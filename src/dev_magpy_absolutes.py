@@ -22,10 +22,10 @@ Procedure:
 
 """
 
-from dev_pymag_stream import *
+from dev_magpy_stream import *
 #from pymag_absolutes import *
 #from pymag_obsini import *
-from dev_pymag_transfer import *
+from dev_magpy_transfer import *
 
 MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','UNKNOWN']
 ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
