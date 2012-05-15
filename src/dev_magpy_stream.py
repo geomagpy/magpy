@@ -3759,6 +3759,7 @@ if __name__ == '__main__':
 
     # Baseline Correction and RotationMatrix
     # ---------------
+    # alpha and beta describe the rotation matrix (alpha is the horizontal angle (D) and beta the vertical)
     #didd = pmRead(path_or_url=os.path.normpath('g:\Vario-Cobenzl\dIdD-System\*'),starttime='2011-01-1',endtime='2011-12-31')
     #basdidd = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_didd.txt'))
     #lemi = pmRead(path_or_url=os.path.normpath('g:\Vario-Cobenzl\dIdD-System\LEMI\*'),starttime='2011-01-1',endtime='2011-12-31')
@@ -3803,7 +3804,7 @@ if __name__ == '__main__':
     newst.pmplot(['x','y','z'])
 
     testarray = np.array(baslemi1)
-    print testarray[1][1]
+    print testarray[1][2]
     print testarray.ndim
     # Testing new funcs
     #lemi = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\lemi\*'),starttime='2010-7-17',endtime='2010-7-18')

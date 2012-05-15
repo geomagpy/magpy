@@ -22,10 +22,10 @@ Procedure:
 
 """
 
-from dev_magpy_stream import *
+from dev_pymag_stream import *
 #from pymag_absolutes import *
 #from pymag_obsini import *
-from dev_magpy_transfer import *
+from dev_pymag_transfer import *
 
 MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','UNKNOWN']
 ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
@@ -1212,7 +1212,7 @@ if __name__ == '__main__':
     loglst = msg.combineWarnLog(msg.warnings,msg.logger)
     print loglst
 
-    msg.sendLogByMail(loglst,user="maxmustermann",pwd="pass")
+    msg.sendLogByMail(loglst,user="roman_leonhardt",pwd="2kippen")
 
     #newst = pmRead(path_or_url=summarypath)
     #newst.pmplot(['x','y','z'])
