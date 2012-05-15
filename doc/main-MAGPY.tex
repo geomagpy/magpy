@@ -1,0 +1,75 @@
+% Template article for preprint document class `elsart'
+% SP 2000/09/06
+
+\documentclass{elsart}
+%\documentclass{autart} %Two column manuscript
+%\documentclass[reviewcopy]{elsart}
+
+% if you use PostScript figures in your article
+% use the graphics package for simple commands
+% \usepackage{graphics}
+% or use the graphicx package for more complicated commands
+\usepackage{graphicx}
+% or use the epsfig package if you prefer to use the old commands
+%\usepackage{psfig}
+\usepackage{amsmath}
+\usepackage{epsfig}
+\usepackage{lscape}
+\usepackage{longtable}
+\usepackage{natbib}
+\usepackage{ulem}
+\usepackage{bigdelim}
+\usepackage{multirow}
+
+
+\bibliographystyle{elsart-harv}
+
+\sloppy
+
+% The amssymb package provides various useful mathematical symbols
+\usepackage{amssymb}
+
+\begin{document}
+
+\begin{frontmatter}
+
+
+\title{Analyzing geomagnetic observatory measurements: MagPy 1.0}
+
+\author[ZAMG]{R. Leonhardt}\ead{roman.leonhardt@zamg.ac.at}
+\author[DTU]{, J. Matzka}
+\author[LMU]{, M. Wack}
+\author[GFZ]{and O. Bronkala}
+
+\address[ZAMG]{Conrad Observatory, Zentralanstalt f\"ur Meteorologie und Geodynamik, Vienna, Austria}
+\address[DTU]{National Space Institute (DTU Space), Technical University of Denmark, Copenhagen, Denmark}
+\address[LMU]{Department Geowissenschaften, Ludwig-Maximilians-Universit\"at, Munich, Germany}
+\address[GFZ]{Observatory, GFZ Potsdam, Niemegk, Germany}
+
+
+\begin{abstract}
+The MagPy software is a platform independent, multi-purpose software to assist geomagnetic data analysis primarily in observatory environments. It supports various common data formats of the geomagnetic community, among them instrument specific formats and general purpose formats like IAGA02, cdf and hdf5. Direct url-data access is also possible and new format conventions can be easily incorporated. Using the scriptable access of the underlying functions for import,  treatment, and export of data, an automated real-time analysis of geomagnetic data is possible. Currently supported are variometer data, scalar data and absolute measurements. For this, basic analysis features like filtering (gaussian, linear), smoothing and data fitting routines are available. Baseline stability tests, outlier detection and flagging procedures allow for a detailed examination of data quality. The package is completed by routines for coherence and spectral analysis as well as k-index calculation and variation (storm) detection making use of well established routines from the seismological community. Beside the scriptable access and command line routines, a graphical user interface based on Python WX is provided which allows, platform independent, windowed access to most routines and a direct graphical demonstration. The software has currently been tested on Linux and Windows systems.
+\end{abstract}
+
+\begin{keyword}
+% PACS codes here, in the form: \PACS code \sep code
+%\PACS
+Geomagnetic field, Observatory, Python
+\end{keyword}
+\end{frontmatter}
+
+\input body-MAGPY
+
+\begin{ack}
+Research is funded by someone and the BMWF, Austria (R.L.: Project)).
+\end{ack}
+
+%GATHER{e:\leon\Texte\Papers\Literatur\literatur.bib}
+\bibliography{e://leon//Texte//Papers//Literatur//literatur}{}
+%\bibliography{literatur}
+
+%\newpage
+%\input captions
+%\input figures
+
+\end{document}

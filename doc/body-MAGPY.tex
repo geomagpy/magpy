@@ -1,0 +1,144 @@
+\section{Introduction}
+
+
+\section{Basic Concept}
+
+\subsection{DI measurements}
+
+\subsection{Variometer and Scalar measurements}
+
+\subsection{The Programs Layout}
+
+
+\section{Input and Output Formats}
+
+\subsection{Supported input types}
+
+\subsection{Supported output types}
+
+\subsection{Using databases}
+
+
+\section{Application}
+
+\subsection{Basic data analysis}
+
+\subsubsection{Reading and Plotting}
+
+Plotting all data from a certain directory:
+\begin{verbatim}
+    from dev_magpy_stream import *
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'))
+    st.pmplot(['x','y','z'])
+\end{verbatim}
+
+Trimming data with starttime and/or endtime limits:
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    st.pmplot(['x','y','z'])
+\end{verbatim}
+
+Starttime and endtime formats:
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime=datetime(2011,7,18,13,0,0,0))
+    st.pmplot(['x','y','z'])
+\end{verbatim}
+
+
+\subsubsection{Filtering/Smoothing/Interpolation}
+
+The first example shows how to filter data using gaussian and linear filters.
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+    st.pmplot(['x','y','z'])
+    st = st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+    st.pmplot(['x','y','z'])
+\end{verbatim}
+
+Smoothing:
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    st = st.smooth(['x'],window_len=21)
+    st.pmplot(['x','y','z'])
+\end{verbatim}
+
+Approximating functions and fitting:
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    func = st.fit(['f'],fitfunc='spline',knotstep=0.05)
+    st.pmplot(['f'],function=func)
+\end{verbatim}
+
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    func = st.interpol(['x','y','z'])
+    st.pmplot(['f'],function=func)
+\end{verbatim}
+
+\subsubsection{Flagging data}
+
+\begin{verbatim}
+    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    st = st.routlier()
+    st = st.flag_stream('f',3,"Moaing",datetime(2010,7,18,12,0,0,0),datetime(2010,7,18,13,0,0,0))
+    st = st.remove_flagged()
+    st.pmplot(['f'],function=func)
+    st = st.get_gaps(gapvariable=True)
+    st.pmplot(['f','var2'])
+\end{verbatim}
+
+
+\subsection{DI and Baselines}
+
+\subsubsection{DI analysis}
+
+\subsubsection{Baseline calculation}
+
+\subsubsection{Baseline stability}
+
+\subsection{Auxiliary data}
+
+
+\subsection{Advanced data analysis}
+
+\subsubsection{Merging and Comparing records}
+
+\subsubsection{Spectral analysis}
+
+\subsubsection{Variation anaylsis/Strom recognition}
+
+\begin{verbatim}
+    st = pmRead(...)
+    func = st.fit(['x','y','z'],fitfunc='spline',knotstep=0.1)
+    st = st.aic_calc('x',timerange=timedelta(hours=1))
+    st.pmplot(['x','y','z','var2'],function=func)
+    fmi = st.k_fmi(fitdegree=2)
+    fmi = st.k_fmi(fitfunc='spline',knotstep=0.4)
+    col = st._get_column('var2')
+    st = st._put_column(col,'y')
+    st = st.differentiate()
+    st.pmplot(['x','var2','dy','t2'],symbollist = ['-','-','-','z'])
+\end{verbatim}
+
+
+\subsection{Automizing analysis procedures}
+
+\subsubsection{Scripting}
+
+\subsubsection{Logging and Notification}
+
+use the python logging package
+
+\subsection{Summary of supported routines}
+
+Show table containing all functions, their purpose and the available keys.
+
+\section{Advanced}
+
+\subsection{Creating import/export filters}
+
+\subsection{Adding Analysis Functions}
+
+\section{Discussion}
+
