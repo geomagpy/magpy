@@ -14,6 +14,11 @@
 
 \subsection{Supported input types}
 
+Any data loaded into the MagPy analysis software is transferred into an internal data structure. This structure represents a time series with a number of keywords which represent individual columns of the original data. The following keywords (table) are generally available for all input data, although most input data only use a few of them.
+
+KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
+
+
 \subsection{Supported output types}
 
 \subsection{Using databases}
@@ -31,28 +36,31 @@ Plotting all data from a certain directory:
     st = pmRead(path_or_url=os.path.normpath('datapath\\*'))
     st.pmplot(['x','y','z'])
 \end{verbatim}
+The first line denotes the import line for the required package. The second line contains the read command which load the selected data into an internal memory. The data will be stored as a structured time series, as stream ``st'', for further treatment. ``datapath'' can either be an absolute path (e.g. c:$\\$data$\\$instrument$\\$*, /data/instrument/*) or a relative path (e.g. ..$\\$data$\\$instrument\\*, ../data/instrument/*). Any function is then performed on the stream ``st'' by using the following structure: st.function(options). For plotting the time series the pmplot function is used. This function requires the
 
-Trimming data with starttime and/or endtime limits:
-\begin{verbatim}
-    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
-    st.pmplot(['x','y','z'])
-\end{verbatim}
-
-Starttime and endtime formats:
+Trimming data with starttime and/or endtime limits. Starttime and endtime formats:
 \begin{verbatim}
     st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime=datetime(2011,7,18,13,0,0,0))
     st.pmplot(['x','y','z'])
 \end{verbatim}
 
+\subsubsection{Writing data}
+
+\begin{verbatim}
+    from dev_magpy_stream import *
+    st = pmRead(...)
+    st.DoUsefulThings(options)
+    st.pmwrite('outputpath')
+\end{verbatim}
 
 \subsubsection{Filtering/Smoothing/Interpolation}
 
 The first example shows how to filter data using gaussian and linear filters.
 \begin{verbatim}
-    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+    st = pmRead(...)
     st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
     st.pmplot(['x','y','z'])
-    st = st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+    st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
     st.pmplot(['x','y','z'])
 \end{verbatim}
 
