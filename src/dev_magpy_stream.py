@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-PyMag-General: Standard pymag package containing the following classes:
+MagPy-General: Standard pymag package containing the following classes:
 Written by Roman Leonhardt 2011/2012
 Version 1.0 (from the 23.02.2012)
 """
@@ -37,6 +37,7 @@ try:
     #standard packages
     import csv
     import pickle 
+    import logging
     import sys, re
     import thread, time, string, os, shutil
     import copy
@@ -80,25 +81,17 @@ except:
     logpygen += "pymag-general: Import failure: Mailing functions not available\n"
     pass
 
-try:
-    # PyMag packages
-    #from pymag_paths_mobile import *
-    #from pymag_general import *
-    #from dev_magpy_formats import *
-    #from pymag_obsini import *
-    pass
-except ImportError:
-    logpygen += "pymag-general: Critical Import failure: PyMag packages missing\n"
-
 if logpygen == '':
     logpygen = "OK"
-print "PyMag-General - Import: %s" % logpygen
 
 # ##################
 # file format tests
 # ##################
+logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.DEBUG)
+
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
+KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
 FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
@@ -327,7 +320,6 @@ def isPYCDF(filename):
             return False
     except:
         return False
-    print 'good'
     return True
 
 
@@ -394,7 +386,7 @@ def readDIDD(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
     except:
-        msg.addwarn("Wrong dateformat in Filename %s" % daystring[0])
+        logging.warning("Wrong dateformat in Filename %s" % daystring[0])
         return []
     # Select only files within eventually defined time range
     if starttime:
@@ -495,7 +487,7 @@ def readDTU1(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring[1] , "%Y%m%d"),"%Y-%m-%d")
     except:
-        msg.addwarn("Wrong dateformat in Filename %s" % daystring[0])
+        logging.warning("Wrong dateformat in Filename %s" % daystring[0])
         return []
     # Select only files within eventually defined time range
     if starttime:
@@ -618,7 +610,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring[0].strip('gdas') , "%Y%m%d"),"%Y-%m-%d")
     except:
-        msg.addwarn("Wrong dateformat in Filename %s" % daystring[0])
+        logging.warning("Wrong dateformat in Filename %s" % daystring[0])
         return []
     # Select only files within eventually defined time range
     if starttime:
@@ -777,7 +769,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    msg = PyMagLog()
+    
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
@@ -795,7 +787,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%Y_%m_%d"),"%Y-%m-%d")
     except:
-        msg.addwarn("Wrong dateformat in Filename %s" % daystring)
+        logging.warning("Wrong dateformat in Filename %s" % daystring)
         return []
     print day
     # Select only files within eventually defined time range
@@ -857,7 +849,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
             row.sectime=date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
             stream.add(row)
         except:
-            msg.addwarn("Error in input data: %s - skipping bad value" % daystring)
+            logging.warning("Error in input data: %s - skipping bad value" % daystring)
             pass
 
     return DataStream(stream, headers)  
@@ -870,7 +862,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
     48488.3	0713220022
     48487.7	0713220032
     """
-    msg = PyMagLog()
+    
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
@@ -889,7 +881,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
         day = datetime.strftime(datetime.strptime(daystring, "%y%m%d"),"%Y-%m-%d")
     except:
         #raise ValueError, "Dateformat in Filename missing"
-        msg.addwarn("Wrong dateformat in Filename %s" % daystring)
+        logging.warning("Wrong dateformat in Filename %s" % daystring)
         return []
     print day
     firsthit = True
@@ -926,7 +918,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
                 row.f = float(strval)/10
                 stream.add(row)
             except:
-                msg.addwarn("Error in input data: %s - skipping bad value" % daystring)
+                logging.warning("Error in input data: %s - skipping bad value" % daystring)
                 pass
 
     if len(stream) > 0:
@@ -996,48 +988,62 @@ def readPYCDF(filename, headonly=False, **kwargs):
     Reading CDF format data - DTU type.
     """
     stream = DataStream()
-    msg = PyMagLog()
+
     # Check whether header infromation is already present
     if stream.header == None:
         headers = {}
     else:
         headers = stream.header
 
-    msg.addpro('--- Start reading CDF at %s ' % str(datetime.now()))
+    logging.info('--- Start reading CDF at %s ' % str(datetime.now()))
 
     cdf_file = cdf.CDF(filename)
-    print cdf_file
-  
-    row = LineStruct()
+
+    # Get format type:
+    # DTU type is using different date format (MATLAB specific)
+    # MagPy type is using datetime objects
+    try:
+        cdfformat = cdf_file.attrs['DataFormat']
+    except:
+        print "No format specification in CDF - passing"
+        cdfformat = 'Unknown'
+        pass
+
+    logging.info('--- File: %s Format: %s ' % (filename, cdfformat))
+
     for key in cdf_file:
+        print key
         # first get time or epoch column
         lst = cdf_file[key]
         if key == 'time' or key == 'Epoch':
             ti = lst[...]
-            print str(datetime.now())
-            cti = [x+730485 for x in ti]
-            print str(datetime.now())
-            print num2date(cti[0])
-            #for idx in range(len(ti)):
-            #    row.time = ti[idx]+730485
-            #    print num2date(ti[idx]+730485)
-            #    stream.add(row)
-        if key == 'HNvar' or key == 'x':
+            for elem in ti:
+                row = LineStruct()
+                if str(cdfformat) == 'MagPyCDF':
+                    row.time = date2num(elem)                  
+                else:
+                    row.time = date2num(elem)+730485.0 # DTU MATLAB time
+                stream.add(row)
+        elif key == 'HNvar' or key == 'x':
             x = lst[...]
-        if key == 'HEvar' or key == 'y':
+            stream._put_column(x,'x')
+        elif key == 'HEvar' or key == 'y':
             y = lst[...]
-            
- 
-    #for key in cdf_file:
-    #    # first get time or epoch column
-    #    if key.lower() in KEYLIST:
-    #        stream = stream._put_column(cdf_file[key],key.lower())
-    #    else:
-    #        print key
+            stream._put_column(y,'y')
+        elif key == 'Zvar' or key == 'z':
+            z = lst[...]
+            stream._put_column(z,'z')
+        elif key == 'Fsc' or key == 'f':
+            f = lst[...]
+            stream._put_column(f,'f')
+        else:
+            if key.lower() in KEYLIST:
+                col = lst[...]
+                stream._put_column(col,key.lower())
 
     cdf_file.close()
 
-    msg.addpro('--- Finished reading CDF at %s ' % str(datetime.now()))
+    logging.info('--- Finished reading CDF at %s ' % str(datetime.now()))
 
     return DataStream(stream, headers)    
 
@@ -1110,7 +1116,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    msg = PyMagLog()
+    
 
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
@@ -1121,7 +1127,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
     except:
-        msg.addwarn("Wrong dateformat in Filename %s" % daystring)
+        logging.warning("Wrong dateformat in Filename %s" % daystring)
         return []
     # Select only files within eventually defined time range
     if starttime:
@@ -1245,10 +1251,10 @@ def readIAGA(filename, headonly=False, **kwargs):
 # -------------------
 
 def writePYSTR(datastream, filename, **kwargs):
-    # check for nan and - columns
-    #for key in KEYLIST:
-    #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
-    #    head.append(title)
+    """
+    Function to write structural ASCII data 
+    """
+
     mode = kwargs.get('mode')
 
     if os.path.isfile(filename):
@@ -1303,7 +1309,7 @@ def writeDIDD(datastream, filename, **kwargs):
     00 00  20826.8   1206.1  43778.3  48494.8
     00 01  20833.3   1202.2  43779.3  48498.5
     """
-    if (datastrem[-1].time - datastrem[0].time) > 1:
+    if (datastream[-1].time - datastream[0].time) > 1:
         return "Writing DIDD format requires daily coverage - choose"
 
     headdict = datastream.header
@@ -1320,62 +1326,54 @@ def writeDIDD(datastream, filename, **kwargs):
 
 
 def writePYCDF(datastream, filename, **kwargs):
-    """
-        time,x,y,z,f,dx,dy,dz,df,t1,t2,var1,var2,typ,str1,str2,str3,flag,comment = [],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],
-        for idx, row in enumerate(magdatastruct):
-            line = ""
-            time.append(num2date(magdatastruct[idx].time))
-            x.append(magdatastruct[idx].x)
-            y.append(magdatastruct[idx].y)
-            z.append(magdatastruct[idx].z)
-            f.append(magdatastruct[idx].f)
-            dx.append(magdatastruct[idx].dx)
-            dy.append(magdatastruct[idx].dy)
-            dz.append(magdatastruct[idx].dz)
-            df.append(magdatastruct[idx].df)
-            t1.append(magdatastruct[idx].t1)
-            t2.append(magdatastruct[idx].t2)
-            var1.append(magdatastruct[idx].var1)
-            var2.append(magdatastruct[idx].var2)
-            typ.append(magdatastruct[idx].typ)
-            str1.append(magdatastruct[idx].str1)
-            str2.append(magdatastruct[idx].str2)
-            str3.append(magdatastruct[idx].str3)
-            flag.append(magdatastruct[idx].flag)
-            comment.append(magdatastruct[idx].comment)
-        try:
-            cdf = pycdf.CDF(filename, '')
-            cdf['Epoch'] = time
-            cdf['x'] = x
-            cdf['y'] = y
-            cdf['z'] = z
-            cdf['f'] = f
-            cdf['dx'] = dx
-            cdf['dy'] = dy
-            cdf['dz'] = dz
-            cdf['df'] = df
-            cdf['t1'] = t1
-            cdf['t2'] = t2
-            cdf['var1'] = var1
-            cdf['var2'] = var2
-            cdf['typ'] = typ
-            cdf['str1'] = str1
-            cdf['str2'] = str2
-            cdf['str3'] = str3
-            cdf['flag'] = flag
-            cdf['comment'] = comment
-            cdf.attrs['Author'] = 'RL'
-            cdf.attrs['CreateDate'] = datetime.now()
-            cdf['x'].attrs['units'] = 'nT'
-            cdf.close()
-        except:
-            msg = "File exists"
-            print msg
-            pass
-        return
-    """
-    pass
+    # check for nan and - columns
+    #for key in KEYLIST:
+    #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
+    #    head.append(title)
 
+    mode = kwargs.get('mode')
+
+    if os.path.isfile(filename+'.cdf'):
+        if mode == 'skip': # skip existing inputs
+            exst = pmRead(path_or_url=filename+'.cdf')
+            datastream = mergeStreams(exst,datastream,extend=True)
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
+        elif mode == 'replace': # replace existing inputs
+            exst = pmRead(path_or_url=filename+'.cdf')
+            datastream = mergeStreams(datastream,exst,extend=True)
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
+        elif mode == 'append':
+            mycdf = cdf.CDF(filename, filename) # append????
+        else: # overwrite mode
+            print " got here"
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
+    else:
+        mycdf = cdf.CDF(filename, '')
+
+    headdict = datastream.header
+    head, line = [],[]
+    mycdf.attrs['DataFormat'] = 'MagPyCDF'
+    if not mode == 'append':
+        for key in headdict:
+            if not key.find('col') >= 0:
+                mycdf.attrs[key] = headdict[key]
+
+    for key in KEYLIST:            
+        col = datastream._get_column(key)
+        if key == 'time':
+            key = 'Epoch'
+            mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
+        elif len(col) > 0:
+            mycdf[key] = col
+        for keydic in headdict:
+            if keydic.find('unit-col-'+key) > 0:
+                mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
+    mycdf.close()
+
+ 
 # -------------------
 #  Classes and functions of the stream file
 # -------------------
@@ -1530,7 +1528,7 @@ class ColStruct(object):
 
     
 class LineStruct(object):
-    def __init__(self, time=0, x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='000000000-', comment='-', typ="xyzf", sectime=float('nan')):
+    def __init__(self, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='000000000-', comment='-', typ="xyzf", sectime=float('nan')):
         """
         - at the end of flag is important to be recognized as string
         """
@@ -1751,9 +1749,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
     """
     Reads a single file into a ObsPy Stream object.
-    """
-    log = PyMagLog()
-    
+    """    
     # get format type
     format_type = None
     if not dataformat:
@@ -1772,7 +1768,7 @@ def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
     # file format should be known by now
-    log.addlog('Appending data - dataformat: %s' % format_type)
+    logging.info('Appending data - dataformat: %s' % format_type)
     #print format_type
     """
     try:
@@ -1809,9 +1805,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     extend = kwargs.get('extend')
     if not keys:
         keys = KEYLIST[1:15]
-
-    msg = PyMagLog()
-    msg.addpro('--- Start mergings at %s ' % str(datetime.now()))
+   
+    logging.info('--- Start mergings at %s ' % str(datetime.now()))
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -1851,7 +1846,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         exec('stream_a['+str(pos)+'].'+key+' = float(newval)')
                         #print "Added %f to column %s at time %s" % (newval, key, num2date(ta))
 
-    msg.addpro('--- Mergings finished at %s ' % str(datetime.now()))
+    logging.info('--- Mergings finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)      
 
@@ -1869,8 +1864,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     if not keys:
         keys = KEYLIST[1:15]
 
-    msg = PyMagLog()
-    msg.addpro('--- Start subtracting streams at %s ' % str(datetime.now()))
+    
+    logging.info('--- Start subtracting streams at %s ' % str(datetime.now()))
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -1901,7 +1896,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     newval = function[0][fkey](functime)
                     exec('stream_a['+str(pos)+'].'+key+' -= float(newval)')
  
-    msg.addpro('--- Stream-subtraction finished at %s ' % str(datetime.now()))
+    logging.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)      
 
@@ -2078,7 +2073,19 @@ class DataStream(object):
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
 
-        return np.asarray([eval('elem.'+key) for elem in self])
+        # Get only columns which contain different data from initialization
+        count = 0
+        col = []
+        for elem in self:
+            if eval('elem.'+key) != KEYINITDICT[key] and not isnan(eval('elem.'+key)):
+                count = count+1
+            col.append(eval('elem.'+key))
+        if count > 0:
+            return np.asarray(col)
+        else:
+            return np.asarray([])
+
+        #return np.asarray([eval('elem.'+key) for elem in self])
 
 
     def _put_column(self, column, key):
@@ -2271,7 +2278,7 @@ class DataStream(object):
         """
         Tests for NAN values in column and ually masks them
         """
-        msg = PyMagLog()
+        
         try: # Test for the presence of nan values
             val = np.mean(column)
             numdat = True
@@ -2285,11 +2292,11 @@ class DataStream(object):
                     column = mcolumn
                 else:
                     numdat = False
-                    msg.addwarn("NAN warning: only nan in column")
+                    logging.warning("NAN warning: only nan in column")
                     return []
         except:
             numdat = False
-            msg.addwarn("NAN warning: only nan in column")
+            logging.warning("NAN warning: only nan in column")
             return []
 
         return column
@@ -2394,7 +2401,7 @@ class DataStream(object):
         extradays = kwargs.get('extradays')
         plotbaseline = kwargs.get('plotbaseline')
 
-        msg = PyMagLog()
+        
         endtime = self[-1].time
         if not extradays:
             extradays = 30
@@ -2406,7 +2413,7 @@ class DataStream(object):
             knotstep = 0.05
 
 
-        msg.addpro(' --- Start baseline-correction at %s' % str(datetime.now()))
+        logging.info(' --- Start baseline-correction at %s' % str(datetime.now()))
 
         # 1) test whether absolutes are in the selected absolute data stream
         if absolutestream[0].time == 0:
@@ -2418,9 +2425,9 @@ class DataStream(object):
             
         # 4) check whether endtime is within abs time range or larger:
         if absolutestream[-1].time < endtime:
-            msg.addlog("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
+            logging.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
         if num2date(absolutestream[-1].time).replace(tzinfo=None) + timedelta(days=extradays) < num2date(endtime).replace(tzinfo=None):
-            msg.addwarn("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
+            logging.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
 
         endtime = num2date(endtime).replace(tzinfo=None)
         # 5) check whether an abolute measurement larger then 12-31 of the same year as enddate exists
@@ -2455,7 +2462,7 @@ class DataStream(object):
         # subtract baseline
         self = self.func_subtract(func)
 
-        msg.addpro(' --- Finished baseline-correction at %s' % str(datetime.now()))
+        logging.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
         return self
 
@@ -2475,8 +2482,8 @@ class DataStream(object):
             elem.time = date2num(newtime)
             newstream.add(elem)
 
-        msg = PyMagLog()
-        msg.addlog('Corrected time column by %s sec' % str(offset.seconds))
+        
+        logging.info('Corrected time column by %s sec' % str(offset.seconds))
 
         return DataStream(newstream,header)
 
@@ -2489,9 +2496,9 @@ class DataStream(object):
         optional:
         keys: (list - default ['x','y','z','f'] provide limited key-list
         """
-        msg = PyMagLog()
+        
 
-        msg.addpro('--- Calculating derivative started at %s ' % str(datetime.now()))
+        logging.info('--- Calculating derivative started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
         if not keys:
@@ -2503,7 +2510,7 @@ class DataStream(object):
             dval = np.gradient(np.asarray(val))
             self._put_column(dval, 'd'+key)
 
-        msg.addpro('--- derivative obtained at %s ' % str(datetime.now()))
+        logging.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
         
 
@@ -2568,7 +2575,7 @@ class DataStream(object):
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
                     ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
                 except:
-                    msg.addwarn('Value error in fit function - likely reason: no valid numbers')
+                    logging.warning('Value error in fit function - likely reason: no valid numbers')
                     raise ValueError, "Value error in fit function"
                     return
                 f_fit = interpolate.splev(x,ti)
@@ -2579,10 +2586,10 @@ class DataStream(object):
                 ti = polyfit(nt, val, fitdegree)
                 f_fit = polyval(ti,x)
             elif len(val)<=1:
-                msg.addwarn('Fit: No valid data')
+                logging.warning('Fit: No valid data')
                 return
             else:
-                msg.addwarn('Fit: function not valid')
+                logging.warning('Fit: function not valid')
                 return
             exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
             exec('functionkeylist["f'+key+'"] = f'+key)
@@ -2623,23 +2630,23 @@ class DataStream(object):
         if not m_fmi:
             m_fmi = 0
 
-        msg = PyMagLog()
+        
 
         gf_fac = gauss_win
         resdataout = []
 
         # check whether data is valid
         if len(self) < 2:
-            msg.addwarn('FilterFunc: No valid stream provided')
+            logging.warning('FilterFunc: No valid stream provided')
             return self
 
         # check whether requested filter_width >= sampling interval within 1 millisecond accuracy
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         if filter_width - si <= timedelta(microseconds=1000):
-            msg.addwarn('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
+            logging.warning('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
             return self
 
-        msg.addpro('--- Start filtering at %s ' % str(datetime.now()))
+        logging.info('--- Start filtering at %s ' % str(datetime.now()))
 
         starray = np.asarray(self)
         firstday = 0
@@ -2652,7 +2659,7 @@ class DataStream(object):
             offs = date2num(datetime.strptime("2010-11-22","%Y-%m-%d")+filter_offset)-date2num(datetime.strptime("2010-11-22","%Y-%m-%d"))
 
         currtime = num2date(np.floor(starray[0].time)).replace(tzinfo=None) + filter_offset
-        
+
         # 2.) Define the time ranges in dependency of resolution - use non-flagged data here
         # determine time diff between successive steps for linear means (e.g. 00-59 and not 00 to 60)
         # and get the trange for filtering
@@ -2709,6 +2716,7 @@ class DataStream(object):
             #print "Bounds: %f - %f" % (lowlim,uplim)
             #print currtime
             resrow = LineStruct()
+            resrow.time = abscurrtime
             if uplim > lowlim:
                 for el in KEYLIST[:15]:
                     exec('col'+el+'=[]')
@@ -2723,14 +2731,14 @@ class DataStream(object):
                         for el in KEYLIST[:15]:
                             exec('col'+el+'.append(starray[k].'+el+'*nor)')
                     resrow.time = abscurrtime
-                    for el in KEYLIST[:15]:
+                    for el in KEYLIST[1:15]:
                         exec('resrow.'+el+' = np.sum(col'+el+')')
                 elif filter_type == "linear" or filter_type == "fmi":
                     for k in range(lowlim,uplim):
                         for el in KEYLIST[:15]:
                             exec('col'+el+'.append(starray[k].'+el+')')
                     resrow.time = abscurrtime
-                    for el in KEYLIST[:15]:
+                    for el in KEYLIST[1:15]:
                         exec('resrow.'+el+' = np.mean(col'+el+')')
                     # add maxmin diffs: important for fmi
                     if starray[k].typ != 'fonly':
@@ -2739,11 +2747,11 @@ class DataStream(object):
                         resrow.dz = np.max(colz)-np.min(colz)
                         resrow.df = np.max(colf)-np.min(colf)
                 else:
-                    msg.addwarn("FilterFunc: Filter not recognized - aborting")
+                    logging.warning("FilterFunc: Filter not recognized - aborting")
                 resrow.typ = starray[0].typ
             else: # in case of removed flagged sequences - add time and leave "NaN" value in file 
-                resrow.time = abscurrtime              
-                
+                resrow.time = abscurrtime
+
             resdata.add(resrow)
             
             # e) increase counter
@@ -2765,7 +2773,7 @@ class DataStream(object):
         self.header['DigitalSamplingFilter'] = filter_type
         self.header['DataInterval'] = str(filter_width.seconds)+' sec'
         
-        msg.addpro(' --- Finished filtering at %s' % str(datetime.now()))
+        logging.info(' --- Finished filtering at %s' % str(datetime.now()))
 
         return DataStream(resdata,self.header)      
 
@@ -2781,7 +2789,7 @@ class DataStream(object):
         optional:
         enddate: the enddate of a time range to be flagged in a identical way
         """
-        msg = PyMagLog()
+        
         if not key in KEYLIST:
             raise ValueError, "Wrong Key"
         if not flag in [0,1,2,3,4]:
@@ -2805,9 +2813,9 @@ class DataStream(object):
                 elem.comment = comment
         if flag == 1 or flag == 3:
             if enddate:
-                msg.addlog("Removed data from %s to %s ->  (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
+                logging.info("Removed data from %s to %s ->  (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
             else:
-                msg.addlog("Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
+                logging.info("Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
         return self
             
         
@@ -2892,8 +2900,8 @@ class DataStream(object):
 
         sp = self.get_sampling_period()
 
-        msg = PyMagLog()
-        msg.addpro('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
+        
+        logging.info('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
 
         # remove any lines with NAN values
         #self = self._drop_empty_line()
@@ -2921,7 +2929,7 @@ class DataStream(object):
                 stream.add(elem)
             prevtime = elem.time
 
-        msg.addpro('--- Filling gaps finished at %s ' % (str(datetime.now())))
+        logging.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
                 
         return DataStream(stream,header)
 
@@ -2965,9 +2973,9 @@ class DataStream(object):
         optional:
         keys: (list - default ['x','y','z','f'] provide limited key-list
         """
-        msg = PyMagLog()
+        
 
-        msg.addpro('--- Integrating started at %s ' % str(datetime.now()))
+        logging.info('--- Integrating started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
         if not keys:
@@ -2980,7 +2988,7 @@ class DataStream(object):
             dval = np.insert(dval, 0, 0) # Prepend 0 to maintain original length
             self._put_column(dval, 'd'+key)
 
-        msg.addpro('--- integration finished at %s ' % str(datetime.now()))
+        logging.info('--- integration finished at %s ' % str(datetime.now()))
         return self
 
 
@@ -3047,7 +3055,7 @@ class DataStream(object):
         iprev = 0
         iend = 0
 
-        msg.addpro('--- Starting k value calculation: %s ' % (str(datetime.now())))
+        logging.info('--- Starting k value calculation: %s ' % (str(datetime.now())))
 
         # Start with the full input stream
         # convert xyz to hdz first
@@ -3055,7 +3063,7 @@ class DataStream(object):
         fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
         fmi2stream = fmistream.filtered(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 
-        msg.addpro('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
+        logging.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
 
         t = fmi2stream._get_column('time')
 
@@ -3078,14 +3086,14 @@ class DataStream(object):
 
         outstream = mergeStreams(self,fmi4stream,keys=[key])
 
-        msg.addpro('--- finished k value calculation: %s ' % (str(datetime.now())))
+        logging.info('--- finished k value calculation: %s ' % (str(datetime.now())))
         
         return DataStream(outstream, self.header)
 
 
     def pmplot(self, keys, **kwargs):
         """
-        Creates a simple graph of the current trace.
+        Creates a simple graph of the current stream.
         Supports the following keywords:
         function: (func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
         fullday: (boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
@@ -3095,9 +3103,9 @@ class DataStream(object):
         symbol_func: (string - default '-') symbol of function plot 
         savefigure: (string - default None) if provided a copy of the plot is saved to savefilename.png 
 
-            from pymag_general import read
+            from dev_magpy_stream import *
             st = read()
-            st.plot()
+            st.pmplot()
 
             keys define the columns to be plotted
         """
@@ -3157,6 +3165,8 @@ class DataStream(object):
                 # Create primary plot and define x scale and ticks/labels of subplots
                 if count == 1:
                     ax = fig.add_subplot(subplt)
+                    if plottitle:
+                        ax.set_title(plottitle)
                     a = ax
                 else:
                     ax = fig.add_subplot(subplt, sharex=a)
@@ -3180,7 +3190,7 @@ class DataStream(object):
                     if len(yerr) > 0: 
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
-                        msg.addwarn(' -- Errorbars (d%s) not found for key %s' % (key, key))
+                        logging.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
                 #ax.plot_date(t2,yplt2,"r"+symbol[1],markersize=4)
                 if function:
                     fkey = 'f'+key
@@ -3207,6 +3217,8 @@ class DataStream(object):
                 ax.get_yaxis().set_major_formatter(myyfmt)
                 if fullday:
                     ax.set_xlim(np.floor(np.min(t)),np.floor(np.max(t)+1))
+            else:
+                logging.warning("Plot: No data available for key %s" % key)
 
         fig.subplots_adjust(hspace=0)
 
@@ -3255,7 +3267,7 @@ class DataStream(object):
         alpha is the horizontal rotation in degree,
         beta the vertical
         """
-        msg = PyMagLog()
+        
         
         unit = kwargs.get('unit')
         alpha = kwargs.get('alpha')
@@ -3271,7 +3283,7 @@ class DataStream(object):
         if not beta:
             beta = 0.
 
-        msg.addpro('--- Applying rotation matrix: %s ' % (str(datetime.now())))
+        logging.info('--- Applying rotation matrix: %s ' % (str(datetime.now())))
 
         for elem in self:
             ra = np.pi*alpha/(180.*ang_fac)
@@ -3283,7 +3295,7 @@ class DataStream(object):
             elem.y = ys
             elem.z = zs
 
-        msg.addpro('--- finished reorientation: %s ' % (str(datetime.now())))
+        logging.info('--- finished reorientation: %s ' % (str(datetime.now())))
 
         return self
 
@@ -3333,8 +3345,8 @@ class DataStream(object):
         # f (intensity): pos 0
         # x,y,z (vector): pos 1
         # other (vector): pos 2
-        msg = PyMagLog()
-        msg.addpro('--- Starting outlier removal at %s ' % (str(datetime.now())))
+        
+        logging.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
 
         # Start here with for key in keys:
         for key in keys:
@@ -3372,7 +3384,7 @@ class DataStream(object):
                         md = np.median(selcol) 
                         whisker = md*0.005
                     except:
-                        msg.addwarn("Eliminate outliers produced a problem: please check\n")
+                        logging.warning("Eliminate outliers produced a problem: please check\n")
                         pass
 
                 for elem in lstpart:
@@ -3383,14 +3395,14 @@ class DataStream(object):
                         fllist[flagpos] = '1'
                         row.flag=''.join(fllist)
                         row.comment = "%s removed by automatic outlier removal" % key
-                        msg.addlog("Outlier: removed %f at time %f, " % (eval('elem.'+key), elem.time))
+                        logging.info("Outlier: removed %f at time %f, " % (eval('elem.'+key), elem.time))
                     else:
                         fllist = list(row.flag)
                         fllist[flagpos] = '0'
                         row.flag=''.join(fllist)
                     newst.add(row)
 
-        msg.addpro('--- Outlier removal finished at %s ' % str(datetime.now()))
+        logging.info('--- Outlier removal finished at %s ' % str(datetime.now()))
 
         return DataStream(newst, self.header)        
 
@@ -3433,8 +3445,8 @@ class DataStream(object):
         if not window:
             window='hanning'
 
-        msg = PyMagLog()
-        msg.addpro(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
+        
+        logging.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
 
         for key in keys:
             if not key in KEYLIST:
@@ -3462,7 +3474,7 @@ class DataStream(object):
 
             self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
 
-        msg.addpro(' --- Finished smoothing at %s' % (str(datetime.now())))
+        logging.info(' --- Finished smoothing at %s' % (str(datetime.now())))
         
         return self
 
@@ -3601,6 +3613,10 @@ class DataStream(object):
         if not mode:
             mode= 'overwrite'
 
+        # Extension for cfd files is automatically attached
+        if format_type == 'PYCDF':
+            filenameends = ''
+
         # divide stream in parts according to coverage and same them
         newst = DataStream()
         if not coverage == 'all':
@@ -3622,7 +3638,7 @@ class DataStream(object):
          
 if __name__ == '__main__':
     print "Starting the PyMag program:"
-    msg = PyMagLog()
+    
 
     # Environmental Data
     # ------------------
@@ -3648,9 +3664,6 @@ if __name__ == '__main__':
     #func = usb.interpol(['t1','t2','var1'])
     #usb.pmplot(['t1','t2','var1'],function=func)
 
-    #msg.clearpro()
-    #msg.clearwarn()
-    #msg.clearlog()
     #rcs.clear_header()
     #print rcs.header
 
@@ -3820,12 +3833,6 @@ if __name__ == '__main__':
     #newst.pmplot(['x','y','z'])
 
     #print len(st)
-    #print "Processing:"
-    #print msg.process
-    #print "Logging info:"
-    #print msg.logger
-    #print "Warning messages:"
-    #print msg.warnings
     #print "Current header information:"
     #print st.header
     
