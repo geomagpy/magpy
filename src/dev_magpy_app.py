@@ -17,9 +17,9 @@ msg = PyMagLog()
 #
 logging.info("----- Now starting Example 1 -----")
 # relative path
-st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 # !!! TODO: If time range is not part of available data range, an error message should be shown
-st.pmplot(['x','y','z'],plottitle = "Ex 1 - Plot")
+#st.pmplot(['x','y','z'],plottitle = "Ex 1 - Plot")
 
 #
 # Writing data 
@@ -65,37 +65,33 @@ logging.info("----- Now starting Example 4 -----")
 # Intensity values, Outlier removal and auto-flagging
 #
 logging.info("----- Now starting Example 5 -----")
-st = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
-st.pmplot(['f'],plottitle = "Ex 5 - F vals with outliers")
-st = st.routlier()
-stmod = st.remove_flagged()
-stmod.pmplot(['f'],plottitle = "Ex 5 - Outliers removed")
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
+#st.pmplot(['f'],plottitle = "Ex 5 - F vals with outliers")
+#st = st.routlier()
+#stmod = st.remove_flagged()
+#stmod.pmplot(['f'],plottitle = "Ex 5 - Outliers removed")
 
 #
 # Flagging - not working yet - check other variables 
 #
 # !!! TODO: check variables etc
-logging.info("----- Now starting Example 6 -----")
+#logging.info("----- Now starting Example 6 -----")
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
-st = st.flag_stream('f',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
-stmod = st.remove_flagged()
-stmod = stmod.get_gaps(gapvariable=True)
-stmod.pmplot(['f','var2'])
+#st = st.flag_stream('f',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
+#stmod = st.remove_flagged()
+#stmod = stmod.get_gaps(gapvariable=True)
+#stmod.pmplot(['f','var2'])
 
 #
-# Smoothing, differentiating, integrating, interpolating data
+# Smoothing and interpolating data
 #
-logging.info("----- Now starting Example 7 -----")
-st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
-st.pmplot(['x'],plottitle = "Ex 7 - Before smoothing")
-st = st.smooth(['x'],window_len=21)
-st.pmplot(['x'],plottitle = "Ex 7 - After smoothing")
-#st = st.differentiate()
-#col = st._get_column('dx')
-#st = st._put_column(col,'x')
-#st = st.integrate(keys=['x'])
-func = st.interpol(['x','y','z'])
-st.pmplot(['x'],function=func,plottitle = "Ex 7 - After smoothing and interpolation")
+#logging.info("----- Now starting Example 7 -----")
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
+#st.pmplot(['x'],plottitle = "Ex 7 - Before smoothing")
+#st = st.smooth(['x'],window_len=21)
+#st.pmplot(['x'],plottitle = "Ex 7 - After smoothing")
+#func = st.interpol(['x','y','z'])
+#st.pmplot(['x'],function=func,plottitle = "Ex 7 - After smoothing and interpolation")
 
 #
 # Storm analysis and fit functions 
@@ -114,6 +110,11 @@ st.pmplot(['x','y','z','var2'],function=func,plottitle = "Ex 8 - AIC Analysis")
 #st.pmplot(['x','var2','dy','t2'],symbollist = ['-','-','-','z'])
 #
 
+#
+# Basic spectral investigation 
+#
+st.spectrogram('x')
+#st.powerspectrum('x')
 
 #
 # Auxiliary data

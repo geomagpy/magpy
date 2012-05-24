@@ -3227,6 +3227,63 @@ class DataStream(object):
         else:
             savefig(savefigure,dpi=savedpi)	# save as PNG/SVG
 
+
+    def pmwrite(self, filepath, **kwargs):
+        """
+        Writing Stream to a file
+        filepath (string): provding path/filename for saving
+        Keywords:
+        format_type (string): in which format - default pystr
+        period (string) : supports hour, day, month, year, all - default day
+        filenamebegins (string): providing the begin of savename (e.g. "WIK_")
+        filenameends (string): providing the end of savename (e.g. ".min")
+        wformat (string): outputformat
+        dateformat (string):  outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22"
+        coverage: (timedelta): day files or hour or month or year or all - default day
+        mode: (append, overwrite, replace, skip) mode for handling existing files/data in files
+        --- > Example output: "WIK_2011-11-22.min"
+        """
+        format_type = kwargs.get('format_type')
+        filenamebegins = kwargs.get('filenamebegins')
+        filenameends = kwargs.get('filenameends')
+        dateformat = kwargs.get('dateformat')
+        coverage = kwargs.get('coverage')
+        mode = kwargs.get('mode')
+        if not format_type:
+            format_type = 'PYSTR'
+        if not dateformat:
+            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+        if not coverage:
+            coverage = timedelta(days=1)
+        if not filenamebegins:
+            filenamebegins = 'Test-'
+        if not filenameends:
+            filenameends = '.txt'
+        if not mode:
+            mode= 'overwrite'
+
+        # Extension for cfd files is automatically attached
+        if format_type == 'PYCDF':
+            filenameends = ''
+
+        # divide stream in parts according to coverage and same them
+        newst = DataStream()
+        if not coverage == 'all':
+            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            endtime = starttime + coverage
+            while starttime < num2date(self[-1].time).replace(tzinfo=None):
+                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                newst = DataStream(lst,self.header)
+                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                if len(lst) > 0:
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode)
+                starttime = endtime
+                endtime = endtime + coverage
+        else:
+            filename = filenamebegins + filenameends
+            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode)
+            
+
     def remove_flagged(self, **kwargs):
         """
         remove flagged data from stream:
@@ -3479,25 +3536,29 @@ class DataStream(object):
         return self
 
 
-    def pmspectrogram(self, keys, **kwargs):
+    def spectrogram(self, keys, **kwargs):
         """
-        Sorting data according to time (maybe generalize that to some key)
+        Creates a spectrogram plot of selected keys.
+
         """
 
         t = self._get_column('time')
         for key in keys:
             val = self._get_column(key)
+            specgram(val,NFFT=512,noverlap=0)
             #dval = np.gradient(np.asarray(val))
             #self._put_column(dval, 'd'+key)
 
+        show()
         #plot(t,val,'b-')
+        
 
         dt = self.get_sampling_period()*(24*60)
         print "Sampling period: %f" % dt
         NFFT = 1024       # the length of the windowing segments
         Fs = int(1.0/dt)  # the sampling frequency
 
-        Pxx, freqs, bins, im = specgram(val,NFFT=NFFT,Fs=Fs)
+        #Pxx, freqs, bins, im = specgram(val,NFFT=NFFT,Fs=Fs)
         #show()
 
     def powerspectrum(self, key):
@@ -3579,61 +3640,6 @@ class DataStream(object):
         return DataStream(self.container,self.header)
 
 
-    def pmwrite(self, filepath, **kwargs):
-        """
-        Writing Stream to a file
-        filepath (string): provding path/filename for saving
-        Keywords:
-        format_type (string): in which format - default pystr
-        period (string) : supports hour, day, month, year, all - default day
-        filenamebegins (string): providing the begin of savename (e.g. "WIK_")
-        filenameends (string): providing the end of savename (e.g. ".min")
-        wformat (string): outputformat
-        dateformat (string):  outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22"
-        coverage: (timedelta): day files or hour or month or year or all - default day
-        mode: (append, overwrite, replace, skip) mode for handling existing files/data in files
-        --- > Example output: "WIK_2011-11-22.min"
-        """
-        format_type = kwargs.get('format_type')
-        filenamebegins = kwargs.get('filenamebegins')
-        filenameends = kwargs.get('filenameends')
-        dateformat = kwargs.get('dateformat')
-        coverage = kwargs.get('coverage')
-        mode = kwargs.get('mode')
-        if not format_type:
-            format_type = 'PYSTR'
-        if not dateformat:
-            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
-        if not coverage:
-            coverage = timedelta(days=1)
-        if not filenamebegins:
-            filenamebegins = 'Test-'
-        if not filenameends:
-            filenameends = '.txt'
-        if not mode:
-            mode= 'overwrite'
-
-        # Extension for cfd files is automatically attached
-        if format_type == 'PYCDF':
-            filenameends = ''
-
-        # divide stream in parts according to coverage and same them
-        newst = DataStream()
-        if not coverage == 'all':
-            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
-            endtime = starttime + coverage
-            while starttime < num2date(self[-1].time).replace(tzinfo=None):
-                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                newst = DataStream(lst,self.header)
-                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
-                if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode)
-                starttime = endtime
-                endtime = endtime + coverage
-        else:
-            filename = filenamebegins + filenameends
-            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode)
-            
 
          
 if __name__ == '__main__':
