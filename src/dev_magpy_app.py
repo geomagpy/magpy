@@ -9,8 +9,6 @@ Version 1.0 (from the 22.05.2012)
 # ----------------------------------------
 
 from dev_magpy_stream import *
-# Starting the Logger - change that to the logging package of py
-msg = PyMagLog()
 
 #
 # Reading data and plotting
@@ -18,7 +16,11 @@ msg = PyMagLog()
 logging.info("----- Now starting Example 1 -----")
 # relative path
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !!! TODO: If time range is not part of available data range, an error message should be shown
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!! TODO: Add padding option to plots
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #st.pmplot(['x','y','z'],plottitle = "Ex 1 - Plot")
 
 #
@@ -43,7 +45,6 @@ logging.info("----- Now starting Example 3 -----")
 #st.pmplot(['x','y','z','t1'],plottitle = "Ex 3 - Formats - gdas-bgs")
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 #st.pmplot(['f'],plottitle = "Ex 3 - Formats - pmag")
-# !!! TODO: Create folder if not existing
 #st.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
 
 
@@ -72,10 +73,13 @@ logging.info("----- Now starting Example 5 -----")
 #stmod.pmplot(['f'],plottitle = "Ex 5 - Outliers removed")
 
 #
-# Flagging - not working yet - check other variables 
+# Flagging - not working correctly yet - check other variables 
 #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !!! TODO: check variables etc
-#logging.info("----- Now starting Example 6 -----")
+# !!! TODO: flagging of f also removes timestamps (set to nan) and thus other components
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+logging.info("----- Now starting Example 6 - Flagging -----")
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
 #st = st.flag_stream('f',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
 #stmod = st.remove_flagged()
@@ -85,7 +89,7 @@ logging.info("----- Now starting Example 5 -----")
 #
 # Smoothing and interpolating data
 #
-#logging.info("----- Now starting Example 7 -----")
+logging.info("----- Now starting Example 7 - Smoothing -----")
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
 #st.pmplot(['x'],plottitle = "Ex 7 - Before smoothing")
 #st = st.smooth(['x'],window_len=21)
@@ -96,8 +100,10 @@ logging.info("----- Now starting Example 5 -----")
 #
 # Storm analysis and fit functions 
 #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !!! TODO: Use H for estimation and calculate index
-logging.info("----- Now starting Example 8 -----")
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+logging.info("----- Now starting Example 8 - Storm analysis -----")
 st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-9-8',endtime='2011-9-14')
 func = st.fit(['x','y','z'],fitfunc='spline',knotstep=0.1)
 st = st.aic_calc('x',timerange=timedelta(hours=1))
@@ -113,39 +119,63 @@ st.pmplot(['x','y','z','var2'],function=func,plottitle = "Ex 8 - AIC Analysis")
 #
 # Basic spectral investigation 
 #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!! TODO: Develop these functions
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 st.spectrogram('x')
 #st.powerspectrum('x')
 
 #
 # Auxiliary data
 #
-logging.info("----- Now starting Example 9 -----")
-#rcs = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-RCS\RCS-T7-2012-02-01_00-00-00_c.txt'))
-#print "Plotting raw data:"
-#rcs.pmplot(['x','y','z','f'])
-#print "Applying Outlier removal:"
-#rcs = rcs.routlier(keys=['x','y','z'])
-#rcs = rcs.remove_flagged(key='x')
-#rcs = rcs.remove_flagged(key='y')
-#rcs = rcs.remove_flagged(key='z')
-#rcs = rcs.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-#rcs = rcs.smooth(['y'],window_len=21)
-#rcs.pmplot(['x','y','z','f'])
-#print "Header information RCS"
-#print rcs.header
-
-
+logging.info("----- Now starting Example 9 - Auxiliary Temperature data -----")
 # Temperature measurements and corrections to time columns
-#usb = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\T-Logs\Schacht*'))
-#usb = usb.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
-#usb = usb.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
-#func = usb.interpol(['t1','t2','var1'])
-#usb.pmplot(['t1','t2','var1'],function=func)
+#aux = pmRead(path_or_url=os.path.normpath('..\\dat\\auxiliary\\temp\\Schacht*'))
+#aux = aux.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
+#aux = aux.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
+#func = aux.interpol(['t1','t2','var1'])
+#aux.pmplot(['t1','t2','var1'],function=func,plottitle = "Ex 9 - Reading/Analyzing auxiliary data")
 
 # 
 # Merging data streams and filling of missing values
 #
-#st = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')) #,starttime='2011-3-1')
+# Using Aux data
+logging.info("----- Now starting Example 10a - Merging auxiliary T data and variometer data -----")
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'))
+#newst = mergeStreams(st,aux,keys=['t1','var1'],plottitle = "Ex 10a - Merge Vario and T data")
+#newst.pmwrite('..\\dat\\output\\cdf\\didd',filenameends='_didd_min',format_type='PYCDF')
+#newst.pmplot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous')
+#st.spectrogram('x')
+
+# Merging primary and secondary data
+logging.info("----- Now starting Example 10b - Filling missing values from secondary instruments -----")
+## Preparing DemoStream-1 with gaps
+st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
+st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
+st1mod = st1.remove_flagged()
+st1mod.pmplot(['x','f'],plottitle = "Ex 10b - Primary data set with some flagged records")
+## Preparing DemoStream-2
+st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*') ,starttime='2011-9-4',endtime='2011-9-5')
+st2 = st2.routlier()
+st2mod = st2.remove_flagged()
+st2mod = st2mod.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+st2mod.pmplot(['f'], plottitle = "Ex 10b - Secondary data set")
+logging.info("----- Example 10b - Determining average offset -----")
+## Determining average offset - median -> should be known
+stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream a gets modified - stdiff = st1mod...
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: Trim required - check why
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
+stdiff.pmplot(['f'], plottitle = "Ex 10b - differences")
+offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
+## Merging Stream 2 to stream 1 average offset - median
+st1new = st1.remove_flagged() # reload st1
+st1.pmplot(['x','f'],plottitle = "Ex 10b - Primary data set with some flagged records")
+mergest = mergeStreams(st1new,st2mod,keys=['f'],offset=offset)
+mergest.pmplot(['x','f'], plottitle = "Ex 10b - offsets")
+
+
 #newst = mergeStreams(st,usb,keys=['t1','var1'])
 #newst.pmplot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous')
 #st = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')) #,starttime='2011-3-1')
@@ -163,15 +193,11 @@ logging.info("----- Now starting Example 9 -----")
 # Further functions -- incomplete
 # ---------------
 #st = st.func_subtract(func)
-
-#st.powerspectrum('x')
-
 #st = st.differentiate()
 #col = st._get_column('dx')
 #st = st._put_column(col,'x')
 #st = st.integrate(keys=['x'])
 #func = st.interpol(['x','y','z'])
-
 #st.pmplot(['x','y','z','var2'],function=func)
 #st.pmplot(['f'])
 

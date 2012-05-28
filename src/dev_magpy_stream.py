@@ -126,6 +126,13 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
 
 
 def writeFormat(datastream, filename, format_type, **kwargs):
+    """
+    calls the format specific write functions
+    if the selceted dir is not existing, it is created
+    """
+    directory = os.path.dirname(filename)
+    if not os.path.exists(directory):
+        os.makedirs(os.path.normpath(directory))
     if (format_type == "IAGA"):
         return writeIAGA(datastream, filename, **kwargs)
     elif (format_type == "DIDD"):
@@ -1005,14 +1012,13 @@ def readPYCDF(filename, headonly=False, **kwargs):
     try:
         cdfformat = cdf_file.attrs['DataFormat']
     except:
-        print "No format specification in CDF - passing"
+        logging.info("No format specification in CDF - passing")
         cdfformat = 'Unknown'
         pass
 
     logging.info('--- File: %s Format: %s ' % (filename, cdfformat))
 
     for key in cdf_file:
-        print key
         # first get time or epoch column
         lst = cdf_file[key]
         if key == 'time' or key == 'Epoch':
@@ -1022,7 +1028,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if str(cdfformat) == 'MagPyCDF':
                     row.time = date2num(elem)                  
                 else:
-                    row.time = date2num(elem)+730485.0 # DTU MATLAB time
+                    row.time = elem+730485.0 # DTU MATLAB time
                 stream.add(row)
         elif key == 'HNvar' or key == 'x':
             x = lst[...]
@@ -1799,12 +1805,19 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
     2. fill gaps in stream_a data with stream_b data without replacing
     - extend = true => any existing date which is not present in stream_a will be filled by stream_b
-    
+
+    keywords:
+    keys
+    extend: time range of stream b is eventually added to stream a
+    offset: offset is added to stream b values 
     """
     keys = kwargs.get('keys')
     extend = kwargs.get('extend')
+    offset = kwargs.get('offset')
     if not keys:
         keys = KEYLIST[1:15]
+    if not offset:
+        offset = 0
    
     logging.info('--- Start mergings at %s ' % str(datetime.now()))
 
@@ -1814,6 +1827,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
     # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')
+    timea = stream_a._maskNAN(timea)
 
     if extend:
         for elem in stream_b:
@@ -1824,6 +1838,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         # interploate stream_b
         sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
         timeb = sb._get_column('time')
+        timeb = sb._maskNAN(timeb)
 
         function = sb.interpol(keys)
 
@@ -1843,7 +1858,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                     if fkey in function[0] and (isnan(keyval) or not stream_a._is_number(keyval)):
                         newval = function[0][fkey](functime)
                         #print 'stream_a['+str(pos)+'].'+key+' = newval'
-                        exec('stream_a['+str(pos)+'].'+key+' = float(newval)')
+                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
                         #print "Added %f to column %s at time %s" % (newval, key, num2date(ta))
 
     logging.info('--- Mergings finished at %s ' % str(datetime.now()))
@@ -1870,12 +1885,17 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     headera = stream_a.header
     headerb = stream_b.header
 
+    newst = DataStream()
+
     # take stream_b data and fine nearest element in time from stream_a
     timea = stream_a._get_column('time')
     #timeb = stream_b._get_column('time')
     # interploate stream_b
+    timea = stream_a._maskNAN(timea)
+
     sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
     timeb = sb._get_column('time')
+    timeb = stream_b._maskNAN(timeb)
 
     function = sb.interpol(keys)
 
@@ -1885,8 +1905,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         pos = foundina[1]
         ta = foundina[0]
         if (ta > taprev) and (np.min(timeb) < ta < np.max(timeb)):
-            taprev = ta
             functime = (ta-function[1])/(function[2]-function[1])
+            taprev = ta
             for key in keys:
                 if not key in KEYLIST[1:15]:
                     raise ValueError, "Column key not valid"
@@ -3114,6 +3134,7 @@ class DataStream(object):
         plottitle = kwargs.get('plottitle')
         colorlist = kwargs.get('colorlist')
         errorbar = kwargs.get('errorbar')
+        padding = kwargs.get('padding') # needs to be incorporated
         symbollist = kwargs.get('symbollist')
         plottype = kwargs.get('plottype')
         symbol_func = kwargs.get('symbol_func')
@@ -3605,9 +3626,10 @@ class DataStream(object):
                 raise TypeError
             """
             for idx, elem in enumerate(self):
-                if num2date(elem.time).replace(tzinfo=None) > starttime:
-                    stval = idx-1
-                    break
+                if not isnan(elem.time):
+                    if num2date(elem.time).replace(tzinfo=None) > starttime:
+                        stval = idx-1
+                        break
             if stval < 0:
                 stval = 0
             self.container = self.container[stval:]
@@ -3632,9 +3654,10 @@ class DataStream(object):
             """
             edval = len(self)
             for idx, elem in enumerate(self):
-                if num2date(elem.time).replace(tzinfo=None) > endtime:
-                    edval = idx-1
-                    break
+                if not isnan(elem.time):
+                    if num2date(elem.time).replace(tzinfo=None) > endtime:
+                        edval = idx-1
+                        break
             self.container = self.container[:edval]
 
         return DataStream(self.container,self.header)
