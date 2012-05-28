@@ -7,7 +7,6 @@ Version 1.0 (from the 22.05.2012)
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-
 from dev_magpy_stream import *
 
 #
@@ -80,11 +79,12 @@ logging.info("----- Now starting Example 5 -----")
 # !!! TODO: flagging of f also removes timestamps (set to nan) and thus other components
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 logging.info("----- Now starting Example 6 - Flagging -----")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
-#st = st.flag_stream('f',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
-#stmod = st.remove_flagged()
+st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
+st = st.flag_stream('x',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
+stmod = st.remove_flagged()
 #stmod = stmod.get_gaps(gapvariable=True)
-#stmod.pmplot(['f','var2'])
+stmod.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
+stmod.pmplot(['x'],plottitle = "Ex 6 - Flagging")
 
 #
 # Smoothing and interpolating data
@@ -122,44 +122,45 @@ st.pmplot(['x','y','z','var2'],function=func,plottitle = "Ex 8 - AIC Analysis")
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !!! TODO: Develop these functions
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+logging.info("----- Now starting Example 9 - Storm analysis -----")
 st.spectrogram('x')
 #st.powerspectrum('x')
 
 #
 # Auxiliary data
 #
-logging.info("----- Now starting Example 9 - Auxiliary Temperature data -----")
+logging.info("----- Now starting Example 10 - Auxiliary Temperature data -----")
 # Temperature measurements and corrections to time columns
 #aux = pmRead(path_or_url=os.path.normpath('..\\dat\\auxiliary\\temp\\Schacht*'))
 #aux = aux.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
 #aux = aux.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
 #func = aux.interpol(['t1','t2','var1'])
-#aux.pmplot(['t1','t2','var1'],function=func,plottitle = "Ex 9 - Reading/Analyzing auxiliary data")
+#aux.pmplot(['t1','t2','var1'],function=func,plottitle = "Ex 10 - Reading/Analyzing auxiliary data")
 
 # 
 # Merging data streams and filling of missing values
 #
 # Using Aux data
-logging.info("----- Now starting Example 10a - Merging auxiliary T data and variometer data -----")
+logging.info("----- Now starting Example 11a - Merging auxiliary T data and variometer data -----")
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'))
-#newst = mergeStreams(st,aux,keys=['t1','var1'],plottitle = "Ex 10a - Merge Vario and T data")
+#newst = mergeStreams(st,aux,keys=['t1','var1'],plottitle = "Ex 11a - Merge Vario and T data")
 #newst.pmwrite('..\\dat\\output\\cdf\\didd',filenameends='_didd_min',format_type='PYCDF')
 #newst.pmplot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous')
 #st.spectrogram('x')
 
 # Merging primary and secondary data
-logging.info("----- Now starting Example 10b - Filling missing values from secondary instruments -----")
+logging.info("----- Now starting Example 11b - Filling missing values from secondary instruments -----")
 ## Preparing DemoStream-1 with gaps
 st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
 st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
 st1mod = st1.remove_flagged()
-st1mod.pmplot(['x','f'],plottitle = "Ex 10b - Primary data set with some flagged records")
+st1mod.pmplot(['x','f'],plottitle = "Ex 11b - Primary data set with some flagged records")
 ## Preparing DemoStream-2
 st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*') ,starttime='2011-9-4',endtime='2011-9-5')
 st2 = st2.routlier()
 st2mod = st2.remove_flagged()
 st2mod = st2mod.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-st2mod.pmplot(['f'], plottitle = "Ex 10b - Secondary data set")
+st2mod.pmplot(['f'], plottitle = "Ex 11b - Secondary data set")
 logging.info("----- Example 10b - Determining average offset -----")
 ## Determining average offset - median -> should be known
 stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream a gets modified - stdiff = st1mod...
@@ -167,39 +168,28 @@ stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream a gets modified - st
 ## ToDo: Trim required - check why
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
-stdiff.pmplot(['f'], plottitle = "Ex 10b - differences")
+stdiff.pmplot(['f'], plottitle = "Ex 11b - differences")
 offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
 ## Merging Stream 2 to stream 1 average offset - median
 st1new = st1.remove_flagged() # reload st1
 st1.pmplot(['x','f'],plottitle = "Ex 10b - Primary data set with some flagged records")
 mergest = mergeStreams(st1new,st2mod,keys=['f'],offset=offset)
 mergest.pmplot(['x','f'], plottitle = "Ex 10b - offsets")
-
-
-#newst = mergeStreams(st,usb,keys=['t1','var1'])
-#newst.pmplot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous')
-#st = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')) #,starttime='2011-3-1')
-#print "Lenght before filling gaps"
-#print len(st)
-#st.pmplot(['x','y','z'])
-#st = st.get_gaps(gapvariable=True)
-#print "Lenght after filling gaps"
-#print len(st)
-#st.pmplot(['x','y','z','var2'])
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: Correct flagging before continuing here
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
+# Absolute Values
+# ----------------------------------------
+from dev_magpy_absolutes import *
 
-# Further functions -- incomplete
-# ---------------
-#st = st.func_subtract(func)
-#st = st.differentiate()
-#col = st._get_column('dx')
-#st = st._put_column(col,'x')
-#st = st.integrate(keys=['x'])
-#func = st.interpol(['x','y','z'])
-#st.pmplot(['x','y','z','var2'],function=func)
-#st.pmplot(['f'])
+# 
+# Absolute Values
+#
+# Using Aux data
+logging.info("----- Now starting Example 12 - Analyzing Absolute measurements -----")
 
 #
 # Absolute Values
