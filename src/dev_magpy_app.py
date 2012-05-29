@@ -120,7 +120,7 @@ logging.info("----- Now starting Example 9 - Spectral analysis -----")
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ## ToDo: Improve the functions, include PSD
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-st.spectrogram('x')
+st.spectrogram('x',dbscale=True)
 #st.powerspectrum('x')
 
 #
@@ -189,10 +189,10 @@ from dev_magpy_absolutes import *
 #
 # Analyze Absolute measurments
 logging.info("----- Now starting Example 12 - Analyzing Absolute measurements -----")
-abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
-print abso
-abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+#abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
+abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'))
 abso.pmplot(['x','y','z'])
+abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
 
 #
 # Absolute Values

@@ -3301,13 +3301,13 @@ class DataStream(object):
         if not filenamebegins:
             filenamebegins = 'Test-'
         if not filenameends:
-            filenameends = '.txt'
+            # Extension for cfd files is automatically attached
+            if format_type == 'PYCDF':
+                filenameends = ''
+            else:
+                filenameends = '.txt'
         if not mode:
             mode= 'overwrite'
-
-        # Extension for cfd files is automatically attached
-        if format_type == 'PYCDF':
-            filenameends = ''
 
         # divide stream in parts according to coverage and same them
         newst = DataStream()
@@ -3324,6 +3324,7 @@ class DataStream(object):
                 endtime = endtime + coverage
         else:
             filename = filenamebegins + filenameends
+            print "Got here: %s" % filename
             writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode)
             
 
@@ -3581,9 +3582,13 @@ class DataStream(object):
         return self
 
 
-    def spectrogram(self, keys, **kwargs):
+    def spectrogram(self, keys, per_lap=0.9, wlen=None, log=False, 
+                    outfile=None, fmt=None, axes=None, dbscale=False, 
+                    mult=8.0, cmap=None, zorder=None, title=None, show=True, 
+                    sphinx=False, clip=[0.0, 1.0], **kwargs):
         """
         Creates a spectrogram plot of selected keys.
+        Parameter description at function obspyspectrogram
 
         keywords:
         samp_rate_multiplicator
@@ -3600,7 +3605,10 @@ class DataStream(object):
             val = self._maskNAN(val)
             dt = self.get_sampling_period()*(samp_rate_multiplicator) # hours
             Fs = float(1.0/dt)
-            self.obspyspectrogram(val,Fs,log=True,dbscale=True)
+            self.obspyspectrogram(val,Fs, per_lap=0.9, wlen=wlen, log=log, 
+                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale, 
+                    mult=mult, cmap=cmap, zorder=zorder, title=title, show=show, 
+                    sphinx=sphinx, clip=clip)
 
 
     def powerspectrum(self, key):

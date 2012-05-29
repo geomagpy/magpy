@@ -87,19 +87,28 @@ Approximating functions and fitting:
 \subsubsection{Flagging data}
 
 \begin{verbatim}
-    st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
-    st = st.routlier()
-    st = st.flag_stream('f',3,"Moaing",datetime(2010,7,18,12,0,0,0),datetime(2010,7,18,13,0,0,0))
-    st = st.remove_flagged()
-    st.pmplot(['f'],function=func)
-    st = st.get_gaps(gapvariable=True)
-    st.pmplot(['f','var2'])
+st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
+st = st.routlier()
+st = st.flag_stream('f',3,"Moaing",datetime(2010,7,18,12,0,0,0),datetime(2010,7,18,13,0,0,0))
+st = st.remove_flagged()
+st.pmplot(['f'],function=func)
+st = st.get_gaps(gapvariable=True)
+st.pmplot(['f','var2'])
 \end{verbatim}
 
 
 \subsection{DI and Baselines}
 
 \subsubsection{DI analysis}
+
+\begin{verbatim}
+abso = analyzeAbsFiles(path_or_url=source, alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
+abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+abso.pmplot(['x','y','z'])
+\end{verbatim}
+The analyzeAbsFiles function reads DI files located in directory source (e.g. os.path.normpath('..\\dat\\absolutes\\raw')). For calculation, the variometer data in variopath is used and if no scalar values are provided along with the DI file, scalar data from scalarpath is used. If the analysis is successful, DI files are moved to the archive directory. Alpha and beta describe the rotation angles. Alpha is the horizontal angle. In case of an HDZ oriented instrument, alpha corresponds to D at the time of instrument orientation. Beta describes deviations from horizontal configurations and is usually zero in case of suspended systems.
+
+
 
 \subsubsection{Baseline calculation}
 
