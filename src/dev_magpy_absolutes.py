@@ -211,7 +211,7 @@ class AbsoluteData(object):
     data is organized in columns
 
     keys are column identifier:
-    key in keys: see KEYLIST
+    key in keys: see ABSKEYLIST
 
     The following application methods are provided:
     - stream.calcabs(key) -- returns stream (with !var2! filled with aic values)
@@ -951,8 +951,8 @@ def analyzeAbsFiles(**kwargs):
             movetoarchive = False
         else:
             movetoarchive = True # this variable will be set false in case of warnings
-        logging.info('Analyzing absolute file: %s' % fi)
         stream = absRead(path_or_url=fi)
+        logging.info('Analyzing absolute file: %s of length %d' % (fi,len(stream)))
         if len(stream) > 0:
             mint = stream._get_min('time')
             maxt = stream._get_max('time')
@@ -974,7 +974,7 @@ def analyzeAbsFiles(**kwargs):
             fcol = stream._get_column('f')
             if not len(fcol) > 0 and not scalarpath:
                 movetoarchive = False
-                logging.warning('%s : f values are required for analysis -- aborting' % fi)
+                logging.error('%s : f values are required for analysis -- aborting' % fi)
                 break
             if scalarpath:
                 # scalar instrument and dF are then required
@@ -1057,10 +1057,10 @@ def analyzeAbsFiles(**kwargs):
                 st.header['col-z'] = 'z'
                 st.header['unit-col-z'] = 'nT'
 
-            # only write reults if no warnings were issued:
-            if movetoarchive:
-                newst.add(result)
-                st.extend(newst, st.header)
+            # only write results if no warnings were issued:
+            #if movetoarchive:
+            newst.add(result)
+            st.extend(newst, st.header)
         else: # len(stream) <= 0
             movetoarchive = False
             logging.warning('%s: File or data format problem - please check' % fi)

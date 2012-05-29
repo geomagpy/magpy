@@ -3,6 +3,8 @@
 
 \section{Basic Concept}
 
+The program is loosely related to the ObsPy package. Some functions are (almost) identically taken from this package. Among them are the read functions and the spectrogram.
+   
 \subsection{DI measurements}
 
 \subsection{Variometer and Scalar measurements}
@@ -104,13 +106,29 @@ st.pmplot(['f','var2'])
 \begin{verbatim}
 abso = analyzeAbsFiles(path_or_url=source, alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
 abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
-abso.pmplot(['x','y','z'])
+func = abso.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
+abso.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 12 - Analysis of absolute values and spline fit")
 \end{verbatim}
 The analyzeAbsFiles function reads DI files located in directory source (e.g. os.path.normpath('..\\dat\\absolutes\\raw')). For calculation, the variometer data in variopath is used and if no scalar values are provided along with the DI file, scalar data from scalarpath is used. If the analysis is successful, DI files are moved to the archive directory. Alpha and beta describe the rotation angles. Alpha is the horizontal angle. In case of an HDZ oriented instrument, alpha corresponds to D at the time of instrument orientation. Beta describes deviations from horizontal configurations and is usually zero in case of suspended systems.
 
+The analyzeAbsFiles function is located in the absolutes package and reads special DI file formats. The output of the function is a stream class of the stream package, and thus can be treated/visualized using any basic stream analysis routine as described in table xxx. 
+
+For the write command the following options are now used: Coverage$=$all saves all data to one file and does not include any date in the filename. This requires option filenamebegins to be set, which determines the actual file name. Mode$=$replace indicates that any already existing input in an existing summary file at the same save-location will be replaced by new analyzes. All others remain untouched.
 
 
 \subsubsection{Baseline calculation}
+\begin{verbatim}
+abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\output\\absolutes\\absolutes_lemi.txt'))
+func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
+abslemi.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 13 - Baseline values and spline fit")
+lemi = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-1',endtime='2011-9-30')
+lemi = lemi.rotation(alpha=3.3,beta=0.0)
+lemi = lemi.baseline(abslemi,knotstep=0.05,plotbaseline=True)
+lemi.pmplot(['x','y','z'])
+\end{verbatim}
+
+Baseline correction is done by the baseline function. Reading the file containing absolute data corrected with the variometer is done in the first line. The fields dx, dy, and dz contain the baseline values for the specified variometer. As shown above a spline fit can be easily calculated for the absolute components. Then the variometer data is loaded and rotated according to its orientation matrix (HDZ here). The baseline correction is then done using the baseline function.
+
 
 \subsubsection{Baseline stability}
 

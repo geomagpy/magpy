@@ -1781,7 +1781,7 @@ def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
     # file format should be known by now
-    logging.info('Appending data - dataformat: %s' % format_type)
+    #logging.info('Appending data - dataformat: %s' % format_type)
     #print format_type
     """
     try:
@@ -2610,9 +2610,13 @@ class DataStream(object):
             if len(val)>1 and fitfunc == 'spline':
                 try:
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
+                    if len(knots) > len(val):
+                        knotstep = knotstep*4
+                        knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
+                        logging.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
                     ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
                 except:
-                    logging.warning('Value error in fit function - likely reason: no valid numbers')
+                    logging.error('Value error in fit function - likely reason: no valid numbers')
                     raise ValueError, "Value error in fit function"
                     return
                 f_fit = interpolate.splev(x,ti)
@@ -2766,6 +2770,7 @@ class DataStream(object):
                     for k in range(lowlim,uplim):
                         nor = normvec[k-lowlim]/normcoeff
                         for el in KEYLIST[:15]:
+                            #if not isnan(eval('starray[k].'+el)):
                             exec('col'+el+'.append(starray[k].'+el+'*nor)')
                     # mask NaNs of the columns
                     exec('col'+el+' = self._maskNAN(col'+el+')')
@@ -2775,6 +2780,7 @@ class DataStream(object):
                 elif filter_type == "linear" or filter_type == "fmi":
                     for k in range(lowlim,uplim):
                         for el in KEYLIST[:15]:
+                            #if not isnan(eval('starray[k].'+el)):
                             exec('col'+el+'.append(starray[k].'+el+')')
                     # mask NaNs of the columns
                     exec('col'+el+' = self._maskNAN(col'+el+')')
@@ -3324,7 +3330,6 @@ class DataStream(object):
                 endtime = endtime + coverage
         else:
             filename = filenamebegins + filenameends
-            print "Got here: %s" % filename
             writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode)
             
 

@@ -34,15 +34,17 @@ logging.info("----- Now starting Example 2 -----")
 # Reading and writing various formats
 #
 logging.info("----- Now starting Example 3 -----")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath(r'..\\dat\\didd\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 #st.pmplot(['x','y','z','f'],plottitle = "Ex 3 - Formats - didd")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath(r'..\\dat\\lemi025\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 #st.pmplot(['x','y','z'],plottitle = "Ex 3 - Formats - lemi")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\iaga02\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath(r'..\\dat\\iaga02\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 #st.pmplot(['x','y','z'],plottitle = "Ex 3 - Formats - iaga02")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath(r'..\\dat\\dtu\\FHB*.sec'))
+#st.pmplot(['x','y','z'],plottitle = "Ex 3 - Formats - DTU ")
+#st = pmRead(path_or_url=os.path.normpath(r'..\\dat\\output\\cdf\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 #st.pmplot(['x','y','z','t1'],plottitle = "Ex 3 - Formats - gdas-bgs")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath(r'..\\dat\\pmag\\*'),starttime='2011-09-8',endtime=datetime(2011,9,9))
 #st.pmplot(['f'],plottitle = "Ex 3 - Formats - pmag")
 #st.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
 
@@ -168,7 +170,7 @@ stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream_a gets modified - st
 ## ToDo: Trim required - check why
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
-stdiff.pmplot(['f'], plottitle = "Ex 11b - differences")
+stdiff.pmplot(['f'], plottitle = "Ex 11b - Differences of both scalar instruments")
 offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
 ## Step D) Merging f column of stream 2 to stream 1 (reloaded) with average offset - median
 st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
@@ -176,7 +178,7 @@ st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0
 st1mod = st1.remove_flagged()
 mergest = mergeStreams(st1mod,st2mod,keys=['f'],offset=offset,comment='Pmag')
 mergest.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
-mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged stream")
+mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged F values in stream")
 
 
 
@@ -189,31 +191,72 @@ from dev_magpy_absolutes import *
 #
 # Analyze Absolute measurments
 logging.info("----- Now starting Example 12 - Analyzing Absolute measurements -----")
-#abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
-abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'))
-abso.pmplot(['x','y','z'])
+abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.3, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'))
 abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+abso.pmplot(['x','y','z'],plottitle = "Ex 12 - Analysis of absolute values")
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: Abs - vario and not vario -Abs
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# Baseline calculation and correction
+logging.info("----- Now starting Example 13 - Obtaining baselines -----")
+abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\output\\absolutes\\absolutes_lemi.txt'))
+func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
+abslemi.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 13 - Baseline values and spline fit")
+lemi = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-1',endtime='2011-9-30')
+lemi = lemi.rotation(alpha=3.3,beta=0.0)
+lemi = lemi.baseline(abslemi,knotstep=0.05,plotbaseline=True)
+lemi.pmplot(['x','y','z'])
+
 
 #
-# Absolute Values
+# An example for standard analysis
+#
+logging.info("----- Now starting Example 14 - Full example -----")
+# 1. Load variometer data
+# 2. Eventually Clean Data - Do flagging
+# 3. Eventually combine with auxiliary data
+# 4. Save modified variometer data
+# 5. Load scalar data
+# 6. Eventually Clean Data - Do flagging
+# 7. Eventually combine with auxiliary data
+# 9. Save eventually modified scalar data
+# 10. Anaylze absolute data with modified variometer and scalar data
+# 11. Calculate baseline and baseline correction
+# 12. Save corrected data
+# 13. Compare data sets (dF, different varios, etc)
+# 14. (Eventually merge data to fill gaps) hmmm....
+# 15. Apply filters to create min, hours, day, month files
+# 16. Do fancy analysis things (indicies, strom onsets, spectral, etc)
+
+
+#
+# Some Tests and ideas
+#
+# Stacking
+# --------------------------
+
+
+# Baseline Stability
+# --------------------------
+
+
+#
+# Getting orientation angles
+# --------------------------
+#Two approaches:
+# 1) using baselines
+# 2) using variometers, baselinecorrected, absolutes without variometer correction
 # ---------------
-#st = pmRead(path_or_url=os.path.normpath(r'e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*'),starttime='2011-9-1',endtime='2011-9-02')
-#st = pmRead(path_or_url=os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*'),starttime='2011-8-20',endtime='2011-8-21')
-#bas = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_didd.txt'))
-#bas.pmplot(['x','y','z'])
-#func = bas.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
-#bas.pmplot(['dx','dy','dz'],function=func)
+baslemi1 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_lemi_alpha3.3.txt'))
+baslemi2 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_didd.txt'))
+newst = subtractStreams(baslemi1,baslemi2,keys=['x','y','z'])
+newst = newst.trim(starttime=datetime(2010,7,10,00,02),endtime=datetime(2011,10,1,23,58))
+newst.pmplot(['x','y','z'])
 
-#st.pmplot(['x','y','z'])
-#st = st.baseline(bas,knotstep=0.05,plotbaseline=True)
-#st.pmplot(['x','y','z'])
-
-
-#stle = pmRead(path_or_url=os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*'),starttime='2011-8-20',endtime='2011-8-21')
-#basle = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_lemi.txt'))
-#stle = stle.baseline(basle,knotstep=0.05,plotbaseline=True)
-#stle.pmplot(['x','y','z'])
-
+testarray = np.array(baslemi1)
+print testarray[1][2]
+print testarray.ndim
 
 # Baseline Correction and RotationMatrix
 # ---------------
@@ -240,39 +283,5 @@ abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filena
 
 #newst.pmplot(['x','y','z'])
 
-# DTU data
-# ---------------
-#dtust = pmRead(path_or_url=os.path.normpath(r'g:\VirtualBox\Ny mappe\GDH4_20091215.cdf'))
-#st = pmRead(path_or_url=os.path.normpath(r'g:\VirtualBox\Ny mappe\FHB*.sec'))
-#st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-#st = st.aic_calc('x',timerange=timedelta(hours=1))
-#col = st._get_column('var2')
-#st = st._put_column(col,'y')
-#st = st.differentiate()
-#st.pmplot(['x','var2','dy'],symbollist = ['-','-','-'])
-#dtust = dtust.filtered(filter_type='linear',filter_width=timedelta(hours=1))
-#dtust.pmplot(['x','y','z'])
-
-# Comparison of baseline calculated with and without correct orientation of sensor
-# ---------------
-baslemi1 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_lemi_alpha3.3.txt'))
-baslemi2 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_didd.txt'))
-newst = subtractStreams(baslemi1,baslemi2,keys=['x','y','z'])
-newst = newst.trim(starttime=datetime(2010,7,10,00,02),endtime=datetime(2011,10,1,23,58))
-newst.pmplot(['x','y','z'])
-
-testarray = np.array(baslemi1)
-print testarray[1][2]
-print testarray.ndim
-# Testing new funcs
-#lemi = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\lemi\*'),starttime='2010-7-17',endtime='2010-7-18')
-#baslemi = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_lemi.txt'))
-#lemi = lemi.rotation(alpha=3.30,beta=-4.5)
-#lemi = lemi.baseline(baslemi,knotstep=0.05,plotbaseline=True)
-#lemi.pmplot(['x','y','z'])
 
 
-#st = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*'),starttime='2011-9-1',endtime='2011-9-30')
-#st.pmplot(['x','y','z'])
-#newst = subtractStreams(bas,st,keys=['x','y','z'])
-#newst.pmplot(['x','y','z'])
