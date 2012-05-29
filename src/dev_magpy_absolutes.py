@@ -702,9 +702,9 @@ class AbsoluteData(object):
             ystart = 0.0
 
         # Baselinevalues:
-        basex = scale_x*poslst[0].varx - xstart
-        basey = scale_y*poslst[0].vary - ystart
-        basez = scale_z*poslst[0].varz - zstart
+        basex = xstart - scale_x*poslst[0].varx
+        basey = ystart - scale_y*poslst[0].vary
+        basez = zstart - scale_z*poslst[0].varz
 
         # Putting data to linestruct:
         linestruct.x = inc
@@ -1196,9 +1196,9 @@ testpath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\
 archivepath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsArchive')
 summarypath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsTest')
 #summarypath = os.path.normpath(r'e:\leon\Observatory\Messdaten\Data-Magnetism\GmoPy\WIK\di\absolutes_didd.txt')
-#variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
-variopath = os.path.normpath(r'g:\Vario-Cobenzl\dIdD-System\LEMI\*')
-scalarpath = os.path.normpath(r'g:\Vario-Cobenzl\dIdD-System\*')
+variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
+#variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*')
+scalarpath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
 #variopath=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')
 #variopath=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\lemi\*')
 #variopath=os.path.normpath(r'e:\leon\Observatory\Messdaten\Data-Magnetism\gdas\rawdata\*')
@@ -1208,13 +1208,14 @@ if __name__ == '__main__':
     msg = PyMagLog()
     # getAbsFTP()
     #st = analyzeAbsFiles(path_or_url=testpath, variopath=variopath, scalarpath=variopath)
-    st = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
-    st.pmwrite(analysispath,coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+    st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=variopath, scalarpath=scalarpath)
+    #st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
+    st.pmwrite(analysispath,coverage='all',mode='replace',filenamebegins='absolutes_didd')
 
-    loglst = msg.combineWarnLog(msg.warnings,msg.logger)
-    print loglst
+    #loglst = msg.combineWarnLog(msg.warnings,msg.logger)
+    #print loglst
 
-    msg.sendLogByMail(loglst,user="roman_leonhardt",pwd="2kippen")
+    #msg.sendLogByMail(loglst,user="roman_leonhardt",pwd="2kippen")
 
     #newst = pmRead(path_or_url=summarypath)
     #newst.pmplot(['x','y','z'])

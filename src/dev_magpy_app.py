@@ -171,6 +171,7 @@ stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream_a gets modified - st
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
 stdiff.pmplot(['f'], plottitle = "Ex 11b - Differences of both scalar instruments")
+stdiff.spectrogram('f',dbscale=True)
 offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
 ## Step D) Merging f column of stream 2 to stream 1 (reloaded) with average offset - median
 st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
@@ -194,19 +195,16 @@ logging.info("----- Now starting Example 12 - Analyzing Absolute measurements --
 abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.3, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'))
 abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
 abso.pmplot(['x','y','z'],plottitle = "Ex 12 - Analysis of absolute values")
-## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-## ToDo: Abs - vario and not vario -Abs
-## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Baseline calculation and correction
 logging.info("----- Now starting Example 13 - Obtaining baselines -----")
-abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\output\\absolutes\\absolutes_lemi.txt'))
+abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\absolutes\\absolutes_lemi.txt'))
 func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
 abslemi.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 13 - Baseline values and spline fit")
 lemi = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-1',endtime='2011-9-30')
 lemi = lemi.rotation(alpha=3.3,beta=0.0)
 lemi = lemi.baseline(abslemi,knotstep=0.05,plotbaseline=True)
-lemi.pmplot(['x','y','z'])
+lemi.pmplot(['x','y','z'], plottitle = "Ex 13 - Baseline corrected data")
 
 
 #
@@ -220,8 +218,9 @@ logging.info("----- Now starting Example 14 - Full example -----")
 # 5. Load scalar data
 # 6. Eventually Clean Data - Do flagging
 # 7. Eventually combine with auxiliary data
-# 9. Save eventually modified scalar data
-# 10. Anaylze absolute data with modified variometer and scalar data
+# 8. Save eventually modified scalar data
+# 9. Eventually merge variometer and scalar data (offsets?)
+# 10. Anaylze absolute data with modified variometer and scalar data (dont forget to remove flagged data first)
 # 11. Calculate baseline and baseline correction
 # 12. Save corrected data
 # 13. Compare data sets (dF, different varios, etc)
@@ -248,15 +247,15 @@ logging.info("----- Now starting Example 14 - Full example -----")
 # 1) using baselines
 # 2) using variometers, baselinecorrected, absolutes without variometer correction
 # ---------------
-baslemi1 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_lemi_alpha3.3.txt'))
-baslemi2 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_didd.txt'))
-newst = subtractStreams(baslemi1,baslemi2,keys=['x','y','z'])
-newst = newst.trim(starttime=datetime(2010,7,10,00,02),endtime=datetime(2011,10,1,23,58))
-newst.pmplot(['x','y','z'])
+#baslemi1 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_lemi_alpha3.3.txt'))
+#baslemi2 = pmRead(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_didd.txt'))
+#newst = subtractStreams(baslemi1,baslemi2,keys=['x','y','z'])
+#newst = newst.trim(starttime=datetime(2010,7,10,00,02),endtime=datetime(2011,10,1,23,58))
+#newst.pmplot(['x','y','z'])
 
-testarray = np.array(baslemi1)
-print testarray[1][2]
-print testarray.ndim
+#testarray = np.array(baslemi1)
+#print testarray[1][2]
+#print testarray.ndim
 
 # Baseline Correction and RotationMatrix
 # ---------------

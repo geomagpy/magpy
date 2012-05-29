@@ -2497,7 +2497,7 @@ class DataStream(object):
             bas.pmplot(['x','y','z'],symbollist = ['o','o','o'],function=func)
 
         # subtract baseline
-        self = self.func_subtract(func)
+        self = self.func_subtract(func, order=1)
 
         logging.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
@@ -2904,8 +2904,15 @@ class DataStream(object):
         Subtract a function from the selected values of the data stream -> e.g. obtain Residuals
         Optional:
         keys (default = 'x','y','z')
+        :type order int
+        :param order : 0 -> stream - function; 1 -> function - stream
         """
         keys = kwargs.get('keys')
+        order = kwargs.get('order')
+
+        if not order:
+            order = 0
+        
         if not keys:
             keys = ['x','y','z']
 
@@ -2920,7 +2927,10 @@ class DataStream(object):
                     exec('keyval = elem.'+key)
                     if fkey in function[0] and not isnan(keyval):
                         try:
-                            newval = keyval - function[0][fkey](functime)
+                            if order == 0:
+                                newval = keyval - function[0][fkey](functime)
+                            else:
+                                newval = function[0][fkey](functime) - keyval                              
                         except:
                             newval = float('nan')
                         exec('elem.'+key+' = newval')
@@ -3902,7 +3912,7 @@ class DataStream(object):
 
 
 if __name__ == '__main__':
-    print "Starting the PyMag program:"
+    print "Starting a Test run of the MagPy program:"
     
 
     # Environmental Data
