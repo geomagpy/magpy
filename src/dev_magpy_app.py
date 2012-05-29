@@ -72,19 +72,16 @@ logging.info("----- Now starting Example 5 -----")
 #stmod.pmplot(['f'],plottitle = "Ex 5 - Outliers removed")
 
 #
-# Flagging - not working correctly yet - check other variables 
+# Flagging - remove_flagged not working correctly yet - check other variables 
 #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# !!! TODO: check variables etc
-# !!! TODO: flagging of f also removes timestamps (set to nan) and thus other components
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 logging.info("----- Now starting Example 6 - Flagging -----")
-st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
-st = st.flag_stream('x',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
-stmod = st.remove_flagged()
-#stmod = stmod.get_gaps(gapvariable=True)
-stmod.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
-stmod.pmplot(['x'],plottitle = "Ex 6 - Flagging")
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
+#st = st.flag_stream('x',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
+#st = st.flag_stream('y',3,"Auto",datetime(2011,9,8,10,0,0,0),datetime(2011,9,8,13,0,0,0))
+#stmod = st.remove_flagged()
+#stmod = stmod.get_gaps(key='y')
+#stmod.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
+#stmod.pmplot(['x','y','z','var3'],plottitle = "Ex 6 - Flagging")
 
 #
 # Smoothing and interpolating data
@@ -119,10 +116,10 @@ st.pmplot(['x','y','z','var2'],function=func,plottitle = "Ex 8 - AIC Analysis")
 #
 # Basic spectral investigation 
 #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# !!! TODO: Develop these functions
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-logging.info("----- Now starting Example 9 - Storm analysis -----")
+logging.info("----- Now starting Example 9 - Spectral analysis -----")
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: Improve the functions, include PSD
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 st.spectrogram('x')
 #st.powerspectrum('x')
 
@@ -150,34 +147,36 @@ logging.info("----- Now starting Example 11a - Merging auxiliary T data and vari
 
 # Merging primary and secondary data
 logging.info("----- Now starting Example 11b - Filling missing values from secondary instruments -----")
-## Preparing DemoStream-1 with gaps
+## Step A) Preparing DemoStream-1 with gaps
 st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
 st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
 st1mod = st1.remove_flagged()
 st1mod.pmplot(['x','f'],plottitle = "Ex 11b - Primary data set with some flagged records")
-## Preparing DemoStream-2
+## Step B) Preparing DemoStream-2
 st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*') ,starttime='2011-9-4',endtime='2011-9-5')
 st2 = st2.routlier()
 st2mod = st2.remove_flagged()
 st2mod = st2mod.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: Check filtering with nan values
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 st2mod.pmplot(['f'], plottitle = "Ex 11b - Secondary data set")
 logging.info("----- Example 10b - Determining average offset -----")
-## Determining average offset - median -> should be known
-stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream a gets modified - stdiff = st1mod...
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## Step C) Determining average offset - median -> should be known
+stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ## ToDo: Trim required - check why
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
 stdiff.pmplot(['f'], plottitle = "Ex 11b - differences")
 offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
-## Merging Stream 2 to stream 1 average offset - median
-st1new = st1.remove_flagged() # reload st1
-st1.pmplot(['x','f'],plottitle = "Ex 10b - Primary data set with some flagged records")
-mergest = mergeStreams(st1new,st2mod,keys=['f'],offset=offset)
-mergest.pmplot(['x','f'], plottitle = "Ex 10b - offsets")
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-## ToDo: Correct flagging before continuing here
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## Step D) Merging f column of stream 2 to stream 1 (reloaded) with average offset - median
+st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
+st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
+st1mod = st1.remove_flagged()
+mergest = mergeStreams(st1mod,st2mod,keys=['f'],offset=offset,comment='Pmag')
+mergest.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
+mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged stream")
 
 
 
@@ -188,8 +187,12 @@ from dev_magpy_absolutes import *
 # 
 # Absolute Values
 #
-# Using Aux data
+# Analyze Absolute measurments
 logging.info("----- Now starting Example 12 - Analyzing Absolute measurements -----")
+abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
+print abso
+abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+abso.pmplot(['x','y','z'])
 
 #
 # Absolute Values

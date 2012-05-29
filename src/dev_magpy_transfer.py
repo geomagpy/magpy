@@ -11,7 +11,7 @@ from pylab import *
 from datetime import datetime
 from matplotlib.dates import date2num, num2date
 
-from dev_pymag_stream import PyMagLog
+from dev_magpy_stream import PyMagLog
 
 # Define defaults:
 
