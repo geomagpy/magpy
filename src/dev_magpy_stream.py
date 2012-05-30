@@ -1504,6 +1504,7 @@ class PyMagLog(object):
 class ColStruct(object):
     def __init__(self,length, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='000000000-', comment='-', typ="xyzf", sectime=float('nan')):
         """
+        Not used so far. Maybe useful for 
         Speed optimization:
         Change the whole thing to column operations
 
@@ -1870,13 +1871,15 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         newval = function[0][fkey](functime)
                         exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
                         exec('stream_a['+str(pos)+'].comment = comment')
-                        ## Put flag 4 into the merged data 
+                        ## Put flag 4 into the merged data if keyposition <= 8
                         flagposlst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-                        flagpos = flagposlst[0]
-                        fllist = list(stream_a[pos].flag)
-                        fllist[flagpos] = '4'
-                        stream_a[pos].flag=''.join(fllist)
-                        
+                        try:
+                            flagpos = flagposlst[0]
+                            fllist = list(stream_a[pos].flag)
+                            fllist[flagpos] = '4'
+                            stream_a[pos].flag=''.join(fllist)
+                        except:
+                            pass
 
     logging.info('--- Mergings finished at %s ' % str(datetime.now()))
 
@@ -1937,6 +1940,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     return DataStream(stream_a, headera)      
 
+
+def stackStreams(stream_a, stream_b, **kwargs):
+    """
+    stack the contents of two data stream:
+    """
+    pass
     
 class DataStream(object):
     """
@@ -2158,47 +2167,93 @@ class DataStream(object):
         """
         Calculates the k value according to the Bartels scale
         Requires alpha to be set correctly (default: alpha = 1 valid for Niemegk)
-        Range nT 0 5 10 20 40 70 120 200 330 500
-        KValue   0 1  2  3  4  5   6   7   8   9
+        default Range nT 0 5 10 20 40 70 120 200 330 500
+        default KValue   0 1  2  3  4  5   6   7   8   9
         key: defines the column to write k values (default is t2)
         """
 
         key = kwargs.get('key')
+        put2key = kwargs.get('put2key')
+        puthead = kwargs.get('puthead')
+        putunit = kwargs.get('putunit')
         alpha = kwargs.get('alpha')
+        scale = kwargs.get('scale')
         if not alpha:
             alpha = 1
         if not key:
-            key = 't2'
+            key = 'dx'
+        if not put2key:
+            put2key = 't2'
+        if not scale:
+            scale = [5,10,20,40,70,120,200,330,500] # Bartles scale
 
         k = 9
         outstream = DataStream()
         for elem in self:
-            row = LineStruct()
-            for key in KEYLIST:
-                exec('row.'+key+' = elem.'+key)
-            dH = elem.dx
-            if dH < 500*alpha:
+            exec('dH = elem.'+key)
+            if dH < scale[8]*alpha:
                 k = 8
-            if dH < 330*alpha:
+            if dH < scale[7]*alpha:
                 k = 7
-            if dH < 200*alpha:
+            if dH < scale[6]*alpha:
                 k = 6
-            if dH < 120*alpha:
+            if dH < scale[5]*alpha:
                 k = 5
-            if dH < 70*alpha:
+            if dH < scale[4]*alpha:
                 k = 4
-            if dH < 40*alpha:
+            if dH < scale[3]*alpha:
                 k = 3
-            if dH < 20*alpha:
+            if dH < scale[2]*alpha:
                 k = 2
-            if dH < 10*alpha:
+            if dH < scale[1]*alpha:
                 k = 1
-            if dH < 5*alpha:
+            if dH < scale[0]*alpha:
                 k = 0
-            row.t2 = k
-            outstream.add(row)
+            exec('elem.'+put2key+' = k')
+            outstream.add(elem)
 
         return outstream
+
+
+    def _get_k_float(self, value, **kwargs):
+        """
+        Like _get_k, but for testing single values and not full stream keys (used in filtered function)
+        Calculates the k value according to the Bartels scale
+        Requires alpha to be set correctly (default: alpha = 1 valid for Niemegk)
+        default Range nT 0 5 10 20 40 70 120 200 330 500
+        default KValue   0 1  2  3  4  5   6   7   8   9
+        """
+
+        puthead = kwargs.get('puthead')
+        putunit = kwargs.get('putunit')
+        alpha = kwargs.get('alpha')
+        scale = kwargs.get('scale')
+        if not alpha:
+            alpha = 1
+        if not scale:
+            scale = [5,10,20,40,70,120,200,330,500] # Bartles scale
+
+        k = 9
+        if value < scale[8]*alpha:
+            k = 8
+        if value < scale[7]*alpha:
+            k = 7
+        if value < scale[6]*alpha:
+            k = 6
+        if value < scale[5]*alpha:
+            k = 5
+        if value < scale[4]*alpha:
+            k = 4
+        if value < scale[3]*alpha:
+            k = 3
+        if value < scale[2]*alpha:
+            k = 2
+        if value < scale[1]*alpha:
+            k = 1
+        if value < scale[0]*alpha:
+            k = 0
+
+        return k
 
 
     def _aic(self, signal, k):
@@ -2222,10 +2277,8 @@ class DataStream(object):
         outstream = DataStream()
         for elem in self:
             row=LineStruct()
-            for key in KEYLIST:
-                exec('row.'+key+' = elem.'+key)
-            row.type = ''.join((list(coordinate))[4:])
-            exec('row.x,row.y,row.z = '+coordinate+'(elem.x,elem.y,elem.z)')
+            exec('row = elem.'+coordinate+'(unit="deg")')
+            row.typ = ''.join((list(coordinate))[4:])+'f'
             outstream.add(row)
 
         if not keep_header:
@@ -2359,7 +2412,7 @@ class DataStream(object):
         """Helper to drop lines with NaNs in any of the selected keys.
 
         """
-        newst = [elem for elem in self if not isnan(eval('elem.'+key))]
+        newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
         return DataStream(newst,self.header)
 
         
@@ -2532,20 +2585,28 @@ class DataStream(object):
 
         optional:
         keys: (list - default ['x','y','z','f'] provide limited key-list
+        put2key
         """
         
 
         logging.info('--- Calculating derivative started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
+        put2keys = kwargs.get('put2keys')
         if not keys:
             keys = ['x','y','z','f']
+        if not put2keys:
+            put2keys = ['dx','dy','dz','df']
+
+        if len(keys) != len(put2keys):
+            logging.error('Amount of columns read must be equal to outputcolumns')
+            return self
 
         t = self._get_column('time')
-        for key in keys:
+        for i, key in enumerate(keys):
             val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
-            self._put_column(dval, 'd'+key)
+            self._put_column(dval, put2keys[i])
 
         logging.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
@@ -2671,8 +2732,6 @@ class DataStream(object):
         if not m_fmi:
             m_fmi = 0
 
-        
-
         gf_fac = gauss_win
         resdataout = []
 
@@ -2684,7 +2743,7 @@ class DataStream(object):
         # check whether requested filter_width >= sampling interval within 1 millisecond accuracy
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         if filter_width - si <= timedelta(microseconds=1000):
-            logging.warning('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
+            logging.error('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
             return self
 
         logging.info('--- Start filtering at %s ' % str(datetime.now()))
@@ -2721,7 +2780,7 @@ class DataStream(object):
             for elem in fmi_initial_data:
                 row = []
                 row.append(elem.time)
-                n = np.power(get_k(elem.dx),3.3)
+                n = np.power(fmi_initial_data._get_k_float(elem.dx),3.3)
                 row.append(n)
                 trangestruct.append(row)
             mint = 99999
@@ -2770,22 +2829,28 @@ class DataStream(object):
                     for k in range(lowlim,uplim):
                         nor = normvec[k-lowlim]/normcoeff
                         for el in KEYLIST[:15]:
-                            #if not isnan(eval('starray[k].'+el)):
-                            exec('col'+el+'.append(starray[k].'+el+'*nor)')
+                            if not isnan(eval('starray[k].'+el))  and not isinf(eval('starray[k].'+el)):
+                                exec('col'+el+'.append(starray[k].'+el+'*nor)')
                     # mask NaNs of the columns
-                    exec('col'+el+' = self._maskNAN(col'+el+')')
+                    #exec('col'+el+' = self._maskNAN(col'+el+')')
                     resrow.time = abscurrtime
                     for el in KEYLIST[1:15]:
+                        if el == 'f':
+                            print "Got here:"
+                            print colf
                         exec('resrow.'+el+' = np.sum(col'+el+')')
                 elif filter_type == "linear" or filter_type == "fmi":
                     for k in range(lowlim,uplim):
                         for el in KEYLIST[:15]:
-                            #if not isnan(eval('starray[k].'+el)):
-                            exec('col'+el+'.append(starray[k].'+el+')')
+                            if not isnan(eval('starray[k].'+el)) and not isinf(eval('starray[k].'+el)):
+                                exec('col'+el+'.append(starray[k].'+el+')')
                     # mask NaNs of the columns
-                    exec('col'+el+' = self._maskNAN(col'+el+')')
+                    #exec('col'+el+' = self._maskNAN(col'+el+')')
                     resrow.time = abscurrtime
                     for el in KEYLIST[1:15]:
+                        #if el == 'var2':
+                        #    print "Got here:"
+                        #    print colvar2
                         exec('resrow.'+el+' = np.mean(col'+el+')')
                     # add maxmin diffs: important for fmi
                     if starray[k].typ != 'fonly':
@@ -3116,8 +3181,22 @@ class DataStream(object):
         logging.info('--- Starting k value calculation: %s ' % (str(datetime.now())))
 
         # Start with the full input stream
-        # convert xyz to hdz first
-        fmistream = self._convertstream('xyz2hdz',keep_header=True)
+        # eventually convert xyz to hdz first
+        for elem in self:
+            gettyp = elem.typ
+            break
+        if gettyp == 'xyzf':
+            fmistream = self._convertstream('xyz2hdz',keep_header=True)
+        elif gettyp == 'idff':
+            fmistream = self._convertstream('idf2xyz',keep_header=True)
+            fmistream = self._convertstream('xyz2hdz',keep_header=True)
+        elif gettyp == 'hdzf':
+            fmistream = self
+            pass
+        else:
+            logging.error('Unkown typ (xyz?) in FMI function')
+            return
+        
         fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
         fmi2stream = fmistream.filtered(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 

@@ -67,23 +67,24 @@ logging.info("----- Now starting Example 4 -----")
 # Intensity values, Outlier removal and auto-flagging
 #
 logging.info("----- Now starting Example 5 -----")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*') ,starttime='2011-9-4',endtime='2011-9-5')
 #st.pmplot(['f'],plottitle = "Ex 5 - F vals with outliers")
 #st = st.routlier()
 #stmod = st.remove_flagged()
 #stmod.pmplot(['f'],plottitle = "Ex 5 - Outliers removed")
+#stmod.pmwrite('..\\dat\\output\\txt',format_type='PYSTR',filenamebegins='FlagPMAG-')
+
 
 #
-# Flagging - remove_flagged not working correctly yet - check other variables 
+# Flagging  
 #
 logging.info("----- Now starting Example 6 - Flagging -----")
-#st = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-7',endtime=datetime(2011,9,9))
-#st = st.flag_stream('x',3,"Moaing",datetime(2011,9,8,12,0,0,0),datetime(2011,9,8,13,0,0,0))
-#st = st.flag_stream('y',3,"Auto",datetime(2011,9,8,10,0,0,0),datetime(2011,9,8,13,0,0,0))
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
+#st = st.flag_stream('f',3,"Maintenance",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
 #stmod = st.remove_flagged()
-#stmod = stmod.get_gaps(key='y')
-#stmod.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
-#stmod.pmplot(['x','y','z','var3'],plottitle = "Ex 6 - Flagging")
+#stmod.pmwrite('..\\dat\\output\\txt',format_type='PYSTR',filenamebegins='FlagDIDD-')
+#stmod = stmod.get_gaps(key='f')
+#stmod.pmplot(['x','y','z','f','var3'],plottitle = "Ex 6 - Flagging")
 
 #
 # Smoothing and interpolating data
@@ -97,22 +98,24 @@ logging.info("----- Now starting Example 7 - Smoothing -----")
 #st.pmplot(['x'],function=func,plottitle = "Ex 7 - After smoothing and interpolation")
 
 #
-# Storm analysis and fit functions 
+# Storm analysis and derivatives 
 #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# !!! TODO: Use H for estimation and calculate index
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 logging.info("----- Now starting Example 8 - Storm analysis -----")
 st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-9-8',endtime='2011-9-14')
-func = st.fit(['x','y','z'],fitfunc='spline',knotstep=0.1)
+st = st._convertstream('xyz2hdz')
 st = st.aic_calc('x',timerange=timedelta(hours=1))
-st.pmplot(['x','y','z','var2'],function=func,plottitle = "Ex 8 - AIC Analysis")
+st = st.differentiate(keys=['var2'],put2keys=['var3'])
+st.pmplot(['x','y','z','var2'],plottitle = "Ex 8 - AIC Analysis")
+stfilt = st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[0,100,200,300,400,500,600,700,800])
+st = mergeStreams(st,stfilt,key=['var4'])
+st.pmplot(['x','var2','var3','var4'],symbollist = ['-','-','-','z'],plottitle = "Ex 8 - Storm onsets and local variation index")
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: Check FMI method
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #fmi = st.k_fmi(fitdegree=2)
 #fmi = st.k_fmi(fitfunc='spline',knotstep=0.4)
-#col = st._get_column('var2')
-#st = st._put_column(col,'y')
-#st = st.differentiate()
-#st.pmplot(['x','var2','dy','t2'],symbollist = ['-','-','-','z'])
+#st.pmplot(['x','var2','var3','t2'],symbollist = ['-','-','-','z'])
 #
 
 #
@@ -122,7 +125,7 @@ logging.info("----- Now starting Example 9 - Spectral analysis -----")
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ## ToDo: Improve the functions, include PSD
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-st.spectrogram('x',dbscale=True)
+#st.spectrogram('x',dbscale=True)
 #st.powerspectrum('x')
 
 #
@@ -150,22 +153,18 @@ logging.info("----- Now starting Example 11a - Merging auxiliary T data and vari
 # Merging primary and secondary data
 logging.info("----- Now starting Example 11b - Filling missing values from secondary instruments -----")
 ## Step A) Preparing DemoStream-1 with gaps
-st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
-st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
-st1mod = st1.remove_flagged()
-st1mod.pmplot(['x','f'],plottitle = "Ex 11b - Primary data set with some flagged records")
+st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagDIDD-*'))
+st1.pmplot(['x','f'],plottitle = "Ex 11b - Primary data set with some flagged records")
 ## Step B) Preparing DemoStream-2
-st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*') ,starttime='2011-9-4',endtime='2011-9-5')
-st2 = st2.routlier()
-st2mod = st2.remove_flagged()
-st2mod = st2mod.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagPMAG-*'))
+st2 = st2.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-## ToDo: Check filtering with nan values
+## ToDo: Check filtering with nan values -- Why !!!!!!!!!!!!!!!!!!!
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-st2mod.pmplot(['f'], plottitle = "Ex 11b - Secondary data set")
+st2.pmplot(['f'], plottitle = "Ex 11b - Secondary data set")
 logging.info("----- Example 10b - Determining average offset -----")
 ## Step C) Determining average offset - median -> should be known
-stdiff = subtractStreams(st1mod,st2mod,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
+stdiff = subtractStreams(st1,st2,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ## ToDo: Trim required - check why
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -174,10 +173,8 @@ stdiff.pmplot(['f'], plottitle = "Ex 11b - Differences of both scalar instrument
 stdiff.spectrogram('f',dbscale=True)
 offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
 ## Step D) Merging f column of stream 2 to stream 1 (reloaded) with average offset - median
-st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\didd\\*') ,starttime='2011-9-4',endtime='2011-9-5')
-st1 = st1.flag_stream('f',3,"Bycicle",'2011-9-4T10:00:00',datetime(2011,9,4,13,0,0,0))
-st1mod = st1.remove_flagged()
-mergest = mergeStreams(st1mod,st2mod,keys=['f'],offset=offset,comment='Pmag')
+st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagDIDD-*'))
+mergest = mergeStreams(st1,st2,keys=['f'],offset=offset,comment='Pmag')
 mergest.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
 mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged F values in stream")
 
@@ -236,6 +233,7 @@ logging.info("----- Now starting Example 14 - Full example -----")
 # --------------------------
 
 
+#
 # Baseline Stability
 # --------------------------
 
