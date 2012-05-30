@@ -101,15 +101,15 @@ logging.info("----- Now starting Example 7 - Smoothing -----")
 # Storm analysis and derivatives 
 #
 logging.info("----- Now starting Example 8 - Storm analysis -----")
-st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-9-8',endtime='2011-9-14')
-st = st._convertstream('xyz2hdz')
-st = st.aic_calc('x',timerange=timedelta(hours=1))
-st = st.differentiate(keys=['var2'],put2keys=['var3'])
-st.pmplot(['x','y','z','var2'],plottitle = "Ex 8 - AIC Analysis")
-stfilt = st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[0,100,200,300,400,500,600,700,800])
-st = mergeStreams(st,stfilt,key=['var4'])
-st.pmplot(['x','var2','var3','var4'],symbollist = ['-','-','-','z'],plottitle = "Ex 8 - Storm onsets and local variation index")
+#st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'),starttime='2011-9-8',endtime='2011-9-14')
+#st = st._convertstream('xyz2hdz')
+#st = st.aic_calc('x',timerange=timedelta(hours=1))
+#st = st.differentiate(keys=['var2'],put2keys=['var3'])
+#st.pmplot(['x','y','z','var2'],plottitle = "Ex 8 - AIC Analysis")
+#stfilt = st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+#stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[0,100,200,300,400,500,600,700,800])
+#st = mergeStreams(st,stfilt,key=['var4'])
+#st.pmplot(['x','var2','var3','var4'],bartrange=0.02,symbollist = ['-','-','-','z'],plottitle = "Ex 8 - Storm onsets and local variation index")
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ## ToDo: Check FMI method
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -145,38 +145,34 @@ logging.info("----- Now starting Example 10 - Auxiliary Temperature data -----")
 # Using Aux data
 logging.info("----- Now starting Example 11a - Merging auxiliary T data and variometer data -----")
 #st = pmRead(path_or_url=os.path.normpath('..\\dat\\didd\\*'))
-#newst = mergeStreams(st,aux,keys=['t1','var1'],plottitle = "Ex 11a - Merge Vario and T data")
+#newst = mergeStreams(st,aux,keys=['t1','var1'])
 #newst.pmwrite('..\\dat\\output\\cdf\\didd',filenameends='_didd_min',format_type='PYCDF')
-#newst.pmplot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous')
+#newst.pmplot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous',plottitle = "Ex 11a - Merge Vario and T data")
 #st.spectrogram('x')
 
 # Merging primary and secondary data
 logging.info("----- Now starting Example 11b - Filling missing values from secondary instruments -----")
 ## Step A) Preparing DemoStream-1 with gaps
-st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagDIDD-*'))
-st1.pmplot(['x','f'],plottitle = "Ex 11b - Primary data set with some flagged records")
+#st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagDIDD-*'))
+#st1.pmplot(['x','f'],plottitle = "Ex 11b - Primary data set with some flagged records")
 ## Step B) Preparing DemoStream-2
-st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagPMAG-*'))
-st2 = st2.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-## ToDo: Check filtering with nan values -- Why !!!!!!!!!!!!!!!!!!!
-## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-st2.pmplot(['f'], plottitle = "Ex 11b - Secondary data set")
-logging.info("----- Example 10b - Determining average offset -----")
+#st2 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagPMAG-*'))
+#st2 = st2.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+#st2.pmplot(['f'], plottitle = "Ex 11b - Secondary data set")
 ## Step C) Determining average offset - median -> should be known
-stdiff = subtractStreams(st1,st2,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
+#stdiff = subtractStreams(st1,st2,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ## ToDo: Trim required - check why
 ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
-stdiff.pmplot(['f'], plottitle = "Ex 11b - Differences of both scalar instruments")
-stdiff.spectrogram('f',dbscale=True)
-offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
+#stdiff = stdiff.trim(starttime=datetime(2011,9,4,00,02),endtime=datetime(2011,9,4,23,58))
+#stdiff.pmplot(['f'], plottitle = "Ex 11b - Differences of both scalar instruments")
+#stdiff.spectrogram('f',dbscale=True)
+#offset = np.median(stdiff._maskNAN(stdiff._get_column('f')))
 ## Step D) Merging f column of stream 2 to stream 1 (reloaded) with average offset - median
-st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagDIDD-*'))
-mergest = mergeStreams(st1,st2,keys=['f'],offset=offset,comment='Pmag')
-mergest.pmwrite('..\\dat\\output\\txt',format_type='PYSTR')
-mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged F values in stream")
+#st1 = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\txt\\FlagDIDD-*'))
+#mergest = mergeStreams(st1,st2,keys=['f'],offset=offset,comment='Pmag')
+#mergest.pmwrite('..\\dat\\output\\txt',format_type='PYSTR',filenamebegins='MergedDIDD-PMAG_')
+#mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged F values in stream")
 
 
 
@@ -189,38 +185,65 @@ from dev_magpy_absolutes import *
 #
 # Analyze Absolute measurments
 logging.info("----- Now starting Example 12 - Analyzing Absolute measurements -----")
-abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.3, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'))
-abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
-abso.pmplot(['x','y','z'],plottitle = "Ex 12 - Analysis of absolute values")
+#abso = analyzeAbsFiles(path_or_url=os.path.normpath('..\\dat\\absolutes\\raw'), alpha=3.3, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'))
+#abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+#abso.pmplot(['x','y','z'],plottitle = "Ex 12 - Analysis of absolute values")
 
 # Baseline calculation and correction
 logging.info("----- Now starting Example 13 - Obtaining baselines -----")
-abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\absolutes\\absolutes_lemi.txt'))
-func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
-abslemi.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 13 - Baseline values and spline fit")
-lemi = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-1',endtime='2011-9-30')
-lemi = lemi.rotation(alpha=3.3,beta=0.0)
-lemi = lemi.baseline(abslemi,knotstep=0.05,plotbaseline=True)
-lemi.pmplot(['x','y','z'], plottitle = "Ex 13 - Baseline corrected data")
+#abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\absolutes\\absolutes_lemi.txt'))
+#func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
+#abslemi.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 13 - Baseline values and spline fit")
+#lemi = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'),starttime='2011-09-1',endtime='2011-9-30')
+#lemi = lemi.rotation(alpha=3.3,beta=0.0)
+#lemi = lemi.baseline(abslemi,knotstep=0.05,plotbaseline=True)
+#lemi.pmplot(['x','y','z'], plottitle = "Ex 13 - Baseline corrected data")
 
 
 #
-# An example for standard analysis
+# An example for an almost automated typical analysis in 16 lines
 #
 logging.info("----- Now starting Example 14 - Full example -----")
 # 1. Load variometer data
-# 2. Eventually Clean Data - Do flagging
-# 3. Eventually combine with auxiliary data
+#va = pmRead(path_or_url=os.path.normpath('..\\dat\\lemi025\\*'))
+# 2. Eventually combine with auxiliary data
+#aux = pmRead(path_or_url=os.path.normpath('..\\dat\\auxiliary\\temp\\Vario*'))
+#vanew = mergeStreams(va,aux,keys=['t1','var1'])
+# 3. Eventually Clean Data - Do flagging
+# see example 6
 # 4. Save modified variometer data
+#vanew.pmwrite('..\\dat\\output\\cdf\\lemi',filenameends='_lemi_min',format_type='PYCDF')
+##vanew = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\lemi\\Test*'))
 # 5. Load scalar data
-# 6. Eventually Clean Data - Do flagging
-# 7. Eventually combine with auxiliary data
+#sc = pmRead(path_or_url=os.path.normpath('..\\dat\\pmag\\*'))
+# 6. Eventually combine with auxiliary data
+# 7. Eventually Clean Data - Do flagging and apply filters for comparions with vario
+#sc = sc.routlier()
+#sc = sc.remove_flagged()
+#sc = sc.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
 # 8. Save eventually modified scalar data
-# 9. Eventually merge variometer and scalar data (offsets?)
+#sc.pmwrite('..\\dat\\output\\cdf\\pmag',filenameends='_pmag_min',format_type='PYCDF')
+##sc = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\pmag\\*'))
+# 9. Eventually merge variometer and scalar data (add pillar offset to f value)
+#vamerge = mergeStreams(vanew,sc,keys=['f'])
 # 10. Anaylze absolute data with modified variometer and scalar data (dont forget to remove flagged data first)
+#see example 12
 # 11. Calculate baseline and baseline correction
+#abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\absolutes\\absolutes_lemi.txt'))
+#func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
+#vamerge = vamerge.rotation(alpha=3.3,beta=0.0)
+#vamerge = vamerge.baseline(abslemi,knotstep=0.05,plotbaseline=True)
+#vamerge.pmplot(['x','y','z','f','t1'])
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+## ToDo: var columns of vario (e.g. humidity) are overwritten by absolute vals 
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # 12. Save corrected data
+#vamerge.pmwrite('..\\dat\\output\\cdf\\lemi',filenamebegins='Basecorr-',filenameends='_lemi_min',format_type='PYCDF')
+vamerge = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\cdf\\lemi\\Basecorr*'))
 # 13. Compare data sets (dF, different varios, etc)
+vamerge = vamerge.delta_f()
+# variation in f is diametral anders....
+vamerge.pmplot(['x','y','z','f','df'])
 # 14. (Eventually merge data to fill gaps) hmmm....
 # 15. Apply filters to create min, hours, day, month files
 # 16. Do fancy analysis things (indicies, strom onsets, spectral, etc)
@@ -231,12 +254,12 @@ logging.info("----- Now starting Example 14 - Full example -----")
 #
 # Stacking
 # --------------------------
-
+# see also Hans-Peters suggestions
 
 #
 # Baseline Stability
 # --------------------------
-
+# code written for old version - include here
 
 #
 # Getting orientation angles

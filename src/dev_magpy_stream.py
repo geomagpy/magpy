@@ -1360,7 +1360,6 @@ def writePYCDF(datastream, filename, **kwargs):
         elif mode == 'append':
             mycdf = cdf.CDF(filename, filename) # append????
         else: # overwrite mode
-            print " got here"
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
     else:
@@ -1374,7 +1373,7 @@ def writePYCDF(datastream, filename, **kwargs):
             if not key.find('col') >= 0:
                 mycdf.attrs[key] = headdict[key]
 
-    for key in KEYLIST:            
+    for key in KEYLIST:
         col = datastream._get_column(key)
         if key == 'time':
             key = 'Epoch'
@@ -1825,7 +1824,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     offset = kwargs.get('offset')
     comment = kwargs.get('comment')
     if not keys:
-        keys = KEYLIST[1:15]
+        keys = KEYLIST[1:16]
     if not offset:
         offset = 0
     if not comment:
@@ -1863,7 +1862,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 taprev = ta
                 functime = (ta-function[1])/(function[2]-function[1])
                 for key in keys:
-                    if not key in KEYLIST[1:15]:
+                    if not key in KEYLIST[1:16]:
                         raise ValueError, "Column key not valid"
                     exec('keyval = stream_a[pos].'+key)
                     fkey = 'f'+key
@@ -1897,7 +1896,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     keys = kwargs.get('keys')
     getmeans = kwargs.get('getmeans')
     if not keys:
-        keys = KEYLIST[1:15]
+        keys = KEYLIST[1:16]
 
     
     logging.info('--- Start subtracting streams at %s ' % str(datetime.now()))
@@ -1928,7 +1927,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             functime = (ta-function[1])/(function[2]-function[1])
             taprev = ta
             for key in keys:
-                if not key in KEYLIST[1:15]:
+                if not key in KEYLIST[1:16]:
                     raise ValueError, "Column key not valid"
                 exec('keyval = stream_a[pos].'+key)
                 fkey = 'f'+key
@@ -2123,8 +2122,14 @@ class DataStream(object):
         count = 0
         col = []
         for elem in self:
-            if eval('elem.'+key) != KEYINITDICT[key] and not isnan(eval('elem.'+key)):
-                count = count+1
+            try: # Testing whether elem.key is a float including nan to determine diffs to initialization
+                nantest = float(eval('elem.'+key))
+                if eval('elem.'+key) != KEYINITDICT[key] and not isnan(eval('elem.'+key)):
+                    count = count+1
+            except:
+                if eval('elem.'+key) != KEYINITDICT[key]:
+                    count = count+1
+                pass
             col.append(eval('elem.'+key))
         if count > 0:
             return np.asarray(col)
@@ -2150,14 +2155,14 @@ class DataStream(object):
 
 
     def _get_max(self, key):
-        if not key in KEYLIST[:15]:
+        if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
         elem = max(self, key=lambda tmp: eval('tmp.'+key))
         return eval('elem.'+key)
 
 
     def _get_min(self, key):
-        if not key in KEYLIST[:15]:
+        if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
         elem = min(self, key=lambda tmp: eval('tmp.'+key))
         return eval('elem.'+key)
@@ -2578,6 +2583,27 @@ class DataStream(object):
         return DataStream(newstream,header)
 
 
+    def delta_f(self, **kwargs):
+        """
+        Calculates the difference of x+y+z to f
+        keywords:
+        :type offset: float
+        :param offset: constant offset to f values
+        """
+
+        offset = kwargs.get('offset')
+        if not offset:
+            offset = 0
+
+        logging.info('--- Calculating delta f started at %s ' % str(datetime.now()))
+        for elem in self:
+            elem.df = np.sqrt(elem.x**2+elem.y**2+elem.z**2) - (elem.f + offset)
+        
+        logging.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
+
+        return self
+
+
     def differentiate(self, **kwargs):
         """
         Method to differentiate all columns with respect to time.
@@ -2588,7 +2614,6 @@ class DataStream(object):
         put2key
         """
         
-
         logging.info('--- Calculating derivative started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
@@ -2661,7 +2686,7 @@ class DataStream(object):
             t = tmpst._get_column('time')
             nt,sv,ev = self._normalize(t)
             sp = self.get_sampling_period()
-            if not key in KEYLIST[1:15]:
+            if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
             val = tmpst._get_column(key)
             # interplolate NaN values
@@ -2818,7 +2843,7 @@ class DataStream(object):
             resrow = LineStruct()
             resrow.time = abscurrtime
             if uplim > lowlim:
-                for el in KEYLIST[:15]:
+                for el in KEYLIST[:16]:
                     exec('col'+el+'=[]')
                 if filter_type == "gauss":
                     normvec = []
@@ -2828,36 +2853,34 @@ class DataStream(object):
                     normcoeff = np.sum(normvec)
                     for k in range(lowlim,uplim):
                         nor = normvec[k-lowlim]/normcoeff
-                        for el in KEYLIST[:15]:
-                            if not isnan(eval('starray[k].'+el))  and not isinf(eval('starray[k].'+el)):
-                                exec('col'+el+'.append(starray[k].'+el+'*nor)')
+                        for el in KEYLIST[:16]:
+                            # nan treatment different to linear case because normvec is already calculated and nan could not be just left out as they are already included in the weighting scheme
+                            # might cause problems in case of inf and leading nan like in aic columns
+                            #if not isnan(eval('starray[k].'+el))  and not isinf(eval('starray[k].'+el)):
+                            exec('col'+el+'.append(starray[k].'+el+'*nor)')
                     # mask NaNs of the columns
-                    #exec('col'+el+' = self._maskNAN(col'+el+')')
+                    exec('col'+el+' = self._maskNAN(col'+el+')')
                     resrow.time = abscurrtime
-                    for el in KEYLIST[1:15]:
-                        if el == 'f':
-                            print "Got here:"
-                            print colf
+                    for el in KEYLIST[1:16]:
                         exec('resrow.'+el+' = np.sum(col'+el+')')
                 elif filter_type == "linear" or filter_type == "fmi":
                     for k in range(lowlim,uplim):
-                        for el in KEYLIST[:15]:
+                        for el in KEYLIST[:16]:
                             if not isnan(eval('starray[k].'+el)) and not isinf(eval('starray[k].'+el)):
                                 exec('col'+el+'.append(starray[k].'+el+')')
-                    # mask NaNs of the columns
-                    #exec('col'+el+' = self._maskNAN(col'+el+')')
                     resrow.time = abscurrtime
-                    for el in KEYLIST[1:15]:
-                        #if el == 'var2':
-                        #    print "Got here:"
-                        #    print colvar2
+                    for el in KEYLIST[1:16]:
                         exec('resrow.'+el+' = np.mean(col'+el+')')
                     # add maxmin diffs: important for fmi
                     if starray[k].typ != 'fonly':
-                        resrow.dx = np.max(colx)-np.min(colx)
-                        resrow.dy = np.max(coly)-np.min(coly)
-                        resrow.dz = np.max(colz)-np.min(colz)
-                        resrow.df = np.max(colf)-np.min(colf)
+                        if len(colx) >0:
+                            resrow.dx = np.max(colx)-np.min(colx)
+                        if len(coly) >0:
+                            resrow.dy = np.max(coly)-np.min(coly)
+                        if len(colz) >0:
+                            resrow.dz = np.max(colz)-np.min(colz)
+                        if len(colf) >0:
+                            resrow.df = np.max(colf)-np.min(colf)
                 else:
                     logging.warning("FilterFunc: Filter not recognized - aborting")
                 resrow.typ = starray[0].typ
@@ -2946,7 +2969,7 @@ class DataStream(object):
             if function[1] <= elem.time <= function[2]:
                 functime = (elem.time-function[1])/(function[2]-function[1])
                 for key in keys:
-                    if not key in KEYLIST[1:15]:
+                    if not key in KEYLIST[1:16]:
                         raise ValueError, "Column key not valid"
                     fkey = 'f'+key
                     exec('keyval = elem.'+key)
@@ -2986,7 +3009,7 @@ class DataStream(object):
             if function[1] <= elem.time <= function[2]:
                 functime = (elem.time-function[1])/(function[2]-function[1])
                 for key in keys:
-                    if not key in KEYLIST[1:15]:
+                    if not key in KEYLIST[1:16]:
                         raise ValueError, "Column key not valid"
                     fkey = 'f'+key
                     exec('keyval = elem.'+key)
@@ -3130,7 +3153,7 @@ class DataStream(object):
         functionkeylist = {}
         
         for key in keys:
-            if not key in KEYLIST[1:15]:
+            if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
             val = self._get_column(key)
             # interplolate NaN values
@@ -3252,6 +3275,7 @@ class DataStream(object):
         colorlist = kwargs.get('colorlist')
         errorbar = kwargs.get('errorbar')
         padding = kwargs.get('padding') # needs to be incorporated
+        bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
         symbollist = kwargs.get('symbollist')
         plottype = kwargs.get('plottype')
         symbol_func = kwargs.get('symbol_func')
@@ -3273,6 +3297,8 @@ class DataStream(object):
             symbol_func = '-'
         if not savedpi:
             savedpi = 80
+        if not bartrange:
+            bartrange = 0.06
 
         myyfmt = ScalarFormatter(useOffset=False)
         n_subplots = len(keys)
@@ -3282,7 +3308,7 @@ class DataStream(object):
         fig = plt.figure()
 
         for key in keys:
-            if not key in KEYLIST[1:15]:
+            if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
             t = self._get_column('time')
             yplt = self._get_column(key)
@@ -3314,12 +3340,11 @@ class DataStream(object):
                     ax.set_xlabel("Time (UTC)")
                 # Create plots
                 # -- switch color and symbol
-                if symbollist[count-1] == 'z': # secrect symbol for plotting colored bars for k values
-                    tstep = 0.06
+                if symbollist[count-1] == 'z': # symbol for plotting colored bars for k values
                     xy = range(9)
                     for num in range(len(t)):
-                        if tstep < t[num] < np.max(t)-tstep:
-                            ax.fill([t[num]-tstep,t[num]+tstep,t[num]+tstep,t[num]-tstep],[0,0,yplt[num]+0.1,yplt[num]+0.1],facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
+                        if bartrange < t[num] < np.max(t)-bartrange:
+                            ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
                     ax.plot_date(t,yplt,colorlist[count-1]+'|')
                 else:
                     ax.plot_date(t,yplt,colorlist[count-1]+symbollist[count-1])
