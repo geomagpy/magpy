@@ -2555,7 +2555,9 @@ class DataStream(object):
             bas.pmplot(['x','y','z'],symbollist = ['o','o','o'],function=func)
 
         # subtract baseline
-        self = self.func_subtract(func, order=1)
+        #self = self.func_subtract(func, order=1)
+        # add baseline
+        self = self.func_add(func)
 
         logging.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
