@@ -4,7 +4,7 @@
 \section{Basic Concept}
 
 The program is loosely related to the ObsPy package. Some functions are (almost) identically taken from this package. Among them are the read functions and the spectrogram.
-   
+
 \subsection{DI measurements}
 
 \subsection{Variometer and Scalar measurements}
@@ -86,7 +86,19 @@ Approximating functions and fitting:
     st.pmplot(['f'],function=func)
 \end{verbatim}
 
-\subsubsection{Flagging data}
+\subsubsection{Removing spikes}
+
+Outlier detection is based on quartiles. Calculated is the interquartile range ($IQR$, which is the difference between the first and third quartile ($Q3 - Q1$). The interquartile range is termed to be a relatively robust statistic compared to the range and standard deviation. $Q1$ is based on the lower 25\% of data, $Q3$ on the upper part, after using medians to divide the data set. Using an optional threshold value outliers are then characterized by exceeding the limit defined by
+\begin{equation}\label{outlier}
+    L = M \pm t*IQR
+\end{equation}
+where $L$ denotes the limit, $M$ is the median of the values and $t$ is the optional threshold value. By default the threshold value is set to 4, which keeps all data except prominent spikes even during stormy conditions in a noisy environment. The outlier function accepts four optional keywords for modifying threshold, time window, and the column key. Shown below are the default values:
+\begin{verbatim}
+stream = stream.routlier(keys=['f'], timerange=timedelta(hours=1), threshold = 4.0)
+\end{verbatim}
+Outlying data is \emph{not} removed from the data set but flagged (see next section). The log file (see section \ref{logging}) contains a list of all flagged data points.
+
+\subsubsection{Flagging data}\label{flagging}
 
 \begin{verbatim}
 st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
@@ -103,6 +115,8 @@ st.pmplot(['f','var2'])
 
 \subsubsection{DI analysis}
 
+\subsubsubsection{Calculating absolutes}
+
 \begin{verbatim}
 abso = analyzeAbsFiles(path_or_url=source, alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
 abso.pmwrite('..\\dat\\output\\absolutes\\',coverage='all',mode='replace',filenamebegins='absolutes_lemi')
@@ -111,9 +125,12 @@ abso.pmplot(['dx','dy','dz'],function=func, plottitle = "Ex 12 - Analysis of abs
 \end{verbatim}
 The analyzeAbsFiles function reads DI files located in directory source (e.g. os.path.normpath('..\\dat\\absolutes\\raw')). For calculation, the variometer data in variopath is used and if no scalar values are provided along with the DI file, scalar data from scalarpath is used. If the analysis is successful, DI files are moved to the archive directory. Alpha and beta describe the rotation angles. Alpha is the horizontal angle. In case of an HDZ oriented instrument, alpha corresponds to D at the time of instrument orientation. Beta describes deviations from horizontal configurations and is usually zero in case of suspended systems.
 
-The analyzeAbsFiles function is located in the absolutes package and reads special DI file formats. The output of the function is a stream class of the stream package, and thus can be treated/visualized using any basic stream analysis routine as described in table xxx. 
+The analyzeAbsFiles function is located in the absolutes package and reads special DI file formats. The output of the function is a stream class of the stream package, and thus can be treated/visualized using any basic stream analysis routine as described in table xxx.
 
 For the write command the following options are now used: Coverage$=$all saves all data to one file and does not include any date in the filename. This requires option filenamebegins to be set, which determines the actual file name. Mode$=$replace indicates that any already existing input in an existing summary file at the same save-location will be replaced by new analyzes. All others remain untouched.
+
+\subsubsubsection{Metadata and collimation angles}
+
 
 
 \subsubsection{Baseline calculation}
@@ -161,7 +178,7 @@ Baseline correction is done by the baseline function. Reading the file containin
 
 \subsubsection{Scripting}
 
-\subsubsection{Logging and Notification}
+\subsubsection{Logging and Notification}\label{logging}
 
 use the python logging package
 
