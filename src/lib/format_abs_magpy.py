@@ -192,19 +192,24 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
         elif line.startwith('#'):
             # header
             headline = line.split(':')
-            if headline[0] == ('# Abs-Obserever'):
+            if headline[0] == ('# Abs-Observer'):
                 person = headline[1]
             if headline[0] == ('# Abs-Theodolite'):
                 di_inst = headline[1].replace(', ','_')
+            if headline[0] == ('# Abs-TheoUnit'):
+                person = headline[1]
+            if headline[0] == ('# Abs-FGSensor'):
+                person = headline[1]
             if headline[0] == ('# Abs-AzimuthMark'):
                 expectedmire = float(headline[1])
-            if headline[0] == ('# Abs-Obserever'):
-                person = headline[1]
-            if headline[0] == ('# Abs-Obserever'):
-                person = headline[1]
-            if headline[0] == ('# Abs-Obserever'):
-                person = headline[1]
-            if headline[0] == ('# Abs-Obserever'):
+            if headline[0] == ('# Abs-Pillar'):
+                pillar = headline[1]
+            if headline[0] == ('# Abs-Scalar'):
+                f_inst = headline[1]
+            if headline[0] == ('# Abs-Temperatur'):
+                #temp = float(headline[1].replace("C",""))
+                pass
+            if headline[0] == ('# Abs-InputDate'):
                 person = headline[1]
         elif not headfound and numelements > 3:
             # data header
