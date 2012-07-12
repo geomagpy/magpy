@@ -7,7 +7,7 @@ Version 1.0 (from the 22.05.2012)
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-from dev_magpy_stream import *
+from core.magpy_stream import *
 
 #
 # Reading data and plotting
@@ -180,7 +180,7 @@ mergest.pmplot(['x','f'], plottitle = "Ex 11b - Merged F values in stream")
 
 # Absolute Values
 # ----------------------------------------
-from dev_magpy_absolutes import *
+from core.magpy_absolutes import *
 
 # 
 # Absolute Values
