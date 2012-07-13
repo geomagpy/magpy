@@ -151,12 +151,19 @@ def ftpremove (**kwargs):
     port = kwargs.get('port')
     login = kwargs.get('login')
     passwd = kwargs.get('passwd')
+    if not port:
+        port = 21        
     try:
+        print "here"
         site = ftplib.FTP()
+        print myproxy, port
         site.connect(myproxy, port)
+        print "here1"
         site.set_debuglevel(1)
         msg = site.login(login,passwd)        
+        print "here2"
         site.cwd(ftppath)
+        print "now here"
         try:
             site.delete(filestr)
         except:

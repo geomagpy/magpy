@@ -29,18 +29,38 @@ logging.info("----- Analyzing Absolute measurements -----")
 #abslemi.pmplot(['x','y','z'],plottitle = "Analysis of absolute values")
 
 
-absdidd = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\absolutes\\absolutes_didd.txt'))
-abslemi = pmRead(path_or_url=os.path.normpath('..\\dat\\output\\absolutes\\absolutes_lemi.txt'))
-absdidd.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - DIDD")
-abslemi.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - LEMI")
+#absdidd = pmRead(path_or_url=os.path.join('..','dat','output','absolutes','absolutes_didd.txt'))
+#abslemi = pmRead(path_or_url=os.path.join('..','dat','output','absolutes','absolutes_lemi.txt'))
+#absdidd.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - DIDD")
+#abslemi.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - LEMI")
 
-absdiff = subtractStreams(absdidd,abslemi,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
-absdiff.pmplot(['x','y','z','f'],plottitle = "Differences of absolute values")
+#absdiff = subtractStreams(absdidd,abslemi,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
+#absdiff.pmplot(['x','y','z','f'],plottitle = "Differences of absolute values")
 
 #abslemi = analyzeAbsFiles(path_or_url="ftp://94.136.40.103:21",alpha=3.3, beta=0.0, variopath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*'), scalarpath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*'))
 abslemi = analyzeAbsFiles(path_or_url="ftp://data@conrad-observatory.at:data2COBS@94.136.40.103/cobenzlabs/", alpha=3.3, beta=0.0, variopath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*'), scalarpath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*'))
+#abslemi = analyzeAbsFiles(path_or_url="ftp://data@conrad-observatory.at:data2COBS@94.136.40.103/cobenzlabs/", alpha=3.3, beta=0.0, variopath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*'), scalarpath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*'), archivepath=os.path.normpath('f:\\Absolute-Cobenzl'))
 #abslemi = analyzeAbsFiles(path_or_url="ftp://data@conrad-observatory.at:data2COBS@94.136.40.103/cobenzlabs/2011-11-21_13-51-42_AbsoluteMeas.txt", alpha=3.3, beta=0.0, variopath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*'), scalarpath=os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*'))
 
+msg = PyMagLog()
+fh = open('magpy.log', 'rt')
+loglst = []
+for line in fh:
+    if "WARNING" in line:
+        loglst.append(line)
+    if "ERROR" in line:
+        loglst.append(line)
+    if "Declination" and "Inclination" in line:
+        loglst.append(line)
+fh.close()
+# write the data
+abslemi.pmwrite(os.path.join('..','dat','absolutes'),coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+# make plot
+abslemi = pmRead(path_or_url=os.path.join('..','dat','absolutes','absolutes_lemi.txt'))
+abslemi.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - LEMI")
+# USe new mail function to send log and plot 
+msg.sendLogByMail(loglst,user="roman_leonhardt",pwd="2kippen")
+send_mail('roman_leonhardt@web.de', ['roman.leonhardt@zamg.ac.at'], 'MagPyTestLog', 'Analysis', [magpy.log], 'smtp.web.de')
 
 test = 1/0
 

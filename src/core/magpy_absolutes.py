@@ -282,7 +282,11 @@ class AbsoluteData(object):
             elif usestep == 2:
                 dl2mean = dl1[k+1]
             else:
-                dl2mean = np.mean([dl1[k],dl1[k+1]])
+                try:
+                    dl2mean = np.mean([dl1[k],dl1[k+1]])
+                except:
+                    logging.error("%s : Data missing for declination calculation"% num2date(poslst[0].time))
+                    pass
             dl2tmp.append(dl2mean)
             if dl2mean < np.pi:
                 dl2mean += np.pi/2
@@ -760,7 +764,6 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
     #print format_type
 
     stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
-    print stream
 
     return stream
 
@@ -870,7 +873,6 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             # Distinguish between directory and file - get filename and add to path -> add to list
             datlst = html_string.split("\n")
             firstline = datlst[0].split()
-            print firstline
             if datlst[0].startswith('# MagPy absolutes'):
                 # found single file
                 localfilelist = path
@@ -1025,13 +1027,21 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 dst = os.path.join(archivepath,fname)
                 shutil.move(src,dst)
             else:
-                print fi
                 fname = fi.split('/')[-1]
-                print fname
+                suffix = fname.split('.')[-1]
+                passwdtyp = fi.split(':')
+                typus = passwdtyp[0]
+                passwd = passwdtyp[2].split('@')[0]
+                restpath = passwdtyp[2].split('@')[1]
+                myproxy = restpath.split('/')[0]
+                ftppath = restpath.split('/')[1]
+                login = passwdtyp[1].split('//')[1]
                 dst = os.path.join(archivepath,fname)
                 fh = NamedTemporaryFile(suffix=suffix,delete=False)
-                fh.write(urllib2.urlopen(path_or_url).read())
+                fh.write(urllib2.urlopen(fi).read())
                 fh.close()
+                if (typus == 'ftp'):
+                    ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
                 shutil.move(fh.name,dst)
 
     st = st.sorting()
@@ -1151,7 +1161,7 @@ filestr = 'test'
 #port = 21
 login = 'data@conrad-observatory.at'
 myproxy = '138.22.156.44'
-port = 8021
+#port = 8021
 login = 'data@conrad-observatory.at@94.136.40.103'
 passwd = 'data2COBS'
 

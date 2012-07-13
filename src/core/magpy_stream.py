@@ -78,12 +78,18 @@ except:
     pass
 
 try:
-    # Import mailing functions - for e-mail notifications
     import smtplib
+    from email.MIMEMultipart import MIMEMultipart
+    from email.MIMEBase import MIMEBase
+    from email.MIMEText import MIMEText
+    from email.Utils import COMMASPACE, formatdate
+    from email import Encoders
+    # Import mailing functions - for e-mail notifications
+    #import smtplib
     from email.mime.text import MIMEText
     #from smtplib import SMTP_SSL as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
     from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
-    from email.MIMEText import MIMEText
+    #from email.MIMEText import MIMEText
 except:
     mailingfunc = False
     logpygen += "pymag-general: Import failure: Mailing functions not available\n"
@@ -2610,6 +2616,41 @@ def isNumber(s):
         return True
     except ValueError:
         return False
+
+
+def send_mail(send_from, send_to, subject, text, files=[], server="localhost", **kwargs):
+    assert type(send_to)==list
+    assert type(files)==list
+
+    user = kwargs.get('user')
+    pwd = kwargs.get('pwd')
+    port = kwargs.get('port')
+
+    msg = MIMEMultipart()
+    msg['From'] = send_from
+    msg['To'] = COMMASPACE.join(send_to)
+    msg['Date'] = formatdate(localtime=True)
+    msg['Subject'] = subject
+
+    msg.attach( MIMEText(text) )
+
+    for f in files:
+        part = MIMEBase('application', "octet-stream")
+        part.set_payload( open(f,"rb").read() )
+        Encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
+        msg.attach(part)
+
+    #smtp = smtplib.SMTP(server)
+    smtp = SMTP()
+    smtp.set_debuglevel(False)
+    smtp.connect(smtpserver, 587)
+    smtp.ehlo()
+    smtp.starttls()
+    smtp.ehlo()
+    smtp.login(user, pwd)
+    smtp.sendmail(send_from, send_to, msg.as_string())
+    smtp.close()
 
 
 def sendLogByMail(logfile,**kwargs):
