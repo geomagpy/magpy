@@ -124,7 +124,7 @@ stormlogger = logging.getLogger('core.magpy_stream')
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
-FLAGKEYLIST = KEYLIST[:8]
+FLAGKEYLIST = KEYLIST[:12]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
@@ -842,6 +842,22 @@ class DataStream(object):
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
+
+    def eventlogger(self, key, value, compare=None, debugmode=None):
+        """
+        read stream and log data of which key meets the criteria
+        maybe combine with extract
+        example:
+        compare is string like ">, <, ==, !="
+        st.eventlogger(['var3'],[15,30,45],'>')
+        """
+        assert type(value) == list
+
+        if not compare:
+            compare = '=='
+        for elem in self:
+            if eval('elem['+key+'] '+ compare + ' ' + value[0]):
+                stormlogger.warning('Moderate')
         
 
     def extract(self, key, value, compare=None, debugmode=None):
