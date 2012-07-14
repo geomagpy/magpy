@@ -80,7 +80,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
                 try:
                     expectedmire = miredict[colsstr[2]]
                 except:
-                    logging.warning('ReadAbsolute: Mire not known in file %s' % filename)
+                    loggerlib.error('%s : ReadAbsolute: Mire not known in this file' % filename)
                     return stream
             headers['pillar'] = colsstr[3]
             if numelements > 4:
@@ -107,12 +107,12 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             try:
                 row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
-                logging.warning('ReadAbsolute: Check date format of f measurements in file %s' % filename)
+                loggerlib.error('%s : ReadAbsolute: Check date format of f measurements in this file' % filename)
                 return stream
             try:
                 row.f = float(fstr[1])
             except:
-                logging.warning('ReadAbsolute: Check data format in file %s' % filename)
+                loggerlib.error('%s : ReadAbsolute: Check data format in this file' % filename)
                 return stream
             stream.add(row)
         elif numelements == 4:
@@ -123,7 +123,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
                 row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
                 if not posstr[0] == 'Variometer':
-                    logging.warning('ReadAbsolute: Check date format of measurements positions in file %s' % filename)
+                    loggerlib.error('%s : ReadAbsolute: Check date format of measurements positions in this file' % filename)
                 return stream
             try:
                 row.hc = float(posstr[1])
@@ -137,7 +137,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
                 row.di_inst = di_inst
                 row.f_inst = f_inst
             except:
-                logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
+                loggerlib.error('%s : ReadAbsolute: Check general format of measurements positions in this file' % filename)
                 return stream
             stream.add(row)
         elif numelements == 8:
@@ -149,7 +149,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             mdstd = np.std([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
             maxdev = np.max([mustd, mdstd])
             if abs(maxdev) > 0.01:
-                logging.warning('ReadAbsolute: Check miren readings in file %s' % filename)
+                loggerlib.error('%s : ReadAbsolute: Check azimuth readings in this file' % filename)
         else:
             #print line
             pass
@@ -183,61 +183,35 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     expectedmire,temp = 0.0,0.0
     key = None
     headfound = False
-    #print "Reading data ..."
+    print "Reading data ..."
     for line in fh:
         numelements = len(line.split())
         if line.isspace():
             # blank line
             pass
-        elif line.startwith('#'):
+        elif line.startswith('#'):
             # header
+            line = line.strip('\n')
             headline = line.split(':')
             if headline[0] == ('# Abs-Observer'):
-                person = headline[1]
+                person = headline[1].strip()
             if headline[0] == ('# Abs-Theodolite'):
-                di_inst = headline[1].replace(', ','_')
+                di_inst = headline[1].replace(', ','_').strip()
             if headline[0] == ('# Abs-TheoUnit'):
-                person = headline[1]
+                unit = headline[1].strip()
             if headline[0] == ('# Abs-FGSensor'):
-                person = headline[1]
+                fgsensor = headline[1].strip()
             if headline[0] == ('# Abs-AzimuthMark'):
-                expectedmire = float(headline[1])
+                expectedmire = float(headline[1].strip())
             if headline[0] == ('# Abs-Pillar'):
-                pillar = headline[1]
+                headers['pillar'] = headline[1].strip()
             if headline[0] == ('# Abs-Scalar'):
-                f_inst = headline[1]
+                f_inst = headline[1].strip()
             if headline[0] == ('# Abs-Temperatur'):
-                #temp = float(headline[1].replace("C",""))
-                pass
+                temp = float(headline[1].strip('C'))
             if headline[0] == ('# Abs-InputDate'):
-                person = headline[1]
-        elif not headfound and numelements > 3:
-            # data header
-            headfound = True
-            colsstr = line.split()
-            person =  colsstr[0]
-            di_inst = colsstr[1]
-            # check whether mire is number or String            
-            try:
-                expectedmire = float(colsstr[2])
-            except:
-                try:
-                    expectedmire = miredict[colsstr[2]]
-                except:
-                    logging.warning('ReadAbsolute: Mire not known in file %s' % filename)
-                    return stream
-            headers['pillar'] = colsstr[3]
-            if numelements > 4:
-                f_inst = colsstr[4]
-            if numelements > 5:
-                try:
-                    adate= datetime.strptime(colsstr[5],'%Y-%m-%d')
-                    headers['analysisdate'] = adate
-                except:
-                    if colsstr[5].find('C') > 0:
-                        temp = float(colsstr[5].strip('C'))
-            if numelements > 6:
-                temp = float(colsstr[6].strip('C'))
+                adate= datetime.strptime(headline[1].strip(),'%Y-%m-%d')
+                headers['analysisdate'] = adate
         elif headonly:
             # skip data for option headonly
             continue
@@ -252,12 +226,10 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
                 logging.warning('ReadAbsolute: Check date format of f measurements in file %s' % filename)
-                return stream
             try:
                 row.f = float(fstr[1])
             except:
                 logging.warning('ReadAbsolute: Check data format in file %s' % filename)
-                return stream
             stream.add(row)
         elif numelements == 4:
             # Position mesurements
@@ -278,7 +250,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.expectedmire = expectedmire
                 row.temp = temp
                 row.person = person
-                row.di_inst = di_inst
+                row.di_inst = di_inst+'_'+fgsensor
                 row.f_inst = f_inst
             except:
                 logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)

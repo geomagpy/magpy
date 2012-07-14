@@ -25,7 +25,7 @@ Procedure:
 from core.magpy_stream import *
 from core.magpy_transfer import *
 
-MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','UNKNOWN']
+MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','UNKNOWN']
 ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
 
 miredict = {'UA': 290.0, 'MireTower':41.80333,'MireChurch':51.1831,'MireCobenzl':353.698}
@@ -197,7 +197,7 @@ class AbsoluteData(object):
         unit - str - default 'deg' - can be either 'deg' or 'gon'
         deltaD - float - default 0.0 - eventual correction factor for declination in angular units (dependent on 'unit')
         usestep - int - use first, second or both of successive measurements
-        iterator - int - switch of logging (e.g. vario not present) in case of iterative approach
+        iterator - int - switch of loggerabs (e.g. vario not present) in case of iterative approach
         """
         plog = PyMagLog()
         xstart = kwargs.get('xstart')
@@ -285,7 +285,7 @@ class AbsoluteData(object):
                 try:
                     dl2mean = np.mean([dl1[k],dl1[k+1]])
                 except:
-                    logging.error("%s : Data missing for declination calculation"% num2date(poslst[0].time))
+                    loggerabs.error("%s : Data missing for declination calculation"% num2date(poslst[0].time).replace(tzinfo=None))
                     pass
             dl2tmp.append(dl2mean)
             if dl2mean < np.pi:
@@ -304,7 +304,7 @@ class AbsoluteData(object):
                     self[k].hc += decmean
         except:
             if iterator == 0:
-                logging.warning("%s : No inclination measurements available"% num2date(poslst[0].time))
+                loggerabs.warning("%s : No inclination measurements available"% num2date(poslst[0].time).replace(tzinfo=None))
             pass
 
         #print "Miremean: %.3f" % miremean
@@ -315,7 +315,7 @@ class AbsoluteData(object):
 
         if (np.max(dl2)-np.min(dl2))>0.1:
             if iterator == 0:
-                logging.warning('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time))
+                loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
         dec = decmean + mirediff + variocorr[0]*180.0/np.pi*ang_fac + deltaD
 
         s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
@@ -407,7 +407,7 @@ class AbsoluteData(object):
                     flist.append(elem.varf)
                     if foundfirstelem == 0:
                         if iterator == 0:
-                            logging.info("%s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time)))
+                            loggerabs.info("%s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
                         foundfirstelem = 1
 
         if len(mflst)>0 or len(mfvlst)>0:
@@ -418,7 +418,7 @@ class AbsoluteData(object):
 
         if len(variox) == 0:
             if iterator == 0:
-                logging.info("%s : no variometervalues found" % num2date(self[0].time))
+                loggerabs.warning("%s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))
             # set means to zero...
             meanvariox = 0.0
             meanvarioy = 0.0
@@ -546,7 +546,7 @@ class AbsoluteData(object):
         # check for inclination error in file inc
         #   -- the following part may casue problems in case of close to polar positions and locations were X is larger than Y
         if ((90.*ang_fac)-inc) < 0.1:
-            logging.warning('%s : Inclination warning... check your vertical measurements' % num2date(self[0].time))
+            loggerabs.error('%s : Inclination warning... check your vertical measurements' % num2date(self[0].time).replace(tzinfo=None))
             h_adder = 0.
         else:
             h_adder = np.sqrt(tmpH**2 - meanvarioy**2) - meanvariox
@@ -575,7 +575,7 @@ class AbsoluteData(object):
             s0i = -I0Diff1/4*fstart - xDiff1*np.sin(inc*np.pi/180) - zDiff1*np.cos(inc*np.pi/180) 
             epzi = (-I0Diff2/4 - (xDiff2*np.sin(inc*np.pi/180) - zDiff2*np.cos(inc*np.pi/180))/(4*fstart))*zstart;
         else:
-            logging.info("%s : no intensity measurement available - presently using an x value of 20000 nT for Dec"  % num2date(self[0].time))
+            loggerabs.warning("%s : no intensity measurement available - presently using an x value of 20000 nT for Dec"  % num2date(self[0].time).replace(tzinfo=None))
             fstart, deltaF, s0i, epzi = float(nan),float(nan),float(nan),float(nan)
             xstart = 20000 ## arbitrary
             ystart = 0.0
@@ -631,7 +631,7 @@ class AbsoluteData(object):
                 print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
             # requires succesful declination determination
             if isnan(resultline.y):
-                logging.warning('%s : CalcAbsolutes: Declination could not be determined - aborting' % num2date(self[0].time))
+                loggerabs.error('%s : CalcAbsolutes: Declination could not be determined - aborting' % num2date(self[0].time).replace(tzinfo=None))
                 break
             # use incstart and ystart as boundary conditions
             try: # check, whether outline already exists
@@ -645,7 +645,7 @@ class AbsoluteData(object):
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
-        logging.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
+        loggerabs.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
 
         if printresults:
             print 'Vector:'
@@ -660,6 +660,16 @@ class AbsoluteData(object):
 #
 
 from lib.magpy_absformats import *
+
+
+def _logfile_len(fname, logfilter):
+    f = open(fname,"rb")
+    cnt = 0
+    for line in f:
+        if logfilter in line:
+            cnt = cnt +1
+    return cnt
+ 
 
 def deg2degminsec(value):
     """
@@ -818,7 +828,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     password = kwargs.get('password')
     
     if not absidentifier:
-        absidentifier = '*AbsoluteMeas.txt'
+        absidentifier = 'AbsoluteMeas.txt'
     if not deltaF:
         deltaF = 0.0
     if not deltaI:
@@ -857,63 +867,70 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     varioinst = '-'
     scalarinst = '-'
 
-    logging.info('--- Start absolute analysis at %s ' % str(datetime.now()))
+    loggerabs.info('--- Start absolute analysis at %s ' % str(datetime.now()))
 
     # now check the contents of the analysis path - url part is yet missing
     if not os.path.isfile(path_or_url):
         if os.path.exists(path_or_url):
-            for infile in iglob(os.path.join(path_or_url,absidentifier)):
+            for infile in iglob(os.path.join(path_or_url,'*'+absidentifier)):
                 localfilelist.append(infile)
         elif  "://" in path_or_url: # URL part
             # get all files in ftp path
-            logging.info('--- -- Accessing absolutes from URL (not shown for security reason)')
+            loggerabs.info('--- -- Accessing absolutes from URL (not shown for security reason)')
             response = urllib2.urlopen(path_or_url)
             path = response.geturl()
             html_string = response.read()
             # Distinguish between directory and file - get filename and add to path -> add to list
             datlst = html_string.split("\n")
             firstline = datlst[0].split()
-            if datlst[0].startswith('# MagPy absolutes'):
+            if datlst[0].startswith('# MagPy Absolutes') or datlst[1].startswith('Miren:'):
                 # found single file
-                localfilelist = path
+                localfilelist.append(path)
                 pass
             elif len(datlst[0].split()) > 8: 
                 for elem in datlst:
                     try:
                         absfile = elem.split()[-1]
-                        localfilelist.append(path+absfile)
+                        if absfile.endswith(absidentifier):
+                            localfilelist.append(path+absfile)
                     except:
                         pass
             else:
-                logging.error('--- -- Aborting AbsAnalysis: no apropriate file found')              
+                loggerabs.error('--- -- Aborting AbsAnalysis: no apropriate file found')              
         else:
-            logging.error('--- -- Aborting AbsAnalysis: could not identify path_or_url')
+            loggerabs.error('--- -- Aborting AbsAnalysis: could not identify path_or_url')
             return  
     else:
         localfilelist.append(path_or_url)
 
+    # Escape for single files:
+    assert type(localfilelist)==list
+
     # get files from localfilelist and analyze them (localfilelist is not sorted!)
     cnt = 0
+
     for fi in localfilelist:
         # Get the amount of warning messages prior to a new analysis
-        lengthofwarningsbefore = len(plog.warnings)
+        lengthoferrorsbefore = _logfile_len('magpy.log','ERROR')
+
         cnt += 1
         plog.addcount(cnt, len(localfilelist))
         # ######## Process counter
         print plog.proc_count
         # ######## Process counter
+        
         # initialize the move function for each fi
         if not archivepath:
             movetoarchive = False
         else:
             movetoarchive = True # this variable will be set false in case of warnings
         stream = absRead(path_or_url=fi,archivepath=archivepath)
-        logging.info('Analyzing absolute file: %s of length %d' % (fi,len(stream)))
+        loggerabs.info('%s : Analyzing absolute file of length %d' % (fi,len(stream)))
         if len(stream) > 0:
             mint = stream._get_min('time')
             maxt = stream._get_max('time')
             # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
-            # Problem: Logging and Warning information from PyMagLog is lost !!!!!!!!!!
+            # Problem: loggerabs and Warning information from PyMagLog is lost !!!!!!!!!!
             if variopath:
                 variost = pmRead(path_or_url=variopath,starttime=mint-0.04,endtime=maxt+0.04)
                 # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
@@ -925,12 +942,12 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                     varioinst = os.path.split(variopath)[0]
                 else:
                     #movetoarchive = False
-                    logging.info('%s : No variometer correction possible' % fi) 
+                    loggerabs.warning('%s : No variometer correction possible' % fi) 
             # Now check for f values in file
             fcol = stream._get_column('f')
             if not len(fcol) > 0 and not scalarpath:
                 movetoarchive = False
-                logging.error('%s : f values are required for analysis -- aborting' % fi)
+                loggerabs.error('%s : f values are required for analysis -- aborting' % fi)
                 break
             if scalarpath:
                 # scalar instrument and dF are then required
@@ -941,17 +958,17 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                     scalarinst = os.path.split(scalarpath)[0]
                 else:
                     #movetoarchive = False
-                    logging.info('%s : Did not find independent scalar values' % fi)
+                    loggerabs.warning('%s : Did not find independent scalar values' % fi)
             # use DataStream and its LineStruct to store results
             result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
             result.str4 = varioinst
             if (result.str3 == '-' or result.str3 == '') and not scalarinst == '-':
                 result.str3 = scalarinst
 
-            # Get the amount of warning messages after the analysis
-            lengthofwarningsafter = len(plog.warnings)
+            # Get the amount of error messages after the analysis
+            lengthoferrorsafter = _logfile_len('magpy.log','ERROR')
 
-            if lengthofwarningsafter > lengthofwarningsbefore:
+            if lengthoferrorsafter > lengthoferrorsbefore:
                 movetoarchive = False
                 
             # check for presence of result in summary-file and append / replace existing data (if more non-NAN values are present)
@@ -1015,11 +1032,13 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
 
             # only write results if no warnings were issued:
             #if movetoarchive:
-            newst.add(result)
-            st.extend(newst, st.header)
+            if not lengthoferrorsafter > lengthoferrorsbefore:
+                newst.add(result)
+                st.extend(newst, st.header)
         else: # len(stream) <= 0
             movetoarchive = False
-            logging.warning('%s: File or data format problem - please check' % fi)
+            loggerabs.error('%s: File or data format problem - please check' % fi)
+
         if movetoarchive:
             if not "://" in fi: 
                 src = fi
@@ -1031,6 +1050,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 suffix = fname.split('.')[-1]
                 passwdtyp = fi.split(':')
                 typus = passwdtyp[0]
+                port = 21
                 passwd = passwdtyp[2].split('@')[0]
                 restpath = passwdtyp[2].split('@')[1]
                 myproxy = restpath.split('/')[0]
@@ -1046,7 +1066,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
 
     st = st.sorting()
     
-    logging.info('--- Finished absolute analysis at %s ' % str(datetime.now()))
+    loggerabs.info('--- Finished absolute analysis at %s ' % str(datetime.now()))
                             
     return st
 
@@ -1089,22 +1109,22 @@ def getAbsFilesFTP(**kwargs):
     filelist = []
     
     msg = PyMagLog()
-    logging.info(" -- Starting downloading Absolute files from %s" % ftppath)
+    loggerabs.info(" -- Starting downloading Absolute files from %s" % ftppath)
 
     # -- Checking whether new data is available
     ftplist = ftpdirlist (localpath=localpath, ftppath=ftppath, filestr=filestr, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
     if len(ftplist) == 0:
-        logging.info(" ---- AbsDownload: no new data on ftp directory")
+        loggerabs.info(" ---- AbsDownload: no new data on ftp directory")
     # -- get local list
     for infile in iglob(os.path.join(archivepath,absidentifier)):
         filelist.append(infile)
 
     # -- Download files to Analysis folder
     for f in ftplist:
-        logging.info(" ---- Now getting %s" % f) 
+        loggerabs.info(" ---- Now getting %s" % f) 
         ftpget (localpath=analysispath, ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
 
-    logging.info(" -- Download procedure finished at %s" % ftppath)
+    loggerabs.info(" -- Download procedure finished at %s" % ftppath)
 
     return ftpfilelist, localfilelist
 
@@ -1137,7 +1157,7 @@ def removeAbsFilesFTP(**kwargs):
     localfilelist = kwargs.get('localfilelist')
 
     msg = PyMagLog()
-    logging.info(" -- Starting removing already successfully analyzed files from %s" % ftppath)
+    loggerabs.info(" -- Starting removing already successfully analyzed files from %s" % ftppath)
 
     doubles = list(set(ftpfilelist) & set(localfilelist))
     print doubles
@@ -1145,7 +1165,7 @@ def removeAbsFilesFTP(**kwargs):
     for f in doubles:
         ftpremove (ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd)
 
-    logging.info(" -- Removing procedure finished at %s" % ftppath)
+    loggerabs.info(" -- Removing procedure finished at %s" % ftppath)
 
 
 # ##################
@@ -1163,30 +1183,16 @@ login = 'data@conrad-observatory.at'
 myproxy = '138.22.156.44'
 #port = 8021
 login = 'data@conrad-observatory.at@94.136.40.103'
-passwd = 'data2COBS'
 
-logfile = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\upload.log')
-analysispath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis')
-testpath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsTest')
-#analysispath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsTest\2011-07-07_11-02-00_AbsoluteMeas.txt')
-archivepath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsArchive')
-summarypath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsTest')
-#summarypath = os.path.normpath(r'e:\leon\Observatory\Messdaten\Data-Magnetism\GmoPy\WIK\di\absolutes_didd.txt')
-variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
-#variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*')
-scalarpath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
-#variopath=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')
-#variopath=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\lemi\*')
-#variopath=os.path.normpath(r'e:\leon\Observatory\Messdaten\Data-Magnetism\gdas\rawdata\*')
 
 if __name__ == '__main__':
-    print "Starting the GetAbsolutes program:"
-    msg = PyMagLog()
+    print "Starting a test of the Absolutes program:"
+    #msg = PyMagLog()
     # getAbsFTP()
     #st = analyzeAbsFiles(path_or_url=testpath, variopath=variopath, scalarpath=variopath)
-    st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=variopath, scalarpath=scalarpath)
+    #st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=variopath, scalarpath=scalarpath)
     #st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
-    st.pmwrite(analysispath,coverage='all',mode='replace',filenamebegins='absolutes_didd')
+    #st.pmwrite(analysispath,coverage='all',mode='replace',filenamebegins='absolutes_didd')
 
     #loglst = msg.combineWarnLog(msg.warnings,msg.logger)
     #print loglst

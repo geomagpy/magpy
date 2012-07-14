@@ -13,13 +13,17 @@ def isAbsFormat(filename, format_type):
     if (format_type == "MAGPYABS"):
         if (isMAGPYABS(filename)):
             return True
+    elif (format_type == "MAGPYNEWABS"):
+        if (isMAGPYNEWABS(filename)):
+            return True
     else:
         return False
 
 def readAbsFormat(filename, format_type, headonly=False, **kwargs):
     if (format_type == "MAGPYABS"):
         return readMAGPYABS(filename, headonly, **kwargs)
+    if (format_type == "MAGPYNEWABS"):
+        return readMAGPYNEWABS(filename, headonly, **kwargs)
     else:
         return AbsoluteData([],{})
-
 

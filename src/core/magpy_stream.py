@@ -8,7 +8,7 @@ Version 1.0 (from the 23.02.2012)
 # ------------------------------------
 # Part 1: Import routines for packages
 # ------------------------------------
-logpygen = '' # logging variable
+logpygen = '' # loggerstream variable
 netcdf = True # Export routines for netcdf
 spacecdf = True # Export routines for Nasa cdf
 mailingfunc = True # E-mail notifications
@@ -101,7 +101,25 @@ if logpygen == '':
 # ##################
 # file format tests
 # ##################
+
 logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.DEBUG)
+# define a Handler which writes INFO messages or higher to the sys.stderr
+console = logging.StreamHandler()
+console.setLevel(logging.WARNING)
+# set a format which is simpler for console use
+formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+# tell the handler to use this format
+console.setFormatter(formatter)
+# add the handler to the root logger
+logging.getLogger('').addHandler(console)
+
+# Package loggers to identify info/problem source
+loggerabs = logging.getLogger('core.magpy_abolutes')
+loggerstream = logging.getLogger('core.magpy_stream')
+loggerlib = logging.getLogger('lib')
+
+# Special loggers for event notification
+stormlogger = logging.getLogger('core.magpy_stream')
 
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
@@ -559,11 +577,11 @@ class DataStream(object):
                     column = mcolumn
                 else:
                     numdat = False
-                    logging.warning("NAN warning: only nan in column")
+                    loggerstream.warning("NAN warning: only nan in column")
                     return []
         except:
             numdat = False
-            logging.warning("NAN warning: only nan in column")
+            loggerstream.warning("NAN warning: only nan in column")
             return []
 
         return column
@@ -681,7 +699,7 @@ class DataStream(object):
         starttime = self[0].time
         endtime = self[-1].time
 
-        logging.info(' --- Start baseline-correction at %s' % str(datetime.now()))
+        loggerstream.info(' --- Start baseline-correction at %s' % str(datetime.now()))
 
         # 1) test whether absolutes are in the selected absolute data stream
         if absolutestream[0].time == 0:
@@ -689,20 +707,20 @@ class DataStream(object):
 
         # 2) check whether enddate is within abs time range or larger:
         if not absolutestream[0].time-1 < endtime:
-            logging.warning("Baseline: Endtime prior to beginning of absolute measurements selected ")
+            loggerstream.warning("Baseline: Endtime prior to beginning of absolute measurements selected ")
             
         # 3) check time ranges of stream and absolute values:
         abst = absolutestream._get_column('time')
         if np.min(abst) > starttime:
-            logging.info('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
+            loggerstream.info('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
             #absolutestream.add(absolutestream[0])
             #absolutestream[-1].time = starttime
             #absolutestream.sorting()
-            logging.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))         
+            loggerstream.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))         
         if np.max(abst) < endtime:
-            logging.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
+            loggerstream.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
             if num2date(absolutestream[-1].time).replace(tzinfo=None) + timedelta(days=extradays) < num2date(endtime).replace(tzinfo=None):
-                logging.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
+                loggerstream.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
             
         endtime = num2date(endtime).replace(tzinfo=None)
         # 5) check whether an abolute measurement larger then 12-31 of the same year as enddate exists
@@ -718,13 +736,13 @@ class DataStream(object):
         
         # endtime for baseline calc determined
         if (np.max(abst) - np.min(abst)) < 365+2*extradays:
-            logging.info('Baseline: Coverage of absolute values does not reach one year')
+            loggerstream.info('Baseline: Coverage of absolute values does not reach one year')
             basestarttime = num2date(absolutestream[0].time).replace(tzinfo=None) - timedelta(days=extradays)
         else:
             basestarttime = baseendtime-timedelta(days=(365+2*extradays))
 
         msg = 'Baseline: absolute data taken from %s to %s' % (basestarttime,baseendtime)
-        logging.debug(msg)
+        loggerstream.debug(msg)
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
         bas = bas.extrapolate(basestarttime,baseendtime)
@@ -746,7 +764,7 @@ class DataStream(object):
         # add baseline
         self = self.func_add(func)
 
-        logging.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
+        loggerstream.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
         return self
 
@@ -767,7 +785,7 @@ class DataStream(object):
             newstream.add(elem)
 
         
-        logging.info('Corrected time column by %s sec' % str(offset.seconds))
+        loggerstream.info('Corrected time column by %s sec' % str(offset.seconds))
 
         return DataStream(newstream,header)
 
@@ -784,11 +802,11 @@ class DataStream(object):
         if not offset:
             offset = 0
 
-        logging.info('--- Calculating delta f started at %s ' % str(datetime.now()))
+        loggerstream.info('--- Calculating delta f started at %s ' % str(datetime.now()))
         for elem in self:
             elem.df = np.sqrt(elem.x**2+elem.y**2+elem.z**2) - (elem.f + offset)
         
-        logging.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
+        loggerstream.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
 
         return self
 
@@ -803,7 +821,7 @@ class DataStream(object):
         put2key
         """
         
-        logging.info('--- Calculating derivative started at %s ' % str(datetime.now()))
+        loggerstream.info('--- Calculating derivative started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
         put2keys = kwargs.get('put2keys')
@@ -813,7 +831,7 @@ class DataStream(object):
             put2keys = ['dx','dy','dz','df']
 
         if len(keys) != len(put2keys):
-            logging.error('Amount of columns read must be equal to outputcolumns')
+            loggerstream.error('Amount of columns read must be equal to outputcolumns')
             return self
 
         t = self._get_column('time')
@@ -822,7 +840,7 @@ class DataStream(object):
             dval = np.gradient(np.asarray(val))
             self._put_column(dval, put2keys[i])
 
-        logging.info('--- derivative obtained at %s ' % str(datetime.now()))
+        loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
         
 
@@ -917,26 +935,26 @@ class DataStream(object):
                     if len(knots) > len(val):
                         knotstep = knotstep*4
                         knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
-                        logging.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
+                        loggerstream.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
                     ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
                 except:
-                    logging.error('Value error in fit function - likely reason: no valid numbers')
+                    loggerstream.error('Value error in fit function - likely reason: no valid numbers')
                     raise ValueError, "Value error in fit function"
                     return
                 f_fit = interpolate.splev(x,ti)
             elif len(val)>1 and fitfunc == 'poly':
-                logging.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
+                loggerstream.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
                 ti = polyfit(nt, val, fitdegree)
                 f_fit = polyval(ti,x)
             elif len(val)>1 and fitfunc == 'harmonic':
-                logging.debug('Selected harmonic fit - not yet implemented')
+                loggerstream.debug('Selected harmonic fit - not yet implemented')
                 ti = polyfit(nt, val, fitdegree)
                 f_fit = polyval(ti,x)
             elif len(val)<=1:
-                logging.warning('Fit: No valid data')
+                loggerstream.warning('Fit: No valid data')
                 return
             else:
-                logging.warning('Fit: function not valid')
+                loggerstream.warning('Fit: function not valid')
                 return
             exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
             exec('functionkeylist["f'+key+'"] = f'+key)
@@ -982,16 +1000,16 @@ class DataStream(object):
 
         # check whether data is valid
         if len(self) < 2:
-            logging.warning('FilterFunc: No valid stream provided')
+            loggerstream.warning('FilterFunc: No valid stream provided')
             return self
 
         # check whether requested filter_width >= sampling interval within 1 millisecond accuracy
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         if filter_width - si <= timedelta(microseconds=1000):
-            logging.error('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
+            loggerstream.error('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
             return self
 
-        logging.info('--- Start filtering at %s ' % str(datetime.now()))
+        loggerstream.info('--- Start filtering at %s ' % str(datetime.now()))
 
         starray = np.asarray(self)
         firstday = 0
@@ -1102,7 +1120,7 @@ class DataStream(object):
                         if len(colf) >0:
                             resrow.df = np.max(colf)-np.min(colf)
                 else:
-                    logging.warning("FilterFunc: Filter not recognized - aborting")
+                    loggerstream.warning("FilterFunc: Filter not recognized - aborting")
                 resrow.typ = starray[0].typ
             else: # in case of removed flagged sequences - add time and leave "NaN" value in file 
                 resrow.time = abscurrtime
@@ -1128,7 +1146,7 @@ class DataStream(object):
         self.header['DigitalSamplingFilter'] = filter_type
         self.header['DataInterval'] = str(filter_width.seconds)+' sec'
         
-        logging.info(' --- Finished filtering at %s' % str(datetime.now()))
+        loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
 
         return DataStream(resdata,self.header)      
 
@@ -1168,9 +1186,9 @@ class DataStream(object):
                 elem.comment = comment
         if flag == 1 or flag == 3:
             if enddate:
-                logging.info("Removed data from %s to %s ->  (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
+                loggerstream.info("Removed data from %s to %s ->  (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
             else:
-                logging.info("Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
+                loggerstream.info("Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
         return self
             
         
@@ -1268,7 +1286,7 @@ class DataStream(object):
 
         sp = self.get_sampling_period()
         
-        logging.info('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
+        loggerstream.info('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
 
         header = self.header
         stream = DataStream()
@@ -1295,7 +1313,7 @@ class DataStream(object):
                 stream.add(elem)
             prevtime = elem.time
 
-        logging.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
+        loggerstream.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
                 
         return DataStream(stream,header)
 
@@ -1341,7 +1359,7 @@ class DataStream(object):
         """
         
 
-        logging.info('--- Integrating started at %s ' % str(datetime.now()))
+        loggerstream.info('--- Integrating started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
         if not keys:
@@ -1354,7 +1372,7 @@ class DataStream(object):
             dval = np.insert(dval, 0, 0) # Prepend 0 to maintain original length
             self._put_column(dval, 'd'+key)
 
-        logging.info('--- integration finished at %s ' % str(datetime.now()))
+        loggerstream.info('--- integration finished at %s ' % str(datetime.now()))
         return self
 
 
@@ -1421,7 +1439,7 @@ class DataStream(object):
         iprev = 0
         iend = 0
 
-        logging.info('--- Starting k value calculation: %s ' % (str(datetime.now())))
+        loggerstream.info('--- Starting k value calculation: %s ' % (str(datetime.now())))
 
         # Start with the full input stream
         # eventually convert xyz to hdz first
@@ -1437,13 +1455,13 @@ class DataStream(object):
             fmistream = self
             pass
         else:
-            logging.error('Unkown typ (xyz?) in FMI function')
+            loggerstream.error('Unkown typ (xyz?) in FMI function')
             return
         
         fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
         fmi2stream = fmistream.filtered(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 
-        logging.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
+        loggerstream.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
 
         t = fmi2stream._get_column('time')
 
@@ -1466,7 +1484,7 @@ class DataStream(object):
 
         outstream = mergeStreams(self,fmi4stream,keys=[key])
 
-        logging.info('--- finished k value calculation: %s ' % (str(datetime.now())))
+        loggerstream.info('--- finished k value calculation: %s ' % (str(datetime.now())))
         
         return DataStream(outstream, self.header)
 
@@ -1590,7 +1608,7 @@ class DataStream(object):
                     if len(yerr) > 0: 
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
-                        logging.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
+                        loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
                 #ax.plot_date(t2,yplt2,"r"+symbol[1],markersize=4)
                 if function:
                     fkey = 'f'+key
@@ -1621,7 +1639,7 @@ class DataStream(object):
                 if debugmode:
                     print "Finished plot %d at %s" % (count, datetime.utcnow())
             else:
-                logging.warning("Plot: No data available for key %s" % key)
+                loggerstream.warning("Plot: No data available for key %s" % key)
 
         fig.subplots_adjust(hspace=0)
 
@@ -1750,7 +1768,7 @@ class DataStream(object):
         if not beta:
             beta = 0.
 
-        logging.info('--- Applying rotation matrix: %s ' % (str(datetime.now())))
+        loggerstream.info('--- Applying rotation matrix: %s ' % (str(datetime.now())))
 
         for elem in self:
             ra = np.pi*alpha/(180.*ang_fac)
@@ -1762,7 +1780,7 @@ class DataStream(object):
             elem.y = ys
             elem.z = zs
 
-        logging.info('--- finished reorientation: %s ' % (str(datetime.now())))
+        loggerstream.info('--- finished reorientation: %s ' % (str(datetime.now())))
 
         return self
 
@@ -1813,7 +1831,7 @@ class DataStream(object):
         # x,y,z (vector): pos 1
         # other (vector): pos 2
         
-        logging.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
+        loggerstream.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
 
         # Start here with for key in keys:
         for key in keys:
@@ -1851,7 +1869,7 @@ class DataStream(object):
                         md = np.median(selcol) 
                         whisker = md*0.005
                     except:
-                        logging.warning("Eliminate outliers produced a problem: please check\n")
+                        loggerstream.warning("Eliminate outliers produced a problem: please check\n")
                         pass
 
                 for elem in lstpart:
@@ -1862,14 +1880,14 @@ class DataStream(object):
                         fllist[flagpos] = '1'
                         row.flag=''.join(fllist)
                         row.comment = "%s removed by automatic outlier removal" % key
-                        logging.info("Outlier: removed %f at time %f, " % (eval('elem.'+key), elem.time))
+                        loggerstream.info("Outlier: removed %f at time %f, " % (eval('elem.'+key), elem.time))
                     else:
                         fllist = list(row.flag)
                         fllist[flagpos] = '0'
                         row.flag=''.join(fllist)
                     newst.add(row)
 
-        logging.info('--- Outlier removal finished at %s ' % str(datetime.now()))
+        loggerstream.info('--- Outlier removal finished at %s ' % str(datetime.now()))
 
         return DataStream(newst, self.header)        
 
@@ -1913,7 +1931,7 @@ class DataStream(object):
             window='hanning'
 
         
-        logging.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
+        loggerstream.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
 
         for key in keys:
             if not key in KEYLIST:
@@ -1941,7 +1959,7 @@ class DataStream(object):
 
             self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
 
-        logging.info(' --- Finished smoothing at %s' % (str(datetime.now())))
+        loggerstream.info(' --- Finished smoothing at %s' % (str(datetime.now())))
         
         return self
 
@@ -2046,7 +2064,7 @@ class DataStream(object):
         #if date2num(self._testtime(starttime)) > date2num(self._testtime(endtime)):
         #    raise ValueError, "Starttime is larger then Endtime"
         # remove data prior to starttime input
-        logging.debug('Trim: Started from %s to %s' % (starttime,endtime))
+        loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
 
         if starttime:
             # check starttime input
@@ -2356,7 +2374,7 @@ class PyMagLog(object):
 
     def sendLogByMail(self,loglist,**kwargs):
         """
-        function to send logging lists by mail to the observer
+        function to send loggerstream lists by mail to the observer
         keywords:
         smtpserver
         sender
@@ -2618,13 +2636,33 @@ def isNumber(s):
         return False
 
 
-def send_mail(send_from, send_to, subject, text, files=[], server="localhost", **kwargs):
+def send_mail(send_from, send_to, **kwargs):
+    """
+    Function for sending mails with attachments
+    """
+    
     assert type(send_to)==list
-    assert type(files)==list
 
+    files = kwargs.get('files')
     user = kwargs.get('user')
     pwd = kwargs.get('pwd')
     port = kwargs.get('port')
+    smtpserver = kwargs.get('smtpserver')
+    subject = kwargs.get('subject')
+    text = kwargs.get('text')
+
+    if not smtpserver:
+        smtpserver = 'smtp.web.de'
+    if not files:
+        files = []
+    if not text:
+        text = 'Cheers, Your Analysis-Robot'
+    if not subject:
+        subject = 'MagPy - Automatic Analyzer Message'
+    if not port:
+        port = 587
+
+    assert type(files)==list
 
     msg = MIMEMultipart()
     msg['From'] = send_from
@@ -2644,77 +2682,13 @@ def send_mail(send_from, send_to, subject, text, files=[], server="localhost", *
     #smtp = smtplib.SMTP(server)
     smtp = SMTP()
     smtp.set_debuglevel(False)
-    smtp.connect(smtpserver, 587)
+    smtp.connect(smtpserver, port)
     smtp.ehlo()
     smtp.starttls()
     smtp.ehlo()
     smtp.login(user, pwd)
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.close()
-
-
-def sendLogByMail(logfile,**kwargs):
-    """
-    function to send logging lists by mail to the observer
-    keywords:
-    smtpserver
-    sender
-    user
-    pwd
-    destination
-    subject
-    """
-    smtpserver = kwargs.get('smtpserver')
-    sender = kwargs.get('sender')
-    user = kwargs.get('user')
-    pwd = kwargs.get('pwd')
-    destination = kwargs.get('destination')
-    subject = kwargs.get('subject')
-
-    if not smtpserver:
-        smtpserver = 'smtp.web.de'
-    if not sender:
-       sender = 'roman_leonhardt@web.de'
-    if not destination:
-        destination = ['roman.leonhardt@zamg.ac.at']
-    if not user:
-        user = "FrauMusterfrau"
-    if not pwd:
-        pwd = "HelloWorld"
-    if not subject:
-        subject= 'MagPy Log from %s' % datetime.utcnow()
-
-    # typical values for text_subtype are plain, html, xml
-    text_subtype = 'plain'
-
-    lf = open(logfile,'rb')
-    for line in lf:
-        content = '\n'.join(line)
-    lf.close()
-
-    print content
-    
-    #content = '\n'.join(''.join(line) for line in loglist)
-    
-    try:
-        msg = MIMEText(content, text_subtype)
-        msg['Subject']= subject
-        msg['From'] = sender # some SMTP servers will do this automatically, not all
-        smtp = SMTP()
-        smtp.set_debuglevel(False)
-        smtp.connect(smtpserver, 587)
-        smtp.ehlo()
-        smtp.starttls()
-        smtp.ehlo()
-        smtp.login(user, pwd)
-
-        try:
-            smtp.sendmail(sender, destination, msg.as_string())
-        finally:
-            smtp.close()
-
-    except Exception, exc:
-        raise ValueError( "mail failed; %s" % str(exc) ) # give a error message
 
 
 # ##################
@@ -2816,7 +2790,7 @@ def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
     # file format should be known by now
-    #logging.info('Appending data - dataformat: %s' % format_type)
+    #loggerstream.info('Appending data - dataformat: %s' % format_type)
     #print format_type
     """
     try:
@@ -2865,7 +2839,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     if not comment:
         comment = '-'
    
-    logging.info('--- Start mergings at %s ' % str(datetime.now()))
+    loggerstream.info('--- Start mergings at %s ' % str(datetime.now()))
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -2915,7 +2889,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         except:
                             pass
 
-    logging.info('--- Mergings finished at %s ' % str(datetime.now()))
+    loggerstream.info('--- Mergings finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)      
 
@@ -2928,12 +2902,18 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     2. fill gaps in stream_a data with stream_b data without replacing
     """
+    try:
+        assert len(stream_a) > 0
+    except:
+        loggerstream.error('Stream a empty - aborting merging function')
+        return
+        
     keys = kwargs.get('keys')
     getmeans = kwargs.get('getmeans')
     if not keys:
         keys = KEYLIST[1:16]
 
-    logging.info('--- Start subtracting streams at %s ' % str(datetime.now()))
+    loggerstream.info('--- Start subtracting streams at %s ' % str(datetime.now()))
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -2956,7 +2936,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         etime = np.max(timeb)
 
     if (etime <= stime):
-        logging.error('Subtracting streams: stream are not overlapping')
+        loggerstream.error('Subtracting streams: stream are not overlapping')
         return self
     
     # Take only the time range of the shorter stream
@@ -2964,7 +2944,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
     stream_b = stream_b.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
 
-    logging.info('Subtracting Streams: time range form %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
+    loggerstream.info('Subtracting Streams: time range form %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
     # Interpolate stream_b
     function = stream_b.interpol(keys)
@@ -2982,7 +2962,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     newval = function[0][fkey](functime)
                     exec('elem.'+key+' -= float(newval)')
  
-    logging.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))
+    loggerstream.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)      
 
