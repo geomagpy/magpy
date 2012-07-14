@@ -18,7 +18,7 @@ try:
     # Matpoltlib
     import matplotlib
     version = matplotlib.__version__.replace('svn', '')
-    version = map(int, version.split("."))
+    version = map(int, version.strip("rc").split("."))
     MATPLOTLIB_VERSION = version
     print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
     import matplotlib.pyplot as plt
@@ -63,18 +63,29 @@ try:
     # NetCDF
     print "Loading Netcdf4 support ..."
     from netCDF4 import Dataset
+    print "success"
 except ImportError:
     netcdf = False
+    print " -failed- "
     logpygen += "pymag-general: Import failure: Netcdf not available\n"
     pass
 
 try:
     # NasaCDF
     print "Loading Spacepy package cdf support ..."
-    os.putenv("CDF_LIB", nasacdfdir)
-    import spacepy.pycdf as cdf
+    try:
+        os.putenv("CDF_LIB", nasacdfdir)
+        print "trying CDF lib at %s" % nasacdfdir
+        import spacepy.pycdf as cdf
+        print "... success"
+    except:
+        os.putenv("CDF_LIB", "/user/local/cdf/lib")
+        print "trying CDF lib in /user/local/cdf"
+        import spacepy.pycdf as cdf      
+        print "... success"
 except:
     logpygen += "pymag-general: Import failure: Nasa cdf not available\n"
+    print " -failed- check spacepy package"
     pass
 
 try:
