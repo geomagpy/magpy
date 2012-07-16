@@ -135,7 +135,7 @@ stormlogger = logging.getLogger('core.magpy_stream')
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
-FLAGKEYLIST = KEYLIST[:12]
+FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
@@ -664,10 +664,15 @@ class DataStream(object):
             for idx, el in enumerate(currsequence):
                 if idx > 1 and idx < len(currsequence)-1:
                     aicval = self._aic(currsequence, idx)
-                    self[idx+istart].var2 = aicval               
+                    self[idx+istart].var2 = aicval
+                    # store start value - aic: is a measure for the significance of information change
+                    #if idx == 2:
+                    #    aicstart = aicval
+                    #self[idx+istart].var5 = aicstart-aicval
             iprev = iend
 
         self.header['col-var2'] = 'aic'
+        #self.header['col-var4'] = 'aicchange'
         # old approach
         #for idx, elem in enumerate(self):
         #    ta, ts = self._find_nearest(np.asarray(t), date2num(num2date(elem.time).replace(tzinfo=None) - timerange))
@@ -860,15 +865,20 @@ class DataStream(object):
         maybe combine with extract
         example:
         compare is string like ">, <, ==, !="
-        st.eventlogger(['var3'],[15,30,45],'>')
+        st.eventlogger(['var3'],[15,20,30],'>')
         """
         assert type(value) == list
 
         if not compare:
             compare = '=='
         for elem in self:
-            if eval('elem['+key+'] '+ compare + ' ' + value[0]):
-                stormlogger.warning('Moderate')
+            evaluationstring = 'elem.' + key + ' ' + compare + ' ' + str(value[0])
+            if eval('elem.'+key+' '+compare+' '+str(value[2])):
+                stormlogger.warning('Strong onset at %s' % num2date(elem.time).replace(tzinfo=None))
+            elif eval('elem.'+key+' '+compare+' '+str(value[1])):
+                stormlogger.warning('Moderate onset at %s' % num2date(elem.time).replace(tzinfo=None))
+            elif eval('elem.'+key+' '+compare+' '+str(value[0])):
+                stormlogger.warning('Minor onset at %s' % num2date(elem.time).replace(tzinfo=None))
         
 
     def extract(self, key, value, compare=None, debugmode=None):
@@ -883,7 +893,7 @@ class DataStream(object):
         if not compare:
             compare = '=='
 
-        liste = [elem for elem in self if eval('elem['+key+'] '+ compare + ' ' + value)]
+        liste = [elem for elem in self if eval('elem['+key+'] '+ compare + ' ' + str(value))]
 
         return DataStream(liste,self.header)    
 
@@ -1033,7 +1043,7 @@ class DataStream(object):
         # check whether requested filter_width >= sampling interval within 1 millisecond accuracy
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         if filter_width - si <= timedelta(microseconds=1000):
-            loggerstream.error('FilterFunc: Requested filter_width does not exceed sampling interval - aborting')
+            loggerstream.warning('FilterFunc: Requested filter_width does not exceed sampling interval - aborting filtering')
             return self
 
         loggerstream.info('--- Start filtering at %s ' % str(datetime.now()))
@@ -1147,7 +1157,7 @@ class DataStream(object):
                         if len(colf) >0:
                             resrow.df = np.max(colf)-np.min(colf)
                 else:
-                    loggerstream.warning("FilterFunc: Filter not recognized - aborting")
+                    loggerstream.warning("FilterFunc: Filter not recognized - aborting filering")
                 resrow.typ = starray[0].typ
             else: # in case of removed flagged sequences - add time and leave "NaN" value in file 
                 resrow.time = abscurrtime

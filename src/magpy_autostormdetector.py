@@ -22,8 +22,8 @@ endtime='2011-9-14' # datetime.replace by utcnow()
 variopath = os.path.join('..','dat','didd','*')
 scalarpath = os.path.join('..','dat','didd','*')
 
-starttime = '2011-4-1' # replace by datetime.utcnow-timedelta(days=3)
-endtime='2011-4-30' # datetime.replace by utcnow()
+starttime = '2011-3-1' # replace by datetime.utcnow-timedelta(days=3)
+endtime='2011-3-31' # datetime.replace by utcnow()
 variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*')
 scalarpath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
 
