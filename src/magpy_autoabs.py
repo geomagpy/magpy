@@ -12,9 +12,11 @@ from core.magpy_absolutes import *
 # Some definitions
 absolutedatalocation = "ftp://data@conrad-observatory.at:data2COBS@94.136.40.103/cobenzlabs/"
 absindentifier = 'AbsoluteMeas.txt'
-lemipath = os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*')
-diddpath = os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*')
-archivepath = os.path.normpath('f:\\Absolute-Cobenzl\\Archive')
+lemipath = os.path.join('/media','32_00_00','Vario-Cobenzl','dIdD-System','LEMI','*')
+#lemipath = os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*')
+diddpath = os.path.join('/media','32_00_00','Vario-Cobenzl','dIdD-System','*')
+#diddpath = os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*')
+archivepath = os.path.join('/media','32_00_00','Absolute-Cobenzl','Archive')
 writeresultpath = os.path.join('..','dat','absolutes')
 send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at']
 
