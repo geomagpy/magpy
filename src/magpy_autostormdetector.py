@@ -22,10 +22,10 @@ endtime='2011-9-14' # datetime.replace by utcnow()
 variopath = os.path.join('..','dat','didd','*')
 scalarpath = os.path.join('..','dat','didd','*')
 
-starttime = '2011-3-1' # replace by datetime.utcnow-timedelta(days=3)
-endtime='2011-3-31' # datetime.replace by utcnow()
-variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*')
-scalarpath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
+#starttime = '2011-3-1' # replace by datetime.utcnow-timedelta(days=3)
+#endtime='2011-3-31' # datetime.replace by utcnow()
+#variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*')
+#scalarpath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
 
 #
 # Read Variometer data
@@ -44,8 +44,6 @@ func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
 sinst = sinst.rotation(alpha=3.3,beta=0.0)
 sinst = sinst.baseline(abslemi,knotstep=0.05)
 sinst = sinst._convertstream('xyz2hdz')
-sinst.pmplot(['x','y','z','f'])
-
 
 #sinst.spectrogram('x',wlen=60,dbscale=True)
 sinst = sinst.aic_calc('x',timerange=timedelta(hours=1))
@@ -58,3 +56,5 @@ sinst = mergeStreams(sinst,stfilt,key=['var4'])
 
 sinst.pmplot(['x','var2','var3','var4'],bartrange=0.02,symbollist = ['-','-','-','z'],plottitle = "Ex 8 - Storm onsets and local variation index")
 
+#sinst.trim(starttime=endtime, endtime=endtime)
+#sinst.pmplot(['x','y','z','f'],fullday=True)
