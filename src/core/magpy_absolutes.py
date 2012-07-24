@@ -1060,9 +1060,9 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 fh = NamedTemporaryFile(suffix=suffix,delete=False)
                 fh.write(urllib2.urlopen(fi).read())
                 fh.close()
+                shutil.move(fh.name,dst)
                 if (typus == 'ftp'):
                     ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
-                shutil.move(fh.name,dst)
 
     st = st.sorting()
     

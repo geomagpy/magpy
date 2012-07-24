@@ -12,11 +12,12 @@ from core.magpy_absolutes import *
 # Some definitions
 absolutedatalocation = "ftp://data@conrad-observatory.at:data2COBS@94.136.40.103/cobenzlabs/"
 absindentifier = 'AbsoluteMeas.txt'
-lemipath = os.path.join('/media','32_00_00','Vario-Cobenzl','dIdD-System','LEMI','*')
-#lemipath = os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\LEMI\\*')
-diddpath = os.path.join('/media','32_00_00','Vario-Cobenzl','dIdD-System','*')
-#diddpath = os.path.normpath('f:\\Vario-Cobenzl\\dIdD-System\\*')
-archivepath = os.path.join('/media','32_00_00','Absolute-Cobenzl','Archive')
+# check os and vary the basepath variable
+print os.name
+basepath = 'e:\dropbox\My Dropbox'
+lemipath = os.path.join(basepath,'Daten','Magnetism','LEMI-WIK','*')
+diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','*')
+archivepath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW')
 writeresultpath = os.path.join('..','dat','absolutes')
 send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at']
 
