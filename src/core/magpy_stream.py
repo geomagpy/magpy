@@ -79,14 +79,15 @@ try:
         import spacepy.pycdf as cdf
         print "... success"
     except:
-        os.putenv("CDF_LIB", "/user/local/cdf/lib")
-        print "trying CDF lib in /user/local/cdf"
+        os.putenv("CDF_LIB", "/usr/local/cdf/lib")
+        print "trying CDF lib in /usr/local/cdf"
         import spacepy.pycdf as cdf      
         print "... success"
 except:
     logpygen += "pymag-general: Import failure: Nasa cdf not available\n"
     print " -failed- check spacepy package"
     pass
+
 
 try:
     import smtplib

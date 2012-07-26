@@ -1,16 +1,4 @@
  # MagPy - ASCII
- # Station Name:                                               |
- # Data Type:  variation                                    |
- # Elevation:                                               |
- # Format:  IAGA-2002                                    |
- # Geodetic Latitude:                                               |
- # Reported:                                               |
- # IAGA Code:                                               |
- # Sensor Orientation:                                               |
- # Geodetic Longitude:                                               |
- # Source of Data:                                               |
- # Data Interval Type:  Filtered 1-minute (00:15-01:45)              |
- # Digital Sampling:  0.00625 seconds                              |
 # head:
 Epoch[],x[nT],y[nT],z[nT],f[nT],T[],ScaleValueDI[],Dec_S0[],Dec_deltaH[],Dec_epsilonZ[],Inc_S0[],Inc_epsilonZ[],basex[],basey[],basez[],dF[],Person[],DI-Inst[],F-Inst[],Vario-Inst[],-[],-[],-[],-[]
 # data:

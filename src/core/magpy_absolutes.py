@@ -722,6 +722,13 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pass
     elif "://" in path_or_url:
         # some URL
+        #proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )
+           
+        #opener = urllib2.build_opener(proxy_handler,urllib2.HTTPBasicAuthHandler(),urllib2.HTTPHandler, urllib2.HTTPSHandler,
+                urllib2.FTPHandler)
+        # install this opener
+        #urllib2.install_opener(opener)       
+  
         # extract extension if any
         suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
         fh = NamedTemporaryFile(suffix=suffix,delete=False)
@@ -826,6 +833,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     # Not used so far are username and passwd
     username = kwargs.get('username')
     password = kwargs.get('password')
+    proxy = kwargs.get('proxy')
     
     if not absidentifier:
         absidentifier = 'AbsoluteMeas.txt'
@@ -862,6 +870,14 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         opener = urllib2.build_opener(authhandler)
         urllib2.install_opener(opener)
 
+    if proxy:
+        proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )
+           
+        opener = urllib2.build_opener(proxy_handler,urllib2.HTTPBasicAuthHandler(),urllib2.HTTPHandler, urllib2.HTTPSHandler,
+                urllib2.FTPHandler)
+        # install this opener
+        urllib2.install_opener(opener)
+            
     localfilelist = []
     st = DataStream()
     varioinst = '-'
