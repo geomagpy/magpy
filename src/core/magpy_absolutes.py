@@ -869,10 +869,8 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         urllib2.install_opener(opener)
 
     if proxy:
-        proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )
-           
-        opener = urllib2.build_opener(proxy_handler,urllib2.HTTPBasicAuthHandler(),urllib2.HTTPHandler, urllib2.HTTPSHandler,
-                urllib2.FTPHandler)
+        proxy_handler = urllib2.ProxyHandler( {'http': 'http://138.22.156.44:3128', 'ftp' : 'ftp://138.22.156.44:8021' } )           
+        opener = urllib2.build_opener(proxy_handler)
         # install this opener
         urllib2.install_opener(opener)
             
@@ -890,8 +888,18 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 localfilelist.append(infile)
         elif  "://" in path_or_url: # URL part
             # get all files in ftp path
-            loggerabs.info('--- -- Accessing absolutes from URL (not shown for security reason)')
+            #path_or_url = "ftp://94.136.40.103/cobenzlabs/"
+            #loggerabs.info('--- -- Accessing absolutes from URL (not shown for security reason)')
+            #passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            #passman.add_password(None, path_or_url, 'data@conrad-observatory.at', 'data2COBS')
+            #authhandler = urllib2.HTTPBasicAuthHandler(passman)
+            #proxy_handler = urllib2.ProxyHandler( {'http': 'http://138.22.156.44:3128', 'ftp' : 'ftp://138.22.156.44:8021' } )           
+            #opener = urllib2.build_opener(proxy_handler,authhandler)
+            # install this opener
+            #urllib2.install_opener(opener)
+            
             response = urllib2.urlopen(path_or_url)
+            
             path = response.geturl()
             html_string = response.read()
             # Distinguish between directory and file - get filename and add to path -> add to list
