@@ -141,7 +141,7 @@ FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'PMAG1', 'PMAG2', 'GDASA1', 'RMRCS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
                             'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','UNKOWN']
 
 # -------------------
@@ -2764,10 +2764,11 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # currently only single files are supported
         # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
-        fh = NamedTemporaryFile(suffix=suffix,delete=False)
+        date = os.path.basename(path_or_url).partition('.')[0][-8:]
+        fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
         fh.write(content)
         fh.close()
-        stream = _absRead(fh.name, dataformat, headonly, **kwargs) 
+        st = _pmRead(fh.name, dataformat, headonly, **kwargs)
         os.remove(fh.name)
     else:
         # some file name
@@ -2778,6 +2779,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         if len(st) == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
+                loggerstream.critical("Check file/pathname - No file matching pattern: %s" % pathname)
                 raise Exception("No file matching file pattern: %s" % pathname)
             elif not has_magic(pathname) and not os.path.isfile(pathname):
                 raise IOError(2, "No such file or directory", pathname)
@@ -2972,21 +2974,39 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         etime = np.max(timea)
     else:
         etime = np.max(timeb)
+    # if stream_b is longer than stream_a use one step after and one step before e and stime
+    if etime < np.max(timeb):
+        for idx, ttt in enumerate(timeb):
+            if ttt > etime:
+                try: # use slightly larger time range for interpolation
+                    etimeb = timeb[idx+1]
+                except:
+                    etimeb = timeb[idx]
+                break
+    else:
+        etimeb = etime
 
+    if stime > np.min(timeb):
+        for idx, ttt in enumerate(timeb):
+            if ttt > stime:
+                stimeb = timeb[idx-1]
+                break
+    else:
+        stimeb = stime
+        
     if (etime <= stime):
         loggerstream.error('Subtracting streams: stream are not overlapping')
-        return self
+        return stream_a
     
     # Take only the time range of the shorter stream
     # Important for baselines: extend the absfile to start and endtime of the stream to be corrected
     stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
-    stream_b = stream_b.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
+    stream_b = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None))
 
     loggerstream.info('Subtracting Streams: time range form %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
     # Interpolate stream_b
     function = stream_b.interpol(keys)
-
     taprev = 0
     for elem in stream_a:
         ta = elem.time

@@ -11,16 +11,21 @@ from core.magpy_absolutes import *
 
 # Some definitions
 absolutedatalocation = "ftp://data@conrad-observatory.at:data2COBS@94.136.40.103/cobenzlabs/"
-absindentifier = 'AbsoluteMeas.txt'
+absindentifier = 'D_WIK.txt'
 # check os and vary the basepath variable
-print os.name
-basepath = 'e:\dropbox\My Dropbox'
+if os.name == 'posix':
+    print "Running on Linux or similar OS"
+    basepath = '/home/leon/Dropbox'
+else:
+    print "Windows system"
+    basepath = 'e:\dropbox\My Dropbox'
+
 lemipath = os.path.join(basepath,'Daten','Magnetism','LEMI-WIK','*')
 diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','*')
 archivepath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW')
 writeresultpath = os.path.join('..','dat','absolutes')
-#send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at']
-send_notification_to = ['roman.leonhardt@zamg.ac.at']
+send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at','andrea.draxler@gmx.at']
+#send_notification_to = ['roman.leonhardt@zamg.ac.at']
 
 # ToDo: add counter for logfile length and only send mail if new data was added or errors are happening 
 

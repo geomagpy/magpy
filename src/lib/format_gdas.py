@@ -16,9 +16,25 @@ def isGDASA1(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('  Time'):
+    if not temp.startswith('# Cobs GDAS'):
+        if not temp.startswith('  Time'):
+            return False
+    return True
+
+
+def isGDASB1(filename):
+    """
+    Checks whether a file is Binary GDAS (type1) format "flare type Chris Turbit".
+    """
+    try:
+        temp = open(filename, 'rb').read(25)
+    except:
         return False
-    if not 'T' in temp:
+    try:
+        data= struct.unpack("<BBBBLLLLLc", temp)
+    except:
+        return False
+    if not data[9]=='x':
         return False
     return True
 
@@ -60,7 +76,8 @@ def readGDASA1(filename, headonly=False, **kwargs):
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
     try:
-        day = datetime.strftime(datetime.strptime(daystring[0].strip('gdas') , "%Y%m%d"),"%Y-%m-%d")
+        tmpdate = daystring[0][-8:]
+        day = datetime.strftime(datetime.strptime(tmpdate, "%Y%m%d"),"%Y-%m-%d")
     except:
         logging.warning("Wrong dateformat in Filename %s" % daystring[0])
         return []
@@ -76,6 +93,9 @@ def readGDASA1(filename, headonly=False, **kwargs):
         for line in fh:
             if line.isspace():
                 # blank line
+                pass
+            elif line.startswith('# Cobs'):
+                # data header
                 pass
             elif line.startswith('  Time'):
                 # data header
@@ -101,20 +121,97 @@ def readGDASA1(filename, headonly=False, **kwargs):
             else:
                 row = LineStruct()
                 elem = line.split()
+                print elem[0]
                 try:
                     row.time=date2num(datetime.strptime(elem[0],"%d-%m-%Y-%H:%M:%S"))
                 except:
                     try:
-                        row.time = date2num(elem[0].isoformat())
+                        row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S"))
                     except:
                         raise ValueError, "Wrong date format in %s" % filename
                 row.x = float(elem[1])/10.0
                 row.y = float(elem[2])/10.0
                 row.z = float(elem[3])/10.0
                 row.t1 = float(elem[4])/10.0
-                if (float(elem[5]) != 99999):
-                    row.f = float(elem[5])/10.0
+                try:
+                    if (float(elem[5]) != 99999):
+                        row.f = float(elem[5])/10.0
+                except:
+                    pass
                 stream.add(row)         
+
+        fh.close()
+    else:
+        headers = stream.header
+        stream =[]
+
+    return DataStream(stream, headers)    
+
+
+def readGDASB1(filename, headonly=False, **kwargs):
+    """
+    Reading GDAS Binary format data. (flare format)
+    25 bit line lenght:
+    """
+    fh = open(filename, 'rb')
+    # read file and split text into channels
+    data = []
+    getfile = True
+    key = None
+    stream = DataStream()
+    # Check whether header infromation is already present
+    if stream.header is None:
+        headers = {}
+    else:
+        headers = stream.header
+    # get day from filename (platform independent) -- does not work for temporary files
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    splitpath = os.path.split(filename)
+    daystring = splitpath[1].split('.')
+    print daystring
+    try:
+         # remove some common prefixes from filename
+        tmpdate = daystring[0][-8:]
+        day = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y-%m-%d")
+        year = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y")
+    except:
+        logging.warning("Wrong dateformat in Filename %s" % daystring[0])
+        return []
+    # Select only files within eventually defined time range
+    if starttime:
+        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            getfile = False
+    if endtime:
+        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            getfile = False
+
+    if getfile:
+        line = fh.read(25)
+        while line != "":
+            row = LineStruct()
+            data= struct.unpack("<BBBBlllllc", line)
+            #print data
+            date = year + '-' + str(data[0]) + '-' + str(data[1]) + 'T' + str(data[2]) + ':' + str(data[3]) + ':00'
+            row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+            row.x = float(data[4])/10.0
+            row.y = float(data[5])/10.0
+            row.z = float(data[6])/10.0
+            row.t1 = float(data[7])/10.0
+            row.f = float(data[8])/10.0
+            stream.add(row)         
+            line = fh.read(25)
+
+        headers['col-x'] = 'x'
+        headers['col-y'] = 'y'
+        headers['col-z'] = 'z'
+        headers['col-t1'] = 'T'
+        headers['col-f'] = 'F'
+        headers['unit-col-x'] = 'nT'
+        headers['unit-col-y'] = 'nT'
+        headers['unit-col-z'] = 'nT'
+        headers['unit-col-f'] = 'nT'
+        headers['unit-col-t1'] = 'C'
 
         fh.close()
     else:

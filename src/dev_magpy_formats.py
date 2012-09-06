@@ -9,8 +9,18 @@ MagPy - WIK analysis
 from core.magpy_stream import *
 from core.magpy_absolutes import *
 
-basepath = '/home/leon'
-path = r'/home/leon/Dropbox/Projects/SpaceWeather/Conrad Observatorium/outdoormessungen'
+
+basispath = r'/home/leon/Dropbox/Daten/Magnetism/DataFormats'
+
+infile = os.path.join(basispath,'WIC-GDAS','WIC_v1_20120906.sec')
+
+st = pmRead(path_or_url=infile)
+st.pmplot(['x','y','z'])
+
+st2 = pmRead(path_or_url='ftp://trmsoe:mgt.trms!@www.zamg.ac.at/data/WIC_v1_min_20120906.bin')
+st2.pmplot(['x','y','z','f'])
+
+x=1/0
 
 basispath = r'/home/leon/Dropbox/Projects/SpaceWeather/Conrad Observatorium/Basismessungen'
 

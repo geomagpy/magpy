@@ -39,6 +39,9 @@ def isFormat(filename, format_type):
     elif (format_type == "GDASA1"): # Data from the Conrad Observatory GDAS System
         if (isGDASA1(filename)):
             return True
+    elif (format_type == "GDASB1"): # Data from the Conrad Observatory GDAS System
+        if (isGDASB1(filename)):
+            return True
     elif (format_type == "DTU1"): # ASCII Data from the DTU's FGE systems
         if (isDTU1(filename)):
             return True
@@ -81,6 +84,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readDIDD(filename, headonly, **kwargs)
     elif (format_type == "GDASA1"):
         return readGDASA1(filename, headonly, **kwargs)
+    elif (format_type == "GDASB1"):
+        return readGDASB1(filename, headonly, **kwargs)
     elif (format_type == "RMRCS"):
         return readRMRCS(filename, headonly, **kwargs)
     elif (format_type == "PYSTR"):

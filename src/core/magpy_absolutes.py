@@ -791,16 +791,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     archivepath -- archive directory to which tsuccessfully analyzed data is moved to
     access_ftp -- retrives data from an ftp directory first and removes them after successful analysis
     printresults (boolean) -- screen output of calculation results
-    -- if access_ftp = True then the follwoing keywords are also required:
-            localpath
-            ftppath
-            filestr(ing)
-            myproxy
-            port
-            login
-            passwd
-            logfile
-            archivepath
+    disableproxy (boolean) -- by default system settings are used        
     -- calcabs calculation parameters:
             usestep: (int) for selecting whether first (1), second (2) or a mean (0) of both repeated measurements at each "Lage" is used 
     """
@@ -831,7 +822,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     # Not used so far are username and passwd
     username = kwargs.get('username')
     password = kwargs.get('password')
-    proxy = kwargs.get('proxy')
+    disableroxy = kwargs.get('disableproxy')
     
     if not absidentifier:
         absidentifier = 'AbsoluteMeas.txt'
@@ -867,13 +858,12 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         authhandler = urllib2.HTTPBasicAuthHandler(passman)
         opener = urllib2.build_opener(authhandler)
         urllib2.install_opener(opener)
-
-    if proxy:
-        proxy_handler = urllib2.ProxyHandler( {'http': 'http://138.22.156.44:3128', 'ftp' : 'ftp://138.22.156.44:8021' } )           
+    if disableproxy:
+        proxy_handler = urllib2.ProxyHandler( {} )           
         opener = urllib2.build_opener(proxy_handler)
         # install this opener
         urllib2.install_opener(opener)
-            
+
     localfilelist = []
     st = DataStream()
     varioinst = '-'
@@ -887,21 +877,21 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             for infile in iglob(os.path.join(path_or_url,'*'+absidentifier)):
                 localfilelist.append(infile)
         elif  "://" in path_or_url: # URL part
-            # get all files in ftp path
-            #path_or_url = "ftp://94.136.40.103/cobenzlabs/"
-            #loggerabs.info('--- -- Accessing absolutes from URL (not shown for security reason)')
-            #passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
-            #passman.add_password(None, path_or_url, 'data@conrad-observatory.at', 'data2COBS')
-            #authhandler = urllib2.HTTPBasicAuthHandler(passman)
-            #proxy_handler = urllib2.ProxyHandler( {'http': 'http://138.22.156.44:3128', 'ftp' : 'ftp://138.22.156.44:8021' } )           
-            #opener = urllib2.build_opener(proxy_handler,authhandler)
-            # install this opener
-            #urllib2.install_opener(opener)
-            
-            response = urllib2.urlopen(path_or_url)
-            
+            # get all files in URL path
+            # (changes from 04.09)
+            req = urllib2.Request(path_or_url)
+            try:
+                response = urllib2.urlopen(req)
+            except urllib2.URLError, e:
+                if hasattr(e, 'reason'):
+                    loggerabs.error('URLLIB2 Failed to reach a server. Reason: %s' % e.reason)
+                elif hasattr(e, 'code'):
+                    loggerabs.error('The server couldn\'t fulfill the request. Error code: %s' % e.code)
+                return
+
             path = response.geturl()
             html_string = response.read()
+
             # Distinguish between directory and file - get filename and add to path -> add to list
             datlst = html_string.split("\n")
             firstline = datlst[0].split()
@@ -952,7 +942,6 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             mint = stream._get_min('time')
             maxt = stream._get_max('time')
             # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
-            # Problem: loggerabs and Warning information from PyMagLog is lost !!!!!!!!!!
             if variopath:
                 variost = pmRead(path_or_url=variopath,starttime=mint-0.04,endtime=maxt+0.04)
                 # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
