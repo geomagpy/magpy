@@ -8,6 +8,7 @@ MagPy - WIK analysis
 # ----------------------------------------
 from core.magpy_stream import *
 from core.magpy_absolutes import *
+from core.magpy_transfer import *
 
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/DataFormats'
@@ -15,10 +16,13 @@ basispath = r'/home/leon/Dropbox/Daten/Magnetism/DataFormats'
 infile = os.path.join(basispath,'WIC-GDAS','WIC_v1_20120906.sec')
 
 st = pmRead(path_or_url=infile)
-st.pmplot(['x','y','z'])
+st.pmplot(['x','y','z'],outfile="test.png")
+
+ftpdatatransfer(localpath='',filestr="test.png", ftppath='/data', myproxy='www.zamg.ac.at',port=21, login='trmsoe', passwd='mgt.trms!',logfile = 'ltest.txt')
 
 st2 = pmRead(path_or_url='ftp://trmsoe:mgt.trms!@www.zamg.ac.at/data/WIC_v1_min_20120906.bin')
 st2.pmplot(['x','y','z','f'])
+
 
 x=1/0
 

@@ -57,6 +57,9 @@ def ftpdatatransfer (**kwargs):
     filelocal = os.path.join(localpath,filestr)
     logpath = os.path.split(logfile)[0]
     logname = os.path.split(logfile)[1]
+
+    if not localpath:
+        localpath = ''
                             
     try:
         site = ftplib.FTP()
@@ -82,7 +85,7 @@ def ftpdatatransfer (**kwargs):
         newline = "\n"
         #os.chdir(logpath)
         lfile = open(os.path.join(logfile),"a")
-        lfile.write(path + '  ' + filestr + '  ' + ftppath )
+        lfile.write(localpath + '  ' + filestr + '  ' + ftppath )
         lfile.write(newline)
         lfile.close()
 

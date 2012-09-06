@@ -121,7 +121,6 @@ def readGDASA1(filename, headonly=False, **kwargs):
             else:
                 row = LineStruct()
                 elem = line.split()
-                print elem[0]
                 try:
                     row.time=date2num(datetime.strptime(elem[0],"%d-%m-%Y-%H:%M:%S"))
                 except:
@@ -169,7 +168,6 @@ def readGDASB1(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
-    print daystring
     try:
          # remove some common prefixes from filename
         tmpdate = daystring[0][-8:]
