@@ -822,7 +822,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     # Not used so far are username and passwd
     username = kwargs.get('username')
     password = kwargs.get('password')
-    disableroxy = kwargs.get('disableproxy')
+    disableproxy = kwargs.get('disableproxy')
     
     if not absidentifier:
         absidentifier = 'AbsoluteMeas.txt'

@@ -2743,6 +2743,13 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
     messagecont = ""
 
+    disableproxy = kwargs.get('disableproxy')
+    if disableproxy:
+        proxy_handler = urllib2.ProxyHandler( {} )           
+        opener = urllib2.build_opener(proxy_handler)
+        # install this opener
+        urllib2.install_opener(opener)
+
     # 1. No path
     if not path_or_url:
         messagecont = "File not specified"
