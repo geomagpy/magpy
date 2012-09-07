@@ -10,6 +10,31 @@ from core.magpy_stream import *
 from core.magpy_absolutes import *
 from core.magpy_transfer import *
 
+basispath = r'/home/leon/Dropbox/Daten/Magnetism/OPT-WIK'
+stD = pmRead(path_or_url=os.path.join(basispath,'D_2009_0*'))
+stH = pmRead(path_or_url=os.path.join(basispath,'H_2009_0*'))
+stZ = pmRead(path_or_url=os.path.join(basispath,'Z_2009_0*'))
+stF = pmRead(path_or_url=os.path.join(basispath,'F_2009_0*'))
+stHZ = mergeStreams(stH,stZ)
+stHDZ = mergeStreams(stHZ,stD)
+stOPT = mergeStreams(stHDZ,stF)
+stOPT = stOPT._convertstream('hdz2xyz')
+stOPT.pmplot(['x','y','z','f'])
+
+
+basispath = r'/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK'
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'*'),starttime='2009-01-01', endtime='2009-05-31')
+stDIDD = stDIDD.flag_stream('x',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
+# Save that to the working dir
+stDIDDmod = stDIDD.remove_flagged()
+# Save this data to the working folder! and use it for baseline calculation
+absDIDD = pmRead(path_or_url=os.path.join('..','dat','absolutes','absolutes_didd.txt'))
+stDIDDmod = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True)
+
+stDIDDmod.pmplot(['x','y','z','f'])
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/DataFormats'
 

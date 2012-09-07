@@ -7,6 +7,18 @@ Written by Roman Leonhardt June 2012
 
 from core.magpy_stream import *
 
+def isOPT(filename):
+    """
+    Checks whether a file is ASCII PMAG format.
+    """
+    try:
+        temp = open(filename, 'rt').readline()
+    except:
+        return False
+    if not temp.startswith('Tag'):
+        return False
+    return True
+
 
 def isPMAG1(filename):
     """
@@ -47,6 +59,95 @@ def isPMAG2(filename):
     except:
         return False
     return True
+
+def readOPT(filename, headonly=False, **kwargs):
+    """
+    Reading PMAG1 format data.
+    Looks like:
+    Tag	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20	21	22	23	24	mittel
+    1.	66	66	66	65	64	65	66	66	67	66	65	66	64	64	65	66	67	66	66	67	67	67	68	67	65,97
+    2.	67	66	66	66	66	66	66	67	67	67	66	66	65	65	66	65	65	66	66	68	68	67	66	68	66,29
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
+    fh = open(filename, 'rt')
+    # read file and split text into channels
+    stream = DataStream()
+    # Check whether header infromation is already present
+    if stream.header is None:
+        headers = {}
+    else:
+        headers = stream.header
+    key = None
+    # get day from filename (platform independent)
+    splitpath = os.path.split(filename)
+    namestring = splitpath[1].split('.')
+    elemstring = namestring[0].split('_')
+    year = elemstring[1]
+    month = elemstring[2][:2]
+    comp = elemstring[0].lower()
+    if comp=='d':
+        offset = float(elemstring[3].strip('grad').strip('Basis'))
+        headers['col-y'] = 'd'
+        headers['unit-col-y'] = 'deg'
+    elif comp=='h':
+        offset = float(elemstring[3].strip('Basis'))
+        headers['col-x'] = 'h'
+        headers['unit-col-x'] = 'nT'
+    elif comp=='z':
+        offset = float(elemstring[3].strip('Basis'))
+        headers['col-z'] = 'z'
+        headers['unit-col-z'] = 'nT'
+    elif comp=='f':
+        offset = float(elemstring[3].strip('Basis'))
+        headers['col-f'] = 'f'
+        headers['unit-col-f'] = 'nT'
+
+    print "Basis for component %s: %s" % (comp, offset)
+
+    for line in fh:
+        if line.isspace():
+            # blank line
+            continue
+        elif line.startswith('Tag'):
+            # data header
+            pass
+        elif headonly:
+            # skip data for option headonly
+            continue
+        else:
+            elem = line.split()
+            day = elem[0]
+            i=0
+            for i in range(24):
+                try:
+                    row = LineStruct()
+                    date = year + '-' + month + '-' + str(day).strip('.') + 'T' + str(i) + ':30:00'
+                    row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                    if comp=='d':
+                        # minutes to seconds
+                        row.y = offset + float(elem[i+1])/60.
+                    if comp=='z':
+                        # minutes to seconds
+                        row.z = offset + float(elem[i+1])
+                    if comp=='h':
+                        # minutes to seconds
+                        row.x = offset + float(elem[i+1])
+                    if comp=='f':
+                        # minutes to seconds
+                        if (offset + float(elem[i+1])) < 100000: # empty values get 100000 as input in data file
+                            row.f = offset + float(elem[i+1])
+                    row.typ = 'hdzf'
+                    stream.add(row)
+                except:
+                    pass
+
+    fh.close()
+
+    return DataStream(stream, headers)  
+
 
 
 def readPMAG1(filename, headonly=False, **kwargs):

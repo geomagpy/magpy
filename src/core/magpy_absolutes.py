@@ -787,7 +787,9 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     """
     Analyze absolute files from a specific path
     Requires an analysis directory for treatment of downloaded absolute files.
+    By default flagged data is removed. In order to keep them for analysis use the useflagged=True keyword
     Optional keywords:
+    useflagged (boolean) -- default False
     archivepath -- archive directory to which tsuccessfully analyzed data is moved to
     access_ftp -- retrives data from an ftp directory first and removes them after successful analysis
     printresults (boolean) -- screen output of calculation results
@@ -813,6 +815,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     deltaI = kwargs.get('deltaI')
     alpha = kwargs.get('alpha')
     beta = kwargs.get('beta')
+    useflagged = kwargs.get('useflagged')
     usestep = kwargs.get('usestep')
     outputformat  = kwargs.get('outputformat')
     summaryfile = kwargs.get('summaryfile')
@@ -944,6 +947,8 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
             if variopath:
                 variost = pmRead(path_or_url=variopath,starttime=mint-0.04,endtime=maxt+0.04)
+                if not useflagged:
+                    variost = variost.remove_flagged()
                 # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
                 variost = variost.rotation(alpha=alpha,beta=beta,unit=unit)
                 # get instrument from header info
@@ -963,6 +968,8 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             if scalarpath:
                 # scalar instrument and dF are then required
                 scalarst = pmRead(path_or_url=scalarpath,starttime=mint-0.04,endtime=maxt+0.04)
+                if not useflagged:
+                    scalarst = scalarst.remove_flagged()
                 if len(scalarst) > 0:
                     func = scalarst.interpol(['f'])
                     stream = stream._insert_function_values(func, funckeys=['f'],offset=deltaF)

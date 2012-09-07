@@ -30,6 +30,9 @@ def isFormat(filename, format_type):
     elif (format_type == "DIDD"):
         if (isDIDD(filename)):
             return True
+    elif (format_type == "OPT"):
+        if (isOPT(filename)):
+            return True
     elif (format_type == "PMAG1"):
         if (isPMAG1(filename)):
             return True
@@ -99,6 +102,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
     # Observatory specific
+    elif (format_type == "OPT"):
+        return readOPT(filename, headonly, **kwargs)
     elif (format_type == "PMAG1"):
         return readPMAG1(filename, headonly, **kwargs)
     elif (format_type == "PMAG2"):
