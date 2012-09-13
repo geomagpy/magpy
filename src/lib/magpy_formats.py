@@ -12,6 +12,7 @@ from lib.format_gsm19 import *
 from lib.format_didd import *
 from lib.format_gdas import *
 from lib.format_lemi import *
+from lib.format_cr800 import *
 # general purpose
 from lib.format_iaga02 import *
 from lib.format_magpy import *
@@ -57,6 +58,9 @@ def isFormat(filename, format_type):
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
             return True
+    elif (format_type == "CR800"): # Data from the CR800 datalogger
+        if (isCR800(filename)):
+            return True
     elif (format_type == "USBLOG"):
         if (isUSBLOG(filename)):
             return True
@@ -101,6 +105,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readLEMIHF(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
+    elif (format_type == "CR800"):
+        return readCR800(filename, headonly, **kwargs)
     # Observatory specific
     elif (format_type == "OPT"):
         return readOPT(filename, headonly, **kwargs)
@@ -148,5 +154,7 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writePYCDF(datastream, filename, **kwargs)
     elif (format_type == "USBLOG"):
         return writeUSBLOG(datastream, filename, **kwargs)
+    elif (format_type == "CR800"):
+        return writeCR800(datastream, filename, **kwargs)
     else:
         return "Writing not succesful - format not recognized"
