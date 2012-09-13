@@ -947,6 +947,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
             if variopath:
                 variost = pmRead(path_or_url=variopath,starttime=mint-0.04,endtime=maxt+0.04)
+                variost.header.clear()
                 if not useflagged:
                     variost = variost.remove_flagged()
                 # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
@@ -968,6 +969,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             if scalarpath:
                 # scalar instrument and dF are then required
                 scalarst = pmRead(path_or_url=scalarpath,starttime=mint-0.04,endtime=maxt+0.04)
+                scalarst.header.clear()
                 if not useflagged:
                     scalarst = scalarst.remove_flagged()
                 if len(scalarst) > 0:
@@ -1081,6 +1083,10 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 shutil.move(fh.name,dst)
                 if (typus == 'ftp'):
                     ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
+
+        #if writedirectly:
+        #    st.pmwrite(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_lemi')
+
 
     st = st.sorting()
     

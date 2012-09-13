@@ -74,8 +74,10 @@ def readDIDD(filename, headonly=False, **kwargs):
                 for it, elem in enumerate(colsstr):
                     if it>1: # dont take hh and mm
                         colname = "col-%s" % KEYLIST[it-1]
-                        headers[colname] = elem            
-                        headers['unit-' + colname] = 'nT'
+                        colname = colname.lower()
+                        headers[colname] = elem
+                        unitstr =  'unit-%s' % colname        
+                        headers[unitstr] = 'nT'
             elif headonly:
                 # skip data for option headonly
                 continue

@@ -43,8 +43,6 @@ def readIAGA(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    
-
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
     tmpdaystring = splitpath[1].split('.')[0]
@@ -71,19 +69,61 @@ def readIAGA(filename, headonly=False, **kwargs):
                 continue
             elif line.startswith(' '):
                 # data info
-                infoline = line.lstrip().strip('|')
-                key = infoline[:23].rstrip()
-                headers[key] = infoline[23:].rstrip()
+                infoline = line[:-4]
+                key = infoline[:23].strip()
+                val = infoline[23:].strip()
+                if key.find('Source') > -1:
+                    if not val == '': 
+                        headers['Institution'] = val
+                if key.find('Station') > -1:
+                    if not val == '': 
+                        headers['Station'] = val
+                if key.find('IAGA') > -1:
+                    if not val == '': 
+                        headers['IAGAcode'] = val
+                if key.find('Latitude') > -1:
+                    if not val == '': 
+                        headers['Latitude'] = val
+                if key.find('Longitude') > -1:
+                    if not val == '': 
+                        headers['Longitude'] = val
+                if key.find('Elevation') > -1:
+                    if not val == '': 
+                        headers['Elevation'] = val
+                if key.find('Format') > -1:
+                    if not val == '': 
+                        headers['DataFormat'] = val
+                if key.find('Reported') > -1:
+                    if not val == '': 
+                        headers['Reported'] = val
+                if key.find('Orientation') > -1:
+                    if not val == '': 
+                        headers['Orientation'] = val
+                if key.find('Digital') > -1:
+                    if not val == '': 
+                        headers['DigitalSamplingInterval'] = val
+                if key.find('Interval') > -1:
+                    if not val == '': 
+                        headers['DigitalFilter'] = val
+                if key.find('Data Type') > -1:
+                    if not val == '': 
+                        headers['ProvidedType'] = val
             elif line.startswith('DATE'):
                 # data header
                 colsstr = line.lower().split()
                 for it, elem in enumerate(colsstr):
                     if it > 2:
                         colname = "col-%s" % elem[-1]
-                        headers[colname] = elem[-1]
+                        colname = colname.lower()
+                        headers[colname] = elem[-1].lower()
+                        if elem[-1].lower() in ['x','y','z','f']:
+                            headers['unit-'+colname] = 'nT' 
                     else:
                         colname = "col-%s" % elem
-                        headers[colname] = elem
+                        colname = colname.lower()
+                        headers[colname] = elem.lower()
+                        if elem.lower() in ['x','y','z','f']:
+                            headers['unit-'+colname] = 'nT'
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -171,5 +211,125 @@ def readIAGA(filename, headonly=False, **kwargs):
     """
 
     return DataStream(stream, headers)    
+
+
+def writeIAGA(filename, headonly=False, **kwargs):
+    """
+    Writing IAGA2002 format data.
+    """
+    mode = kwargs.get('mode')
+
+    if os.path.isfile(filename):
+        if mode == 'skip': # skip existing inputs
+            exst = pmRead(path_or_url=filename)
+            datastream = mergeStreams(exst,datastream,extend=True)
+            myFile= open( filename, "wb" )
+        elif mode == 'replace': # replace existing inputs
+            exst = pmRead(path_or_url=filename)
+            datastream = mergeStreams(datastream,exst,extend=True)
+            myFile= open( filename, "wb" )
+        elif mode == 'append':
+            myFile= open( filename, "ab" )
+        else: # overwrite mode
+            #os.remove(filename)  ?? necessary ??
+            myFile= open( filename, "wb" )
+    else:
+        myFile= open( filename, "wb" )
+
+    wtr= csv.writer( myFile )
+    headdict = datastream.header
+    head, line = [],[]
+    if not mode == 'append':
+        try:
+            val = '%-48s' % header['DataFormat']
+        except:
+            val = ''
+        line = ' Format                 ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Institution']
+        except:
+            val = ''
+        line = ' Source of Data         ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Station']
+        except:
+            val = ''
+        line = ' Station Name           ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['IAGAcode']
+        except:
+            val = ''
+        line = ' IAGA Code              ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Latitude']
+        except:
+            val = ''
+        line = ' Geodetic Latitude      ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Longitude']
+        except:
+            val = ''
+        line = ' Geodetic Longitude     ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Elevation']
+        except:
+            val = ''
+        line = ' Elevation              ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Reported']
+        except:
+            val = ''
+        line = ' Reported               ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['Orinetation']
+        except:
+            val = ''
+        line = ' Sensor Orientation     ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['DigitalSampling']
+        except:
+            val = ''
+        line = ' Digital Sampling       ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['DataFomat']
+        except:
+            val = ''
+        line = ' Data Interval Type     ' + val[:48] + '|'
+        wtr.writerow( line )
+        try:
+            val = '%-48s' % header['ProvidedType']
+        except:
+            val = ''
+        line = ' Data Type              ' + val[:48] + '|'
+        wtr.writerow( line )
+        for key in KEYLIST:
+            title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit-col-'+key,'') + ']'
+            head.append(title)
+        wtr.writerow( head )
+        wtr.writerow( ['# data:'] )
+    for elem in datastream:
+        row = []
+        for key in KEYLIST:
+            if key.find('time') >= 0:
+                try:
+                    row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                except:
+                    row.append( float('nan') )
+                    pass
+            else:
+                row.append(eval('elem.'+key))
+        wtr.writerow( row )
+    myFile.close()
+
 
 

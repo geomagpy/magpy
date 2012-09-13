@@ -20,8 +20,8 @@ else:
     print "Windows system"
     basepath = 'e:\dropbox\My Dropbox'
 
-lemipath = os.path.join(basepath,'Daten','Magnetism','LEMI-WIK','*')
-diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','*')
+lemipath = os.path.join(basepath,'Daten','Magnetism','LEMI-WIK','data','*')
+diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','data','*')
 archivepath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW')
 writeresultpath = os.path.join('..','dat','absolutes')
 send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at','andrea.draxler@gmx.at']

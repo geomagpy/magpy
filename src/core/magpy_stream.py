@@ -141,7 +141,7 @@ FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'USBLOG', 'CR800', 'SERSIN', 'SERMUL', 'PYSTR',
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
                             'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','UNKOWN']
 
 # -------------------
@@ -341,17 +341,22 @@ class DataStream(object):
         #return np.asarray([eval('elem.'+key) for elem in self])
 
 
-    def _put_column(self, column, key):
+    def _put_column(self, column, key, **kwargs):
         """
         adds a column to a Stream
         """
+        #init = kwargs.get('init')
+        #if init>0:
+        #    for i in range init:
+        #    self.add(float('NaN'))
+
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
         if not len(column) == len(self):
             raise ValueError, "Column length does not fit Datastream"
-
         for idx, elem in enumerate(self):
             exec('elem.'+key+' = column[idx]')
+
             
         return self
 
@@ -1720,7 +1725,7 @@ class DataStream(object):
         if not coverage:
             coverage = timedelta(days=1)
         if not filenamebegins:
-            filenamebegins = 'Test-'
+            filenamebegins = ''
         if not filenameends:
             # Extension for cfd files is automatically attached
             if format_type == 'PYCDF':
@@ -1734,7 +1739,18 @@ class DataStream(object):
         newst = DataStream()
         if not coverage == 'all':
             starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
-            endtime = starttime + coverage
+            if coverage == 'month':
+                cmonth = int(datetime.strftime(starttime,'%m')) + 1
+                cyear = int(datetime.strftime(starttime,'%Y'))
+                print cmonth
+                if cmonth == 13:
+                   cmonth = 1
+                   cyear = cyear + 1
+                monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
+                print monthstr
+                endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
+            else:
+                endtime = starttime + coverage
             while starttime < num2date(self[-1].time).replace(tzinfo=None):
                 lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                 newst = DataStream(lst,self.header)
@@ -2783,6 +2799,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for file in iglob(pathname):
             stp = _pmRead(file, dataformat, headonly, **kwargs)
             st.extend(stp.container,stp.header)
+            del stp
         if len(st) == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
@@ -2818,7 +2835,8 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
     """
     Reads a single file into a ObsPy Stream object.
-    """    
+    """
+    stream = DataStream()
     # get format type
     format_type = None
     if not dataformat:

@@ -9,6 +9,73 @@ MagPy - WIK analysis
 from core.magpy_stream import *
 from core.magpy_absolutes import *
 
+
+# general definitions
+mainpath = r'/home/leon/Dropbox/Daten/Magnetism/'
+year = 2010
+
+print datetime.utcnow()
+st = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-07-20', endtime=str(year)+'-07-31')
+st.pmplot(['x','y'],plottype='continuous')
+st.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
+st.header.clear()
+st = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','data','*'),starttime= str(year)+'-07-20', endtime=str(year)+'-07-31')
+st.pmplot(['x','y','t1'],plottype='continuous')
+print datetime.utcnow()
+
+x=1/0
+# --------------------
+# create working files
+# --------------------
+# here we read raw data from the instruments, flag them,
+# merge them with additional parameters like temperature
+# and save them to the working directory
+
+# Start with DIDD values and read yearly fractions
+# 1. Get data
+st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+# 2. Merge auxilliary data
+aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
+aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
+aux1 = aux1.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
+stDIDD = mergeStreams(st1,aux1,keys=['t1','var1'])
+# 3. Flagging list (last updated 07.9.2012 by leon)
+# currently still empty
+# 4. Save all to the worjing directory
+stDIDD.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
+
+
+# LEMI values and read yearly fractions
+# 1. Get data
+st2 = pmRead(path_or_url=os.path.join(mainpath,'LEMI-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+# 2. Merge auxilliary data
+aux2 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Vario*'))
+aux2 = aux2.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
+aux2 = aux2.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
+stLEMI = mergeStreams(st2,aux2,keys=['t1','var1'])
+# 3. Flagging list (last updated 07.9.2012 by leon)
+# currently still empty
+# 4. Save all to the worjing directory
+stLEMI.pmwrite(os.path.join(mainpath,'LEMI-WIK','data'),filenamebegins='LEMI_',format_type='PYCDF')
+
+
+# PMAG values : read yearly fractions
+# 1. Get data
+stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+# 2. Flagging list (last updated 07.9.2012 by leon)
+# currently still empty
+# 3. Remove outliers
+stPMAG = stPMAG.routlier()
+# 4. Save all to the worjing directory
+stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+
+x=1/0
+
+
+
+
+
+
 basepath = '/home/leon'
 path = r'/home/leon/Dropbox/Projects/SpaceWeather/Conrad Observatorium/outdoormessungen'
 

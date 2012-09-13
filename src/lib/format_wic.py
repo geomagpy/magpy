@@ -161,7 +161,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
                 headers['unit-col-t2'] = unicode(el4[1].strip(')'),errors='ignore')
                 headers['col-t2'] = el4[0]
             elif len(elem) == 6 and not elem[1] == 'Time':
-                headers['InstrumentSerialNum'] = elem[5]
+                headers['InstrumentSerialNum'] = 'T-sensor:%s' % elem[5]
             else:
                 row.time = date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
                 row.t1 = float(elem[2])

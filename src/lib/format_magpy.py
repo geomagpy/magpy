@@ -16,9 +16,9 @@ def isPYCDF(filename):
     except:
         return False
     try:
-        lst =[key for key in temp if key == 'time' or key == 'Epoch']
-        if lst == []:
-            return False
+        if not 'Epoch' in temp:
+            if not 'time' in temp:
+                return False
     except:
         return False
     return True
@@ -97,62 +97,125 @@ def readPYCDF(filename, headonly=False, **kwargs):
     """
     stream = DataStream()
 
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
     # Check whether header infromation is already present
+    headskip = False
     if stream.header == None:
-        headers = {}
+        stream.header.clear()
     else:
-        headers = stream.header
-
-    logging.info('--- Start reading CDF at %s ' % str(datetime.now()))
-
+        headskip = True
+    
     cdf_file = cdf.CDF(filename)
+
+    # get day from filename (platform independent)
+    splitpath = os.path.split(filename)
+    tmpdaystring = splitpath[1].split('.')[0]
+    daystring = tmpdaystring[-10:]
+    try:
+        if starttime:
+            if not datetime.strptime(daystring,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(daystring,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True 
 
     # Get format type:
     # DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
-    try:
-        cdfformat = cdf_file.attrs['DataFormat']
-    except:
-        logging.info("No format specification in CDF - passing")
-        cdfformat = 'Unknown'
-        pass
+    if getfile:
+        try:
+            cdfformat = cdf_file.attrs['DataFormat']
+        except:
+            logging.info("No format specification in CDF - passing")
+            cdfformat = 'Unknown'
+            pass
+        
+        if not headskip:
+            for key in cdf_file.attrs:
+                stream.header[key] = str(cdf_file.attrs[key])
 
-    logging.info('--- File: %s Format: %s ' % (filename, cdfformat))
+        logging.info('--- File: %s Format: %s ' % (filename, cdfformat))
 
-    for key in cdf_file:
-        # first get time or epoch column
-        lst = cdf_file[key]
-        if key == 'time' or key == 'Epoch':
-            ti = lst[...]
-            for elem in ti:
-                row = LineStruct()
+        for key in cdf_file:
+            # first get time or epoch column
+            lst = cdf_file[key]
+            if key == 'time' or key == 'Epoch':
+                ti = lst[...]
+                #row = LineStruct()
                 if str(cdfformat) == 'MagPyCDF':
-                    row.time = date2num(elem)                  
+                    #ti = [date2num(elem) for elem in ti]
+                    #stream._put_column(ti,'time')
+                    for elem in ti:
+                        row = LineStruct()
+                        row.time = date2num(elem)
+                        stream.add(row)
+                        del row
                 else:
-                    row.time = elem+730485.0 # DTU MATLAB time
-                stream.add(row)
-        elif key == 'HNvar' or key == 'x':
-            x = lst[...]
-            stream._put_column(x,'x')
-        elif key == 'HEvar' or key == 'y':
-            y = lst[...]
-            stream._put_column(y,'y')
-        elif key == 'Zvar' or key == 'z':
-            z = lst[...]
-            stream._put_column(z,'z')
-        elif key == 'Fsc' or key == 'f':
-            f = lst[...]
-            stream._put_column(f,'f')
-        else:
-            if key.lower() in KEYLIST:
-                col = lst[...]
-                stream._put_column(col,key.lower())
+                    for elem in ti:
+                        row = LineStruct()
+                        row.time = date2num(elem)
+                        stream.add(row)
+                        del row
+                del ti
+            elif key == 'HNvar' or key == 'x':
+                x = lst[...]
+                stream._put_column(x,'x')
+                del x
+                #if not headskip:
+                stream.header['col-x'] = 'x'
+                try:
+                    stream.header['unit-col-x'] = cdf_file['x'].attrs['units']
+                except:
+                    pass
+            elif key == 'HEvar' or key == 'y':
+                y = lst[...]
+                stream._put_column(y,'y')
+                del y
+                stream.header['col-y'] = 'y'
+                try:
+                    stream.header['unit-col-y'] = cdf_file['y'].attrs['units']
+                except:
+                    pass
+            elif key == 'Zvar' or key == 'z':
+                z = lst[...]
+                stream._put_column(z,'z')
+                del z
+                stream.header['col-z'] = 'z'
+                try:
+                    stream.header['unit-col-z'] = cdf_file['z'].attrs['units']
+                except:
+                    pass
+            elif key == 'Fsc' or key == 'f':
+                f = lst[...]
+                stream._put_column(f,'f')
+                del f
+                stream.header['col-f'] = 'f'
+                try:
+                    stream.header['unit-col-f'] = cdf_file['f'].attrs['units']
+                except:
+                    pass
+            else:
+                if key.lower() in KEYLIST:
+                    col = lst[...]
+                    stream._put_column(col,key.lower())
+                    del col
+                    stream.header['col-'+key.lower()] = key.lower()
+                    try:
+                        stream.header['unit-col'+key.lower()] = cdf_file[key.lower()].attrs['units']
+                    except:
+                        pass
 
     cdf_file.close()
 
-    logging.info('--- Finished reading CDF at %s ' % str(datetime.now()))
+    del cdf_file
 
-    return DataStream(stream, headers)    
+    return DataStream(stream, stream.header)    
 
 
 def writePYSTR(datastream, filename, **kwargs):
@@ -236,11 +299,12 @@ def writePYCDF(datastream, filename, **kwargs):
 
     headdict = datastream.header
     head, line = [],[]
-    mycdf.attrs['DataFormat'] = 'MagPyCDF'
+
     if not mode == 'append':
         for key in headdict:
             if not key.find('col') >= 0:
                 mycdf.attrs[key] = headdict[key]
+    mycdf.attrs['DataFormat'] = 'MagPyCDF'
 
     for key in KEYLIST:
         col = datastream._get_column(key)
@@ -250,8 +314,11 @@ def writePYCDF(datastream, filename, **kwargs):
         elif len(col) > 0:
             mycdf[key] = col
         for keydic in headdict:
-            if keydic.find('unit-col-'+key) > 0:
-                mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
+            if keydic == ('unit-col-'+key):
+                try:
+                    mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
+                except:
+                    pass
     mycdf.close()
 
  

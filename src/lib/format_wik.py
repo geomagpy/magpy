@@ -171,78 +171,78 @@ def readPMAG1(filename, headonly=False, **kwargs):
     else:
         headers = stream.header
     data = []
+    day = ''
     key = None
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
-    daystring = daystring[0].strip("ZAGCPMAG-LOG_")
+    daystring = daystring[0][-10:]
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%Y_%m_%d"),"%Y-%m-%d")
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
+                getfile = False
     except:
         logging.warning("Wrong dateformat in Filename %s" % daystring)
-        return []
-    print day
+        getfile = True
+
     # Select only files within eventually defined time range
-    if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
-            getfile = False
-    if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
-            getfile = False
-
-    for line in fh:
-        if line.isspace():
-            # blank line
-            continue
-        elif len(line.split())!=3:
-            # data header
-            pass
-        elif headonly:
-            # skip data for option headonly
-            continue
-        else:
-            # data entry - may be written in multiple columns
-            # row beinhaltet die Werte eine Zeile
-            row=[]
-            # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
-            # da darin der Zeilenumbruch "\n" steht
-            for val in string.split(line[:-1]):
-                # nur nicht-leere Spalten hinzufuegen
-                if string.strip(val)!="":
-                    row.append(string.strip(val))
-            # Baue zweidimensionales Array auf       
-            data.append(row)
-
-    fh.close()
-
-    # The final values for checking non-single day records
-    data_len = len(data)
-    finhour = datetime.strftime(datetime.strptime(data[-1][0],"%H:%M:%S"),"%H")
-    if data_len > 0:
-        headers['col-f'] = 'f'
-        headers['unit-col-f'] = 'nT'
-
-    for idx, elem in enumerate(data):
-        # Time conv:
-        row = LineStruct()
-        try:
-            strtime = datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S")
-            hour = datetime.strftime(strtime,"%H")
-            subday = 0
-            if (int(finhour)-int(hour) == 0) and (data_len-idx > data_len/2):
-                subday = -1
-            row.time=date2num(strtime + timedelta(days=subday))
-            try:
-                strval = elem[1].replace(',','.')
-            except:
-                strval = elem[1]
+    if getfile:
+        for line in fh:
+            if line.isspace():
+                # blank line
+                continue
+            elif len(line.split())!=3:
+                # data header
                 pass
-            row.f = float(strval)
-            row.sectime=date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
-            stream.add(row)
-        except:
-            logging.warning("Error in input data: %s - skipping bad value" % daystring)
-            pass
+            elif headonly:
+                # skip data for option headonly
+                continue
+            else:
+                # data entry - may be written in multiple columns
+                # row beinhaltet die Werte eine Zeile
+                row=[]
+                # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
+                # da darin der Zeilenumbruch "\n" steht
+                for val in string.split(line[:-1]):
+                    # nur nicht-leere Spalten hinzufuegen
+                    if string.strip(val)!="":
+                        row.append(string.strip(val))
+                # Baue zweidimensionales Array auf       
+                data.append(row)
+
+            # The final values for checking non-single day records
+            data_len = len(data)
+            finhour = datetime.strftime(datetime.strptime(data[-1][0],"%H:%M:%S"),"%H")
+            if data_len > 0:
+                headers['col-f'] = 'f'
+                headers['unit-col-f'] = 'nT'
+
+            for idx, elem in enumerate(data):
+                # Time conv:
+                row = LineStruct()
+                try:
+                    strtime = datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S")
+                    hour = datetime.strftime(strtime,"%H")
+                    subday = 0
+                    if (int(finhour)-int(hour) == 0) and (data_len-idx > data_len/2):
+                        subday = -1
+                    row.time=date2num(strtime + timedelta(days=subday))
+                    try:
+                        strval = elem[1].replace(',','.')
+                    except:
+                        strval = elem[1]
+                        pass
+                    row.f = float(strval)
+                    row.sectime=date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
+                    stream.add(row)
+                except:
+                    logging.warning("Error in input data: %s - skipping bad value" % daystring)
+                    pass
+        fh.close()
 
     return DataStream(stream, headers)  
 
@@ -264,18 +264,19 @@ def readPMAG2(filename, headonly=False, **kwargs):
     else:
         headers = stream.header
     data = []
+    day = ''
     key = None
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
-    daystring = daystring[0].strip("CO")
+    daystring = daystring[0].upper().strip("CO")
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%y%m%d"),"%Y-%m-%d")
     except:
         #raise ValueError, "Dateformat in Filename missing"
         logging.warning("Wrong dateformat in Filename %s" % daystring)
-        return []
-    print day
+        pass
+
     firsthit = True
     for line in fh:
         if line.isspace():
@@ -289,7 +290,6 @@ def readPMAG2(filename, headonly=False, **kwargs):
             continue
         else:
             elem = line.split()
-            row = LineStruct()
             if firsthit:
                 startmonth = datetime.strftime(datetime.strptime(elem[1],"%m%d%H%M%S"),"%m")
                 firsthit = False
@@ -298,6 +298,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
                 strtime = datetime.strptime(day.split("-")[0]+elem[1],"%Y%m%d%H%M%S")
                 month = datetime.strftime(strtime,"%m")
                 addyear = 0
+                row = LineStruct()
                 if int(month)-int(startmonth) < 0:
                     addyear = 1
                     strtime = datetime.strptime(str(int(day.split("-")[0])+addyear)+elem[1],"%Y%m%d%H%M%S")

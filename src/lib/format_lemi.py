@@ -83,6 +83,12 @@ def readLEMIHF(filename, headonly=False, **kwargs):
                 row.y = float(elem[7])
                 row.z = float(elem[8])
                 stream.add(row)         
+        headers['col-x'] = 'x'
+        headers['unit-col-x'] = 'nT'
+        headers['col-y'] = 'y'
+        headers['unit-col-y'] = 'nT'
+        headers['col-z'] = 'z'
+        headers['unit-col-z'] = 'nT'
     else:
         headers = stream.header
         stream =[]
