@@ -17,10 +17,11 @@ from core.magpy_stream import *
 # ----------------------------------------
 
 #Some definitions
-starttime = '2011-9-8' # replace by datetime.utcnow-timedelta(days=3)
-endtime='2011-9-14' # datetime.replace by utcnow()
-variopath = os.path.join('..','dat','didd','*')
-scalarpath = os.path.join('..','dat','didd','*')
+starttime = '2011-2-2' # replace by datetime.utcnow-timedelta(days=3)
+endtime='2011-2-8' # datetime.replace by utcnow()
+basepath = "/home/leon/Dropbox/Daten/Magnetism"
+variopath = os.path.join(basepath,'DIDD-WIK','data','*')
+scalarpath = os.path.join(basepath,'DIDD-WIK','data','*')
 
 #starttime = '2011-3-1' # replace by datetime.utcnow-timedelta(days=3)
 #endtime='2011-3-31' # datetime.replace by utcnow()
@@ -39,13 +40,13 @@ sinst = mergeStreams(sva,ssc,keys=['f'])
 
 
 # Baseline correction
-abslemi = pmRead(path_or_url=os.path.join('..','dat','absolutes','absolutes_lemi.txt'))
+abslemi = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
 func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
 sinst = sinst.rotation(alpha=3.3,beta=0.0)
 sinst = sinst.baseline(abslemi,knotstep=0.05)
 sinst = sinst._convertstream('xyz2hdz')
 
-#sinst.spectrogram('x',wlen=60,dbscale=True)
+sinst.spectrogram('x',wlen=600)
 sinst = sinst.aic_calc('x',timerange=timedelta(hours=1))
 sinst = sinst.differentiate(keys=['var2'],put2keys=['var3'])
 sinst.eventlogger('var3',[20,30,50],'>')

@@ -10,6 +10,20 @@ from core.magpy_stream import *
 from core.magpy_absolutes import *
 from core.magpy_transfer import *
 
+basispath = r'/home/leon/Dropbox/Daten/Magnetism'
+stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'))
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
+stDIDDmod = stDIDD.remove_flagged()
+absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+stDIDDmod = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True)
+stDIDDmod = stDIDDmod.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stOPT.pmplot(['x','y','z','f'])
+stDIDDmod.pmplot(['x','y','z','f'])
+stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
+stdiff.pmplot(['x','y','z','f'])
+
+x=1/0
+
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/OPT-WIK'
 stD = pmRead(path_or_url=os.path.join(basispath,'D_2009_0*'))
 stH = pmRead(path_or_url=os.path.join(basispath,'H_2009_0*'))
@@ -25,7 +39,8 @@ stOPT.pmplot(['x','y','z','f'])
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK'
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'*'),starttime='2009-01-01', endtime='2009-05-31')
 stDIDD = stDIDD.flag_stream('x',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-stDIDD = stDIDD.flag_stream('y',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,
+8,21,0,0))
 stDIDD = stDIDD.flag_stream('z',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
 stDIDD = stDIDD.flag_stream('f',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
 # Save that to the working dir

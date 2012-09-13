@@ -17,7 +17,10 @@ def isCR800(filename):
     except:
         return False
     elem = temp.split()
-    if not elem[2] == "CR800":
+    try:
+        if not elem[2] == "CR800":
+            return False
+    except:
         return False
     return True
 
