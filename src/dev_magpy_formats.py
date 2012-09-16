@@ -22,6 +22,23 @@ stDIDDmod.pmplot(['x','y','z','f'])
 stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
 stdiff.pmplot(['x','y','z','f'])
 
+
+stLEMI = pmRead(path_or_url=os.path.join(basispath,'LEMI-WIK','data','*'),starttime='2011-01-01', endtime='2011-03-31')
+stLEMI = stLEMI.remove_flagged()
+absLEMI = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
+stLEMI = stLEMI.rotation(alpha=3.3)
+stLEMI = stLEMI.baseline(absLEMI,knotstep=0.05,plotbaseline=True)
+stLEMI = stLEMI.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2011-01-01', endtime='2011-03-31')
+stDIDD = stDIDD.remove_flagged()
+absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+stDIDD = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True)
+stDIDD = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stLEMI.pmplot(['x','y','z','f'])
+stDIDD.pmplot(['x','y','z','f'])
+stdiff = subtractStreams(stDIDD,stLEMI,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
+stdiff.pmplot(['x','y','z','f'])
+
 x=1/0
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/OPT-WIK'

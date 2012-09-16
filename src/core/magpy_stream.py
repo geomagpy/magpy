@@ -17,6 +17,7 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 try:
     # Matpoltlib
     import matplotlib
+    matplotlib.use('Agg')
     version = matplotlib.__version__.replace('svn', '')
     version = map(int, version.strip("rc").split("."))
     MATPLOTLIB_VERSION = version
@@ -1534,7 +1535,7 @@ class DataStream(object):
 
     def pmplot(self, keys, debugmode=None, **kwargs):
         """
-        Creates a simple graph of the current stream.
+        Creates a simple graph of the current stream. In order to run matplotlib from cron one need to include (matplotlib.use('Agg'))
         Supports the following keywords:
         function: (func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
         fullday: (boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
@@ -1591,6 +1592,7 @@ class DataStream(object):
         if not padding:
             padding = 0
  
+
         myyfmt = ScalarFormatter(useOffset=False)
         n_subplots = len(keys)
         if n_subplots < 1:

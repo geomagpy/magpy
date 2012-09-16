@@ -202,7 +202,11 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             if headline[0] == ('# Abs-FGSensor'):
                 fgsensor = headline[1].strip()
             if headline[0] == ('# Abs-AzimuthMark'):
-                expectedmire = float(headline[1].strip())
+                try:
+                    expectedmire = float(headline[1].strip())
+                except:
+                    logging.error('ReadAbsolute: Azimuth mark could not be interpreted in file %s' % filename)
+                    return stream
             if headline[0] == ('# Abs-Pillar'):
                 headers['pillar'] = headline[1].strip()
             if headline[0] == ('# Abs-Scalar'):
