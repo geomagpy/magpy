@@ -15,32 +15,6 @@ mailingfunc = True # E-mail notifications
 nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 
 try:
-    # Matpoltlib
-    import matplotlib
-    #matplotlib.use('Agg') # For using cron
-    version = matplotlib.__version__.replace('svn', '')
-    version = map(int, version.strip("rc").split("."))
-    MATPLOTLIB_VERSION = version
-    print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize 
-    from matplotlib import mlab 
-    from matplotlib.dates import date2num, num2date
-    import matplotlib.cm as cm
-except ImportError:
-    logpygen += "pymag-general: Critical Import failure: Python matplotlib required - please install to proceed\n"
-
-try:
-    #numpy/scipy
-    import numpy as np
-    import scipy as sp
-    from scipy import interpolate
-    from scipy import stats
-    import math
-except ImportError:
-    logpygen += "pymag-general: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
-
-try:
     #standard packages
     import csv
     import pickle
@@ -54,11 +28,39 @@ try:
     from tempfile import NamedTemporaryFile
     import warnings
     from glob import glob, iglob, has_magic
-    from pylab import *
-    from datetime import datetime, timedelta
     from StringIO import StringIO
 except ImportError:
-    logpygen += "pymag-general: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
+    logpygen += "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
+
+try:
+    # Matpoltlib
+    import matplotlib
+    if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
+        print "No terminal connected"
+        matplotlib.use('Agg') # For using cron
+    version = matplotlib.__version__.replace('svn', '')
+    version = map(int, version.strip("rc").split("."))
+    MATPLOTLIB_VERSION = version
+    print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import Normalize 
+    from matplotlib import mlab 
+    from matplotlib.dates import date2num, num2date
+    import matplotlib.cm as cm
+    from pylab import *  # do I need that?
+    from datetime import datetime, timedelta
+except ImportError:
+    logpygen += "Init MagPy: Critical Import failure: Python matplotlib required - please install to proceed\n"
+
+try:
+    #numpy/scipy
+    import numpy as np
+    import scipy as sp
+    from scipy import interpolate
+    from scipy import stats
+    import math
+except ImportError:
+    logpygen += "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
 
 try:
     # NetCDF
@@ -68,7 +70,7 @@ try:
 except ImportError:
     netcdf = False
     print " -failed- "
-    logpygen += "pymag-general: Import failure: Netcdf not available\n"
+    logpygen += "Init MagPy: Import failure: Netcdf not available\n"
     pass
 
 try:
@@ -85,7 +87,7 @@ try:
         import spacepy.pycdf as cdf      
         print "... success"
 except:
-    logpygen += "pymag-general: Import failure: Nasa cdf not available\n"
+    logpygen += "Init MagPy: Import failure: Nasa cdf not available\n"
     print " -failed- check spacepy package"
     pass
 

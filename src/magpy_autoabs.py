@@ -6,7 +6,7 @@ MagPy - Automatically analyze absolute values from CobsServer - WIK analysis
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-from core.magpy_stream_cron import *    # !!!!!!!!!!!!! Cron usage !!!!!!!!!!!!!!!!!!!
+from core.magpy_stream import *   
 from core.magpy_absolutes import *
 
 # Some definitions

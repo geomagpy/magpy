@@ -22,6 +22,7 @@ stDIDDmod.pmplot(['x','y','z','f'])
 stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
 stdiff.pmplot(['x','y','z','f'])
 
+x=1/0
 
 stLEMI = pmRead(path_or_url=os.path.join(basispath,'LEMI-WIK','data','*'),starttime='2011-01-01', endtime='2011-03-31')
 stLEMI = stLEMI.remove_flagged()
