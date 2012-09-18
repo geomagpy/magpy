@@ -3,6 +3,10 @@
 MagPy-General: Standard pymag package containing the following classes:
 Written by Roman Leonhardt 2011/2012
 Version 1.0 (from the 23.02.2012)
+
+Special Cron version (no X available)
+Problem with matplotlib: 
+included matplotlib.use('Agg')
 """
 
 # ------------------------------------
@@ -17,7 +21,7 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 try:
     # Matpoltlib
     import matplotlib
-    #matplotlib.use('Agg') # For using cron
+    matplotlib.use('Agg') # This is the only change - necessary for cron execution
     version = matplotlib.__version__.replace('svn', '')
     version = map(int, version.strip("rc").split("."))
     MATPLOTLIB_VERSION = version
