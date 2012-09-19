@@ -48,7 +48,13 @@ absdidd.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - Using va
 absdiff = subtractStreams(absdidd,abslemi,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
 absdiff.pmplot(['x','y','z','f'],plottitle = "Differences of absolute values", outfile="AutoAnalysisDifferences")
 
-# Use new mail function to send log and plot
-msg = 'Successfully analyzed files were transferred to archive directory\n\nControl the graph - still erroneous data is usually related to wrong azimuth marks\nThis data has to be uploaded manually again for correction\nPlease check the remaining files on the server for errors -> see attached logfile for hints\n\nCheers, Your Analysis-Robot'
-send_mail('roman_leonhardt@web.de', send_notification_to, text=msg, files=['magpy.log','AutoAnalysisDIDD.png','AutoAnalysisLemi.png','AutoAnalysisDifferences.png'], smtpserver='smtp.web.de',user="roman_leonhardt",pwd="2kippen")
+# test whether new data is analyzed
+import commands
+ret = commands.getoutput('wc -l magpy.log') # check whether paths are ok or switch to full paths
+linenum = int(ret.split()[0])
+
+if linenum > 10:
+    # Use new mail function to send log and plot
+    msg = 'Successfully analyzed files were transferred to archive directory\n\nControl the graph - still erroneous data is usually related to wrong azimuth marks\nThis data has to be uploaded manually again for correction\nPlease check the remaining files on the server for errors -> see attached logfile for hints\n\nCheers, Your Analysis-Robot'
+    send_mail('roman_leonhardt@web.de', send_notification_to, text=msg, files=['magpy.log','AutoAnalysisDIDD.png','AutoAnalysisLemi.png','AutoAnalysisDifferences.png'], smtpserver='smtp.web.de',user="roman_leonhardt",pwd="2kippen")
 
