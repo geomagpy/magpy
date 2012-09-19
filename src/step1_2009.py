@@ -35,10 +35,15 @@ stDIDD = stDIDD.flag_stream('y',3,"Water income",datetime(2009,2,28,16,35,0,0),d
 stDIDD = stDIDD.flag_stream('z',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
 stDIDD = stDIDD.flag_stream('f',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
 #
-stDIDD = stDIDD.flag_stream('x',3,"Car",datetime(2009,3,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-stDIDD = stDIDD.flag_stream('y',3,"Car",datetime(2009,3,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-stDIDD = stDIDD.flag_stream('z',3,"Car",datetime(2009,3,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-stDIDD = stDIDD.flag_stream('f',3,"Car",datetime(2009,3,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
+stDIDD = stDIDD.flag_stream('x',3,"Mowing lawn",datetime(2009,12,1,6,24,0,0),datetime(2009,12,1,7,58,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"Mowing lawn",datetime(2009,12,1,6,24,0,0),datetime(2009,12,1,7,58,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"Mowing lawn",datetime(2009,12,1,6,24,0,0),datetime(2009,12,1,7,58,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"Mowing lawn",datetime(2009,12,1,6,24,0,0),datetime(2009,12,1,7,58,0,0))
+#
+stDIDD = stDIDD.flag_stream('x',3,"Mowing lawn",datetime(2009,12,1,10,57,0,0),datetime(2009,12,1,11,12,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"Mowing lawn",datetime(2009,12,1,10,57,0,0),datetime(2009,12,1,11,12,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"Mowing lawn",datetime(2009,12,1,10,57,0,0),datetime(2009,12,1,11,12,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"Mowing lawn",datetime(2009,12,1,10,57,0,0),datetime(2009,12,1,11,12,0,0))
 #
 
 # 4. Provide Meta information (last updated 07.9.2012 by leon)
