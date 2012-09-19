@@ -144,7 +144,7 @@ FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
                             'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','UNKOWN']
 
 # -------------------

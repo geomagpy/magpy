@@ -38,6 +38,23 @@ def isRMRCS(filename):
     return True
 
 
+def isCS(filename):
+    """
+    Checks whether a file is ASCII PMAG format.
+    """
+    try:
+        temp = open(filename, 'rt').readline()
+    except:
+        return False
+    tmp = temp.split()
+    if not len(tmp) == 2:
+        return False
+    try:
+        testdate = datetime.strptime(tmp[0].strip(','),"%H:%M:%S.%f")
+    except:
+        return False
+    return True
+
 def readRMRCS(filename, headonly=False, **kwargs):
     """
     Reading RMRCS format data. (Richard Mandl's RCS extraction)
@@ -174,4 +191,58 @@ def readUSBLOG(filename, headonly=False, **kwargs):
 
     return DataStream(stream, headers)    
 
+
+def readCS(filename, headonly=False, **kwargs):
+    """
+    Reading ASCII PyMagStructure format data.
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+
+    stream = DataStream()
+    # Check whether header infromation is already present
+    if stream.header == None:
+        headers = {}
+    else:
+        headers = stream.header
+    qFile= file( filename, "rb" )
+    csvReader= csv.reader( qFile )
+
+    # get day from filename (platform independent)
+    getfile = True
+    splitpath = os.path.split(filename)
+    daystring = splitpath[1].split('.')
+    daystring = daystring[0][-6:]
+    try:
+        day = datetime.strftime(datetime.strptime(daystring, "%d%m%y"),"%Y-%m-%d")
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
+                getfile = False
+    except:
+        logging.warning("Wrong dateformat in Filename %s" % daystring)
+        getfile = True
+
+    # Select only files within eventually defined time range
+    #if getfile:
+    for elem in csvReader:
+        if elem[0]=='#':
+            # blank line
+            pass
+        elif headonly:
+            # skip data for option headonly
+            continue
+        else:
+            try:
+                row = LineStruct()
+                row.time = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                row.f = float(elem[1])
+                stream.add(row)
+            except ValueError:
+                pass
+    qFile.close()
+
+    return DataStream(stream, headers)    
 

@@ -64,6 +64,9 @@ def isFormat(filename, format_type):
     elif (format_type == "USBLOG"):
         if (isUSBLOG(filename)):
             return True
+    elif (format_type == "CS"):
+        if (isCS(filename)):
+            return True
     elif (format_type == "GSM19"):
         if (isGSM19(filename)):
             return True
@@ -107,6 +110,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
         return readCR800(filename, headonly, **kwargs)
+    elif (format_type == "CS"):
+        return readCS(filename, headonly, **kwargs)
     # Observatory specific
     elif (format_type == "OPT"):
         return readOPT(filename, headonly, **kwargs)
