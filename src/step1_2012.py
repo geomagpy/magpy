@@ -19,7 +19,7 @@ year = 2012
 # here we read raw data from the instruments, flag them,
 # merge them with additional parameters like temperature
 # and save them to the working directory
-"""
+
 # Start with DIDD values and read yearly fractions
 # 1. Get data
 st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
@@ -30,7 +30,11 @@ aux1 = aux1.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filt
 stDIDD = mergeStreams(st1,aux1,keys=['t1','var1'])
 Tserialnr = aux1.header['InstrumentSerialNum']
 # 3. Flagging list (last updated 07.9.2012 by leon)
-# currently still empty
+stDIDD = stDIDD.flag_stream('x',3,"Mowing lawn",datetime(2012,5,31,8,35,0,0),datetime(2012,5,31,10,02,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"Mowing lawn",datetime(2012,5,31,8,35,0,0),datetime(2012,5,31,10,02,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"Mowing lawn",datetime(2012,5,31,8,35,0,0),datetime(2012,5,31,10,02,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"Mowing lawn",datetime(2012,5,31,8,35,0,0),datetime(2012,5,31,10,02,0,0))
+#
 # 4. Provide Meta information (last updated 07.9.2012 by leon)
 headers = stDIDD.header
 headers['Instrument'] = 'DIDD'

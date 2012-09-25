@@ -20,10 +20,10 @@ year = 2010
 # merge them with additional parameters like temperature
 # and save them to the working directory
 
-"""
+
 # Start with DIDD values and read yearly fractions
 # 1. Get data
-st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-06-15', endtime=str(year+1)+'-01-01')
+st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
 # 2. Merge auxilliary data
 aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
 aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
@@ -32,7 +32,21 @@ Tserialnr = aux1.header['InstrumentSerialNum']
 stDIDD = mergeStreams(st1,aux1,keys=['t1','var1'])
 print stDIDD.header
 # 3. Flagging list (last updated 07.9.2012 by leon)
-# currently still empty
+stDIDD = stDIDD.flag_stream('x',3,"default",datetime(2010,5,25,14,16,0,0),datetime(2010,5,25,14,18,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"default",datetime(2010,5,25,14,16,0,0),datetime(2010,5,25,14,18,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"default",datetime(2010,5,25,14,16,0,0),datetime(2010,5,25,14,18,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"default",datetime(2010,5,25,14,16,0,0),datetime(2010,5,25,14,18,0,0))
+#
+stDIDD = stDIDD.flag_stream('x',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),datetime(2010,6,23,9,55,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),datetime(2010,6,23,9,55,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),datetime(2010,6,23,9,55,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),datetime(2010,6,23,9,55,0,0))
+#
+stDIDD = stDIDD.flag_stream('x',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+#
 # 4. Provide Meta information (last updated 07.9.2012 by leon)
 headers = stDIDD.header
 headers['Instrument'] = 'DIDD'
