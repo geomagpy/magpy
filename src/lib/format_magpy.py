@@ -136,8 +136,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
             cdfformat = 'Unknown'
             pass
         
-        if not headskip:
-            for key in cdf_file.attrs:
+        if headskip:
+           for key in cdf_file.attrs:
                 stream.header[key] = str(cdf_file.attrs[key])
 
         logging.info('--- File: %s Format: %s ' % (filename, cdfformat))

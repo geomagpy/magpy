@@ -11,6 +11,39 @@ from core.magpy_absolutes import *
 from core.magpy_transfer import *
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism'
+
+# reading WDC data directly from the WDC
+stWDC = pmRead(path_or_url='ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
+#HDZ: stWDC = pmRead(path_or_url='ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/lrv2011.wdc')
+stWDC.pmplot(['x','y','z','f'])
+
+x=1/0
+
+# write WDC Format
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2012-09-01', endtime='2012-10-01')
+stDIDD = stDIDD.flag_stream('x',3,"Water income",datetime(2012,9,28,15,35,0,0),datetime(2012,9,28,17,21,0,0))
+stDIDD = stDIDD.remove_flagged()
+stDIDD = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stDIDD.pmwrite(os.path.join(basispath),filenamebegins='wik',format_type='WDC',coverage='month',dateformat='%Y%m')
+# ToDo: WDC minute filter
+
+x=1/0
+
+# write IAGA2002 Format
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2012-09-01', endtime='2012-09-02')
+stDIDD.pmwrite(os.path.join(basispath),filenamebegins='IAGA_',format_type='IAGA')
+
+x=1/0
+
+# write monthly files
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2012-09-01', endtime='2012-10-2')
+stDIDD.pmwrite(os.path.join(basispath),filenamebegins='Mon_',format_type='PYCDF',dateformat="%Y-%m",coverage='month')
+# Works for DIDD when read again: Test this function for all other file formats as well
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'Mon_*'),starttime='2012-09-01', endtime='2012-10-2')
+stDIDD.pmplot(['x','y','z','f'])
+
+x=1/0
+
 stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'))
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
 stDIDDmod = stDIDD.remove_flagged()

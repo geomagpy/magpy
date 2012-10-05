@@ -316,6 +316,7 @@ class AbsoluteData(object):
         if (np.max(dl2)-np.min(dl2))>0.1:
             if iterator == 0:
                 loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
+
         dec = decmean + mirediff + variocorr[0]*180.0/np.pi*ang_fac + deltaD
 
         s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
@@ -400,21 +401,28 @@ class AbsoluteData(object):
                     fvlist.append(elem.varf)
                     dflist.append(elem.f-elem.varf)
             elif len(mflst) == 0 and len(mfvlst) > 0:
-                if not isnan(elem.varf) and not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
+                if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
                     variox.append(scale_x*elem.varx) 
                     varioy.append(scale_y*elem.vary) 
                     varioz.append(scale_z*elem.varz)
-                    flist.append(elem.varf)
+                if not isnan(elem.varf):
+                    fvlist.append(elem.varf)
                     if foundfirstelem == 0:
                         if iterator == 0:
                             loggerabs.info("%s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
                         foundfirstelem = 1
 
-        if len(mflst)>0 or len(mfvlst)>0:
+        if len(mflst)>0:
             meanf = np.mean(flist)
+            loggerabs.info("Using F from Absolute files") 
+        elif len(mfvlst)>0:
+            meanf = np.mean(fvlist)
+            loggerabs.info("Using F from provided scalar path") 
         else:
             meanf = 0.
             #return emptyline, 20000.0, 0.0
+
+        
 
         if len(variox) == 0:
             if iterator == 0:
@@ -979,6 +987,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 else:
                     #movetoarchive = False
                     loggerabs.warning('%s : Did not find independent scalar values' % fi)
+                    
             # use DataStream and its LineStruct to store results
             result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
             result.str4 = varioinst

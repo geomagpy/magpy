@@ -192,12 +192,18 @@ def readGDASB1(filename, headonly=False, **kwargs):
             #print data
             date = year + '-' + str(data[0]) + '-' + str(data[1]) + 'T' + str(data[2]) + ':' + str(data[3]) + ':00'
             row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
-            row.x = float(data[4])/10.0
-            row.y = float(data[5])/10.0
-            row.z = float(data[6])/10.0
-            row.t1 = float(data[7])/10.0
-            row.f = float(data[8])/10.0
-            stream.add(row)         
+            if not data[4] == 99999:
+                row.x = float(data[4])/10.0
+            if not data[5] == 99999:
+                row.y = float(data[5])/10.0
+            if not data[6] == 99999:
+                row.z = float(data[6])/10.0
+            if not data[7] == 99999:
+                row.t1 = float(data[7])/10.0
+            if not data[8] == 99999:
+                row.f = float(data[8])/10.0
+            if not data[8] == 99999 or not data[4] == 99999:
+                stream.add(row)         
             line = fh.read(25)
 
         headers['col-x'] = 'x'

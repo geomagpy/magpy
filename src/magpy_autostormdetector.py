@@ -17,17 +17,11 @@ from core.magpy_stream import *
 # ----------------------------------------
 
 #Some definitions
-starttime = '2011-2-2' # replace by datetime.utcnow-timedelta(days=3)
-endtime='2011-2-8' # datetime.replace by utcnow()
+endtime='2012-9-29' # datetime.replace by utcnow()
+starttime = endtime - timedelta(days=3)
 basepath = "/home/leon/Dropbox/Daten/Magnetism"
-variopath = os.path.join(basepath,'DIDD-WIK','data','*')
-scalarpath = os.path.join(basepath,'DIDD-WIK','data','*')
-
-#starttime = '2011-3-1' # replace by datetime.utcnow-timedelta(days=3)
-#endtime='2011-3-31' # datetime.replace by utcnow()
-#variopath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*')
-#scalarpath = os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*')
-
+variopath = os.path.join(basepath,'DIDD-WIK','*')
+scalarpath = os.path.join(basepath,'DIDD-WIK','*')
 #
 # Read Variometer data
 sva = pmRead(path_or_url=variopath,starttime=starttime,endtime=endtime)
@@ -40,10 +34,10 @@ sinst = mergeStreams(sva,ssc,keys=['f'])
 
 
 # Baseline correction
-abslemi = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+absdidd = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
 func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
-sinst = sinst.rotation(alpha=3.3,beta=0.0)
-sinst = sinst.baseline(abslemi,knotstep=0.05)
+#sinst = sinst.rotation(alpha=3.3,beta=0.0)
+sinst = sinst.baseline(absdidd,knotstep=0.05)
 sinst = sinst._convertstream('xyz2hdz')
 
 sinst.spectrogram('x',wlen=600)

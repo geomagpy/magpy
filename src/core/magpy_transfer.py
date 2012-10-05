@@ -43,8 +43,12 @@ def _checklogfile(logfile):
 def ftpdatatransfer (**kwargs):
     """
     Tranfering data to a ftp server
+    :type cleanup: bool
+    :param cleanup: if true, transfered files are removed from the local directory
+    Example: 
     """
     plog = PyMagLog()
+    localfile = kwargs.get('localfile')
     localpath = kwargs.get('localpath')
     ftppath = kwargs.get('ftppath')
     filestr = kwargs.get('filestr')
@@ -53,13 +57,19 @@ def ftpdatatransfer (**kwargs):
     login = kwargs.get('login')
     passwd = kwargs.get('passwd')
     logfile = kwargs.get('logfile')
-
-    filelocal = os.path.join(localpath,filestr)
-    logpath = os.path.split(logfile)[0]
-    logname = os.path.split(logfile)[1]
+    cleanup = kwargs.get('cleanup')
 
     if not localpath:
         localpath = ''
+                            
+    if not localfile:
+        filelocal = os.path.join(localpath,filestr)
+    else:
+        localpath = os.path.split(localfile)[0]
+        filestr = os.path.split(localfile)[1]
+        filelocal = localfile
+    logpath = os.path.split(logfile)[0]
+    logname = os.path.split(logfile)[1]
                             
     try:
         site = ftplib.FTP()
@@ -76,10 +86,11 @@ def ftpdatatransfer (**kwargs):
         site.storbinary('STOR ' + filestr,filetosend)
         filetosend.close()
         site.quit()
+        # Clean up - Remove transferred file
+        if cleanup:
+            os.remove(filelocal)
         # Now send missing files from log
         _missingvals(myproxy, port, login, passwd, logpath, logname)
-        # Clean up - Remove transferred file
-        #os.remove(filestr)
     except:
         plog.addlog(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
         newline = "\n"

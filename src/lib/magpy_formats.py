@@ -15,6 +15,7 @@ from lib.format_lemi import *
 from lib.format_cr800 import *
 # general purpose
 from lib.format_iaga02 import *
+from lib.format_wdc import *
 from lib.format_magpy import *
 # observatory/group specific
 from lib.format_wik import *
@@ -27,6 +28,9 @@ from lib.format_dtu import *
 def isFormat(filename, format_type):
     if (format_type == "IAGA"):
         if (isIAGA(filename)):
+            return True
+    elif (format_type == "WDC"):
+        if (isWDC(filename)):
             return True
     elif (format_type == "DIDD"):
         if (isDIDD(filename)):
@@ -90,6 +94,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
     empty = DataStream()
     if (format_type == "IAGA"):
         return readIAGA(filename, headonly, **kwargs)
+    elif (format_type == "WDC"):
+        return readWDC(filename, headonly, **kwargs)
     elif (format_type == "DIDD"):
         return readDIDD(filename, headonly, **kwargs)
     elif (format_type == "GDASA1"):
@@ -141,6 +147,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         os.makedirs(os.path.normpath(directory))
     if (format_type == "IAGA"):
         return writeIAGA(datastream, filename, **kwargs)
+    elif (format_type == "WDC"):
+        return writeWDC(datastream, filename, **kwargs)
     elif (format_type == "DIDD"):
         return writeDIDD(datastream, filename, **kwargs)
     elif (format_type == "PMAG1"):

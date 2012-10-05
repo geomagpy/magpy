@@ -160,7 +160,6 @@ def readPMAG1(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
-
     
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -191,6 +190,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
 
     # Select only files within eventually defined time range
     if getfile:
+        regularfound = False
         for line in fh:
             if line.isspace():
                 # blank line
@@ -204,32 +204,17 @@ def readPMAG1(filename, headonly=False, **kwargs):
             else:
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
-                row=[]
+                row=LineStruct()
                 # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
-                # da darin der Zeilenumbruch "\n" steht
-                for val in string.split(line[:-1]):
-                    # nur nicht-leere Spalten hinzufuegen
-                    if string.strip(val)!="":
-                        row.append(string.strip(val))
-                # Baue zweidimensionales Array auf       
-                data.append(row)
-
-            # The final values for checking non-single day records
-            data_len = len(data)
-            finhour = datetime.strftime(datetime.strptime(data[-1][0],"%H:%M:%S"),"%H")
-            if data_len > 0:
-                headers['col-f'] = 'f'
-                headers['unit-col-f'] = 'nT'
-
-            for idx, elem in enumerate(data):
-                # Time conv:
-                row = LineStruct()
+                elem = line.split()
                 try:
                     strtime = datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S")
                     hour = datetime.strftime(strtime,"%H")
                     subday = 0
-                    if (int(finhour)-int(hour) == 0) and (data_len-idx > data_len/2):
+                    if (23-int(hour) == 0) and not regularfound:
                         subday = -1
+                    elif int(hour) == 0:
+                        regularfound = True 
                     row.time=date2num(strtime + timedelta(days=subday))
                     try:
                         strval = elem[1].replace(',','.')
@@ -321,4 +306,5 @@ def readPMAG2(filename, headonly=False, **kwargs):
     fh.close()
 
     return DataStream(stream, headers)    
+
 

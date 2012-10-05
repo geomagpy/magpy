@@ -36,7 +36,7 @@ try:
     # Matpoltlib
     import matplotlib
     if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
-        print "No terminal connected"
+        print "No terminal connected - assuming cron job and using Agg"
         matplotlib.use('Agg') # For using cron
     version = matplotlib.__version__.replace('svn', '')
     version = map(int, version.strip("rc").split("."))
@@ -144,7 +144,7 @@ FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
                             'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','UNKOWN']
 
 # -------------------
@@ -359,7 +359,6 @@ class DataStream(object):
             raise ValueError, "Column length does not fit Datastream"
         for idx, elem in enumerate(self):
             exec('elem.'+key+' = column[idx]')
-
             
         return self
 
@@ -581,7 +580,7 @@ class DataStream(object):
 
     def _maskNAN(self, column):
         """
-        Tests for NAN values in column and ually masks them
+        Tests for NAN values in column and usually masks them
         """
         
         try: # Test for the presence of nan values
@@ -601,7 +600,7 @@ class DataStream(object):
                     return []
         except:
             numdat = False
-            loggerstream.warning("NAN warning: only nan in column")
+            #loggerstream.warning("Here: NAN warning: only nan in column")
             return []
 
         return column
@@ -669,15 +668,18 @@ class DataStream(object):
         while iend < len(t)-1:
             istart = iprev
             ta, iend = self._find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
-            currsequence = signal[istart:iend]
-            for idx, el in enumerate(currsequence):
-                if idx > 1 and idx < len(currsequence)-1:
-                    aicval = self._aic(currsequence, idx)
-                    self[idx+istart].var2 = aicval
-                    # store start value - aic: is a measure for the significance of information change
-                    #if idx == 2:
-                    #    aicstart = aicval
-                    #self[idx+istart].var5 = aicstart-aicval
+            if iend == istart:
+                 iend += 60 # approx for minute files and 1 hour timedelta (used when no data available in time range) should be valid for any other time range as well
+            else:
+                currsequence = signal[istart:iend]
+                for idx, el in enumerate(currsequence):
+                    if idx > 1 and idx < len(currsequence)-1:
+                        aicval = self._aic(currsequence, idx)
+                        self[idx+istart].var2 = aicval
+                        # store start value - aic: is a measure for the significance of information change
+                        #if idx == 2:
+                        #    aicstart = aicval
+                        #self[idx+istart].var5 = aicstart-aicval
             iprev = iend
 
         self.header['col-var2'] = 'aic'
@@ -695,14 +697,19 @@ class DataStream(object):
         """
         calculates baseline correction for input stream (datastream)
         keywords:
-        starttime
-        endtime
-        fit parameters:
-        fitfunc
-        fitdegree
-        knotstep
+        :type plotbaseline: bool 
+        :param plotbaseline: if true plot a baselineplot 
+        :type extradays: int 
+        :param extradays: days to which the absolutedata is exteded prior and after start and endtime
+        :type plotfilename: string 
+        :param plotfilename: if plotbaseline is selected, the outputplot is send to this file
+        :type fitfunc: string
+        :param fitfunc: see fit
+        :type fitdegree: int 
+        :param fitdegree: see fit
+        :type knotstep: int 
+        :param knotstep: see fit
 
-        extradays
         stabilitytest (bool)
         """
         fitfunc = kwargs.get('fitfunc')
@@ -710,9 +717,10 @@ class DataStream(object):
         knotstep = kwargs.get('knotstep')
         extradays = kwargs.get('extradays')
         plotbaseline = kwargs.get('plotbaseline')
+        plotfilename = kwargs.get('plotfilename')
 
         if not extradays:
-            extradays = 30
+            extradays = 15
         if not fitfunc:
             fitfunc = 'spline'
         if not fitdegree:
@@ -723,6 +731,8 @@ class DataStream(object):
 
         starttime = self[0].time
         endtime = self[-1].time
+
+        usestepinbetween = False # for better extrapolation
 
         loggerstream.info(' --- Start baseline-correction at %s' % str(datetime.now()))
 
@@ -745,6 +755,7 @@ class DataStream(object):
         if np.max(abst) < endtime:
             loggerstream.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
             if num2date(absolutestream[-1].time).replace(tzinfo=None) + timedelta(days=extradays) < num2date(endtime).replace(tzinfo=None):
+                usestepinbetween = True
                 loggerstream.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
             
         endtime = num2date(endtime).replace(tzinfo=None)
@@ -770,6 +781,8 @@ class DataStream(object):
         loggerstream.debug(msg)
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
+        if usestepinbetween:
+            bas = bas.extrapolate(basestarttime,endtime)
         bas = bas.extrapolate(basestarttime,baseendtime)
 
         col = bas._get_column('dx')
@@ -782,7 +795,10 @@ class DataStream(object):
         func = bas.fit(['x','y','z'],fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
 
         if plotbaseline:
-            bas.pmplot(['x','y','z'],padding = 5, symbollist = ['o','o','o'],function=func,title='Absolute data')
+            if plotfilename:
+                bas.pmplot(['x','y','z'],padding = 5, symbollist = ['o','o','o'],function=func,plottitle='Absolute data',outfile=plotfilename)
+            else:
+                bas.pmplot(['x','y','z'],padding = 5, symbollist = ['o','o','o'],function=func,plottitle='Absolute data')
 
         # subtract baseline
         #self = self.func_subtract(func, order=1)
@@ -821,15 +837,24 @@ class DataStream(object):
         keywords:
         :type offset: float
         :param offset: constant offset to f values
+        :type digits: int
+        :param digits: number of digits to be rounded (should equal the input precision)
         """
 
+        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
+
         offset = kwargs.get('offset')
+        digits = kwargs.get('digits')
         if not offset:
             offset = 0
+        if not digits:
+            digits = 8
 
         loggerstream.info('--- Calculating delta f started at %s ' % str(datetime.now()))
         for elem in self:
-            elem.df = np.sqrt(elem.x**2+elem.y**2+elem.z**2) - (elem.f + offset)
+            elem.df = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.f + offset)
+
+        self.header['unit-col-df'] = 'nT'
         
         loggerstream.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
 
@@ -1741,20 +1766,33 @@ class DataStream(object):
 
         # divide stream in parts according to coverage and same them
         newst = DataStream()
-        if not coverage == 'all':
+        if coverage == 'month':
             starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
-            if coverage == 'month':
+            cmonth = int(datetime.strftime(starttime,'%m')) + 1
+            cyear = int(datetime.strftime(starttime,'%Y'))
+            if cmonth == 13:
+               cmonth = 1
+               cyear = cyear + 1
+            monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
+            endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
+            while starttime < num2date(self[-1].time).replace(tzinfo=None):
+                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                newst = DataStream(lst,self.header)
+                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                if len(lst) > 0:
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode)
+                starttime = endtime
+                # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
                 cyear = int(datetime.strftime(starttime,'%Y'))
-                print cmonth
                 if cmonth == 13:
                    cmonth = 1
                    cyear = cyear + 1
                 monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
-                print monthstr
                 endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
-            else:
-                endtime = starttime + coverage
+        elif not coverage == 'all':
+            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            endtime = starttime + coverage
             while starttime < num2date(self[-1].time).replace(tzinfo=None):
                 lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                 newst = DataStream(lst,self.header)

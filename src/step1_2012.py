@@ -13,16 +13,16 @@ from core.magpy_absolutes import *
 mainpath = r'/home/leon/Dropbox/Daten/Magnetism/'
 year = 2012
 
+"""
 # --------------------
 # create working files
 # --------------------
 # here we read raw data from the instruments, flag them,
 # merge them with additional parameters like temperature
 # and save them to the working directory
-
 # Start with DIDD values and read yearly fractions
 # 1. Get data
-st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-09-01', endtime=str(year+1)+'-01-01')
 # 2. Merge auxilliary data
 aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
 aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
@@ -49,8 +49,8 @@ headers['ProvidedInterval'] = 'min'
 headers['ProvidedType'] = 'variation'
 headers['DigitalSamplingInterval'] = '8 sec'
 headers['DigitalFilter'] = 'Gauss 45sec'
-headers['Latitude (WGS84)'] = '48'
-headers['Longitude (WGS84)'] = '13'
+headers['Latitude (WGS84)'] = '48.265'
+headers['Longitude (WGS84)'] = '16.318'
 headers['Elevation (NN)'] = '400 m'
 headers['IAGAcode'] = 'WIK'
 headers['Station'] = 'Cobenzl'
@@ -61,11 +61,11 @@ headers['T-InstrumentSerialNum'] = str(Tserialnr)
 stDIDD.header = headers
 # 5. Save all to the worjing directory
 stDIDD.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
-
+"""
 
 # LEMI values and read yearly fractions
 # 1. Get data
-st2 = pmRead(path_or_url=os.path.join(mainpath,'LEMI-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-05-30')
+st2 = pmRead(path_or_url=os.path.join(mainpath,'LEMI-WIK','*.min'),starttime= str(year)+'-09-01', endtime=str(year)+'-12-30')
 # 2. Merge auxilliary data
 aux2 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Vario*'))
 aux2 = aux2.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
@@ -91,8 +91,8 @@ headers['ProvidedInterval'] = 'min'
 headers['ProvidedType'] = 'variation'
 headers['DigitalSamplingInterval'] = '0.00625 sec'
 headers['DigitalFilter'] = 'Gauss 45sec'
-headers['Latitude (WGS84)'] = '48'
-headers['Longitude (WGS84)'] = '13'
+headers['Latitude (WGS84)'] = '48.265'
+headers['Longitude (WGS84)'] = '16.318'
 headers['Elevation (NN)'] = '400 m'
 headers['IAGAcode'] = 'WIK'
 headers['Station'] = 'Cobenzl'
@@ -180,5 +180,5 @@ stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'12','*')
 # currently no flags
 stPMAG = stPMAG.routlier()
 stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-
+"""
 

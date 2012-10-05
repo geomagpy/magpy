@@ -128,7 +128,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             try:
                 row.hc = float(posstr[1])
                 row.vc = float(posstr[2])
-                row.res = float(posstr[3])
+                row.res = float(posstr[3].replace(',','.'))
                 row.mu = mu
                 row.md = md
                 row.expectedmire = expectedmire
@@ -212,7 +212,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             if headline[0] == ('# Abs-Scalar'):
                 f_inst = headline[1].strip()
             if headline[0] == ('# Abs-Temperatur'):
-                temp = float(headline[1].strip('C'))
+                temp = float(headline[1].strip('C').replace(',','.').strip(u"\u00B0"))
             if headline[0] == ('# Abs-InputDate'):
                 adate= datetime.strptime(headline[1].strip(),'%Y-%m-%d')
                 headers['analysisdate'] = adate
@@ -248,7 +248,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             try:
                 row.hc = float(posstr[1])
                 row.vc = float(posstr[2])
-                row.res = float(posstr[3])
+                row.res = float(posstr[3].replace(',','.'))
                 row.mu = mu
                 row.md = md
                 row.expectedmire = expectedmire

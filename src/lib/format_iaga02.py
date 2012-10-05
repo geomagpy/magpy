@@ -2,7 +2,7 @@
 MagPy
 IAGA02 input filter
 Written by Roman Leonhardt June 2012
-- contains test and read function, toDo: write function
+- contains test, read and write function
 """
 
 from core.magpy_stream import *
@@ -213,10 +213,11 @@ def readIAGA(filename, headonly=False, **kwargs):
     return DataStream(stream, headers)    
 
 
-def writeIAGA(filename, headonly=False, **kwargs):
+def writeIAGA(datastream, filename, **kwargs):
     """
     Writing IAGA2002 format data.
     """
+    
     mode = kwargs.get('mode')
 
     if os.path.isfile(filename):
@@ -236,100 +237,59 @@ def writeIAGA(filename, headonly=False, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
-    wtr= csv.writer( myFile )
-    headdict = datastream.header
-    head, line = [],[]
+    header = datastream.header
+    line = []
     if not mode == 'append':
+        if header.get('Elevation') > 0:
+            print header
+        line.append(' Format %-15s IAGA-2002 %-34s |\n' % (' ',' '))
+        line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('Institution'," ")[:44]))
+        line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('Station'," ")[:44]))
+        line.append(' IAGA Code %-12s %-44s |\n' % (' ',header.get('IAGAcode'," ")[:44]))
+        line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',header.get('Latitude (WGS84)'," ")[:44]))
+        line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',header.get('Longitude (WGS84)'," ")[:44]))
+        line.append(' Elevation %-12s %-44s |\n' % (' ',header.get('Elevation (NN)'," ")[:44]))
+        line.append(' Reported %-13s %-44s |\n' % (' ',header.get('ProvidedComp'," ")))
+        line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('InstrumentOrientation'," ")[:44]))
+        line.append(' Digital Sampling %-5s %-44s |\n' % (' ',header.get('DigitalSamplingInterval'," ")[:44]))
+        line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(header.get('ProvidedInterval'," ")+' ('+header.get('DigitalFilter'," ")+')')[:44]))
+        line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('ProvidedType'," ")[:44]))
+        line.append('DATE       TIME         DOI %5s %9s %9s %9s      |\n' % (header.get('col-x'," ").upper(),header.get('col-y'," ").upper(),header.get('col-z'," ").upper(),header.get('col-f'," ").upper()))
+    try:
+        myFile.writelines(line) # Write header sequence of strings to a file
+    except IOError:
+        pass
+
+    try:
+        line = []
+        for elem in datastream:
+            row = ''
+            for key in KEYLIST:
+                if key == 'time':
+                    try:
+                        row = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%d %H:%M:%S.%f")
+                        row = row[:-3]
+                        doi = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%j")
+                        row += ' %s' % str(doi)
+                    except:
+                        row = ''
+                        pass
+                elif key == 'x':
+                    row += '%13.2f' % elem.x
+                elif key == 'y':
+                    row += '%10.2f' % elem.y
+                elif key == 'z':
+                    row += '%10.2f' % elem.z
+                elif key == 'f':
+                    row += '  %.2f' % elem.f
+            line.append(row + '\n')
         try:
-            val = '%-48s' % header['DataFormat']
-        except:
-            val = ''
-        line = ' Format                 ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Institution']
-        except:
-            val = ''
-        line = ' Source of Data         ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Station']
-        except:
-            val = ''
-        line = ' Station Name           ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['IAGAcode']
-        except:
-            val = ''
-        line = ' IAGA Code              ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Latitude']
-        except:
-            val = ''
-        line = ' Geodetic Latitude      ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Longitude']
-        except:
-            val = ''
-        line = ' Geodetic Longitude     ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Elevation']
-        except:
-            val = ''
-        line = ' Elevation              ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Reported']
-        except:
-            val = ''
-        line = ' Reported               ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['Orinetation']
-        except:
-            val = ''
-        line = ' Sensor Orientation     ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['DigitalSampling']
-        except:
-            val = ''
-        line = ' Digital Sampling       ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['DataFomat']
-        except:
-            val = ''
-        line = ' Data Interval Type     ' + val[:48] + '|'
-        wtr.writerow( line )
-        try:
-            val = '%-48s' % header['ProvidedType']
-        except:
-            val = ''
-        line = ' Data Type              ' + val[:48] + '|'
-        wtr.writerow( line )
-        for key in KEYLIST:
-            title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit-col-'+key,'') + ']'
-            head.append(title)
-        wtr.writerow( head )
-        wtr.writerow( ['# data:'] )
-    for elem in datastream:
-        row = []
-        for key in KEYLIST:
-            if key.find('time') >= 0:
-                try:
-                    row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                except:
-                    row.append( float('nan') )
-                    pass
-            else:
-                row.append(eval('elem.'+key))
-        wtr.writerow( row )
-    myFile.close()
+            myFile.writelines( line )
+            pass
+        finally:
+            myFile.close()
+    except IOError:
+        pass
 
 
 
