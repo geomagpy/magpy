@@ -116,7 +116,7 @@ stOPT.pmwrite(os.path.join(mainpath),filenamebegins='OPT_',format_type='PYCDF')
 """
 # PMAG values : read yearly fractions
 # 1. Get data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','C*'),starttime=str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','CO0903*'),starttime=str(year)+'-01-01', endtime=str(year+1)+'-01-01')
 # Add Meta information
 headers = stPMAG.header
 headers['Instrument'] = 'ELSEC820'
@@ -147,5 +147,5 @@ stPMAG.header = headers
 # 3. Remove outliers
 stPMAG = stPMAG.routlier()
 # 4. Save all to the worjing directory
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',mode='replace',format_type='PYCDF')
 

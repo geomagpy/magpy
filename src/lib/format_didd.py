@@ -129,7 +129,7 @@ def writeDIDD(datastream, filename, **kwargs):
     wtr.writerow( [headline] )
     for elem in datastream:
         time = datetime.strftime(num2date(elem.time).replace(tzinfo=None), "%H %M")
-        line = '%s %7.1f %7.1f %7.1f %7.1f' % (time, elem.x, elem.x, elem.z, elem.f)
+        line = '%s %8.1f %8.1f %8.1f %8.1f' % (time, elem.x, elem.y, elem.z, elem.f)
         wtr.writerow( [line] )
     myFile.close()
 

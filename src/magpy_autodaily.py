@@ -109,7 +109,7 @@ except:
     dropmsgflag = True
 
 # 11.) transfer plots to server
-#ftpdatatransfer(localfile='didd_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
+ftpdatatransfer(localfile='didd_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
 
 
 # ###################################
@@ -203,7 +203,7 @@ except:
     dropmsgflag = True
 
 # 11.) transfer plots to server
-#ftpdatatransfer(localfile='lemi_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
+ftpdatatransfer(localfile='lemi_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
 
 
 # ###################################
@@ -278,7 +278,7 @@ except:
     dropmsgflag = True
 
 # 8.) transfer plots to server
-#ftpdatatransfer(localfile='pmag_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log')
+ftpdatatransfer(localfile='pmag_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
 
 if dropmsgflag:
     send_mail('roman_leonhardt@web.de', send_notification_to, text=msg, files=['magpy.log','AutoAnalysisDIDD.png','AutoAnalysisLemi.png','AutoAnalysisDifferences.png'], smtpserver='smtp.web.de',user="roman_leonhardt",pwd="2kippen")

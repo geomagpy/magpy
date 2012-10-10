@@ -819,9 +819,14 @@ class DataStream(object):
         if len(lst) > 0:
             baseendtime = datetime.strptime(yearenddate+'-12-31', '%Y-%m-%d')
         else:
-            # if not extending to next year use the last input
-            baseendtime = num2date(np.max(abst)).replace(tzinfo=None)
-            #baseendtime = endtime
+            # if not extending to next year check whether absolutes older then last stream value are present
+            # in this case use last absolute value
+            # if not use use the last input
+            maxabstime = num2date(np.max(abst)).replace(tzinfo=None)
+            if maxabstime > endtime:
+                baseendtime = maxabstime
+            else:
+                baseendtime = endtime
 
         # now add the extradays to endtime
         baseendtime = baseendtime + timedelta(days=extradays)

@@ -13,6 +13,13 @@ from core.magpy_transfer import *
 basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
 
+stRADON = pmRead(path_or_url='ftp://trmsoe:mgt.trms!@www.zamg.ac.at/data/radon/')
+print stRADON
+stRADON.pmplot(['x','t1','var1'],padding=0.2)
+stRADON.powerspectrum('x')
+
+
+x=1/0
 
 stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
 #Flag the f column without data
@@ -23,6 +30,16 @@ stOPT = stOPT._convertstream('xyz2hdz')
 stOPT = stOPT.offset({'x': -6, 'z': 11}) 
 stOPT = stOPT.delta_f()
 stOPT.pmplot(['x','y','z','f','df'])
+
+stPMAG = pmRead(path_or_url=os.path.join(basispath,'PMAG-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
+stPMAG = stPMAG.remove_flagged()
+stPMAG.pmplot(['f'])
+stPMAG = stPMAG.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stdiff = subtractStreams(stOPT,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
+stdiff.pmplot(['f'])
+
+x= 1/0
+
 
 #absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
 #absDIDD.pmplot(['dx','dy','dz'])
