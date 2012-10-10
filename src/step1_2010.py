@@ -23,7 +23,7 @@ year = 2010
 
 # Start with DIDD values and read yearly fractions
 # 1. Get data
-st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-09-01', endtime=str(year+1)+'-01-01')
 # 2. Merge auxilliary data
 aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
 aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
@@ -42,10 +42,10 @@ stDIDD = stDIDD.flag_stream('y',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),dat
 stDIDD = stDIDD.flag_stream('z',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),datetime(2010,6,23,9,55,0,0))
 stDIDD = stDIDD.flag_stream('f',3,"Mowing lawn",datetime(2010,6,23,8,55,0,0),datetime(2010,6,23,9,55,0,0))
 #
-stDIDD = stDIDD.flag_stream('x',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
-stDIDD = stDIDD.flag_stream('y',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
-stDIDD = stDIDD.flag_stream('z',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
-stDIDD = stDIDD.flag_stream('f',3,"default",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('x',3,"unkown",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"unkown",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"unkown",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"unkown",datetime(2010,6,25,13,38,0,0),datetime(2010,6,25,14,9,0,0))
 #
 # 4. Provide Meta information (last updated 07.9.2012 by leon)
 headers = stDIDD.header
@@ -218,4 +218,4 @@ stPMAG = stPMAG.routlier()
 # 4. Save all to the worjing directory
 stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 
-
+"""

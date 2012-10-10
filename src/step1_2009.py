@@ -12,7 +12,7 @@ from core.magpy_absolutes import *
 # general definitions
 mainpath = r'/home/leon/Dropbox/Daten/Magnetism/'
 year = 2009
-
+"""
 # --------------------
 # create working files
 # --------------------
@@ -70,10 +70,11 @@ headers['WebInfo'] = 'http://www.wiki.at'
 headers['T-Instrument'] = 'External-USB'
 headers['T-InstrumentSerialNum'] = str(Tserialnr)
 stDIDD.header = headers
-# 5. Save all to the worjing directory
+# 5. Save all to the working directory
 stDIDD.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
 
-"""
+
+
 # OPT values : read yearly fractions
 # 1. Get data
 stD = pmRead(path_or_url=os.path.join(mainpath,'OPT-WIK','D_2009_0*'))
@@ -111,9 +112,8 @@ headers['WebInfo'] = 'http://www.wiki.at'
 headers['T-Instrument'] = ''
 headers['T-InstrumentSerialNum'] = ''
 # 5. Save all to the worjing directory
-stOPT.pmwrite(os.path.join(mainpath),filenamebegins='OPT_',format_type='PYCDF',coverage='month')
-
-
+stOPT.pmwrite(os.path.join(mainpath),filenamebegins='OPT_',format_type='PYCDF')
+"""
 # PMAG values : read yearly fractions
 # 1. Get data
 stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','C*'),starttime=str(year)+'-01-01', endtime=str(year)+'-02-01')
@@ -148,4 +148,4 @@ stPMAG.header = headers
 stPMAG = stPMAG.routlier()
 # 4. Save all to the worjing directory
 stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-"""
+

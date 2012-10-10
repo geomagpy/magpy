@@ -51,16 +51,16 @@ def readIAGA(filename, headonly=False, **kwargs):
         daystring = daystring[:8]
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
+        # Select only files within eventually defined time range
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
     except:
-        logging.warning("Wrong dateformat in Filename %s" % daystring)
-        return []
-    # Select only files within eventually defined time range
-    if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
-            getfile = False
-    if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
-            getfile = False
+        logging.warning("Could not identify typical IAGA date in %s. Reading all ..." % daystring)
+        getfile = True
 
     if getfile:
         for line in fh:

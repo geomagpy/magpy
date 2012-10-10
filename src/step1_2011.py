@@ -35,10 +35,10 @@ stDIDD = stDIDD.flag_stream('y',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(
 stDIDD = stDIDD.flag_stream('z',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(2011,6,3,9,02,0,0))
 stDIDD = stDIDD.flag_stream('f',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(2011,6,3,9,02,0,0))
 #
-stDIDD = stDIDD.flag_stream('x',3,"default",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
-stDIDD = stDIDD.flag_stream('y',3,"default",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
-stDIDD = stDIDD.flag_stream('z',3,"default",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
-stDIDD = stDIDD.flag_stream('f',3,"default",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stDIDD = stDIDD.flag_stream('x',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stDIDD = stDIDD.flag_stream('y',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stDIDD = stDIDD.flag_stream('z',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stDIDD = stDIDD.flag_stream('f',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
 #
 stDIDD = stDIDD.flag_stream('x',3,"Mowing lawn",datetime(2011,9,14,05,43,0,0),datetime(2011,9,14,6,41,0,0))
 stDIDD = stDIDD.flag_stream('y',3,"Mowing lawn",datetime(2011,9,14,05,43,0,0),datetime(2011,9,14,6,41,0,0))
@@ -59,8 +59,8 @@ headers['ProvidedInterval'] = 'min'
 headers['ProvidedType'] = 'variation'
 headers['DigitalSamplingInterval'] = '8 sec'
 headers['DigitalFilter'] = 'Gauss 45sec'
-headers['Latitude (WGS84)'] = '48'
-headers['Longitude (WGS84)'] = '13'
+headers['Latitude (WGS84)'] = '48.265'
+headers['Longitude (WGS84)'] = '16.318'
 headers['Elevation (NN)'] = '400 m'
 headers['IAGAcode'] = 'WIK'
 headers['Station'] = 'Cobenzl'
@@ -83,10 +83,20 @@ aux2 = aux2.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filt
 Tserialnr = aux2.header['InstrumentSerialNum']
 stLEMI = mergeStreams(st2,aux2,keys=['t1','var1'])
 # 3. Flagging list (last updated 07.9.2012 by leon)
-stLEMI = stLEMI.flag_stream('x',3,"System not yet oriented",datetime(2010,7,1,16,35,0,0),datetime(2010,7,11,12,42,0,0))
-stLEMI = stLEMI.flag_stream('y',3,"System not yet oriented",datetime(2010,7,1,16,35,0,0),datetime(2010,7,11,12,42,0,0))
-stLEMI = stLEMI.flag_stream('z',3,"System not yet oriented",datetime(2010,7,1,16,35,0,0),datetime(2010,7,11,12,42,0,0))
-stLEMI = stLEMI.flag_stream('f',3,"System not yet oriented",datetime(2010,7,1,16,35,0,0),datetime(2010,7,11,12,42,0,0))
+stLEMI = stLEMI.flag_stream('x',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(2011,6,3,9,02,0,0))
+stLEMI = stLEMI.flag_stream('y',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(2011,6,3,9,02,0,0))
+stLEMI = stLEMI.flag_stream('z',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(2011,6,3,9,02,0,0))
+stLEMI = stLEMI.flag_stream('f',3,"Mowing",datetime(2011,6,3,7,57,0,0),datetime(2011,6,3,9,02,0,0))
+#
+stLEMI = stLEMI.flag_stream('x',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stLEMI = stLEMI.flag_stream('y',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stLEMI = stLEMI.flag_stream('z',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+stLEMI = stLEMI.flag_stream('f',3,"unknown",datetime(2011,7,14,18,32,0,0),datetime(2011,7,14,18,34,0,0))
+#
+stLEMI = stLEMI.flag_stream('x',3,"Mowing lawn",datetime(2011,9,14,05,43,0,0),datetime(2011,9,14,6,41,0,0))
+stLEMI = stLEMI.flag_stream('y',3,"Mowing lawn",datetime(2011,9,14,05,43,0,0),datetime(2011,9,14,6,41,0,0))
+stLEMI = stLEMI.flag_stream('z',3,"Mowing lawn",datetime(2011,9,14,05,43,0,0),datetime(2011,9,14,6,41,0,0))
+stLEMI = stLEMI.flag_stream('f',3,"Mowing lawn",datetime(2011,9,14,05,43,0,0),datetime(2011,9,14,6,41,0,0))
 # 4. Add Meta information
 headers = stLEMI.header
 headers['Instrument'] = 'Lemi025'
@@ -101,8 +111,8 @@ headers['ProvidedInterval'] = 'min'
 headers['ProvidedType'] = 'variation'
 headers['DigitalSamplingInterval'] = '0.00625 sec'
 headers['DigitalFilter'] = 'Gauss 45sec'
-headers['Latitude (WGS84)'] = '48'
-headers['Longitude (WGS84)'] = '13'
+headers['Latitude (WGS84)'] = '48.265'
+headers['Longitude (WGS84)'] = '16.318'
 headers['Elevation (NN)'] = '400 m'
 headers['IAGAcode'] = 'WIK'
 headers['Station'] = 'Cobenzl'
@@ -192,4 +202,4 @@ stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'12','*')
 stPMAG = stPMAG.routlier()
 stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 
-
+"""

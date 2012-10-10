@@ -65,6 +65,9 @@ def isFormat(filename, format_type):
     elif (format_type == "CR800"): # Data from the CR800 datalogger
         if (isCR800(filename)):
             return True
+    elif (format_type == "RADON"): # Data from the CR800 datalogger
+        if (isRADON(filename)):
+            return True
     elif (format_type == "USBLOG"):
         if (isUSBLOG(filename)):
             return True
@@ -116,6 +119,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
         return readCR800(filename, headonly, **kwargs)
+    elif (format_type == "RADON"):
+        return readRADON(filename, headonly, **kwargs)
     elif (format_type == "CS"):
         return readCS(filename, headonly, **kwargs)
     # Observatory specific

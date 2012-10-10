@@ -144,7 +144,7 @@ FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
                             'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','UNKOWN']
 
 # -------------------
@@ -470,10 +470,12 @@ class DataStream(object):
         return k
 
 
-    def _aic(self, signal, k):
+    def _aic(self, signal, k, debugmode=None):
         try:
             aicval = k* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
         except:
+            if debugmode:
+                loggerstream.debug('_AIC: could not evaluate AIC at index position %i' % (k))
             pass               
         return aicval
         
@@ -651,9 +653,18 @@ class DataStream(object):
         - extract one dimensional array from DataStream (e.g. H) -> signal
         - take the first k values of the signal and calculates variance and log
         - plus the rest of the signal (variance and log)
-        Keywords:
-            timerange: defines the length of the time window examined by the aic iteration
-                        default: timedelta(hours=6)
+
+        Required:
+        :type key: string
+        :param key: needs to be an element of KEYLIST
+
+        Optional keywords:
+        :type timerange: timedelta object
+        :param timerange: defines the length of the time window examined by the aic iteration
+                        default: timedelta(hours=1)
+
+        Example:
+        
         """
         timerange = kwargs.get('timerange')
         if not timerange:
@@ -661,6 +672,8 @@ class DataStream(object):
 
         t = self._get_column('time')
         signal = self._get_column(key)
+        # get sampling interval for normalization - need seconds data to test that
+        sp = self.get_sampling_period()*24*60
         # corrcet approach
         iprev = 0
         iend = 0
@@ -673,14 +686,43 @@ class DataStream(object):
             else:
                 currsequence = signal[istart:iend]
                 for idx, el in enumerate(currsequence):
-                    if idx > 1 and idx < len(currsequence)-1:
-                        aicval = self._aic(currsequence, idx)
+                    if idx > 1 and idx < len(currsequence):
+                        aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normailze to sampling rate and timerange
                         self[idx+istart].var2 = aicval
                         # store start value - aic: is a measure for the significance of information change
                         #if idx == 2:
                         #    aicstart = aicval
                         #self[idx+istart].var5 = aicstart-aicval
             iprev = iend
+
+        """
+        xx, iprev = self._find_nearest(np.asarray(t), date2num(num2date(t[0]).replace(tzinfo=None) + timerange/2))
+        iend = 0
+        while iend < len(t)-1:
+            istart = iprev
+            ta, iend = self._find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
+            if iend == istart:
+                 iend += 60 # approx for minute files and 1 hour timedelta (used when no data available in time range) should be valid for any other time range as well
+            else:
+                currsequence = signal[istart:iend]
+                for idx, el in enumerate(currsequence):
+                    if idx > 1 and idx < len(currsequence)-1:
+                        aicval = self._aic(currsequence, idx)
+                        prevval = self[idx+istart].var2
+                        if not isnan(prevval):
+                            lastcorrectval = prevval
+                            self[idx+istart].var2 = (prevval + aicval)/2
+                        else:
+                            meanfirst = lastcorrectval + self[idx+istart+5].var2
+                            self[idx+istart].var2 = (meanfirst + aicval)/2
+                        #self[idx+istart].var2 = aicval
+                        print prevval, self[idx+istart].var2
+                        # store start value - aic: is a measure for the significance of information change
+                        #if idx == 2:
+                        #    aicstart = aicval
+                        #self[idx+istart].var5 = aicstart-aicval
+            iprev = iend
+        """
 
         self.header['col-var2'] = 'aic'
         #self.header['col-var4'] = 'aicchange'
@@ -696,6 +738,18 @@ class DataStream(object):
     def baseline( self, absolutestream, **kwargs):
         """
         calculates baseline correction for input stream (datastream)
+        Uses available baseline values from the provided absolute file
+        Special cases:
+        1) Absolte data covers the full time range of the stream:
+            -> Absolute data is extrapolated by duplicating the last and first entry at "extradays" offset
+            -> desired function is calculated
+        2) No Absolte data for the end of the stream:
+            -> like 1: Absolute data is extrapolated by duplicating the last entry at "extradays" offset or end of stream
+            -> and info message is created, if timedifference exceeds the "extraday" arg then a warning will be send
+        2) No Absolte data for the beginning of the stream:
+            -> like 2: Absolute data is extrapolated by duplicating the first entry at "extradays" offset or beginning o stream
+            -> and info message is created, if timedifference exceeds the "extraday" arg then a warning will be send
+  
         keywords:
         :type plotbaseline: bool 
         :param plotbaseline: if true plot a baselineplot 
@@ -742,7 +796,7 @@ class DataStream(object):
 
         # 2) check whether enddate is within abs time range or larger:
         if not absolutestream[0].time-1 < endtime:
-            loggerstream.warning("Baseline: Endtime prior to beginning of absolute measurements selected ")
+            loggerstream.warning("Baseline: Last measurement prior to beginning of absolute measurements ")
             
         # 3) check time ranges of stream and absolute values:
         abst = absolutestream._get_column('time')
@@ -765,7 +819,9 @@ class DataStream(object):
         if len(lst) > 0:
             baseendtime = datetime.strptime(yearenddate+'-12-31', '%Y-%m-%d')
         else:
-            baseendtime = endtime
+            # if not extending to next year use the last input
+            baseendtime = num2date(np.max(abst)).replace(tzinfo=None)
+            #baseendtime = endtime
 
         # now add the extradays to endtime
         baseendtime = baseendtime + timedelta(days=extradays)
@@ -893,26 +949,73 @@ class DataStream(object):
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
 
-    def eventlogger(self, key, value, compare=None, debugmode=None):
+    def eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
         """
         read stream and log data of which key meets the criteria
         maybe combine with extract
+
+        Required:
+        :type key: string 
+        :param key: provide the key to be examined
+        :type values: list 
+        :param values: provide a list of three values 
+        :type values: list 
+        :param values: provide a list of three values
+        Optional:
+        :type compare: string 
+        :param compare: ">, <, ==, !="         
+        :type stringvalues: list 
+        :param stringvalues: provide a list of exactly the same length as values with the respective comments 
+        :type addcomment: bool 
+        :param addcomment: if true add the stringvalues to the comment line of the datastream
+        
+        :type debugmode: bool 
+        :param debugmode: provide more information 
+
         example:
         compare is string like ">, <, ==, !="
         st.eventlogger(['var3'],[15,20,30],'>')
         """
-        assert type(value) == list
+        assert type(values) == list
 
         if not compare:
             compare = '=='
+        if not compare in ['<','>','<=','>=','==','!=']:
+            loggerstream.warning('Eventlogger: wrong value for compare: needs to be among <,>,<=,>=,==,!=')
+            return self                                 
+        if not stringvalues:
+            stringvalues = ['Minor storm onset','Moderate storm onset','Major storm onset']
+        else:
+            assert type(stringvalues) == list
+        if not len(stringvalues) == len(values):
+            loggerstream.warning('Eventlogger: Prvided comments do not match amount of values')
+            return self
+       
         for elem in self:
-            evaluationstring = 'elem.' + key + ' ' + compare + ' ' + str(value[0])
-            if eval('elem.'+key+' '+compare+' '+str(value[2])):
-                stormlogger.warning('Strong onset at %s' % num2date(elem.time).replace(tzinfo=None))
-            elif eval('elem.'+key+' '+compare+' '+str(value[1])):
-                stormlogger.warning('Moderate onset at %s' % num2date(elem.time).replace(tzinfo=None))
-            elif eval('elem.'+key+' '+compare+' '+str(value[0])):
-                stormlogger.warning('Minor onset at %s' % num2date(elem.time).replace(tzinfo=None))
+            #evaluationstring = 'elem.' + key + ' ' + compare + ' ' + str(values[0])
+            if eval('elem.'+key+' '+compare+' '+str(values[2])):
+                stormlogger.warning('%s at %s' % (stringvalues[2],num2date(elem.time).replace(tzinfo=None)))
+                if addcomment:
+                    if elem.comment == '-':
+                        elem.comment = stringvalues[2]
+                    else:
+                        elem.comment += ', ' + stringvalues[2]
+            elif eval('elem.'+key+' '+compare+' '+str(values[1])):
+                stormlogger.warning('%s at %s' % (stringvalues[1],num2date(elem.time).replace(tzinfo=None)))
+                if addcomment:
+                    if elem.comment == '-':
+                        elem.comment = stringvalues[1]
+                    else:
+                        elem.comment += ', ' + stringvalues[1]
+            elif eval('elem.'+key+' '+compare+' '+str(values[0])):
+                stormlogger.warning('%s at %s' % (stringvalues[0],num2date(elem.time).replace(tzinfo=None)))
+                if addcomment:
+                    if elem.comment == '-':
+                        elem.comment = stringvalues[0]
+                    else:
+                        elem.comment += ', ' + stringvalues[0]
+
+        return self
         
 
     def extract(self, key, value, compare=None, debugmode=None):
@@ -1559,6 +1662,32 @@ class DataStream(object):
         
         return DataStream(outstream, self.header)
 
+    def offset(self, offsets):
+        """
+        Offset treatment: offsets argument is a dictionary
+        Apply constant offsets to elements of the datastream
+        the Offsets arguments is a dictionary which refers to keys fo the datastream
+        Important: Time offsets have to be timedelta objects
+        : type offsets: dict
+        : param offsets: looks like {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
+        # 1.) assert that offsets is a dictionary {'x': 4.2, 'y':... }
+        # 2.) apply offsets
+        """
+        #header = self.header
+
+        for key in offsets:
+            if key in KEYLIST:
+                val = self._get_column(key)
+                if key == 'time':
+                    newval = [num2date(elem.time).replace(tzinfo=None) + offsets[key] for elem in val]
+                    loggerstream.info('Offset function: Corrected time column by %s sec' % str(offset.seconds))
+                else:
+                    newval = [elem + offsets[key] for elem in val]
+                    loggerstream.info('Offset function: Corrected column %s by %.3f' % (key, offsets[key]))
+                self = self._put_column(newval, key)
+    
+        return self
+                            
 
     def pmplot(self, keys, debugmode=None, **kwargs):
         """
@@ -1575,6 +1704,7 @@ class DataStream(object):
         fmt: format of outfile
         savedpi: integer resolution
         noshow: bool- don't call show at the end, just returns figure handle
+        annote: bool - annotate data using comments
         padding: (integer - default 0) Value to add to the max-min data for adjusting y-scales
                  maybe change that to a relative padding depending on data values
 
@@ -1599,6 +1729,7 @@ class DataStream(object):
         fmt = kwargs.get('fmt')
         savedpi = kwargs.get('savedpi')
         noshow = kwargs.get('noshow')
+        annotate = kwargs.get('annotate')
 
         if not function:
             function = None
@@ -1682,6 +1813,40 @@ class DataStream(object):
                     else:
                         loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
                 #ax.plot_date(t2,yplt2,"r"+symbol[1],markersize=4)
+                # Add annotations for flags
+                if annotate:
+                    flag = self._get_column('flag')
+                    comm = self._get_column('comment')
+                    elemprev = "-"
+                    try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
+                        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                        indexflag = int(poslst[0])
+                        for idx, elem in enumerate(comm):
+                            if not elem == elemprev:
+                                if not elem == "-" and flag[idx][indexflag] in ['0','3']:
+                                    annotecount = idx
+                                    ax.annotate(r'%s' % (elem),
+                                        xy=(t[idx], yplt[idx]),
+                                        xycoords='data', xytext=(20, 20),
+                                        textcoords='offset points',
+                                        bbox=dict(boxstyle="round", fc="0.8"),
+                                        arrowprops=dict(arrowstyle="->",
+                                        shrinkA=0, shrinkB=1,
+                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                                elif elem == "-" and idx > annotecount + 3: # test that one point defines the flagged range
+                                    ax.annotate(r'End of %s' % (comm[idx-1]),
+                                        xy=(t[idx-1], yplt[idx-1]),
+                                        xycoords='data', xytext=(20, -20),
+                                        textcoords='offset points',
+                                        bbox=dict(boxstyle="round", fc="0.8"),
+                                        arrowprops=dict(arrowstyle="->",
+                                        shrinkA=0, shrinkB=1,
+                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                            elemprev = elem
+                    except:
+                        if debugmode:
+                            loggerstream.debug('PmPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+                        
                 if function:
                     fkey = 'f'+key
                     if fkey in function[0]:
@@ -1747,6 +1912,8 @@ class DataStream(object):
         dateformat = kwargs.get('dateformat')
         coverage = kwargs.get('coverage')
         mode = kwargs.get('mode')
+        offsets = kwargs.get('offsets')
+        
         if not format_type:
             format_type = 'PYSTR'
         if not dateformat:
@@ -2798,6 +2965,15 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     supported formats - use extra packages: generalcdf, cdf, netcdf, MagStructTXT,
     IAGA02, DIDD, PMAG, TIMEVAL
     optional arguments are starttime, endtime and dateformat of file given in kwargs
+
+    :type path_or_url: string
+    :param path_or_url: pathname of the following kinds:
+                        a) c:\my\data\*
+                        b) c:\my\data\thefile.txt
+                        c) /home/data/*
+                        d) /home/data/thefile.txt
+                        e) ftp://server/directory/
+                        f) ftp://server/directory/thefile.txt
     """
     messagecont = ""
 
@@ -2824,17 +3000,35 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some URL
         # extract extension if any
         content = urllib2.urlopen(path_or_url).read()
-        # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # check whether content is a single file or e.g. a ftp-directory
-        # currently only single files are supported
-        # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
-        date = os.path.basename(path_or_url).partition('.')[0][-8:]
-        fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
-        fh.write(content)
-        fh.close()
-        st = _pmRead(fh.name, dataformat, headonly, **kwargs)
-        os.remove(fh.name)
+        print urllib2.urlopen(path_or_url).info()
+        if path_or_url[-1] == '/':
+            # directory
+            string = content.decode('utf-8')
+            for line in string.split("\n"):
+                if len(line) > 1: 
+                    filename = (line.strip().split()[-1])
+                    print filename
+                    content = urllib2.urlopen(path_or_url+filename).read()
+                    suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
+                    date = os.path.basename(path_or_url).partition('.')[0][-8:]
+                    fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+                    fh.write(content)
+                    fh.close()
+                    stp = _pmRead(fh.name, dataformat, headonly, **kwargs)
+                    st.extend(stp.container,stp.header)
+                    os.remove(fh.name)
+        else:            
+            # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # check whether content is a single file or e.g. a ftp-directory
+            # currently only single files are supported
+            # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
+            date = os.path.basename(path_or_url).partition('.')[0][-8:]
+            fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+            fh.write(content)
+            fh.close()
+            st = _pmRead(fh.name, dataformat, headonly, **kwargs)
+            os.remove(fh.name)
     else:
         # some file name
         pathname = path_or_url
@@ -3070,6 +3264,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
     stream_b = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None))
 
+    samplingrate_b = stream_b.get_sampling_period()
+
     loggerstream.info('Subtracting Streams: time range form %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
     # Interpolate stream_b
@@ -3077,15 +3273,29 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     taprev = 0
     for elem in stream_a:
         ta = elem.time
-        if ta >= function[1]: # in records of different resolution the first element might be older then th function start
+        if ta >= function[1]: # in records of different resolution the first element might be older then the function start
             functime = (ta-function[1])/(function[2]-function[1])
-            for key in keys:
-                if not key in KEYLIST[1:16]:
-                    raise ValueError, "Column key not valid"
-                fkey = 'f'+key
-                if fkey in function[0]:
-                    newval = function[0][fkey](functime)
-                    exec('elem.'+key+' -= float(newval)')
+            # Do the subtraction if there is is an element within stream b within twice the sampling rate distance
+            # If not wite NaN to the diffs
+            tb, itmp = stream_b._find_nearest(timeb,ta)
+            if ta-2*samplingrate_b < tb < ta+2*samplingrate_b:
+                for key in keys:
+                    if not key in KEYLIST[1:16]:
+                        raise ValueError, "Column key not valid"
+                    fkey = 'f'+key
+                    if fkey in function[0] and not isnan(eval('stream_b[itmp].' + key)):
+                        newval = function[0][fkey](functime)
+                        exec('elem.'+key+' -= float(newval)')
+                    else:
+                        exec('elem.'+key+' = float(NaN)')
+            else:
+                for key in keys:
+                    if not key in KEYLIST[1:16]:
+                        raise ValueError, "Column key not valid"
+                    fkey = 'f'+key
+                    if fkey in function[0]:
+                        exec('elem.'+key+' = float(NaN)')
+                
  
     loggerstream.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))
 

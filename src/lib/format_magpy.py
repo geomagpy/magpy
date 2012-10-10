@@ -114,12 +114,27 @@ def readPYCDF(filename, headonly=False, **kwargs):
     splitpath = os.path.split(filename)
     tmpdaystring = splitpath[1].split('.')[0]
     daystring = tmpdaystring[-10:]
+    # test for day month year
+    try:
+        bounddate = datetime.strptime(daystring,'%Y-%m-%d')
+        testdateform = '%Y-%m-%d'
+    except:
+        try:
+            bounddate = datetime.strptime(daystring[-7:],'%Y-%m')
+            testdateform = '%Y-%m'
+        except:
+            try:
+                bounddate = datetime.strptime(daystring[-4:],'%Y')
+                testdateform = '%Y'
+            except:
+                pass
+         
     try:
         if starttime:
-            if not datetime.strptime(daystring,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not bounddate >= datetime.strptime(datetime.strftime(stream._testtime(starttime),testdateform),testdateform):
                 getfile = False
         if endtime:
-            if not datetime.strptime(daystring,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not bounddate <= datetime.strptime(datetime.strftime(stream._testtime(endtime),testdateform),testdateform):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -292,6 +307,7 @@ def writePYCDF(datastream, filename, **kwargs):
         elif mode == 'append':
             mycdf = cdf.CDF(filename, filename) # append????
         else: # overwrite mode
+            print filename
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
     else:

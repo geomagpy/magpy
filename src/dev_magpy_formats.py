@@ -12,7 +12,85 @@ from core.magpy_transfer import *
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
+
+
+stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
+#Flag the f column without data
+stOPT = stOPT.flag_stream('f',3,"System failure",datetime(2009,2,9,15,0,0,0),datetime(2009,2,16,13,0,0,0))
+stOPT = stOPT.remove_flagged()
+stOPT = stOPT._convertstream('xyz2hdz')
+# Offsets to VVDM Pear
+stOPT = stOPT.offset({'x': -6, 'z': 11}) 
+stOPT = stOPT.delta_f()
+stOPT.pmplot(['x','y','z','f','df'])
+
+#absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+#absDIDD.pmplot(['dx','dy','dz'])
+
+#stDIDDdat = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
+stDIDDmod = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2009-01-01', endtime='2009-05-31')
+#stDIDDmod = stDIDDdat.remove_flagged()
+#absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+#stDIDDmod = stDIDDmod.baseline(absDIDD,fitfunc='poly',fitdegree=5,plotbaseline=True)
+stDIDDmod = stDIDDmod.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stDIDDmod = stDIDDmod._convertstream('xyz2hdz')
+stDIDDmod.pmplot(['x','y','z','f'])
+stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
+stdiff.pmplot(['x','y','z','f'])
+hvals = stdiff._get_column('x')
+dvals = stdiff._get_column('y')
+zvals = stdiff._get_column('z')
+fvals = stdiff._get_column('f')
+hlst = [elem for elem in hvals if not isnan(elem)]
+dlst = [elem for elem in dvals if not isnan(elem)]
+zlst = [elem for elem in zvals if not isnan(elem)]
+flst = [elem for elem in fvals if not isnan(elem)]
+deltaH = np.median(hlst)
+deltaD = np.median(dlst)
+deltaZ = np.median(zlst)
+deltaF = np.median(flst)
+print "Delta H to main pear: %f" % deltaH
+print "Delta D to main pear: %f" % deltaD
+print "Delta Z to main pear: %f" % deltaZ
+print "Delta F to main pear: %f" % deltaF
+#offsetdict = {'x': deltaH, 'z': deltaZ, 'f': deltaF}
+#stOPT = stOPT.offset(offsetdict)
+#stOPT.pmplot(['x','y','z','f'])
+
+
+x=1/0
+
+# Annotation of plots
+# ----------------
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2009-12-01', endtime='2009-12-2')
+stDIDD.pmplot(['x','y','z','f'],annotate=True)
+stDIDD = stDIDD.remove_flagged()
+stDIDD.pmplot(['x','y','z','f'])
+# Check for storm onsets
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2011-9-9', endtime='2011-9-14')
+stDIDD = stDIDD._convertstream('xyz2hdz')
+stDIDD = stDIDD.aic_calc('x',timerange=timedelta(hours=2))
+stDIDD = stDIDD.differentiate(keys=['var2'],put2keys=['var3'])
+stDIDD = stDIDD.eventlogger('var3',[20,30,50],'>',None,True)
+stfilt = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[0,70,140,210,280,350,420,490,560])
+stfilt.header['col-var4'] = 'Cobs k_-index'
+stDIDD = mergeStreams(stDIDD,stfilt,key=['var4'])
+stDIDD.pmplot(['x','var2','var3','var4'],bartrange=0.02,symbollist = ['-','-','-','z'],plottitle = "Storm onsets and local variation index", annotate=True)
+
+x=1/0
+
+# Read Radon data
+# ----------------
+stRADON = pmRead(path_or_url='ftp://trmsoe:mgt.trms!@www.zamg.ac.at/data/radon/')
+stRADON.pmplot(['x','t1','var1'],padding=0.2)
+stRADON.powerspectrum('x')
+
+x = 1/0
+
+
 # reading WDC data directly from the WDC
+# ----------------
 stWDC = pmRead(path_or_url='ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
 #HDZ: stWDC = pmRead(path_or_url='ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/lrv2011.wdc')
 stWDC.pmplot(['x','y','z','f'])
@@ -20,6 +98,7 @@ stWDC.pmplot(['x','y','z','f'])
 x=1/0
 
 # write WDC Format
+# ----------------
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2012-09-01', endtime='2012-10-01')
 stDIDD = stDIDD.flag_stream('x',3,"Water income",datetime(2012,9,28,15,35,0,0),datetime(2012,9,28,17,21,0,0))
 stDIDD = stDIDD.remove_flagged()
@@ -30,30 +109,19 @@ stDIDD.pmwrite(os.path.join(basispath),filenamebegins='wik',format_type='WDC',co
 x=1/0
 
 # write IAGA2002 Format
+# ----------------
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2012-09-01', endtime='2012-09-02')
 stDIDD.pmwrite(os.path.join(basispath),filenamebegins='IAGA_',format_type='IAGA')
 
 x=1/0
 
 # write monthly files
+# ----------------
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2012-09-01', endtime='2012-10-2')
 stDIDD.pmwrite(os.path.join(basispath),filenamebegins='Mon_',format_type='PYCDF',dateformat="%Y-%m",coverage='month')
 # Works for DIDD when read again: Test this function for all other file formats as well
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'Mon_*'),starttime='2012-09-01', endtime='2012-10-2')
 stDIDD.pmplot(['x','y','z','f'])
-
-x=1/0
-
-stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'))
-stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
-stDIDDmod = stDIDD.remove_flagged()
-absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
-stDIDDmod = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True)
-stDIDDmod = stDIDDmod.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-stOPT.pmplot(['x','y','z','f'])
-stDIDDmod.pmplot(['x','y','z','f'])
-stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
-stdiff.pmplot(['x','y','z','f'])
 
 x=1/0
 
@@ -75,6 +143,8 @@ stdiff.pmplot(['x','y','z','f'])
 
 x=1/0
 
+# Read optical data files
+# ----------------
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/OPT-WIK'
 stD = pmRead(path_or_url=os.path.join(basispath,'D_2009_0*'))
 stH = pmRead(path_or_url=os.path.join(basispath,'H_2009_0*'))
@@ -87,25 +157,11 @@ stOPT = stOPT._convertstream('hdz2xyz')
 stOPT.pmplot(['x','y','z','f'])
 
 
-basispath = r'/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK'
-stDIDD = pmRead(path_or_url=os.path.join(basispath,'*'),starttime='2009-01-01', endtime='2009-05-31')
-stDIDD = stDIDD.flag_stream('x',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-stDIDD = stDIDD.flag_stream('y',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,
-8,21,0,0))
-stDIDD = stDIDD.flag_stream('z',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-stDIDD = stDIDD.flag_stream('f',3,"Water income",datetime(2009,2,28,16,35,0,0),datetime(2009,5,9,8,21,0,0))
-# Save that to the working dir
-stDIDDmod = stDIDD.remove_flagged()
-# Save this data to the working folder! and use it for baseline calculation
-absDIDD = pmRead(path_or_url=os.path.join('..','dat','absolutes','absolutes_didd.txt'))
-stDIDDmod = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True)
-
-stDIDDmod.pmplot(['x','y','z','f'])
+# Read binary data from the GDAS logger
+# ----------------
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism/DataFormats'
-
 infile = os.path.join(basispath,'WIC-GDAS','WIC_v1_20120906.sec')
-
 st = pmRead(path_or_url=infile)
 st.pmplot(['x','y','z'],outfile="test.png")
 
@@ -116,6 +172,10 @@ st2.pmplot(['x','y','z','f'])
 
 
 x=1/0
+
+
+# Read data from field surveys
+# ----------------
 
 basispath = r'/home/leon/Dropbox/Projects/SpaceWeather/Conrad Observatorium/Basismessungen'
 
@@ -130,6 +190,8 @@ bas.pmplot(['f'],plottitle = "Basis")
 newst = subtractStreams(st,bas,keys='f')
 newst.pmplot(['f'],plottitle = "Sub")
 newst.pmwrite(path,coverage='all',filenamebegins='outdoorsurvey_red_2012-08-02')
+
+
 x = 1/0
 
 # Example for the analysis of WIK data
