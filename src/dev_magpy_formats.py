@@ -14,7 +14,6 @@ basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
 
 stRADON = pmRead(path_or_url='ftp://trmsoe:mgt.trms!@www.zamg.ac.at/data/radon/')
-print stRADON
 stRADON.pmplot(['x','t1','var1'],padding=0.2)
 stRADON.powerspectrum('x')
 

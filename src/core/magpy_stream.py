@@ -36,8 +36,12 @@ try:
     # Matpoltlib
     import matplotlib
     if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
-        print "No terminal connected - assuming cron job and using Agg"
+        print "No terminal connected - assuming cron job and using Agg for matplotlib"
         matplotlib.use('Agg') # For using cron
+except:
+    print "Prob with matplotlib"
+
+try:
     version = matplotlib.__version__.replace('svn', '')
     version = map(int, version.strip("rc").split("."))
     MATPLOTLIB_VERSION = version
@@ -130,6 +134,7 @@ logging.getLogger('').addHandler(console)
 
 # Package loggers to identify info/problem source
 loggerabs = logging.getLogger('core.magpy_abolutes')
+loggertransfer = logging.getLogger('core.magpy_transfer')
 loggerstream = logging.getLogger('core.magpy_stream')
 loggerlib = logging.getLogger('lib')
 
@@ -1735,6 +1740,7 @@ class DataStream(object):
         savedpi = kwargs.get('savedpi')
         noshow = kwargs.get('noshow')
         annotate = kwargs.get('annotate')
+        confinex = kwargs.get('confinex')
 
         if not function:
             function = None
@@ -1797,10 +1803,45 @@ class DataStream(object):
                     a = ax
                 else:
                     ax = fig.add_subplot(subplt, sharex=a)
+                timeunit = ''
+                if confinex:
+                    trange = np.max(t) - np.min(t)
+                    if trange < 0.0001: # 8 sec level
+                        #set 0.5 second
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%S'))
+                        timeunit = '[Sec]'
+                    elif trange < 0.01: # 13 minute level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%M:%S'))
+                        timeunit = '[M:S]'
+                    elif trange <= 1: # day level
+                        # set 1 hour
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+                        timeunit = '[H:M]'
+                    elif trange < 7: # 3 day level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d-%H'))
+                        setp(ax.get_xticklabels(),rotation='70')
+                        timeunit = '[Day-H]'
+                    elif trange < 60: # year level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b'))
+                        setp(ax.get_xticklabels(),rotation='70')
+                        timeunit = '[Day]'
+                    elif trange < 150: # year level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b%y'))
+                        setp(ax.get_xticklabels(),rotation='70')
+                        timeunit = '[Day]'
+                    elif trange < 600: # minute level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b%y'))
+                        setp(ax.get_xticklabels(),rotation='70')
+                        timeunit = '[Month]'
+                    else:
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
+                        timeunit = '[Year]'
+
                 if count < len(keys):
                     setp(ax.get_xticklabels(), visible=False)
                 else:
-                    ax.set_xlabel("Time (UTC)")
+                    ax.set_xlabel("Time (UTC) %s" % timeunit)
+                        
                 # Create plots
                 # -- switch color and symbol
                 if symbollist[count-1] == 'z': # symbol for plotting colored bars for k values
@@ -1876,8 +1917,8 @@ class DataStream(object):
                 ax.set_ylabel(label)
                 ax.set_ylim(np.min(yplt)-padding,np.max(yplt)+padding)
                 ax.get_yaxis().set_major_formatter(myyfmt)
-                if fullday:
-                    ax.set_xlim(np.floor(np.min(t)),np.floor(np.max(t)+1))
+                if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
+                    ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
                 if debugmode:
                     print "Finished plot %d at %s" % (count, datetime.utcnow())
             else:
@@ -3283,7 +3324,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             # Do the subtraction if there is is an element within stream b within twice the sampling rate distance
             # If not wite NaN to the diffs
             tb, itmp = stream_b._find_nearest(timeb,ta)
-            if ta-2*samplingrate_b < tb < ta+2*samplingrate_b:
+            #Test whether a time_b event exists in the vicinity of ta and whether tb is within the time_b range otherwise interpolation fails
+            if ta-samplingrate_b < tb < ta+samplingrate_b and timeb[0]<ta<timeb[-1] :
                 for key in keys:
                     if not key in KEYLIST[1:16]:
                         raise ValueError, "Column key not valid"
@@ -3300,6 +3342,13 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     fkey = 'f'+key
                     if fkey in function[0]:
                         exec('elem.'+key+' = float(NaN)')
+        else: # put NaNs in cloumn if no interpolated values in b exist
+            for key in keys:
+                if not key in KEYLIST[1:16]:
+                    raise ValueError, "Column key not valid"
+                fkey = 'f'+key
+                if fkey in function[0]:
+                    exec('elem.'+key+' = float(NaN)')
                 
  
     loggerstream.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))

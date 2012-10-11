@@ -1,17 +1,14 @@
+#!/usr/bin/env python
+"""
+MagPy-transfer: Procedures for data transfer
+
+Written by Roman Leonhardt 2011/2012
+Version 1.0 (from the 23.02.2012)
+"""
+
+
+from core.magpy_stream import *
 import ftplib
-import sys
-import thread, time, string, os
-import math
-import pylab
-import numpy as np
-import scipy as sp
-
-from scipy import interpolate
-from pylab import *
-from datetime import datetime
-from matplotlib.dates import date2num, num2date
-
-from core.magpy_stream import PyMagLog
 
 # Define defaults:
 
@@ -68,8 +65,6 @@ def ftpdatatransfer (**kwargs):
         localpath = os.path.split(localfile)[0]
         filestr = os.path.split(localfile)[1]
         filelocal = localfile
-    logpath = os.path.split(logfile)[0]
-    logname = os.path.split(logfile)[1]
                             
     try:
         site = ftplib.FTP()
@@ -86,13 +81,13 @@ def ftpdatatransfer (**kwargs):
         site.storbinary('STOR ' + filestr,filetosend)
         filetosend.close()
         site.quit()
-        # Clean up - Remove transferred file
         if cleanup:
             os.remove(filelocal)
         # Now send missing files from log
-        _missingvals(myproxy, port, login, passwd, logpath, logname)
+        _missingvals(myproxy, port, login, passwd, logfile)
     except:
-        plog.addlog(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
+        loggertransfer.warning(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
+        #plog.addlog(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
         newline = "\n"
         #os.chdir(logpath)
         lfile = open(os.path.join(logfile),"a")
@@ -113,7 +108,7 @@ def _missingvals(myproxy, port, login, passwd, logfile):
         npath = loginfo[0]
         filetosend = loginfo[1]
         nftppath = loginfo[2]
-        plog.addlog(' -- Uploading prviously missing vals: %s' % loginfo[1])
+        loggertransfer.info(' -- Uploading previously missing vals: %s' % loginfo[1])
         ftpdatatransfer (localpath=npath, ftppath=nftppath, filestr=filetosend, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile) 
 
 # ####################

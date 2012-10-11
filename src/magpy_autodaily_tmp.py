@@ -15,8 +15,8 @@ from core.magpy_transfer import *
 # ---- Daily analysis  ----
 # ----------------------------------------
 finaldate = datetime.utcnow()
-finaldate = datetime(2010,1,1)
-endtime = datetime.strptime('2009-6-26T23:59:59',"%Y-%m-%dT%H:%M:%S")
+finaldate = datetime(2012,2,15)
+endtime = datetime.strptime('2012-1-26T23:59:59',"%Y-%m-%dT%H:%M:%S")
 while endtime < finaldate:
     #Some definitions
     #endtime=datetime.strptime('2012-8-29T15:30:00',"%Y-%m-%dT%H:%M:%S") # datetime.replace by utcnow()
@@ -34,8 +34,9 @@ while endtime < finaldate:
     #  Start with primary instruments
     # ###################################
 
-
-    basepath = "/home/leon/Dropbox/Daten/Magnetism"
+    abspath = "/home/leon/Dropbox/Daten/Magnetism"
+    basepath = "/home/data/WIK"
+    #basepath = "/home/leon/Dropbox/Daten/Magnetism"
     variopath = os.path.join(basepath,'DIDD-WIK','data','*')
     scalarpath = os.path.join(basepath,'DIDD-WIK','data','*')
 
@@ -86,20 +87,18 @@ while endtime < finaldate:
         # baseline interrupted in March due to water income
         # DIDD System newly set up
         # ---- special case 2009 ---
-        print endtime.month
         if endtime.year == 2009 and endtime.month <= 2:
-            print "using linear function"
-            absDIDD = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'),starttime='2009-01-01', endtime='2009-02-28')
+            absDIDD = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_didd.txt'),starttime='2009-01-01', endtime='2009-02-28')
             # no rotation necessary for DIDD
             stDIDD = stDIDD.baseline(absDIDD,fitfunc='poly',fitdegree=1,plotbaseline=True,plotfilename='test.png')
             deltaF = np.median(absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=365),endtime)._get_column('df'))
         elif endtime.year == 2009 and endtime.month > 2:
-            absDIDD = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'),starttime='2009-03-01', endtime='2009-12-31')
+            absDIDD = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_didd.txt'),starttime='2009-03-01', endtime='2009-12-31')
             # no rotation necessary for DIDD
             stDIDD = stDIDD.baseline(absDIDD,fitfunc='poly',fitdegree=4,plotbaseline=True,plotfilename='test.png')
             deltaF = np.median(absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=365),endtime)._get_column('df'))
         else:
-            absDIDD = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+            absDIDD = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
             # no rotation necessary for DIDD
             stDIDD = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
             deltaF = np.median(absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=365),endtime)._get_column('df'))
@@ -109,10 +108,11 @@ while endtime < finaldate:
         # 7.) Merge with Scalar-Data and Calculate dF (respect pear differences)
         if endtime.year == 2009:
             deltaF = 4.386
-        stDIDD = stDIDD.delta_f(offset=deltaF) # use last years peardiff except for 2009 (use the mean here) 
+        #stDIDD = stDIDD.delta_f(offset=deltaF) # use last years peardiff except for 2009 (use the mean here)
+        stDIDD = stDIDD.delta_f()
 
         # 7a.) Apply offset to stream
-        stDIDD = stDIDD.offset({'f': deltaF})
+        #stDIDD = stDIDD.offset({'f': deltaF})
 
         # 7b.) Save preliminary data # is used for storm detection
         headers['ProvidedType'] = 'preliminary'
@@ -120,12 +120,12 @@ while endtime < finaldate:
 
         # 8.) Plot HDZF 
         stDIDD = stDIDD._convertstream('xyz2hdz')
-        stDIDD.pmplot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, outfile='didd_%s.png' % day)
+        stDIDD.pmplot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, confinex=True, fullday=True, outfile=os.path.join(basepath,'WIK-Diagrams','didd_%s.png' % day))
 
         # 9.) status plot showing T1, dF, derivative (as well as a spectrogram - only for space weather plots)
         stDIDD = stDIDD.aic_calc('x',timerange=timedelta(hours=1))
         stDIDD = stDIDD.differentiate(keys=['var2'],put2keys=['var3'])
-        stDIDD.pmplot(['df','var3'],padding=2,plottitle="Statusplot for DIDD : %s" % starttime, outfile='didd_status_%s.png' % day)
+        stDIDD.pmplot(['df','var3'],padding=2,plottitle="Statusplot for DIDD : %s" % starttime, confinex=True, fullday=True, outfile=os.path.join(basepath,'WIK-Diagrams','didd_status_%s.png' % day))
 
         # 10.) append message if data stream to old
         numlasttimeofstream = stDIDD[-1].time
@@ -192,7 +192,7 @@ while endtime < finaldate:
         # Not necessary for LEMI
 
         # 6.) Do Baseline correction
-        absLEMI = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
+        absLEMI = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
         stLEMI = stLEMI.rotation(alpha=3.3,beta=0.0)
         stLEMI = stLEMI.baseline(absLEMI,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
         deltaF = np.median(absLEMI.trim(absLEMI._testtime(endtime)-timedelta(days=100),endtime)._get_column('df'))
@@ -204,7 +204,8 @@ while endtime < finaldate:
         ssc = ssc.remove_flagged()
         ssc = ssc.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
         stLEMI = mergeStreams(stLEMI,ssc,keys=['f'])
-        stLEMI = stLEMI.delta_f(offset=deltaF)
+        #stLEMI = stLEMI.delta_f(offset=deltaF)
+        stLEMI = stLEMI.delta_f()
 
         # 7b.) Save preliminary data # is used for storm detection
         headers['ProvidedType'] = 'preliminary'
@@ -212,16 +213,16 @@ while endtime < finaldate:
         
         # 8.) Plot HDZF 
         stLEMI = stLEMI._convertstream('xyz2hdz')
-        stLEMI.pmplot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, outfile='lemi_%s.png' % day)
+        stLEMI.pmplot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, confinex=True, fullday=True, outfile=os.path.join(basepath,'WIK-Diagrams','lemi_%s.png' % day))
 
         # 9.) status plot showing T1, dF, derivative (as well as a spectrogram - only for space weather plots)
         stLEMI = stLEMI.aic_calc('x',timerange=timedelta(hours=1))
         stLEMI = stLEMI.differentiate(keys=['var2'],put2keys=['var3'])
-        stLEMI.pmplot(['df','var3'],padding=2,plottitle="Statusplot for LEMI : %s" % day, outfile='lemi_status_%s.png' % day)
+        stLEMI.pmplot(['df','var3'],padding=2,plottitle="Statusplot for LEMI : %s" % day, confinex=True, fullday=True, outfile=os.path.join(basepath,'WIK-Diagrams','lemi_status_%s.png' % day))
 
         stdiffs = subtractStreams(stLEMI,stDIDD,keys=['x','y','z'])# add difference between lemi and DIDD
-        stdiffs.pmplot(['x','y','z'],plottitle="Differences Lemi/DIDD : %s" % day, outfile='lemi_didd_diff_%s.png' % day)
-        
+        stdiffs.pmplot(['x','y','z'],plottitle="Differences Lemi/DIDD : %s" % day, confinex=True, fullday=True, outfile=os.path.join(basepath,'WIK-Diagrams','lemi_didd_diff_%s.png' % day))
+       
         # 10.) append message if data stream to old
         numlasttimeofstream = stLEMI[-1].time
         if date2num(endtime)-0.1 > numlasttimeofstream:
@@ -291,11 +292,11 @@ while endtime < finaldate:
         # 5.) Perfom filtering (min data is used for plots)
         stPMAG = stPMAG.remove_flagged()
         stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-        stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, outfile='pmag_%s.png' % day)
+        stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, confinex=True, outfile=os.path.join(basepath,'WIK-Diagrams','pmag_%s.png' % day))
 
         # 6.) Plot F and dF'S
         stDIFF = subtractStreams(stPMAG,stDIDD,keys=['f'])
-        stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, outfile='pmag_status_%s.png' % day)
+        stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, confinex=True, outfile=os.path.join(basepath,'WIK-Diagrams','pmag_status_%s.png' % day))
 
         # 7.) append message if data stream to old
         numlasttimeofstream = stPMAG[-1].time
