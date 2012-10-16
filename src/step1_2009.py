@@ -10,7 +10,8 @@ from core.magpy_stream import *
 from core.magpy_absolutes import *
 
 # general definitions
-mainpath = r'/home/leon/Dropbox/Daten/Magnetism/'
+mainpath = r'/home/leon/Dropbox/Daten/Magnetism'
+basispath = r'/home/data/WIK'
 year = 2009
 """
 # --------------------
@@ -116,7 +117,7 @@ stOPT.pmwrite(os.path.join(mainpath),filenamebegins='OPT_',format_type='PYCDF')
 """
 # PMAG values : read yearly fractions
 # 1. Get data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','CO0911*'),starttime=str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','CO0906*'),starttime=str(year)+'-01-01', endtime=str(year+1)+'-01-01')
 # Add Meta information
 headers = stPMAG.header
 headers['Instrument'] = 'ELSEC820'
@@ -146,6 +147,8 @@ stPMAG.header = headers
 # currently still empty
 # 3. Remove outliers
 stPMAG = stPMAG.routlier()
-# 4. Save all to the worjing directory
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',mode='replace',format_type='PYCDF')
+stPMAG = stPMAG.remove_flagged()
+stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+# 4. Save all to the working directory
+stPMAG.pmwrite(os.path.join(basispath,'PMAG-WIK','data'),filenamebegins='PMAG_',mode='replace',format_type='PYCDF')
 

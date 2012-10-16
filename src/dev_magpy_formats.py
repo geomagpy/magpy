@@ -10,7 +10,7 @@ from core.magpy_stream import *
 from core.magpy_absolutes import *
 from core.magpy_transfer import *
 
-basispath = r'/home/leon/Dropbox/Daten/Magnetism'
+basispath = r'/home/data/WIK'
 
 
 """
@@ -42,31 +42,36 @@ stOPT = stOPT._convertstream('xyz2hdz')
 # Offsets to VVDM Pear
 stOPT = stOPT.offset({'x': -6, 'z': 11}) 
 stOPT = stOPT.delta_f()
-stOPT.pmplot(['x','y','z','f','df'])
+stOPT.pmplot(['x','y','z','f','df'],confinex = True)
+# This plot nicly shows the deviations in February -> seems to be a timing problem of either OPT or PMAG
 
 # 2. Read the baselinecorrected DIDD data (lets see whether we can deal with one year)
 # -------------------------------------------------------------
 print 'Now reading one year of minute DIDD data - that will take a while'
 print datetime.utcnow()
 stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2009-01-01', endtime='2010-01-01')
-print 'Finished reading - Start writing DIDD (for Geralds program) and IAGA output'
+print 'Finished reading - Start writing DIDD (for Geralds program)'
 print datetime.utcnow()
 # 2a) Write DIDD output
-stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','DIDD'),filenameends='.cob',dateformat='%b%m%y',format_type='DIDD')
+#stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','DIDD'),filenameends='.cob',dateformat='%b%d%y',format_type='DIDD')
 # 2b) Write IAGA output
+print 'Start writing IAGA output'
+print datetime.utcnow()
 obscode = stDIDD.header['IAGAcode']
-stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','IAGA'),filenameends='d_'+obscode.lower()+'.min',dateformat='%Y%m%d'format_type='IAGA')
-
+print obscode
+#stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','IAGA'),filenameends='d_'+obscode.lower()+'.min',dateformat='%Y%m%d',format_type='IAGA')
+# ToDo: write the other IAGA files (baseline, ...)
 
 # 3. Analyze the ELSEC PMAG system and compare it with the DIDD
 # -------------------------------------------------------------
-print 'Starting PMAG analysis'
+print 'Starting PMAG analysis - Reading one year of minute pmag data'
+print datetime.utcnow()
 stPMAG = pmRead(path_or_url=os.path.join(basispath,'PMAG-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
-stPMAG = stPMAG.remove_flagged()
-stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
+print 'Finished reading'
+print datetime.utcnow()
 stPMAG.pmplot(['f'])
 print 'Starting PMAG analysis'
-stDIDDminmod = stDIDD.trim(,starttime='2009-01-01', endtime='2009-05-31')
+stDIDDminmod = stDIDD.trim(starttime='2009-01-01', endtime='2009-05-31')
 stFdiff = subtractStreams(stDIDDminmod,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
 fvals = stdiff._get_column('f')
 flst = [elem for elem in fvals if not isnan(elem)]
@@ -74,9 +79,6 @@ deltaF = np.median(flst)
 print "Delta F between F pillar and shaft: %f" % deltaF
 stFdiff.pmplot(['f'])
 
-#stPMAG = stPMAG.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-#stdiff = subtractStreams(stOPT,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
-#stFdiff.pmplot(['f'])
 
 
 # 4. Construct combined record
@@ -86,7 +88,7 @@ stDIDDhour = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes
 stDIDDhour = stDIDDhour._convertstream('xyz2hdz')
 
 # 4a) get offsets
-stDIDDmod = stDIDDhour.trim(,starttime='2009-01-01', endtime='2009-05-31')
+stDIDDmod = stDIDDhour.trim(starttime='2009-01-01', endtime='2009-05-31')
 stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
 stdiff.pmplot(['x','y','z','f'])
 hvals = stdiff._get_column('x')
@@ -110,7 +112,7 @@ print "Delta F to shaft: %f" % deltaF
 stOPTcorr = stOPT.offset({'x': -6, 'z': 11, 'f': 2.84})
 # Eventually trim stDIDDhour to full day beginning and end
 streamFINAL = mergeStreams(stDIDDhou,stOPTcorr,key=['x','y','z','f'])
-streamFINAL.pmplot(['x','y','z','f'],annotate=True,plottitle='Year 2009 - hourly data)
+streamFINAL.pmplot(['x','y','z','f'],annotate=True,plottitle='Year 2009 - hourly data')
 
 # 5. Save WDC output
 print 'Writing the WDC output'
