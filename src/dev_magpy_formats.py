@@ -13,13 +13,27 @@ from core.magpy_transfer import *
 basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
 
-stRADON = pmRead(path_or_url='ftp://trmsoe:mgt.trms!@www.zamg.ac.at/data/radon/')
-stRADON.pmplot(['x','t1','var1'],padding=0.2)
-stRADON.powerspectrum('x')
+"""
+# Read Optical data and DIDD data
+# DIDD data is baseline corrected within two separate intervals, which both minimize the residuals with the least complex function:
+# Interval 1: until February 09: using a linear aproximation
+# Interval 2: starting from May 09: using a polynomial function of degree 4
+# Save minute means of DIDD values as IAGA and DIDD files in the definite folder
+# Construct joint datastream for 2009 based on DIDD relative to pear D
+# OPT data uses ELSEC PMAG values for F - They are transferred to shaft values of the DIDD using a constant offset
+# The constant offset is determined by comparing both instruments betwwen 01/2009 and 05/2009
+# OPT data has been shifted by -6 and 11 for H and Z respectively. This shifts are removed for joining the files
+# Comparison of OPT (including shift) and DIDD for 01/2009 to 05/2009 indicated a average diff of 10 sec in D, 10.3 in Z and -8 in H
+# Please note that no DIDD data is available for April, March and parts of February and May
+# Save combined sequence of hourly means in WDC format
+# All calculations, transfomations and output are done using the MagPy Software (Leonhardt et al., in prep)
+# Remainig issue (increased variance in x in February when comparing DIDD and OPT - time shift in one of the records?)
 
+"""
 
-x=1/0
-
+print 'Starting with optical data'
+# 1. Produce plot of the optical system (all procedures are done using the flagged stream in the data folder)
+# -------------------------------------------------------------
 stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
 #Flag the f column without data
 stOPT = stOPT.flag_stream('f',3,"System failure",datetime(2009,2,9,15,0,0,0),datetime(2009,2,16,13,0,0,0))
@@ -30,12 +44,80 @@ stOPT = stOPT.offset({'x': -6, 'z': 11})
 stOPT = stOPT.delta_f()
 stOPT.pmplot(['x','y','z','f','df'])
 
+# 2. Read the baselinecorrected DIDD data (lets see whether we can deal with one year)
+# -------------------------------------------------------------
+print 'Now reading one year of minute DIDD data - that will take a while'
+print datetime.utcnow()
+stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2009-01-01', endtime='2010-01-01')
+print 'Finished reading - Start writing DIDD (for Geralds program) and IAGA output'
+print datetime.utcnow()
+# 2a) Write DIDD output
+stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','DIDD'),filenameends='.cob',dateformat='%b%m%y',format_type='DIDD')
+# 2b) Write IAGA output
+obscode = stDIDD.header['IAGAcode']
+stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','IAGA'),filenameends='d_'+obscode.lower()+'.min',dateformat='%Y%m%d'format_type='IAGA')
+
+
+# 3. Analyze the ELSEC PMAG system and compare it with the DIDD
+# -------------------------------------------------------------
+print 'Starting PMAG analysis'
 stPMAG = pmRead(path_or_url=os.path.join(basispath,'PMAG-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
 stPMAG = stPMAG.remove_flagged()
+stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
 stPMAG.pmplot(['f'])
-stPMAG = stPMAG.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-stdiff = subtractStreams(stOPT,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
-stdiff.pmplot(['f'])
+print 'Starting PMAG analysis'
+stDIDDminmod = stDIDD.trim(,starttime='2009-01-01', endtime='2009-05-31')
+stFdiff = subtractStreams(stDIDDminmod,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
+fvals = stdiff._get_column('f')
+flst = [elem for elem in fvals if not isnan(elem)]
+deltaF = np.median(flst)
+print "Delta F between F pillar and shaft: %f" % deltaF
+stFdiff.pmplot(['f'])
+
+#stPMAG = stPMAG.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+#stdiff = subtractStreams(stOPT,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
+#stFdiff.pmplot(['f'])
+
+
+# 4. Construct combined record
+# -------------------------------------------------------------
+print 'Starting with the production of a combined data list'
+stDIDDhour = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+stDIDDhour = stDIDDhour._convertstream('xyz2hdz')
+
+# 4a) get offsets
+stDIDDmod = stDIDDhour.trim(,starttime='2009-01-01', endtime='2009-05-31')
+stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
+stdiff.pmplot(['x','y','z','f'])
+hvals = stdiff._get_column('x')
+dvals = stdiff._get_column('y')
+zvals = stdiff._get_column('z')
+fvals = stdiff._get_column('f')
+hlst = [elem for elem in hvals if not isnan(elem)]
+dlst = [elem for elem in dvals if not isnan(elem)]
+zlst = [elem for elem in zvals if not isnan(elem)]
+flst = [elem for elem in fvals if not isnan(elem)]
+deltaH = np.median(hlst)
+deltaD = np.median(dlst)
+deltaZ = np.median(zlst)
+deltaF = np.median(flst)
+print "Delta H to main pear: %f" % deltaH
+print "Delta D to main pear: %f" % deltaD
+print "Delta Z to main pear: %f" % deltaZ
+print "Delta F to shaft: %f" % deltaF
+
+# 4b) remove shifts from OPT and correct for ELSEC-SHAFT differences
+stOPTcorr = stOPT.offset({'x': -6, 'z': 11, 'f': 2.84})
+# Eventually trim stDIDDhour to full day beginning and end
+streamFINAL = mergeStreams(stDIDDhou,stOPTcorr,key=['x','y','z','f'])
+streamFINAL.pmplot(['x','y','z','f'],annotate=True,plottitle='Year 2009 - hourly data)
+
+# 5. Save WDC output
+print 'Writing the WDC output'
+streamFINAL.pmwrite(os.path.join(basispath),filenamebegins='wik',filenameends='.wdc',format_type='WDC',coverage='month',dateformat='%Y%m')
+
+# 6. Creating reports and tables
+print 'ToDo: Final step - writing tables, creating report etc'
 
 x= 1/0
 
@@ -95,6 +177,7 @@ stDIDD = mergeStreams(stDIDD,stfilt,key=['var4'])
 stDIDD.pmplot(['x','var2','var3','var4'],bartrange=0.02,symbollist = ['-','-','-','z'],plottitle = "Storm onsets and local variation index", annotate=True)
 
 x=1/0
+
 
 # Read Radon data
 # ----------------

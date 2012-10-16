@@ -106,7 +106,17 @@ def readSFDMI(filename, headonly=False, **kwargs):
                     row.z = zval
                     row.t1 = float(elem[4])
                     row.t2 = float(elem[5])
-                    stream.add(row)         
+                    stream.add(row)
+        stream.header['col-x'] = 'x'         
+        stream.header['col-y'] = 'y'         
+        stream.header['col-z'] = 'z'         
+        stream.header['col-t1'] = 'T1'         
+        stream.header['col-t2'] = 'T2'         
+        stream.header['unit-col-x'] = 'nT'         
+        stream.header['unit-col-y'] = 'nT'         
+        stream.header['unit-col-z'] = 'nT'         
+        stream.header['unit-col-t1'] = 'deg C'         
+        stream.header['unit-col-t2'] = 'deg C'         
     else:
         headers = stream.header
         stream =[]
@@ -166,6 +176,8 @@ def readSFGSM(filename, headonly=False, **kwargs):
                     row.time=date2num(datetime.strptime(day,"%Y-%m-%d"))+ float(elem[0])/86400
                     row.f = float(elem[1])
                     stream.add(row)         
+        stream.header['col-f'] = 'f'         
+        stream.header['unit-col-f'] = 'nT'         
     else:
         headers = stream.header
         stream =[]

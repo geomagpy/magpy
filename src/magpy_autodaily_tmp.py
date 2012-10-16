@@ -15,8 +15,8 @@ from core.magpy_transfer import *
 # ---- Daily analysis  ----
 # ----------------------------------------
 finaldate = datetime.utcnow()
-finaldate = datetime(2012,2,15)
-endtime = datetime.strptime('2012-1-26T23:59:59',"%Y-%m-%dT%H:%M:%S")
+finaldate = datetime(2010,9,5)
+endtime = datetime.strptime('2010-8-15T23:59:59',"%Y-%m-%dT%H:%M:%S")
 while endtime < finaldate:
     #Some definitions
     #endtime=datetime.strptime('2012-8-29T15:30:00',"%Y-%m-%dT%H:%M:%S") # datetime.replace by utcnow()
@@ -36,7 +36,7 @@ while endtime < finaldate:
 
     abspath = "/home/leon/Dropbox/Daten/Magnetism"
     basepath = "/home/data/WIK"
-    #basepath = "/home/leon/Dropbox/Daten/Magnetism"
+    basepath = "/home/leon/Dropbox/Daten/Magnetism"
     variopath = os.path.join(basepath,'DIDD-WIK','data','*')
     scalarpath = os.path.join(basepath,'DIDD-WIK','data','*')
 

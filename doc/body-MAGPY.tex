@@ -26,11 +26,9 @@ KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','
 \subsection{Using databases}
 
 
-\section{Application}
+\section{Basic geomagnetic data analysis}
 
-\subsection{Basic data analysis}
-
-\subsubsection{Reading and Plotting}
+\subsection{Reading and Plotting}
 
 Plotting all data from a certain directory:
 \begin{verbatim}
@@ -46,7 +44,7 @@ Trimming data with starttime and/or endtime limits. Starttime and endtime format
     st.pmplot(['x','y','z'])
 \end{verbatim}
 
-\subsubsection{Writing data}
+\subsection{Writing data}
 
 \begin{verbatim}
     from dev_magpy_stream import *
@@ -55,7 +53,7 @@ Trimming data with starttime and/or endtime limits. Starttime and endtime format
     st.pmwrite('outputpath')
 \end{verbatim}
 
-\subsubsection{Filtering/Smoothing/Interpolation}
+\subsection{Filtering/Smoothing/Interpolation}
 
 The first example shows how to filter data using gaussian and linear filters.
 \begin{verbatim}
@@ -86,7 +84,7 @@ Approximating functions and fitting:
     st.pmplot(['f'],function=func)
 \end{verbatim}
 
-\subsubsection{Removing spikes}
+\subsection{Removing spikes}
 
 Outlier detection is based on quartiles. Calculated is the interquartile range ($IQR$, which is the difference between the first and third quartile ($Q3 - Q1$). The interquartile range is termed to be a relatively robust statistic compared to the range and standard deviation. $Q1$ is based on the lower 25\% of data, $Q3$ on the upper part, after using medians to divide the data set. Using an optional threshold value outliers are then characterized by exceeding the limit defined by
 \begin{equation}\label{outlier}
@@ -98,7 +96,7 @@ stream = stream.routlier(keys=['f'], timerange=timedelta(hours=1), threshold = 4
 \end{verbatim}
 Outlying data is \emph{not} removed from the data set but flagged (see next section). The log file (see section \ref{logging}) contains a list of all flagged data points.
 
-\subsubsection{Flagging data}\label{flagging}
+\subsection{Flagging data}\label{flagging}
 
 \begin{verbatim}
 st = pmRead(path_or_url=os.path.normpath('datapath\\*'),starttime='2011-7-8',endtime='2011-7-9')
@@ -111,11 +109,9 @@ st.pmplot(['f','var2'])
 \end{verbatim}
 
 
-\subsection{DI and Baselines}
+\section{DI and Baselines}
 
-\subsubsection{DI analysis}
-
-\subsubsubsection{Calculating absolutes}
+\subsection{Calculating absolutes and and collimation angles}
 
 \begin{verbatim}
 abso = analyzeAbsFiles(path_or_url=source, alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
@@ -129,11 +125,8 @@ The analyzeAbsFiles function is located in the absolutes package and reads speci
 
 For the write command the following options are now used: Coverage$=$all saves all data to one file and does not include any date in the filename. This requires option filenamebegins to be set, which determines the actual file name. Mode$=$replace indicates that any already existing input in an existing summary file at the same save-location will be replaced by new analyzes. All others remain untouched.
 
-\subsubsubsection{Metadata and collimation angles}
 
-
-
-\subsubsection{Baseline calculation}
+\subsection{Baseline calculation}
 \begin{verbatim}
 abslemi = pmRead(path_or_url=os.path.normpath(r'..\\dat\\output\\absolutes\\absolutes_lemi.txt'))
 func = abslemi.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
@@ -147,18 +140,22 @@ lemi.pmplot(['x','y','z'])
 Baseline correction is done by the baseline function. Reading the file containing absolute data corrected with the variometer is done in the first line. The fields dx, dy, and dz contain the baseline values for the specified variometer. As shown above a spline fit can be easily calculated for the absolute components. Then the variometer data is loaded and rotated according to its orientation matrix (HDZ here). The baseline correction is then done using the baseline function.
 
 
-\subsubsection{Baseline stability}
-
-\subsection{Auxiliary data}
+\subsection{Baseline stability}
 
 
-\subsection{Advanced data analysis}
+\subsection{Quasi-definite data}
 
-\subsubsection{Merging and Comparing records}
 
-\subsubsection{Spectral analysis}
+\section{Auxiliary data}
 
-\subsubsection{Variation anaylsis/Strom recognition}
+
+\section{Advanced data analysis}
+
+\subsection{Merging and Comparing records}
+
+\subsection{Spectral analysis}
+
+\subsection{Variation anaylsis/Strom recognition}
 
 \begin{verbatim}
     st = pmRead(...)
@@ -174,23 +171,46 @@ Baseline correction is done by the baseline function. Reading the file containin
 \end{verbatim}
 
 
-\subsection{Automizing analysis procedures}
+\subsubsection{Akaika-Information-Criterion}\label{AIC}
 
-\subsubsection{Scripting}
+MagPy implements picking of storm onsets using the Akaike Information Criterion (AIC) which is well known from seismic data analysis for determining p-wave onsets (citations).
+The AIC picker principally compares the variance content of two parts of one data stream and aims to identify any change in the information content of the data stream. For that purpose, a 1-dimensional array of a data stream, for storm recognition usually the H column, is taken. A window of suitable length is then used to define segments to investigate of this stream. For each segement, a point of interest is moved along the segement and log of variance is calculated before and after this point. The difference of these two variance values defines the AIC value. The minimum AIC points to the occurrence of the most significant change in information content. Beside recognition of storm onsets, this method can be used fro any other monitoring of information content, e.g. chang in noise, etc. Beside the actual AIC value, the function also determines the relative AIC, normalized to the maximum of each segment, which is useful to get an idea of the relative amplitude of the information change. Finally, this relative value can be stacked with the values of repeated runs of the AIC function (e.g. using different time windows).
 
-\subsubsection{Logging and Notification}\label{logging}
+        Required:
+        :type key: string
+        :param key: needs to be an element of KEYLIST
+
+        Optional keywords:
+        :type timerange: timedelta object
+        :param timerange: defines the length of the time window examined by the aic iteration
+                        default: timedelta(hours=1)
+        :type aic2key: string 
+        :param aic2key: defines the key of the column where to save the aic values (default = var2)
+        :type aicmin2key: string
+        :param aicmin2key: defines the key of the column where to save the aic minimum val
+                        default: key = var1
+        :type aicminstack: bool
+        :param aicminstack: if true, aicmin values are added to previously present column values
+
+\section{Automizing analysis procedures}
+
+\subsection{Scripting}
+
+\subsection{Logging and Notification}\label{logging}
 
 use the python logging package
 
-\subsection{Summary of supported routines}
+\section{Discussion}
+
+
+\section{Summary of supported routines}
 
 Show table containing all functions, their purpose and the available keys.
 
-\section{Advanced}
+\section{Appendix}
 
 \subsection{Creating import/export filters}
 
 \subsection{Adding Analysis Functions}
 
-\section{Discussion}
 

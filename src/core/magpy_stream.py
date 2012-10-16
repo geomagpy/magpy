@@ -368,6 +368,26 @@ class DataStream(object):
         return self
 
 
+    def _clear_column(self, key):
+        """
+        adds a column to a Stream
+        """
+        #init = kwargs.get('init')
+        #if init>0:
+        #    for i in range init:
+        #    self.add(float('NaN'))
+
+        if not key in KEYLIST:
+            raise ValueError, "Column key not valid"
+        for idx, elem in enumerate(self):
+            if key in ['x','y','z','f','dx','dy','dz','df','var1','var2','var3','var4']:
+                exec('elem.'+key+' = float("NaN")')
+            else:
+                exec('elem.'+key+' = "-"')
+                   
+        return self
+
+
     def _get_max(self, key):
         if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
@@ -667,16 +687,33 @@ class DataStream(object):
         :type timerange: timedelta object
         :param timerange: defines the length of the time window examined by the aic iteration
                         default: timedelta(hours=1)
-
+        :type aic2key: string 
+        :param aic2key: defines the key of the column where to save the aic values (default = var2)
+        :type aicmin2key: string
+        :param aicmin2key: defines the key of the column where to save the aic minimum val
+                        default: key = var1
+        :type aicminstack: bool
+        :param aicminstack: if true, aicmin values are added to previously present column values
+                        
         Example:
         
-        """
+        """ 
         timerange = kwargs.get('timerange')
+        aic2key = kwargs.get('aic2key')
+        aicmin2key = kwargs.get('aicmin2key')
+        aicminstack = kwargs.get('aicminstack')
+
         if not timerange:
             timerange = timedelta(hours=1)
+        if not aic2key:
+            aic2key = 'var2'
+        if not aicmin2key:
+            aicmin2key = 'var1'
 
         t = self._get_column('time')
         signal = self._get_column(key)
+        #Clear the projected results column
+        self = self._clear_column(aic2key)
         # get sampling interval for normalization - need seconds data to test that
         sp = self.get_sampling_period()*24*60
         # corrcet approach
@@ -690,53 +727,38 @@ class DataStream(object):
                  iend += 60 # approx for minute files and 1 hour timedelta (used when no data available in time range) should be valid for any other time range as well
             else:
                 currsequence = signal[istart:iend]
+                aicarray = []
                 for idx, el in enumerate(currsequence):
                     if idx > 1 and idx < len(currsequence):
                         aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normailze to sampling rate and timerange
-                        self[idx+istart].var2 = aicval
+                        exec('self[idx+istart].'+ aic2key +' = aicval')
+                        if not isnan(aicval):
+                            aicarray.append(aicval)
                         # store start value - aic: is a measure for the significance of information change
                         #if idx == 2:
                         #    aicstart = aicval
                         #self[idx+istart].var5 = aicstart-aicval
+                maxaic = np.max(aicarray)
+                # determine the relative amplitude as well
+                cnt = 0
+                for idx, el in enumerate(currsequence):
+                    if idx > 1 and idx < len(currsequence):
+                        try:
+                            if aicminstack:
+                                if not eval('isnan(self[idx+istart].'+aicmin2key+')'):
+                                    exec('self[idx+istart].'+ aicmin2key +' += (-aicarray[cnt] + maxaic)')
+                                else:
+                                    exec('self[idx+istart].'+ aicmin2key +' = (-aicarray[cnt] + maxaic)')
+                            else:
+                                exec('self[idx+istart].'+ aicmin2key +' = (-aicarray[cnt] + maxaic)')
+                                exec('self[idx+istart].'+ aicmin2key +' = maxaic')
+                            cnt = cnt+1
+                        except:
+                            msg = "number of counts does not fit usually because of nans"
             iprev = iend
 
-        """
-        xx, iprev = self._find_nearest(np.asarray(t), date2num(num2date(t[0]).replace(tzinfo=None) + timerange/2))
-        iend = 0
-        while iend < len(t)-1:
-            istart = iprev
-            ta, iend = self._find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
-            if iend == istart:
-                 iend += 60 # approx for minute files and 1 hour timedelta (used when no data available in time range) should be valid for any other time range as well
-            else:
-                currsequence = signal[istart:iend]
-                for idx, el in enumerate(currsequence):
-                    if idx > 1 and idx < len(currsequence)-1:
-                        aicval = self._aic(currsequence, idx)
-                        prevval = self[idx+istart].var2
-                        if not isnan(prevval):
-                            lastcorrectval = prevval
-                            self[idx+istart].var2 = (prevval + aicval)/2
-                        else:
-                            meanfirst = lastcorrectval + self[idx+istart+5].var2
-                            self[idx+istart].var2 = (meanfirst + aicval)/2
-                        #self[idx+istart].var2 = aicval
-                        print prevval, self[idx+istart].var2
-                        # store start value - aic: is a measure for the significance of information change
-                        #if idx == 2:
-                        #    aicstart = aicval
-                        #self[idx+istart].var5 = aicstart-aicval
-            iprev = iend
-        """
 
         self.header['col-var2'] = 'aic'
-        #self.header['col-var4'] = 'aicchange'
-        # old approach
-        #for idx, elem in enumerate(self):
-        #    ta, ts = self._find_nearest(np.asarray(t), date2num(num2date(elem.time).replace(tzinfo=None) - timerange))
-        #    ta, te = self._find_nearest(np.asarray(t), date2num(num2date(elem.time).replace(tzinfo=None) + timerange))
-        #    signalsegment = signal[ts:te]
-        #    elem.var2 = self._aic(signalsegment,int(len(signalsegment)/2))
 
         return self
 
@@ -954,7 +976,11 @@ class DataStream(object):
         for i, key in enumerate(keys):
             val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
-            self._put_column(dval, put2keys[i])
+            # gradient is shifted towards +x (compensate that by a not really good trick)
+            dvaltmp = dval[1:]
+            ndval = np.append(dvaltmp,float('NaN'))
+            
+            self._put_column(ndval, put2keys[i])
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
@@ -998,7 +1024,7 @@ class DataStream(object):
         else:
             assert type(stringvalues) == list
         if not len(stringvalues) == len(values):
-            loggerstream.warning('Eventlogger: Prvided comments do not match amount of values')
+            loggerstream.warning('Eventlogger: Provided comments do not match amount of values')
             return self
        
         for elem in self:
@@ -1040,7 +1066,7 @@ class DataStream(object):
         if not compare:
             compare = '=='
 
-        liste = [elem for elem in self if eval('elem['+key+'] '+ compare + ' ' + str(value))]
+        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + str(value))]
 
         return DataStream(liste,self.header)    
 
