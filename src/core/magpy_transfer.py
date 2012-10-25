@@ -87,13 +87,14 @@ def ftpdatatransfer (**kwargs):
         _missingvals(myproxy, port, login, passwd, logfile)
     except:
         loggertransfer.warning(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
-        #plog.addlog(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
-        newline = "\n"
-        #os.chdir(logpath)
-        lfile = open(os.path.join(logfile),"a")
-        lfile.write(localpath + '  ' + filestr + '  ' + ftppath )
-        lfile.write(newline)
-        lfile.close()
+        if os.path.isfile(filelocal):
+            #plog.addlog(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
+            newline = "\n"
+            #os.chdir(logpath)
+            lfile = open(os.path.join(logfile),"a")
+            lfile.write(localpath + '  ' + filestr + '  ' + ftppath )
+            lfile.write(newline)
+            lfile.close()
 
 
 # ####################
