@@ -10,155 +10,45 @@ from core.magpy_stream import *
 from core.magpy_absolutes import *
 from core.magpy_transfer import *
 
-basispath = r'/home/data/WIK'
+
+basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
 
-"""
-# Read Optical data and DIDD data
-# DIDD data is baseline corrected within two separate intervals, which both minimize the residuals with the least complex function:
-# Interval 1: until February 09: using a linear aproximation
-# Interval 2: starting from May 09: using a polynomial function of degree 4
-# Save minute means of DIDD values as IAGA and DIDD files in the definite folder
-# Construct joint datastream for 2009 based on DIDD relative to pear D
-# OPT data uses ELSEC PMAG values for F - They are transferred to shaft values of the DIDD using a constant offset
-# The constant offset is determined by comparing both instruments betwwen 01/2009 and 05/2009
-# OPT data has been shifted by -6 and 11 for H and Z respectively. This shifts are removed for joining the files
-# Comparison of OPT (including shift) and DIDD for 01/2009 to 05/2009 indicated a average diff of 10 sec in D, 10.3 in Z and -8 in H
-# Please note that no DIDD data is available for April, March and parts of February and May
-# Save combined sequence of hourly means in WDC format
-# All calculations, transfomations and output are done using the MagPy Software (Leonhardt et al., in prep)
-# Remainig issue (increased variance in x in February when comparing DIDD and OPT - time shift in one of the records?)
+# Reading data from NOAA (ACE satellite data)
+# ----------------
+today = datetime.strftime(datetime.utcnow(),'%Y%m%d')
+acedata = today + '_ace_swepam_1m.txt'
+#ace = pmRead(path_or_url=os.path.join(basispath,'SolarData',acedata))
+ace = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (acedata))
+#print st
+ace.pmplot(['x','y','z'],labelcolor='0.2',bgcolor='#d5de9c',grid=True,gridcolor='#316931')
+#st.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism"),filenamebegins='gfzkp',format_type='PYCDF',coverage='all')
 
-"""
+ace2data = today + '_ace_sis_5m.txt'
+ace2 = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (ace2data))
+ace2.pmplot(['t1','t2'])
 
-print 'Starting with optical data'
-# 1. Produce plot of the optical system (all procedures are done using the flagged stream in the data folder)
-# -------------------------------------------------------------
-stOPT = pmRead(path_or_url=os.path.join(basispath,'OPT-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
-#Flag the f column without data
-stOPT = stOPT.flag_stream('f',3,"System failure",datetime(2009,2,9,15,0,0,0),datetime(2009,2,16,13,0,0,0))
-stOPT = stOPT.remove_flagged()
-stOPT = stOPT._convertstream('xyz2hdz')
-# Offsets to VVDM Pear
-stOPT = stOPT.offset({'x': -6, 'z': 11}) 
-stOPT = stOPT.delta_f()
-stOPT.pmplot(['x','y','z','f','df'],confinex = True)
-# This plot nicly shows the deviations in February -> seems to be a timing problem of either OPT or PMAG
-
-# 2. Read the baselinecorrected DIDD data (lets see whether we can deal with one year)
-# -------------------------------------------------------------
-print 'Now reading one year of minute DIDD data - that will take a while'
-print datetime.utcnow()
-stDIDD = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2009-01-01', endtime='2010-01-01')
-print 'Finished reading - Start writing DIDD (for Geralds program)'
-print datetime.utcnow()
-# 2a) Write DIDD output
-#stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','DIDD'),filenameends='.cob',dateformat='%b%d%y',format_type='DIDD')
-# 2b) Write IAGA output
-print 'Start writing IAGA output'
-print datetime.utcnow()
-obscode = stDIDD.header['IAGAcode']
-print obscode
-#stDIDD.pmwrite(os.path.join(basispath,'WIK-Definite2009','IAGA'),filenameends='d_'+obscode.lower()+'.min',dateformat='%Y%m%d',format_type='IAGA')
-# ToDo: write the other IAGA files (baseline, ...)
-
-# 3. Analyze the ELSEC PMAG system and compare it with the DIDD
-# -------------------------------------------------------------
-print 'Starting PMAG analysis - Reading one year of minute pmag data'
-print datetime.utcnow()
-stPMAG = pmRead(path_or_url=os.path.join(basispath,'PMAG-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
-print 'Finished reading'
-print datetime.utcnow()
-stPMAG.pmplot(['f'])
-print 'Starting PMAG analysis'
-stDIDDminmod = stDIDD.trim(starttime='2009-01-01', endtime='2009-05-31')
-stFdiff = subtractStreams(stDIDDminmod,stPMAG,keys=['f']) # Stream_a gets modified - stdiff = st1mod...
-fvals = stdiff._get_column('f')
-flst = [elem for elem in fvals if not isnan(elem)]
-deltaF = np.median(flst)
-print "Delta F between F pillar and shaft: %f" % deltaF
-stFdiff.pmplot(['f'])
+ace3data = today + '_ace_epam_5m.txt'
+ace3 = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (ace3data))
+ace3.pmplot(['f','df','dx','dy','dz'])
 
 
+# Reading data from the GFZ (Kp)
+# ----------------
 
-# 4. Construct combined record
-# -------------------------------------------------------------
-print 'Starting with the production of a combined data list'
-stDIDDhour = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-stDIDDhour = stDIDDhour._convertstream('xyz2hdz')
-
-# 4a) get offsets
-stDIDDmod = stDIDDhour.trim(starttime='2009-01-01', endtime='2009-05-31')
-stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
-stdiff.pmplot(['x','y','z','f'])
-hvals = stdiff._get_column('x')
-dvals = stdiff._get_column('y')
-zvals = stdiff._get_column('z')
-fvals = stdiff._get_column('f')
-hlst = [elem for elem in hvals if not isnan(elem)]
-dlst = [elem for elem in dvals if not isnan(elem)]
-zlst = [elem for elem in zvals if not isnan(elem)]
-flst = [elem for elem in fvals if not isnan(elem)]
-deltaH = np.median(hlst)
-deltaD = np.median(dlst)
-deltaZ = np.median(zlst)
-deltaF = np.median(flst)
-print "Delta H to main pear: %f" % deltaH
-print "Delta D to main pear: %f" % deltaD
-print "Delta Z to main pear: %f" % deltaZ
-print "Delta F to shaft: %f" % deltaF
-
-# 4b) remove shifts from OPT and correct for ELSEC-SHAFT differences
-stOPTcorr = stOPT.offset({'x': -6, 'z': 11, 'f': 2.84})
-# Eventually trim stDIDDhour to full day beginning and end
-streamFINAL = mergeStreams(stDIDDhou,stOPTcorr,key=['x','y','z','f'])
-streamFINAL.pmplot(['x','y','z','f'],annotate=True,plottitle='Year 2009 - hourly data')
-
-# 5. Save WDC output
-print 'Writing the WDC output'
-streamFINAL.pmwrite(os.path.join(basispath),filenamebegins='wik',filenameends='.wdc',format_type='WDC',coverage='month',dateformat='%Y%m')
-
-# 6. Creating reports and tables
-print 'ToDo: Final step - writing tables, creating report etc'
-
-x= 1/0
+kp = pmRead(path_or_url='http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
+# Append that data to the local list (as only one month is published online            
+kp.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism"),filenamebegins='gfzkp',format_type='PYCDF',coverage='all',mode='replace')
+stream = pmRead(path_or_url=os.path.join(basispath,'gfzkp.cdf'))
+stream.pmplot(['var1'],bartrange=0.06,symbollist=['z'],specialdict = {'var1': [0,9]})
 
 
-#absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
-#absDIDD.pmplot(['dx','dy','dz'])
+newdat = mergeStreams(ace,kp,keys=['var1','var2'],addall=True)
+newdat2 = mergeStreams(newdat,ace2,keys=['t1','t2'])
 
-#stDIDDdat = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','data','*'),starttime='2009-01-01', endtime='2009-05-31')
-stDIDDmod = pmRead(path_or_url=os.path.join(basispath,'DIDD-WIK','preliminary','*'),starttime='2009-01-01', endtime='2009-05-31')
-#stDIDDmod = stDIDDdat.remove_flagged()
-#absDIDD = pmRead(path_or_url=os.path.join(basispath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
-#stDIDDmod = stDIDDmod.baseline(absDIDD,fitfunc='poly',fitdegree=5,plotbaseline=True)
-stDIDDmod = stDIDDmod.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-stDIDDmod = stDIDDmod._convertstream('xyz2hdz')
-stDIDDmod.pmplot(['x','y','z','f'])
-stdiff = subtractStreams(stDIDDmod,stOPT,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
-stdiff.pmplot(['x','y','z','f'])
-hvals = stdiff._get_column('x')
-dvals = stdiff._get_column('y')
-zvals = stdiff._get_column('z')
-fvals = stdiff._get_column('f')
-hlst = [elem for elem in hvals if not isnan(elem)]
-dlst = [elem for elem in dvals if not isnan(elem)]
-zlst = [elem for elem in zvals if not isnan(elem)]
-flst = [elem for elem in fvals if not isnan(elem)]
-deltaH = np.median(hlst)
-deltaD = np.median(dlst)
-deltaZ = np.median(zlst)
-deltaF = np.median(flst)
-print "Delta H to main pear: %f" % deltaH
-print "Delta D to main pear: %f" % deltaD
-print "Delta Z to main pear: %f" % deltaZ
-print "Delta F to main pear: %f" % deltaF
-#offsetdict = {'x': deltaH, 'z': deltaZ, 'f': deltaF}
-#stOPT = stOPT.offset(offsetdict)
-#stOPT.pmplot(['x','y','z','f'])
+newdat2.pmplot(['x','y','t1','var1'],bartrange=0.06,symbollist=['-','-','-','z'],specialdict = {'var1': [0,9]})
 
-
-x=1/0
+x = 1/0
 
 # Annotation of plots
 # ----------------

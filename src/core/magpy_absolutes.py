@@ -285,7 +285,7 @@ class AbsoluteData(object):
                 try:
                     dl2mean = np.mean([dl1[k],dl1[k+1]])
                 except:
-                    loggerabs.error("%s : Data missing for declination calculation"% num2date(poslst[0].time).replace(tzinfo=None))
+                    loggerabs.error("%s : Data missing: check whether all fields are filled"% num2date(poslst[0].time).replace(tzinfo=None))
                     pass
             dl2tmp.append(dl2mean)
             if dl2mean < np.pi:
@@ -737,7 +737,8 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
   
         # extract extension if any
         suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
-        fh = NamedTemporaryFile(suffix=suffix,delete=False)
+        name = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
+        fh = NamedTemporaryFile(suffix=name+suffix,delete=False)
         fh.write(urllib2.urlopen(path_or_url).read())
         fh.close()
         stream = _absRead(fh.name, dataformat, headonly, **kwargs)

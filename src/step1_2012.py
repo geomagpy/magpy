@@ -21,7 +21,7 @@ year = 2012
 # and save them to the working directory
 # Start with DIDD values and read yearly fractions
 # 1. Get data
-st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-10-03', endtime=str(year)+'-10-10')
+st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-10-10', endtime=str(year+1)+'-1-1')
 # 2. Merge auxilliary data
 aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
 aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
@@ -64,7 +64,7 @@ stDIDD.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',f
 
 # LEMI values and read yearly fractions
 # 1. Get data
-st2 = pmRead(path_or_url=os.path.join(mainpath,'LEMI-WIK','*.min'),starttime= str(year)+'-10-03', endtime=str(year)+'-10-10')
+st2 = pmRead(path_or_url=os.path.join(mainpath,'LEMI-WIK','*.min'),starttime= str(year)+'-10-10', endtime=str(year+1)+'-1-1')
 # 2. Merge auxilliary data
 aux2 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Vario*'))
 aux2 = aux2.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC

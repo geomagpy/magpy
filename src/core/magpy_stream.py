@@ -150,7 +150,7 @@ FLAGKEYLIST = KEYLIST[:8]
 
 
 PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
-                            'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','UNKOWN']
+                            'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','UNKOWN']
 
 # -------------------
 #  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
@@ -1743,6 +1743,26 @@ class DataStream(object):
         annote: bool - annotate data using comments
         padding: (integer - default 0) Value to add to the max-min data for adjusting y-scales
                  maybe change that to a relative padding depending on data values
+        :type bgcolor: string 
+        :param bgcolor: Define background color e.g. '0.5' greyscale, 'r' red, etc 
+        :type gridcolor: string 
+        :param gridcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc 
+        :type labelcolor: string 
+        :param labelcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc 
+        :type grid: bool 
+        :param grid: show grid or not, default = True 
+        :type specialdict: dictionary 
+        :param specialdict: contains special information for specific plots. key
+                      key corresponds to the column
+                      input is a list with the following parameters
+                      ('None' if not used)
+                      ymin
+                      ymax
+                      ycolor
+                      bgcolor
+                      grid
+                      gridcolor
+                      
 
             from magpy_stream import *
             st = read()
@@ -1755,7 +1775,11 @@ class DataStream(object):
         plottitle = kwargs.get('plottitle')
         colorlist = kwargs.get('colorlist')
         errorbar = kwargs.get('errorbar')
-        padding = kwargs.get('padding') # needs to be incorporated
+        padding = kwargs.get('padding')
+        labelcolor = kwargs.get('labelcolor')
+        bgcolor = kwargs.get('bgcolor')
+        gridcolor = kwargs.get('gridcolor')
+        grid = kwargs.get('grid')
         bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
         symbollist = kwargs.get('symbollist')
         plottype = kwargs.get('plottype')
@@ -1767,6 +1791,7 @@ class DataStream(object):
         noshow = kwargs.get('noshow')
         annotate = kwargs.get('annotate')
         confinex = kwargs.get('confinex')
+        specialdict = kwargs.get('specialdict')
 
         if not function:
             function = None
@@ -1786,7 +1811,14 @@ class DataStream(object):
             bartrange = 0.06
         if not padding:
             padding = 0
- 
+        if not labelcolor:
+            labelcolor = '0.2'
+        if not bgcolor:
+            bgcolor = '#d5de9c'
+        if not gridcolor:
+            gridcolor = '#316931'
+        if not grid:
+            grid =True
 
         myyfmt = ScalarFormatter(useOffset=False)
         n_subplots = len(keys)
@@ -1823,12 +1855,12 @@ class DataStream(object):
                 subplt = "%d%d%d" %(n_subplots,1,count)
                 # Create primary plot and define x scale and ticks/labels of subplots
                 if count == 1:
-                    ax = fig.add_subplot(subplt)
+                    ax = fig.add_subplot(subplt, axisbg=bgcolor)
                     if plottitle:
                         ax.set_title(plottitle)
                     a = ax
                 else:
-                    ax = fig.add_subplot(subplt, sharex=a)
+                    ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
                 timeunit = ''
                 if confinex:
                     trange = np.max(t) - np.min(t)
@@ -1866,9 +1898,18 @@ class DataStream(object):
                 if count < len(keys):
                     setp(ax.get_xticklabels(), visible=False)
                 else:
-                    ax.set_xlabel("Time (UTC) %s" % timeunit)
-                        
+                    ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
+                
                 # Create plots
+                ymin = np.min(yplt)-padding
+                ymax = np.max(yplt)+padding
+                if specialdict:
+                    if key in specialdict:
+                        paramlst = specialdict[key]
+                        if not paramlst[0] == None:
+                            ymin = paramlst[0]
+                        if not paramlst[1] == None:
+                            ymax = paramlst[1]
                 # -- switch color and symbol
                 if symbollist[count-1] == 'z': # symbol for plotting colored bars for k values
                     xy = range(9)
@@ -1886,6 +1927,8 @@ class DataStream(object):
                         loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
                 #ax.plot_date(t2,yplt2,"r"+symbol[1],markersize=4)
                 # Add annotations for flags
+                if grid:
+                    ax.grid(True,color=gridcolor,linewidth=0.5)
                 if annotate:
                     flag = self._get_column('flag')
                     comm = self._get_column('comment')
@@ -1939,9 +1982,13 @@ class DataStream(object):
                 except:
                     yunit = ''
                     pass
-                label = ylabel+' ['+yunit+']'
-                ax.set_ylabel(label)
-                ax.set_ylim(np.min(yplt)-padding,np.max(yplt)+padding)
+                if not yunit == '': 
+                    label = ylabel+' $['+yunit+']$'
+                else:
+                    label = ylabel
+                ax.set_ylabel(label, color=labelcolor)
+                
+                ax.set_ylim(ymin,ymax)
                 ax.get_yaxis().set_major_formatter(myyfmt)
                 if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
                     ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
@@ -1988,6 +2035,10 @@ class DataStream(object):
         
         if not format_type:
             format_type = 'PYSTR'
+        if not format_type in PYMAG_SUPPORTED_FORMATS:
+            loggerstream.info('Output format not supported')
+            print "Format not supported"
+            return
         if not dateformat:
             dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
         if not coverage:
@@ -3046,9 +3097,11 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                         d) /home/data/thefile.txt
                         e) ftp://server/directory/
                         f) ftp://server/directory/thefile.txt
+                        g) http://www.thepage.at/file.tab
     """
     messagecont = ""
 
+    debugmode = kwargs.get('debugmode')
     disableproxy = kwargs.get('disableproxy')
     if disableproxy:
         proxy_handler = urllib2.ProxyHandler( {} )           
@@ -3072,17 +3125,21 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some URL
         # extract extension if any
         content = urllib2.urlopen(path_or_url).read()
-        print urllib2.urlopen(path_or_url).info()
+        if debugmode:
+            print urllib2.urlopen(path_or_url).info()
         if path_or_url[-1] == '/':
             # directory
             string = content.decode('utf-8')
             for line in string.split("\n"):
                 if len(line) > 1: 
                     filename = (line.strip().split()[-1])
-                    print filename
+                    if debugmode:
+                        print filename
                     content = urllib2.urlopen(path_or_url+filename).read()
                     suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
-                    date = os.path.basename(path_or_url).partition('.')[0][-8:]
+                    #date = os.path.basename(path_or_url).partition('.')[0][-8:]
+                    #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])
+                    date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
                     fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
                     fh.write(content)
                     fh.close()
@@ -3095,7 +3152,9 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # currently only single files are supported
             # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
-            date = os.path.basename(path_or_url).partition('.')[0][-8:]
+            #date = os.path.basename(path_or_url).partition('.')[0][-8:]
+            #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])[0]
+            date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
             fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
             fh.write(content)
             fh.close()
@@ -3203,6 +3262,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     """
     keys = kwargs.get('keys')
     extend = kwargs.get('extend')
+    addall = kwargs.get('addall') # similar to extend - check both functions
     offset = kwargs.get('offset')
     comment = kwargs.get('comment')
     if not keys:
@@ -3217,6 +3277,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     headera = stream_a.header
     headerb = stream_b.header
 
+    if addall:
+        for elem in stream_b:
+            #if not elem.time in stream_a._get_column('time'):
+            stream_a.add(elem)
+        stream_a = stream_a.sorting()
 
     # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')

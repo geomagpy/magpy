@@ -17,12 +17,14 @@ from lib.format_cr800 import *
 from lib.format_iaga02 import *
 from lib.format_wdc import *
 from lib.format_magpy import *
+from lib.format_noaa import *
 # observatory/group specific
 from lib.format_wik import *
 from lib.format_wic import *
 from lib.format_sfs import *
 from lib.format_bdv import *
 from lib.format_dtu import *
+from lib.format_gfz import *
 
 
 def isFormat(filename, format_type):
@@ -89,6 +91,12 @@ def isFormat(filename, format_type):
     elif (format_type == "BDV1"): # Budkov format
         if (isBDV1(filename)):
             return True
+    elif (format_type == "GFZKP"): # GFZ Kp
+        if (isGFZKP(filename)):
+            return True
+    elif (format_type == "NOAAACE"): # GFZ Kp
+        if (isNOAAACE(filename)):
+            return True
     else:
         return False
 
@@ -138,6 +146,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readSFGSM(filename, headonly, **kwargs)
     elif (format_type == "BDV1"):
         return readBDV1(filename, headonly, **kwargs)
+    elif (format_type == "GFZKP"):
+        return readGFZKP(filename, headonly, **kwargs)
+    elif (format_type == "NOAAACE"):
+        return readNOAAACE(filename, headonly, **kwargs)
     else:
         return DataStream(empty,empty.header)
 

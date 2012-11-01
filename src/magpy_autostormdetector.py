@@ -18,8 +18,8 @@ from core.magpy_stream import *
 
 #Some definitions
 #endtime = datetime.utcnow()
-endtime=datetime.strptime('2012-5-30',"%Y-%m-%d")
-starttime = endtime - timedelta(days=30)
+endtime=datetime.strptime('2012-10-10',"%Y-%m-%d")
+starttime = endtime - timedelta(days=10)
 basepath = "/home/leon/Dropbox/Daten/Magnetism"
 variopath = os.path.join(basepath,'DIDD-WIK','preliminary','*')
 #
@@ -37,7 +37,7 @@ try:
 except:
     pass
 stfilt = stDIDD.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[0,70,140,210,280,350,420,490,560])
+stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[-50,10,70,130,180,230,280,320,360])
 stfilt.header['col-var4'] = 'Cobs k_-index'
 stDIDD = mergeStreams(stDIDD,stfilt,key=['var4'])
 

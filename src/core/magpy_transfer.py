@@ -42,7 +42,9 @@ def ftpdatatransfer (**kwargs):
     Tranfering data to a ftp server
     :type cleanup: bool
     :param cleanup: if true, transfered files are removed from the local directory
-    Example: 
+    Example:
+
+    ftpdatatransfer(localfile='/home/leon/file.txt', ftppath='/stories/currentdata/radon',myproxy='',login='login',passwd='passwd',logfile='radon.log')
     """
     plog = PyMagLog()
     localfile = kwargs.get('localfile')
