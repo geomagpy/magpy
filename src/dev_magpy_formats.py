@@ -16,37 +16,123 @@ basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
 # Reading data from NOAA (ACE satellite data)
 # ----------------
-today = datetime.strftime(datetime.utcnow(),'%Y%m%d')
-acedata = today + '_ace_swepam_1m.txt'
-#ace = pmRead(path_or_url=os.path.join(basispath,'SolarData',acedata))
-ace = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (acedata))
-#print st
-ace.pmplot(['x','y','z'],labelcolor='0.2',bgcolor='#d5de9c',grid=True,gridcolor='#316931')
-#st.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism"),filenamebegins='gfzkp',format_type='PYCDF',coverage='all')
 
+# Job 1: Read data from net and save locally (every 30 min?)
+now = datetime.utcnow()
+today = datetime.strftime(now,'%Y%m%d')
+acedata = today + '_ace_swepam_1m.txt'
+ace = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (acedata))
+ace.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism","SolarData"),filenamebegins='ace-swepam_',format_type='PYCDF')
 ace2data = today + '_ace_sis_5m.txt'
 ace2 = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (ace2data))
-ace2.pmplot(['t1','t2'])
-
 ace3data = today + '_ace_epam_5m.txt'
 ace3 = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (ace3data))
-ace3.pmplot(['f','df','dx','dy','dz'])
+ace5 = mergeStreams(ace3,ace2,keys=['t1','t2'])
+ace5.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism","SolarData"),filenamebegins='ace-5min_',coverage='month', dateformat='%Y%m', format_type='PYCDF',mode='replace')
 
+if int(datetime.strftime(now,'%H')) < 1: # Repeat for last day to get full coverage
+    today = datetime.strftime(now-timedelta(days=1),'%Y%m%d')
+    acedata = today + '_ace_swepam_1m.txt'
+    ace = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (acedata))
+    ace.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism","SolarData"),filenamebegins='ace-swepam_',format_type='PYCDF')
+    ace2data = today + '_ace_sis_5m.txt'
+    ace2 = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (ace2data))
+    ace3data = today + '_ace_epam_5m.txt'
+    ace3 = pmRead(path_or_url='http://www.swpc.noaa.gov/ftpdir/lists/ace/%s' % (ace3data))
+    ace5 = mergeStreams(ace3,ace2,keys=['t1','t2'])
+    ace5.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism","SolarData"),filenamebegins='ace-5min_',coverage='month', dateformat='%Y%m', format_type='PYCDF',mode='replace')
+
+
+
+# Job 2: Read data from net and save locally (every 3 hours)
+
+kp = pmRead(path_or_url='http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
+# Append that data to the local list (as only one month is published online
+kp.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism","SolarData"),filenamebegins='gfzkp',format_type='PYCDF',dateformat='%Y%m',coverage='month')
+
+# Get SOHO image and transfer it to homepage
+import urllib
+today = datetime.strftime(datetime.utcnow(),"%Y%m%d_%H")
+
+urllib.urlretrieve("http://sohowww.nascom.nasa.gov/data/realtime/eit_304/512/latest.jpg","/home/leon/CronScripts/%s_SOHO_EIT304.jpg" % (today))
+urllib.urlretrieve("http://sohowww.nascom.nasa.gov/data/realtime/eit_304/512/latest.jpg","/home/leon/CronScripts/latest_eit304.jpg")
+urllib.urlretrieve("http://sohowww.nascom.nasa.gov/data/realtime/hmi_mag/512/latest.jpg","/home/leon/CronScripts/%s_SOHO_HMIMAG.jpg" % (today))
+urllib.urlretrieve("http://sohowww.nascom.nasa.gov/data/realtime/hmi_mag/512/latest.jpg","/home/leon/CronScripts/latest_hmimag.jpg")
+ftpdatatransfer(localfile=os.path.join('/home/leon/CronScripts','%s_SOHO_EIT304.jpg' % (today)), ftppath='/stories/currentdata/sun/eit304',myproxy='94.136.40.103',login='data@conrad-observatory.at',passwd='data2COBS',logfile='sun.log')
+ftpdatatransfer(localfile=os.path.join('/home/leon/CronScripts','%s_SOHO_HMIMAG.jpg' % (today)), ftppath='/stories/currentdata/sun/eit304',myproxy='94.136.40.103',login='data@conrad-observatory.at',passwd='data2COBS',logfile='sun.log')
+ftpdatatransfer(localfile=os.path.join('/home/leon/CronScripts','latest_eit304.jpg'), ftppath='/stories/currentdata/sun/latest',myproxy='94.136.40.103',login='data@conrad-observatory.at',passwd='data2COBS',logfile='sun.log')
+ftpdatatransfer(localfile=os.path.join('/home/leon/CronScripts','latest_hmimag.jpg'), ftppath='/stories/currentdata/sun/latest',myproxy='94.136.40.103',login='data@conrad-observatory.at',passwd='data2COBS',logfile='sun.log')
+
+
+
+
+# Job 3: Create plots (every 30 min like Job 1 or even 10 min)
+
+stace = pmRead(path_or_url=os.path.join(basispath,'SolarData','ace-swepam*'))
+stace.pmplot(['x','y','z'],labelcolor='0.2',bgcolor='#d5de9c',grid=True,gridcolor='#316931')
+
+
+stace5 = pmRead(path_or_url=os.path.join(basispath,'SolarData','ace-5min*'))
+stace5.pmplot(['f','df','dx','dy','dz','var3','var4','t1','t2'])
 
 # Reading data from the GFZ (Kp)
 # ----------------
-
-kp = pmRead(path_or_url='http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
-# Append that data to the local list (as only one month is published online            
-kp.pmwrite(os.path.join("/home/leon/Dropbox/Daten/Magnetism"),filenamebegins='gfzkp',format_type='PYCDF',coverage='all',mode='replace')
-stream = pmRead(path_or_url=os.path.join(basispath,'gfzkp.cdf'))
+stream = pmRead(path_or_url=os.path.join(basispath,'SolarData','gfzkp*'))
 stream.pmplot(['var1'],bartrange=0.06,symbollist=['z'],specialdict = {'var1': [0,9]})
 
+# Extract last 30 min mean values of solar wind speed, proton density and proton flux 75-100, and last Kp
+# Solar wind (max 1000), proton dens, proton flux > 500 warning, > 1000 approaching (maximum reached about 20 min before magnetic storm)
+print "Values"
+#print stace[-1].x
+i = 1
+while isnan(stace[-i].x):
+    i=i+1
+pd = stace[-i].x
+i = 1
+while isnan(stace[-i].y):
+    i=i+1
+sw = stace[-i].y
+i = 1
+while isnan(stace5[-1].dy):
+    i=i+1
+pf = stace5[-1].dy
 
-newdat = mergeStreams(ace,kp,keys=['var1','var2'],addall=True)
-newdat2 = mergeStreams(newdat,ace2,keys=['t1','t2'])
+vals = [sw,pd,pf,stream[-1].var1,stream[-1].var1]
+valsmax = [1000,40,500,9,9]
 
-newdat2.pmplot(['x','y','t1','var1'],bartrange=0.06,symbollist=['-','-','-','z'],specialdict = {'var1': [0,9]})
+names = [r'$V_{Sol}$',r'$\rho_{p^+}$',r'$\Phi_{p^+}$',r'$K_p$',r'$K_{Cobs}$'] 
+fig = plt.figure(figsize=(5,5))
+im = plt.imread('/home/leon/CronScripts/image3156.png')
+implot = plt.imshow(im, aspect='auto')
+ax1 = fig.add_subplot(111)
+plt.subplots_adjust(left=0.115, right=0.88)
+fig.canvas.set_window_title('Space Weather condition chart')
+ax1.get_xaxis().set_visible(False)
+
+pos = np.arange(5)+0.5 #Center bars on the Y-axis ticks
+nm = Normalize(0, 1) 
+
+for i in range(len(vals)):
+    if float(vals[i])/valsmax[i] < 0.3334:
+        col = 'g'
+    elif float(vals[i])/valsmax[i] < 0.6667:
+        col = 'y'
+    else:
+        col = 'r'
+    if vals[i] > valsmax[i]:
+        vals[i] = valsmax[i]
+    rects = ax1.barh(pos[i]*100, float(vals[i])/valsmax[i]*500, align='center', height=50, color=col)
+
+ax1.axis([0,500,0,500])
+yticks(pos*100, names)
+for tick in ax1.yaxis.get_major_ticks():
+    tick.set_pad(-50)
+ax1.set_title('Current Space Weather')
+
+plt.show()
+#savefig()
+#ftpdatatransfer(localfile=os.path.join('/home/leon/CronScripts','latest_hmimag.jpg'), ftppath='/stories/currentdata/sun/latest',myproxy='94.136.40.103',login='data@conrad-observatory.at',passwd='data2COBS',logfile='sun.log')
+
 
 x = 1/0
 

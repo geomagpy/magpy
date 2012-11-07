@@ -185,6 +185,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 #if not headskip:
                 stream.header['col-x'] = 'x'
                 try:
+                    stream.header['col-x'] = cdf_file['x'].attrs['name']
+                except:
+                    pass
+                try:
                     stream.header['unit-col-x'] = cdf_file['x'].attrs['units']
                 except:
                     pass
@@ -192,7 +196,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 y = lst[...]
                 stream._put_column(y,'y')
                 del y
-                stream.header['col-y'] = 'y'
+                try:
+                    stream.header['col-y'] = cdf_file['y'].attrs['name']
+                except:
+                    stream.header['col-y'] = 'y'
                 try:
                     stream.header['unit-col-y'] = cdf_file['y'].attrs['units']
                 except:
@@ -201,7 +208,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 z = lst[...]
                 stream._put_column(z,'z')
                 del z
-                stream.header['col-z'] = 'z'
+                try:
+                    stream.header['col-z'] = cdf_file['z'].attrs['name']
+                except:
+                    stream.header['col-z'] = 'z'
                 try:
                     stream.header['unit-col-z'] = cdf_file['z'].attrs['units']
                 except:
@@ -210,7 +220,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 f = lst[...]
                 stream._put_column(f,'f')
                 del f
-                stream.header['col-f'] = 'f'
+                try:
+                    stream.header['col-f'] = cdf_file['f'].attrs['name']
+                except:
+                    stream.header['col-f'] = 'f'
                 try:
                     stream.header['unit-col-f'] = cdf_file['f'].attrs['units']
                 except:
@@ -222,7 +235,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     del col
                     stream.header['col-'+key.lower()] = key.lower()
                     try:
-                        stream.header['unit-col'+key.lower()] = cdf_file[key.lower()].attrs['units']
+                        stream.header['unit-col-'+key.lower()] = cdf_file[key.lower()].attrs['units']
+                    except:
+                        pass
+                    try:
+                        stream.header['col-'+key.lower()] = cdf_file[key.lower()].attrs['name']
                     except:
                         pass
 
@@ -307,7 +324,7 @@ def writePYCDF(datastream, filename, **kwargs):
         elif mode == 'append':
             mycdf = cdf.CDF(filename, filename) # append????
         else: # overwrite mode
-            print filename
+            #print filename
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
     else:
@@ -330,11 +347,17 @@ def writePYCDF(datastream, filename, **kwargs):
         elif len(col) > 0:
             mycdf[key] = col
         for keydic in headdict:
+            if keydic == ('col-'+key):
+                try:
+                    mycdf[key].attrs['name'] = headdict.get('col-'+key,'')
+                except:
+                    pass
             if keydic == ('unit-col-'+key):
                 try:
                     mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
                 except:
                     pass
+                    
     mycdf.close()
 
  

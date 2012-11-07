@@ -48,6 +48,7 @@ try:
     print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize 
+    #from matplotlib.colorbar import ColorbarBase 
     from matplotlib import mlab 
     from matplotlib.dates import date2num, num2date
     import matplotlib.cm as cm

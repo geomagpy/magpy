@@ -105,6 +105,7 @@ def readDIDD(filename, headonly=False, **kwargs):
         headers = stream.header
         stream =[]
 
+    headers['unit-col-f'] = 'nT'
     fh.close()
 
     return DataStream(stream, headers)    

@@ -49,7 +49,13 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
     try:
-        tmpdaystring = splitpath[1].split('_')[0]
+        splitname = splitpath[1].split('_')
+        if len(splitname) == 4:
+            tmpdaystring = splitpath[1].split('_')[0]
+        elif len(splitname) == 5:
+            tmpdaystring = splitpath[1].split('_')[1]
+        elif len(splitname) == 6:
+            tmpdaystring = splitpath[1].split('_')[2]
         daystring = re.findall(r'\d+',tmpdaystring)[0]
         datatype = splitpath[1].split('_')[2]
         day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
@@ -103,10 +109,16 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                         stream.header['col-df'] = 'Electron flux 175-315'
                         stream.header['unit-col-f'] = unit
                         stream.header['unit-col-df'] = unit
-                        stream.header['col-dx'] = 'Proton flux 38-53'
-                        stream.header['col-dy'] = 'Proton flux 175-315'
+                        stream.header['col-dx'] = 'Proton flux 47-68'
+                        stream.header['col-dy'] = 'Proton flux 115-195'
+                        stream.header['col-dz'] = 'Proton flux 310-580'
+                        stream.header['col-var3'] = 'Proton flux 795-1193'
+                        stream.header['col-var4'] = 'Proton flux 1060-1900'
                         stream.header['unit-col-dx'] = unit
                         stream.header['unit-col-dy'] = unit
+                        stream.header['unit-col-dz'] = unit
+                        stream.header['unit-col-var3'] = unit
+                        stream.header['unit-col-var4'] = unit
             elif headonly:
                 # skip data for option headonly
                 continue

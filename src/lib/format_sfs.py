@@ -17,8 +17,9 @@ def isSFDMI(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if temp[9] in ['o','+','-']: # Prevent errors with GFZ kp
-        return False    
+    if len(temp) >= 9:
+        if temp[9] in ['o','+','-']: # Prevent errors with GFZ kp
+            return False    
     sp = temp.split()
     if not len(sp) == 6:
         return False
