@@ -107,38 +107,26 @@ def readRMRCS(filename, headonly=False, **kwargs):
         else:
             # data entry - may be written in multiple columns
             # row beinhaltet die Werte eine Zeile
-            row=[]
-            # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
-            # da darin der Zeilenumbruch "\n" steht
-            for val in string.split(line[:-1]):
-                # nur nicht-leere Spalten hinzufuegen
-                if string.strip(val)!="":
-                    row.append(string.strip(val))
-            # Baue zweidimensionales Array auf       
-            data.append(row)
+            elem = string.split(line[:-1])
+            row = LineStruct()
+            try:
+                row.time = date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S"))
+                add = 2
+            except:
+                try:
+                    row.time = date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S"))
+                    add = 3
+                except:
+                    raise ValueError, "Can't read date format in RCS file"
+            for i in range(len(unit)):
+                try:
+                    exec('row.'+KEYLIST[i+1]+' = float(elem['+str(i+add)+'])')
+                except:
+                    pass
+            stream.add(row)         
 
     fh.close()
 
-    print " Got %d ASCII lines" % len(data)
-    print "Extracting data..."
-
-    for elem in data:
-        # Time conv:
-        row = LineStruct()
-        try:
-            row.time = date2num(elem[1].isoformat())
-            add = 2
-        except:
-            try:
-                row.time = date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S"))
-                add = 3
-            except:
-                raise ValueError, "Can't read date format in RCS file"
-        for i in range(len(unit)):
-            exec('row.'+KEYLIST[i+1]+' = float(elem['+str(i+add)+'])')
-        stream.add(row)         
-
-    print "Extraction finished. Starting processing ..."
     return DataStream(stream, headers)    
 
 
