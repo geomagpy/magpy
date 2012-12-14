@@ -15,8 +15,8 @@ from core.magpy_transfer import *
 # ---- Daily analysis  ----
 # ----------------------------------------
 finaldate = datetime.utcnow()
-finaldate = datetime(2010,10,5)
-endtime = datetime.strptime('2010-9-4T23:59:59',"%Y-%m-%dT%H:%M:%S")
+finaldate = datetime(2011,2,20)
+endtime = datetime.strptime('2011-1-20T23:59:59',"%Y-%m-%dT%H:%M:%S")
 while endtime < finaldate:
     #Some definitions
     #endtime=datetime.strptime('2012-8-29T15:30:00',"%Y-%m-%dT%H:%M:%S") # datetime.replace by utcnow()
@@ -101,9 +101,15 @@ while endtime < finaldate:
             absDIDD = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
             # no rotation necessary for DIDD
             stDIDD = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
+            print absDIDD[0], absDIDD[-1]
             deltaF = np.median(absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=365),endtime)._get_column('df'))
-        print "Delta F to main pear (last 100 days): %f" % deltaF
+        print "Delta F to main pear (last 365 days): %f" % deltaF
         print "Delta F average 2009, 2010, 2011: 4.386, 4.149, 3.609"
+
+        # 6b.) If currentday == 1.1.newyear then save the baseline files to the definite directory 
+        if endtime.day == 31 and endtime.month == 12:
+            print "Save test.png as baseline_didd_year.png"
+
 
         # 7.) Merge with Scalar-Data and Calculate dF (respect pear differences)
         if endtime.year == 2009:
@@ -192,6 +198,7 @@ while endtime < finaldate:
         # Not necessary for LEMI
 
         # 6.) Do Baseline correction
+        # Regard for changing baseline in 2012 
         absLEMI = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
         stLEMI = stLEMI.rotation(alpha=3.3,beta=0.0)
         stLEMI = stLEMI.baseline(absLEMI,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
@@ -234,85 +241,6 @@ while endtime < finaldate:
         msg += 'Problems with LEMI treatment\nPlease check\n\n'
         dropmsgflag = True
 
-    # 11.) transfer plots to server
-    #ftpdatatransfer(localfile='lemi_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
-
-
-    # ###################################
-    #  Start with third instruments
-    # ###################################
-
-    try:
-        """
-        # Finallay for third instrument
-        year = datetime.strftime(endtime,"%Y")
-        month = datetime.strftime(endtime,"%m")
-        if len(month) < 2:
-            month = str(0)+month
-        scalarpath = os.path.join(basepath,'PMAG-WIK',year,month,'*')
-
-        #
-        # 1.) Read Variometer RAW data
-        stPMAG = pmRead(path_or_url=scalarpath,starttime=starttime,endtime=endtime)
-
-        # 2.) Eventually perfom some automatic filtering and or merging
-        stPMAG = stPMAG.routlier()
-
-        # 3.) Add header information
-        headers = stPMAG.header
-        headers['Instrument'] = 'ELSEC820'
-        headers['InstrumentSerialNum'] = 'not known'
-        headers['InstrumentOrientation'] = 'None'
-        headers['Azimuth'] = ''
-        headers['Tilt'] = ''
-        headers['InstrumentPeer'] = 'F pillar'
-        headers['InstrumentDataLogger'] = 'ELSEC and FieldPoint'
-        headers['ProvidedComp'] = 'f'
-        headers['ProvidedInterval'] = '10 sec'
-        headers['ProvidedType'] = 'intensity'
-        headers['DigitalSamplingInterval'] = '10 sec'
-        headers['DigitalFilter'] = 'None'
-        headers['Latitude (WGS84)'] = '48.265'
-        headers['Longitude (WGS84)'] = '16.318'
-        headers['Elevation (NN)'] = '400 m'
-        headers['IAGAcode'] = 'WIK'
-        headers['Station'] = 'Cobenzl'
-        headers['Institution'] = 'Zentralanstalt fuer Meteorologie und Geodynamik'
-        headers['WebInfo'] = 'http://www.wiki.at'
-        headers['TemperatureSensors'] = ''
-        stPMAG.header = headers
-
-        # 4.) Between 0:00 and 0:30 write last day
-        if windowstart < endtime < windowstart+timedelta(minutes=30):
-            stPMAGout = pmRead(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
-            stPMAGout = stPMAGout.routlier()
-            stPMAGout = stPMAGout.remove_flagged()
-            stPMAGout = stPMAGout.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-            stPMAGout.pmwrite(os.path.join(basepath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-
-        # 5.) Perfom filtering (min data is used for plots)
-        stPMAG = stPMAG.remove_flagged()
-        stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-        stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, confinex=True, outfile=os.path.join(basepath,'WIK-Diagrams','pmag_%s.png' % day))
-
-        # 6.) Plot F and dF'S
-        stDIFF = subtractStreams(stPMAG,stDIDD,keys=['f'])
-        stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, confinex=True, outfile=os.path.join(basepath,'WIK-Diagrams','pmag_status_%s.png' % day))
-
-        # 7.) append message if data stream to old
-        numlasttimeofstream = stPMAG[-1].time
-        if date2num(endtime)-0.1 > numlasttimeofstream:
-            nodatatime = (date2num(endtime)-numlasttimeofstream)/24/60
-            # Use new mail function to send log and plot
-            msg += 'PMAG data stream dried out since at least %i minutes.\nCheck your server and data communication\n\n' % int(nodatatime)
-            dropmsgflag = True
-    except:
-        msg += 'Problems with PMAG treatment\nPlease check\n\n'
-        dropmsgflag = True
-        """
-
-    # 8.) transfer plots to server
-    #ftpdatatransfer(localfile='pmag_%s.png' % day,ftppath='/stories/currentdata/wik',myproxy='94.136.40.103',port='21',login='data@conrad-observatory.at',passwd='data2COBS',logfile='transfer.log',cleanup=True)
     endtime = endtime+timedelta(days=1)
 
 print msg

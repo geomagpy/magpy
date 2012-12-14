@@ -2033,6 +2033,7 @@ class DataStream(object):
         coverage = kwargs.get('coverage')
         mode = kwargs.get('mode')
         offsets = kwargs.get('offsets')
+        createlatex = kwargs.get('createlatex')
         
         if not format_type:
             format_type = 'PYSTR'
@@ -2071,7 +2072,7 @@ class DataStream(object):
                 newst = DataStream(lst,self.header)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode)
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,createlatex=createlatex)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -2089,12 +2090,12 @@ class DataStream(object):
                 newst = DataStream(lst,self.header)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode)
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,createlatex=createlatex)
                 starttime = endtime
                 endtime = endtime + coverage
         else:
             filename = filenamebegins + filenameends
-            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode)
+            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,createlatex=createlatex)
             
 
     def remove_flagged(self, **kwargs):

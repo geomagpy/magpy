@@ -17,11 +17,11 @@ def isDIDD(filename):
     except:
         return False
     if not temp.startswith('hh mm'):
-        return False
-    if not 'F' in temp:
-        return False
+        if not  temp.startswith('%hh %mm'):
+            return False
+    #if not 'F' in temp:
+    #    return False
     return True
-
 
 
 def readDIDD(filename, headonly=False, **kwargs):
@@ -68,7 +68,7 @@ def readDIDD(filename, headonly=False, **kwargs):
             if line.isspace():
                 # blank line
                 continue
-            elif line.startswith('hh mm'):
+            elif line.startswith('hh mm') or line.startswith('%hh %mm'):
                 # data header
                 colsstr = line.lower().split()
                 for it, elem in enumerate(colsstr):
@@ -84,7 +84,11 @@ def readDIDD(filename, headonly=False, **kwargs):
             else:
                 row = LineStruct()
                 elem = line.split()
-                if (float(elem[5])) < 999990:
+                if len(elem) < 6:
+                    fval = 9999
+                else:
+                    fval = float(elem[5])               
+                if fval < 999990:
                     row.time=date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M"))
                     xval = float(elem[2])
                     yval = float(elem[3])
@@ -98,8 +102,11 @@ def readDIDD(filename, headonly=False, **kwargs):
                     elif (headers['col-x']=='i'):
                         row.x, row.y, row.z = idf2xyz(xval,yval,zval)
                     else:
-                        raise ValueError
-                    row.f = float(elem[5])
+                        row.x = xval
+                        row.y = yval
+                        row.z = zval
+                        #raise ValueError
+                    row.f = fval
                     stream.add(row)         
     else:
         headers = stream.header

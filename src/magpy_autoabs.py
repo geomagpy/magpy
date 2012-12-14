@@ -24,8 +24,8 @@ lemipath = os.path.join(basepath,'Daten','Magnetism','LEMI-WIK','data','*')
 diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','data','*')
 archivepath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW')
 writeresultpath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW','data')
-send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at','andrea.draxler@gmx.at']
-#send_notification_to = ['roman.leonhardt@zamg.ac.at']
+#send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at','andrea.draxler@gmx.at']
+send_notification_to = ['roman.leonhardt@zamg.ac.at']
 
 # ToDo: add counter for logfile length and only send mail if new data was added or errors are happening 
 

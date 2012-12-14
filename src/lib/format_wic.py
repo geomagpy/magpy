@@ -84,7 +84,6 @@ def readRMRCS(filename, headonly=False, **kwargs):
     unit = []
     i = 0
     key = None
-    print "Reading data ..."
     for line in fh:
         if line.isspace():
             # blank line
@@ -120,6 +119,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
                     raise ValueError, "Can't read date format in RCS file"
             for i in range(len(unit)):
                 try:
+                    #print eval('elem['+str(i+add)+']')
                     exec('row.'+KEYLIST[i+1]+' = float(elem['+str(i+add)+'])')
                 except:
                     pass

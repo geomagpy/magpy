@@ -206,6 +206,7 @@ def writeWDC(datastream, filename, **kwargs):
     """
     
     mode = kwargs.get('mode')
+    createlatex = kwargs.get('createlatex')
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -241,8 +242,9 @@ def writeWDC(datastream, filename, **kwargs):
     # 3.)
     if hourly:
         #try:
-        line = []
+        line, textable = [],[]
         rowx, rowy, rowz, rowf = '','','',''
+        latexrowx = ''
         for elem in datastream:
             arb = '  '
             for key in KEYLIST:
@@ -265,6 +267,8 @@ def writeWDC(datastream, filename, **kwargs):
                             xhourel.append(int(hour))
                     elif rowx == '':
                         rowx = xname
+                        if createlatex:
+                            latexrowx = xname
                         if not isnan(elem.x):
                             xel = [elem.x]
                             xhourel = [int(hour)]
@@ -281,19 +285,27 @@ def writeWDC(datastream, filename, **kwargs):
                             xbase = int(xbase/100)
                             xdailymean = int(xmean - xbase*100)
                         rowx += "%4i" % xbase
+                        if createlatex:
+                            latexrowx += " & %4i" % xbase
                         count = 0
                         for i in range(24):
-                            if len(xhourel) > 0 and xhourel[count] == i:
+                            if len(xhourel) > 0 and count < len(xhourel) and xhourel[count] == i:
                                 xval = int(xel[count] - xbase*100)
                                 count = count+1
                             else:
                                 xval = int(9999)
                                 xdailymean = int(9999)
                             rowx+='%4i' % xval
+                            if createlatex:
+                                latexrowx += ' & %4i' % xval
                         eol = '\n'
                         rowx+='%4i%s' % (xdailymean,eol)
                         line.append(rowx)
                         rowx = xname
+                        if createlatex:
+                            latexrowx += ' & %4i%s' % (xdailymean,eol)
+                            textable.append(latexrowx)
+                            latexrowx = xname
                         xel, xhourel = [], []
                         if not isnan(elem.x):
                             xel.append(elem.x)
@@ -324,7 +336,7 @@ def writeWDC(datastream, filename, **kwargs):
                         rowy += "%4i" % ybase
                         count = 0
                         for i in range(24):
-                            if len(yhourel) > 0 and yhourel[count] == i:
+                            if len(yhourel) > 0 and count < len(yhourel) and yhourel[count] == i:
                                 yval = int(yel[count] - ybase*100)
                                 count = count+1
                             else:
@@ -364,7 +376,7 @@ def writeWDC(datastream, filename, **kwargs):
                         rowz += "%4i" % zbase
                         count = 0
                         for i in range(24):
-                            if len(zhourel) > 0 and zhourel[count] == i:
+                            if len(zhourel) > 0 and count < len(zhourel) and zhourel[count] == i:
                                 zval = int(zel[count] - zbase*100)
                                 count = count+1
                             else:
@@ -404,7 +416,7 @@ def writeWDC(datastream, filename, **kwargs):
                         rowf += "%4i" % fbase
                         count = 0
                         for i in range(24):
-                            if len(fhourel) > 0 and fhourel[count] == i:
+                            if len(fhourel) > 0 and count < len(fhourel) and fhourel[count] == i:
                                 fval = int(fel[count] - fbase*100)
                                 count = count+1
                             else:
@@ -431,7 +443,7 @@ def writeWDC(datastream, filename, **kwargs):
             exec('row'+comp+'+= "%4i" % '+comp+'base')
             count = 0
             for i in range(24):
-                if len(eval(comp+'hourel')) > 0 and eval(comp+'hourel[count]') == i:
+                if len(eval(comp+'hourel')) > 0 and count < len(eval(comp+'hourel')) and eval(comp+'hourel[count]') == i:
                     exec(comp+'val = int(' + comp +'el[count] - ' + comp + 'base*100)')
                     count = count+1
                 else:
@@ -450,6 +462,11 @@ def writeWDC(datastream, filename, **kwargs):
            myFile.close()
         #except IOError:
         #    pass
+        try:
+            if createlatex:
+                print textable 
+        except:
+            pass
     elif minute:
         pass
     else:
