@@ -10,6 +10,14 @@ from core.magpy_stream import *
 from core.magpy_absolutes import *
 from core.magpy_transfer import *
 
+# reading WDC data directly from the WDC
+# ----------------
+stWDC = pmRead(path_or_url='ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
+#HDZ: stWDC = pmRead(path_or_url='ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/lrv2011.wdc')
+stWDC.pmplot(['x','y','z','f'])
+
+x=1/0
+
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
