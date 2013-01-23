@@ -13,6 +13,54 @@ from core.magpy_transfer import *
 
 basispath = r'/home/leon/Dropbox/Daten/Magnetism'
 
+#teststream = pmRead(path_or_url=os.path.join(basispath,'WIK-Definite2009','CDF','wik-didd-200901.cdf'))
+#print teststream.mean('x')
+
+#print num2date(teststream[-1].time)
+#stream.pmplot(['x','y','z'])
+stream = pmRead(path_or_url=os.path.join(basispath,'WIK-Definite2009','WDC','wik2009.wdc'))
+year = num2date(stream[0].time).year
+stream.pmplot(['x','y','z','f'],plottitle='Magnetic data for '+str(year),outfile=os.path.join(basispath,'Yearbook',str(year)+'.png'))
+monthlst = DataStream()
+
+for i in range(12):
+    startmonth = str(i+1)
+    stdate = str(year)+'-'+str(i+1)+'-1'
+    endmonth = str(i+2)
+    if i+2 > 12:
+        year = year+1
+        endmonth = str(1)
+    eddate = str(year)+'-'+endmonth+'-1'
+    print stdate, eddate
+    stream = pmRead(path_or_url=os.path.join(basispath,'WIK-Definite2009','WDC','wik2009.wdc'),starttime=stdate, endtime=eddate)
+    row = LineStruct()
+    row.time = np.mean(stream._get_column('time'))
+    row.x = stream.mean('x')
+    row.y = stream.mean('y')
+    row.z = stream.mean('z')
+    row.f = stream.mean('f')
+    monthlst.add(row)
+    stream.header['TEXcaption'] = "Hourly magnetic data for %s" % datetime.strftime(num2date(stream[0].time),"%b %Y")
+    stream.header['TEXlabel'] = "tab:"+str(i+1) 
+    stream.header['TEXfontsize'] = "\\scriptsize"
+    stream.header['TEXrotate'] = True
+    stream.pmwrite(os.path.join(basispath,'Yearbook'),filenamebegins='latextab-',filenameends='.tex',format_type='LATEX',coverage='month', dateformat='%m',mode='wdc')
+
+monthlst.header['TEXcaption'] = "Monthly magnetic data for %d" % year
+monthlst.header['TEXlabel'] = "tab:monthly" 
+monthlst.header['TEXfontsize'] = "\\scriptsize"
+monthlst.header['TEXrotate'] = False
+yeart = monthlst.mean('time')
+yearx = monthlst.mean('x')
+yeary = monthlst.mean('y')
+yearz = monthlst.mean('z')
+yearf = monthlst.mean('f')
+print yearx, yeary, yearz, yearf
+#monthlst.header['TEXrotate'] = True
+monthlst = monthlst._convertstream('xyz2hdz')
+monthlst.pmwrite(os.path.join(basispath,'Yearbook'),filenamebegins='latextab-month',filenameends='.tex',format_type='LATEX',coverage='all')
+
+x=1/0
 
 # Reading data from NOAA (ACE satellite data)
 # ----------------
@@ -164,6 +212,16 @@ stRADON.pmplot(['x','t1','var1'],padding=0.2)
 stRADON.powerspectrum('x')
 
 x = 1/0
+
+
+# reading Lemis binary data from the memory card
+# ----------------
+stLemibin = pmRead(path_or_url='/home/leon/CronScripts/LemiBinary/L025_065.B01')
+stLemibin.pmplot(['x','y','z','t1','t2'])
+stLemibin.spectrogram(['x'],wlen=10,dbscale=True,title='LEMI at GMO(Conrad) - HF-spectra')
+stLemibin.powerspectrum('x')
+
+x=1/0
 
 
 # reading WDC data directly from the WDC

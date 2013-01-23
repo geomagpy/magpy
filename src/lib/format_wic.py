@@ -71,8 +71,13 @@ def readRMRCS(filename, headonly=False, **kwargs):
     1328054407.99	20120201 000008	79.480E-6	49.823E+0	-11.677E+0	78.364E+0
     1328054411.99	20120201 000012	68.555E-6	49.828E+0	-11.688E+0	78.389E+0
     """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
     fh = open(filename, 'rt')
     # read file and split text into channels
+    # --------------------------------------
     stream = DataStream()
     # Check whether header infromation is already present
     if stream.header is None:
@@ -84,46 +89,73 @@ def readRMRCS(filename, headonly=False, **kwargs):
     unit = []
     i = 0
     key = None
-    for line in fh:
-        if line.isspace():
-            # blank line
-            pass
-        elif line.startswith('#'):
-            # data header
-            colsstr = line.split(',')
-            if (len(colsstr) == 3):
-                # select the lines with three komma separaeted parts -> they describe the data
-                meastype = colsstr[1].split()
-                unittype = colsstr[2].split()
-                measurement.append(meastype[2])
-                unit.append(unittype[2])
-                headers['col-'+KEYLIST[i+1]] = unicode(measurement[i],errors='ignore')
-                headers['unit-col-'+KEYLIST[i+1]] = unicode(unit[i],errors='ignore')
-                i=i+1
-        elif headonly:
-            # skip data for option headonly
-            continue
-        else:
-            # data entry - may be written in multiple columns
-            # row beinhaltet die Werte eine Zeile
-            elem = string.split(line[:-1])
-            row = LineStruct()
-            try:
-                row.time = date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S"))
-                add = 2
-            except:
+
+    # try to get day from filename (platform independent)
+    # --------------------------------------
+    splitpath = os.path.split(filename)
+    tmpdaystring = splitpath[1].split('.')[0].split('_')
+    tmpdaystring = tmpdaystring[0].replace('-','')
+    daystring = re.findall(r'\d+',tmpdaystring)[0]
+    if len(daystring) >  8:
+        daystring = daystring[-8:]
+    try:
+        day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
+        # Select only files within eventually defined time range
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        logging.warning("Could not identify date in filename %s - reading all" % filename)
+        getfile = True
+        pass
+
+    if getfile:
+        for line in fh:
+            if line.isspace():
+                # blank line
+                pass
+            elif line.startswith('#'):
+                # data header
+                colsstr = line.split(',')
+                if (len(colsstr) == 3):
+                    # select the lines with three komma separaeted parts -> they describe the data
+                    meastype = colsstr[1].split()
+                    unittype = colsstr[2].split()
+                    measurement.append(meastype[2])
+                    unit.append(unittype[2])
+                    headers['col-'+KEYLIST[i+1]] = unicode(measurement[i],errors='ignore')
+                    headers['unit-col-'+KEYLIST[i+1]] = unicode(unit[i],errors='ignore')
+                    i=i+1
+            elif headonly:
+                # skip data for option headonly
+                continue
+            else:
+                # data entry - may be written in multiple columns
+                # row beinhaltet die Werte eine Zeile
+                elem = string.split(line[:-1])
+                row = LineStruct()
                 try:
-                    row.time = date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S"))
-                    add = 3
+                    row.time = date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S"))
+                    add = 2
                 except:
-                    raise ValueError, "Can't read date format in RCS file"
-            for i in range(len(unit)):
-                try:
-                    #print eval('elem['+str(i+add)+']')
-                    exec('row.'+KEYLIST[i+1]+' = float(elem['+str(i+add)+'])')
-                except:
-                    pass
-            stream.add(row)         
+                    try:
+                        row.time = date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S"))
+                        add = 3
+                    except:
+                        raise ValueError, "Can't read date format in RCS file"
+                for i in range(len(unit)):
+                    try:
+                        #print eval('elem['+str(i+add)+']')
+                        exec('row.'+KEYLIST[i+1]+' = float(elem['+str(i+add)+'])')
+                    except:
+                        pass
+                stream.add(row)         
+    else:
+        headers = stream.header
+        stream =[]
 
     fh.close()
 

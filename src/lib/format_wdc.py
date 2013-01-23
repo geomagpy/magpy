@@ -206,7 +206,7 @@ def writeWDC(datastream, filename, **kwargs):
     """
     
     mode = kwargs.get('mode')
-    createlatex = kwargs.get('createlatex')
+    #createlatex = kwargs.get('createlatex')
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -267,8 +267,6 @@ def writeWDC(datastream, filename, **kwargs):
                             xhourel.append(int(hour))
                     elif rowx == '':
                         rowx = xname
-                        if createlatex:
-                            latexrowx = xname
                         if not isnan(elem.x):
                             xel = [elem.x]
                             xhourel = [int(hour)]
@@ -285,8 +283,6 @@ def writeWDC(datastream, filename, **kwargs):
                             xbase = int(xbase/100)
                             xdailymean = int(xmean - xbase*100)
                         rowx += "%4i" % xbase
-                        if createlatex:
-                            latexrowx += " & %4i" % xbase
                         count = 0
                         for i in range(24):
                             if len(xhourel) > 0 and count < len(xhourel) and xhourel[count] == i:
@@ -296,16 +292,10 @@ def writeWDC(datastream, filename, **kwargs):
                                 xval = int(9999)
                                 xdailymean = int(9999)
                             rowx+='%4i' % xval
-                            if createlatex:
-                                latexrowx += ' & %4i' % xval
                         eol = '\n'
                         rowx+='%4i%s' % (xdailymean,eol)
                         line.append(rowx)
                         rowx = xname
-                        if createlatex:
-                            latexrowx += ' & %4i%s' % (xdailymean,eol)
-                            textable.append(latexrowx)
-                            latexrowx = xname
                         xel, xhourel = [], []
                         if not isnan(elem.x):
                             xel.append(elem.x)
@@ -453,7 +443,6 @@ def writeWDC(datastream, filename, **kwargs):
             eol = '\n'
             exec('row' + comp + '+="%4i%s" % (' + comp + 'dailymean,eol)')
             line.append(eval('row'+comp))
-
         line.sort()
         try:
             myFile.writelines( line )
@@ -462,12 +451,29 @@ def writeWDC(datastream, filename, **kwargs):
            myFile.close()
         #except IOError:
         #    pass
-        try:
-            if createlatex:
-                print textable 
-        except:
-            pass
     elif minute:
         pass
     else:
         logging.warning("Could not save WDC data. Please provide hour or minute data")
+
+"""
+def textable_preamble(fp, kwargs**):
+TEX Table generator
+written by Chris Burn, http://users.obs.carnegiescience.edu/~cburns/site/?p=22
+
+    :type justs: String 
+    :param justs: String defining justifictaions of the table
+    :type fontsize: int 
+    :param fontsize: fontsize of table
+    :type rotate: bool 
+    :param rotate: turn the table
+    :type tablewidth: int 
+    :param tablewidth: width of the table
+    :type numcols: int 
+    :param numcols: number of columns of the table
+    :type caption: String 
+    :param caption: String with table caption
+    :type label: String 
+    :param label: String with table label
+"""
+

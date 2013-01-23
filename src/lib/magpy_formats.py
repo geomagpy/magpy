@@ -18,6 +18,7 @@ from lib.format_iaga02 import *
 from lib.format_wdc import *
 from lib.format_magpy import *
 from lib.format_noaa import *
+from lib.format_latex import *
 # observatory/group specific
 from lib.format_wik import *
 from lib.format_wic import *
@@ -82,6 +83,9 @@ def isFormat(filename, format_type):
     elif (format_type == "LEMIHF"): # High frequency Lemi data (10 Hz)
         if (isLEMIHF(filename)):
             return True
+    elif (format_type == "LEMIBIN"): # Binary Lemi data (10 Hz)
+        if (isLEMIBIN(filename)):
+            return True
     elif (format_type == "SFDMI"): # San Fernando DMI(FGE) format
         if (isSFDMI(filename)):
             return True
@@ -94,7 +98,7 @@ def isFormat(filename, format_type):
     elif (format_type == "GFZKP"): # GFZ Kp
         if (isGFZKP(filename)):
             return True
-    elif (format_type == "NOAAACE"): # GFZ Kp
+    elif (format_type == "NOAAACE"): # NOAA Satellite date
         if (isNOAAACE(filename)):
             return True
     else:
@@ -123,6 +127,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGSM19(filename, headonly, **kwargs)
     elif (format_type == "LEMIHF"):
         return readLEMIHF(filename, headonly, **kwargs)
+    elif (format_type == "LEMIBIN"):
+        return readLEMIBIN(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
@@ -186,5 +192,7 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeUSBLOG(datastream, filename, **kwargs)
     elif (format_type == "CR800"):
         return writeCR800(datastream, filename, **kwargs)
+    elif (format_type == "LATEX"):
+        return writeLATEX(datastream, filename, **kwargs)
     else:
         return "Writing not succesful - format not recognized"

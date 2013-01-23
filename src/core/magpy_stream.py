@@ -150,8 +150,8 @@ FLAGKEYLIST = KEYLIST[:8]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
-                            'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','UNKOWN']
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+                            'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','UNKOWN']
 
 # -------------------
 #  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
@@ -325,7 +325,10 @@ class DataStream(object):
     def _get_column(self, key):
         """
         returns an numpy array of selected columns from Stream
+        example:
+        columnx = datastream._get_column('x')
         """
+
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
 
@@ -342,6 +345,7 @@ class DataStream(object):
                     count = count+1
                 pass
             col.append(eval('elem.'+key))
+            
         if count > 0:
             return np.asarray(col)
         else:
@@ -1536,9 +1540,14 @@ class DataStream(object):
         for time savings, this function is only testing the first 1000 elements
         """
         timedifflist = [[0,0]]
-        domtd = 0
+        domtd = [0,0]
         timecol= self._get_column('time')
-        for idx, val in enumerate(timecol[:1000]):
+        if len(timecol) <= 1000:
+            testrange = len(timecol)
+        else:
+            testrange = 1000
+
+        for idx, val in enumerate(timecol[:testrange]):
             if idx > 1 and not isnan(val):
                 timediff = val - timeprev
                 found = 0
@@ -1698,6 +1707,41 @@ class DataStream(object):
         loggerstream.info('--- finished k value calculation: %s ' % (str(datetime.now())))
         
         return DataStream(outstream, self.header)
+
+    def mean(self, key, **kwargs):
+        """
+        Calculates mean values for the specified key, Nan's are regarded for.
+        Means are only calculated if more then "amount" in percent are non-nan's
+        Returns a float if successful or NaN.
+        :type percentage: int 
+        :param percentage: Define required percentage of non-nan values, if not met that nan will be returned. Default is 95 (%) 
+        :type meanfunction: string 
+        :param meanfunction: accepts 'mean' and 'median'. Default is 'mean' 
+        
+        Example:
+        meanx = datastream.mean('x',meanfunction='median',percentage=90)
+        """
+        percentage = kwargs.get('percentage')
+        meanfunction = kwargs.get('meanfunction')
+
+        if not meanfunction:
+            meanfunction = 'mean'
+        if not percentage:
+            percentage = 95
+        if not isinstance( percentage, (int,long)):
+            raise ValueError, "Mean: Percentage needs to be an integer"
+        if not key in KEYLIST[:16]:
+            raise ValueError, "Mean: Column key not valid"
+
+        ar = [eval('elem.'+key) for elem in self if not isnan(eval('elem.'+key))]
+        div = float(len(ar))/float(len(self))*100.0
+
+        if div >= percentage:
+            return eval('np.'+meanfunction+'(ar)')
+        else:
+            loggerstream.warning('mean: To many nans in column, exceeding %d percent' % percentage)
+            return float("NaN")
+
 
     def offset(self, offsets):
         """
@@ -2034,6 +2078,7 @@ class DataStream(object):
         mode = kwargs.get('mode')
         offsets = kwargs.get('offsets')
         createlatex = kwargs.get('createlatex')
+        keys = kwargs.get('keys')
         
         if not format_type:
             format_type = 'PYSTR'
@@ -2056,7 +2101,7 @@ class DataStream(object):
         if not mode:
             mode= 'overwrite'
 
-        # divide stream in parts according to coverage and same them
+        # divide stream in parts according to coverage and save them
         newst = DataStream()
         if coverage == 'month':
             starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
@@ -2072,7 +2117,7 @@ class DataStream(object):
                 newst = DataStream(lst,self.header)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,createlatex=createlatex)
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -2090,12 +2135,12 @@ class DataStream(object):
                 newst = DataStream(lst,self.header)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,createlatex=createlatex)
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
                 starttime = endtime
                 endtime = endtime + coverage
         else:
             filename = filenamebegins + filenameends
-            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,createlatex=createlatex)
+            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
             
 
     def remove_flagged(self, **kwargs):
@@ -2475,7 +2520,8 @@ class DataStream(object):
             for idx, elem in enumerate(self):
                 if not isnan(elem.time):
                     if num2date(elem.time).replace(tzinfo=None) > starttime:
-                        stval = idx-1
+                        #stval = idx-1 # changed because of latex output
+                        stval = idx
                         break
             if stval < 0:
                 stval = 0
@@ -2503,7 +2549,8 @@ class DataStream(object):
             for idx, elem in enumerate(self):
                 if not isnan(elem.time):
                     if num2date(elem.time).replace(tzinfo=None) > endtime:
-                        edval = idx-1
+                        edval = idx
+                        #edval = idx-1
                         break
             self.container = self.container[:edval]
 

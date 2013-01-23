@@ -15,8 +15,8 @@ from core.magpy_transfer import *
 # ---- Daily analysis  ----
 # ----------------------------------------
 finaldate = datetime.utcnow()
-finaldate = datetime(2011,2,20)
-endtime = datetime.strptime('2011-1-20T23:59:59',"%Y-%m-%dT%H:%M:%S")
+finaldate = datetime(2010,11,6)
+endtime = datetime.strptime('2010-10-27T23:59:59',"%Y-%m-%dT%H:%M:%S")
 while endtime < finaldate:
     #Some definitions
     #endtime=datetime.strptime('2012-8-29T15:30:00',"%Y-%m-%dT%H:%M:%S") # datetime.replace by utcnow()
@@ -101,15 +101,18 @@ while endtime < finaldate:
             absDIDD = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
             # no rotation necessary for DIDD
             stDIDD = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
-            print absDIDD[0], absDIDD[-1]
+            absDIDD = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+            absDIDDlst = absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=365),endtime)
+            print len(absDIDDlst)
             deltaF = np.median(absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=365),endtime)._get_column('df'))
         print "Delta F to main pear (last 365 days): %f" % deltaF
         print "Delta F average 2009, 2010, 2011: 4.386, 4.149, 3.609"
 
         # 6b.) If currentday == 1.1.newyear then save the baseline files to the definite directory 
         if endtime.day == 31 and endtime.month == 12:
-            print "Save test.png as baseline_didd_year.png"
-
+            basefigname = 'baseline_didd_%i.png' % (endtime.year)
+            print "Renaming the baseline figure: %s" % (basefigname)
+            os.rename('test.png',basefigname)
 
         # 7.) Merge with Scalar-Data and Calculate dF (respect pear differences)
         if endtime.year == 2009:
@@ -202,8 +205,16 @@ while endtime < finaldate:
         absLEMI = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
         stLEMI = stLEMI.rotation(alpha=3.3,beta=0.0)
         stLEMI = stLEMI.baseline(absLEMI,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
-        deltaF = np.median(absLEMI.trim(absLEMI._testtime(endtime)-timedelta(days=100),endtime)._get_column('df'))
-        print "Delta F to main pear (last 100 days): %f" % deltaF
+        absLEMI = pmRead(path_or_url=os.path.join(abspath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
+        deltaF = np.median(absLEMI.trim(absLEMI._testtime(endtime)-timedelta(days=365),endtime)._get_column('df'))
+        print "Delta F to main pear (last 365 days): %f" % deltaF
+
+
+        # 6b.) If currentday == 1.1.newyear then save the baseline files to the definite directory 
+        if endtime.day == 31 and endtime.month == 12:
+            basefigname = 'baseline_lemi_%i.png' % (endtime.year)
+            print "Renaming the baseline figure: %s" % (basefigname)
+            os.rename('test.png',basefigname)
 
         # 7.) Merge with Scalar-Data and Calculate dF (respect pear differences)
         ssc = pmRead(path_or_url=scalarpath,starttime=starttime,endtime=endtime)
