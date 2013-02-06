@@ -263,10 +263,10 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
         elif numelements == 8:
             # Miren mesurements
             mirestr = line.split()
-            mu = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
-            md = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
-            mustd = np.std([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
-            mdstd = np.std([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
+            md = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
+            mu = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
+            mdstd = np.std([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
+            mustd = np.std([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
             maxdev = np.max([mustd, mdstd])
             if abs(maxdev) > 0.01:
                 logging.warning('ReadAbsolute: Check miren readings in file %s' % filename)

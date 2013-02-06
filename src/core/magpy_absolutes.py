@@ -109,6 +109,14 @@ class AbsoluteData(object):
         liste = sorted(self.container, key=lambda tmp: tmp.time)
         return AbsoluteData(liste, self.header)        
 
+    def _corrangle(self,angle, ang_fac):
+        if angle > 360*ang_fac:
+            angle = angle - 360.0*ang_fac
+        elif angle < 0:
+            angle = angle + 360.0*ang_fac
+        return angle
+
+
     # ----------------
     # internal methods
     # ----------------
@@ -226,7 +234,18 @@ class AbsoluteData(object):
         expmire = self._get_column('expectedmire')
         expmire = np.mean([elem for elem in expmire if not isnan(elem)])
         poslst = [elem for elem in self if not isnan(elem.hc) and not isnan(elem.vc)]
-        
+
+
+        # Check that: Should be correct if the order of input values is correct
+        miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
+        # relative mire position of theo is either miremean +90 or -90
+        # if sheet is exactly used then it would be easy... however sensor down first measurements have not frequently be used...
+        if poslst[1].mu-5 < (miremean-90.0*ang_fac) < poslst[1].mu+5:
+            mireval = miremean-90.0*ang_fac
+        else:
+            mireval = miremean+90.0*ang_fac
+        mirediff = self._corrangle(expmire - mireval,ang_fac)
+
         # -- Get mean values for x and y
         # ------------------------------
         meanx, meany = 0.0,0.0
@@ -244,13 +263,16 @@ class AbsoluteData(object):
             
         nr_lines = len(poslst)
         dl1,dl2,dl2tmp,variocorr, variohlst = [],[],[],[],[] # temporary lists
+
         # -- check, whether inclination and declination values are present:
+        # ------------------------------
         if nr_lines < 9:
             linecount = nr_lines
         else:
             linecount = (nr_lines-1)/2
 
         # -- cylce through declinations measurements:
+        # ------------------------------
         for k in range(linecount):
             if (poslst[k].hc > poslst[k].vc):
                 val = poslst[k].hc-poslst[k].vc
@@ -295,7 +317,7 @@ class AbsoluteData(object):
             dl2.append(dl2mean)
 
         decmean = np.mean(dl2)*180.0/np.pi*ang_fac - 180.0*ang_fac
-        miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
+        #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
     
         #Initialize HC if no input in this column = 0
         try:
@@ -307,17 +329,27 @@ class AbsoluteData(object):
                 loggerabs.warning("%s : No inclination measurements available"% num2date(poslst[0].time).replace(tzinfo=None))
             pass
 
-        #print "Miremean: %.3f" % miremean
-        if expmire > 180.0*ang_fac:
-            mirediff = expmire - (miremean+90.0*ang_fac)
+        # Stupid test of validity - needs to be removed if input order is finally correct
+        if 90*ang_fac > self._corrangle(mirediff + decmean,ang_fac) >= 0:
+            corrfac = 0.0
+        elif  360*ang_fac >= self._corrangle(mirediff + decmean,ang_fac) > 270*ang_fac:
+            corrfac = 0.0
         else:
-            mirediff = expmire - (miremean-90.0*ang_fac)
+            corrfac = 180.0*ang_fac
+            mirediff = self._corrangle(mirediff - 180.0*ang_fac,ang_fac)
+
+        #print "Mirediff1: %.3f" % (mirediff + decmean)
+        #if expmire > 180.0*ang_fac:
+        #    mirediff = expmire - (miremean+90.0*ang_fac)
+        #else:
+        #    mirediff = expmire - (miremean-90.0*ang_fac)
+        #print "Mirediff2: %.3f" % (mirediff + decmean)
 
         if (np.max(dl2)-np.min(dl2))>0.1:
             if iterator == 0:
                 loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
-        dec = decmean + mirediff + variocorr[0]*180.0/np.pi*ang_fac + deltaD
+        dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi*ang_fac + deltaD,ang_fac)
 
         s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
         deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
@@ -448,12 +480,16 @@ class AbsoluteData(object):
 
         # -- Start with the inclination calculation
         # --------------------------------------------------------------
-
         nr_lines = len(poslst)
         I0Diff1,I0Diff2,xDiff1,zDiff1,xDiff2,zDiff2= 0,0,0,0,0,0
         I0list, ppmval,testlst = [],[],[]
         cnt = 0
-        mirediff = linestruct.var1
+        mirediff = linestruct.t2
+
+        # Check that mirediff is correct
+        # get the correct hc values and replace 0 and 180 degree with the correct data
+        #print "Hc = ", linestruct.y - mirediff
+        #print linestruct.y, mirediff
 
         # If only D measurements are available then no suitable estimate of H can be obtained
         # Therefore we use an arbitrary start value -- Testing of the validity of this approach needs to be conducted
@@ -482,19 +518,20 @@ class AbsoluteData(object):
             if poslst[k].vc > (poslst[k].hc + mirediff):
                 quad = poslst[k].vc - (poslst[k].hc + mirediff)
             else:
-                quad = poslst[k].vc + 360*ang_fac - (poslst[k].hc + mirediff)
+                quad = poslst[k].vc + 360.0*ang_fac - (poslst[k].hc + mirediff)
             # The signums are essential for the collimation angle calculation
             # ToDo: check regarding correctness for different location/angles 
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
             #signum1 = np.sign(np.tan(quad*np.pi/180/ang_fac))
-            signum1 = np.sign(-np.cos(quad*np.pi/180/ang_fac))
-            signum2 = np.sign(np.sin(quad*np.pi/180/ang_fac))
+            signum1 = np.sign(-np.cos(quad*np.pi/180.0/ang_fac))
+            signum2 = np.sign(np.sin(quad*np.pi/180.0/ang_fac))
             if signum2>0:
                 PiVal=2*np.pi
             else:
                 PiVal=np.pi
-            I0 = (signum1*poslst[k].vc*np.pi/180/ang_fac - signum2*rcorri - signum1*PiVal)
+            I0 = (signum1*poslst[k].vc*np.pi/180.0/ang_fac - signum2*rcorri - signum1*PiVal)
 
+            #print signum1, poslst[k].vc, quad, I0, rcorri, signum2, PiVal
             # check the quadrant
             if I0 > np.pi:
                 I0 = 2*np.pi-I0
@@ -544,7 +581,7 @@ class AbsoluteData(object):
         zDiff2 = zDiff2/2.
 
         # Variometer correction to start time is missing for f value and inc ???
-        inc = np.mean(i1list)*180*ang_fac/np.pi + deltaI
+        inc = np.mean(i1list)*180.0*ang_fac/np.pi + deltaI
 
         if isnan(inc): # if only dec measurements are available
             inc = 0.0
@@ -554,7 +591,8 @@ class AbsoluteData(object):
         # check for inclination error in file inc
         #   -- the following part may casue problems in case of close to polar positions and locations were X is larger than Y
         if ((90.*ang_fac)-inc) < 0.1:
-            loggerabs.error('%s : Inclination warning... check your vertical measurements' % num2date(self[0].time).replace(tzinfo=None))
+            loggerabs.error('%s : Inclination warning... check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
+            #loggerabs.error(I0list)
             h_adder = 0.
         else:
             h_adder = np.sqrt(tmpH**2 - meanvarioy**2) - meanvariox

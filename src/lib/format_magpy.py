@@ -174,7 +174,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 else:
                     for elem in ti:
                         row = LineStruct()
-                        row.time = date2num(elem)
+                        # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
+                        row.time = 730120. + elem
                         stream.add(row)
                         del row
                 del ti
