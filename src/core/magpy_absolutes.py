@@ -1269,8 +1269,6 @@ if __name__ == '__main__':
     #loglst = msg.combineWarnLog(msg.warnings,msg.logger)
     #print loglst
 
-    #msg.sendLogByMail(loglst,user="roman_leonhardt",pwd="2kippen")
-
     #newst = pmRead(path_or_url=summarypath)
     #newst.pmplot(['x','y','z'])
     #print newst.header

@@ -30,7 +30,7 @@ try:
     from glob import glob, iglob, has_magic
     from StringIO import StringIO
 except ImportError:
-    logpygen += "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
+    print "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed"
 
 try:
     # Matpoltlib
@@ -1080,10 +1080,15 @@ class DataStream(object):
         """
         read absolute stream and extrapolate the data
         currently:
-        repeat the last and first input at start and end
+        repeat the last and first input with baseline values at start and end
         """
         firstelem = self[0]
         lastelem = self[-1]
+        # Find the last element with baseline values
+        i = 1
+        while isnan(lastelem.dx):
+            lastelem = self[-i]
+            i = i +1
         ltime = date2num(end + timedelta(days=1))
         ftime = date2num(start - timedelta(days=1))
         line = LineStruct()
