@@ -219,7 +219,11 @@ class DataStream(object):
             self.container.key = np.append(self.container.key, columnstructure.key, 1)
 
     def add(self, datlst):
+        #try:
+        assert isinstance(self.container, (list, tuple))
         self.container.append(datlst)
+        #except:
+        #    print list(self.container).append(datlst)
 
     def __str__(self):
         return str(self.container)
@@ -2033,6 +2037,7 @@ class DataStream(object):
                     yunit = ''
                     pass
                 if not yunit == '': 
+                    yunit = re.sub('[#$%&~_^\{}]', '', yunit)
                     label = ylabel+' $['+yunit+']$'
                 else:
                     label = ylabel
@@ -2146,7 +2151,9 @@ class DataStream(object):
         else:
             filename = filenamebegins + filenameends
             writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
-            
+
+        return True
+    
 
     def remove_flagged(self, **kwargs):
         """
@@ -2273,6 +2280,7 @@ class DataStream(object):
 
         # Start here with for key in keys:
         for key in keys:
+            print key
             poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
             flagpos = poslst[0]
 
@@ -3315,8 +3323,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     comment: add comment to stream_b data in stream_a
     """
     keys = kwargs.get('keys')
-    extend = kwargs.get('extend')
-    addall = kwargs.get('addall') # similar to extend - check both functions
+    extend = kwargs.get('extend') # add all elements from stream_b for which no time exists in stream_a
+    addall = kwargs.get('addall') # add all elements from stream_b
     offset = kwargs.get('offset')
     comment = kwargs.get('comment')
     if not keys:
@@ -3331,21 +3339,30 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     headera = stream_a.header
     headerb = stream_b.header
 
-    if addall:
-        for elem in stream_b:
-            #if not elem.time in stream_a._get_column('time'):
-            stream_a.add(elem)
-        stream_a = stream_a.sorting()
-
+    # Test streams
+    if len(stream_a) == 0:
+        loggerstream.info('mergeStreams: stream_a is empty - doing nothing')
+        return stream_a
+    if len(stream_b) == 0:
+        loggerstream.info('mergeStreams: stream_b is empty - returning unchanged stream_a')
+        return stream_a
     # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')
     timea = stream_a._maskNAN(timea)
 
-    if extend:
+    sta = list(stream_a)
+    stb = list(stream_b)
+    if addall:
+        for elem in stream_b:
+            sta.append(elem)
+        sta.sort()
+        return DataStream(sta, headera)
+    elif extend:
         for elem in stream_b:
             if not elem.time in timea:
-                stream_a.add(elem)
-        stream_a = stream_a.sorting()
+                sta.append(elem)
+        sta.sort()
+        return DataStream(sta, headera)
     else:
         # interploate stream_b
         sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
@@ -3398,7 +3415,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         assert len(stream_a) > 0
     except:
         loggerstream.error('Stream a empty - aborting merging function')
-        return
+        return stream_a
         
     keys = kwargs.get('keys')
     getmeans = kwargs.get('getmeans')

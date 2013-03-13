@@ -205,7 +205,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
                 row.var1 = float(elem[3])
                 row.t2 = float(elem[4])
                 stream.add(row)
-        except ValueError:
+        except:
             pass
     qFile.close()
 
