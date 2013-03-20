@@ -89,25 +89,29 @@ def readDIDD(filename, headonly=False, **kwargs):
                 else:
                     fval = float(elem[5])               
                 if fval < 999990:
-                    row.time=date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M"))
-                    xval = float(elem[2])
-                    yval = float(elem[3])
-                    zval = float(elem[4])
-                    if (headers['col-x']=='x'):
-                        row.x = xval
-                        row.y = yval
-                        row.z = zval
-                    elif (headers['col-x']=='h'):
-                        row.x, row.y, row.z = hdz2xyz(xval,yval,zval)
-                    elif (headers['col-x']=='i'):
-                        row.x, row.y, row.z = idf2xyz(xval,yval,zval)
-                    else:
-                        row.x = xval
-                        row.y = yval
-                        row.z = zval
-                        #raise ValueError
-                    row.f = fval
-                    stream.add(row)         
+                    try:
+                        row.time=date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M"))
+                        xval = float(elem[2])
+                        yval = float(elem[3])
+                        zval = float(elem[4])
+                        if (headers['col-x']=='x'):
+                            row.x = xval
+                            row.y = yval
+                            row.z = zval
+                        elif (headers['col-x']=='h'):
+                            row.x, row.y, row.z = hdz2xyz(xval,yval,zval)
+                        elif (headers['col-x']=='i'):
+                            row.x, row.y, row.z = idf2xyz(xval,yval,zval)
+                        else:
+                            row.x = xval
+                            row.y = yval
+                            row.z = zval
+                            #raise ValueError
+                        row.f = fval
+                        stream.add(row)
+                    except:
+                        logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
+         
     else:
         headers = stream.header
         stream =[]

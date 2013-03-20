@@ -7,6 +7,8 @@ Written by Roman Leonhardt June 2012
 
 from core.magpy_stream import *
 
+import gc
+
 def isPYCDF(filename):
     """
     Checks whether a file is Nasa CDF format.
@@ -159,30 +161,30 @@ def readPYCDF(filename, headonly=False, **kwargs):
 
         for key in cdf_file:
             # first get time or epoch column
-            lst = cdf_file[key]
+            #lst = cdf_file[key]
             if key == 'time' or key == 'Epoch':
-                ti = lst[...]
+                #ti = cdf_file[key][...]
                 #row = LineStruct()
                 if str(cdfformat) == 'MagPyCDF':
                     #ti = [date2num(elem) for elem in ti]
                     #stream._put_column(ti,'time')
-                    for elem in ti:
+                    for elem in cdf_file[key][...]:
                         row = LineStruct()
                         row.time = date2num(elem)
                         stream.add(row)
                         del row
                 else:
-                    for elem in ti:
+                    for elem in cdf_file[key][...]:
                         row = LineStruct()
                         # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
                         row.time = 730120. + elem
                         stream.add(row)
                         del row
-                del ti
+                #del ti
             elif key == 'HNvar' or key == 'x':
-                x = lst[...]
-                stream._put_column(x,'x')
-                del x
+                #x = cdf_file[key][...]
+                stream._put_column(cdf_file[key][...],'x')
+                #del x
                 #if not headskip:
                 stream.header['col-x'] = 'x'
                 try:
@@ -194,9 +196,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 except:
                     pass
             elif key == 'HEvar' or key == 'y':
-                y = lst[...]
-                stream._put_column(y,'y')
-                del y
+                #y = cdf_file[key][...]
+                stream._put_column(cdf_file[key][...],'y')
+                #del y
                 try:
                     stream.header['col-y'] = cdf_file['y'].attrs['name']
                 except:
@@ -206,9 +208,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 except:
                     pass
             elif key == 'Zvar' or key == 'z':
-                z = lst[...]
-                stream._put_column(z,'z')
-                del z
+                #z = cdf_file[key][...]
+                stream._put_column(cdf_file[key][...],'z')
+                #del z
                 try:
                     stream.header['col-z'] = cdf_file['z'].attrs['name']
                 except:
@@ -218,9 +220,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 except:
                     pass
             elif key == 'Fsc' or key == 'f':
-                f = lst[...]
-                stream._put_column(f,'f')
-                del f
+                #f = cdf_file[key][...]
+                stream._put_column(cdf_file[key][...],'f')
+                #del f
                 try:
                     stream.header['col-f'] = cdf_file['f'].attrs['name']
                 except:
@@ -231,9 +233,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     pass
             else:
                 if key.lower() in KEYLIST:
-                    col = lst[...]
-                    stream._put_column(col,key.lower())
-                    del col
+                    #col = cdf_file[key][...]
+                    stream._put_column(cdf_file[key][...],key.lower())
+                    #del col
                     stream.header['col-'+key.lower()] = key.lower()
                     try:
                         stream.header['unit-col-'+key.lower()] = cdf_file[key.lower()].attrs['units']
@@ -243,10 +245,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         stream.header['col-'+key.lower()] = cdf_file[key.lower()].attrs['name']
                     except:
                         pass
-
+            
     cdf_file.close()
-
     del cdf_file
+    #gc.collect()
 
     return DataStream(stream, stream.header)    
 

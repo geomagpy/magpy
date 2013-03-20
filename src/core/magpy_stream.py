@@ -123,6 +123,8 @@ if logpygen == '':
 # ##################
 
 logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.DEBUG)
+#logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.WARNING)
+#logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',level=logging.WARNING)
 # define a Handler which writes INFO messages or higher to the sys.stderr
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
@@ -144,8 +146,8 @@ stormlogger = logging.getLogger('core.magpy_stream')
 
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
-KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
-FLAGKEYLIST = KEYLIST[:8]
+KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
+FLAGKEYLIST = KEYLIST[:15]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
@@ -2180,7 +2182,10 @@ class DataStream(object):
             emptyelem = LineStruct()
             for elem in self:
                 fllst = list(elem.flag)
-                flag = int(fllst[pos])
+                try: # test whether useful flag is present: flaglst length changed during the program development
+                    flag = int(fllst[pos])
+                except:
+                    flag = 0
                 if not flag in flaglist:
                     liste.append(elem)
                 else:
@@ -2886,7 +2891,7 @@ class PyMagLog(object):
 
     
 class LineStruct(object):
-    def __init__(self, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='000000000-', comment='-', typ="xyzf", sectime=float('nan')):
+    def __init__(self, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
         """
         - at the end of flag is important to be recognized as string
         """
@@ -3030,7 +3035,7 @@ class LineStruct(object):
 # Unused classes
 
 class ColStruct(object):
-    def __init__(self,length, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='000000000-', comment='-', typ="xyzf", sectime=float('nan')):
+    def __init__(self,length, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
         """
         Not used so far. Maybe useful for 
         Speed optimization:
