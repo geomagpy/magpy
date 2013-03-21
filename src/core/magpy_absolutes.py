@@ -971,6 +971,49 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     # get files from localfilelist and analyze them (localfilelist is not sorted!)
     cnt = 0
 
+    # change function here
+    # firstly load all absolutes and get min and max time
+    # load vario and scalar data between min and max
+    # then do the analysis
+    loggerabs.info('AbsAnalysis: Getting time range')
+    mintime = 9999999999.0
+    maxtime = 0.0
+    abst = []
+    print 'Getting time range', datetime.utcnow()
+    for fi in localfilelist:
+        abstr = absRead(path_or_url=fi,archivepath=archivepath)
+        if len(abstr) > 0:
+            mint = abstr._get_min('time')
+            maxt = abstr._get_max('time')
+            if mint < mintime:
+                mintime = mint
+            if maxt > maxtime:
+                maxtime = maxt
+            abst.append(abstr)
+    print 'Min Time', num2date(mintime)
+    print 'Max Time', num2date(maxtime)
+
+    print 'Reading varios', datetime.utcnow()
+    if variopath:
+        variost = pmRead(path_or_url=variopath,starttime=mintime-0.04,endtime=maxtime+0.04)
+        variost.header.clear()
+        if not useflagged:
+            variost = variost.remove_flagged()
+        # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
+        variost = variost.rotation(alpha=alpha,beta=beta,unit=unit)
+        if len(variost) > 0:
+            vafunc = variost.interpol(['x','y','z'])
+
+    print 'Reading scalars', datetime.utcnow()
+    if scalarpath:
+        # scalar instrument and dF are then required
+        scalarst = pmRead(path_or_url=scalarpath,starttime=mintime-0.04,endtime=maxtime+0.04)
+        scalarst.header.clear()
+        if not useflagged:
+            scalarst = scalarst.remove_flagged()
+        if len(scalarst) > 0:
+            scfunc = scalarst.interpol(['f'])
+
     for fi in localfilelist:
         # Get the amount of warning messages prior to a new analysis
         lengthoferrorsbefore = _logfile_len('magpy.log','ERROR')
@@ -993,16 +1036,16 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             maxt = stream._get_max('time')
             # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
             if variopath:
-                variost = pmRead(path_or_url=variopath,starttime=mint-0.04,endtime=maxt+0.04)
-                variost.header.clear()
-                if not useflagged:
-                    variost = variost.remove_flagged()
+                #variost = pmRead(path_or_url=variopath,starttime=mint-0.04,endtime=maxt+0.04)
+                #variost.header.clear()
+                #if not useflagged:
+                #    variost = variost.remove_flagged()
                 # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
-                variost = variost.rotation(alpha=alpha,beta=beta,unit=unit)
+                #variost = variost.rotation(alpha=alpha,beta=beta,unit=unit)
                 # get instrument from header info
                 if len(variost) > 0:
-                    func = variost.interpol(['x','y','z'])
-                    stream = stream._insert_function_values(func)
+                    #vafunc = variost.interpol(['x','y','z'])
+                    stream = stream._insert_function_values(vafunc)
                     varioinst = os.path.split(variopath)[0]
                 else:
                     #movetoarchive = False
@@ -1015,13 +1058,13 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 break
             if scalarpath:
                 # scalar instrument and dF are then required
-                scalarst = pmRead(path_or_url=scalarpath,starttime=mint-0.04,endtime=maxt+0.04)
-                scalarst.header.clear()
-                if not useflagged:
-                    scalarst = scalarst.remove_flagged()
+                #scalarst = pmRead(path_or_url=scalarpath,starttime=mint-0.04,endtime=maxt+0.04)
+                #scalarst.header.clear()
+                #if not useflagged:
+                #    scalarst = scalarst.remove_flagged()
                 if len(scalarst) > 0:
-                    func = scalarst.interpol(['f'])
-                    stream = stream._insert_function_values(func, funckeys=['f'],offset=deltaF)
+                    #scfunc = scalarst.interpol(['f'])
+                    stream = stream._insert_function_values(scfunc, funckeys=['f'],offset=deltaF)
                     scalarinst = os.path.split(scalarpath)[0]
                 else:
                     #movetoarchive = False

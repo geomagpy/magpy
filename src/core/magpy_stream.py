@@ -1886,11 +1886,14 @@ class DataStream(object):
         if debugmode:
             print "Start plotting at %s" % datetime.utcnow()
 
+        t = np.asarray([row[0] for row in self])
         for key in keys:
             if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
-            t = self._get_column('time')
-            yplt = self._get_column(key)
+            #print datetime.utcnow()
+            ind = KEYLIST.index(key)
+            yplt = np.asarray([row[ind] for row in self])
+            #yplt = self._get_column(key)
             # switch between continuous and discontinuous plots
             if debugmode:
                 print "column extracted at %s" % datetime.utcnow()
