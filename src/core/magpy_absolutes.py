@@ -971,7 +971,6 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     # get files from localfilelist and analyze them (localfilelist is not sorted!)
     cnt = 0
 
-    # change function here
     # firstly load all absolutes and get min and max time
     # load vario and scalar data between min and max
     # then do the analysis
@@ -990,9 +989,190 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             if maxt > maxtime:
                 maxtime = maxt
             abst.append(abstr)
+
     print 'Min Time', num2date(mintime)
     print 'Max Time', num2date(maxtime)
 
+    # Test of iterative procedure with variable length  (chnage days=30) 
+    iterationtime = date2num(num2date(mintime).replace(tzinfo=None)+timedelta(days=30))
+    start = mintime
+    while start < maxtime:
+        print "Do 30 days of analysis between start and iterationtime: starting at ", num2date(start)
+        # 1.) Get vario
+        print 'Reading varios', datetime.utcnow()
+        if variopath:
+            variost = pmRead(path_or_url=variopath,starttime=start-0.04,endtime=iterationtime+0.04)
+            variost.header.clear()
+            if not useflagged:
+                variost = variost.remove_flagged()
+            # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
+            variost = variost.rotation(alpha=alpha,beta=beta,unit=unit)
+            if len(variost) > 0:
+                vafunc = variost.interpol(['x','y','z'])
+
+        # 2.) Get scalars
+        print 'Reading scalars', datetime.utcnow()
+        if scalarpath:
+            # scalar instrument and dF are then required
+            scalarst = pmRead(path_or_url=scalarpath,starttime=start-0.04,endtime=iterationtime+0.04)
+            scalarst.header.clear()
+            if not useflagged:
+                scalarst = scalarst.remove_flagged()
+            if len(scalarst) > 0:
+                scfunc = scalarst.interpol(['f'])
+
+        # 3.) Analyse streams
+        testlst = [elem for elem in abst if elem._get_min('time') >= start and elem._get_max('time') < iterationtime]
+        print len(testlst)
+        start = iterationtime
+        iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))    
+        for stream in testlst:
+            #print len(stream)
+            lengthoferrorsbefore = _logfile_len('magpy.log','ERROR')
+
+            cnt += 1
+            plog.addcount(cnt, len(localfilelist))
+            # ######## Process counter
+            print plog.proc_count
+            # ######## Process counter
+            
+            # initialize the move function for each fi
+            if not archivepath:
+                movetoarchive = False
+            else:
+                movetoarchive = True # this variable will be set false in case of warnings
+            loggerabs.info('%s : Analyzing absolute file of length %d' % (fi,len(stream)))
+            if len(stream) > 0:
+                mint = stream._get_min('time')
+                maxt = stream._get_max('time')
+                # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
+                if variopath:
+                    if len(variost) > 0:
+                        stream = stream._insert_function_values(vafunc)
+                        varioinst = os.path.split(variopath)[0]
+                    else:
+                        loggerabs.warning('%s : No variometer correction possible' % fi) 
+                # Now check for f values in file
+                fcol = stream._get_column('f')
+                if not len(fcol) > 0 and not scalarpath:
+                    movetoarchive = False
+                    loggerabs.error('%s : f values are required for analysis -- aborting' % fi)
+                    break
+                if scalarpath:
+                    if len(scalarst) > 0:
+                        stream = stream._insert_function_values(scfunc, funckeys=['f'],offset=deltaF)
+                        scalarinst = os.path.split(scalarpath)[0]
+                    else:
+                        loggerabs.warning('%s : Did not find independent scalar values' % fi)
+                        
+                # use DataStream and its LineStruct to store results
+                result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
+                result.str4 = varioinst
+                if (result.str3 == '-' or result.str3 == '') and not scalarinst == '-':
+                    result.str3 = scalarinst
+
+                # Get the amount of error messages after the analysis
+                lengthoferrorsafter = _logfile_len('magpy.log','ERROR')
+
+                if lengthoferrorsafter > lengthoferrorsbefore:
+                    movetoarchive = False
+                    
+                # check for presence of result in summary-file and append / replace existing data (if more non-NAN values are present)
+                nonnan_result, nonnan_line = [],[]
+                for key in KEYLIST:
+                    try:
+                        if not isnan(eval('result.'+key)):
+                            nonnan_result.append(eval('result.'+key))
+                    except:
+                        pass
+                newst = DataStream()
+
+                # Create header keys and attributes
+                line = LineStruct()
+                st.header['col-time'] = 'Epoch'
+                st.header['col-x'] = 'i'
+                st.header['unit-col-x'] = unit
+                st.header['col-y'] = 'd'
+                st.header['unit-col-y'] = unit
+                st.header['col-z'] = 'f'
+                st.header['unit-col-z'] = 'nT'
+                st.header['col-f'] = 'f'
+                st.header['col-dx'] = 'basex'
+                st.header['col-dy'] = 'basey'
+                st.header['col-dz'] = 'basez'
+                st.header['col-df'] = 'dF'
+                st.header['col-t1'] = 'T'
+                st.header['col-t2'] = 'ScaleValueDI'
+                st.header['col-var1'] = 'Dec_S0'
+                st.header['col-var2'] = 'Dec_deltaH'
+                st.header['col-var3'] = 'Dec_epsilonZ'
+                st.header['col-var4'] = 'Inc_S0'
+                st.header['col-var5'] = 'Inc_epsilonZ'
+                st.header['col-str1'] = 'Person'
+                st.header['col-str2'] = 'DI-Inst'
+                st.header['col-str3'] = 'F-Inst'
+                st.header['col-str4'] = 'Vario-Inst'
+
+                if outputformat == 'xyz':
+                    #for elem in st:
+                    result = result.idf2xyz(unit=unit)
+                    result.typ = 'xyzf'         
+                    st.header['col-x'] = 'x'
+                    st.header['unit-col-x'] = 'nT'
+                    st.header['col-y'] = 'y'
+                    st.header['unit-col-y'] = 'nT'
+                    st.header['col-z'] = 'z'
+                    st.header['unit-col-z'] = 'nT'
+                elif outputformat == 'hdz':
+                    #for elem in st:
+                    result = result.idf2xyz(unit=unit)
+                    #for elem in st:
+                    result = result.xyz2hdz(unit=unit)
+                    result.typ = 'hdzf'         
+                    st.header['col-x'] = 'h'
+                    st.header['unit-col-x'] = 'nT'
+                    st.header['col-y'] = 'd'
+                    st.header['unit-col-y'] = unit
+                    st.header['col-z'] = 'z'
+                    st.header['unit-col-z'] = 'nT'
+
+                # only write results if no warnings were issued:
+                #if movetoarchive:
+                if not lengthoferrorsafter > lengthoferrorsbefore:
+                    newst.add(result)
+                    st.extend(newst, st.header)
+            else: # len(stream) <= 0
+                movetoarchive = False
+                loggerabs.error('%s: File or data format problem - please check' % fi)
+
+            if movetoarchive:
+                if not "://" in fi: 
+                    src = fi
+                    fname = os.path.split(src)[1]
+                    dst = os.path.join(archivepath,fname)
+                    shutil.move(src,dst)
+                else:
+                    fname = fi.split('/')[-1]
+                    suffix = fname.split('.')[-1]
+                    passwdtyp = fi.split(':')
+                    typus = passwdtyp[0]
+                    port = 21
+                    passwd = passwdtyp[2].split('@')[0]
+                    restpath = passwdtyp[2].split('@')[1]
+                    myproxy = restpath.split('/')[0]
+                    ftppath = restpath.split('/')[1]
+                    login = passwdtyp[1].split('//')[1]
+                    dst = os.path.join(archivepath,fname)
+                    fh = NamedTemporaryFile(suffix=suffix,delete=False)
+                    fh.write(urllib2.urlopen(fi).read())
+                    fh.close()
+                    shutil.move(fh.name,dst)
+                    if (typus == 'ftp'):
+                        ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
+        #start = iterationtime
+        #iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))    
+
+    """
     print 'Reading varios', datetime.utcnow()
     if variopath:
         variost = pmRead(path_or_url=variopath,starttime=mintime-0.04,endtime=maxtime+0.04)
@@ -1177,7 +1357,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
 
         #if writedirectly:
         #    st.pmwrite(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_lemi')
-
+    """
 
     st = st.sorting()
     

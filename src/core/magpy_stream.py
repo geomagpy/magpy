@@ -1935,10 +1935,16 @@ class DataStream(object):
                         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
                         timeunit = '[H:M]'
                     elif trange < 7: # 3 day level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d-%H'))
-                        setp(ax.get_xticklabels(),rotation='70')
-                        timeunit = '[Day-H]'
-                    elif trange < 60: # year level
+                        if trange < 2:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=6))
+                        elif trange < 5:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=12))
+                        else:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.WeekdayLocator(byweekday=matplotlib.dates.MO))
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%H:%M'))
+                        setp(ax.get_xticklabels(),rotation='0')
+                        timeunit = '[Day-H:M]'
+                    elif trange < 60: # month level
                         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b'))
                         setp(ax.get_xticklabels(),rotation='70')
                         timeunit = '[Day]'
@@ -1947,8 +1953,14 @@ class DataStream(object):
                         setp(ax.get_xticklabels(),rotation='70')
                         timeunit = '[Day]'
                     elif trange < 600: # minute level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b%y'))
-                        setp(ax.get_xticklabels(),rotation='70')
+                        if trange < 300:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=1))
+                        elif trange < 420:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=2))
+                        else:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=4))
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b %Y'))
+                        setp(ax.get_xticklabels(),rotation='0')
                         timeunit = '[Month]'
                     else:
                         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
@@ -2271,7 +2283,7 @@ class DataStream(object):
         """
         # Defaults:
         timerange = kwargs.get('timerange')
-        threshold = kwargs.get('treshold')
+        threshold = kwargs.get('threshold')
         keys = kwargs.get('keys')
         if not timerange:
             timerange = timedelta(hours=1)
@@ -2288,8 +2300,8 @@ class DataStream(object):
 
         # Start here with for key in keys:
         for key in keys:
-            print key
             poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+            print key, poslst
             flagpos = poslst[0]
 
             st = self._get_min('time')
@@ -2318,6 +2330,7 @@ class DataStream(object):
                     iqd = q3-q1
                     md = np.median(selcol)
                     whisker = threshold*iqd
+                    print whisker
                 except:
                     try:
                         md = np.median(selcol) 
@@ -2334,7 +2347,8 @@ class DataStream(object):
                         fllist[flagpos] = '1'
                         row.flag=''.join(fllist)
                         row.comment = "%s removed by automatic outlier removal" % key
-                        loggerstream.info("Outlier: removed %f at time %f, " % (eval('elem.'+key), elem.time))
+                        if not isnan(eval('elem.'+key)):
+                            loggerstream.info("Outlier: removed %s (= %f) at time %s, " % (key, eval('elem.'+key), datetime.strftime(num2date(elem.time),"%Y-%m-%dT%H:%M:%S")))
                     else:
                         fllist = list(row.flag)
                         fllist[flagpos] = '0'
