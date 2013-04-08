@@ -189,16 +189,16 @@ def readUSBLOG(filename, headonly=False, **kwargs):
             if elem[1] == 'Time':
                 el2 = elem[2].split('(')
                 test = el2[1]
-                headers['unit-col-t1'] = unicode(el2[1].strip(')'),errors='ignore')
-                headers['col-t1'] = el2[0]
+                headers['unit-col-t1'] = "\circ C" #unicode(el2[1].strip(')'),errors='ignore')
+                headers['col-t1'] = 'T'
                 el3 = elem[3].split('(')
-                headers['unit-col-var1'] = unicode(el3[1].strip(')'),errors='ignore')
-                headers['col-var1'] = el3[0]
+                headers['unit-col-var1'] = "percent" #unicode(el3[1].strip(')'),errors='ignore')
+                headers['col-var1'] = 'RH'
                 el4 = elem[4].split('(')
-                headers['unit-col-t2'] = unicode(el4[1].strip(')'),errors='ignore')
-                headers['col-t2'] = el4[0]
+                headers['unit-col-t2'] = "\circ C" #unicode(el4[1].strip(')'),errors='ignore')
+                headers['col-t2'] = 'T(dew)'
             elif len(elem) == 6 and not elem[1] == 'Time':
-                headers['InstrumentSerialNum'] = 'T-sensor:%s' % elem[5]
+                headers['SensorSerialNum'] = '%s' % elem[5]
             else:
                 row.time = date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
                 row.t1 = float(elem[2])
@@ -208,6 +208,10 @@ def readUSBLOG(filename, headonly=False, **kwargs):
         except:
             pass
     qFile.close()
+    # Add some Sensor specific header information
+    headers['SensorDescription'] = 'Model HMHT-LG01: This Humidity and Temperature USB data logger measures and stores relative humidity temperature readings over 0 to 100 per RH and -35 to +80 deg C measurement ranges. Humidity: Repeatability (short term) 0.1 per RH, Accuracy (overall error) 3.0* 6.0 per RH, Internal resolution 0.5 per RH, Long term stability 0.5 per RH/Yr; Temperature: Repeatability 0.1 deg C, Accuracy (overall error) 0.5 and 2  deg C, Internal resolution 0.5 deg C'
+    headers['SensorName'] = 'HMHT-LG01'
+    headers['SensorType'] = 'Temperature/Humidity'
 
     return DataStream(stream, headers)    
 

@@ -24,8 +24,8 @@ else:
 print "step1"
 lemipath = os.path.join(basepath,'Daten','Magnetism','LEMI-WIK','data','*')
 diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','data','*')
-archivepath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW')
-writeresultpath = os.path.join(basepath,'Daten','Magnetism','ABSOLUTE-RAW','data')
+archivepath = os.path.join(basepath,'Daten','Magnetism','DI-WIK','raw')
+writeresultpath = os.path.join(basepath,'Daten','Magnetism','DI-WIK','data')
 send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at','andrea.draxler@gmx.at']
 #send_notification_to = ['roman.leonhardt@zamg.ac.at']
 
@@ -35,19 +35,25 @@ print "step2"
 
 # Do it for the Lemi
 abslemi = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=3.3, beta=0.0, absidentifier=absindentifier, variopath=lemipath, scalarpath=diddpath)
+abslemi = abslemi.routlier(timerange=timedelta(days=60),keys=['dx','dy','dz'],threshold=1.5)
+abslemi = abslemi.sorting()
 # write the data
 abslemi.pmwrite(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_lemi')
 # make plot covering one year back from now
 start = datetime.utcnow()-timedelta(days=365)
 abslemi = pmRead(path_or_url=os.path.join(writeresultpath,'absolutes_lemi.txt'),starttime=start)
+abslemi = abslemi.remove_flagged()
 abslemi.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - Using variocorr. data from LEMI", outfile="AutoAnalysisLemi")
 
 print "step3"
 
 # Repeat for DIDD but write new logfile and move succesfully analyzed files from the server to the archive
 absdidd = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=0.0, beta=0.0, absidentifier=absindentifier, variopath=diddpath, scalarpath=diddpath, archivepath=archivepath)
+absdidd = absdidd.routlier(timerange=timedelta(days=60),keys=['dx','dy','dz'],threshold=1.5)
+absdidd = absdidd.sorting()
 absdidd.pmwrite(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_didd')
 absdidd = pmRead(path_or_url=os.path.join(writeresultpath,'absolutes_didd.txt'),starttime=start)
+absdidd = absdidd.remove_flagged()
 absdidd.pmplot(['x','y','z'],plottitle = "Analysis of absolute values - Using variocorr. data from DIDD", outfile="AutoAnalysisDIDD")
 
 # Calculate differences to easily identify errors in one instrument

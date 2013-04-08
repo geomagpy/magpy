@@ -45,6 +45,7 @@ def readDIDD(filename, headonly=False, **kwargs):
         headers = {}
     else:
         headers = stream.header
+
     data = []
     key = None
     # get day from filename (platform independent)
@@ -53,8 +54,9 @@ def readDIDD(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
     except:
-        logging.warning("Wrong dateformat in Filename %s" % daystring[0])
-        return []
+        logging.warning("format-DIDD: Wrong dateformat in Filename %s" % daystring[0])
+        fh.close()
+        return DataStream([], headers)
     # Select only files within eventually defined time range
     if starttime:
         if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
@@ -85,9 +87,13 @@ def readDIDD(filename, headonly=False, **kwargs):
                 row = LineStruct()
                 elem = line.split()
                 if len(elem) < 6:
-                    fval = 9999
+                    fval = 9999  # why 9999 ??
                 else:
-                    fval = float(elem[5])               
+                    try:
+                        fval = float(elem[5])
+                    except:
+                        logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
+                        fval = 999999.0
                 if fval < 999990:
                     try:
                         row.time=date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M"))
@@ -114,7 +120,7 @@ def readDIDD(filename, headonly=False, **kwargs):
          
     else:
         headers = stream.header
-        stream =[]
+        stream = []
 
     headers['unit-col-f'] = 'nT'
     fh.close()

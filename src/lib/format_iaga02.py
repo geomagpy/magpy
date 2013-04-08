@@ -74,40 +74,40 @@ def readIAGA(filename, headonly=False, **kwargs):
                 val = infoline[23:].strip()
                 if key.find('Source') > -1:
                     if not val == '': 
-                        headers['Institution'] = val
+                        headers['StationInstitution'] = val
                 if key.find('Station') > -1:
                     if not val == '': 
-                        headers['Station'] = val
+                        headers['StationName'] = val
                 if key.find('IAGA') > -1:
                     if not val == '': 
-                        headers['IAGAcode'] = val
+                        headers['StationIAGAcode'] = val
                 if key.find('Latitude') > -1:
                     if not val == '': 
-                        headers['Latitude'] = val
+                        headers['DataAcquisitionLatitude'] = val
                 if key.find('Longitude') > -1:
                     if not val == '': 
-                        headers['Longitude'] = val
+                        headers['DataAcquisitionLongitude'] = val
                 if key.find('Elevation') > -1:
                     if not val == '': 
-                        headers['Elevation'] = val
+                        headers['DataElevation'] = val
                 if key.find('Format') > -1:
                     if not val == '': 
                         headers['DataFormat'] = val
                 if key.find('Reported') > -1:
                     if not val == '': 
-                        headers['Reported'] = val
+                        headers['DataComponents'] = val
                 if key.find('Orientation') > -1:
                     if not val == '': 
-                        headers['Orientation'] = val
+                        headers['DataSensorOrientation'] = val
                 if key.find('Digital') > -1:
                     if not val == '': 
-                        headers['DigitalSamplingInterval'] = val
+                        headers['DataDigitalSampling'] = val
                 if key.find('Interval') > -1:
                     if not val == '': 
-                        headers['DigitalFilter'] = val
+                        headers['DataSamplingFilter'] = val
                 if key.find('Data Type') > -1:
                     if not val == '': 
-                        headers['ProvidedType'] = val
+                        headers['DataType'] = val
             elif line.startswith('DATE'):
                 # data header
                 colsstr = line.lower().split()
@@ -243,17 +243,17 @@ def writeIAGA(datastream, filename, **kwargs):
         if header.get('Elevation') > 0:
             print header
         line.append(' Format %-15s IAGA-2002 %-34s |\n' % (' ',' '))
-        line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('Institution'," ")[:44]))
-        line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('Station'," ")[:44]))
-        line.append(' IAGA Code %-12s %-44s |\n' % (' ',header.get('IAGAcode'," ")[:44]))
-        line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',header.get('Latitude (WGS84)'," ")[:44]))
-        line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',header.get('Longitude (WGS84)'," ")[:44]))
-        line.append(' Elevation %-12s %-44s |\n' % (' ',header.get('Elevation (NN)'," ")[:44]))
-        line.append(' Reported %-13s %-44s |\n' % (' ',header.get('ProvidedComp'," ")))
-        line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('InstrumentOrientation'," ")[:44]))
-        line.append(' Digital Sampling %-5s %-44s |\n' % (' ',header.get('DigitalSamplingInterval'," ")[:44]))
-        line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(header.get('ProvidedInterval'," ")+' ('+header.get('DigitalFilter'," ")+')')[:44]))
-        line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('ProvidedType'," ")[:44]))
+        line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('StationInstitution'," ")[:44]))
+        line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('StationName'," ")[:44]))
+        line.append(' IAGA Code %-12s %-44s |\n' % (' ',header.get('StationIAGAcode'," ")[:44]))
+        line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',header.get('DataAcquisitionLatitude'," ")[:44]))
+        line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',header.get('DataAcquisitionLongitude'," ")[:44]))
+        line.append(' Elevation %-12s %-44s |\n' % (' ',header.get('DataElevation'," ")[:44]))
+        line.append(' Reported %-13s %-44s |\n' % (' ',header.get('DataComponents'," ")))
+        line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('DataSensorOrientation'," ")[:44]))
+        line.append(' Digital Sampling %-5s %-44s |\n' % (' ',header.get('DataDigitalSampling'," ")[:44]))
+        line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(header.get('DataSamplingRate'," ")+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
+        line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('DataType'," ")[:44]))
         line.append('DATE       TIME         DOI %5s %9s %9s %9s      |\n' % (header.get('col-x'," ").upper(),header.get('col-y'," ").upper(),header.get('col-z'," ").upper(),header.get('col-f'," ").upper()))
     try:
         myFile.writelines(line) # Write header sequence of strings to a file

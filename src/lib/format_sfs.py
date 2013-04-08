@@ -80,7 +80,8 @@ def readSFDMI(filename, headonly=False, **kwargs):
         day = datetime.strftime(datetime.strptime(daystring[0], "%d%m%Y"),"%Y-%m-%d")
     except:
         logging.warning("Wrong dateformat in Filename %s" % daystring[0])
-        return []
+        fh.close()
+        return DataStream([], headers)
 
 
     # Select only files within eventually defined time range

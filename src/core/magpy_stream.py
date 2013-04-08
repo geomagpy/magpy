@@ -291,7 +291,13 @@ class DataStream(object):
                 try:
                     timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
                 except:
-                    raise TypeError
+                    try:
+                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
+                    except:
+                        try:
+                            timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
+                        except:
+                            raise TypeError
         elif not isinstance(time, datetime):
             raise TypeError
         else:
@@ -1368,9 +1374,9 @@ class DataStream(object):
                     lowlim = 0
 
         # Add filtering information to header:
-        self.header['DigitalSamplingWidth'] = str(trange.seconds)+' sec'
-        self.header['DigitalSamplingFilter'] = filter_type
-        self.header['DataInterval'] = str(filter_width.seconds)+' sec'
+        #self.header['DigitalSamplingWidth'] = str(trange.seconds)+' sec'
+        self.header['DataSamplingFilter'] = filter_type + str(filter_width.seconds)+' sec'
+        #self.header['DataInterval'] = str(filter_width.seconds)+' sec'
         
         loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
 
@@ -3250,7 +3256,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for file in iglob(pathname):
             stp = _pmRead(file, dataformat, headonly, **kwargs)
             st.extend(stp.container,stp.header)
-            del stp
+            #del stp
         if len(st) == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
@@ -3320,6 +3326,7 @@ def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
     """
     # read
     #if not format_type == 'UNKNOWN':
+    #print format_type
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
 
     # set _format identifier for each trace
