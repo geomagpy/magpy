@@ -147,7 +147,7 @@ stormlogger = logging.getLogger('core.magpy_stream')
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
-FLAGKEYLIST = KEYLIST[:15]
+FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
@@ -1076,14 +1076,21 @@ class DataStream(object):
         read stream and extract data of which key meets the criteria
         example:
         compare is string like ">, <, ==, !="
-        st.extract(['x'],20000,'>')
-        st.extract(['str1'],'Berger')
+        st.extract('x',20000,'>')
+        st.extract('str1','Berger')
         """
 
         if not compare:
             compare = '=='
+        if not compare in [">=", "<=",">", "<", "==", "!="]:
+            loggerstream.info('--- Extract: Please provide proper compare paramter ">=", "<=",">", "<", "==" or "!=" ')
+            return self
 
-        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + str(value))]
+        if not self._is_number(value):
+            too = '"' + str(value) + '"'
+        else:
+            too = str(value)
+        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + too)]
 
         return DataStream(liste,self.header)    
 
@@ -2307,7 +2314,6 @@ class DataStream(object):
         # Start here with for key in keys:
         for key in keys:
             poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-            print key, poslst
             flagpos = poslst[0]
 
             st = self._get_min('time')
@@ -2336,7 +2342,6 @@ class DataStream(object):
                     iqd = q3-q1
                     md = np.median(selcol)
                     whisker = threshold*iqd
-                    print whisker
                 except:
                     try:
                         md = np.median(selcol) 
