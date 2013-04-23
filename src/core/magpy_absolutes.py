@@ -869,6 +869,9 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     analysispath = kwargs.get('analysispath')
     archivepath = kwargs.get('archivepath')
     absidentifier = kwargs.get('absidentifier') # Part of filename, which defines absolute files
+    # Timerange
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
     # Not used so far are username and passwd
     username = kwargs.get('username')
     password = kwargs.get('password')
@@ -968,6 +971,27 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     # Escape for single files:
     assert type(localfilelist)==list
 
+    # if time range is given then limit the localfilelist
+    elem = localfilelist[0].split('/')
+    splitter = '/'
+    try:
+        elem = elem.split('\\')
+        splitter = '\\'
+        loggerabs.info('--- -- AbsAnalysis: Windows type path found')
+    except:
+        loggerabs.info('--- -- AbsAnalysis: Linux type path found')
+    if starttime:
+        localfilelist = [elem for elem in localfilelist if (datetime.strptime(elem.split(splitter)[-1][:10],"%Y-%m-%d") >= st._testtime(starttime))]
+
+    if endtime:
+        localfilelist = [elem for elem in localfilelist if (datetime.strptime(elem.split(splitter)[-1][:10],"%Y-%m-%d") <= st._testtime(endtime))]
+        
+    if len(localfilelist) > 0:
+        loggerabs.info('--- -- AbsAnalysis: %d DI measurements to be analyzed' % len(localfilelist))
+    else:
+        loggerabs.error('--- -- Aborting AbsAnalysis: check time range or data source: no DI data present')
+        return
+ 
     # get files from localfilelist and analyze them (localfilelist is not sorted!)
     cnt = 0
 

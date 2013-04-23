@@ -12,7 +12,6 @@ ToDo: add table footer
 from core.magpy_stream import *
 from opt.Table import Table
 
-
 def writeLATEX(datastream, filename, **kwargs):
     """
     Writing WDC format data.
