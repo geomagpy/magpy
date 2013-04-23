@@ -12,7 +12,13 @@ import sigfig
 import os,string,re,sys
 import types
 
-float_types = [types.FloatType, numpy.float16, numpy.float32, numpy.float64]
+try:
+    float_types = [types.FloatType, numpy.float16, numpy.float32, numpy.float64]
+except:
+    try:
+        float_types = [types.FloatType, numpy.float32, numpy.float64]
+    except:
+        float_types = [types.FloatType, numpy.float32]
 
 class Table:
 
