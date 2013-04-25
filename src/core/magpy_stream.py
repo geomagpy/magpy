@@ -3567,13 +3567,69 @@ def stackStreams(stream_a, stream_b, **kwargs):
     pass
 
 
+# Some helpful methods
+def extractDateFromString(datestring):
+    """
+    Function to extract dates from a string (e.g. a filename within a path)
+    Requires a string
+    returns a datetime object)
+    """
+    # get day from filename (platform independent)
+    try:
+        splitpath = os.path.split(datestring)
+        daystring = splitpath[1].split('.')[0]
+    except:
+        daystring = datestring
+
+    try:
+        date = datetime.strptime(daystring, '%b%d%y')
+        dateform = '%b%d%y'
+        # log ('Found Dateformat of type dateform
+    except:
+        # test for day month year
+        tmpdaystring = re.findall(r'\d+',daystring)[0]
+        testunder = daystring.replace('-','').split('_')
+        for i in range(len(testunder)):
+            try:
+                numberstr = re.findall(r'\d+',testunder[i])[0]
+            except:
+                numberstr = '0'
+            if len(numberstr) > 4:
+                tmpdaystring = numberstr
+        
+        if len(tmpdaystring) > 8:
+            tmpdaystring = tmpdaystring[:8]
+
+        if len(tmpdaystring) == 8:
+            try:
+                dateform = '%Y%m%d'
+                date = datetime.strptime(tmpdaystring,dateform)
+            except:
+                # log ('dateformat in filename could not be identified')
+                pass
+        elif len(tmpdaystring) == 6:
+            try:
+                dateform = '%Y%m'
+                date = datetime.strptime(tmpdaystring,dateform)
+            except:
+                # log ('dateformat in filename could not be identified')
+                pass
+        elif len(tmpdaystring) == 4:
+            try:
+                dateform = '%Y'
+                date = datetime.strptime(tmpdaystring,dateform)
+            except:
+                # log ('dateformat in filename could not be identified')
+                pass
+
+    return date
+
+
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Now import the child classes with formats etc
 # Otherwise DataStream etc will not be known
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 from lib.magpy_formats import *
-
-
 
 
 

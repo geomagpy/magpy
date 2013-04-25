@@ -923,7 +923,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     scalarinst = '-'
 
     loggerabs.info('--- Start absolute analysis at %s ' % str(datetime.now()))
-    print "Using unit ", unit
+    print "Using unit with angfac", unit, ang_fac
 
     # now check the contents of the analysis path - url part is yet missing
     if not os.path.isfile(path_or_url):
@@ -1096,6 +1096,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                         loggerabs.warning('%s : Did not find independent scalar values' % fi)
                         
                 # use DataStream and its LineStruct to store results
+                print unit
                 result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
                 result.str4 = varioinst
                 if (result.str3 == '-' or result.str3 == '') and not scalarinst == '-':
