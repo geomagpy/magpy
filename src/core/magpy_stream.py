@@ -1161,12 +1161,15 @@ class DataStream(object):
             t = tmpst._get_column('time')
             nt,sv,ev = self._normalize(t)
             sp = self.get_sampling_period()
+            if sp == 0:  ## if no dominant sampling period can be identified then use minutes
+                sp = 0.0177083333256
             if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
             val = tmpst._get_column(key)
             # interplolate NaN values
             #nans, xxx= self._nan_helper(val)
             #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
+            #print np.min(nt), np.max(nt), sp, len(self)
             x = arange(np.min(nt),np.max(nt),sp)
             if len(val)>1 and fitfunc == 'spline':
                 try:
@@ -1571,6 +1574,8 @@ class DataStream(object):
         else:
             testrange = 1000
 
+        #print len(timecol)
+
         for idx, val in enumerate(timecol[:testrange]):
             if idx > 1 and not isnan(val):
                 timediff = val - timeprev
@@ -1582,6 +1587,8 @@ class DataStream(object):
                 if found == 0:
                     timedifflist.append([1,timediff])
             timeprev = val
+
+        #print self
 
         # get the most often timediff
         dominate = 0
