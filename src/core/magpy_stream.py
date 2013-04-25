@@ -2123,7 +2123,7 @@ class DataStream(object):
         if not format_type:
             format_type = 'PYSTR'
         if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.info('Output format not supported')
+            loggerstream.info('Write: Output format not supported')
             print "Format not supported"
             return
         if not dateformat:
@@ -2141,6 +2141,10 @@ class DataStream(object):
         if not mode:
             mode= 'overwrite'
 
+        if len(self) < 1:
+            loggerstream.info('Write: zero length of stream ')
+            return
+            
         # divide stream in parts according to coverage and save them
         newst = DataStream()
         if coverage == 'month':
@@ -2311,6 +2315,10 @@ class DataStream(object):
         
         loggerstream.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
 
+        if len(self) < 1:
+            loggerstream.info('--- No data - Stopping outlier removal at %s ' % (str(datetime.now())))
+            return self
+        
         # Start here with for key in keys:
         for key in keys:
             poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
