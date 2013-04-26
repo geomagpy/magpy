@@ -215,6 +215,7 @@ class AbsoluteData(object):
         usestep = kwargs.get('usestep')
         scalevalue = kwargs.get('scalevalue')
         iterator = kwargs.get('iterator')
+        debugmode = kwargs.get('debugmode')
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
@@ -229,6 +230,8 @@ class AbsoluteData(object):
 
         if not iterator:
             iterator = 0
+        if not debugmode:
+            debugmode = False
 
         #drop NANs from input stream - positions
         expmire = self._get_column('expectedmire')
@@ -296,7 +299,8 @@ class AbsoluteData(object):
             else:
                 variocorr.append(np.arctan((ystart+varioy)/(xstart+variox)))
             dl1.append( poslst[k].hc*np.pi/(180.0*ang_fac) + rescorr - variocorr[k])
-            print "values: ", poslst[k].hc
+            if debugmode:
+                print "Horizontal angles: ", poslst[k].hc, rescorr, variocorr[k]
 
         # use selected steps, default is average....
         for k in range(0,7,2):
@@ -319,7 +323,7 @@ class AbsoluteData(object):
 
         decmean = np.mean(dl2)*180.0/np.pi*ang_fac - 180.0*ang_fac
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
-    
+        
         #Initialize HC if no input in this column = 0
         try:
             if (poslst[8].hc == 0 or poslst[8].hc == 180):
@@ -351,6 +355,9 @@ class AbsoluteData(object):
                 loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
         dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi*ang_fac + deltaD,ang_fac)
+
+        if debugmode:
+            print "All (dec, decmean, mirediff, variocorr, delta D and ang_fac): ", dec, decmean, mirediff, variocorr[0], deltaD, ang_fac
 
         s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
         deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
@@ -672,7 +679,7 @@ class AbsoluteData(object):
 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
-            resultline = self._calcdec(unit=unit,xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i)
+            resultline = self._calcdec(unit=unit,xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
                 print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
@@ -1099,7 +1106,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                         
                 # use DataStream and its LineStruct to store results
                 print unit
-                result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=True)
+                result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
                 result.str4 = varioinst
                 if (result.str3 == '-' or result.str3 == '') and not scalarinst == '-':
                     result.str3 = scalarinst
