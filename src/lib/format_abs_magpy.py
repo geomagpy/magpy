@@ -199,11 +199,19 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 di_inst = headline[1].replace(', ','_').strip()
             if headline[0] == ('# Abs-TheoUnit'):
                 unit = headline[1].strip()
+                # Transform unit to degree
+                if unit=='gon':
+        	    ang_fac = 400./360.
+                elif unit == 'rad':
+                    ang_fac = np.pi/180.
+                else:
+                    ang_fac = 1.
+                unit = 'deg'
             if headline[0] == ('# Abs-FGSensor'):
                 fgsensor = headline[1].strip()
             if headline[0] == ('# Abs-AzimuthMark'):
                 try:
-                    expectedmire = float(headline[1].strip())
+                    expectedmire = float(headline[1].strip())/ang_fac
                 except:
                     logging.error('ReadAbsolute: Azimuth mark could not be interpreted in file %s' % filename)
                     return stream
@@ -246,8 +254,8 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                     logging.warning('ReadAbsolute: Check date format of measurements positions in file %s' % filename)
                 return stream
             try:
-                row.hc = float(posstr[1])
-                row.vc = float(posstr[2])
+                row.hc = float(posstr[1])/ang_fac
+                row.vc = float(posstr[2])/ang_fac
                 row.res = float(posstr[3].replace(',','.'))
                 row.mu = mu
                 row.md = md
@@ -263,8 +271,8 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
         elif numelements == 8:
             # Miren mesurements
             mirestr = line.split()
-            md = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
-            mu = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
+            md = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])/ang_fac
+            mu = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])/ang_fac
             mdstd = np.std([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
             mustd = np.std([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
             maxdev = np.max([mustd, mdstd])

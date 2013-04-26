@@ -296,6 +296,7 @@ class AbsoluteData(object):
             else:
                 variocorr.append(np.arctan((ystart+varioy)/(xstart+variox)))
             dl1.append( poslst[k].hc*np.pi/(180.0*ang_fac) + rescorr - variocorr[k])
+            print "values: ", poslst[k].hc
 
         # use selected steps, default is average....
         for k in range(0,7,2):
@@ -675,6 +676,7 @@ class AbsoluteData(object):
             # Calculate inclination value
             if debugmode:
                 print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
+                print "All results: " , resultline
             # requires succesful declination determination
             if isnan(resultline.y):
                 loggerabs.error('%s : CalcAbsolutes: Declination could not be determined - aborting' % num2date(self[0].time).replace(tzinfo=None))
@@ -1097,7 +1099,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                         
                 # use DataStream and its LineStruct to store results
                 print unit
-                result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
+                result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=True)
                 result.str4 = varioinst
                 if (result.str3 == '-' or result.str3 == '') and not scalarinst == '-':
                     result.str3 = scalarinst
