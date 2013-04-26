@@ -3541,11 +3541,15 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     if not key in KEYLIST[1:16]:
                         raise ValueError, "Column key not valid"
                     fkey = 'f'+key
-                    if fkey in function[0] and not isnan(eval('stream_b[itmp].' + key)):
-                        newval = function[0][fkey](functime)
-                        exec('elem.'+key+' -= float(newval)')
-                    else:
-                        exec('elem.'+key+' = float(NaN)')
+                    try:
+                        if fkey in function[0] and not isnan(eval('stream_b[itmp].' + key)):
+                            newval = function[0][fkey](functime)
+                            exec('elem.'+key+' -= float(newval)')
+                        else:
+                            exec('elem.'+key+' = float(NaN)')
+                    except:
+                            print "Check why exception was thrown in subtractStreams function"
+                            exec('elem.'+key+' = float(NaN)')
             else:
                 for key in keys:
                     if not key in KEYLIST[1:16]:
