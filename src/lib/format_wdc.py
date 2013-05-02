@@ -195,7 +195,7 @@ def readWDC(filename, headonly=False, **kwargs):
     headers['unit-col-z'] = 'nT'
     headers['col-f'] = 'f'
     headers['unit-col-f'] = 'nT'
-    headers['IAGAcode'] = code
+    headers['StationIAGAcode'] = code
     
     return DataStream(stream, headers)  
 
@@ -237,7 +237,7 @@ def writeWDC(datastream, filename, **kwargs):
 
     # 2.) Get Iaga code
     header = datastream.header
-    iagacode = header.get('IAGAcode'," ").upper()
+    iagacode = header.get('StationIAGAcode'," ").upper()
 
     # 3.)
     if hourly:

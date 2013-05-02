@@ -2091,7 +2091,10 @@ class DataStream(object):
 
         fig.subplots_adjust(hspace=0)
 
-        if outfile: 
+        if outfile:
+            path = os.path.split(outfile)[0]
+            if not os.path.exists(path):
+                os.makedirs(path)
             if fmt: 
                 fig.savefig(outfile, format=fmt, dpi=savedpi) 
             else: 

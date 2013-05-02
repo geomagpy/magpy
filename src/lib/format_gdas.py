@@ -168,6 +168,10 @@ def readGDASB1(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
+    theday = extractDateFromString(filename)
+    day = datetime.strftime(theday,"%Y-%m-%d")
+    year = datetime.strftime(theday,"%Y")
+    print day, year
     try:
          # remove some common prefixes from filename
         tmpdate = daystring[0][-8:]
