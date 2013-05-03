@@ -1824,7 +1824,7 @@ class DataStream(object):
         symbol: (string - default '-') symbol for primary plot
         symbol_func: (string - default '-') symbol of function plot 
         savefigure: (string - default None) if provided a copy of the plot is saved to savefilename.png 
-        outfile: strign to save the figure
+        outfile: strign to save the figure, if path is not existing it will be created
         fmt: format of outfile
         savedpi: integer resolution
         noshow: bool- don't call show at the end, just returns figure handle
