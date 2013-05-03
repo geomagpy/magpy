@@ -1672,7 +1672,7 @@ class DataStream(object):
             - flag 
         """
         fitfunc = kwargs.get('fitfunc')
-        key = kwargs.get('key')
+        put2key = kwargs.get('put2key')
         fitdegree = kwargs.get('fitdegree')
         knotstep=kwargs.get('knotstep')
         m_fmi = kwargs.get('m_fmi')
@@ -1682,8 +1682,8 @@ class DataStream(object):
             fitdegree = 5
         if not m_fmi:
             m_fmi = 0
-        if not key:
-            key = 't2'
+        if not put2key:
+            put2key = 't2'
         
         stream = DataStream()
         # extract daily streams/24h slices from input
@@ -1708,8 +1708,19 @@ class DataStream(object):
         else:
             loggerstream.error('Unkown typ (xyz?) in FMI function')
             return
-        
-        fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+
+        sr = fmistream.get_sampling_period()
+        #print "Sampling rate of stream (sec) = %.1f" % (sr*24*3600)
+        samprate = int(float("%.1f" % (sr*24*3600)))
+        if not samprate in [1,60]:
+            loggerstream.error('K-FMI: please check the sampling rate of the input file - should be second or minute data - current sampling rate is %d seconds' % samprate)
+            return
+        if samprate == 1:
+            fmistream = fmistream.filtered(filter_type='gauss',filter_width=timedelta(seconds=45))
+            fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+        if samprate == 60:
+            fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+         
         fmi2stream = fmistream.filtered(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 
         loggerstream.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
@@ -1724,16 +1735,17 @@ class DataStream(object):
             for el in currsequence:
                 fmitmpstream.add(el)
             func = fmitmpstream.fit(['x','y','z'],fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
+            #fmitmpstream.pmplot(['x'],function=func)
             fmitmpstream = fmitmpstream.func_subtract(func)
             stream.extend(fmitmpstream,self.header)
             iprev = iend
 
         fmi3stream = stream.filtered(filter_type='linear',filter_width=timedelta(minutes=180),filter_offset=timedelta(minutes=90))
-        fmi4stream = fmi3stream._get_k(key=key)
+        fmi4stream = fmi3stream._get_k(put2key=put2key)
 
-        self.header['col-'+key] = 'k'
+        self.header['col-'+put2key] = 'k'
 
-        outstream = mergeStreams(self,fmi4stream,keys=[key])
+        outstream = mergeStreams(self,fmi4stream,keys=[put2key])
 
         loggerstream.info('--- finished k value calculation: %s ' % (str(datetime.now())))
         

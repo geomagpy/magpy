@@ -166,20 +166,20 @@ def readGDASB1(filename, headonly=False, **kwargs):
     # get day from filename (platform independent) -- does not work for temporary files
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    splitpath = os.path.split(filename)
-    daystring = splitpath[1].split('.')
+    #splitpath = os.path.split(filename)
+    #daystring = splitpath[1].split('.')
     theday = extractDateFromString(filename)
     day = datetime.strftime(theday,"%Y-%m-%d")
     year = datetime.strftime(theday,"%Y")
     print day, year
-    try:
-         # remove some common prefixes from filename
-        tmpdate = daystring[0][-8:]
-        day = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y-%m-%d")
-        year = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y")
-    except:
-        logging.warning("Wrong dateformat in Filename %s" % daystring[0])
-        return []
+    #try:
+    #     # remove some common prefixes from filename
+    #    tmpdate = daystring[0][-8:]
+    #    day = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y-%m-%d")
+    #    year = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y")
+    #except:
+    #    logging.warning("Wrong dateformat in Filename %s" % daystring[0])
+    #    return []
     # Select only files within eventually defined time range
     if starttime:
         if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
@@ -193,7 +193,7 @@ def readGDASB1(filename, headonly=False, **kwargs):
         while line != "":
             row = LineStruct()
             data= struct.unpack("<BBBBlllllc", line)
-            #print data
+            print data
             date = year + '-' + str(data[0]) + '-' + str(data[1]) + 'T' + str(data[2]) + ':' + str(data[3]) + ':00'
             row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
             if not data[4] == 99999:
