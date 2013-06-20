@@ -40,19 +40,23 @@ def isRMRCS(filename):
 
 def isCS(filename):
     """
-    Checks whether a file is ASCII PMAG format.
+    Checks whether a file is ASCII CS Mag and initial ws format.
+    should be called as one of the last options
     """
     try:
         temp = open(filename, 'rt').readline()
     except:
         return False
     tmp = temp.split()
-    if not len(tmp) == 2:
+    if not len(tmp) in [2,4]:
         return False
     try:
         testdate = datetime.strptime(tmp[0].strip(','),"%H:%M:%S.%f")
     except:
-        return False
+        try:
+            testdate = datetime.strptime(tmp[0],"%Y-%m-%dT%H:%M:%S.%f")
+        except:
+            return False
     return True
 
 def readRMRCS(filename, headonly=False, **kwargs):
@@ -234,6 +238,7 @@ def readCS(filename, headonly=False, **kwargs):
 
     # get day from filename (platform independent)
     getfile = True
+    theday = extractDateFromString(filename)
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
     daystring = daystring[0][-6:]
@@ -246,27 +251,58 @@ def readCS(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
                 getfile = False
     except:
-        logging.warning("Wrong dateformat in Filename %s" % daystring)
-        getfile = True
+        try:
+            theday = extractDateFromString(filename)
+            day = datetime.strftime(theday,"%Y-%m-%d")
+            if starttime:
+                if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
+                    getfile = False
+            if endtime:
+                if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
+                    getfile = False
+        except:
+            logging.warning("Wrong dateformat in Filename %s" % daystring)
+            getfile = True
 
     # Select only files within eventually defined time range
-    #if getfile:
-    for elem in csvReader:
-        if elem[0]=='#':
-            # blank line
-            pass
-        elif headonly:
-            # skip data for option headonly
-            continue
-        else:
-            try:
-                row = LineStruct()
-                row.time = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
-                row.f = float(elem[1])
-                stream.add(row)
-            except ValueError:
+    if getfile:
+        for elem in csvReader:
+            if len(elem) == 1:
+                elem = elem[0].split()
+            if elem[0]=='#':
+                # blank line
                 pass
-    qFile.close()
+            elif headonly:
+                # skip data for option headonly
+                continue
+            else:
+                try:
+                    row = LineStruct()
+                    try:
+                        row.time = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                    except:
+                        row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                    if len(elem) == 2:
+                        row.f = float(elem[1])
+                    elif len(elem) == 4:
+                        row.t1 = float(elem[1])
+                        row.var1 = float(elem[2])
+                        row.t2 = float(elem[3])
+                    stream.add(row)
+                except ValueError:
+                    pass
+        qFile.close()
+
+        if len(elem) == 2:
+            headers['unit-col-f'] = 'nT' 
+            headers['col-f'] = 'F' 
+        elif len(elem) == 4:
+            headers['unit-col-t1'] = 'deg C' 
+            headers['unit-col-t2'] = 'deg C' 
+            headers['unit-col-var1'] = 'percent' 
+            headers['col-t1'] = 'T' 
+            headers['col-t2'] = 'Dewpoint' 
+            headers['col-var1'] = 'RH' 
 
     return DataStream(stream, headers)    
 

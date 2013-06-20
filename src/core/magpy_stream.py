@@ -152,8 +152,8 @@ FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON','CS', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
-                            'PYCDF', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','UNKOWN']
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+                            'PYCDF', 'PYBIN', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
 
 # -------------------
 #  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
@@ -670,6 +670,9 @@ class DataStream(object):
         """Helper to drop lines with NaNs in any of the selected keys.
 
         """
+        #print key
+        #keylst = [eval('elem.'+key) for elem in self]
+        #print keylst
         newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
         return DataStream(newst,self.header)
 
@@ -816,6 +819,7 @@ class DataStream(object):
         extradays = kwargs.get('extradays')
         plotbaseline = kwargs.get('plotbaseline')
         plotfilename = kwargs.get('plotfilename')
+        returnfunction = kwargs.get('returnfunction')
 
         if not extradays:
             extradays = 15
@@ -912,7 +916,10 @@ class DataStream(object):
 
         loggerstream.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
-        return self
+        if returnfunction:
+            return self, func
+        else:
+            return self
 
     
     def date_offset(self, offset, **kwargs):
@@ -1206,7 +1213,7 @@ class DataStream(object):
         return func
 
 
-    def filtered(self, **kwargs):
+    def filter(self, **kwargs):
         """
         Filtering function
         kwargs support the following keywords:
@@ -1813,7 +1820,7 @@ class DataStream(object):
         return self
                             
 
-    def pmplot(self, keys, debugmode=None, **kwargs):
+    def plot(self, keys, debugmode=None, **kwargs):
         """
         Creates a simple graph of the current stream. In order to run matplotlib from cron one need to include (matplotlib.use('Agg'))
         Supports the following keywords:
@@ -2117,7 +2124,7 @@ class DataStream(object):
             plt.show() 
 
 
-    def pmwrite(self, filepath, **kwargs):
+    def write(self, filepath, **kwargs):
         """
         Writing Stream to a file
         filepath (string): provding path/filename for saving
@@ -2289,7 +2296,7 @@ class DataStream(object):
         return self
 
 
-    def routlier(self, **kwargs):
+    def remove_outlier(self, **kwargs):
         """
         uses quartiles: threshold should be 1.5
         treshold 5 keeps storm onsets in
@@ -2574,6 +2581,8 @@ class DataStream(object):
         #    raise ValueError, "Starttime is larger then Endtime"
         # remove data prior to starttime input
         loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
+
+        stream = DataStream()
 
         if starttime:
             # check starttime input
@@ -3206,7 +3215,7 @@ def send_mail(send_from, send_to, **kwargs):
 # read/write functions
 # ##################
 
-def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
+def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
     The read functions trys to open the selected dats
     dataformat: none - autodetection
@@ -3228,6 +3237,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 
     debugmode = kwargs.get('debugmode')
     disableproxy = kwargs.get('disableproxy')
+    keylist = kwargs.get('keylist') # for PYBIN
     if disableproxy:
         proxy_handler = urllib2.ProxyHandler( {} )           
         opener = urllib2.build_opener(proxy_handler)
@@ -3268,7 +3278,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
                     fh.write(content)
                     fh.close()
-                    stp = _pmRead(fh.name, dataformat, headonly, **kwargs)
+                    stp = _read(fh.name, dataformat, headonly, **kwargs)
                     st.extend(stp.container,stp.header)
                     os.remove(fh.name)
         else:            
@@ -3283,7 +3293,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
             fh.write(content)
             fh.close()
-            st = _pmRead(fh.name, dataformat, headonly, **kwargs)
+            st = _read(fh.name, dataformat, headonly, **kwargs)
             os.remove(fh.name)
     else:
         # some file name
@@ -3324,7 +3334,7 @@ def pmRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 
 
 #@uncompressFile
-def _pmRead(filename, dataformat=None, headonly=False, **kwargs):
+def _read(filename, dataformat=None, headonly=False, **kwargs):
     """
     Reads a single file into a ObsPy Stream object.
     """
@@ -3600,6 +3610,7 @@ def extractDateFromString(datestring):
     Requires a string
     returns a datetime object)
     """
+    date = False
     # get day from filename (platform independent)
     try:
         splitpath = os.path.split(datestring)
@@ -3646,6 +3657,15 @@ def extractDateFromString(datestring):
                 date = datetime.strptime(tmpdaystring,dateform)
             except:
                 # log ('dateformat in filename could not be identified')
+                pass
+
+        if not date:
+            # No Date found so far - now try last 6 elements of string () e.g. SG gravity files
+            try: 
+                tmpdaystring = re.findall(r'\d+',daystring)[0]
+                dateform = '%y%m%d'
+                date = datetime.strptime(tmpdaystring[-6:],dateform)
+            except:
                 pass
 
     return date

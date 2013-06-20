@@ -62,6 +62,9 @@ def isFormat(filename, format_type):
     elif (format_type == "PYCDF"):
         if (isPYCDF(filename)):
             return True
+    elif (format_type == "PYBIN"):
+        if (isPYBIN(filename)):
+            return True
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
             return True
@@ -123,6 +126,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYSTR(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):
         return readPYCDF(filename, headonly, **kwargs)
+    elif (format_type == "PYBIN"):
+        return readPYBIN(filename, headonly, **kwargs)
     elif (format_type == "GSM19"):
         return readGSM19(filename, headonly, **kwargs)
     elif (format_type == "LEMIHF"):
