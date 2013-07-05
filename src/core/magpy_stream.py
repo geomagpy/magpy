@@ -152,8 +152,9 @@ FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[1:8] # only primary values without time
 
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1', 'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
-                            'PYCDF', 'PYBIN', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1',
+                           'GDASB1', 'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR', 'POS1', 'ENV05',
+                           'PYCDF', 'PYBIN', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
 
 # -------------------
 #  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
@@ -171,7 +172,7 @@ class DataStream(object):
     - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
     - stream.differentiate() -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     - stream.fit(keys) -- returns function
-    - stream.filtered() -- returns stream (changes sampling_period; in case of fmi ...) 
+    - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...) 
     - stream.integrate() -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
     - stream.interpol(keys) -- returns function
     - stream.routlier() -- returns stream (adds flags and comments)
@@ -921,6 +922,18 @@ class DataStream(object):
         else:
             return self
 
+
+    def copy(self):
+        '''
+        A simple routine to copy the exact data in a stream.
+        '''
+        newstream = DataStream()
+        col = self._get_column('f')
+        for i in range(0,len(col)):
+            newstream.add(self[i])
+
+        return newstream
+
     
     def date_offset(self, offset, **kwargs):
         """
@@ -1398,6 +1411,28 @@ class DataStream(object):
         loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
 
         return DataStream(resdata,self.header)      
+
+
+    def find_mean_var(self, key):
+        '''
+        A simple routine to find the probabilistic mean and variance from one column of data.
+        '''
+
+        if not key in KEYLIST:
+            raise ValueError, "Wrong Key"
+
+        column = self._get_column(key)
+
+        mean_sum, var_sum = 0, 0
+        for elem in column:
+            mean_sum = mean_sum + elem
+        mean = mean_sum/len(column)
+
+        for elem in column:
+            var_sum = var_sum + (elem - mean)**2.
+        variance = var_sum/len(column)
+
+        return mean, variance
 
 
     def flag_stream(self, key, flag, comment, startdate, enddate=None):
@@ -3145,6 +3180,12 @@ class ColStruct(object):
 #  Global functions of the stream file
 # -------------------
 
+def findMean(stream):
+    '''
+    I exist
+    '''
+    print "hello"
+
 def isNumber(s):
     """
     Test whether s is a number
@@ -3299,7 +3340,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some file name
         pathname = path_or_url
         for file in iglob(pathname):
-            stp = _pmRead(file, dataformat, headonly, **kwargs)
+            stp = _read(file, dataformat, headonly, **kwargs)
             st.extend(stp.container,stp.header)
             #del stp
         if len(st) == 0:

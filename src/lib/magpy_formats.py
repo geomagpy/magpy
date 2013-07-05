@@ -12,6 +12,8 @@ from lib.format_gsm19 import *
 from lib.format_didd import *
 from lib.format_gdas import *
 from lib.format_lemi import *
+from lib.format_pos1 import *
+from lib.format_env05 import *
 from lib.format_cr800 import *
 # general purpose
 from lib.format_iaga02 import *
@@ -89,6 +91,15 @@ def isFormat(filename, format_type):
     elif (format_type == "LEMIBIN"): # Binary Lemi data (10 Hz)
         if (isLEMIBIN(filename)):
             return True
+    elif (format_type == "LEMIBIN2"): # Binary Lemi data (10 Hz)
+        if (isLEMIBIN2(filename)):
+            return True
+    elif (format_type == "POS1"): # Binary POS1 data (0.2 Hz)
+        if (isPOS1(filename)):
+            return True
+    elif (format_type == "ENV05"): # Binary Environmental data (1 Hz)
+        if (isENV05(filename)):
+            return True
     elif (format_type == "SFDMI"): # San Fernando DMI(FGE) format
         if (isSFDMI(filename)):
             return True
@@ -134,6 +145,12 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readLEMIHF(filename, headonly, **kwargs)
     elif (format_type == "LEMIBIN"):
         return readLEMIBIN(filename, headonly, **kwargs)
+    elif (format_type == "LEMIBIN2"):
+        return readLEMIBIN2(filename, headonly, **kwargs)
+    elif (format_type == "POS1"):
+        return readPOS1(filename, headonly, **kwargs)
+    elif (format_type == "ENV05"):
+        return readENV05(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
