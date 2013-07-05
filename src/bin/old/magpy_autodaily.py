@@ -7,9 +7,9 @@ Version 1.0 (from the 22.05.2012)
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-from core.magpy_stream import *
-from core.magpy_absolutes import *
-from core.magpy_transfer import *
+from stream import *
+from absolutes import *
+from transfer import *
 
 # ----------------------------------------
 # ---- Daily analysis  ----
@@ -36,7 +36,7 @@ scalarpath = os.path.join(basepath,'DIDD-WIK','*')
 
 try:
     # 1.) Read Variometer RAW data
-    stDIDD = pmRead(path_or_url=variopath,starttime=starttime,endtime=endtime)
+    stDIDD = read(path_or_url=variopath,starttime=starttime,endtime=endtime)
 
     # 2.) Eventually perfom some automatic filtering and or merging
 
@@ -68,14 +68,14 @@ try:
     # 4.) Between 0:00 and 0:30 write last day
     windowstart = stDIDD._testtime(starttime)
     if windowstart < endtime < windowstart+timedelta(minutes=30):
-        stDIDDout = pmRead(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
-        stDIDDout.pmwrite(os.path.join(basepath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
+        stDIDDout = read(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
+        stDIDDout.write(os.path.join(basepath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
 
     # 5.) Perfom filtering (min data is used for plots)
     # Not necessary for DIDD
 
     # 6.) Do Baseline correction
-    absDIDD = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
+    absDIDD = read(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_didd.txt'))
     # no rotation necessary for DIDD
     stDIDD = stDIDD.baseline(absDIDD,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
     deltaF = np.median(absDIDD.trim(absDIDD._testtime(endtime)-timedelta(days=100),endtime)._get_column('df'))
@@ -86,16 +86,16 @@ try:
 
     # 7b.) Save preliminary data # is used for storm detection
     headers['ProvidedType'] = 'preliminary'
-    stDIDD.pmwrite(os.path.join(basepath,'DIDD-WIK','preliminary'),filenamebegins='DIDD_p_',format_type='PYCDF')
+    stDIDD.write(os.path.join(basepath,'DIDD-WIK','preliminary'),filenamebegins='DIDD_p_',format_type='PYCDF')
 
     # 8.) Plot HDZF 
     stDIDD = stDIDD._convertstream('xyz2hdz')
-    stDIDD.pmplot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, outfile='didd_%s.png' % day)
+    stDIDD.plot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, outfile='didd_%s.png' % day)
 
     # 9.) status plot showing T1, dF, derivative (as well as a spectrogram - only for space weather plots)
     stDIDD = stDIDD.aic_calc('x',timerange=timedelta(hours=1))
     stDIDD = stDIDD.differentiate(keys=['var2'],put2keys=['var3'])
-    stDIDD.pmplot(['df','var3'],padding=2,plottitle="Statusplot for DIDD : %s" % starttime, outfile='didd_status_%s.png' % day)
+    stDIDD.plot(['df','var3'],padding=2,plottitle="Statusplot for DIDD : %s" % starttime, outfile='didd_status_%s.png' % day)
 
     # 10.) append message if data stream to old
     numlasttimeofstream = stDIDD[-1].time
@@ -123,7 +123,7 @@ scalarpath = os.path.join(basepath,'DIDD-WIK','*')
 
 try:
     # 1.) Read Variometer RAW data
-    stLEMI = pmRead(path_or_url=variopath,starttime=starttime,endtime=endtime)
+    stLEMI = read(path_or_url=variopath,starttime=starttime,endtime=endtime)
 
     # 2.) Eventually perfom some automatic filtering and or merging
 
@@ -154,22 +154,22 @@ try:
 
     # 4.) Save all that to the working directory
     if windowstart < endtime < windowstart+timedelta(minutes=30):
-        stLEMIout = pmRead(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
-        stLEMIout.pmwrite(os.path.join(basepath,'LEMI-WIK','data'),filenamebegins='LEMI_',format_type='PYCDF')
+        stLEMIout = read(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
+        stLEMIout.write(os.path.join(basepath,'LEMI-WIK','data'),filenamebegins='LEMI_',format_type='PYCDF')
 
     # 5.) Perfom filtering (min data is used for plots)
     # Not necessary for LEMI
 
     # 6.) Do Baseline correction
-    absLEMI = pmRead(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
+    absLEMI = read(path_or_url=os.path.join(basepath,'ABSOLUTE-RAW','data','absolutes_lemi.txt'))
     stLEMI = stLEMI.rotation(alpha=3.3,beta=0.0)
     stLEMI = stLEMI.baseline(absLEMI,knotstep=0.05,plotbaseline=True,plotfilename='test.png')
     deltaF = np.median(absLEMI.trim(absLEMI._testtime(endtime)-timedelta(days=100),endtime)._get_column('df'))
     print "Delta F to main pear (last 100 days): %f" % deltaF
 
     # 7.) Merge with Scalar-Data and Calculate dF (respect pear differences)
-    ssc = pmRead(path_or_url=scalarpath,starttime=starttime,endtime=endtime)
-    ssc = ssc.routlier()
+    ssc = read(path_or_url=scalarpath,starttime=starttime,endtime=endtime)
+    ssc = ssc.remove_outlier()
     ssc = ssc.remove_flagged()
     ssc = ssc.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
     stLEMI = mergeStreams(stLEMI,ssc,keys=['f'])
@@ -177,19 +177,19 @@ try:
 
     # 7b.) Save preliminary data # is used for storm detection
     headers['ProvidedType'] = 'preliminary'
-    stLEMI.pmwrite(os.path.join(basepath,'LEMI-WIK','preliminary'),filenamebegins='LEMI_p_',format_type='PYCDF')
+    stLEMI.write(os.path.join(basepath,'LEMI-WIK','preliminary'),filenamebegins='LEMI_p_',format_type='PYCDF')
     
     # 8.) Plot HDZF 
     stLEMI = stLEMI._convertstream('xyz2hdz')
-    stLEMI.pmplot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, outfile='lemi_%s.png' % day)
+    stLEMI.plot(['x','y','z','f'],plottitle="Magnetogram : %s" % day, outfile='lemi_%s.png' % day)
 
     # 9.) status plot showing T1, dF, derivative (as well as a spectrogram - only for space weather plots)
     stLEMI = stLEMI.aic_calc('x',timerange=timedelta(hours=1))
     stLEMI = stLEMI.differentiate(keys=['var2'],put2keys=['var3'])
-    stLEMI.pmplot(['df','var3'],padding=2,plottitle="Statusplot for LEMI : %s" % day, outfile='lemi_status_%s.png' % day)
+    stLEMI.plot(['df','var3'],padding=2,plottitle="Statusplot for LEMI : %s" % day, outfile='lemi_status_%s.png' % day)
 
     stdiffs = subtractStreams(stLEMI,stDIDD,keys=['x','y','z'])# add difference between lemi and DIDD
-    stdiffs.pmplot(['x','y','z'],plottitle="Differences Lemi/DIDD : %s" % day, outfile='lemi_didd_diff_%s.png' % day)
+    stdiffs.plot(['x','y','z'],plottitle="Differences Lemi/DIDD : %s" % day, outfile='lemi_didd_diff_%s.png' % day)
     
     # 10.) append message if data stream to old
     numlasttimeofstream = stLEMI[-1].time
@@ -220,10 +220,10 @@ try:
 
     #
     # 1.) Read Variometer RAW data
-    stPMAG = pmRead(path_or_url=scalarpath,starttime=starttime,endtime=endtime)
+    stPMAG = read(path_or_url=scalarpath,starttime=starttime,endtime=endtime)
 
     # 2.) Eventually perfom some automatic filtering and or merging
-    stPMAG = stPMAG.routlier()
+    stPMAG = stPMAG.remove_outlier()
 
     # 3.) Add header information
     headers = stPMAG.header
@@ -251,20 +251,20 @@ try:
 
     # 4.) Between 0:00 and 0:30 write last day
     if windowstart < endtime < windowstart+timedelta(minutes=30):
-        stPMAGout = pmRead(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
-        stPMAGout = stPMAGout.routlier()
+        stPMAGout = read(path_or_url=variopath,starttime=starttime-timedelta(days=1),endtime=starttime)
+        stPMAGout = stPMAGout.remove_outlier()
         stPMAGout = stPMAGout.remove_flagged()
         stPMAGout = stPMAGout.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-        stPMAGout.pmwrite(os.path.join(basepath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+        stPMAGout.write(os.path.join(basepath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 
     # 5.) Perfom filtering (min data is used for plots)
     stPMAG = stPMAG.remove_flagged()
     stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, outfile='pmag_%s.png' % day)
+    stPMAG.plot(['f'],plottitle="Magnetogram : %s" % day, outfile='pmag_%s.png' % day)
 
     # 6.) Plot F and dF'S
     stDIFF = subtractStreams(stPMAG,stDIDD,keys=['f'])
-    stPMAG.pmplot(['f'],plottitle="Magnetogram : %s" % day, outfile='pmag_status_%s.png' % day)
+    stPMAG.plot(['f'],plottitle="Magnetogram : %s" % day, outfile='pmag_status_%s.png' % day)
 
     # 7.) append message if data stream to old
     numlasttimeofstream = stPMAG[-1].time

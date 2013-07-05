@@ -6,8 +6,8 @@ MagPy - WIK analysis
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-from core.magpy_stream import *
-from core.magpy_absolutes import *
+from stream import *
+from absolutes import *
 
 # general definitions
 mainpath = r'/home/leon/Dropbox/Daten/Magnetism'
@@ -23,9 +23,9 @@ year = 2009
 
 # Start with DIDD values and read yearly fractions
 # 1. Get data
-st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+st1 = read(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
 # 2. Merge auxilliary data
-aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
+aux1 = read(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
 aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
 aux1 = aux1.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
 Tserialnr = aux1.header['InstrumentSerialNum']
@@ -72,16 +72,16 @@ headers['T-Instrument'] = 'External-USB'
 headers['T-InstrumentSerialNum'] = str(Tserialnr)
 stDIDD.header = headers
 # 5. Save all to the working directory
-stDIDD.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
+stDIDD.write(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
 
 
 
 # OPT values : read yearly fractions
 # 1. Get data
-stD = pmRead(path_or_url=os.path.join(mainpath,'OPT-WIK','D_2009_0*'))
-stH = pmRead(path_or_url=os.path.join(mainpath,'OPT-WIK','H_2009_0*'))
-stZ = pmRead(path_or_url=os.path.join(mainpath,'OPT-WIK','Z_2009_0*'))
-stF = pmRead(path_or_url=os.path.join(mainpath,'OPT-WIK','F_2009_0*'))
+stD = read(path_or_url=os.path.join(mainpath,'OPT-WIK','D_2009_0*'))
+stH = read(path_or_url=os.path.join(mainpath,'OPT-WIK','H_2009_0*'))
+stZ = read(path_or_url=os.path.join(mainpath,'OPT-WIK','Z_2009_0*'))
+stF = read(path_or_url=os.path.join(mainpath,'OPT-WIK','F_2009_0*'))
 stHZ = mergeStreams(stH,stZ)
 stHDZ = mergeStreams(stHZ,stD)
 stOPT = mergeStreams(stHDZ,stF)
@@ -113,11 +113,11 @@ headers['WebInfo'] = 'http://www.wiki.at'
 headers['T-Instrument'] = ''
 headers['T-InstrumentSerialNum'] = ''
 # 5. Save all to the worjing directory
-stOPT.pmwrite(os.path.join(mainpath),filenamebegins='OPT_',format_type='PYCDF')
+stOPT.write(os.path.join(mainpath),filenamebegins='OPT_',format_type='PYCDF')
 """
 # PMAG values : read yearly fractions
 # 1. Get data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','CO0906*'),starttime=str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK','origfiles2009','CO0906*'),starttime=str(year)+'-01-01', endtime=str(year+1)+'-01-01')
 # Add Meta information
 headers = stPMAG.header
 headers['Instrument'] = 'ELSEC820'
@@ -146,9 +146,9 @@ stPMAG.header = headers
 # 2. Flagging list (last updated 07.9.2012 by leon)
 # currently still empty
 # 3. Remove outliers
-stPMAG = stPMAG.routlier()
+stPMAG = stPMAG.remove_outlier()
 stPMAG = stPMAG.remove_flagged()
 stPMAG = stPMAG.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
 # 4. Save all to the working directory
-stPMAG.pmwrite(os.path.join(basispath,'PMAG-WIK','data'),filenamebegins='PMAG_',mode='replace',format_type='PYCDF')
+stPMAG.write(os.path.join(basispath,'PMAG-WIK','data'),filenamebegins='PMAG_',mode='replace',format_type='PYCDF')
 

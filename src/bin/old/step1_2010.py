@@ -6,8 +6,8 @@ MagPy - WIK analysis
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-from core.magpy_stream import *
-from core.magpy_absolutes import *
+from stream import *
+from absolutes import *
 
 # general definitions
 mainpath = r'/home/leon/Dropbox/Daten/Magnetism/'
@@ -23,9 +23,9 @@ year = 2010
 
 # Start with DIDD values and read yearly fractions
 # 1. Get data
-st1 = pmRead(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-09-01', endtime=str(year+1)+'-01-01')
+st1 = read(path_or_url=os.path.join(mainpath,'DIDD-WIK','*'),starttime= str(year)+'-09-01', endtime=str(year+1)+'-01-01')
 # 2. Merge auxilliary data
-aux1 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
+aux1 = read(path_or_url=os.path.join(mainpath,'TEMP-WIK','Schacht*'))
 aux1 = aux1.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
 aux1 = aux1.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
 Tserialnr = aux1.header['InstrumentSerialNum']
@@ -72,14 +72,14 @@ headers['T-Instrument'] = 'External-USB'
 headers['T-InstrumentSerialNum'] = str(Tserialnr)
 stDIDD.header = headers
 # 5. Save all to the worjing directory
-stDIDD.pmwrite(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
+stDIDD.write(os.path.join(mainpath,'DIDD-WIK','data'),filenamebegins='DIDD_',format_type='PYCDF')
 
 
 # LEMI values and read yearly fractions
 # 1. Get data
-st2 = pmRead(path_or_url=os.path.join(mainpath,'LEMI-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
+st2 = read(path_or_url=os.path.join(mainpath,'LEMI-WIK','*'),starttime= str(year)+'-01-01', endtime=str(year+1)+'-01-01')
 # 2. Merge auxilliary data
-aux2 = pmRead(path_or_url=os.path.join(mainpath,'TEMP-WIK','Vario*'))
+aux2 = read(path_or_url=os.path.join(mainpath,'TEMP-WIK','Vario*'))
 aux2 = aux2.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
 aux2 = aux2.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
 Tserialnr = aux2.header['InstrumentSerialNum']
@@ -114,13 +114,13 @@ headers['T-Instrument'] = 'External-USB'
 headers['T-InstrumentSerialNum'] = str(Tserialnr)
 stLEMI.header = headers
 # 5. Save all to the worjing directory
-stLEMI.pmwrite(os.path.join(mainpath,'LEMI-WIK','data'),filenamebegins='LEMI_',format_type='PYCDF')
+stLEMI.write(os.path.join(mainpath,'LEMI-WIK','data'),filenamebegins='LEMI_',format_type='PYCDF')
 
 """
 
 # PMAG values : read yearly fractions
 # 1. Get data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'07','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'07','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
 # currently no flags
 # Add Meta information
 headers = stPMAG.header
@@ -146,30 +146,30 @@ headers['WebInfo'] = 'http://www.wiki.at'
 headers['TemperatureSensors'] = ''
 stPMAG.header = headers
 #
-stPMAG = stPMAG.routlier()
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'08','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = stPMAG.remove_outlier()
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'08','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
 # currently no flags
-stPMAG = stPMAG.routlier()
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'09','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = stPMAG.remove_outlier()
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'09','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
 # currently no flags
-stPMAG = stPMAG.routlier()
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'10','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = stPMAG.remove_outlier()
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'10','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
 # currently no flags
-stPMAG = stPMAG.routlier()
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'11','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = stPMAG.remove_outlier()
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'11','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
 # currently no flags
-stPMAG = stPMAG.routlier()
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'12','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
+stPMAG = stPMAG.remove_outlier()
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'12','*'),starttime= str(year)+'-01-01', endtime=str(year)+'-02-01')
 # currently no flags
-stPMAG = stPMAG.routlier()
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG = stPMAG.remove_outlier()
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 # 1. Get old data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'CO*'),starttime= str(year)+'-01-01', endtime=str(year)+'-03-01')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'CO*'),starttime= str(year)+'-01-01', endtime=str(year)+'-03-01')
 # 2. Flagging list (last updated 07.9.2012 by leon)
 # currently still empty
 # Add Meta information
@@ -198,24 +198,24 @@ headers['T-InstrumentSerialNum'] = ''
 stPMAG.header = headers
 #
 # 3. Remove outliers
-stPMAG = stPMAG.routlier()
+stPMAG = stPMAG.remove_outlier()
 # 4. Save all to the worjing directory
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 # 1. Get old data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'CO*'),starttime= str(year)+'-03-01', endtime=str(year)+'-05-01')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'CO*'),starttime= str(year)+'-03-01', endtime=str(year)+'-05-01')
 # 2. Flagging list (last updated 07.9.2012 by leon)
 # currently still empty
 # 3. Remove outliers
-stPMAG = stPMAG.routlier()
+stPMAG = stPMAG.remove_outlier()
 # 4. Save all to the worjing directory
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 # 1. Get old data
-stPMAG = pmRead(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'CO*'),starttime= str(year)+'-05-01', endtime=str(year)+'-08-01')
+stPMAG = read(path_or_url=os.path.join(mainpath,'PMAG-WIK',str(year),'CO*'),starttime= str(year)+'-05-01', endtime=str(year)+'-08-01')
 # 2. Flagging list (last updated 07.9.2012 by leon)
 # currently still empty
 # 3. Remove outliers
-stPMAG = stPMAG.routlier()
+stPMAG = stPMAG.remove_outlier()
 # 4. Save all to the worjing directory
-stPMAG.pmwrite(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
+stPMAG.write(os.path.join(mainpath,'PMAG-WIK','data'),filenamebegins='PMAG_',format_type='PYCDF')
 
 """

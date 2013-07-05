@@ -7,7 +7,7 @@ Version 1.0 (from the 22.05.2012)
 
 # Non-corrected Variometer and Scalar Data
 # ----------------------------------------
-from core.magpy_stream import *
+from stream import *
 
 
 # Take care: changed flagkeylist from 8 to 12 - see whether this affects anything else
@@ -24,7 +24,7 @@ basepath = "/home/leon/Dropbox/Daten/Magnetism"
 variopath = os.path.join(basepath,'DIDD-WIK','preliminary','*')
 #
 # Read Variometer data
-stDIDD = pmRead(path_or_url=variopath,starttime=starttime,endtime=endtime)
+stDIDD = read(path_or_url=variopath,starttime=starttime,endtime=endtime)
 stDIDD = stDIDD._convertstream('xyz2hdz')
 
 #sinst.spectrogram('x',wlen=600)
@@ -41,6 +41,6 @@ stfilt = stfilt._get_k(key='var2',put2key='var4',scale=[-50,10,70,130,180,230,28
 stfilt.header['col-var4'] = 'Cobs k_-index'
 stDIDD = mergeStreams(stDIDD,stfilt,key=['var4'])
 
-#stDIDD.pmplot(['x','var1','var2','var3'],bartrange=0.02,symbollist = ['-','-','-','-'],annotate=True, plottitle = "Ex 8 - Storm onsets and local variation index")
-stDIDD.pmplot(['x','var1','var2','var3','var4'],bartrange=0.02,symbollist = ['-','-','-','-','z'],annotate=True, confinex=True, plottitle = "Ex 8 - Storm onsets and local variation index")
+#stDIDD.plot(['x','var1','var2','var3'],bartrange=0.02,symbollist = ['-','-','-','-'],annotate=True, plottitle = "Ex 8 - Storm onsets and local variation index")
+stDIDD.plot(['x','var1','var2','var3','var4'],bartrange=0.02,symbollist = ['-','-','-','-','z'],annotate=True, confinex=True, plottitle = "Ex 8 - Storm onsets and local variation index")
 
