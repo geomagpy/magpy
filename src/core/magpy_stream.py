@@ -153,7 +153,7 @@ FLAGKEYLIST = KEYLIST[:16]
 
 
 PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1',
-                           'GDASB1', 'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR', 'POS1', 'ENV05',
+                           'GDASB1', 'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR', 'POS1', 'POS1TXT', 'ENV05',
                            'PYCDF', 'PYBIN', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
 
 # -------------------
@@ -921,18 +921,6 @@ class DataStream(object):
             return self, func
         else:
             return self
-
-
-    def copy(self):
-        '''
-        A simple routine to copy the exact data in a stream.
-        '''
-        newstream = DataStream()
-        col = self._get_column('f')
-        for i in range(0,len(col)):
-            newstream.add(self[i])
-
-        return newstream
 
     
     def date_offset(self, offset, **kwargs):

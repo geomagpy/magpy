@@ -238,7 +238,6 @@ def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
     y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
     return y
 
-
 def readLEMIBIN2(filename, headonly=False, **kwargs):
 
     '''
@@ -267,7 +266,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
      --(EMPTY)         data[54]
      --TIME (PC):      2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
 
-    Data is in 10Hz, currently only putting 1Hz data into stream.
+    Data is in 10Hz, currently only putting 1Hz data into stream to save time and space.
     '''
 
     #Reading Lemi025 Binary format data.
@@ -309,14 +308,15 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     	    newtime = []
 
             row = LineStruct()   
-            time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]),int(0.0*1000000))
+            time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])
+            #lemitime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))
             row.time = date2num(time)
             row.x = (data[20]-bfx)*1000.
             row.y = (data[21]-bfy)*1000.
             row.z = (data[22]-bfz)*1000.
             row.t1 = data[11]/100.
             row.t2 = data[12]/100.
-            correction = 0.0 # 31.447826372
+            correction = 31.447826372 # 0.0 # 
             row.f = (row.x**2.+row.y**2.+row.z**2.)**.5	+ correction	#TODO
 
             stream.add(row)    

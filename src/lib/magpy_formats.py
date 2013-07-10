@@ -97,6 +97,9 @@ def isFormat(filename, format_type):
     elif (format_type == "POS1"): # Binary POS1 data (0.2 Hz)
         if (isPOS1(filename)):
             return True
+    elif (format_type == "POS1TXT"): # Text POS1 data (0.2 Hz)
+        if (isPOS1TXT(filename)):
+            return True
     elif (format_type == "ENV05"): # Binary Environmental data (1 Hz)
         if (isENV05(filename)):
             return True
@@ -149,6 +152,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readLEMIBIN2(filename, headonly, **kwargs)
     elif (format_type == "POS1"):
         return readPOS1(filename, headonly, **kwargs)
+    elif (format_type == "POS1TXT"):
+        return readPOS1TXT(filename, headonly, **kwargs)
     elif (format_type == "ENV05"):
         return readENV05(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):

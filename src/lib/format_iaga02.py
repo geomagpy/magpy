@@ -212,6 +212,8 @@ def readIAGA(filename, headonly=False, **kwargs):
     stream = col
     """
 
+    print "Finished file reading of %s" % filename
+
     return DataStream(stream, headers)    
 
 
