@@ -5,7 +5,7 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from core.magpy_absolutes import *
+from absolutes import *
 
 
 def isMAGPYABS(filename):

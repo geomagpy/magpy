@@ -6,7 +6,7 @@ Written by Roman Leonhardt June 2012
 """
 
 
-from core.magpy_stream import *
+from stream import *
 # instrument specific
 from lib.format_gsm19 import *
 from lib.format_didd import *

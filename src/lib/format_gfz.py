@@ -8,7 +8,7 @@ Written by Roman Leonhardt October 2012
 ToDo: Filter for minute data
 """
 
-from core.magpy_stream import *
+from stream import *
 
 
 def isGFZKP(filename):
