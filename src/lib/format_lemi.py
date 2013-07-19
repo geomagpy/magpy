@@ -8,7 +8,7 @@ logging.debug(lib - format_lemi: Found Lemi Binary file %s % filename)
 '''
 
 
-from core.magpy_stream import *
+from stream import *
 
 
 def correct_bin_time(time):
@@ -88,6 +88,7 @@ def isLEMIBIN2(filename):
         return False
     logging.debug("lib - format_lemi: Found Lemi Binary file %s" % filename)
     return True
+
 
 def readLEMIHF(filename, headonly=False, **kwargs):
     '''
@@ -181,6 +182,18 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     data = []
     key = None
 
+    theday = extractDateFromString(filename)
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True 
+
     if getfile:
 
         headers['col-x'] = 'x'
@@ -196,12 +209,12 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     	    bfx = data[-4]/400.
     	    bfy = data[-3]/400.
     	    bfz = data[-2]/400.
-            headers['Compensation-x'] = bfx
-            headers['Compensation-y'] = bfy
-            headers['Compensation-z'] = bfz
+            headers['DataCompensationX'] = bfx
+            headers['DataCompensationY'] = bfy
+            headers['DataCompensationZ'] = bfz
     	    newtime = []
     	    for i in range (5,11):
-        	newtime.append(correct_bin_time(data[i]))
+        	newtime.append(h2d(data[i]))
     	    currsec = newtime[-1]
     	    newtime.append(0.0)
     	    for i in range (0,30):
@@ -274,6 +287,22 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
+    # Check whether its the new (with ntp time) or old (without ntp) format
+    temp = open(filename, 'rb').read(169)
+    data= struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
+    if data[55] == 'L':
+        # old format
+        print "old format"
+        packcode = '<4cb6B8hb30f3BcB'
+        linelength = 153
+        stime = False
+    else:
+        # new format
+        print "new format"
+        packcode = '<4cb6B8hb30f3BcB6hL'
+        linelength = 169
+        stime = True
+
     fh = open(filename, 'rb')
     # read file and split text into channels
     stream = DataStream()
@@ -285,6 +314,18 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     data = []
     key = None
 
+    theday = extractDateFromString(filename)
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True 
+
     if getfile:
 
         headers['col-x'] = 'x'
@@ -294,22 +335,24 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
         headers['col-z'] = 'z'
         headers['unit-col-z'] = 'nT'
 
-	line = fh.read(169)
+	line = fh.read(linelength)
 
 	while line != '':
-            data= struct.unpack("<4cb6B8hb30f3BcB6hL",line)
-
+            data= struct.unpack(packcode,line)
     	    bfx = data[16]/400.
     	    bfy = data[17]/400.
     	    bfz = data[18]/400.
-            headers['Compensation-x'] = bfx
-            headers['Compensation-y'] = bfy
-            headers['Compensation-z'] = bfz
+            headers['DataCompensationX'] = bfx
+            headers['DataCompensationY'] = bfy
+            headers['DataCompensationZ'] = bfz
     	    newtime = []
 
             row = LineStruct()   
-            time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])
-            #lemitime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))
+            time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))
+            if stime:
+                print time, data[54]
+                print 2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
+                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])
             row.time = date2num(time)
             row.x = (data[20]-bfx)*1000.
             row.y = (data[21]-bfy)*1000.
@@ -321,11 +364,11 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
 
             stream.add(row)    
 
-    	    line = fh.read(169)
+    	    line = fh.read(linelength)
+
+        print "Finished file reading of %s" % filename
 
     fh.close()
-
-    print "Finished file reading of %s" % filename
    
     return DataStream(stream, headers)    
 
