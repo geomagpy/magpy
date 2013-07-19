@@ -5,7 +5,7 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from core.magpy_stream import *
+from stream import *
 
 import gc
 
@@ -407,8 +407,6 @@ def readPYBIN(filename, headonly=False, **kwargs):
     stream = DataStream()
 
     theday = extractDateFromString(filename)
-    print theday
-
     try:
         if starttime:
             if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
@@ -424,6 +422,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         fh = open(filename, 'rb')
         # read header line and extract packing format
         header = fh.readline()
+        print header
         h_elem = header.strip().split()
         if not h_elem[1] == 'MagPyBin':
             print 'No MagPyBin format - aborting'
@@ -469,7 +468,18 @@ def readPYBIN(filename, headonly=False, **kwargs):
             return stream
             
         packstr = '<'+h_elem[-2]+'B'
-        length = int(h_elem[-1])+1
+        lengthcode = struct.calcsize(packstr)
+        lengthgiven = int(h_elem[-1])+1
+        if not lengthcode == lengthgiven:
+            print "Check your packing code!"
+            if lengthcode < lengthgiven:
+                missings = lengthgiven-lengthcode
+                for i in range(missings):
+                    packstr += 'B'
+                    length = lengthgiven
+            else:
+                length = lengthcode
+
 
         line = fh.read(length)
         stream.header['SensorID'] = h_elem[2]

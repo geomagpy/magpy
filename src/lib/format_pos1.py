@@ -5,7 +5,7 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from core.magpy_stream import *
+from stream import *
 
 def isPOS1(filename):
     """
@@ -20,6 +20,7 @@ def isPOS1(filename):
     if not 'POS1' in temp:
         return False
     logging.debug("lib - format_pos1: Found POS-1 Binary file %s" % filename)
+    print "success"
     return True
 
 def isPOS1TXT(filename):
@@ -56,10 +57,25 @@ def readPOS1(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    line = fh.readline()
+    theday = extractDateFromString(filename)
+    try:
+        day = datetime.strftime(theday,"%Y-%m-%d")
+        # Select only files within eventually defined time range
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        logging.warning("Could not identify date in %s. Reading all ..." % daystring)
+        getfile = True
 
     if getfile:
 
+        line = fh.readline()
+        print line
+ 
 	line = fh.read(45)
 	while line != "":
             data= struct.unpack("6hLLLh6hL",line.strip())
@@ -74,9 +90,10 @@ def readPOS1(filename, headonly=False, **kwargs):
 
     	    line = fh.read(45)
 
+        print "Finished file reading of %s" % filename
+
     fh.close()
 
-    print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers)    
 
@@ -98,6 +115,21 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
     data = []
     key = None
 
+
+    theday = extractDateFromString(filename)
+    try:
+        day = datetime.strftime(theday,"%Y-%m-%d")
+        # Select only files within eventually defined time range
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        logging.warning("Could not identify date in %s. Reading all ..." % daystring)
+        getfile = True
+
     if getfile:
 
 	line = fh.readline()
@@ -113,9 +145,10 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
 
     	    line = fh.readline()
 
+        print "Finished file reading of %s" % filename
+
     fh.close()
 
-    print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers)
 
