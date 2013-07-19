@@ -30,7 +30,10 @@ def isPOS1TXT(filename):
         temp = open(filename, 'rb').readline()
     except:
         return False
-    linebit = (temp.split())[2]
+    try:
+        linebit = (temp.split())[2]
+    except:
+        return False
     if not linebit == '+-':
         return False
     logging.debug("lib - format_pos1: Found POS-1 Text file %s" % filename)
