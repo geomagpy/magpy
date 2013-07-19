@@ -278,11 +278,11 @@ def writePYSTR(datastream, filename, **kwargs):
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = pmRead(path_or_url=filename)
+            exst = read(path_or_url=filename)
             datastream = mergeStreams(exst,datastream,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
-            exst = pmRead(path_or_url=filename)
+            exst = read(path_or_url=filename)
             datastream = mergeStreams(datastream,exst,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'append':
@@ -331,12 +331,12 @@ def writePYCDF(datastream, filename, **kwargs):
 
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
-            exst = pmRead(path_or_url=filename+'.cdf')
+            exst = read(path_or_url=filename+'.cdf')
             datastream = mergeStreams(exst,datastream,extend=True)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
         elif mode == 'replace': # replace existing inputs
-            exst = pmRead(path_or_url=filename+'.cdf')
+            exst = read(path_or_url=filename+'.cdf')
             datastream = mergeStreams(datastream,exst,extend=True)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
