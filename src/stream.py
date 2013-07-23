@@ -151,10 +151,14 @@ FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
+#PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1',
+#                            'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+#                            'PYCDF', 'PYBIN', 'POS1TXT', 'POS1', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
+
+#FOR TESTING PURPOSES - INCOMPLETE LIST AS PYBIN HAS BEEN REMOVED.
 PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2', 'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1',
                             'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
-                            'PYCDF', 'PYBIN', 'POS1TXT', 'POS1', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
-
+                            'PYCDF', 'POS1TXT', 'POS1', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
 
 # -------------------
 #  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
