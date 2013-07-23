@@ -92,7 +92,7 @@ def readPOS1(filename, headonly=False, **kwargs):
 
     	    line = fh.read(45)
 
-        #print "Finished file reading of %s" % filename
+        print "Finished file reading of %s" % filename
 
     fh.close()
 

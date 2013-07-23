@@ -288,8 +288,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     getfile = True
 
     # Define frequency of output data:
-    #tenHz = True
-    tenHz = False
+    tenHz = False # True #  		# Currently gives memory errors for t > 1 day. 10Hz stream too large?
 
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
@@ -344,16 +343,15 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
 	while line != '':
             data= struct.unpack(packcode,line)
             bfx = data[16]/400.
-            bfz = data[17]/400.
-            bfy = data[18]/400.
+            bfy = data[17]/400.
+            bfz = data[18]/400.
 
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
 
-            correction = 31.447826372 # 0.0 # 
-
-            time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))
+            #time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))	# Lemi GPS time
+            time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
 
             if tenHz:
                 #print "HERE"
@@ -367,7 +365,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.x = (data[20+i*3]-bfx)*1000.
                     row.y = (data[21+i*3]-bfy)*1000.
                     row.z = (data[22+i*3]-bfz)*1000.
-                    row.f = (row.x**2.+row.y**2.+row.z**2.)**.5	+ correction
+                    row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
                     #print row.time, row.x, row.y, row.z
 
                     stream.add(row)
@@ -387,14 +385,14 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                 row.x = (data[20]-bfx)*1000.
                 row.y = (data[21]-bfy)*1000.
                 row.z = (data[22]-bfz)*1000.
-                row.f = (row.x**2.+row.y**2.+row.z**2.)**.5 + correction	#TODO
-                #print row.time, row.x, row.y, row.z, row.f, row.t1, row.t2
+                row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
+                #print row.time, row.x, row.y, row.z
 
                 stream.add(row)    
 
     	    line = fh.read(linelength)
 
-        #print "Finished file reading of %s" % filename
+        print "Finished file reading of %s" % filename
 
     fh.close()
    
