@@ -20,7 +20,7 @@ def isPOS1(filename):
     if not 'POS1' in temp:
         return False
     logging.debug("lib - format_pos1: Found POS-1 Binary file %s" % filename)
-    print "success"
+    #print "success"
     return True
 
 def isPOS1TXT(filename):
@@ -74,7 +74,7 @@ def readPOS1(filename, headonly=False, **kwargs):
     if getfile:
 
         line = fh.readline()
-        print line
+        #print line
  
 	line = fh.read(45)
 	while line != "":
@@ -86,11 +86,13 @@ def readPOS1(filename, headonly=False, **kwargs):
             row.time = date2num(time)
             row.f = data[7]/1000.
             row.df = data[8]/1000.
+
+            #print row.time, row.f, row.df
             stream.add(row)    
 
     	    line = fh.read(45)
 
-        print "Finished file reading of %s" % filename
+        #print "Finished file reading of %s" % filename
 
     fh.close()
 
