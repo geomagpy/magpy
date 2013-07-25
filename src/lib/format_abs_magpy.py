@@ -183,7 +183,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     expectedmire,temp = 0.0,0.0
     key = None
     headfound = False
-    print "Reading data ..."
+    print "Reading DI data ..."
     for line in fh:
         numelements = len(line.split())
         if line.isspace():
@@ -251,7 +251,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
                 if not posstr[0] == 'Variometer':
-                    logging.warning('ReadAbsolute: Check date format of measurements positions in file %s' % filename)
+                    logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
                 return stream
             try:
                 row.hc = float(posstr[1])/ang_fac

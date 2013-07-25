@@ -422,12 +422,11 @@ def readPYBIN(filename, headonly=False, **kwargs):
         fh = open(filename, 'rb')
         # read header line and extract packing format
         header = fh.readline()
-        print header
         h_elem = header.strip().split()
         if not h_elem[1] == 'MagPyBin':
             print 'No MagPyBin format - aborting'
             return
-        print "Length ", len(h_elem)
+        #print "Length ", len(h_elem)
 
         #Test whether element 3,4,5 (and 6) are lists of equal length 
         if len(h_elem) == 8:
@@ -504,7 +503,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print "To be done ..."
             pass
 
-    print stream.header        
+    #print stream.header        
     return stream
 
 

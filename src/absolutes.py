@@ -109,11 +109,11 @@ class AbsoluteData(object):
         liste = sorted(self.container, key=lambda tmp: tmp.time)
         return AbsoluteData(liste, self.header)        
 
-    def _corrangle(self,angle, ang_fac):
-        if angle > 360*ang_fac:
-            angle = angle - 360.0*ang_fac
+    def _corrangle(self,angle):
+        if angle > 360:
+            angle = angle - 360.0
         elif angle < 0:
-            angle = angle + 360.0*ang_fac
+            angle = angle + 360.0
         return angle
 
 
@@ -194,6 +194,59 @@ class AbsoluteData(object):
 
         return self
 
+    def variocorr(self, thedate, variostream, absresult, **kwargs):
+        """
+        This function should not be here .... is absresults a stream??
+        Function to perform variometercorrection of an absresult object
+        towrads the given datetime using the ginven variometer stream.
+        Returns a new absresult object with new datetime and corrected values
+        """
+        funckeys = kwargs.get('funckeys')
+        offset = kwargs.get('offset')
+        if not funckeys:
+            funckeys = ['x','y','z','f']
+        if not offset:
+            offset = 0.0
+
+        # 1 Convert absresult - idff to xyz
+        absresult = absresult._convertstream('idf2xyz')
+
+        # 2 Convert datetime to number
+        newdate = date2num(absresult._testtime(thedate))
+
+        # 3 Interplolate the variometer data
+        function = variostream.interpol(funckeys)
+
+        for elem in stream:
+            # 4 Test whether variostream covers the timerange between the abstream value(s) and the datetime
+            if function[1] <= elem.time <= function[2] and function[1] <= newdate <= function[2]:
+                valatorgtime = (elem.time-function[1])/(function[2]-function[1])
+                valatnewtime = (newdate-function[1])/(function[2]-function[1])
+                elem.time = newdate
+                for key in funckeys:
+                    if not key in KEYLIST[1:15]:
+                        raise ValueError, "Column key not valid"
+                    fkey = 'f'+key
+                    if fkey in function[0]:
+                        try:
+                            orgval = float(function[0][fkey](valatorgtime))
+                            newval = float(function[0][fkey](valatnewtime))
+                            diff = orgval - newval
+                        except:
+                            loggerabs.error("variocorr: error in assigning new values")
+                            return
+                        exec('elem.'+key+' = elem.'+key+' + diff')
+                    else:
+                        pass
+            else:
+                loggerabs.warning("method variocorr: Variometer stream does not cover the projected time range") 
+                pass
+
+        # 5 Convert absresult - xyzf to idff 
+        absresult = absresult._convertstream('xyz2idf')
+
+        return absresult
+
     def _calcdec(self, **kwargs):
         """
         Calculates declination values from input.
@@ -210,28 +263,31 @@ class AbsoluteData(object):
         plog = PyMagLog()
         xstart = kwargs.get('xstart')
         ystart = kwargs.get('ystart')
-        unit = kwargs.get('unit')
         deltaD = kwargs.get('deltaD')
         usestep = kwargs.get('usestep')
         scalevalue = kwargs.get('scalevalue')
         iterator = kwargs.get('iterator')
         debugmode = kwargs.get('debugmode')
 
-        scale_x = scalevalue[0]
-        scale_y = scalevalue[1]
-        scale_z = scalevalue[2]
-
-        if unit=='gon':
-            ang_fac = 400./360.
-        elif unit == 'rad':
-            ang_fac = np.pi/180.
-        else:
-            ang_fac = 1
-
+        ang_fac = 1
+        if not deltaD:
+            deltaD = 0.0
+        if not scalevalue:
+            scalevalue = [1.0,1.0,1.0]
+        if not xstart:
+            xstart = 20000.0
+        if not ystart:
+            ystart = 0.0
+        if not usestep: 
+            usestep = 0
         if not iterator:
             iterator = 0
         if not debugmode:
             debugmode = False
+
+        scale_x = scalevalue[0]
+        scale_y = scalevalue[1]
+        scale_z = scalevalue[2]
 
         #drop NANs from input stream - positions
         expmire = self._get_column('expectedmire')
@@ -243,11 +299,11 @@ class AbsoluteData(object):
         miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
         # relative mire position of theo is either miremean +90 or -90
         # if sheet is exactly used then it would be easy... however sensor down first measurements have not frequently be used...
-        if poslst[1].mu-5 < (miremean-90.0*ang_fac) < poslst[1].mu+5:
-            mireval = miremean-90.0*ang_fac
+        if poslst[1].mu-5 < (miremean-90.0) < poslst[1].mu+5:
+            mireval = miremean-90.0
         else:
-            mireval = miremean+90.0*ang_fac
-        mirediff = self._corrangle(expmire - mireval,ang_fac)
+            mireval = miremean+90.0
+        mirediff = self._corrangle(expmire - mireval)
 
         # -- Get mean values for x and y
         # ------------------------------
@@ -280,7 +336,7 @@ class AbsoluteData(object):
             if (poslst[k].hc > poslst[k].vc):
                 val = poslst[k].hc-poslst[k].vc
             else:
-                val = poslst[k].hc + (360*ang_fac) - poslst[k].vc
+                val = poslst[k].hc + (360) - poslst[k].vc
             signum = np.sign(np.tan(val))
             # xstart and ystart are already variometercorrected from iteration step 1 on
             variox = (poslst[k].varx-meanx)*scale_x
@@ -298,7 +354,7 @@ class AbsoluteData(object):
                 variocorr.append(0)
             else:
                 variocorr.append(np.arctan((ystart+varioy)/(xstart+variox)))
-            dl1.append( poslst[k].hc*np.pi/(180.0*ang_fac) + rescorr - variocorr[k])
+            dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k])
             if debugmode:
                 print "Horizontal angles: ", poslst[k].hc, rescorr, variocorr[k]
 
@@ -319,9 +375,11 @@ class AbsoluteData(object):
                 dl2mean += np.pi/2
             else:
                 dl2mean -= np.pi/2
+            #dl2tmp.append(dl2mean)
             dl2.append(dl2mean)
 
-        decmean = np.mean(dl2)*180.0/np.pi*ang_fac - 180.0*ang_fac
+        print "Dls: ", dl2tmp, dl2
+        decmean = np.mean(dl2)*180.0/np.pi - 180.0
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
         
         #Initialize HC if no input in this column = 0
@@ -335,29 +393,29 @@ class AbsoluteData(object):
             pass
 
         # Stupid test of validity - needs to be removed if input order is finally correct
-        if 90*ang_fac > self._corrangle(mirediff + decmean,ang_fac) >= 0:
+        if 90 > self._corrangle(mirediff + decmean) >= 0:
             corrfac = 0.0
-        elif  360*ang_fac >= self._corrangle(mirediff + decmean,ang_fac) > 270*ang_fac:
+        elif  360 >= self._corrangle(mirediff + decmean) > 270:
             corrfac = 0.0
         else:
-            corrfac = 180.0*ang_fac
-            mirediff = self._corrangle(mirediff - 180.0*ang_fac,ang_fac)
+            corrfac = 180.0
+            mirediff = self._corrangle(mirediff - 180.0)
 
         #print "Mirediff1: %.3f" % (mirediff + decmean)
-        #if expmire > 180.0*ang_fac:
-        #    mirediff = expmire - (miremean+90.0*ang_fac)
+        #if expmire > 180.0:
+        #    mirediff = expmire - (miremean+90.0)
         #else:
-        #    mirediff = expmire - (miremean-90.0*ang_fac)
+        #    mirediff = expmire - (miremean-90.0)
         #print "Mirediff2: %.3f" % (mirediff + decmean)
 
         if (np.max(dl2)-np.min(dl2))>0.1:
             if iterator == 0:
                 loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
-        dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi*ang_fac + deltaD,ang_fac)
+        dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi + deltaD)
 
         if debugmode:
-            print "All (dec, decmean, mirediff, variocorr, delta D and ang_fac): ", dec, decmean, mirediff, variocorr[0], deltaD, ang_fac
+            print "All (dec, decmean, mirediff, variocorr, delta D and ang_fac, hstart): ", dec, decmean, mirediff, variocorr[0], deltaD, ang_fac, hstart
 
         s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
         deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
@@ -394,23 +452,20 @@ class AbsoluteData(object):
         
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
-        unit = kwargs.get('unit')
         deltaI = kwargs.get('deltaI')
         iterator = kwargs.get('iterator')
+
+        ang_fac = 1
+        if not scalevalue:
+            scalevalue = [1.0,1.0,1.0]
+        if not incstart:
+            incstart = 45.0
+        if not iterator:
+            iterator = 0
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
         scale_z = scalevalue[2]
-
-        if unit=='gon':
-            ang_fac = 400./360.
-        elif unit == 'rad':
-            ang_fac = np.pi/180.
-        else:
-            ang_fac = 1
-
-        if not iterator:
-            iterator = 0
 
         # Initialize variometer and scalar instruments .... maybe better not here
         variotype = 'None'
@@ -476,9 +531,9 @@ class AbsoluteData(object):
             meanvarioy = np.mean(varioy)
             meanvarioz = np.mean(varioz)
 
-        xcorr =  meanf * np.cos( incstart *np.pi/(180.0*ang_fac) ) * np.cos ( linestruct.y *np.pi/(180.0*ang_fac) ) - meanvariox
-        ycorr =  meanf * np.cos( incstart *np.pi/(180.0*ang_fac) ) * np.sin ( linestruct.y *np.pi/(180.0*ang_fac) ) - meanvarioy
-        zcorr =  meanf * np.sin( incstart *np.pi/(180.0*ang_fac) ) - meanvarioz
+        xcorr =  meanf * np.cos( incstart *np.pi/(180.0) ) * np.cos ( linestruct.y *np.pi/(180.0) ) - meanvariox
+        ycorr =  meanf * np.cos( incstart *np.pi/(180.0) ) * np.sin ( linestruct.y *np.pi/(180.0) ) - meanvarioy
+        zcorr =  meanf * np.sin( incstart *np.pi/(180.0) ) - meanvarioz
 
         #drop NANs from input stream - fvalues
         if len(dflist) > 0:
@@ -526,18 +581,18 @@ class AbsoluteData(object):
             if poslst[k].vc > (poslst[k].hc + mirediff):
                 quad = poslst[k].vc - (poslst[k].hc + mirediff)
             else:
-                quad = poslst[k].vc + 360.0*ang_fac - (poslst[k].hc + mirediff)
+                quad = poslst[k].vc + 360.0 - (poslst[k].hc + mirediff)
             # The signums are essential for the collimation angle calculation
             # ToDo: check regarding correctness for different location/angles 
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-            #signum1 = np.sign(np.tan(quad*np.pi/180/ang_fac))
-            signum1 = np.sign(-np.cos(quad*np.pi/180.0/ang_fac))
-            signum2 = np.sign(np.sin(quad*np.pi/180.0/ang_fac))
+            #signum1 = np.sign(np.tan(quad*np.pi/180))
+            signum1 = np.sign(-np.cos(quad*np.pi/180.0))
+            signum2 = np.sign(np.sin(quad*np.pi/180.0))
             if signum2>0:
                 PiVal=2*np.pi
             else:
                 PiVal=np.pi
-            I0 = (signum1*poslst[k].vc*np.pi/180.0/ang_fac - signum2*rcorri - signum1*PiVal)
+            I0 = (signum1*poslst[k].vc*np.pi/180.0 - signum2*rcorri - signum1*PiVal)
 
             #print signum1, poslst[k].vc, quad, I0, rcorri, signum2, PiVal
             # check the quadrant
@@ -562,7 +617,7 @@ class AbsoluteData(object):
                 for n in range((nr_lines-1)/2,nr_lines-1):
                     rotation = np.abs(scaleangle - poslst[n].vc)
                     if rotation < minimum:
-                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/ppmval[cnt] + np.cos(np.mean(I0list))*(poslst[n].vary-poslst[k].vary)/ppmval[cnt])*180/np.pi*ang_fac 
+                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/ppmval[cnt] + np.cos(np.mean(I0list))*(poslst[n].vary-poslst[k].vary)/ppmval[cnt])*180/np.pi 
                         #print fieldchange
                         deltaB = rotation+fieldchange
                         deltaR = np.abs(poslst[n].res-poslst[k].res)
@@ -571,7 +626,7 @@ class AbsoluteData(object):
                         if (deltaR == 0):
                             calcscaleval = 999.0
                         else:
-                            calcscaleval = ppmval[cnt] * deltaB/deltaR * np.pi/180/ang_fac
+                            calcscaleval = ppmval[cnt] * deltaB/deltaR * np.pi/180
             cnt += 1
 
         i1list,i1tmp = [],[]
@@ -589,16 +644,16 @@ class AbsoluteData(object):
         zDiff2 = zDiff2/2.
 
         # Variometer correction to start time is missing for f value and inc ???
-        inc = np.mean(i1list)*180.0*ang_fac/np.pi + deltaI
+        inc = np.mean(i1list)*180.0/np.pi + deltaI
 
         if isnan(inc): # if only dec measurements are available
             inc = 0.0
         # Dec is already variometer corrected (if possible) and transferred to time[0]
-        tmpH = meanf * np.cos( inc *np.pi/(180.0*ang_fac) )
-        tmpZ = meanf * np.sin( inc *np.pi/(180.0*ang_fac) )
+        tmpH = meanf * np.cos( inc *np.pi/(180.0) )
+        tmpZ = meanf * np.sin( inc *np.pi/(180.0) )
         # check for inclination error in file inc
         #   -- the following part may casue problems in case of close to polar positions and locations were X is larger than Y
-        if ((90.*ang_fac)-inc) < 0.1:
+        if (90-inc) < 0.1:
             loggerabs.error('%s : Inclination warning... check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
             #loggerabs.error(I0list)
             h_adder = 0.
@@ -607,8 +662,8 @@ class AbsoluteData(object):
 
         if not isnan(poslst[0].varx):
             hstart = np.sqrt((scale_x*poslst[0].varx + h_adder)**2 + (scale_y*poslst[0].vary)**2)
-            xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0*ang_fac) )
-            ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0*ang_fac) )
+            xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0) )
+            ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0) )
             zstart = scale_z*poslst[0].varz + tmpZ - meanvarioz
             fstart = np.sqrt(xstart**2 + ystart**2 + zstart**2)
         else:
@@ -624,7 +679,7 @@ class AbsoluteData(object):
             zDiff2 = 0.0
 
         if not meanf == 0:
-            inc = np.arctan(zstart/hstart)*180.0*ang_fac/np.pi
+            inc = np.arctan(zstart/hstart)*180.0/np.pi
             # Divided by 4 - need to be corrected if scalevals are used - don't thing so (leon, June 2012)
             s0i = -I0Diff1/4*fstart - xDiff1*np.sin(inc*np.pi/180) - zDiff1*np.cos(inc*np.pi/180) 
             epzi = (-I0Diff2/4 - (xDiff2*np.sin(inc*np.pi/180) - zDiff2*np.cos(inc*np.pi/180))/(4*fstart))*zstart;
@@ -661,6 +716,7 @@ class AbsoluteData(object):
         Returns a resultsline according to line struct 
         Supports the following optional keywords:
         incstart - float - default 45.0 - inclination value in 'unit'
+        ### Important: removed unit completely from calculations - unit conversion is done during file reading
         unit - str - default 'deg' - can be either 'deg' or 'gon'
         scalevalue - float - default 1.0 - convert varx,vary,varz to nT
         printresults - boolean - if True print results to screen
@@ -677,9 +733,24 @@ class AbsoluteData(object):
         usestep = kwargs.get('usestep')
         printresults = kwargs.get('printresults')
 
+        if not deltaI:
+            deltaI = 0.0
+        if not deltaD:
+            deltaD = 0.0
+        if not scalevalue:
+            scalevalue = [1.0,1.0,1.0]
+        if not incstart:
+            incstart = 45.0
+        if not xstart:
+            xstart = 20000.0
+        if not ystart:
+            ystart = 0.0
+        if not usestep: 
+            usestep = 0
+
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
-            resultline = self._calcdec(unit=unit,xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,debugmode=debugmode)
+            resultline = self._calcdec(xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
                 print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
@@ -696,7 +767,7 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, xstart, ystart = self._calcinc(resultline,unit=unit,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i)
+            outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i)
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 

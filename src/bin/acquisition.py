@@ -53,7 +53,7 @@ from datetime import datetime, timedelta
 import re
 #from matplotlib.dates import date2num, num2date
 
-from cobs_ws_protocols import *
+from acquisition.cobs_ws_protocols import *
 
 hostname = socket.gethostname()
 
@@ -104,8 +104,8 @@ class WsMcuFactory(WampServerFactory):
 
     def __init__(self, url):
        WampServerFactory.__init__(self, url)
-       self.lemiProtocol = LemiProtocol(self,'LEMI036_1_0001')
-       self.owProtocol = OwProtocol(self)
+       self.lemiProtocol = LemiProtocol(self,'LEMI036_1_0001','/srv/ws')
+       self.owProtocol = OwProtocol(self,"u")
 
 
 if __name__ == '__main__':

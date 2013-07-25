@@ -128,8 +128,10 @@ class FileProtocol():
 ## GEM -GSM90 protocol
 ##
 class GSM90Protocol(LineReceiver):
-    def __init__(self, wsMcuFactory):
+    def __init__(self, wsMcuFactory,sensor,savedir):
         self.wsMcuFactory = wsMcuFactory
+        self.sensor = sensor
+        self.savedir = savedir
         print "Initialize the connection and set automatic mode (use ser.commands?)"
 
     def initConnection(self, path_or_url):
@@ -149,10 +151,11 @@ class LemiProtocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory, sensor):
+    def __init__(self, wsMcuFactory, sensor, savedir):
         self.wsMcuFactory = wsMcuFactory
         #self.sensor = "lemi"
         self.sensor = sensor
+        self.savedir = savedir
         self.buffer = ''
         flag = 0
 
@@ -339,9 +342,10 @@ class Pos1Protocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory, sensor):
+    def __init__(self, wsMcuFactory, sensor, savedir):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
+        self.savedir = savedir
         delimiter = '\x00'
         self.buffer = ''
 
@@ -504,9 +508,10 @@ class CsProtocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory):
+    def __init__(self, wsMcuFactory, sensor, savepath):
         self.wsMcuFactory = wsMcuFactory
-        self.sensor = 'cs'
+        self.sensor = sensor
+        self.savedir = savedir
 
     def connectionMade(self):
         log.msg('Serial port connected.')
@@ -605,9 +610,10 @@ class EnvProtocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory):
+    def __init__(self, wsMcuFactory, sensor, savedir):
         self.wsMcuFactory = wsMcuFactory
-        self.sensor = "env"
+        self.sensor = sensor
+        self.savedir = savedir
 
     @exportRpc("control-led")
     def controlLed(self, status):
@@ -717,10 +723,12 @@ if onewire:
         Save path ? folders ?
 
         """
-        def __init__(self, wsMcuFactory):
+        def __init__(self, wsMcuFactory, initpath):
             self.wsMcuFactory = wsMcuFactory
             #self.sensor = 'ow'
-            ow.init("u")
+            self.initpath = initpath
+            #ow.init("u")
+            ow.init(self.initpath)
             self.root = ow.Sensor('/').sensorList()
             self.reconnectcount = 0
 
@@ -731,7 +739,7 @@ if onewire:
 
                 if not (self.root == owsensorlist):
                     log.msg('Rereading sensor list')                
-                    ow.init("u")
+                    ow.init(self.initpath)
                     self.root = ow.Sensor('/').sensorList()
                     owsensorlist = self.root
                     self.connectionMade(self.root)

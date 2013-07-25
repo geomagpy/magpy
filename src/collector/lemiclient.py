@@ -16,6 +16,11 @@ def defineclient(cname):
     clientname = cname
     return    
 
+def definedb(host,user,passwd,db):
+    global ghost
+    ghost = host
+    return    
+
 class PubSubClient(WampClientProtocol):
     """
     Class for OneWire communication
