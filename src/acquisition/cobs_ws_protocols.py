@@ -527,7 +527,7 @@ class CsProtocol(LineReceiver):
         header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
         
         try:
-            value = float(data[0])
+            value = float(data[0].strip('$'))
             if 10000 < value < 100000:
                 intensity = value
             else:
@@ -554,36 +554,42 @@ class CsProtocol(LineReceiver):
             evt1 = {'id': 4, 'value': 0}
             evt4 = {'id': 0, 'value': 0}
             evt8 = {'id': 8, 'value': 0}
+            evt99 = {'id': 99, 'value': 'eol'}
         else:
             evt1 = {'id': 4, 'value': intensity}
             evt4 = {'id': 0, 'value': outtime}
             evt8 = {'id': 8, 'value': timestamp}
+            evt99 = {'id': 99, 'value': 'eol'}
             lastActualtime = currenttime
 
-        return evt1,evt4,evt8
+        return evt1,evt4,evt8,evt99
 
     def lineReceived(self, line):
         dispatch_url =  "http://example.com/"+hostname+"/cs#"+self.sensor+"-value"
         try:
             data = line.strip('$').split(',')
-            evt1, evt4, evt8 = self.processData(data)
+            evt1, evt4, evt8, evt99 = self.processData(data)
         except ValueError:
             log.err('CS - Protocol: Unable to parse data %s' % line)
             #return
         except:
             pass
 
-
-        if evt1['value'] and evt4['value']:
-            try:
-                ## publish event to all clients subscribed to topic
-                ##
-                self.wsMcuFactory.dispatch(dispatch_url, evt1)
-                self.wsMcuFactory.dispatch(dispatch_url, evt4)
-                self.wsMcuFactory.dispatch(dispatch_url, evt8)
-                #log.msg("Analog value: %s" % str(evt4))
-            except:
-                log.err('CS - Protocol: wsMcuFactory error while dispatching data.')
+        try:
+            if evt1['value'] and evt4['value']:
+                try:
+                    ## publish event to all clients subscribed to topic
+                    ##
+                    self.wsMcuFactory.dispatch(dispatch_url, evt1)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt4)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt8)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt99)
+                    #log.msg("Analog value: %s" % str(evt4))
+                except:
+                    log.err('CS - Protocol: wsMcuFactory error while dispatching data.')
+        except:
+            log.err('CS - Protocol: No appropriate data events returned')
+            pass
 
 ## Environment protocol
 ##
