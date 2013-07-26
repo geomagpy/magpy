@@ -11,8 +11,8 @@ from autobahn.wamp import WampClientFactory, WampClientProtocol
 # For converting Unicode text
 import collections
 
-import owclient as ow
-import lemiclient as lemi
+import collector.owclient as ow
+import collector.lemiclient as lemi
 
 
 import MySQLdb

@@ -128,10 +128,8 @@ class FileProtocol():
 ## GEM -GSM90 protocol
 ##
 class GSM90Protocol(LineReceiver):
-    def __init__(self, wsMcuFactory,sensor,savedir):
+    def __init__(self, wsMcuFactory):
         self.wsMcuFactory = wsMcuFactory
-        self.sensor = sensor
-        self.savedir = savedir
         print "Initialize the connection and set automatic mode (use ser.commands?)"
 
     def initConnection(self, path_or_url):
@@ -151,11 +149,10 @@ class LemiProtocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory, sensor, savedir):
+    def __init__(self, wsMcuFactory, sensor):
         self.wsMcuFactory = wsMcuFactory
         #self.sensor = "lemi"
         self.sensor = sensor
-        self.savedir = savedir
         self.buffer = ''
         flag = 0
 
@@ -181,9 +178,9 @@ class LemiProtocol(LineReceiver):
     def connectionLost(self):
         log.msg('LEMI connection lost. Perform steps to restart it!')
 
-    def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
-        y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
-        return y
+    #def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
+    #    y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
+    #    return y
 
     def processLemiData(self, data):
         """Convert raw ADC counts into SI units as per datasheets"""
@@ -342,10 +339,9 @@ class Pos1Protocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory, sensor, savedir):
+    def __init__(self, wsMcuFactory, sensor):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
-        self.savedir = savedir
         delimiter = '\x00'
         self.buffer = ''
 
@@ -508,13 +504,12 @@ class CsProtocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory, sensor, savepath):
+    def __init__(self, wsMcuFactory, sensor):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
-        self.savedir = savedir
 
     def connectionMade(self):
-        log.msg('Serial port connected.')
+        log.msg('Cs-Sensor at serial port connected.')
 
     def processData(self, data):
         """Convert raw ADC counts into SI units as per datasheets"""
@@ -523,8 +518,13 @@ class CsProtocol(LineReceiver):
         filename = datetime.strftime(currenttime, "%Y-%m-%d")
         actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
+        timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
 
         global lastActualtime
+
+        packcode = '6hLL'
+        sensorid = self.sensor
+        header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
         
         try:
             value = float(data[0])
@@ -534,52 +534,39 @@ class CsProtocol(LineReceiver):
                 intensity = 0.0
         except ValueError:
             log.err("CS - Protocol: Not a number. Instead found:", data[0])
+            intensity = float(NaN)
 
-        # define pathname for local file storage (default dir plus hostname plus sensor plus year) and create if not existing
+        datearray = timeToArray(timestamp)
         try:
-            subdirname = socket.gethostname()
-            path = os.path.join(outputdir,subdirname,self.sensor,str(currenttime.year))
-            if not os.path.exists(path):
-                os.makedirs(path)
+            datearray = timeToArray(timestamp)
+            datearray.append(int(intensity*1000))
+            data_bin = struct.pack(packcode,*datearray)
         except:
-            log.err("CS - Protocol: Could not create directory.")
+            log.msg('Error while packing binary data')
+            pass
 
-        """
-        # put data to buffer
-        databuf  = []
-        if len(databuf) < 100 and day == currday:
-             databuf.append()
-        else:
-           # cretae new buffer with first value
-           #call thread with: 
-           # pack data to binary
-           # if file exists write header containing type id, bytes in line and packing info
-           # write the data to file
-           pass
-        """
+        # File Operations
+        dataToFile(sensorid, filename, data_bin, header)
 
-        with open(os.path.join(path,self.sensor+'_'+filename+".txt"), "a") as myfile:
-            try:
-                myfile.write(str(actualtime) + " " + str(intensity) + "\n")
-            except:
-                log.err("CS - Protocol: Error while saving file")
         
         #return value every second
         if lastActualtime+timedelta(microseconds=999000) >= currenttime:   # Using ms instead of s accounts for only small errors, not all.
             evt1 = {'id': 4, 'value': 0}
             evt4 = {'id': 0, 'value': 0}
+            evt8 = {'id': 8, 'value': 0}
         else:
             evt1 = {'id': 4, 'value': intensity}
             evt4 = {'id': 0, 'value': outtime}
+            evt8 = {'id': 8, 'value': timestamp}
             lastActualtime = currenttime
 
-        return evt1,evt4
+        return evt1,evt4,evt8
 
     def lineReceived(self, line):
         dispatch_url =  "http://example.com/"+hostname+"/cs#"+self.sensor+"-value"
         try:
             data = line.strip('$').split(',')
-            evt1, evt4 = self.processData(data)
+            evt1, evt4, evt8 = self.processData(data)
         except ValueError:
             log.err('CS - Protocol: Unable to parse data %s' % line)
             #return
@@ -593,6 +580,7 @@ class CsProtocol(LineReceiver):
                 ##
                 self.wsMcuFactory.dispatch(dispatch_url, evt1)
                 self.wsMcuFactory.dispatch(dispatch_url, evt4)
+                self.wsMcuFactory.dispatch(dispatch_url, evt8)
                 #log.msg("Analog value: %s" % str(evt4))
             except:
                 log.err('CS - Protocol: wsMcuFactory error while dispatching data.')
@@ -610,10 +598,9 @@ class EnvProtocol(LineReceiver):
 
     ## need a reference to our WS-MCU gateway factory to dispatch PubSub events
     ##
-    def __init__(self, wsMcuFactory, sensor, savedir):
+    def __init__(self, wsMcuFactory):
         self.wsMcuFactory = wsMcuFactory
-        self.sensor = sensor
-        self.savedir = savedir
+        self.sensor = "env"
 
     @exportRpc("control-led")
     def controlLed(self, status):
@@ -723,12 +710,10 @@ if onewire:
         Save path ? folders ?
 
         """
-        def __init__(self, wsMcuFactory, initpath):
+        def __init__(self, wsMcuFactory):
             self.wsMcuFactory = wsMcuFactory
             #self.sensor = 'ow'
-            self.initpath = initpath
-            #ow.init("u")
-            ow.init(self.initpath)
+            ow.init("u")
             self.root = ow.Sensor('/').sensorList()
             self.reconnectcount = 0
 
@@ -739,7 +724,7 @@ if onewire:
 
                 if not (self.root == owsensorlist):
                     log.msg('Rereading sensor list')                
-                    ow.init(self.initpath)
+                    ow.init("u")
                     self.root = ow.Sensor('/').sensorList()
                     owsensorlist = self.root
                     self.connectionMade(self.root)
