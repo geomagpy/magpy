@@ -469,6 +469,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         packstr = '<'+h_elem[-2]+'B'
         lengthcode = struct.calcsize(packstr)
         lengthgiven = int(h_elem[-1])+1
+        length = lengthgiven
         if not lengthcode == lengthgiven:
             print "Check your packing code!"
             if lengthcode < lengthgiven:

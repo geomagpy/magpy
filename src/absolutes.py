@@ -194,7 +194,7 @@ class AbsoluteData(object):
 
         return self
 
-    def variocorr(self, thedate, variostream, absresult, **kwargs):
+    def variocorr(self, thedate, variostream, absstream, **kwargs):
         """
         This function should not be here .... is absresults a stream??
         Function to perform variometercorrection of an absresult object
@@ -209,15 +209,15 @@ class AbsoluteData(object):
             offset = 0.0
 
         # 1 Convert absresult - idff to xyz
-        absresult = absresult._convertstream('idf2xyz')
+        absstream = absstream._convertstream('idf2xyz')
 
         # 2 Convert datetime to number
-        newdate = date2num(absresult._testtime(thedate))
+        newdate = date2num(absstream._testtime(thedate))
 
         # 3 Interplolate the variometer data
         function = variostream.interpol(funckeys)
 
-        for elem in stream:
+        for elem in absstream:
             # 4 Test whether variostream covers the timerange between the abstream value(s) and the datetime
             if function[1] <= elem.time <= function[2] and function[1] <= newdate <= function[2]:
                 valatorgtime = (elem.time-function[1])/(function[2]-function[1])
@@ -235,7 +235,7 @@ class AbsoluteData(object):
                         except:
                             loggerabs.error("variocorr: error in assigning new values")
                             return
-                        exec('elem.'+key+' = elem.'+key+' + diff')
+                        exec('elem.'+key+' = elem.'+key+' - diff')
                     else:
                         pass
             else:
@@ -243,9 +243,9 @@ class AbsoluteData(object):
                 pass
 
         # 5 Convert absresult - xyzf to idff 
-        absresult = absresult._convertstream('xyz2idf')
+        absstream = absstream._convertstream('xyz2idf')
 
-        return absresult
+        return absstream
 
     def _calcdec(self, **kwargs):
         """
@@ -378,7 +378,6 @@ class AbsoluteData(object):
             #dl2tmp.append(dl2mean)
             dl2.append(dl2mean)
 
-        print "Dls: ", dl2tmp, dl2
         decmean = np.mean(dl2)*180.0/np.pi - 180.0
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
         
