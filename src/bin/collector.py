@@ -13,6 +13,7 @@ import collections
 
 import collector.owclient as ow
 import collector.lemiclient as lemi
+import collector.posclient as pos
 
 
 import MySQLdb
@@ -160,10 +161,20 @@ if __name__ == '__main__':
     factory2 = WampClientFactory("ws://138.22.188.186:9100", debugWamp = False)
     lemi.defineclient(clientname)
     factory2.protocol = lemi.PubSubClient
+
+    clientname = 'ceres' 
+    factory3 = WampClientFactory("ws://138.22.188.181:9100", debugWamp = False)
+    lemi.defineclient(clientname)
+    factory3.protocol = lemi.PubSubClient
+    factory4 = WampClientFactory("ws://138.22.188.181:9100", debugWamp = False)
+    pos.defineclient(clientname)
+    factory4.protocol = pos.PubSubClient
     
 
     connectWS(factory1)
     connectWS(factory2)
+    connectWS(factory3)
+    connectWS(factory4)
     reactor.run()
 
     try:
