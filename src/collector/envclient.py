@@ -33,8 +33,8 @@ class PubSubClient(WampClientProtocol):
 
 
     def subscribeInst(self, db, cursor, client):
-        self.prefix("pos1", "http://example.com/" + client +"/pos1#")
-        sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorDataLogger = 'ENV'"
+        self.prefix("env", "http://example.com/" + client +"/env#")
+        sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorDataLogger = 'ENV05'"
         try:
             # Execute the SQL command
             cursor.execute(sql)
@@ -48,17 +48,18 @@ class PubSubClient(WampClientProtocol):
             for row in results:
                  sensid = str(row[0])
                  sensdesc = row[1]
-                 module = row[2].lower()
+                 module = row[2].lower()[:3]
                  param = row[3]
                  print row, len(param.split(',')) 
                  self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
                  # Create Sensor Table if it does not yet exist  # TODO: check the length of param for other then temperatur data 
-                 createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, f FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                 createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var2 FLOAT, t2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
                  try:
                      cursor.execute(createtable)
                  except:
                      log.msg("Table exists already.")
+                 print module, sensid
                  subscriptionstring = "%s:%s-value" % (module, sensid)
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result
@@ -78,22 +79,21 @@ class PubSubClient(WampClientProtocol):
             return type(data)(map(self.convertUnicode, data))
         else:
             return data
+
  
     def onEvent(self, topicUri, event):
         eventdict = self.convertUnicode(event)
         time = ''
         eol = ''
-        print event
         try:
             sensorid = topicUri.split('/')[-1].split('-')[0].split('#')[1]
             if eventdict['id'] == 99:
                 eol = eventdict['value']
             if eol == '':
-                if eventdict['id'] in [4,8]: # replace by some eol parameter
+                if eventdict['id'] in [7,5,6,8,9]: # replace by some eol parameter
                      self.line.append(eventdict['value'])
-                     print self.line
             else:
-                sql = "INSERT INTO %s(time, t1, var2, var3, var4, flag, typ) VALUES ('%s', %f, %f, %f, %f, '0000000000000000-', 'temp')" % (sensorid, self.line[0], self.line[1], self.line[3], self.line[4], self.line[5])
+                sql = "INSERT INTO %s(time, t1, var2, t2, flag, typ) VALUES ('%s', %f, %f, %f, '0000000000000000-', 'temp')" % (sensorid, self.line[4]+' '+self.line[0], self.line[2], self.line[1], self.line[3])
                 self.line = []
                 # Prepare SQL query to INSERT a record into the database.
                 try:
