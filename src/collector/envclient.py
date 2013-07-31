@@ -34,7 +34,7 @@ class PubSubClient(WampClientProtocol):
 
     def subscribeInst(self, db, cursor, client):
         self.prefix("pos1", "http://example.com/" + client +"/pos1#")
-        sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorDataLogger = 'POS1'"
+        sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorDataLogger = 'ENV'"
         try:
             # Execute the SQL command
             cursor.execute(sql)
@@ -83,15 +83,17 @@ class PubSubClient(WampClientProtocol):
         eventdict = self.convertUnicode(event)
         time = ''
         eol = ''
+        print event
         try:
             sensorid = topicUri.split('/')[-1].split('-')[0].split('#')[1]
             if eventdict['id'] == 99:
                 eol = eventdict['value']
             if eol == '':
-                if eventdict['id'] in [4,8,15,16]: # replace by some eol parameter
+                if eventdict['id'] in [4,8]: # replace by some eol parameter
                      self.line.append(eventdict['value'])
+                     print self.line
             else:
-                sql = "INSERT INTO %s(time, f, df, var2, flag, typ) VALUES ('%s', %f, %f, %f, '0000000000000000-', 'xyz')" % (sensorid, self.line[0], self.line[1], self.line[2], self.line[3])
+                sql = "INSERT INTO %s(time, t1, var2, var3, var4, flag, typ) VALUES ('%s', %f, %f, %f, %f, '0000000000000000-', 'temp')" % (sensorid, self.line[0], self.line[1], self.line[3], self.line[4], self.line[5])
                 self.line = []
                 # Prepare SQL query to INSERT a record into the database.
                 try:
