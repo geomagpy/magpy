@@ -15,6 +15,10 @@ from twisted.web.static import File
 from autobahn.websocket import listenWS
 from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
 
+def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
+    y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
+    return y
+
 def timeToArray(timestring):
     # Converts time string of format 2013-12-12T23:12:23.122324
     # to an array similiat to a datetime object
@@ -70,10 +74,6 @@ class LemiProtocol(LineReceiver):
     def connectionLost(self):
         log.msg('LEMI connection lost. Perform steps to restart it!')
 
-    #def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
-    #    y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
-    #    return y
-
     def processLemiData(self, data):
         """Convert raw ADC counts into SI units as per datasheets"""
         if len(data) != 153:
@@ -123,22 +123,26 @@ class LemiProtocol(LineReceiver):
             z = (data_array[22]-biasz)*1000.
             temp_sensor = data_array[11]/100.
             temp_el = data_array[12]/100.
+            gps_array = datetime(2000+h2d(data_array[5]),h2d(data_array[6]),h2d(data_array[7]),h2d(data_array[8]),h2d(data_array[9]),h2d(data_array[10]))
+            gps_time = datetime.strftime(gps_array, "%Y-%m-%d %H:%M:%S")
         except:
             log.err("LEMI - Protocol: Number conversion error.")
 
         # important !!! change outtime to lemi reading when GPS is running 
         try:
-            evt1 = {'id': 8, 'value': timestamp}
-            evt2 = {'id': 1, 'value': x}
-            evt3 = {'id': 2, 'value': y}
-            evt4 = {'id': 3, 'value': z}
-            evt5 = {'id': 5, 'value': temp_sensor}
-            evt6 = {'id': 6, 'value': temp_el}
-            evt7 = {'id': 99, 'value': 'eol'}
+            evt1 = {'id': 1, 'value': timestamp}
+            evt3 = {'id': 3, 'value': outtime}
+            evt4 = {'id': 4, 'value': gps_time}
+            evt11 = {'id': 11, 'value': x}
+            evt12 = {'id': 12, 'value': y}
+            evt13 = {'id': 13, 'value': z}
+            evt31 = {'id': 31, 'value': temp_sensor}
+            evt32 = {'id': 32, 'value': temp_el}
+            evt99 = {'id': 99, 'value': 'eol'}
         except:
             log.err('LEMI - Protocol: Error assigning "evt" values.')
  
-        return evt1,evt2,evt3,evt4,evt5,evt6,evt7
+        return evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99
          
     def dataReceived(self, data):
         #print "Lemi data here!", self.buffer
@@ -150,7 +154,7 @@ class LemiProtocol(LineReceiver):
             if (self.buffer).startswith(self.soltag) and len(self.buffer) == 153:
                 currdata = self.buffer
                 self.buffer = ''
-                evt1,evt2,evt3,evt4,evt5,evt6,evt7 = self.processLemiData(currdata)
+                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(currdata)
                 WSflag = 2
 
             ### Note: this code for fixing data is more complex than the POS fix code
@@ -173,7 +177,7 @@ class LemiProtocol(LineReceiver):
                             split_data_string = self.buffer[0:153]
                             if (split_data_string).startswith(self.soltag):
                                 log.msg('LEMI - Protocol: Processing data part # %s in string...' % (str(i+1)))
-                                evt1,evt2,evt3,evt4,evt5,evt6,evt7 = self.processLemiData(split_data_string)
+                                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(split_data_string)
                                 WSflag = 2
                                 self.buffer = self.buffer[153:len(self.buffer)]
                             else:
@@ -184,7 +188,7 @@ class LemiProtocol(LineReceiver):
                             lemisearch = (self.buffer).find(self.soltag, 6)
                             if lemisearch >= 153:
                                 split_data_string = self.buffer[0:153]
-                                evt1,evt2,evt3,evt4,evt5,evt6,evt7 = self.processLemiData(split_data_string)
+                                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(split_data_string)
                                 WSflag = 2
                                 self.buffer = self.buffer[153:len(self.buffer)]
                             elif lemisearch == -1:
@@ -217,12 +221,14 @@ class LemiProtocol(LineReceiver):
         if WSflag == 2:
             try:
                 self.wsMcuFactory.dispatch(dispatch_url, evt1)
-                self.wsMcuFactory.dispatch(dispatch_url, evt2)
                 self.wsMcuFactory.dispatch(dispatch_url, evt3)
                 self.wsMcuFactory.dispatch(dispatch_url, evt4)
-                self.wsMcuFactory.dispatch(dispatch_url, evt5)
-                self.wsMcuFactory.dispatch(dispatch_url, evt6)
-                self.wsMcuFactory.dispatch(dispatch_url, evt7)
+                self.wsMcuFactory.dispatch(dispatch_url, evt11)
+                self.wsMcuFactory.dispatch(dispatch_url, evt12)
+                self.wsMcuFactory.dispatch(dispatch_url, evt13)
+                self.wsMcuFactory.dispatch(dispatch_url, evt31)
+                self.wsMcuFactory.dispatch(dispatch_url, evt32)
+                self.wsMcuFactory.dispatch(dispatch_url, evt99)
             except:
                 log.err('LEMI - Protocol: wsMcuFactory error while dispatching data.')
 

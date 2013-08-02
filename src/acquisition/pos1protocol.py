@@ -137,14 +137,15 @@ class Pos1Protocol(LineReceiver):
             log.msg('POS1 - Protocol: Error with binary save routine')
             pass
 
-        evt1 = {'id': 8, 'value': timestamp}
-        evt2 = {'id': 4, 'value': intensity}
-        evt3 = {'id': 15, 'value': sigma_int}
-        evt4 = {'id': 16, 'value': err_code}
-        #evt5 = {'id': 17, 'value': outdate+' '+outtime}
-        evt6 = {'id': 99, 'value': 'eol'}
+        evt1 = {'id': 1, 'value': timestamp}
+        evt3 = {'id': 3, 'value': outtime}
+        evt4 = {'id': 4, 'value': gps_time}
+        evt10 = {'id': 10, 'value': intensity}
+        evt14 = {'id': 14, 'value': sigma_int}
+        evt40 = {'id': 40, 'value': err_code}
+        evt99 = {'id': 99, 'value': 'eol'}
 
-        return evt1,evt2,evt3,evt4,evt6
+        return evt1,evt3,evt4,evt10,evt14,evt40,evt99
          
 
     def dataReceived(self, data):
@@ -153,17 +154,19 @@ class Pos1Protocol(LineReceiver):
         try:
             #log.msg('Bufferlength:', len(self.buffer))		# debug
             if len(self.buffer) == 44:
-                evt1, evt4, evt7, evt8, evt9 = self.processPos1Data(self.buffer[:44])
+                evt1, evt3,evt4, evt10, evt14, evt40, evt99 = self.processPos1Data(self.buffer[:44])
                 self.buffer = ''
 
                 ## publish event to all clients subscribed to topic
                 ##
                 if evt1['value'] > 0:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt3)
                     self.wsMcuFactory.dispatch(dispatch_url, evt4)
-                    self.wsMcuFactory.dispatch(dispatch_url, evt7)
-                    self.wsMcuFactory.dispatch(dispatch_url, evt8)
-                    self.wsMcuFactory.dispatch(dispatch_url, evt9)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt10)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt14)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt40)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt99)
                 else:
                     log.err('POS1 - Protocol: Zero value, skipping. (Value still written to file.)')
 
@@ -181,13 +184,15 @@ class Pos1Protocol(LineReceiver):
                         for i in range(dataparts):
                             split_data_string = self.buffer[i*44:(i*44)+44]
                             log.msg('POS1 - Protocol: Processing data part # %s in string (%s)' % (str(i+1), split_data_string))
-                            evt1, evt4, evt7, evt8, evt9 = self.processPos1Data(split_data_string)
+                            evt1,evt3,evt4,evt10,evt14,evt40,evt99 = self.processPos1Data(split_data_string)
                             if evt1['value'] > 0:
                                 self.wsMcuFactory.dispatch(dispatch_url, evt1)
+                                self.wsMcuFactory.dispatch(dispatch_url, evt3)
                                 self.wsMcuFactory.dispatch(dispatch_url, evt4)
-                                self.wsMcuFactory.dispatch(dispatch_url, evt7)
-                                self.wsMcuFactory.dispatch(dispatch_url, evt8)
-                                self.wsMcuFactory.dispatch(dispatch_url, evt9)
+                                self.wsMcuFactory.dispatch(dispatch_url, evt10)
+                                self.wsMcuFactory.dispatch(dispatch_url, evt14)
+                                self.wsMcuFactory.dispatch(dispatch_url, evt40)
+                                self.wsMcuFactory.dispatch(dispatch_url, evt99)
                             else:
                                 log.err('POS1 - Protocol: Zero value, skipping. (Value still written to file.)')
                         self.buffer = ''

@@ -137,15 +137,15 @@ class EnvProtocol(LineReceiver):
 
         # create a dictionary out of the input file
  
-        evt4 = {'id': 8, 'value': outtime}
-        evt2 = {'id': 5, 'value': temp}
-        evt1 = {'id': 7, 'value': rh}
-        evt3 = {'id': 6, 'value': dew}
-        evt5 = {'id': 10, 'value': self.hostname}
-        evt6 = {'id': 9, 'value': outdate}
-        evt7 = {'id': 99, 'value': 'eol'}
+        evt0 = {'id': 0, 'value': self.hostname}
+        evt1 = {'id': 1, 'value': timestamp}
+        evt3 = {'id': 3, 'value': outtime}
+        evt30 = {'id': 30, 'value': temp}
+        evt33 = {'id': 33, 'value': rh}
+        evt34 = {'id': 34, 'value': dew}
+        evt99 = {'id': 99, 'value': 'eol'}
  
-        return evt4, evt1, evt2, evt3, evt5, evt6, evt7
+        return evt0,evt1,evt3,evt30,evt33,evt34,evt99
 
 
     def lineReceived(self, line):
@@ -153,20 +153,20 @@ class EnvProtocol(LineReceiver):
         try:
             data = line.split()
             if len(data) == 3:
-                evt1,evt2,evt3,evt4,evt5,evt6,evt7 = self.processEnvData(data)
+                evt0,evt1,evt3,evt30,evt33,evt34,evt99 = self.processEnvData(data)
             else:
                 print 'Data error'
 
 
             ## publish event to all clients subscribed to topic
             ##
+            self.wsMcuFactory.dispatch(dispatch_url, evt0)
             self.wsMcuFactory.dispatch(dispatch_url, evt1)
-            self.wsMcuFactory.dispatch(dispatch_url, evt2)
             self.wsMcuFactory.dispatch(dispatch_url, evt3)
-            self.wsMcuFactory.dispatch(dispatch_url, evt4)
-            self.wsMcuFactory.dispatch(dispatch_url, evt5)
-            self.wsMcuFactory.dispatch(dispatch_url, evt6)
-            self.wsMcuFactory.dispatch(dispatch_url, evt7)
+            self.wsMcuFactory.dispatch(dispatch_url, evt30)
+            self.wsMcuFactory.dispatch(dispatch_url, evt33)
+            self.wsMcuFactory.dispatch(dispatch_url, evt34)
+            self.wsMcuFactory.dispatch(dispatch_url, evt99)
             #log.msg("Analog value: %s" % str(evt4))
 
         except ValueError:
