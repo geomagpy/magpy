@@ -86,7 +86,6 @@ class GSM90Protocol(LineReceiver):
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
         packcode = '6hLL'
-        sensorid = 'gsm90'
         header = "# MagPyBin %s %s %s %s %s %s %d" % ('GSM90', '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
 
         try:

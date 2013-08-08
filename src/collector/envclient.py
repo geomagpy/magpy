@@ -59,7 +59,6 @@ class PubSubClient(WampClientProtocol):
                      cursor.execute(createtable)
                  except:
                      log.msg("Table exists already.")
-                 print module, sensid
                  subscriptionstring = "%s:%s-value" % (module, sensid)
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result
