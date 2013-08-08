@@ -84,8 +84,7 @@ class CsProtocol(LineReceiver):
         global lastActualtime
 
         packcode = '6hLL'
-        sensorid = self.sensor
-        header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
+        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
         
         try:
             value = float(data[0].strip('$'))
@@ -107,7 +106,7 @@ class CsProtocol(LineReceiver):
             pass
 
         # File Operations
-        dataToFile(self.outputdir, sensorid, filename, data_bin, header)
+        dataToFile(self.outputdir, self.sensor, filename, data_bin, header)
 
         
         #return value every second
@@ -137,7 +136,7 @@ class CsProtocol(LineReceiver):
             pass
 
         try:
-            if evt1['value'] and evt4['value']:
+            if evt1['value'] and evt3['value']:
                 try:
                     ## publish event to all clients subscribed to topic
                     ##
