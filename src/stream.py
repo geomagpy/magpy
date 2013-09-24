@@ -1824,31 +1824,34 @@ class DataStream(object):
     def plot(self, keys, debugmode=None, **kwargs):
         """
         Creates a simple graph of the current stream. In order to run matplotlib from cron one need to include (matplotlib.use('Agg'))
+
+        Keys define the columns to be plotted.
+
         Supports the following keywords:
-        function: (func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
-        fullday: (boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
-        colorlist (list - default []): provide a ordered color list of type ['b','g'],....
-        errorbar: (boolean - default False) plot dx,dy,dz,df values if True
-        symbol: (string - default '-') symbol for primary plot
-        symbol_func: (string - default '-') symbol of function plot 
-        savefigure: (string - default None) if provided a copy of the plot is saved to savefilename.png 
-        outfile: strign to save the figure, if path is not existing it will be created
-        fmt: format of outfile
-        savedpi: integer resolution
-        noshow: bool- don't call show at the end, just returns figure handle
-        annote: bool - annotate data using comments
-        padding: (integer - default 0) Value to add to the max-min data for adjusting y-scales
-                 maybe change that to a relative padding depending on data values
-        :type bgcolor: string 
-        :param bgcolor: Define background color e.g. '0.5' greyscale, 'r' red, etc 
-        :type gridcolor: string 
-        :param gridcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc 
-        :type labelcolor: string 
-        :param labelcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc 
-        :type grid: bool 
-        :param grid: show grid or not, default = True 
-        :type specialdict: dictionary 
-        :param specialdict: contains special information for specific plots. key
+        - annote: 	(bool) Annotate data using comments
+	- bgcolor	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
+        - colorlist 	(list - default []) Provide a ordered color list of type ['b','g']
+	- confinex	(bool) Confines tags on x-axis to shorter values.
+        - errorbar: 	(boolean - default False) plot dx,dy,dz,df values if True
+        - function: 	(func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
+        - fullday: 	(boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
+        - fmt: 		(string?) format of outfile 
+	- grid		(bool) show grid or not, default = True 
+	- gridcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
+	- labelcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc 
+        - noshow: 	(bool) don't call show at the end, just returns figure handle
+        - outfile: 	string to save the figure, if path is not existing it will be created
+        - padding: 	(integer - default 0) Value to add to the max-min data for adjusting y-scales
+        - savedpi: 	(integer) resolution
+        - savefigure: 	(string - default None) if provided a copy of the plot is saved to savefilename.png
+	- shadephases	(list) Should be a list with four datetime objects:
+		      [0 = date of SSC/start of initial phase,
+		       1 = start of main phase,
+		       2 = start of recovery phase,
+		       3 = end of recovery phase]
+		      (Added 24.09.2013 by RLB.)
+	- shadeplots	(list) List of keys in plots to shade.
+	- specialdict	(dictionary) contains special information for specific plots. key
                       key corresponds to the column
                       input is a list with the following parameters
                       ('None' if not used)
@@ -1858,36 +1861,35 @@ class DataStream(object):
                       bgcolor
                       grid
                       gridcolor
-                      
+        - symbol: 	(string - default '-') symbol for primary plot
+        - symbol_func: 	(string - default '-') symbol of function plot 
 
-            from magpy_stream import *
-            st = read()
-            st.plot()
-
-            keys define the columns to be plotted
         """
+
+        annotate = kwargs.get('annotate')
+        bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
+        bgcolor = kwargs.get('bgcolor')
+        colorlist = kwargs.get('colorlist')
+        confinex = kwargs.get('confinex')
+        endvalue = kwargs.get('endvalue')
+        errorbar = kwargs.get('errorbar')
+        fmt = kwargs.get('fmt')
         function = kwargs.get('function')
         fullday = kwargs.get('fullday')
-        plottitle = kwargs.get('plottitle')
-        colorlist = kwargs.get('colorlist')
-        errorbar = kwargs.get('errorbar')
-        padding = kwargs.get('padding')
-        labelcolor = kwargs.get('labelcolor')
-        bgcolor = kwargs.get('bgcolor')
-        gridcolor = kwargs.get('gridcolor')
         grid = kwargs.get('grid')
-        bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
-        symbollist = kwargs.get('symbollist')
+        gridcolor = kwargs.get('gridcolor')
+        labelcolor = kwargs.get('labelcolor')
+        padding = kwargs.get('padding')
+        plottitle = kwargs.get('plottitle')
         plottype = kwargs.get('plottype')
-        symbol_func = kwargs.get('symbol_func')
-        endvalue = kwargs.get('endvalue')
-        outfile = kwargs.get('outfile')
-        fmt = kwargs.get('fmt')
-        savedpi = kwargs.get('savedpi')
         noshow = kwargs.get('noshow')
-        annotate = kwargs.get('annotate')
-        confinex = kwargs.get('confinex')
+        outfile = kwargs.get('outfile')
+        savedpi = kwargs.get('savedpi')
+        shadephases = kwargs.get('shadephases')
+        shadeplots = kwargs.get('shadeplots')
         specialdict = kwargs.get('specialdict')
+        symbol_func = kwargs.get('symbol_func')
+        symbollist = kwargs.get('symbollist')
 
         if not function:
             function = None
@@ -1918,6 +1920,7 @@ class DataStream(object):
 
         myyfmt = ScalarFormatter(useOffset=False)
         n_subplots = len(keys)
+
         if n_subplots < 1:
             raise  ValueError, "Provide valid key(s)"
         count = 0
@@ -1930,11 +1933,11 @@ class DataStream(object):
         for key in keys:
             if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
-            #print datetime.utcnow()
             ind = KEYLIST.index(key)
             yplt = np.asarray([row[ind] for row in self])
             #yplt = self._get_column(key)
-            # switch between continuous and discontinuous plots
+
+            # Switch between continuous and discontinuous plots
             if debugmode:
                 print "column extracted at %s" % datetime.utcnow()
             if plottype == 'discontinuous':
@@ -1944,7 +1947,9 @@ class DataStream(object):
                 newt = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
                 t = newt
                 yplt = [el for idx, el in enumerate(yplt) if not nans[idx]]
-            # start plotting if non-nan data is present
+
+            # 1. START PLOTTING (if non-NaN data is present)
+
             len_val= len(yplt)
             if debugmode:
                 print "Got row with %d elements" % len_val
@@ -1952,7 +1957,10 @@ class DataStream(object):
                 count += 1
                 ax = count
                 subplt = "%d%d%d" %(n_subplots,1,count)
-                # Create primary plot and define x scale and ticks/labels of subplots
+
+                # 2. PREAMBLE: define plot properties
+		# -- Create primary plot and define x scale and ticks/labels of subplots
+                # -- If primary plot already exists, add subplot
                 if count == 1:
                     ax = fig.add_subplot(subplt, axisbg=bgcolor)
                     if plottitle:
@@ -1961,6 +1969,8 @@ class DataStream(object):
                 else:
                     ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
                 timeunit = ''
+
+		# -- If dates to be in shorter values, set value types:
                 if confinex:
                     trange = np.max(t) - np.min(t)
                     if trange < 0.0001: # 8 sec level
@@ -2006,12 +2016,13 @@ class DataStream(object):
                         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
                         timeunit = '[Year]'
 
+		# -- Set x-labels:
                 if count < len(keys):
                     setp(ax.get_xticklabels(), visible=False)
                 else:
                     ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
                 
-                # Create plots
+                # -- Adjust scales with padding:
                 ymin = np.min(yplt)-padding
                 ymax = np.max(yplt)+padding
                 if specialdict:
@@ -2021,25 +2032,34 @@ class DataStream(object):
                             ymin = paramlst[0]
                         if not paramlst[1] == None:
                             ymax = paramlst[1]
-                # -- switch color and symbol
-                if symbollist[count-1] == 'z': # symbol for plotting colored bars for k values
+
+                # 3. PLOT EVERYTHING
+
+		# -- Plot k-values with z (= symbol for plotting colored bars for k values)
+                if symbollist[count-1] == 'z':
                     xy = range(9)
                     for num in range(len(t)):
                         if bartrange < t[num] < np.max(t)-bartrange:
-                            ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
+                            ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
+				bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],
+				facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
                     ax.plot_date(t,yplt,colorlist[count-1]+'|')
                 else:
                     ax.plot_date(t,yplt,colorlist[count-1]+symbollist[count-1])
+
+		# -- Plot error bars:
                 if errorbar:
                     yerr = self._get_column('d'+key)
                     if len(yerr) > 0: 
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
                         loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
-                #ax.plot_date(t2,yplt2,"r"+symbol[1],markersize=4)
-                # Add annotations for flags
+
+		# -- Add grid:
                 if grid:
                     ax.grid(True,color=gridcolor,linewidth=0.5)
+
+                # -- Add annotations for flagged data:
                 if annotate:
                     flag = self._get_column('flag')
                     comm = self._get_column('comment')
@@ -2071,18 +2091,41 @@ class DataStream(object):
                             elemprev = elem
                     except:
                         if debugmode:
-                            loggerstream.debug('PmPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
-                        
+                            loggerstream.debug('MagPyPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+
+		# -- Shade in areas of storm phases:
+                if shadephases:
+		    if len(shadephases) < 4:
+		        loggerstream.debug('MagPyPlot: Incorrect number of phase definition times in variable shadephases.')
+		    if not shadeplots:
+		        loggerstream.debug('MagPyPlot: No keys given for phase shading. No phases will be plotted.')
+			shadeplots = []
+
+                    if key in shadeplots:
+                        try: 
+                            t_ssc = shadephases[0]
+                            t_mphase = shadephases[1]
+                            t_recphase = shadephases[2]
+                            t_end = shadephases[3]
+                            ax.axvspan(t_ssc, t_mphase, facecolor='red', alpha=0.3, linewidth=0)
+        		    ax.axvspan(t_mphase, t_recphase, facecolor='yellow', alpha=0.3, linewidth=0)
+        		    ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
+		        except:
+                            if debugmode:
+                                loggerstream.debug('MayPyPlot: Error plotting shaded phase regions.')
+                  
+		# -- Plot given function:      
                 if function:
                     fkey = 'f'+key
                     if fkey in function[0]:
                         ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
                         ax.plot_date(self._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
-                # Y-axis ticks
+                # -- Add Y-axis ticks:
                 if bool((count-1) & 1):
                     ax.yaxis.tick_right()
                     ax.yaxis.set_label_position("right")
-                # Y-axis labels from header information
+
+                # -- Take Y-axis labels from header information
                 try:
                     ylabel = self.header['col-'+key].upper()
                 except:
@@ -2099,18 +2142,21 @@ class DataStream(object):
                 else:
                     label = ylabel
                 ax.set_ylabel(label, color=labelcolor)
-                
                 ax.set_ylim(ymin,ymax)
                 ax.get_yaxis().set_major_formatter(myyfmt)
                 if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
                     ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
                 if debugmode:
                     print "Finished plot %d at %s" % (count, datetime.utcnow())
+
+            # 4. END PLOTTING
+
             else:
                 loggerstream.warning("Plot: No data available for key %s" % key)
 
         fig.subplots_adjust(hspace=0)
 
+        # 5. SAVE TO FILE (or show)
         if outfile:
             path = os.path.split(outfile)[0]
             if not path == '': 
