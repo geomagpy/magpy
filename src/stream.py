@@ -5,20 +5,22 @@ Written by Roman Leonhardt 2011/2012
 Version 1.0 (from the 23.02.2012)
 """
 
-# ------------------------------------
+# ----------------------------------------------------------------------------
 # Part 1: Import routines for packages
-# ------------------------------------
-logpygen = '' # loggerstream variable
-netcdf = True # Export routines for netcdf
-spacecdf = True # Export routines for Nasa cdf
-mailingfunc = True # E-mail notifications
+# ----------------------------------------------------------------------------
+
+logpygen = '' 		# loggerstream variable
+netcdf = True 		# Export routines for netcdf
+spacecdf = True 	# Export routines for Nasa cdf
+mailingfunc = True 	# E-mail notifications
 nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 
+# Standard packages
+# -----------------
 try:
-    #standard packages
     import csv
     import pickle
-    import struct # binary package for reading/writing
+    import struct
     import logging
     import sys, re
     import thread, time, string, os, shutil
@@ -32,8 +34,9 @@ try:
 except ImportError:
     print "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed"
 
+# Matplotlib
+# ----------
 try:
-    # Matpoltlib
     import matplotlib
     if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
         print "No terminal connected - assuming cron job and using Agg for matplotlib"
@@ -52,13 +55,14 @@ try:
     from matplotlib import mlab 
     from matplotlib.dates import date2num, num2date
     import matplotlib.cm as cm
-    from pylab import *  # do I need that?
+    from pylab import *
     from datetime import datetime, timedelta
 except ImportError:
     logpygen += "Init MagPy: Critical Import failure: Python matplotlib required - please install to proceed\n"
 
+# Numpy & SciPy
+# -------------
 try:
-    #numpy/scipy
     import numpy as np
     import scipy as sp
     from scipy import interpolate
@@ -67,8 +71,9 @@ try:
 except ImportError:
     logpygen += "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
 
+# NetCDF
+# ------
 try:
-    # NetCDF
     print "Loading Netcdf4 support ..."
     from netCDF4 import Dataset
     print "success"
@@ -78,8 +83,9 @@ except ImportError:
     logpygen += "Init MagPy: Import failure: Netcdf not available\n"
     pass
 
+# NASACDF - SpacePy
+# -----------------
 try:
-    # NasaCDF
     print "Loading Spacepy package cdf support ..."
     try:
         os.putenv("CDF_LIB", nasacdfdir)
@@ -96,7 +102,8 @@ except:
     print " -failed- check spacepy package"
     pass
 
-
+# Utilities
+# ---------
 try:
     import smtplib
     from email.MIMEMultipart import MIMEMultipart
@@ -104,7 +111,6 @@ try:
     from email.MIMEText import MIMEText
     from email.Utils import COMMASPACE, formatdate
     from email import Encoders
-    # Import mailing functions - for e-mail notifications
     #import smtplib
     from email.mime.text import MIMEText
     #from smtplib import SMTP_SSL as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
@@ -119,7 +125,7 @@ if logpygen == '':
     logpygen = "OK"
 
 # ##################
-# file format tests
+# File Format Tests
 # ##################
 
 logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.DEBUG)
@@ -144,6 +150,9 @@ loggerlib = logging.getLogger('lib')
 # Special loggers for event notification
 stormlogger = logging.getLogger('stream')
 
+# ----------------------------------------------------------------------------
+# Part 2: Define Dictionaries
+# ----------------------------------------------------------------------------
 
 KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
@@ -156,9 +165,10 @@ PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 
                             'PYCDF', 'PYBIN', 'POS1TXT', 'POS1', 'PYNC','DTU1','SFDMI','SFGSM','BDV1','GFZKP','NOAAACE','LATEX','CS','UNKOWN']
 
 
-# -------------------
-#  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
-# -------------------
+# ----------------------------------------------------------------------------
+#  Part 3: Main classes -- DataStream, LineStruct and 
+#      PyMagLog (To be removed)
+# ----------------------------------------------------------------------------
     
 class DataStream(object):
     """
@@ -168,36 +178,78 @@ class DataStream(object):
     keys are column identifier:
     key in keys: see KEYLIST
 
-    The following application methods are provided:
+    Application methods:
     - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
+    - stream.baseline() -- calculates baseline correction for input stream (datastream)
+    - stream.date_offset() -- Corrects the time column of the selected stream by the offst
+    - stream.delta_f() -- Calculates the difference of x+y+z to f
     - stream.differentiate() -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
+    - stream.extrapolate() -- read absolute stream and extrapolate the data
     - stream.fit(keys) -- returns function
-    - stream.filtered() -- returns stream (changes sampling_period; in case of fmi ...) 
+    - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...) 
+    - stream.flag_stream() -- Add flags to specific times or time ranges
+    - stream.func_add() -- Add a function to the selected values of the data stream
+    - stream.func_subtract() -- Subtract a function from the selected values of the data stream
+    - stream.get_gaps() -- Takes the dominant sample frequency and fills non-existing time steps
+    - stream.get_sampling_period() -- returns the dominant sampling frequency in unit ! days !
     - stream.integrate() -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
     - stream.interpol(keys) -- returns function
-    - stream.remove_outlier() -- returns stream (adds flags and comments)
-    - stream.smooth(key) -- returns stream
-    - stream.trim() -- returns stream within new time frame
-    - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
-    - stream.flag_stream(key,flag,comment,startdate) -- returns stream (adds flags and comments)
-    - stream.get_gaps() 
-    - stream.get_sampling_period() -- returns float (with period in days)
-
-    - stream.plot(keys)
+    - stream.k_fmi() -- Calculating k values following the fmi approach
+    - stream.mean() -- Calculates mean values for the specified key, Nan's are regarded for
+    - stream. obspyspectrogram() -- Computes and plots spectrogram of the input data
+    - stream.offset() -- Apply constant offsets to elements of the datastream
+    - stream.plot() -- plot keys from stream
     - stream.pmspectrogram(keys)
-    - stream.powerspectrum(key)
+    - stream.powerspectrum() -- Calculating the power spectrum following the numpy fft example
+    - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
+    - stream.remove_outlier() -- returns stream (adds flags and comments)
+    - stream.rotation() -- Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs
+    - stream.smooth(key) -- smooth the data using a window with requested size
+    - stream.spectrogram() -- Creates a spectrogram plot of selected keys
+    - stream.trim() -- returns stream within new time frame
+    - stream.write() -- Writing Stream to a file
 
     Supporting internal methods are:
-    - self._timetest(time) -- returns datetime object
-    - self._get_column(key) -- returns list
-    - self._put_column(key)
+
+    A. Standard functions and overrides for list like objects
+    - self.clear_header(self) -- Clears headers
+    - self.extend(self,datlst,header) -- Extends stream object
+    - self.sorting(self) -- Sorts object
+
+    B. Internal Methods I: Line & column functions
+    - self._get_column(key) -- returns a numpy array of selected columns from Stream
+    - self._put_column(key) -- adds a column to a Stream
+    - self._clear_column(key) -- clears a column to a Stream
+    - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
+    - self._remove_lines(self, key, value) -- removes lines with value within the selected key
+
+    B. Internal Methods II: Data manipulation functions
+    - self._aic(self, signal, k, debugmode=None) -- returns float -- determines Akaki Information Criterion for a specific index k
+    - self._get_k(self, **kwargs) -- Calculates the k value according to the Bartels scale
+    - self._get_k_float(self, value, **kwargs) -- Like _get_k, but for testing single values and not full stream keys (used in filtered function)
+    - self._gf(self, t, tau):  -- Gauss function
+    - self._hf(self, p, x) -- Harmonic function
+    - self._residual_func(self, func, y) -- residual of the harmonic function
+    - self._tau(self, period) -- low pass filter with -3db point at period in sec (e.g. 120 sec)
+
+    B. Internal Methods III: General utility & NaN handlers
+    - self._convertstream(self, coordinate, **kwargs) -- Convert coordinates of x,y,z columns in stream
+    - self._det_trange(self, period) -- starting with coefficients above 1%
+    - self._find_nearest(self, array, value) -- find point in array closest to value
+    - self._testtime(time) -- returns datetime object
     - self._get_min(key) -- returns float
     - self._get_max(key) -- returns float
-    - self._aic(signal, k) -- returns float -- determines Akaki Information Criterion for a specific index k
+    - self._nearestPow2(self, x) -- Find power of two nearest to x 
     - self._normalize(column) -- returns list,float,float -- normalizes selected column to range 0,1
     - self._denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
+    - self._maskNAN(self, column) -- Tests for NAN values in column and usually masks them
+    - self._nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
+    - self._nearestPow2(self, x) -- Find power of two nearest to x
+    - self._drop_nans(self, key) -- Helper to drop lines with NaNs in any of the selected keys.
+    - self._is_number(self, s) -- ?
     
     """
+
     def __init__(self, container=None, header={}):
         if container is None:
             container = []
@@ -206,12 +258,11 @@ class DataStream(object):
         #    header = {'Test':'Well, it works'}
             #header = {}
         self.header = header
-
         #self.header = {'Test':'Well, it works'}
 
-    # ----------------
-    # Standard functions and overrides for list like objects
-    # ----------------
+    # ------------------------------------------------------------------------
+    # A. Standard functions and overrides for list like objects
+    # ------------------------------------------------------------------------
 
     def ext(self, columnstructure): # new version of extend function for column operations
         """
@@ -238,10 +289,13 @@ class DataStream(object):
         return self.container.__getitem__(index)
 
     def __len__(self):
-        return len(self.container)
+        return len(self.container)        
 
-    #def extend(self, datlst):
-    #    self.container.extend(datlst)
+    def clear_header(self):
+        """
+        Remove header information
+        """
+        self.header = {}
 
     def extend(self,datlst,header):
         self.container.extend(datlst)
@@ -252,60 +306,11 @@ class DataStream(object):
         Sorting data according to time (maybe generalize that to some key)
         """
         liste = sorted(self.container, key=lambda tmp: tmp.time)
-        return DataStream(liste, self.header)        
+        return DataStream(liste, self.header)
 
-    def clear_header(self):
-        """
-        Remove header information
-        """
-        self.header = {}
-
-    # ----------------
-    # internal methods
-    # ----------------
-
-    def _find_nearest(self, array, value):
-        idx=(np.abs(array-value)).argmin()
-        return array[idx], idx
-
-    def _testtime(self, time):
-        """
-        Check the date/time input and returns a datetime object if valid:
-
-        ! Use UTC times !
-
-        - accepted are the following inputs:
-        1) absolute time: as provided by date2num
-        2) strings: 2011-11-22 or 2011-11-22T11:11:00
-        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-        
-        """
-        if isinstance(time, float) or isinstance(time, int):
-            try:
-                timeobj = num2date(time).replace(tzinfo=None)
-            except:
-                raise TypeError
-        elif isinstance(time, str):
-            try:
-                timeobj = datetime.strptime(time,"%Y-%m-%d")
-            except:
-                try:
-                    timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
-                except:
-                    try:
-                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
-                    except:
-                        try:
-                            timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
-                        except:
-                            raise TypeError
-        elif not isinstance(time, datetime):
-            raise TypeError
-        else:
-            timeobj = time
-
-        return timeobj
-
+    # ------------------------------------------------------------------------
+    # B. Internal Methods: Line & column functions
+    # ------------------------------------------------------------------------
 
     def _get_line(self, key, value):
         """
@@ -405,19 +410,18 @@ class DataStream(object):
                    
         return self
 
+    # ------------------------------------------------------------------------
+    # B. Internal Methods: Data manipulation functions
+    # ------------------------------------------------------------------------
 
-    def _get_max(self, key):
-        if not key in KEYLIST[:16]:
-            raise ValueError, "Column key not valid"
-        elem = max(self, key=lambda tmp: eval('tmp.'+key))
-        return eval('elem.'+key)
-
-
-    def _get_min(self, key):
-        if not key in KEYLIST[:16]:
-            raise ValueError, "Column key not valid"
-        elem = min(self, key=lambda tmp: eval('tmp.'+key))
-        return eval('elem.'+key)
+    def _aic(self, signal, k, debugmode=None):
+        try:
+            aicval = k* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
+        except:
+            if debugmode:
+                loggerstream.debug('_AIC: could not evaluate AIC at index position %i' % (k))
+            pass               
+        return aicval
 
 
     def _get_k(self, **kwargs):
@@ -513,14 +517,55 @@ class DataStream(object):
         return k
 
 
-    def _aic(self, signal, k, debugmode=None):
-        try:
-            aicval = k* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
-        except:
-            if debugmode:
-                loggerstream.debug('_AIC: could not evaluate AIC at index position %i' % (k))
-            pass               
-        return aicval
+    def _get_max(self, key):
+        if not key in KEYLIST[:16]:
+            raise ValueError, "Column key not valid"
+        elem = max(self, key=lambda tmp: eval('tmp.'+key))
+        return eval('elem.'+key)
+
+
+    def _get_min(self, key):
+        if not key in KEYLIST[:16]:
+            raise ValueError, "Column key not valid"
+        elem = min(self, key=lambda tmp: eval('tmp.'+key))
+        return eval('elem.'+key)
+
+
+    def _gf(self, t, tau):
+        """
+        Gauss function
+        """
+        return np.exp(-((t/tau)*(t/tau))/2)
+
+
+    def _hf(self, p, x):
+        """
+        Harmonic function
+        """
+        hf = p[0]*cos(2*pi/p[1]*x+p[2]) + p[3]*x + p[4] # Target function
+        return hf
+
+
+    def _residual_func(self, func, y):
+        """
+        residual of the harmonic function
+        """
+        return y - func
+
+
+    def _tau(self, period):
+        """
+        low pass filter with -3db point at period in sec (e.g. 120 sec)
+        1. convert period from seconds to days as used in daytime
+        2. return tau (in unit "day")
+        """
+        per = period/(3600*24)
+        return 0.83255461*per/(2*np.pi)
+
+
+    # ------------------------------------------------------------------------
+    # B. Internal Methods: General utility & NaN handlers
+    # ------------------------------------------------------------------------
         
     def _convertstream(self, coordinate, **kwargs):
         """
@@ -559,18 +604,6 @@ class DataStream(object):
 
         return DataStream(outstream,outstream.header)
 
-    def _normalize(self, column):
-        """
-        normalizes the given column to range [0:1]
-        """
-        normcol = []
-        maxval = np.max(column)
-        minval = np.min(column)
-        for elem in column:
-            normcol.append((elem-minval)/(maxval-minval))
-            
-        return normcol, minval, maxval
-
 
     def _denormalize(self, column, startvalue, endvalue):
         """
@@ -588,33 +621,6 @@ class DataStream(object):
             
         return normcol
 
-    def _hf(self, p, x):
-        """
-        Harmonic function
-        """
-        hf = p[0]*cos(2*pi/p[1]*x+p[2]) + p[3]*x + p[4] # Target function
-        return hf
-
-    def _residualFunc(self, func, y):
-        """
-        residual of the harmonic function
-        """
-        return y - func
-
-    def _gf(self, t, tau):
-        """
-        Gauss function
-        """
-        return np.exp(-((t/tau)*(t/tau))/2)
-
-    def _tau(self, period):
-        """
-        low pass filter with -3db point at period in sec (e.g. 120 sec)
-        1. convert period from seconds to days as used in daytime
-        2. return tau (in unit "day")
-        """
-        per = period/(3600*24)
-        return 0.83255461*per/(2*np.pi)
 
     def _det_trange(self, period):
         """
@@ -622,6 +628,23 @@ class DataStream(object):
         is now returning a timedelta object
         """
         return np.sqrt(-np.log(0.01)*2)*self._tau(period)
+
+
+    def _find_nearest(self, array, value):
+        idx=(np.abs(array-value)).argmin()
+        return array[idx], idx
+
+        
+    def _is_number(self, s):
+        """
+        Test whether s is a number
+        """
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
 
     def _maskNAN(self, column):
         """
@@ -650,6 +673,7 @@ class DataStream(object):
 
         return column
 
+
     def _nan_helper(self, y):
         """Helper to handle indices and logical indices of NaNs. Taken from eat (http://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array)
 
@@ -667,6 +691,80 @@ class DataStream(object):
         return np.isnan(y), lambda z: z.nonzero()[0]
 
 
+    def _nearestPow2(self, x): 
+        """
+        Function taken from ObsPy
+        Find power of two nearest to x 
+        >>> _nearestPow2(3) 
+        2.0 
+        >>> _nearestPow2(15) 
+        16.0 
+        :type x: Float 
+        :param x: Number 
+        :rtype: Int 
+        :return: Nearest power of 2 to x 
+        """ 
+
+        a = pow(2, ceil(np.log2(x))) 
+        b = pow(2, floor(np.log2(x))) 
+        if abs(a - x) < abs(b - x): 
+            return a 
+        else: 
+            return b 
+
+
+    def _normalize(self, column):
+        """
+        normalizes the given column to range [0:1]
+        """
+        normcol = []
+        maxval = np.max(column)
+        minval = np.min(column)
+        for elem in column:
+            normcol.append((elem-minval)/(maxval-minval))
+            
+        return normcol, minval, maxval
+
+
+    def _testtime(self, time):
+        """
+        Check the date/time input and returns a datetime object if valid:
+
+        ! Use UTC times !
+
+        - accepted are the following inputs:
+        1) absolute time: as provided by date2num
+        2) strings: 2011-11-22 or 2011-11-22T11:11:00
+        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+        
+        """
+        if isinstance(time, float) or isinstance(time, int):
+            try:
+                timeobj = num2date(time).replace(tzinfo=None)
+            except:
+                raise TypeError
+        elif isinstance(time, str):
+            try:
+                timeobj = datetime.strptime(time,"%Y-%m-%d")
+            except:
+                try:
+                    timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
+                except:
+                    try:
+                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
+                    except:
+                        try:
+                            timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
+                        except:
+                            raise TypeError
+        elif not isinstance(time, datetime):
+            raise TypeError
+        else:
+            timeobj = time
+
+        return timeobj
+
+
     def _drop_nans(self, key):
         """Helper to drop lines with NaNs in any of the selected keys.
 
@@ -677,21 +775,11 @@ class DataStream(object):
         newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
         return DataStream(newst,self.header)
 
-        
-    def _is_number(self, s):
-        """
-        Test whether s is a number
-        """
-        try:
-            float(s)
-            return True
-        except ValueError:
-            return False
 
-    # ----------------
-    # application methods - alphabetical order
-    # ----------------
-
+    # ------------------------------------------------------------------------
+    # C. Application methods
+    # 		(in alphabetical order)
+    # ------------------------------------------------------------------------
 
     def aic_calc(self, key, **kwargs):
         """
@@ -1091,7 +1179,7 @@ class DataStream(object):
         if not compare:
             compare = '=='
         if not compare in [">=", "<=",">", "<", "==", "!="]:
-            loggerstream.info('--- Extract: Please provide proper compare paramter ">=", "<=",">", "<", "==" or "!=" ')
+            loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==" or "!=" ')
             return self
 
         if not self._is_number(value):
@@ -1134,84 +1222,7 @@ class DataStream(object):
         self.add(line)
         self = self.sorting()
 
-        return self       
-
-        
-    def fit(self, keys, **kwargs):
-        """
-        fitting data:
-        NaN values are interpolated
-        kwargs support the following keywords:
-            - fitfunc   (string: 'poly', 'harmonic', 'spline') default='spline'
-            - timerange (timedelta obsject) default=timedelta(hours=1)
-            - fitdegree (float)  default=5
-            - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
-            - flag 
-        """
-        # Defaults:
-        fitfunc = kwargs.get('fitfunc')
-        fitdegree = kwargs.get('fitdegree')
-        knotstep = kwargs.get('knotstep')
-        if not fitfunc:
-            fitfunc = 'spline'
-        if not fitdegree:
-            fitdegree = 5
-        if not knotstep:
-            knotstep = 0.01
-
-        if knotstep >= 0.5:
-            raise ValueError, "Knotstep needs to be smaller than 0.5"
-
-        functionkeylist = {}
-        
-        for key in keys:
-            tmpst = self._drop_nans(key)
-            t = tmpst._get_column('time')
-            nt,sv,ev = self._normalize(t)
-            sp = self.get_sampling_period()
-            if sp == 0:  ## if no dominant sampling period can be identified then use minutes
-                sp = 0.0177083333256
-            if not key in KEYLIST[1:16]:
-                raise ValueError, "Column key not valid"
-            val = tmpst._get_column(key)
-            # interplolate NaN values
-            #nans, xxx= self._nan_helper(val)
-            #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
-            #print np.min(nt), np.max(nt), sp, len(self)
-            x = arange(np.min(nt),np.max(nt),sp)
-            if len(val)>1 and fitfunc == 'spline':
-                try:
-                    knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
-                    if len(knots) > len(val):
-                        knotstep = knotstep*4
-                        knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
-                        loggerstream.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
-                    ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
-                except:
-                    loggerstream.error('Value error in fit function - likely reason: no valid numbers')
-                    raise ValueError, "Value error in fit function"
-                    return
-                f_fit = interpolate.splev(x,ti)
-            elif len(val)>1 and fitfunc == 'poly':
-                loggerstream.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
-                ti = polyfit(nt, val, fitdegree)
-                f_fit = polyval(ti,x)
-            elif len(val)>1 and fitfunc == 'harmonic':
-                loggerstream.debug('Selected harmonic fit - not yet implemented')
-                ti = polyfit(nt, val, fitdegree)
-                f_fit = polyval(ti,x)
-            elif len(val)<=1:
-                loggerstream.warning('Fit: No valid data')
-                return
-            else:
-                loggerstream.warning('Fit: function not valid')
-                return
-            exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
-            exec('functionkeylist["f'+key+'"] = f'+key)
-
-        func = [functionkeylist, sv, ev]
-
-        return func
+        return self
 
 
     def filter(self, **kwargs):
@@ -1398,7 +1409,84 @@ class DataStream(object):
         
         loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
 
-        return DataStream(resdata,self.header)      
+        return DataStream(resdata,self.header)             
+
+        
+    def fit(self, keys, **kwargs):
+        """
+        fitting data:
+        NaN values are interpolated
+        kwargs support the following keywords:
+            - fitfunc   (string: 'poly', 'harmonic', 'spline') default='spline'
+            - timerange (timedelta obsject) default=timedelta(hours=1)
+            - fitdegree (float)  default=5
+            - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
+            - flag 
+        """
+        # Defaults:
+        fitfunc = kwargs.get('fitfunc')
+        fitdegree = kwargs.get('fitdegree')
+        knotstep = kwargs.get('knotstep')
+        if not fitfunc:
+            fitfunc = 'spline'
+        if not fitdegree:
+            fitdegree = 5
+        if not knotstep:
+            knotstep = 0.01
+
+        if knotstep >= 0.5:
+            raise ValueError, "Knotstep needs to be smaller than 0.5"
+
+        functionkeylist = {}
+        
+        for key in keys:
+            tmpst = self._drop_nans(key)
+            t = tmpst._get_column('time')
+            nt,sv,ev = self._normalize(t)
+            sp = self.get_sampling_period()
+            if sp == 0:  ## if no dominant sampling period can be identified then use minutes
+                sp = 0.0177083333256
+            if not key in KEYLIST[1:16]:
+                raise ValueError, "Column key not valid"
+            val = tmpst._get_column(key)
+            # interplolate NaN values
+            #nans, xxx= self._nan_helper(val)
+            #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
+            #print np.min(nt), np.max(nt), sp, len(self)
+            x = arange(np.min(nt),np.max(nt),sp)
+            if len(val)>1 and fitfunc == 'spline':
+                try:
+                    knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
+                    if len(knots) > len(val):
+                        knotstep = knotstep*4
+                        knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
+                        loggerstream.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
+                    ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
+                except:
+                    loggerstream.error('Value error in fit function - likely reason: no valid numbers')
+                    raise ValueError, "Value error in fit function"
+                    return
+                f_fit = interpolate.splev(x,ti)
+            elif len(val)>1 and fitfunc == 'poly':
+                loggerstream.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
+                ti = polyfit(nt, val, fitdegree)
+                f_fit = polyval(ti,x)
+            elif len(val)>1 and fitfunc == 'harmonic':
+                loggerstream.debug('Selected harmonic fit - not yet implemented')
+                ti = polyfit(nt, val, fitdegree)
+                f_fit = polyval(ti,x)
+            elif len(val)<=1:
+                loggerstream.warning('Fit: No valid data')
+                return
+            else:
+                loggerstream.warning('Fit: function not valid')
+                return
+            exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
+            exec('functionkeylist["f'+key+'"] = f'+key)
+
+        func = [functionkeylist, sv, ev]
+
+        return func
 
 
     def flag_stream(self, key, flag, comment, startdate, enddate=None):
@@ -1794,923 +1882,6 @@ class DataStream(object):
             return float("NaN")
 
 
-    def offset(self, offsets):
-        """
-        Offset treatment: offsets argument is a dictionary
-        Apply constant offsets to elements of the datastream
-        the Offsets arguments is a dictionary which refers to keys fo the datastream
-        Important: Time offsets have to be timedelta objects
-        : type offsets: dict
-        : param offsets: looks like {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
-        # 1.) assert that offsets is a dictionary {'x': 4.2, 'y':... }
-        # 2.) apply offsets
-        """
-        #header = self.header
-
-        for key in offsets:
-            if key in KEYLIST:
-                val = self._get_column(key)
-                if key == 'time':
-                    newval = [num2date(elem.time).replace(tzinfo=None) + offsets[key] for elem in val]
-                    loggerstream.info('Offset function: Corrected time column by %s sec' % str(offset.seconds))
-                else:
-                    newval = [elem + offsets[key] for elem in val]
-                    loggerstream.info('Offset function: Corrected column %s by %.3f' % (key, offsets[key]))
-                self = self._put_column(newval, key)
-    
-        return self
-                            
-
-    def plot(self, keys, debugmode=None, **kwargs):
-        """
-        Creates a simple graph of the current stream. In order to run matplotlib from cron one need to include (matplotlib.use('Agg'))
-
-        Keys define the columns to be plotted.
-
-        Supports the following keywords:
-        - annote: 	(bool) Annotate data using comments
-	- bgcolor	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
-        - colorlist 	(list - default []) Provide a ordered color list of type ['b','g']
-	- confinex	(bool) Confines tags on x-axis to shorter values.
-        - errorbar: 	(boolean - default False) plot dx,dy,dz,df values if True
-        - function: 	(func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
-        - fullday: 	(boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
-        - fmt: 		(string?) format of outfile 
-	- grid		(bool) show grid or not, default = True 
-	- gridcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
-	- labelcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc 
-        - noshow: 	(bool) don't call show at the end, just returns figure handle
-        - outfile: 	string to save the figure, if path is not existing it will be created
-        - padding: 	(integer - default 0) Value to add to the max-min data for adjusting y-scales
-        - savedpi: 	(integer) resolution
-        - savefigure: 	(string - default None) if provided a copy of the plot is saved to savefilename.png
-	- shadephases	(list) Should be a list with four datetime objects:
-		      [0 = date of SSC/start of initial phase,
-		       1 = start of main phase,
-		       2 = start of recovery phase,
-		       3 = end of recovery phase]
-		      (Added 24.09.2013 by RLB.)
-	- shadeplots	(list) List of keys in plots to shade.
-	- specialdict	(dictionary) contains special information for specific plots. key
-                      key corresponds to the column
-                      input is a list with the following parameters
-                      ('None' if not used)
-                      ymin
-                      ymax
-                      ycolor
-                      bgcolor
-                      grid
-                      gridcolor
-        - symbol: 	(string - default '-') symbol for primary plot
-        - symbol_func: 	(string - default '-') symbol of function plot 
-
-        """
-
-        annotate = kwargs.get('annotate')
-        bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
-        bgcolor = kwargs.get('bgcolor')
-        colorlist = kwargs.get('colorlist')
-        confinex = kwargs.get('confinex')
-        endvalue = kwargs.get('endvalue')
-        errorbar = kwargs.get('errorbar')
-        fmt = kwargs.get('fmt')
-        function = kwargs.get('function')
-        fullday = kwargs.get('fullday')
-        grid = kwargs.get('grid')
-        gridcolor = kwargs.get('gridcolor')
-        labelcolor = kwargs.get('labelcolor')
-        padding = kwargs.get('padding')
-        plottitle = kwargs.get('plottitle')
-        plottype = kwargs.get('plottype')
-        noshow = kwargs.get('noshow')
-        outfile = kwargs.get('outfile')
-        savedpi = kwargs.get('savedpi')
-        shadephases = kwargs.get('shadephases')
-        shadeplots = kwargs.get('shadeplots')
-        specialdict = kwargs.get('specialdict')
-        symbol_func = kwargs.get('symbol_func')
-        symbollist = kwargs.get('symbollist')
-
-        if not function:
-            function = None
-        if not plottitle:
-            plottitle = None
-        if not colorlist:
-            colorlist = ['b','g','m','c','y','k','b','g','m','c','y','k']
-        if not symbollist:
-            symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-','-']
-        if not plottype:
-            plottype = 'discontinuous' # can also be "continuous"
-        if not symbol_func:
-            symbol_func = '-'
-        if not savedpi:
-            savedpi = 80
-        if not bartrange:
-            bartrange = 0.06
-        if not padding:
-            padding = 0
-        if not labelcolor:
-            labelcolor = '0.2'
-        if not bgcolor:
-            bgcolor = '#d5de9c'
-        if not gridcolor:
-            gridcolor = '#316931'
-        if not grid:
-            grid =True
-
-        myyfmt = ScalarFormatter(useOffset=False)
-        n_subplots = len(keys)
-
-        if n_subplots < 1:
-            raise  ValueError, "Provide valid key(s)"
-        count = 0
-        fig = plt.figure()
-
-        if debugmode:
-            print "Start plotting at %s" % datetime.utcnow()
-
-        t = np.asarray([row[0] for row in self])
-        for key in keys:
-            if not key in KEYLIST[1:16]:
-                raise ValueError, "Column key not valid"
-            ind = KEYLIST.index(key)
-            yplt = np.asarray([row[ind] for row in self])
-            #yplt = self._get_column(key)
-
-            # Switch between continuous and discontinuous plots
-            if debugmode:
-                print "column extracted at %s" % datetime.utcnow()
-            if plottype == 'discontinuous':
-                yplt = self._maskNAN(yplt)
-            else: 
-                nans, test = self._nan_helper(yplt)
-                newt = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
-                t = newt
-                yplt = [el for idx, el in enumerate(yplt) if not nans[idx]]
-
-            # 1. START PLOTTING (if non-NaN data is present)
-
-            len_val= len(yplt)
-            if debugmode:
-                print "Got row with %d elements" % len_val
-            if len_val > 1:
-                count += 1
-                ax = count
-                subplt = "%d%d%d" %(n_subplots,1,count)
-
-                # 2. PREAMBLE: define plot properties
-		# -- Create primary plot and define x scale and ticks/labels of subplots
-                # -- If primary plot already exists, add subplot
-                if count == 1:
-                    ax = fig.add_subplot(subplt, axisbg=bgcolor)
-                    if plottitle:
-                        ax.set_title(plottitle)
-                    a = ax
-                else:
-                    ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
-                timeunit = ''
-
-		# -- If dates to be in shorter values, set value types:
-                if confinex:
-                    trange = np.max(t) - np.min(t)
-                    if trange < 0.0001: # 8 sec level
-                        #set 0.5 second
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%S'))
-                        timeunit = '[Sec]'
-                    elif trange < 0.01: # 13 minute level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%M:%S'))
-                        timeunit = '[M:S]'
-                    elif trange <= 1: # day level
-                        # set 1 hour
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-                        timeunit = '[H:M]'
-                    elif trange < 7: # 3 day level
-                        if trange < 2:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=6))
-                        elif trange < 5:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=12))
-                        else:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.WeekdayLocator(byweekday=matplotlib.dates.MO))
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%H:%M'))
-                        setp(ax.get_xticklabels(),rotation='0')
-                        timeunit = '[Day-H:M]'
-                    elif trange < 60: # month level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b'))
-                        setp(ax.get_xticklabels(),rotation='70')
-                        timeunit = '[Day]'
-                    elif trange < 150: # year level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b%y'))
-                        setp(ax.get_xticklabels(),rotation='70')
-                        timeunit = '[Day]'
-                    elif trange < 600: # minute level
-                        if trange < 300:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=1))
-                        elif trange < 420:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=2))
-                        else:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=4))
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b %Y'))
-                        setp(ax.get_xticklabels(),rotation='0')
-                        timeunit = '[Month]'
-                    else:
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
-                        timeunit = '[Year]'
-
-		# -- Set x-labels:
-                if count < len(keys):
-                    setp(ax.get_xticklabels(), visible=False)
-                else:
-                    ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
-                
-                # -- Adjust scales with padding:
-                ymin = np.min(yplt)-padding
-                ymax = np.max(yplt)+padding
-                if specialdict:
-                    if key in specialdict:
-                        paramlst = specialdict[key]
-                        if not paramlst[0] == None:
-                            ymin = paramlst[0]
-                        if not paramlst[1] == None:
-                            ymax = paramlst[1]
-
-                # 3. PLOT EVERYTHING
-
-		# -- Plot k-values with z (= symbol for plotting colored bars for k values)
-                if symbollist[count-1] == 'z':
-                    xy = range(9)
-                    for num in range(len(t)):
-                        if bartrange < t[num] < np.max(t)-bartrange:
-                            ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
-				bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],
-				facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
-                    ax.plot_date(t,yplt,colorlist[count-1]+'|')
-                else:
-                    ax.plot_date(t,yplt,colorlist[count-1]+symbollist[count-1])
-
-		# -- Plot error bars:
-                if errorbar:
-                    yerr = self._get_column('d'+key)
-                    if len(yerr) > 0: 
-                        ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
-                    else:
-                        loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
-
-		# -- Add grid:
-                if grid:
-                    ax.grid(True,color=gridcolor,linewidth=0.5)
-
-                # -- Add annotations for flagged data:
-                if annotate:
-                    flag = self._get_column('flag')
-                    comm = self._get_column('comment')
-                    elemprev = "-"
-                    try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
-                        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-                        indexflag = int(poslst[0])
-                        for idx, elem in enumerate(comm):
-                            if not elem == elemprev:
-                                if not elem == "-" and flag[idx][indexflag] in ['0','3']:
-                                    annotecount = idx
-                                    ax.annotate(r'%s' % (elem),
-                                        xy=(t[idx], yplt[idx]),
-                                        xycoords='data', xytext=(20, 20),
-                                        textcoords='offset points',
-                                        bbox=dict(boxstyle="round", fc="0.8"),
-                                        arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1,
-                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                                elif elem == "-" and idx > annotecount + 3: # test that one point defines the flagged range
-                                    ax.annotate(r'End of %s' % (comm[idx-1]),
-                                        xy=(t[idx-1], yplt[idx-1]),
-                                        xycoords='data', xytext=(20, -20),
-                                        textcoords='offset points',
-                                        bbox=dict(boxstyle="round", fc="0.8"),
-                                        arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1,
-                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                            elemprev = elem
-                    except:
-                        if debugmode:
-                            loggerstream.debug('MagPyPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
-
-		# -- Shade in areas of storm phases:
-                if shadephases:
-		    if len(shadephases) < 4:
-		        loggerstream.debug('MagPyPlot: Incorrect number of phase definition times in variable shadephases.')
-		    if not shadeplots:
-		        loggerstream.debug('MagPyPlot: No keys given for phase shading. No phases will be plotted.')
-			shadeplots = []
-
-                    if key in shadeplots:
-                        try: 
-                            t_ssc = shadephases[0]
-                            t_mphase = shadephases[1]
-                            t_recphase = shadephases[2]
-                            t_end = shadephases[3]
-                            ax.axvspan(t_ssc, t_mphase, facecolor='red', alpha=0.3, linewidth=0)
-        		    ax.axvspan(t_mphase, t_recphase, facecolor='yellow', alpha=0.3, linewidth=0)
-        		    ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
-		        except:
-                            if debugmode:
-                                loggerstream.debug('MayPyPlot: Error plotting shaded phase regions.')
-                  
-		# -- Plot given function:      
-                if function:
-                    fkey = 'f'+key
-                    if fkey in function[0]:
-                        ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
-                        ax.plot_date(self._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
-                # -- Add Y-axis ticks:
-                if bool((count-1) & 1):
-                    ax.yaxis.tick_right()
-                    ax.yaxis.set_label_position("right")
-
-                # -- Take Y-axis labels from header information
-                try:
-                    ylabel = self.header['col-'+key].upper()
-                except:
-                    ylabel = ''
-                    pass
-                try:
-                    yunit = self.header['unit-col-'+key]
-                except:
-                    yunit = ''
-                    pass
-                if not yunit == '': 
-                    yunit = re.sub('[#$%&~_^\{}]', '', yunit)
-                    label = ylabel+' $['+yunit+']$'
-                else:
-                    label = ylabel
-                ax.set_ylabel(label, color=labelcolor)
-                ax.set_ylim(ymin,ymax)
-                ax.get_yaxis().set_major_formatter(myyfmt)
-                if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
-                    ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
-                if debugmode:
-                    print "Finished plot %d at %s" % (count, datetime.utcnow())
-
-            # 4. END PLOTTING
-
-            else:
-                loggerstream.warning("Plot: No data available for key %s" % key)
-
-        fig.subplots_adjust(hspace=0)
-
-        # 5. SAVE TO FILE (or show)
-        if outfile:
-            path = os.path.split(outfile)[0]
-            if not path == '': 
-                if not os.path.exists(path):
-                    os.makedirs(path)
-            if fmt: 
-                fig.savefig(outfile, format=fmt, dpi=savedpi) 
-            else: 
-                fig.savefig(outfile, dpi=savedpi) 
-        elif noshow: 
-            return fig
-        else: 
-            plt.show() 
-
-
-    def write(self, filepath, **kwargs):
-        """
-        Writing Stream to a file
-        filepath (string): provding path/filename for saving
-        Keywords:
-        format_type (string): in which format - default pystr
-        period (string) : supports hour, day, month, year, all - default day
-        filenamebegins (string): providing the begin of savename (e.g. "WIK_")
-        filenameends (string): providing the end of savename (e.g. ".min")
-        wformat (string): outputformat
-        dateformat (string):  outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22"
-        coverage: (timedelta): day files or hour or month or year or all - default day
-        mode: (append, overwrite, replace, skip) mode for handling existing files/data in files
-        --- > Example output: "WIK_2011-11-22.min"
-        """
-        format_type = kwargs.get('format_type')
-        filenamebegins = kwargs.get('filenamebegins')
-        filenameends = kwargs.get('filenameends')
-        dateformat = kwargs.get('dateformat')
-        coverage = kwargs.get('coverage')
-        mode = kwargs.get('mode')
-        offsets = kwargs.get('offsets')
-        createlatex = kwargs.get('createlatex')
-        keys = kwargs.get('keys')
-        
-        if not format_type:
-            format_type = 'PYSTR'
-        if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.info('Write: Output format not supported')
-            print "Format not supported"
-            return
-        if not dateformat:
-            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
-        if not coverage:
-            coverage = timedelta(days=1)
-        if not filenamebegins:
-            filenamebegins = ''
-        if not filenameends:
-            # Extension for cfd files is automatically attached
-            if format_type == 'PYCDF':
-                filenameends = ''
-            else:
-                filenameends = '.txt'
-        if not mode:
-            mode= 'overwrite'
-
-        if len(self) < 1:
-            loggerstream.info('Write: zero length of stream ')
-            return
-            
-        # divide stream in parts according to coverage and save them
-        newst = DataStream()
-        if coverage == 'month':
-            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
-            cmonth = int(datetime.strftime(starttime,'%m')) + 1
-            cyear = int(datetime.strftime(starttime,'%Y'))
-            if cmonth == 13:
-               cmonth = 1
-               cyear = cyear + 1
-            monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
-            endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
-            while starttime < num2date(self[-1].time).replace(tzinfo=None):
-                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                newst = DataStream(lst,self.header)
-                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
-                if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
-                starttime = endtime
-                # get next endtime
-                cmonth = int(datetime.strftime(starttime,'%m')) + 1
-                cyear = int(datetime.strftime(starttime,'%Y'))
-                if cmonth == 13:
-                   cmonth = 1
-                   cyear = cyear + 1
-                monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
-                endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
-        elif not coverage == 'all':
-            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
-            endtime = starttime + coverage
-            while starttime < num2date(self[-1].time).replace(tzinfo=None):
-                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                newst = DataStream(lst,self.header)
-                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
-                if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
-                starttime = endtime
-                endtime = endtime + coverage
-        else:
-            filename = filenamebegins + filenameends
-            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
-
-        return True
-    
-
-    def remove_flagged(self, **kwargs):
-        """
-        remove flagged data from stream:
-        kwargs support the following keywords:
-            - flaglist  (list) default=[1,3]
-            - keys (string e.g. 'f') default=FLAGKEYLIST
-        flag = '000' or '010' etc
-        """
-        
-        # Defaults:
-        flaglist = kwargs.get('flaglist')
-        keys = kwargs.get('keys')
-
-        if not flaglist:
-            flaglist = [1,3]
-        if not keys:
-            keys = FLAGKEYLIST
-
-        for key in keys:
-            poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-            pos = poslst[0]
-            liste = []
-            emptyelem = LineStruct()
-            for elem in self:
-                fllst = list(elem.flag)
-                try: # test whether useful flag is present: flaglst length changed during the program development
-                    flag = int(fllst[pos])
-                except:
-                    flag = 0
-                if not flag in flaglist:
-                    liste.append(elem)
-                else:
-                    exec('elem.'+key+' = float("nan")')
-                    liste.append(elem)
-
-        #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
-        return DataStream(liste, self.header)      
-
-
-    def rotation(self,**kwargs):
-        """
-        Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
-        alpha is the horizontal rotation in degree,
-        beta the vertical
-        """
-        
-        
-        unit = kwargs.get('unit')
-        alpha = kwargs.get('alpha')
-        beta = kwargs.get('beta')
-        if unit == 'gon':
-            ang_fac = 400./360.
-        elif unit == 'rad':
-            ang_fac = np.pi/180.
-        else:
-            ang_fac = 1.
-        if not alpha:
-            alpha = 0.
-        if not beta:
-            beta = 0.
-
-        loggerstream.info('--- Applying rotation matrix: %s ' % (str(datetime.now())))
-
-        for elem in self:
-            ra = np.pi*alpha/(180.*ang_fac)
-            rb = np.pi*beta/(180.*ang_fac)
-            xs = elem.x*np.cos(rb)*np.cos(ra)-elem.y*np.sin(ra)+elem.z*np.sin(rb)*np.cos(ra)
-            ys = elem.x*np.cos(rb)*np.sin(ra)+elem.y*np.cos(ra)+elem.z*np.sin(rb)*np.sin(ra)
-            zs = elem.x*np.sin(rb)+elem.z*np.cos(rb)
-            elem.x = xs
-            elem.y = ys
-            elem.z = zs
-
-        loggerstream.info('--- finished reorientation: %s ' % (str(datetime.now())))
-
-        return self
-
-
-    def remove_outlier(self, **kwargs):
-        """
-        uses quartiles: threshold should be 1.5
-        treshold 5 keeps storm onsets in
-        treshold 4 seems to be the best compromise
-        Get start time and add (e.g.) one hour for upper limit
-        kwargs support the following keywords:
-            - timerange (timedelta obsject) default=timedelta(hours=1)
-            - threshold (float)  default=4
-            - flag
-            - keys  (from KEYLIST) default 'f'
-
-        Position of flag in flagstring
-        f (intensity): pos 0
-        x,y,z (vector): pos 1
-        other (vector): pos 2
-        Position of flag in flagstring
-        x : pos 0
-        y : pos 1
-        z : pos 2
-        f : pos 3
-        t1 : pos 4
-        t2 : pos 5
-        var1 : pos 6
-        var2: pos 7
-        Coding : 0 take, 1 remove, 2 force take, 3 force remove
-        Example:
-        0000000, 0001000, etc
-        012 = take f, automatically removed v, and force use of other
-        300 = force remove f, take v, and take other
-        """
-        # Defaults:
-        timerange = kwargs.get('timerange')
-        threshold = kwargs.get('threshold')
-        keys = kwargs.get('keys')
-        if not timerange:
-            timerange = timedelta(hours=1)
-        if not keys:
-            keys = ['f']
-        if not threshold:
-            threshold = 4.0
-        # Position of flag in flagstring
-        # f (intensity): pos 0
-        # x,y,z (vector): pos 1
-        # other (vector): pos 2
-        
-        loggerstream.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
-
-        if len(self) < 1:
-            loggerstream.info('--- No data - Stopping outlier removal at %s ' % (str(datetime.now())))
-            return self
-        
-        # Start here with for key in keys:
-        for key in keys:
-            poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-            flagpos = poslst[0]
-
-            st = self._get_min('time')
-            et = self._get_max('time')
-            at = date2num((num2date(st).replace(tzinfo=None)) + timerange)
-            incrt = at-st
-            
-
-            arraytime = self._get_column('time')
-
-            newst = DataStream()
-            while st < et:
-                tmpar, idxst = self._find_nearest(arraytime,st)
-                tmpar, idxat = self._find_nearest(arraytime,at)
-                if idxat == len(arraytime)-1:
-                    idxat = len(arraytime)
-                st = at
-                at += incrt
-
-                lstpart = self[idxst:idxat]
-                selcol = [eval('row.'+key) for row in lstpart]
-                
-                try:
-                    q1 = stats.scoreatpercentile(selcol,25)
-                    q3 = stats.scoreatpercentile(selcol,75)
-                    iqd = q3-q1
-                    md = np.median(selcol)
-                    whisker = threshold*iqd
-                except:
-                    try:
-                        md = np.median(selcol) 
-                        whisker = md*0.005
-                    except:
-                        loggerstream.warning("Eliminate outliers produced a problem: please check\n")
-                        pass
-
-                for elem in lstpart:
-                    row = LineStruct()
-                    row = elem
-                    if not md-whisker < eval('elem.'+key) < md+whisker:
-                        fllist = list(row.flag)
-                        fllist[flagpos] = '1'
-                        row.flag=''.join(fllist)
-                        row.comment = "%s removed by automatic outlier removal" % key
-                        if not isnan(eval('elem.'+key)):
-                            loggerstream.info("Outlier: removed %s (= %f) at time %s, " % (key, eval('elem.'+key), datetime.strftime(num2date(elem.time),"%Y-%m-%dT%H:%M:%S")))
-                    else:
-                        fllist = list(row.flag)
-                        fllist[flagpos] = '0'
-                        row.flag=''.join(fllist)
-                    newst.add(row)
-
-        loggerstream.info('--- Outlier removal finished at %s ' % str(datetime.now()))
-
-        return DataStream(newst, self.header)        
-
-
-    def smooth(self, keys, **kwargs):
-        """smooth the data using a window with requested size.
-        (taken from Cookbook/Signal Smooth)
-        This method is based on the convolution of a scaled window with the signal.
-        The signal is prepared by introducing reflected copies of the signal 
-        (with the window size) in both ends so that transient parts are minimized
-        in the begining and end part of the output signal.
-        
-        input:
-            x: the input signal 
-            window_len: the dimension of the smoothing window; should be an odd integer
-            window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
-                flat window will produce a moving average smoothing.
-
-        output:
-            the smoothed signal
-            
-        example:
-
-        t=linspace(-2,2,0.1)
-        x=sin(t)+randn(len(t))*0.1
-        y=smooth(x)
-        
-        see also: 
-        
-        numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-        scipy.signal.lfilter
-     
-        TODO: the window parameter could be the window itself if an array instead of a string   
-        """
-        # Defaults:
-        window_len = kwargs.get('window_len')
-        window = kwargs.get('window')
-        if not window_len:
-            window_len = 11
-        if not window:
-            window='hanning'
-
-        
-        loggerstream.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
-
-        for key in keys:
-            if not key in KEYLIST:
-                raise ValueError, "Column key not valid"
-
-            x = self._get_column(key)
-
-            if x.ndim != 1:
-                raise ValueError, "smooth only accepts 1 dimension arrays."
-            if x.size < window_len:
-                raise ValueError, "Input vector needs to be bigger than window size."
-            if window_len<3:
-                return x
-            if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-                raise ValueError, "Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
-
-            s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
-            #print(len(s))
-            if window == 'flat': #moving average
-                w=np.ones(window_len,'d')
-            else:
-                w=eval('np.'+window+'(window_len)')
-
-            y=np.convolve(w/w.sum(),s,mode='valid')
-
-            self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
-
-        loggerstream.info(' --- Finished smoothing at %s' % (str(datetime.now())))
-        
-        return self
-
-
-    def spectrogram(self, keys, per_lap=0.9, wlen=None, log=False, 
-                    outfile=None, fmt=None, axes=None, dbscale=False, 
-                    mult=8.0, cmap=None, zorder=None, title=None, show=True, 
-                    sphinx=False, clip=[0.0, 1.0], **kwargs):
-        """
-        Creates a spectrogram plot of selected keys.
-        Parameter description at function obspyspectrogram
-
-        keywords:
-        samp_rate_multiplicator: to change the frequency relative to one day (default value is Hz - 24*3600) 
-        samp_rate_multiplicator : sampling rate give as days -> multiplied by x to create Hz, etc: default 24, which means 1/3600 Hz
-        """
-        samp_rate_multiplicator = kwargs.get('samp_rate_multiplicator')
-
-        if not samp_rate_multiplicator:
-            samp_rate_multiplicator = 24*3600
-
-        t = self._get_column('time')
-
-        for key in keys:
-            val = self._get_column(key)
-            val = self._maskNAN(val)
-            dt = self.get_sampling_period()*(samp_rate_multiplicator)
-            Fs = float(1.0/dt)
-            self.obspyspectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log, 
-                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale, 
-                    mult=mult, cmap=cmap, zorder=zorder, title=title, show=show, 
-                    sphinx=sphinx, clip=clip)
-
-
-    def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None):
-        """
-        Calculating the power spectrum
-        following the numpy fft example
-        """
-        if debugmode:
-            print "Start powerspectrum at %s" % datetime.utcnow()
-
-        dt = self.get_sampling_period()*24*3600
-
-        t = np.asarray(self._get_column('time'))
-        val = np.asarray(self._get_column(key))
-        tnew, valnew = [],[]
-        for idx, elem in enumerate(val):
-            if not isnan(elem):
-                tnew.append((t[idx]-np.min(t))*24*3600)
-                valnew.append(elem)
-
-        tnew = np.asarray(tnew)
-        valnew = np.asarray(valnew)
-
-        if debugmode:
-            print "Extracted data for powerspectrum at %s" % datetime.utcnow()
-
-        freq = np.fft.fftfreq(tnew.shape[-1],dt)
-        freq = freq[range(len(tnew)/2)] # one side frequency range
-        freq = freq[1:]
-
-        s = np.fft.fft(valnew)
-        s = s[range(len(valnew)/2)] # one side data range
-        s = s[1:]
-        ps = np.real(s*np.conjugate(s))
-
-        if not axes: 
-            fig = plt.figure() 
-            ax = fig.add_subplot(111) 
-        else: 
-            ax = axes 
-
-        ax.loglog(freq,ps,'r-')
-
-        ax.set_xlabel('Frequency [Hz]') 
-        ax.set_ylabel('PSD') 
-        if title: 
-            ax.set_title(title)
-
-        if debugmode:
-            print "Finished powerspectrum at %s" % datetime.utcnow()
-
-        if outfile: 
-            if fmt: 
-                fig.savefig(outfile, format=fmt) 
-            else: 
-                fig.savefig(outfile) 
-        elif show: 
-            plt.show() 
-        else: 
-            return fig
-
-        return freq, ps
-
-
-    def trim(self, starttime=None, endtime=None):
-        """
-        Removing dates outside of range between start- and endtime
-        """
-        # include test - does not work yet
-        #if date2num(self._testtime(starttime)) > date2num(self._testtime(endtime)):
-        #    raise ValueError, "Starttime is larger then Endtime"
-        # remove data prior to starttime input
-        loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
-
-        stream = DataStream()
-
-        if starttime:
-            # check starttime input
-            starttime = self._testtime(starttime)
-            stval = 0
-            """
-            if isinstance(starttime, float) or isinstance(starttime, int):
-                try:
-                    starttime = num2date(starttime)
-                except:
-                    raise TypeError
-            elif isinstance(starttime, str):
-                try:
-                    starttime = datetime.strptime(starttime,"%Y-%m-%d")
-                except:
-                    raise TypeError
-            elif not isinstance(starttime, datetime):
-                raise TypeError
-            """
-            for idx, elem in enumerate(self):
-                if not isnan(elem.time):
-                    if num2date(elem.time).replace(tzinfo=None) > starttime:
-                        #stval = idx-1 # changed because of latex output
-                        stval = idx
-                        break
-            if stval < 0:
-                stval = 0
-            self.container = self.container[stval:]
-       
-        # remove data prior to endtime input
-        if endtime:
-            # check endtime input
-            endtime = self._testtime(endtime)
-            """
-            if isinstance(endtime, float) or isinstance(endtime, int):
-                try:
-                    endtime = num2date(endtime).replace(tzinfo=None)
-                except:
-                    raise TypeError
-            elif isinstance(endtime, str):
-                try:
-                    endtime = datetime.strptime(endtime,"%Y-%m-%d")
-                except:
-                    raise TypeError
-            elif not isinstance(endtime, datetime):
-                raise TypeError
-            """
-            edval = len(self)
-            for idx, elem in enumerate(self):
-                if not isnan(elem.time):
-                    if num2date(elem.time).replace(tzinfo=None) > endtime:
-                        edval = idx
-                        #edval = idx-1
-                        break
-            self.container = self.container[:edval]
-
-        return DataStream(self.container,self.header)
-
-
-    def _nearestPow2(self, x): 
-        """
-        Function taken from ObsPy
-        Find power of two nearest to x 
-        >>> _nearestPow2(3) 
-        2.0 
-        >>> _nearestPow2(15) 
-        16.0 
-        :type x: Float 
-        :param x: Number 
-        :rtype: Int 
-        :return: Nearest power of 2 to x 
-        """ 
-
-        a = pow(2, ceil(np.log2(x))) 
-        b = pow(2, floor(np.log2(x))) 
-        if abs(a - x) < abs(b - x): 
-            return a 
-        else: 
-            return b 
-
     def obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False, 
                     outfile=None, fmt=None, axes=None, dbscale=False, 
                     mult=8.0, cmap=None, zorder=None, title=None, show=True, 
@@ -2891,7 +2062,943 @@ class DataStream(object):
         elif show: 
             plt.show() 
         else: 
+            return fig 
+
+
+    def offset(self, offsets):
+        """
+        Offset treatment: offsets argument is a dictionary
+        Apply constant offsets to elements of the datastream
+        the Offsets arguments is a dictionary which refers to keys fo the datastream
+        Important: Time offsets have to be timedelta objects
+        : type offsets: dict
+        : param offsets: looks like {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
+        # 1.) assert that offsets is a dictionary {'x': 4.2, 'y':... }
+        # 2.) apply offsets
+        """
+        #header = self.header
+
+        for key in offsets:
+            if key in KEYLIST:
+                val = self._get_column(key)
+                if key == 'time':
+                    newval = [num2date(elem.time).replace(tzinfo=None) + offsets[key] for elem in val]
+                    loggerstream.info('Offset function: Corrected time column by %s sec' % str(offset.seconds))
+                else:
+                    newval = [elem + offsets[key] for elem in val]
+                    loggerstream.info('Offset function: Corrected column %s by %.3f' % (key, offsets[key]))
+                self = self._put_column(newval, key)
+    
+        return self
+                            
+
+    def plot(self, keys, debugmode=None, **kwargs):
+        """
+        Creates a simple graph of the current stream. In order to run matplotlib from cron one need to include (matplotlib.use('Agg'))
+
+        Keys define the columns to be plotted.
+
+        Supports the following keywords:
+        - annote: 	(bool) Annotate data using comments
+	- annophases	(bool) Annotate phase times with titles
+	- bgcolor	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
+        - colorlist 	(list - default []) Provide a ordered color list of type ['b','g']
+	- confinex	(bool) Confines tags on x-axis to shorter values.
+        - errorbar: 	(boolean - default False) plot dx,dy,dz,df values if True
+        - function: 	(func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
+        - fullday: 	(boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
+        - fmt: 		(string?) format of outfile 
+	- grid		(bool) show grid or not, default = True 
+	- gridcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
+	- labelcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc 
+        - noshow: 	(bool) don't call show at the end, just returns figure handle
+        - outfile: 	string to save the figure, if path is not existing it will be created
+        - padding: 	(integer - default 0) Value to add to the max-min data for adjusting y-scales
+        - savedpi: 	(integer) resolution
+        - savefigure: 	(string - default None) if provided a copy of the plot is saved to savefilename.png
+	- stormphases	(list) Should be a list with four datetime objects:
+		      [0 = date of SSC/start of initial phase,
+		       1 = start of main phase,
+		       2 = start of recovery phase,
+		       3 = end of recovery phase]
+		      (Added 24.09.2013 by RLB.)
+	- plotphases	(list) List of keys of plots to shade.
+	- specialdict	(dictionary) contains special information for specific plots. key
+                      key corresponds to the column
+                      input is a list with the following parameters
+                      ('None' if not used)
+                      ymin
+                      ymax
+                      ycolor
+                      bgcolor
+                      grid
+                      gridcolor
+        - symbol: 	(string - default '-') symbol for primary plot
+        - symbol_func: 	(string - default '-') symbol of function plot 
+
+        """
+
+        annotate = kwargs.get('annotate')
+        annophases = kwargs.get('annophases')
+        bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
+        bgcolor = kwargs.get('bgcolor')
+        colorlist = kwargs.get('colorlist')
+        confinex = kwargs.get('confinex')
+        endvalue = kwargs.get('endvalue')
+        errorbar = kwargs.get('errorbar')
+        fmt = kwargs.get('fmt')
+        function = kwargs.get('function')
+        fullday = kwargs.get('fullday')
+        grid = kwargs.get('grid')
+        gridcolor = kwargs.get('gridcolor')
+        labelcolor = kwargs.get('labelcolor')
+        padding = kwargs.get('padding')
+        plottitle = kwargs.get('plottitle')
+        plottype = kwargs.get('plottype')
+        noshow = kwargs.get('noshow')
+        outfile = kwargs.get('outfile')
+        savedpi = kwargs.get('savedpi')
+        stormphases = kwargs.get('stormphases')
+        plotphases = kwargs.get('plotphases')
+        specialdict = kwargs.get('specialdict')
+        symbol_func = kwargs.get('symbol_func')
+        symbollist = kwargs.get('symbollist')
+
+        if not function:
+            function = None
+        if not plottitle:
+            plottitle = None
+        if not colorlist:
+            colorlist = ['b','g','m','c','y','k','b','g','m','c','y','k']
+        if not symbollist:
+            symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-','-']
+        if not plottype:
+            plottype = 'discontinuous' # can also be "continuous"
+        if not symbol_func:
+            symbol_func = '-'
+        if not savedpi:
+            savedpi = 80
+        if not bartrange:
+            bartrange = 0.06
+        if not padding:
+            padding = 0
+        if not labelcolor:
+            labelcolor = '0.2'
+        if not bgcolor:
+            bgcolor = '#d5de9c'
+        if not gridcolor:
+            gridcolor = '#316931'
+        if not grid:
+            grid =True
+
+        myyfmt = ScalarFormatter(useOffset=False)
+        n_subplots = len(keys)
+
+        if n_subplots < 1:
+            raise  ValueError, "Provide valid key(s)"
+        count = 0
+        fig = plt.figure()
+
+        if debugmode:
+            print "Start plotting at %s" % datetime.utcnow()
+
+        t = np.asarray([row[0] for row in self])
+        for key in keys:
+            if not key in KEYLIST[1:16]:
+                raise ValueError, "Column key not valid"
+            ind = KEYLIST.index(key)
+            yplt = np.asarray([row[ind] for row in self])
+            #yplt = self._get_column(key)
+
+            # Switch between continuous and discontinuous plots
+            if debugmode:
+                print "column extracted at %s" % datetime.utcnow()
+            if plottype == 'discontinuous':
+                yplt = self._maskNAN(yplt)
+            else: 
+                nans, test = self._nan_helper(yplt)
+                newt = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
+                t = newt
+                yplt = [el for idx, el in enumerate(yplt) if not nans[idx]]
+
+            # 1. START PLOTTING (if non-NaN data is present)
+
+            len_val= len(yplt)
+            if debugmode:
+                print "Got row with %d elements" % len_val
+            if len_val > 1:
+                count += 1
+                ax = count
+                subplt = "%d%d%d" %(n_subplots,1,count)
+
+                # 2. PREAMBLE: define plot properties
+		# -- Create primary plot and define x scale and ticks/labels of subplots
+                # -- If primary plot already exists, add subplot
+                if count == 1:
+                    ax = fig.add_subplot(subplt, axisbg=bgcolor)
+                    if plottitle:
+                        ax.set_title(plottitle)
+                    a = ax
+                else:
+                    ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
+                timeunit = ''
+
+		# -- If dates to be confined, set value types:
+                if confinex:
+                    trange = np.max(t) - np.min(t)
+                    if trange < 0.0001: # 8 sec level
+                        #set 0.5 second
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%S'))
+                        timeunit = '[Sec]'
+                    elif trange < 0.01: # 13 minute level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%M:%S'))
+                        timeunit = '[M:S]'
+                    elif trange <= 1: # day level
+                        # set 1 hour
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
+                        timeunit = '[H:M]'
+                    elif trange < 7: # 3 day level
+                        if trange < 2:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=6))
+                        elif trange < 5:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=12))
+                        else:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.WeekdayLocator(byweekday=matplotlib.dates.MO))
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%H:%M'))
+                        setp(ax.get_xticklabels(),rotation='0')
+                        timeunit = '[Day-H:M]'
+                    elif trange < 60: # month level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b'))
+                        setp(ax.get_xticklabels(),rotation='70')
+                        timeunit = '[Day]'
+                    elif trange < 150: # year level
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b%y'))
+                        setp(ax.get_xticklabels(),rotation='70')
+                        timeunit = '[Day]'
+                    elif trange < 600: # minute level
+                        if trange < 300:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=1))
+                        elif trange < 420:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=2))
+                        else:
+                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=4))
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b %Y'))
+                        setp(ax.get_xticklabels(),rotation='0')
+                        timeunit = '[Month]'
+                    else:
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
+                        timeunit = '[Year]'
+
+		# -- Set x-labels:
+                if count < len(keys):
+                    setp(ax.get_xticklabels(), visible=False)
+                else:
+                    ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
+                
+                # -- Adjust scales with padding:
+                ymin = np.min(yplt)-padding
+                ymax = np.max(yplt)+padding
+                if specialdict:
+                    if key in specialdict:
+                        paramlst = specialdict[key]
+                        if not paramlst[0] == None:
+                            ymin = paramlst[0]
+                        if not paramlst[1] == None:
+                            ymax = paramlst[1]
+
+                # 3. PLOT EVERYTHING
+
+		# -- Plot k-values with z (= symbol for plotting colored bars for k values)
+                if symbollist[count-1] == 'z':
+                    xy = range(9)
+                    for num in range(len(t)):
+                        if bartrange < t[num] < np.max(t)-bartrange:
+                            ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
+				bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],
+				facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
+                    ax.plot_date(t,yplt,colorlist[count-1]+'|')
+                else:
+                    ax.plot_date(t,yplt,colorlist[count-1]+symbollist[count-1])
+
+		# -- Plot error bars:
+                if errorbar:
+                    yerr = self._get_column('d'+key)
+                    if len(yerr) > 0: 
+                        ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
+                    else:
+                        loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
+
+		# -- Add grid:
+                if grid:
+                    ax.grid(True,color=gridcolor,linewidth=0.5)
+
+                # -- Add annotations for flagged data:
+                if annotate:
+                    flag = self._get_column('flag')
+                    comm = self._get_column('comment')
+                    elemprev = "-"
+                    try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
+                        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                        indexflag = int(poslst[0])
+                        for idx, elem in enumerate(comm):
+                            if not elem == elemprev:
+                                if not elem == "-" and flag[idx][indexflag] in ['0','3']:
+                                    annotecount = idx
+                                    ax.annotate(r'%s' % (elem),
+                                        xy=(t[idx], yplt[idx]),
+                                        xycoords='data', xytext=(20, 20),
+                                        textcoords='offset points',
+                                        bbox=dict(boxstyle="round", fc="0.8"),
+                                        arrowprops=dict(arrowstyle="->",
+                                        shrinkA=0, shrinkB=1,
+                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                                elif elem == "-" and idx > annotecount + 3: # test that one point defines the flagged range
+                                    ax.annotate(r'End of %s' % (comm[idx-1]),
+                                        xy=(t[idx-1], yplt[idx-1]),
+                                        xycoords='data', xytext=(20, -20),
+                                        textcoords='offset points',
+                                        bbox=dict(boxstyle="round", fc="0.8"),
+                                        arrowprops=dict(arrowstyle="->",
+                                        shrinkA=0, shrinkB=1,
+                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                            elemprev = elem
+                    except:
+                        if debugmode:
+                            loggerstream.debug('MagPyPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+
+		# -- Shade in areas of storm phases:
+                if plotphases:
+                    if not stormphases:
+                        if debugmode:
+                            loggerstream.debug('MagPyPlot: Need phase definition times in "stormphases" list variable.')
+		    if len(stormphases) < 4:
+		        if debugmode: 
+                            loggerstream.debug('MagPyPlot: Incorrect number of phase definition times in variable shadephases. 4 required.')
+                    else:
+                        t_ssc = stormphases[0]
+                        t_mphase = stormphases[1]
+                        t_recphase = stormphases[2]
+                        t_end = stormphases[3]
+
+                    if key in plotphases:
+                        try: 
+                            ax.axvspan(t_ssc, t_mphase, facecolor='red', alpha=0.3, linewidth=0)
+        		    ax.axvspan(t_mphase, t_recphase, facecolor='yellow', alpha=0.3, linewidth=0)
+        		    ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
+		        except:
+                            if debugmode:
+                                loggerstream.debug('MagPyPlot: Error plotting shaded phase regions.')
+
+		# -- Plot phase types with shaded regions:
+                if annophases:
+                    if not stormphases:
+                        if debugmode:
+                            loggerstream.debug('MagPyPlot: Need phase definition times in "stormphases" list variable.')
+		    if len(stormphases) < 4:
+		        if debugmode: 
+                            loggerstream.debug('MagPyPlot: Incorrect number of phase definition times in variable shadephases. 4 required.')
+                    else:
+                        t_ssc = stormphases[0]
+                        t_mphase = stormphases[1]
+                        t_recphase = stormphases[2]
+                        t_end = stormphases[3]
+
+		    if key == plotphases[0]:
+                        try: 
+                            phase_plot_y = [0.85, 0.75, 0.65] 
+                            y_anno = ymin + phase_plot_y[len(keys)-1]*(ymax-ymin)
+                            tssc_anno, issc_anno = self._find_nearest(np.asarray(t), date2num(t_ssc))
+                            y_ssc = yplt[issc_anno]
+                            ax.annotate('SSC', xy=(t_ssc,y_ssc), 
+					xytext=(t_ssc-timedelta(hours=2),y_anno),
+					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
+					arrowprops=dict(arrowstyle="->",
+					shrinkA=0, shrinkB=1,
+					connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                            ax.annotate('Main\nPhase', xy=(t_mphase,y_anno), 
+					xytext=(t_mphase+timedelta(hours=1.5),y_anno),
+					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
+                            ax.annotate('Recovery\nPhase', xy=(t_recphase,y_anno), 
+					xytext=(t_recphase+timedelta(hours=1.5),y_anno),
+					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
+                        except: 
+                            if debugmode:
+                                loggerstream.debug('MagPyPlot: Error annotating shaded phase regions.')
+                  
+		# -- Plot given function:      
+                if function:
+                    fkey = 'f'+key
+                    if fkey in function[0]:
+                        ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
+                        ax.plot_date(self._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+                # -- Add Y-axis ticks:
+                if bool((count-1) & 1):
+                    ax.yaxis.tick_right()
+                    ax.yaxis.set_label_position("right")
+
+                # -- Take Y-axis labels from header information
+                try:
+                    ylabel = self.header['col-'+key].upper()
+                except:
+                    ylabel = ''
+                    pass
+                try:
+                    yunit = self.header['unit-col-'+key]
+                except:
+                    yunit = ''
+                    pass
+                if not yunit == '': 
+                    yunit = re.sub('[#$%&~_^\{}]', '', yunit)
+                    label = ylabel+' $['+yunit+']$'
+                else:
+                    label = ylabel
+                ax.set_ylabel(label, color=labelcolor)
+                ax.set_ylim(ymin,ymax)
+                ax.get_yaxis().set_major_formatter(myyfmt)
+                if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
+                    ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
+                if debugmode:
+                    print "Finished plot %d at %s" % (count, datetime.utcnow())
+
+            # 4. END PLOTTING
+
+            else:
+                loggerstream.warning("Plot: No data available for key %s" % key)
+
+        fig.subplots_adjust(hspace=0)
+
+        # 5. SAVE TO FILE (or show)
+        if outfile:
+            path = os.path.split(outfile)[0]
+            if not path == '': 
+                if not os.path.exists(path):
+                    os.makedirs(path)
+            if fmt: 
+                fig.savefig(outfile, format=fmt, dpi=savedpi) 
+            else: 
+                fig.savefig(outfile, dpi=savedpi) 
+        elif noshow: 
             return fig
+        else: 
+            plt.show()
+
+
+    def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None):
+        """
+        Calculating the power spectrum
+        following the numpy fft example
+        """
+        if debugmode:
+            print "Start powerspectrum at %s" % datetime.utcnow()
+
+        dt = self.get_sampling_period()*24*3600
+
+        t = np.asarray(self._get_column('time'))
+        val = np.asarray(self._get_column(key))
+        tnew, valnew = [],[]
+        for idx, elem in enumerate(val):
+            if not isnan(elem):
+                tnew.append((t[idx]-np.min(t))*24*3600)
+                valnew.append(elem)
+
+        tnew = np.asarray(tnew)
+        valnew = np.asarray(valnew)
+
+        if debugmode:
+            print "Extracted data for powerspectrum at %s" % datetime.utcnow()
+
+        freq = np.fft.fftfreq(tnew.shape[-1],dt)
+        freq = freq[range(len(tnew)/2)] # one side frequency range
+        freq = freq[1:]
+
+        s = np.fft.fft(valnew)
+        s = s[range(len(valnew)/2)] # one side data range
+        s = s[1:]
+        ps = np.real(s*np.conjugate(s))
+
+        if not axes: 
+            fig = plt.figure() 
+            ax = fig.add_subplot(111) 
+        else: 
+            ax = axes 
+
+        ax.loglog(freq,ps,'r-')
+
+        ax.set_xlabel('Frequency [Hz]') 
+        ax.set_ylabel('PSD') 
+        if title: 
+            ax.set_title(title)
+
+        if debugmode:
+            print "Finished powerspectrum at %s" % datetime.utcnow()
+
+        if outfile: 
+            if fmt: 
+                fig.savefig(outfile, format=fmt) 
+            else: 
+                fig.savefig(outfile) 
+        elif show: 
+            plt.show() 
+        else: 
+            return fig
+
+        return freq, ps
+    
+
+    def remove_flagged(self, **kwargs):
+        """
+        remove flagged data from stream:
+        kwargs support the following keywords:
+            - flaglist  (list) default=[1,3]
+            - keys (string e.g. 'f') default=FLAGKEYLIST
+        flag = '000' or '010' etc
+        """
+        
+        # Defaults:
+        flaglist = kwargs.get('flaglist')
+        keys = kwargs.get('keys')
+
+        if not flaglist:
+            flaglist = [1,3]
+        if not keys:
+            keys = FLAGKEYLIST
+
+        for key in keys:
+            poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+            pos = poslst[0]
+            liste = []
+            emptyelem = LineStruct()
+            for elem in self:
+                fllst = list(elem.flag)
+                try: # test whether useful flag is present: flaglst length changed during the program development
+                    flag = int(fllst[pos])
+                except:
+                    flag = 0
+                if not flag in flaglist:
+                    liste.append(elem)
+                else:
+                    exec('elem.'+key+' = float("nan")')
+                    liste.append(elem)
+
+        #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
+        return DataStream(liste, self.header)      
+
+
+    def remove_outlier(self, **kwargs):
+        """
+        uses quartiles: threshold should be 1.5
+        treshold 5 keeps storm onsets in
+        treshold 4 seems to be the best compromise
+        Get start time and add (e.g.) one hour for upper limit
+        kwargs support the following keywords:
+            - timerange (timedelta obsject) default=timedelta(hours=1)
+            - threshold (float)  default=4
+            - flag
+            - keys  (from KEYLIST) default 'f'
+
+        Position of flag in flagstring
+        f (intensity): pos 0
+        x,y,z (vector): pos 1
+        other (vector): pos 2
+        Position of flag in flagstring
+        x : pos 0
+        y : pos 1
+        z : pos 2
+        f : pos 3
+        t1 : pos 4
+        t2 : pos 5
+        var1 : pos 6
+        var2: pos 7
+        Coding : 0 take, 1 remove, 2 force take, 3 force remove
+        Example:
+        0000000, 0001000, etc
+        012 = take f, automatically removed v, and force use of other
+        300 = force remove f, take v, and take other
+        """
+        # Defaults:
+        timerange = kwargs.get('timerange')
+        threshold = kwargs.get('threshold')
+        keys = kwargs.get('keys')
+        if not timerange:
+            timerange = timedelta(hours=1)
+        if not keys:
+            keys = ['f']
+        if not threshold:
+            threshold = 4.0
+        # Position of flag in flagstring
+        # f (intensity): pos 0
+        # x,y,z (vector): pos 1
+        # other (vector): pos 2
+        
+        loggerstream.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
+
+        if len(self) < 1:
+            loggerstream.info('--- No data - Stopping outlier removal at %s ' % (str(datetime.now())))
+            return self
+        
+        # Start here with for key in keys:
+        for key in keys:
+            poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+            flagpos = poslst[0]
+
+            st = self._get_min('time')
+            et = self._get_max('time')
+            at = date2num((num2date(st).replace(tzinfo=None)) + timerange)
+            incrt = at-st
+            
+
+            arraytime = self._get_column('time')
+
+            newst = DataStream()
+            while st < et:
+                tmpar, idxst = self._find_nearest(arraytime,st)
+                tmpar, idxat = self._find_nearest(arraytime,at)
+                if idxat == len(arraytime)-1:
+                    idxat = len(arraytime)
+                st = at
+                at += incrt
+
+                lstpart = self[idxst:idxat]
+                selcol = [eval('row.'+key) for row in lstpart]
+                
+                try:
+                    q1 = stats.scoreatpercentile(selcol,25)
+                    q3 = stats.scoreatpercentile(selcol,75)
+                    iqd = q3-q1
+                    md = np.median(selcol)
+                    whisker = threshold*iqd
+                except:
+                    try:
+                        md = np.median(selcol) 
+                        whisker = md*0.005
+                    except:
+                        loggerstream.warning("Eliminate outliers produced a problem: please check\n")
+                        pass
+
+                for elem in lstpart:
+                    row = LineStruct()
+                    row = elem
+                    if not md-whisker < eval('elem.'+key) < md+whisker:
+                        fllist = list(row.flag)
+                        fllist[flagpos] = '1'
+                        row.flag=''.join(fllist)
+                        row.comment = "%s removed by automatic outlier removal" % key
+                        if not isnan(eval('elem.'+key)):
+                            loggerstream.info("Outlier: removed %s (= %f) at time %s, " % (key, eval('elem.'+key), datetime.strftime(num2date(elem.time),"%Y-%m-%dT%H:%M:%S")))
+                    else:
+                        fllist = list(row.flag)
+                        fllist[flagpos] = '0'
+                        row.flag=''.join(fllist)
+                    newst.add(row)
+
+        loggerstream.info('--- Outlier removal finished at %s ' % str(datetime.now()))
+
+        return DataStream(newst, self.header)        
+
+
+    def rotation(self,**kwargs):
+        """
+        Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
+        alpha is the horizontal rotation in degree,
+        beta the vertical
+        """
+        
+        
+        unit = kwargs.get('unit')
+        alpha = kwargs.get('alpha')
+        beta = kwargs.get('beta')
+        if unit == 'gon':
+            ang_fac = 400./360.
+        elif unit == 'rad':
+            ang_fac = np.pi/180.
+        else:
+            ang_fac = 1.
+        if not alpha:
+            alpha = 0.
+        if not beta:
+            beta = 0.
+
+        loggerstream.info('--- Applying rotation matrix: %s ' % (str(datetime.now())))
+
+        for elem in self:
+            ra = np.pi*alpha/(180.*ang_fac)
+            rb = np.pi*beta/(180.*ang_fac)
+            xs = elem.x*np.cos(rb)*np.cos(ra)-elem.y*np.sin(ra)+elem.z*np.sin(rb)*np.cos(ra)
+            ys = elem.x*np.cos(rb)*np.sin(ra)+elem.y*np.cos(ra)+elem.z*np.sin(rb)*np.sin(ra)
+            zs = elem.x*np.sin(rb)+elem.z*np.cos(rb)
+            elem.x = xs
+            elem.y = ys
+            elem.z = zs
+
+        loggerstream.info('--- finished reorientation: %s ' % (str(datetime.now())))
+
+        return self
+
+
+    def smooth(self, keys, **kwargs):
+        """smooth the data using a window with requested size.
+        (taken from Cookbook/Signal Smooth)
+        This method is based on the convolution of a scaled window with the signal.
+        The signal is prepared by introducing reflected copies of the signal 
+        (with the window size) in both ends so that transient parts are minimized
+        in the begining and end part of the output signal.
+        
+        input:
+            x: the input signal 
+            window_len: the dimension of the smoothing window; should be an odd integer
+            window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+                flat window will produce a moving average smoothing.
+
+        output:
+            the smoothed signal
+            
+        example:
+
+        t=linspace(-2,2,0.1)
+        x=sin(t)+randn(len(t))*0.1
+        y=smooth(x)
+        
+        see also: 
+        
+        numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+        scipy.signal.lfilter
+     
+        TODO: the window parameter could be the window itself if an array instead of a string   
+        """
+        # Defaults:
+        window_len = kwargs.get('window_len')
+        window = kwargs.get('window')
+        if not window_len:
+            window_len = 11
+        if not window:
+            window='hanning'
+
+        
+        loggerstream.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
+
+        for key in keys:
+            if not key in KEYLIST:
+                raise ValueError, "Column key not valid"
+
+            x = self._get_column(key)
+
+            if x.ndim != 1:
+                raise ValueError, "smooth only accepts 1 dimension arrays."
+            if x.size < window_len:
+                raise ValueError, "Input vector needs to be bigger than window size."
+            if window_len<3:
+                return x
+            if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+                raise ValueError, "Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+
+            s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
+            #print(len(s))
+            if window == 'flat': #moving average
+                w=np.ones(window_len,'d')
+            else:
+                w=eval('np.'+window+'(window_len)')
+
+            y=np.convolve(w/w.sum(),s,mode='valid')
+
+            self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
+
+        loggerstream.info(' --- Finished smoothing at %s' % (str(datetime.now())))
+        
+        return self
+
+
+    def spectrogram(self, keys, per_lap=0.9, wlen=None, log=False, 
+                    outfile=None, fmt=None, axes=None, dbscale=False, 
+                    mult=8.0, cmap=None, zorder=None, title=None, show=True, 
+                    sphinx=False, clip=[0.0, 1.0], **kwargs):
+        """
+        Creates a spectrogram plot of selected keys.
+        Parameter description at function obspyspectrogram
+
+        keywords:
+        samp_rate_multiplicator: to change the frequency relative to one day (default value is Hz - 24*3600) 
+        samp_rate_multiplicator : sampling rate give as days -> multiplied by x to create Hz, etc: default 24, which means 1/3600 Hz
+        """
+        samp_rate_multiplicator = kwargs.get('samp_rate_multiplicator')
+
+        if not samp_rate_multiplicator:
+            samp_rate_multiplicator = 24*3600
+
+        t = self._get_column('time')
+
+        for key in keys:
+            val = self._get_column(key)
+            val = self._maskNAN(val)
+            dt = self.get_sampling_period()*(samp_rate_multiplicator)
+            Fs = float(1.0/dt)
+            self.obspyspectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log, 
+                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale, 
+                    mult=mult, cmap=cmap, zorder=zorder, title=title, show=show, 
+                    sphinx=sphinx, clip=clip)
+
+
+    def trim(self, starttime=None, endtime=None):
+        """
+        Removing dates outside of range between start- and endtime
+        """
+        # include test - does not work yet
+        #if date2num(self._testtime(starttime)) > date2num(self._testtime(endtime)):
+        #    raise ValueError, "Starttime is larger then Endtime"
+        # remove data prior to starttime input
+        loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
+
+        stream = DataStream()
+
+        if starttime:
+            # check starttime input
+            starttime = self._testtime(starttime)
+            stval = 0
+            """
+            if isinstance(starttime, float) or isinstance(starttime, int):
+                try:
+                    starttime = num2date(starttime)
+                except:
+                    raise TypeError
+            elif isinstance(starttime, str):
+                try:
+                    starttime = datetime.strptime(starttime,"%Y-%m-%d")
+                except:
+                    raise TypeError
+            elif not isinstance(starttime, datetime):
+                raise TypeError
+            """
+            for idx, elem in enumerate(self):
+                if not isnan(elem.time):
+                    if num2date(elem.time).replace(tzinfo=None) > starttime:
+                        #stval = idx-1 # changed because of latex output
+                        stval = idx
+                        break
+            if stval < 0:
+                stval = 0
+            self.container = self.container[stval:]
+       
+        # remove data prior to endtime input
+        if endtime:
+            # check endtime input
+            endtime = self._testtime(endtime)
+            """
+            if isinstance(endtime, float) or isinstance(endtime, int):
+                try:
+                    endtime = num2date(endtime).replace(tzinfo=None)
+                except:
+                    raise TypeError
+            elif isinstance(endtime, str):
+                try:
+                    endtime = datetime.strptime(endtime,"%Y-%m-%d")
+                except:
+                    raise TypeError
+            elif not isinstance(endtime, datetime):
+                raise TypeError
+            """
+            edval = len(self)
+            for idx, elem in enumerate(self):
+                if not isnan(elem.time):
+                    if num2date(elem.time).replace(tzinfo=None) > endtime:
+                        edval = idx
+                        #edval = idx-1
+                        break
+            self.container = self.container[:edval]
+
+        return DataStream(self.container,self.header)
+
+
+    def write(self, filepath, **kwargs):
+        """
+        Writing Stream to a file
+        filepath (string): provding path/filename for saving
+        Keywords:
+        format_type (string): in which format - default pystr
+        period (string) : supports hour, day, month, year, all - default day
+        filenamebegins (string): providing the begin of savename (e.g. "WIK_")
+        filenameends (string): providing the end of savename (e.g. ".min")
+        wformat (string): outputformat
+        dateformat (string):  outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22"
+        coverage: (timedelta): day files or hour or month or year or all - default day
+        mode: (append, overwrite, replace, skip) mode for handling existing files/data in files
+        --- > Example output: "WIK_2011-11-22.min"
+        """
+        format_type = kwargs.get('format_type')
+        filenamebegins = kwargs.get('filenamebegins')
+        filenameends = kwargs.get('filenameends')
+        dateformat = kwargs.get('dateformat')
+        coverage = kwargs.get('coverage')
+        mode = kwargs.get('mode')
+        offsets = kwargs.get('offsets')
+        createlatex = kwargs.get('createlatex')
+        keys = kwargs.get('keys')
+        
+        if not format_type:
+            format_type = 'PYSTR'
+        if not format_type in PYMAG_SUPPORTED_FORMATS:
+            loggerstream.info('Write: Output format not supported')
+            print "Format not supported"
+            return
+        if not dateformat:
+            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+        if not coverage:
+            coverage = timedelta(days=1)
+        if not filenamebegins:
+            filenamebegins = ''
+        if not filenameends:
+            # Extension for cfd files is automatically attached
+            if format_type == 'PYCDF':
+                filenameends = ''
+            else:
+                filenameends = '.txt'
+        if not mode:
+            mode= 'overwrite'
+
+        if len(self) < 1:
+            loggerstream.info('Write: zero length of stream ')
+            return
+            
+        # divide stream in parts according to coverage and save them
+        newst = DataStream()
+        if coverage == 'month':
+            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            cmonth = int(datetime.strftime(starttime,'%m')) + 1
+            cyear = int(datetime.strftime(starttime,'%Y'))
+            if cmonth == 13:
+               cmonth = 1
+               cyear = cyear + 1
+            monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
+            endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
+            while starttime < num2date(self[-1].time).replace(tzinfo=None):
+                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                newst = DataStream(lst,self.header)
+                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                if len(lst) > 0:
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+                starttime = endtime
+                # get next endtime
+                cmonth = int(datetime.strftime(starttime,'%m')) + 1
+                cyear = int(datetime.strftime(starttime,'%Y'))
+                if cmonth == 13:
+                   cmonth = 1
+                   cyear = cyear + 1
+                monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
+                endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
+        elif not coverage == 'all':
+            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            endtime = starttime + coverage
+            while starttime < num2date(self[-1].time).replace(tzinfo=None):
+                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                newst = DataStream(lst,self.header)
+                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                if len(lst) > 0:
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+                starttime = endtime
+                endtime = endtime + coverage
+        else:
+            filename = filenamebegins + filenameends
+            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+
+        return True
 
 
 class PyMagLog(object):

@@ -144,7 +144,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
         headers = stream.header
         stream =[]
 
-    print "Finished file reading of %s" % filename
+    #print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers)    
 
