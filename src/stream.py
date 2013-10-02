@@ -2100,7 +2100,11 @@ class DataStream(object):
 
         Supports the following keywords:
         - annote: 	(bool) Annotate data using comments
-	- annophases	(bool) Annotate phase times with titles
+	- annoxy 	(dictionary) Define placement of annotation (in % of scale).
+                      Possible parameters:
+                      (called for annotated storm phases:) 
+		      sscx, sscy, mphx, mphy, recx, recy
+	- annophases	(bool) Annotate phase times with titles. Default off.
 	- bgcolor	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
         - colorlist 	(list - default []) Provide a ordered color list of type ['b','g']
 	- confinex	(bool) Confines tags on x-axis to shorter values.
@@ -2139,6 +2143,7 @@ class DataStream(object):
         """
 
         annotate = kwargs.get('annotate')
+        annoxy = kwargs.get('annoxy')
         annophases = kwargs.get('annophases')
         bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
         bgcolor = kwargs.get('bgcolor')
@@ -2326,7 +2331,7 @@ class DataStream(object):
                     if len(yerr) > 0: 
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
-                        loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
+                        loggerstream.warning('Plot: Errorbars (d%s) not found for key %s' % (key, key))
 
 		# -- Add grid:
                 if grid:
@@ -2364,16 +2369,16 @@ class DataStream(object):
                             elemprev = elem
                     except:
                         if debugmode:
-                            loggerstream.debug('MagPyPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+                            loggerstream.debug('Plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
 
 		# -- Shade in areas of storm phases:
                 if plotphases:
                     if not stormphases:
                         if debugmode:
-                            loggerstream.debug('MagPyPlot: Need phase definition times in "stormphases" list variable.')
+                            loggerstream.debug('Plot: Need phase definition times in "stormphases" list variable.')
 		    if len(stormphases) < 4:
 		        if debugmode: 
-                            loggerstream.debug('MagPyPlot: Incorrect number of phase definition times in variable shadephases. 4 required.')
+                            loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
                     else:
                         t_ssc = stormphases[0]
                         t_mphase = stormphases[1]
@@ -2387,16 +2392,19 @@ class DataStream(object):
         		    ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
 		        except:
                             if debugmode:
-                                loggerstream.debug('MagPyPlot: Error plotting shaded phase regions.')
+                                loggerstream.debug('Plot: Error plotting shaded phase regions.')
 
 		# -- Plot phase types with shaded regions:
+
+                if not annoxy:
+                    annoxy = {}
                 if annophases:
                     if not stormphases:
                         if debugmode:
-                            loggerstream.debug('MagPyPlot: Need phase definition times in "stormphases" list variable.')
+                            loggerstream.debug('Plot: Need phase definition times in "stormphases" variable to plot phases.')
 		    if len(stormphases) < 4:
 		        if debugmode: 
-                            loggerstream.debug('MagPyPlot: Incorrect number of phase definition times in variable shadephases. 4 required.')
+                            loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required, %s given.' % len(stormphases))
                     else:
                         t_ssc = stormphases[0]
                         t_mphase = stormphases[1]
@@ -2405,25 +2413,50 @@ class DataStream(object):
 
 		    if key == plotphases[0]:
                         try: 
-                            phase_plot_y = [0.85, 0.75, 0.65] 
-                            y_anno = ymin + phase_plot_y[len(keys)-1]*(ymax-ymin)
+                            y_auto = [0.85, 0.75, 0.65, 0.5, 0.5, 0.5, 0.5] 
+                            y_anno = ymin + y_auto[len(keys)-1]*(ymax-ymin)
                             tssc_anno, issc_anno = self._find_nearest(np.asarray(t), date2num(t_ssc))
-                            y_ssc = yplt[issc_anno]
-                            ax.annotate('SSC', xy=(t_ssc,y_ssc), 
-					xytext=(t_ssc-timedelta(hours=2),y_anno),
+                            yt_ssc = yplt[issc_anno]
+		            if 'sscx' in annoxy:	# parameters for SSC annotation.
+                                x_ssc = annoxy['sscx']
+                            else:
+                                x_ssc = t_ssc-timedelta(hours=2)
+		            if 'sscy' in annoxy:
+                                y_ssc = ymin + annoxy['sscy']*(ymax-ymin)
+                            else:
+                                y_ssc = y_anno
+		            if 'mphx' in annoxy:	# parameters for main-phase annotation.
+                                x_mph = annoxy['mphx']
+                            else:
+                                x_mph = t_mphase+timedelta(hours=1.5)
+		            if 'mphy' in annoxy:
+                                y_mph = ymin + annoxy['mphy']*(ymax-ymin)
+                            else:
+                                y_mph = y_anno
+		            if 'recx' in annoxy:	# parameters for recovery-phase annotation.
+                                x_rec = annoxy['recx']
+                            else:
+                                x_rec = t_recphase+timedelta(hours=1.5)
+		            if 'recy' in annoxy:
+                                y_rec = ymin + annoxy['recy']*(ymax-ymin)
+                            else:
+                                y_rec = y_anno
+
+                            if not yt_ssc > 0.:
+                                loggerstream.debug('MagPyPlot: No data value at point of SSC.')
+                            ax.annotate('SSC', xy=(t_ssc,yt_ssc), 
+					xytext=(x_ssc,y_ssc),
 					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
 					arrowprops=dict(arrowstyle="->",
 					shrinkA=0, shrinkB=1,
 					connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                            ax.annotate('Main\nPhase', xy=(t_mphase,y_anno), 
-					xytext=(t_mphase+timedelta(hours=1.5),y_anno),
+                            ax.annotate('Main\nPhase', xy=(t_mphase,y_mph), xytext=(x_mph,y_mph),
 					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
-                            ax.annotate('Recovery\nPhase', xy=(t_recphase,y_anno), 
-					xytext=(t_recphase+timedelta(hours=1.5),y_anno),
+                            ax.annotate('Recovery\nPhase', xy=(t_recphase,y_rec),xytext=(x_rec,y_rec),
 					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
                         except: 
                             if debugmode:
-                                loggerstream.debug('MagPyPlot: Error annotating shaded phase regions.')
+                                loggerstream.debug('Plot: Error annotating shaded phase regions.')
                   
 		# -- Plot given function:      
                 if function:
