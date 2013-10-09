@@ -196,14 +196,14 @@ class DataStream(object):
     - stream.interpol(keys) -- returns function
     - stream.k_fmi() -- Calculating k values following the fmi approach
     - stream.mean() -- Calculates mean values for the specified key, Nan's are regarded for
-    - stream. obspyspectrogram() -- Computes and plots spectrogram of the input data
+    - stream.obspyspectrogram() -- Computes and plots spectrogram of the input data
     - stream.offset() -- Apply constant offsets to elements of the datastream
     - stream.plot() -- plot keys from stream
     - stream.pmspectrogram(keys)
     - stream.powerspectrum() -- Calculating the power spectrum following the numpy fft example
     - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
     - stream.remove_outlier() -- returns stream (adds flags and comments)
-    - stream.rotation() -- Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs
+    - stream.rotation() -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
     - stream.smooth(key) -- smooth the data using a window with requested size
     - stream.spectrogram() -- Creates a spectrogram plot of selected keys
     - stream.trim() -- returns stream within new time frame
@@ -214,6 +214,7 @@ class DataStream(object):
     A. Standard functions and overrides for list like objects
     - self.clear_header(self) -- Clears headers
     - self.extend(self,datlst,header) -- Extends stream object
+    - self._print_key_headers(self) -- Prints keys in datastream with variable and unit.
     - self.sorting(self) -- Sorts object
 
     B. Internal Methods I: Line & column functions
@@ -300,6 +301,14 @@ class DataStream(object):
     def extend(self,datlst,header):
         self.container.extend(datlst)
         self.header = header
+
+    def _print_key_headers(self):
+        print "MagPy Key : Variable : Unit"
+        for key in FLAGKEYLIST[1:]:
+            try:
+                print key, " : ", self.header['col-'+key], " : ", self.header['unit-col-'+key]
+            except:
+                pass
 
     def sorting(self):
         """
@@ -871,18 +880,18 @@ class DataStream(object):
 
         return self
 
-    def baseline( self, absolutestream, **kwargs):
+    def baseline(self, absolutestream, **kwargs):
         """
         calculates baseline correction for input stream (datastream)
         Uses available baseline values from the provided absolute file
         Special cases:
-        1) Absolte data covers the full time range of the stream:
+        1) Absolute data covers the full time range of the stream:
             -> Absolute data is extrapolated by duplicating the last and first entry at "extradays" offset
             -> desired function is calculated
-        2) No Absolte data for the end of the stream:
+        2) No Absolute data for the end of the stream:
             -> like 1: Absolute data is extrapolated by duplicating the last entry at "extradays" offset or end of stream
             -> and info message is created, if timedifference exceeds the "extraday" arg then a warning will be send
-        2) No Absolte data for the beginning of the stream:
+        2) No Absolute data for the beginning of the stream:
             -> like 2: Absolute data is extrapolated by duplicating the first entry at "extradays" offset or beginning o stream
             -> and info message is created, if timedifference exceeds the "extraday" arg then a warning will be send
   
@@ -2156,6 +2165,7 @@ class DataStream(object):
         fullday = kwargs.get('fullday')
         grid = kwargs.get('grid')
         gridcolor = kwargs.get('gridcolor')
+        gridratio = kwargs.get('gridratio')
         labelcolor = kwargs.get('labelcolor')
         padding = kwargs.get('padding')
         plottitle = kwargs.get('plottitle')
@@ -2168,6 +2178,8 @@ class DataStream(object):
         specialdict = kwargs.get('specialdict')
         symbol_func = kwargs.get('symbol_func')
         symbollist = kwargs.get('symbollist')
+
+        print gridratio
 
         if not function:
             function = None
@@ -2246,6 +2258,7 @@ class DataStream(object):
                     a = ax
                 else:
                     ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
+
                 timeunit = ''
 
 		# -- If dates to be confined, set value types:
@@ -2413,7 +2426,7 @@ class DataStream(object):
 
 		    if key == plotphases[0]:
                         try: 
-                            y_auto = [0.85, 0.75, 0.65, 0.5, 0.5, 0.5, 0.5] 
+                            y_auto = [0.85, 0.75, 0.70, 0.6, 0.5, 0.5, 0.5] 
                             y_anno = ymin + y_auto[len(keys)-1]*(ymax-ymin)
                             tssc_anno, issc_anno = self._find_nearest(np.asarray(t), date2num(t_ssc))
                             yt_ssc = yplt[issc_anno]
@@ -3736,7 +3749,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     samplingrate_b = stream_b.get_sampling_period()
 
-    loggerstream.info('Subtracting Streams: time range form %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
+    loggerstream.info('Subtracting Streams: time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
     # Interpolate stream_b
     function = stream_b.interpol(keys)
@@ -3784,7 +3797,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     return DataStream(stream_a, headera)      
 
 
-def stackStreams(stream_a, stream_b, **kwargs):
+def stackStreams(stream_a, stream_b, **kwargs): # TODO
     """
     stack the contents of two data stream:
     """

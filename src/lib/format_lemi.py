@@ -242,7 +242,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    print "Finished file reading of %s" % filename
+    #print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers) 
 
@@ -392,7 +392,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
 
     	    line = fh.read(linelength)
 
-        print "Finished file reading of %s" % filename
+        #print "Finished file reading of %s" % filename
 
     fh.close()
    
