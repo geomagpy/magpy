@@ -2165,7 +2165,6 @@ class DataStream(object):
         fullday = kwargs.get('fullday')
         grid = kwargs.get('grid')
         gridcolor = kwargs.get('gridcolor')
-        gridratio = kwargs.get('gridratio')
         labelcolor = kwargs.get('labelcolor')
         padding = kwargs.get('padding')
         plottitle = kwargs.get('plottitle')
@@ -2178,8 +2177,6 @@ class DataStream(object):
         specialdict = kwargs.get('specialdict')
         symbol_func = kwargs.get('symbol_func')
         symbollist = kwargs.get('symbollist')
-
-        print gridratio
 
         if not function:
             function = None
