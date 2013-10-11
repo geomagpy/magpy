@@ -362,10 +362,13 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.t1 = data[11]/100.
                     row.t2 = data[12]/100.
 
-                    row.x = (data[20+i*3]-bfx)*1000.
-                    row.y = (data[21+i*3]-bfy)*1000.
-                    row.z = (data[22+i*3]-bfz)*1000.
-                    row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
+                    #row.x = (data[20+i*3]-bfx)*1000.
+                    #row.y = (data[21+i*3]-bfy)*1000.
+                    #row.z = (data[22+i*3]-bfz)*1000.
+                    row.x = (data[20+i*3])*1000.
+                    row.y = (data[21+i*3])*1000.
+                    row.z = (data[22+i*3])*1000.
+                    #row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
                     #print row.time, row.x, row.y, row.z
 
                     stream.add(row)

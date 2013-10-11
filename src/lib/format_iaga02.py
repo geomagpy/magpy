@@ -226,11 +226,11 @@ def writeIAGA(datastream, filename, **kwargs):
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = pmRead(path_or_url=filename)
+            exst = read(path_or_url=filename)
             datastream = mergeStreams(exst,datastream,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
-            exst = pmRead(path_or_url=filename)
+            exst = read(path_or_url=filename)
             datastream = mergeStreams(datastream,exst,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'append':
@@ -258,7 +258,7 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Digital Sampling %-5s %-44s |\n' % (' ',header.get('DataDigitalSampling'," ")[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(header.get('DataSamplingRate'," ")+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('DataType'," ")[:44]))
-        line.append('DATE       TIME         DOI %5s %9s %9s %9s      |\n' % (header.get('col-x'," ").upper(),header.get('col-y'," ").upper(),header.get('col-z'," ").upper(),header.get('col-f'," ").upper()))
+        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (header.get('col-x'," ").upper(),header.get('col-y'," ").upper(),header.get('col-z'," ").upper(),header.get('col-f'," ").upper()))
     try:
         myFile.writelines(line) # Write header sequence of strings to a file
     except IOError:
