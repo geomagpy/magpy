@@ -84,8 +84,9 @@ def readPOS1(filename, headonly=False, **kwargs):
    
             time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
             row.time = date2num(time)
-            row.f = data[7]/1000.
-            row.df = data[8]/1000.
+            row.f = float(data[7])/1000.
+            row.df = float(data[8])/1000.
+            row.var1 = int(data[9])
 
             #print row.time, row.f, row.df
             stream.add(row)    

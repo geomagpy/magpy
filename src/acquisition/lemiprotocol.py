@@ -118,9 +118,9 @@ class LemiProtocol(LineReceiver):
             biasx = float(data_array[16])/400.
             biasy = float(data_array[17])/400.
             biasz = float(data_array[18])/400.
-            x = (data_array[20]-biasx)*1000.
-            y = (data_array[21]-biasy)*1000.
-            z = (data_array[22]-biasz)*1000.
+            x = (data_array[20])*1000.
+            y = (data_array[21])*1000.
+            z = (data_array[22])*1000.
             temp_sensor = data_array[11]/100.
             temp_el = data_array[12]/100.
             gps_array = datetime(2000+h2d(data_array[5]),h2d(data_array[6]),h2d(data_array[7]),h2d(data_array[8]),h2d(data_array[9]),h2d(data_array[10]))
