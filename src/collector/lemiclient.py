@@ -93,7 +93,7 @@ class PubSubClient(WampClientProtocol):
             if eventdict['id'] == 99:
                 eol = eventdict['value']
             if eol == '':
-                if eventdict['id'] in [4,11,12,13,31,32]: # replace by some eol parameter
+                if eventdict['id'] in [1,11,12,13,31,32]: # replace by some eol parameter
                      self.line.append(eventdict['value'])
             else:
                 # TODO: check Bx, By, Bz values of header and eventually create new data table
