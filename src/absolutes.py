@@ -25,7 +25,7 @@ Procedure:
 from stream import *
 from transfer import *
 
-MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','UNKNOWN']
+MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','AUTODIF','UNKNOWN']
 ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
 
 miredict = {'UA': 290.0, 'MireTower':41.80333,'MireChurch':51.1831,'MireCobenzl':353.698}
@@ -53,6 +53,85 @@ class AbsoluteDIStruct(object):
 
     def __repr__(self):
         return repr((self.time, self.hc, self.vc, self.res, self.f, self.mu, self.md, self.expectedmire, self.varx, self.vary, self.varz, self.varf, self.var1, self.var2))
+
+
+class DILineStruct(object):
+    def __init__(self, ndi, nf=0, time=float(nan), laser=float(nan), hc=float(nan), vc=float(nan), res=float(nan), f=float(nan), opt=float(nan), t=float(nan), scaleflux=float(nan), scaleangle=float(nan), azimuth=float(nan), pier='', person='', di_inst='', f_inst=''):
+        self.time = ndi*[time]
+        self.hc = ndi*[hc]
+        self.vc = ndi*[vc]
+        self.res = ndi*[res]
+        self.opt = ndi*[opt]
+        self.laser = ndi*[laser]
+        self.f = nf*[f]
+        self.t = t
+        self.scaleflux = scaleflux
+        self.scaleangle = scaleangle
+        self.azimuth = azimuth
+        self.person = person
+        self.pier = pier
+        self.di_inst = di_inst
+        self.f_inst = f_inst
+
+    def __repr__(self):
+        return repr((self.time, self.hc, self.vc, self.res, self.laser, self.opt, self.f, self.scaleflux, self.scaleangle, self.t, self.azimuth, self.pier, self.person, self.di_inst, self.f_inst))
+
+
+    def getAbsDIStruct(self):
+        """
+        convert the DILineStruct to the AbsDataStruct used for calculations
+        """
+        try:
+            mu1 = self.vc[0]-((self.vc[0]-self.vc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
+        except:
+            mu1 = self.vc[0] # in case of laser(vc0-vc1) = 0
+        try:
+            md1 = self.vc[2]-((self.vc[2]-self.vc[3])/(self.laser[2]-self.laser[3]))*self.laser[2]
+        except:
+            md1 = self.vc[2]
+        try:
+            mu2 = self.vc[12]-((self.vc[12]-self.vc[13])/(self.laser[12]-self.laser[13]))*self.laser[12]
+        except:
+            mu2 = self.vc[12]
+        try:
+            md2 = self.vc[14]-((self.vc[14]-self.vc[15])/(self.laser[14]-self.laser[15]))*self.laser[14]
+        except:
+            md2 = self.vc[14]
+
+        print mu1
+        print md1
+        print mu2
+        print md2
+
+        mu = (mu1+mu2)/2
+        md = (md1+md2)/2
+        stream = AbsoluteData()
+
+        for i, elem in enumerate(self.time):
+            if 4 <= i < 12 or 16 <= i < 24:
+                row = AbsoluteDIStruct()
+                row.time = self.time[i]
+                row.hc = self.hc[i] # add the leveling correction
+                row.vc = self.vc[i]
+                row.res = self.res[i]
+                row.mu = mu
+                row.md = md
+                row.expectedmire = self.azimuth
+                row.temp = self.t
+                row.person = self.person
+                row.di_inst = self.di_inst
+                row.f_inst = self.f_inst
+               
+                stream.add(row)
+            #if 4 <= i < 12:
+            #    print "Dec", self.vc[i]
+
+  
+        #print self.time
+        #row = AbsoluteDIStruct()
+
+        #return stream
+        return stream
 
 
 class AbsoluteData(object):
@@ -902,7 +981,7 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
     # file format should be known by now
-    #print format_type
+    print format_type
 
     stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
 

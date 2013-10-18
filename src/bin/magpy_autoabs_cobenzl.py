@@ -61,9 +61,9 @@ absdidd.plot(['x','y','z'],plottitle = "Analysis of absolute values - Using vari
 
 # Calculate differences to easily identify errors in one instrument
 absdiff = subtractStreams(absdidd,abslemi,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
-absdiff.plot(['x','y','z','f'],plottitle = "Differences of absolute values", outfile="AutoAnalysisDifferences")
+absdiff.plot(['x','y','z','f'],plottitle = "Differences of absolute values", outfile=os.path.join(basepath,'Daten','Magnetism','DI-WIK','AutoAnalysisDifferences'))
 
 # Use new mail function to send log and plot
 msg = 'Successfully analyzed files were transferred to archive directory\n\nControl the graph - still erroneous data is usually related to wrong azimuth marks\nThis data has to be uploaded manually again for correction\nPlease check the remaining files on the server for errors -> see attached logfile for hints\n\nCheers, Your Analysis-Robot'
-send_mail('roman_leonhardt@web.de', send_notification_to, text=msg, files=['magpy.log','AutoAnalysisDIDD.png','AutoAnalysisLemi.png','AutoAnalysisDifferences.png'], smtpserver='smtp.web.de',user="roman_leonhardt",pwd="2kippen")
+send_mail('roman_leonhardt@web.de', send_notification_to, text=msg, files=['magpy.log',os.path.join(basepath,'Daten','Magnetism','DI-WIK','AutoAnalysisDIDD.png'),os.path.join(basepath,'Daten','Magnetism','DI-WIK','AutoAnalysisLemi.png'),os.path.join(basepath,'Daten','Magnetism','DI-WIK','AutoAnalysisDifferences.png')], smtpserver='smtp.web.de',user="roman_leonhardt",pwd="2kippen")
 

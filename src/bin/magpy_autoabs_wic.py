@@ -23,6 +23,8 @@ else:
 
 diddpath = os.path.join(basepath,'Daten','Magnetism','DIDD-WIK','data','*')
 fgepath = os.path.join(basepath,'Daten','Magnetism','FGE-WIC','IAGA','*')
+lemipath = os.path.join('/srv','data','GS-W-30','raw','LEMI*')
+pospath = os.path.join('/srv','data','GS-W-30','raw','POS*')
 archivepath = os.path.join(basepath,'Daten','Magnetism','DI-WIC','raw')
 rawpath = os.path.join(basepath,'Daten','Magnetism','DI-WIC')
 writeresultpath = os.path.join(basepath,'Daten','Magnetism','DI-WIC','data')
@@ -34,7 +36,6 @@ start = datetime.utcnow()-timedelta(days=365)
 
 # ToDo: add counter for logfile length and only send mail if new data was added or errors are happening 
 print "Analyzing absolutes data for dIdD"
-
 # Repeat for DIDD but write new logfile and move succesfully analyzed files from the server to the archive
 absdidd = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=0.0, beta=0.0, deltaF=-170.3, absidentifier=absindentifier, variopath=diddpath, scalarpath=diddpath)
 if absdidd:
@@ -46,6 +47,17 @@ if absdidd:
     absdidd = absdidd.remove_flagged()
     absdidd.plot(['x','y','z'],plottitle = "Analysis of absolute values - Using variocorr. data from DIDD", outfile=os.path.join(rawpath,"AutoAnalysisDIDD"))
 
+print "Analyzing absolutes data for dIdD"
+# Repeat for DIDD but write new logfile and move succesfully analyzed files from the server to the archive
+#abslemi = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=3.35, beta=0.0, deltaF=0.0, absidentifier=absindentifier, variopath=lemipath, scalarpath=pospath)
+#if abslemi:
+#    abslemi.write(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_lemi_A2')
+#    abslemi = read(path_or_url=os.path.join(writeresultpath,'absolutes_lemi_A2.txt'))
+#    abslemi = abslemi.remove_outlier(timerange=timedelta(days=60),keys=['x','y','z','f','dx','dy','dz'],threshold=1.5)
+#    abslemi.write(writeresultpath,coverage='all',filenamebegins='absolutes_lemi_A2')
+#    abslemi = abslemi.trim(starttime=start)
+#    abslemi = abslemi.remove_flagged()
+#    abslemi.plot(['x','y','z'],plottitle = "Analysis of absolute values - Using variocorr. data from LEMI", outfile=os.path.join(rawpath,"AutoAnalysisLEMI"))
 
 print "Analyzing absolutes data for FGE"
 # Do it for the FGE

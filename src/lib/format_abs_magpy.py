@@ -49,6 +49,8 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     2010-06-11_12:08:30	273.25916666666666	90.	0.
     2010-06-11_12:08:30	273.25916666666666	90.	0.
     """
+    azimuth = kwargs.get('azimuth')
+
     plog = PyMagLog()
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -172,6 +174,12 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     2010-06-11_12:08:30	273.25916666666666	90.	0.
     2010-06-11_12:08:30	273.25916666666666	90.	0.
     """
+    azimuth = kwargs.get('azimuth')
+    output = kwargs.get('output')
+
+    if not output:
+        output = 'AbsoluteDIStruct' # else 'DILineStruct'
+
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = AbsoluteData()
@@ -284,6 +292,149 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     fh.close()
 
     return stream
+
+
+def isAUTODIF(filename):
+    """
+    Checks whether a file is ASCII DIDD (Tihany) format.
+    """
+    try:
+        temp = open(filename, 'rt')
+        line = temp.readline()
+    except:
+        return False
+    if not line.startswith('AUTODIF'):
+        return False
+    return True
+
+
+def readAUTODIF(filename, headonly=False, **kwargs):
+    """
+    Reading Autodifs's Absolute format data.
+    Looks like:
+    AUTODIF002	2013-10-17
+
+    Measure ID	Date	Time	Laser	Fluxgate	Level	Haxis	Vaxis
+
+    Laser PU	2013-10-17	00:15:59	0.0471	2047	-192	90.5789	94.871
+    Laser PU	2013-10-17	00:16:07	-0.0366	2047	-192	90.5789	94.8727
+    Laser PD	2013-10-17	00:16:56	-0.022	2047	-185	271.3414	274.1147
+    Laser PD	2013-10-17	00:17:04	0.022	2047	-185	271.3414	274.1157
+    Declination 1	2013-10-17	00:17:23	NaN	55	-183	90.0	281.0448
+    Declination 1	2013-10-17	00:17:31	NaN	-1	-183	90.0	281.0304
+    Declination 2	2013-10-17	00:17:54	NaN	128	-183	269.9991	280.0551
+    Declination 2	2013-10-17	00:18:02	NaN	3	-183	269.9991	280.0883
+    Declination 3	2013-10-17	00:18:17	NaN	-19	-192	269.9999	100.7341
+    Declination 3	2013-10-17	00:18:25	NaN	-15	-192	269.9999	100.7352
+    Declination 4	2013-10-17	00:18:49	NaN	193	-194	90.0007	100.9456
+    Declination 4	2013-10-17	00:18:59	NaN	12	-194	90.0007	100.9947
+    Laser PU	2013-10-17	00:19:14	-0.0053	2047	-191	90.5785	94.8723
+    Laser PU	2013-10-17	00:19:22	0.123	2047	-191	90.5785	94.8696
+    Laser PD	2013-10-17	00:19:47	0.0	2047	-185	271.341	274.115
+    Laser PD	2013-10-17	00:19:55	-0.0659	2047	-185	271.341	274.1134
+    Inclination 1	2013-10-17	00:20:16	NaN	400	-179	115.7004	10.7194
+    Inclination 1	2013-10-17	00:20:25	NaN	-8	-179	115.7463	10.7194
+    Inclination 2	2013-10-17	00:20:44	NaN	51	-179	295.8997	10.7175
+    Inclination 2	2013-10-17	00:20:52	NaN	-7	-179	295.8929	10.7175
+    Inclination 3	2013-10-17	00:21:10	1.0	-8	-202	244.4002	190.7183
+    Inclination 3	2013-10-17	00:21:18	NaN	0	-202	244.4015	190.7183
+    Inclination 4	2013-10-17	00:21:37	NaN	-404	-203	64.3002	190.7157
+    Inclination 4	2013-10-17	00:21:49	NaN	-11	-202	64.2543	190.7157
+    """
+    azimuth = kwargs.get('azimuth')
+    scaleflux = kwargs.get('scaleflux')
+    scaleangle = kwargs.get('scaleangle')
+    temperature = kwargs.get('temperature')
+    pier = kwargs.get('pier')
+
+    if not azimuth:
+        azimuth = float(nan)
+    if not scaleflux:
+        scaleflux = 0.098
+    if not scaleangle:
+        scaleangle = 0.00011
+    if not temperature:
+        temperature = float(nan)
+    if not pier:
+        pier = ''
+
+    fh = open(filename, 'rt')
+    # read file and split text into channels
+    abslist = []
+    # Check whether header infromation is already present
+    headers = {}
+    
+    count = 0
+    inccount = 0
+
+    newset = False  # To distinguish between different absolute sets within one file
+
+    print "Reading DI data ..."
+    row = DILineStruct(24)
+
+    for line in fh:
+        if line.isspace():
+            # blank line
+            pass
+        elif line.startswith('AUTODIF'):
+            di_inst = line.split()[0]
+            pass
+        elif line.startswith('Measure'):
+            pass
+        elif headonly:
+            # skip data for option headonly
+            continue
+        else:
+            # Position mesurements
+            posstr = line.split()
+            try:
+                if not line.startswith('Inclination'):
+                    if newset == True:
+                        count = 0
+                        inccount = 0
+                        newset = False
+                        row.person = 'AutoDIF'
+                        row.di_inst = di_inst
+                        row.scaleflux = scaleflux
+                        row.scaleangle = scaleangle
+                        row.t = temperature
+                        row.azimuth = azimuth
+                        row.pier = pier
+                        abslist.append(row)
+                        row = DILineStruct(24)
+                    try:
+                        row.time[count] = date2num(datetime.strptime(posstr[2] + '_' + posstr[3],"%Y-%m-%d_%H:%M:%S"))
+                    except:
+                        logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        pass
+                    row.laser[count] = float(posstr[4])
+                    row.res[count] = float(posstr[5])*scaleflux
+                    row.opt[count] = float(posstr[6])
+                    row.hc[count] = float(posstr[7])
+                    row.vc[count] = float(posstr[8])
+                    count = count +1
+                else:
+                    inccount = inccount +1
+                    if inccount == 8:
+                        newset = True
+                    try:
+                        row.time[count] = date2num(datetime.strptime(posstr[2] + '_' + posstr[3],"%Y-%m-%d_%H:%M:%S"))
+                    except:
+                        logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        pass
+                    row.res[count] = float(posstr[5])*scaleflux
+                    row.opt[count] = float(posstr[6])
+                    row.hc[count] = float(posstr[7])
+                    row.vc[count] = float(posstr[8])
+                    count = count +1
+            except:
+                logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
+                return
+    fh.close()
+
+    abslist.append(row)
+
+    return abslist
 
 
 def writeMAGPYNEWABS(filename, headonly=False, **kwargs):
