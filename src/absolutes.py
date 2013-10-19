@@ -82,21 +82,21 @@ class DILineStruct(object):
         convert the DILineStruct to the AbsDataStruct used for calculations
         """
         try:
-            mu1 = self.vc[0]-((self.vc[0]-self.vc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
+            mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
         except:
-            mu1 = self.vc[0] # in case of laser(vc0-vc1) = 0
+            mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
         try:
-            md1 = self.vc[2]-((self.vc[2]-self.vc[3])/(self.laser[2]-self.laser[3]))*self.laser[2]
+            md1 = self.hc[2]-((self.hc[2]-self.hc[3])/(self.laser[2]-self.laser[3]))*self.laser[2]
         except:
-            md1 = self.vc[2]
+            md1 = self.hc[2]
         try:
-            mu2 = self.vc[12]-((self.vc[12]-self.vc[13])/(self.laser[12]-self.laser[13]))*self.laser[12]
+            mu2 = self.hc[12]-((self.hc[12]-self.hc[13])/(self.laser[12]-self.laser[13]))*self.laser[12]
         except:
-            mu2 = self.vc[12]
+            mu2 = self.hc[12]
         try:
-            md2 = self.vc[14]-((self.vc[14]-self.vc[15])/(self.laser[14]-self.laser[15]))*self.laser[14]
+            md2 = self.hc[14]-((self.hc[14]-self.hc[15])/(self.laser[14]-self.laser[15]))*self.laser[14]
         except:
-            md2 = self.vc[14]
+            md2 = self.hc[14]
 
         print mu1
         print md1
@@ -106,7 +106,14 @@ class DILineStruct(object):
         mu = (mu1+mu2)/2
         md = (md1+md2)/2
         stream = AbsoluteData()
+        tmplist = []
+        sortlist = []
 
+        headers = {}
+        headers['pillar'] = self.pier
+        headers['analysisdate'] = self.time[0]
+
+        # The order needs to be changed according to the file list
         for i, elem in enumerate(self.time):
             if 4 <= i < 12 or 16 <= i < 24:
                 row = AbsoluteDIStruct()
@@ -121,16 +128,39 @@ class DILineStruct(object):
                 row.person = self.person
                 row.di_inst = self.di_inst
                 row.f_inst = self.f_inst
-               
-                stream.add(row)
-            #if 4 <= i < 12:
-            #    print "Dec", self.vc[i]
+                tmplist.append(row)
 
-  
-        #print self.time
-        #row = AbsoluteDIStruct()
+        # sortlist
+        for idx,elem in enumerate(tmplist):
+            if idx < 4:
+                sortlist.append(elem)
+            if idx == 4:
+                sortlist.insert(2,elem)
+            if idx == 5:
+                sortlist.insert(3,elem)
+            if idx == 6:
+                sortlist.insert(2,elem)
+            if idx == 7:
+                sortlist.insert(3,elem)
+            if 7 < idx <= 9:
+                sortlist.append(elem)
+            if idx == 10:
+                sortlist.insert(8,elem)
+            if idx == 11:
+                sortlist.insert(9,elem)
+            if idx == 12:
+                sortlist.insert(8,elem)
+            if idx == 13:
+                sortlist.insert(9,elem)
+            if idx == 14:
+                sortlist.insert(8,elem)
+            if idx == 15:
+                sortlist.insert(9,elem)
 
-        #return stream
+        sortlist.append(tmplist[8])
+
+        for elem in sortlist:
+            stream.add(elem)        
         return stream
 
 
@@ -277,7 +307,7 @@ class AbsoluteData(object):
         """
         This function should not be here .... is absresults a stream??
         Function to perform variometercorrection of an absresult object
-        towrads the given datetime using the ginven variometer stream.
+        towrads the given datetime using the given variometer stream.
         Returns a new absresult object with new datetime and corrected values
         """
         funckeys = kwargs.get('funckeys')
@@ -384,6 +414,9 @@ class AbsoluteData(object):
             mireval = miremean+90.0
         mirediff = self._corrangle(expmire - mireval)
 
+        if debugmode:
+            print "Miren: ", expmire, poslst[1].mu, miremean
+
         # -- Get mean values for x and y
         # ------------------------------
         meanx, meany = 0.0,0.0
@@ -458,6 +491,10 @@ class AbsoluteData(object):
             dl2.append(dl2mean)
 
         decmean = np.mean(dl2)*180.0/np.pi - 180.0
+
+        if debugmode:
+            print "Mean Dec: ", dl2, decmean, mirediff
+
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
         
         #Initialize HC if no input in this column = 0
@@ -489,6 +526,9 @@ class AbsoluteData(object):
         if (np.max(dl2)-np.min(dl2))>0.1:
             if iterator == 0:
                 loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
+
+        if debugmode:
+            print "Dec calc: ", decmean, mirediff, variocorr[0], deltaD
 
         dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi + deltaD)
 
@@ -526,12 +566,15 @@ class AbsoluteData(object):
         incstart - float - default 45.0 - inclination value in 'unit'
         unit - str - default 'deg' - can be either 'deg' or 'gon'
         scalevalue - 3comp list - default [1.0,1.0,1.0] - contains scales for varx,vary,varz to nT (not essential if all are equal)
+        annualmeans - 3comp list - default [20800,1200,43500] - contains annual mean values - used for calc if no F instrument is provided)
         """
         
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
         deltaI = kwargs.get('deltaI')
         iterator = kwargs.get('iterator')
+        debugmode = kwargs.get('debugmode')
+        annualmeans = kwargs.get('annualmeans')
 
         ang_fac = 1
         if not scalevalue:
@@ -540,6 +583,8 @@ class AbsoluteData(object):
             incstart = 45.0
         if not iterator:
             iterator = 0
+        if not debugmode:
+            debugmode = False
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
@@ -550,7 +595,7 @@ class AbsoluteData(object):
         scalartype = 'None'
 
         #incstart = incstart*ang_fac
-        plog = PyMagLog()
+        #plog = PyMagLog()
 
         # -- Get the variometer and scalar means from then absolute file
         # --------------------------------------------------------------
@@ -592,7 +637,8 @@ class AbsoluteData(object):
             meanf = np.mean(fvlist)
             loggerabs.info("Using F from provided scalar path") 
         else:
-            meanf = 0.
+            #meanf = 0.
+            meanf = (annualmeans[0]^2 + annualmeans[1]^2 + annualmeans[2]^2)
             #return emptyline, 20000.0, 0.0
 
         
@@ -692,19 +738,24 @@ class AbsoluteData(object):
             else:
                 scaleangle = poslst[k].vc
                 minimum = 10000
+                calcscaleval = 999.0
                 for n in range((nr_lines-1)/2,nr_lines-1):
                     rotation = np.abs(scaleangle - poslst[n].vc)
-                    if rotation < minimum:
+                    if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value 
                         fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/ppmval[cnt] + np.cos(np.mean(I0list))*(poslst[n].vary-poslst[k].vary)/ppmval[cnt])*180/np.pi 
-                        #print fieldchange
                         deltaB = rotation+fieldchange
                         deltaR = np.abs(poslst[n].res-poslst[k].res)
-                        #print deltaR
                         minimum = rotation
                         if (deltaR == 0):
                             calcscaleval = 999.0
                         else:
                             calcscaleval = ppmval[cnt] * deltaB/deltaR * np.pi/180
+                        if debugmode:
+                            print "Scalevalue calculation in calcinc:"
+                            print 'Fieldchange ', fieldchange
+                            print 'Scaleval', calcscaleval
+                            print 'DeltaR', deltaR
+   
             cnt += 1
 
         i1list,i1tmp = [],[]
@@ -730,7 +781,7 @@ class AbsoluteData(object):
         tmpH = meanf * np.cos( inc *np.pi/(180.0) )
         tmpZ = meanf * np.sin( inc *np.pi/(180.0) )
         # check for inclination error in file inc
-        #   -- the following part may casue problems in case of close to polar positions and locations were X is larger than Y
+        #   -- the following part may cause problems in case of close to polar positions and locations were X is larger than Y
         if (90-inc) < 0.1:
             loggerabs.error('%s : Inclination warning... check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
             #loggerabs.error(I0list)
@@ -803,6 +854,7 @@ class AbsoluteData(object):
         plog = PyMagLog()
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
+        annualmeans = kwargs.get('annualmeans')
         unit = kwargs.get('unit')
         xstart = kwargs.get('xstart')
         ystart = kwargs.get('ystart')
@@ -825,6 +877,8 @@ class AbsoluteData(object):
             ystart = 0.0
         if not usestep: 
             usestep = 0
+        if not annualmeans:
+            annualmeans = [20800,1200,43500]
 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions

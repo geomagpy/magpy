@@ -153,23 +153,30 @@ def readIAGA(filename, headonly=False, **kwargs):
         xval = float(elem[3])
         yval = float(elem[4])
         zval = float(elem[5])
-        if (headers['col-x']=='x'):
+        try:
+            if (headers['col-x']=='x'):
+                row.x = xval
+                row.y = yval
+                row.z = zval
+            elif (headers['col-h']=='h'):
+                row.x, row.y, row.z = hdz2xyz(xval,yval,zval)
+            elif (headers['col-i']=='i'):
+                row.x, row.y, row.z = idf2xyz(xval,yval,zval)
+            else:
+                raise ValueError
+            if not float(elem[6]) == 88888:
+                if headers['col-f']=='f':
+                    row.f = float(elem[6])
+                elif headers['col-g']=='g':
+                    row.f = np.sqrt(row.x**2+row.y**2+row.z**2) + float(elem[6])
+                else:
+                    raise ValueError
+        except:
             row.x = xval
             row.y = yval
             row.z = zval
-        elif (headers['col-h']=='h'):
-            row.x, row.y, row.z = hdz2xyz(xval,yval,zval)
-        elif (headers['col-i']=='i'):
-            row.x, row.y, row.z = idf2xyz(xval,yval,zval)
-        else:
-            raise ValueError
-        if not float(elem[6]) == 88888:
-            if headers['col-f']=='f':
+            if not float(elem[6]) == 88888:
                 row.f = float(elem[6])
-            elif headers['col-g']=='g':
-                row.f = np.sqrt(row.x**2+row.y**2+row.z**2) + float(elem[6])
-            else:
-                raise ValueError
         stream.add(row)
 
     """
@@ -258,7 +265,7 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Digital Sampling %-5s %-44s |\n' % (' ',header.get('DataDigitalSampling'," ")[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(header.get('DataSamplingRate'," ")+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('DataType'," ")[:44]))
-        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (header.get('col-x'," ").upper(),header.get('col-y'," ").upper(),header.get('col-z'," ").upper(),header.get('col-f'," ").upper()))
+        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (header.get('col-x',"x").upper(),header.get('col-y',"y").upper(),header.get('col-z',"z").upper(),header.get('col-f',"f").upper()))
     try:
         myFile.writelines(line) # Write header sequence of strings to a file
     except IOError:

@@ -311,6 +311,7 @@ def isAUTODIF(filename):
 def readAUTODIF(filename, headonly=False, **kwargs):
     """
     Reading Autodifs's Absolute format data.
+    Take care: File contains horizontal/vertical axis - magpy is using the h/v circles (perpendicular to axis)
     Looks like:
     AUTODIF002	2013-10-17
 
@@ -410,8 +411,8 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                     row.laser[count] = float(posstr[4])
                     row.res[count] = float(posstr[5])*scaleflux
                     row.opt[count] = float(posstr[6])
-                    row.hc[count] = float(posstr[7])
-                    row.vc[count] = float(posstr[8])
+                    row.vc[count] = float(posstr[7])
+                    row.hc[count] = float(posstr[8])
                     count = count +1
                 else:
                     inccount = inccount +1
@@ -424,14 +425,22 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                         pass
                     row.res[count] = float(posstr[5])*scaleflux
                     row.opt[count] = float(posstr[6])
-                    row.hc[count] = float(posstr[7])
-                    row.vc[count] = float(posstr[8])
+                    row.vc[count] = float(posstr[7])
+                    row.hc[count] = float(posstr[8])+180 # 180 deg are necessary for the magpy routine
                     count = count +1
             except:
                 logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
                 return
     fh.close()
 
+    # add the last input as well
+    row.person = 'AutoDIF'
+    row.di_inst = di_inst
+    row.scaleflux = scaleflux
+    row.scaleangle = scaleangle
+    row.t = temperature
+    row.azimuth = azimuth
+    row.pier = pier
     abslist.append(row)
 
     return abslist
