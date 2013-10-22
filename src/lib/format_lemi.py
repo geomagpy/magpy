@@ -67,7 +67,7 @@ def isLEMIBIN(filename):
             return false
     except:
         return False
-    logging.debug("lib - format_lemi: Found Lemi Binary file %s" % filename)
+
     return True
 
 def isLEMIBIN2(filename):
@@ -86,7 +86,7 @@ def isLEMIBIN2(filename):
             return false
     except:
         return False
-    logging.debug("lib - format_lemi: Found Lemi Binary file %s" % filename)
+
     return True
 
 
@@ -109,8 +109,6 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    
-
     # get day from filename (platform independent)
     # --------------------------------------
     splitpath = os.path.split(filename)
@@ -132,6 +130,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
         pass
 
     if getfile:
+        logging.info(' Read: %s Format: LEMI IAGA (txt) ' % (filename))
         for line in fh:
             if line.isspace():
                 # blank line
@@ -158,8 +157,6 @@ def readLEMIHF(filename, headonly=False, **kwargs):
         stream =[]
 
     fh.close()
-
-    print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers)
 
@@ -196,6 +193,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     if getfile:
 
+        logging.info(' Read: %s Format: LEMI BIN (WIK) ' % (filename))
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -298,13 +296,11 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     data= struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
     if data[55] == 'L':
         # old format
-        #print "old format"
         packcode = '<4cb6B8hb30f3BcB'
         linelength = 153
         stime = False
     else:
         # new format
-        #print "new format"
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
         stime = True
@@ -312,7 +308,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     fh = open(filename, 'rb')
     # read file and split text into channels
     stream = DataStream()
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     if stream.header is None:
         headers = {}
     else:
@@ -334,6 +330,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
 
     if getfile:
 
+        logging.info(' Read: %s Format: LEMI BIN (new)' % (filename))
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -357,7 +354,6 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
             time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
 
             if tenHz:
-                #print "HERE"
                 for i in range(10):
                     row = LineStruct()
 
@@ -365,14 +361,10 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.t1 = data[11]/100.
                     row.t2 = data[12]/100.
 
-                    #row.x = (data[20+i*3]-bfx)*1000.
-                    #row.y = (data[21+i*3]-bfy)*1000.
-                    #row.z = (data[22+i*3]-bfz)*1000.
-                    row.x = (data[20+i*3])*1000.
-                    row.y = (data[21+i*3])*1000.
-                    row.z = (data[22+i*3])*1000.
-                    #row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
-                    #print row.time, row.x, row.y, row.z
+                    row.x = (data[20+i*3]-bfx)*1000.
+                    row.y = (data[21+i*3]-bfy)*1000.
+                    row.z = (data[22+i*3]-bfz)*1000.
+                    row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
 
                     stream.add(row)
 
@@ -380,10 +372,6 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     	        newtime = []
                 row = LineStruct()   
 
-                #if stime:
-                 #   print time, data[54]
-                  #  print 2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
-                   # sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])
                 row.time = date2num(time)
                 row.t1 = data[11]/100.
                 row.t2 = data[12]/100.
@@ -395,13 +383,10 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                 row.y = (data[21])*1000.
                 row.z = (data[22])*1000.
                 #row.f = (row.x**2.+row.y**2.+row.z**2.)**.5		# only when bfx etc. calculated in
-                #print row.time, row.x, row.y, row.z
 
                 stream.add(row)    
 
     	    line = fh.read(linelength)
-
-        #print "Finished file reading of %s" % filename
 
     fh.close()
    

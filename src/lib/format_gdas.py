@@ -90,6 +90,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
             getfile = False
 
     if getfile:
+	logging.info(' Read: %s Format: GDAS ' % (filename))
         for line in fh:
             if line.isspace():
                 # blank line
@@ -143,8 +144,6 @@ def readGDASA1(filename, headonly=False, **kwargs):
     else:
         headers = stream.header
         stream =[]
-
-    #print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers)    
 

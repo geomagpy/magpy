@@ -239,16 +239,13 @@ def readCS(filename, headonly=False, **kwargs):
     # get day from filename (platform independent)
     getfile = True
     theday = extractDateFromString(filename)
-    splitpath = os.path.split(filename)
-    daystring = splitpath[1].split('.')
-    daystring = daystring[0][-6:]
+    day = datetime.strftime(theday,'%Y-%m-%d')
     try:
-        day = datetime.strftime(datetime.strptime(daystring, "%d%m%y"),"%Y-%m-%d")
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         try:
@@ -266,6 +263,7 @@ def readCS(filename, headonly=False, **kwargs):
 
     # Select only files within eventually defined time range
     if getfile:
+        logging.info(' Read: %s Format: CS (txt) ' % (filename))
         for elem in csvReader:
             if len(elem) == 1:
                 elem = elem[0].split()
@@ -288,6 +286,7 @@ def readCS(filename, headonly=False, **kwargs):
                         row.t1 = float(elem[1])
                         row.var1 = float(elem[2])
                         row.t2 = float(elem[3])
+
                     stream.add(row)
                 except ValueError:
                     pass

@@ -55,6 +55,8 @@ def readGFZKP(filename, headonly=False, **kwargs):
     else:
         headers = stream.header
 
+    logging.info(' Read: %s Format: GFZ Kp' % (filename))
+
     # read file and split text into channels
     li,ld,lh,lx,ly,lz,lf = [],[],[],[],[],[],[]
     code = ''

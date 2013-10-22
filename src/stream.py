@@ -2387,11 +2387,9 @@ class DataStream(object):
 		# -- Shade in areas of storm phases:
                 if plotphases:
                     if not stormphases:
-                        if debugmode:
-                            loggerstream.debug('Plot: Need phase definition times in "stormphases" list variable.')
+                        loggerstream.debug('Plot: Need phase definition times in "stormphases" list variable.')
 		    if len(stormphases) < 4:
-		        if debugmode: 
-                            loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
+		        loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
                     else:
                         t_ssc = stormphases[0]
                         t_mphase = stormphases[1]

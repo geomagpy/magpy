@@ -172,13 +172,14 @@ def readGSM19(filename, headonly=False, **kwargs):
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     if stream.header == None:
         headers = {}
     else:
         headers = stream.header
     data = []
     key = None
+    logging.info(' Read: %s Format: GSM19' % (filename))
 
     for line in fh:
         if line.isspace():

@@ -9,7 +9,7 @@ from stream import *
 
 def isPOS1(filename):
     """
-    Checks whether a file is Binary POS-1 file format.
+    Checks whether a file is binary POS-1 file format.
     Header:
     # MagPyBin %s %s %s %s %s %s %d" % ('POS1', '[f,df,var1,sectime]', '[f,df,var1,GPStime]', '[nT,nT,none,none]', '[1000,1000,1,1]
     """
@@ -19,8 +19,8 @@ def isPOS1(filename):
         return False
     if not 'POS1' in temp:
         return False
-    logging.debug("lib - format_pos1: Found POS-1 Binary file %s" % filename)
-    #print "success"
+
+    logging.info("--- Lib - format_pos1: Found POS-1 Binary file %s" % filename)
     return True
 
 def isPOS1TXT(filename):
@@ -37,11 +37,12 @@ def isPOS1TXT(filename):
         return False
     if not linebit == '+-':
         return False
-    logging.debug("lib - format_pos1: Found POS-1 Text file %s" % filename)
+    logging.info("lib - format_pos1: Found POS-1 Text file %s" % filename)
     return True
 
 def readPOS1(filename, headonly=False, **kwargs):
     # Reading POS-1 Binary format data.
+
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
@@ -74,7 +75,8 @@ def readPOS1(filename, headonly=False, **kwargs):
     if getfile:
 
         line = fh.readline()
-        #print line
+
+        logging.info('--- File: %s Format: POS-1 BIN ' % (filename))
  
 	line = fh.read(45)
 	while line != "":
@@ -88,12 +90,11 @@ def readPOS1(filename, headonly=False, **kwargs):
             row.df = float(data[8])/1000.
             row.var1 = int(data[9])
 
-            #print row.time, row.f, row.df
             stream.add(row)    
 
     	    line = fh.read(45)
 
-        print "Finished file reading of %s" % filename
+        #print "Finished file reading of %s" % filename
 
     fh.close()
 
@@ -118,7 +119,6 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-
     theday = extractDateFromString(filename)
     try:
         day = datetime.strftime(theday,"%Y-%m-%d")
@@ -136,6 +136,8 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
     if getfile:
 
 	line = fh.readline()
+        logging.info('--- File: %s Format: POS-1 TXT ' % (filename))
+
 	while line != "":
             data = line.split()
             row = LineStruct()
@@ -148,7 +150,7 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
 
     	    line = fh.readline()
 
-        print "Finished file reading of %s" % filename
+        #print "Finished file reading of %s" % filename
 
     fh.close()
 
