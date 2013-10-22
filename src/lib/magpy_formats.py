@@ -28,8 +28,8 @@ from lib.format_sfs import *
 from lib.format_bdv import *
 from lib.format_dtu import *
 from lib.format_gfz import *
-from lib.format_autodif import *
-from lib.format_autodif_fread import *
+#from lib.format_autodif import *
+#from lib.format_autodif_fread import *
 
 
 def isFormat(filename, format_type):
@@ -105,9 +105,9 @@ def isFormat(filename, format_type):
     #elif (format_type == "AUTODIF"): # Text AUTODIF baseline (2/Hr)
     #    if (isAUTODIF(filename)):
     #        return True
-    elif (format_type == "AUTODIF_FREAD"): # Text AUTODIF F for baseline (0.2 Hz, from POS1)
-        if (isAUTODIF_FREAD(filename)):
-            return True
+    #elif (format_type == "AUTODIF_FREAD"): # Text AUTODIF F for baseline (0.2 Hz, from POS1)
+    #    if (isAUTODIF_FREAD(filename)):
+    #        return True
     elif (format_type == "ENV05"): # Binary Environmental data (1 Hz)
         if (isENV05(filename)):
             return True
