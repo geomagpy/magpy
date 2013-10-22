@@ -230,9 +230,6 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
   	      	newtime[-2] = currsec+secadd
         	time = datetime(2000+newtime[0],newtime[1],newtime[2],newtime[3],newtime[4],int(newtime[5]),int(newtime[6]*1000000))
                 row.time = date2num(time)
-                #row.x = (data[0]-bfx)*1000.
-                #row.y = (data[1]-bfy)*1000.
-                #row.z = (data[2]-bfz)*1000.
                 row.x = (data[0])*1000.
                 row.y = (data[1])*1000.
                 row.z = (data[2])*1000.
@@ -361,10 +358,10 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.t1 = data[11]/100.
                     row.t2 = data[12]/100.
 
-                    row.x = (data[20+i*3]-bfx)*1000.
-                    row.y = (data[21+i*3]-bfy)*1000.
-                    row.z = (data[22+i*3]-bfz)*1000.
-                    row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
+                    row.x = (data[20+i*3])*1000.
+                    row.y = (data[21+i*3])*1000.
+                    row.z = (data[22+i*3])*1000.
+                    #row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
 
                     stream.add(row)
 
@@ -376,9 +373,6 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                 row.t1 = data[11]/100.
                 row.t2 = data[12]/100.
 
-                #row.x = (data[20]-bfx)*1000.
-                #row.y = (data[21]-bfy)*1000.
-                #row.z = (data[22]-bfz)*1000.
                 row.x = (data[20])*1000.
                 row.y = (data[21])*1000.
                 row.z = (data[22])*1000.
