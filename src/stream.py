@@ -225,6 +225,7 @@ class DataStream(object):
     - self._put_column(key) -- adds a column to a Stream
     - self._clear_column(key) -- clears a column to a Stream
     - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
+    - self._reduce_stream(self)
     - self._remove_lines(self, key, value) -- removes lines with value within the selected key
 
     B. Internal Methods II: Data manipulation functions
@@ -421,6 +422,36 @@ class DataStream(object):
                 exec('elem.'+key+' = "-"')
                    
         return self
+
+    def _reduce_stream(self, **kwargs):
+        """
+        Reduces size of stream for plotting methods to save memory
+        when plotting large data sets.
+        Does NOT filter or smooth!
+        This function purely removes data points (rows) in a 
+        periodic fashion until size is <100000 data points.
+	(Point limit can also be definited.)
+        """
+
+	pointlimit = kwargs.get('pointlimit')
+
+        if not pointlimit:
+            pointlimit = 100000.        
+
+        size = len(self)
+        div = size/pointlimit
+        divisor = math.ceil(div)
+        count = 0.
+        lst = []
+
+        if divisor > 1.:
+            for elem in self:
+                if count%divisor == 0.:
+                    lst.append(elem)
+                count += 1.
+
+        return DataStream(lst, self.header)
+
 
     # ------------------------------------------------------------------------
     # B. Internal Methods: Data manipulation functions
@@ -2116,7 +2147,7 @@ class DataStream(object):
                       Possible parameters:
                       (called for annotated storm phases:) 
 		      sscx, sscy, mphx, mphy, recx, recy
-	- annophases	(bool) Annotate phase times with titles. Default off.
+	- annophases	(bool) Annotate phase times with titles. Default False.
 	- bgcolor	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
         - colorlist 	(list - default []) Provide a ordered color list of type ['b','g']
 	- confinex	(bool) Confines tags on x-axis to shorter values.
@@ -2316,6 +2347,7 @@ class DataStream(object):
                 # -- Adjust scales with padding:
                 ymin = np.min(yplt)-padding
                 ymax = np.max(yplt)+padding
+
                 if specialdict:
                     if key in specialdict:
                         paramlst = specialdict[key]
@@ -2594,7 +2626,7 @@ class DataStream(object):
         remove flagged data from stream:
         kwargs support the following keywords:
             - flaglist  (list) default=[1,3]
-            - keys (string e.g. 'f') default=FLAGKEYLIST
+            - keys (string list e.g. 'f') default=FLAGKEYLIST
         flag = '000' or '010' etc
         """
         
