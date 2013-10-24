@@ -307,12 +307,17 @@ class DataStream(object):
         self.header = header
 
     def _print_key_headers(self):
-        print "MagPy Key : Variable : Unit"
+        print "%10s : %22s : %28s" % ("MAGPY KEY", "VARIABLE", "UNIT")
         for key in FLAGKEYLIST[1:]:
             try:
-                print key, " : ", self.header['col-'+key], " : ", self.header['unit-col-'+key]
+                header = self.header['col-'+key]
             except:
-                pass
+                header = None
+            try:
+                unit = self.header['unit-col-'+key]
+            except:
+                unit = None
+            print "%10s : %22s : %28s" % (key, header, unit)
 
     def sorting(self):
         """
