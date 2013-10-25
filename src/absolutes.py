@@ -483,6 +483,8 @@ class AbsoluteData(object):
                     loggerabs.error("%s : Data missing: check whether all fields are filled"% num2date(poslst[0].time).replace(tzinfo=None))
                     pass
             dl2tmp.append(dl2mean)
+            if debugmode:
+                print "Selected Dec:", dl2mean*180/np.pi
             if dl2mean < np.pi:
                 dl2mean += np.pi/2
             else:
@@ -575,6 +577,7 @@ class AbsoluteData(object):
         iterator = kwargs.get('iterator')
         debugmode = kwargs.get('debugmode')
         annualmeans = kwargs.get('annualmeans')
+        usestep = kwargs.get('usestep')
 
         ang_fac = 1
         if not scalevalue:
@@ -585,6 +588,8 @@ class AbsoluteData(object):
             iterator = 0
         if not debugmode:
             debugmode = False
+        if not usestep: 
+            usestep = 0
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
@@ -683,6 +688,7 @@ class AbsoluteData(object):
         if nr_lines < 16: # only declination measurements available so far
             return linestruct, 20000.0, 0.0
         
+        # - Now cycle through inclination steps and apply residuum correction
         for k in range((nr_lines-1)/2,nr_lines):
             val = poslst[k].vc
             try:
@@ -761,9 +767,15 @@ class AbsoluteData(object):
         i1list,i1tmp = [],[]
 
         for k in range(0,7,2):
-            i1mean = np.mean([I0list[k],I0list[k+1]])
+            if usestep == 1:
+                i1mean = I0list[k]
+            elif usestep == 2:
+                i1mean = I0list[k+1]
+            else:
+                i1mean = np.mean([I0list[k],I0list[k+1]])
             i1tmp.append(i1mean)
             i1list.append(i1mean)
+
 
         I0Diff1 = I0Diff1/2.
         xDiff1 = xDiff1/2.
@@ -899,7 +911,7 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i)
+            outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep)
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
