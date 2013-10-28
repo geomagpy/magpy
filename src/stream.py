@@ -408,6 +408,20 @@ class DataStream(object):
             
         return self
 
+    def _move_column(self, key, put2key):
+	'''
+	Move column of key "key" to key "put2key".
+	Simples.
+	'''
+
+        if not key in KEYLIST:
+            raise ValueError, "Column key not valid"
+        for i, elem in enumerate(self):
+            exec('elem.'+put2key+' = '+'elem.'+key)
+            if key in ['x','y','z','f','dx','dy','dz','df','var1','var2','var3','var4']:
+	        exec('elem.'+key+' = float("NaN")')
+            else:
+                exec('elem.'+key+' = "-"')
 
     def _clear_column(self, key):
         """
