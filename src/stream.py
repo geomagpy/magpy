@@ -2482,7 +2482,7 @@ class DataStream(object):
 		            if 'sscx' in annoxy:	# parameters for SSC annotation.
                                 x_ssc = annoxy['sscx']
                             else:
-                                x_ssc = t_ssc-timedelta(hours=2)
+                                x_ssc = t_ssc-timedelta(hours=0.5)
 		            if 'sscy' in annoxy:
                                 y_ssc = ymin + annoxy['sscy']*(ymax-ymin)
                             else:
@@ -2490,7 +2490,7 @@ class DataStream(object):
 		            if 'mphx' in annoxy:	# parameters for main-phase annotation.
                                 x_mph = annoxy['mphx']
                             else:
-                                x_mph = t_mphase+timedelta(hours=1.5)
+                                x_mph = t_mphase+timedelta(hours=0.5)
 		            if 'mphy' in annoxy:
                                 y_mph = ymin + annoxy['mphy']*(ymax-ymin)
                             else:
@@ -3851,6 +3851,108 @@ def stackStreams(stream_a, stream_b, **kwargs): # TODO
     stack the contents of two data stream:
     """
     pass
+
+def compareStreams(stream_a, stream_b):
+    '''
+    Default function will compare stream_a to stream_b. If data is missing in
+    a or is different, it will be filled in with that from b.
+    stream_b here is the reference stream.
+    ...
+    stream_a - first stream
+    stream_b - second stream, which is compared to stream_a for differences
+    kwargs:
+    replace (bool) - default False
+    insert (bool) - default False
+    TODO --> Add in support for comments.
+    '''
+
+    insert = True
+    replace = True
+
+    # Do the sampling periods match?
+    samplingrate_a = stream_a.get_sampling_period()
+    samplingrate_b = stream_b.get_sampling_period()
+
+    if samplingrate_a != samplingrate_b:
+        loggingstream.error('CompareStreams: Cannot compare streams with different sampling rates!')
+        return stream_a
+
+    # Do the timelines overlap?
+    timea = stream_a._get_column('time')
+    timeb = stream_b._get_column('time')
+
+    if np.min(timeb) < np.min(timea):
+        stime = np.min(timea)
+    else:
+        stime = np.min(timeb)
+    if np.max(timeb) > np.max(timea):
+        etime = np.max(timea)
+    else:
+        etime = np.max(timeb)
+        
+    if (etime <= stime):
+        loggerstream.error('CompareStreams: Streams do not overlap!')
+        return stream_a
+
+    # Trim to overlapping areas:
+    stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), 
+				endtime=num2date(etime).replace(tzinfo=None))
+    stream_b = stream_b.trim(starttime=num2date(stime).replace(tzinfo=None), 
+				endtime=num2date(etime).replace(tzinfo=None))
+
+
+    loggerstream.info('CompareStreams: Starting comparison...')
+
+    # Compare value for value between the streams:
+
+    flag_len = False
+
+    t_a = stream_a._get_column('time')
+    t_b = stream_b._get_column('time')
+
+    # Check length:
+    if len(t_a) < len(t_b):
+        print "Missing data in main stream."
+        flag_len = True
+
+    # If the lengths are the same, compare single values for differences:
+    if not flag_len:
+        for i in range(len(t_a)):
+            for key in FLAGKEYLIST:
+                exec('val_a = stream_a[i].'+key)
+                exec('val_b = stream_b[i].'+key)
+                if not isnan(val_a):
+                    if val_a != val_b:
+                        print "Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time)
+                        if replace == True:
+                            exec('stream_a[i].'+key+' = stream_b[i].'+key)
+
+    # If the lengths are different, find where values are missing:
+    else:
+        for i in range(len(t_b)):
+            if stream_a[i].time == stream_b[i].time:
+                for key in FLAGKEYLIST:
+                    exec('val_a = stream_a[i].'+key)
+                    exec('val_b = stream_b[i].'+key)
+                    if not isnan(val_a):
+                        if val_a != val_b:
+                            print "Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time)
+                            if replace == True:
+                                exec('stream_a[i].'+key+' = stream_b[i].'+key)
+            else:	# insert row into stream_a
+                print "Line from secondary stream missing in main stream. Timestamp: %s." % stream_b[i].time
+                if insert == True:
+                    row = LineStruct()
+                    stream_a.add(row)
+                    for key in KEYLIST:
+                        temp = stream_a._get_column(key)
+                        if len(temp) > 0:
+                            for j in range(i+1,len(stream_a)):
+                                exec('stream_a[j].'+key+' = temp[j-1]')
+                            exec('stream_a[i].'+key+' = stream_b[i].'+key)
+
+    loggerstream.info('CompareStreams: Finished comparison!')
+    return stream_a
 
 
 # Some helpful methods
