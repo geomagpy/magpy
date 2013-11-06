@@ -416,12 +416,17 @@ class DataStream(object):
 
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
-        for i, elem in enumerate(self):
-            exec('elem.'+put2key+' = '+'elem.'+key)
-            if key in ['x','y','z','f','dx','dy','dz','df','var1','var2','var3','var4']:
-	        exec('elem.'+key+' = float("NaN")')
-            else:
-                exec('elem.'+key+' = "-"')
+        try:
+            for i, elem in enumerate(self):
+                exec('elem.'+put2key+' = '+'elem.'+key)
+                if key in ['x','y','z','f','dx','dy','dz','df','var1','var2','var3','var4']:
+	            exec('elem.'+key+' = float("NaN")')
+                else:
+                    exec('elem.'+key+' = "-"')
+            loggerstream.info("_move_column: Column %s moved to column %s." % (key, put2key))
+        except:
+            loggerstream.debug("_move_column: Error.")
+
 
     def _clear_column(self, key):
         """
@@ -2482,7 +2487,7 @@ class DataStream(object):
 		            if 'sscx' in annoxy:	# parameters for SSC annotation.
                                 x_ssc = annoxy['sscx']
                             else:
-                                x_ssc = t_ssc-timedelta(hours=0.5)
+                                x_ssc = t_ssc-timedelta(hours=2)
 		            if 'sscy' in annoxy:
                                 y_ssc = ymin + annoxy['sscy']*(ymax-ymin)
                             else:
@@ -2490,7 +2495,7 @@ class DataStream(object):
 		            if 'mphx' in annoxy:	# parameters for main-phase annotation.
                                 x_mph = annoxy['mphx']
                             else:
-                                x_mph = t_mphase+timedelta(hours=0.5)
+                                x_mph = t_mphase+timedelta(hours=1.5)
 		            if 'mphy' in annoxy:
                                 y_mph = ymin + annoxy['mphy']*(ymax-ymin)
                             else:
