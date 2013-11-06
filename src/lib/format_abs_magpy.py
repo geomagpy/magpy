@@ -192,6 +192,9 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     key = None
     headfound = False
     print "Reading DI data ..."
+    dirow = DILineStruct(25)
+    count = 4
+
     for line in fh:
         numelements = len(line.split())
         if line.isspace():
@@ -203,11 +206,14 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             headline = line.split(':')
             if headline[0] == ('# Abs-Observer'):
                 person = headline[1].strip()
+                dirow.person = person
             if headline[0] == ('# Abs-Theodolite'):
                 di_inst = headline[1].replace(', ','_').strip()
+                dirow.di_inst = di_inst
             if headline[0] == ('# Abs-TheoUnit'):
                 unit = headline[1].strip()
-                # Transform unit to degree
+                # Any given unit is transformed to degree
+                # Therefor no further angular corrections are necessary 
                 if unit=='gon':
         	    ang_fac = 400./360.
                 elif unit == 'rad':
@@ -217,21 +223,30 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 unit = 'deg'
             if headline[0] == ('# Abs-FGSensor'):
                 fgsensor = headline[1].strip()
+                dirow.fluxgatesensor = fgsensor
             if headline[0] == ('# Abs-AzimuthMark'):
                 try:
                     expectedmire = float(headline[1].strip())/ang_fac
+                    # a given azimuth value overrides the file value
+                    if azimuth: 
+                        expectedmire = azimuth
+                    dirow.azimuth = expectedmire
                 except:
-                    logging.error('ReadAbsolute: Azimuth mark could not be interpreted in file %s' % filename)
+                    logging.error('ReadAbsolute: Azimuth mark could not be interpreted, please provide it by option - azimuth = xxx.xxxx - %s' % filename)
                     return stream
             if headline[0] == ('# Abs-Pillar'):
                 headers['pillar'] = headline[1].strip()
+                dirow.pier = headline[1].strip()
             if headline[0] == ('# Abs-Scalar'):
                 f_inst = headline[1].strip()
+                dirow.f_inst = f_inst
             if headline[0] == ('# Abs-Temperatur'):
                 temp = float(headline[1].strip('C').replace(',','.').strip(u"\u00B0"))
+                dirow.t = temp
             if headline[0] == ('# Abs-InputDate'):
                 adate= datetime.strptime(headline[1].strip(),'%Y-%m-%d')
                 headers['analysisdate'] = adate
+                dirow.inputdate = adate
         elif headonly:
             # skip data for option headonly
             continue
@@ -255,6 +270,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             # Position mesurements
             row = AbsoluteDIStruct()
             posstr = line.split()
+            dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             try:
                 row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
@@ -265,6 +281,9 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.hc = float(posstr[1])/ang_fac
                 row.vc = float(posstr[2])/ang_fac
                 row.res = float(posstr[3].replace(',','.'))
+                dirow.hc[count] = float(posstr[1])/ang_fac
+                dirow.vc[count] = float(posstr[2])/ang_fac
+                dirow.res[count] = float(posstr[3].replace(',','.'))                
                 row.mu = mu
                 row.md = md
                 row.expectedmire = expectedmire
@@ -275,10 +294,15 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             except:
                 logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
                 return stream
+            count = count +1
             stream.add(row)
         elif numelements == 8:
             # Miren mesurements
             mirestr = line.split()
+            dirow.hc[0] = float(mirestr[0])
+            dirow.hc[1] = float(mirestr[1])
+            dirow.hc[2] = float(mirestr[2])
+            dirow.hc[3] = float(mirestr[3])
             md = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])/ang_fac
             mu = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])/ang_fac
             mdstd = np.std([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
@@ -291,7 +315,32 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             pass
     fh.close()
 
-    return stream
+    dirow.hc.insert(12,float(mirestr[4]))
+    dirow.hc.insert(13,float(mirestr[5]))
+    dirow.hc.insert(14,float(mirestr[6]))
+    dirow.hc.insert(15,float(mirestr[7]))
+    dirow.vc.insert(12,float(nan))
+    dirow.vc.insert(13,float(nan))
+    dirow.vc.insert(14,float(nan))
+    dirow.vc.insert(15,float(nan))
+    dirow.time.insert(12,float(nan))
+    dirow.time.insert(13,float(nan))
+    dirow.time.insert(14,float(nan))
+    dirow.time.insert(15,float(nan))
+    dirow.res.insert(12,float(nan))
+    dirow.res.insert(13,float(nan))
+    dirow.res.insert(14,float(nan))
+    dirow.res.insert(15,float(nan))
+
+
+    if output == "DIListStruct":
+        # -- Return single row list ---- Works !!!!!!   Further Checks necessary
+        print dirow
+        abslst = []
+        abslst.append(dirow)
+        return abslst
+    else:
+        return stream
 
 
 def isAUTODIF(filename):

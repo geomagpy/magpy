@@ -23,6 +23,7 @@ def isAbsFormat(filename, format_type):
         return False
 
 def readAbsFormat(filename, format_type, headonly=False, **kwargs):
+    output = kwargs.get('output')
     if (format_type == "MAGPYABS"):
         return readMAGPYABS(filename, headonly, **kwargs)
     elif (format_type == "MAGPYNEWABS"):

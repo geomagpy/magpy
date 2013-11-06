@@ -56,13 +56,14 @@ class AbsoluteDIStruct(object):
 
 
 class DILineStruct(object):
-    def __init__(self, ndi, nf=0, time=float(nan), laser=float(nan), hc=float(nan), vc=float(nan), res=float(nan), f=float(nan), opt=float(nan), t=float(nan), scaleflux=float(nan), scaleangle=float(nan), azimuth=float(nan), pier='', person='', di_inst='', f_inst=''):
+    def __init__(self, ndi, nf=0, time=float(nan), laser=float(nan), hc=float(nan), vc=float(nan), res=float(nan), ftime=float(nan), f=float(nan), opt=float(nan), t=float(nan), scaleflux=float(nan), scaleangle=float(nan), azimuth=float(nan), pier='', person='', di_inst='', f_inst='', fluxgatesensor ='', inputdate=''):
         self.time = ndi*[time]
         self.hc = ndi*[hc]
         self.vc = ndi*[vc]
         self.res = ndi*[res]
         self.opt = ndi*[opt]
         self.laser = ndi*[laser]
+        self.ftime = nf*[ftime]
         self.f = nf*[f]
         self.t = t
         self.scaleflux = scaleflux
@@ -72,9 +73,11 @@ class DILineStruct(object):
         self.pier = pier
         self.di_inst = di_inst
         self.f_inst = f_inst
+        self.fluxgatesensor = fluxgatesensor
+        self.inputdate = inputdate
 
     def __repr__(self):
-        return repr((self.time, self.hc, self.vc, self.res, self.laser, self.opt, self.f, self.scaleflux, self.scaleangle, self.t, self.azimuth, self.pier, self.person, self.di_inst, self.f_inst))
+        return repr((self.time, self.hc, self.vc, self.res, self.laser, self.opt, self.ftime, self.f, self.scaleflux, self.scaleangle, self.t, self.azimuth, self.pier, self.person, self.di_inst, self.f_inst, self.fluxgatesensor, self.inputdate))
 
 
     def getAbsDIStruct(self):
@@ -83,25 +86,31 @@ class DILineStruct(object):
         """
         try:
             mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
+            if isnan(mu1):
+                mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
         except:
             mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
         try:
             md1 = self.hc[2]-((self.hc[2]-self.hc[3])/(self.laser[2]-self.laser[3]))*self.laser[2]
+            if isnan(md1):
+                md1 = self.hc[2] # in case of laser(vc0-vc1) = 0
         except:
             md1 = self.hc[2]
         try:
             mu2 = self.hc[12]-((self.hc[12]-self.hc[13])/(self.laser[12]-self.laser[13]))*self.laser[12]
+            if isnan(mu2):
+                mu2 = self.hc[12] # in case of laser(vc0-vc1) = 0
         except:
             mu2 = self.hc[12]
         try:
             md2 = self.hc[14]-((self.hc[14]-self.hc[15])/(self.laser[14]-self.laser[15]))*self.laser[14]
+            if isnan(md2):
+                md2 = self.hc[14] # in case of laser(vc0-vc1) = 0
         except:
             md2 = self.hc[14]
 
-        print mu1
-        print md1
-        print mu2
-        print md2
+
+        print mu1,md1,mu2,md2
 
         mu = (mu1+mu2)/2
         md = (md1+md2)/2
@@ -111,7 +120,10 @@ class DILineStruct(object):
 
         headers = {}
         headers['pillar'] = self.pier
-        headers['analysisdate'] = self.time[0]
+        if self.inputdate == '':
+            headers['analysisdate'] = self.time[0]
+        else:
+            headers['analysisdate'] = self.inputdate
 
         # The order needs to be changed according to the file list
         for i, elem in enumerate(self.time):
@@ -126,9 +138,14 @@ class DILineStruct(object):
                 row.expectedmire = self.azimuth
                 row.temp = self.t
                 row.person = self.person
-                row.di_inst = self.di_inst
+                if self.fluxgatesensor == '':
+                    row.di_inst = self.di_inst
+                else:
+                    row.di_inst = self.di_inst +'_'+ self.fluxgatesensor
                 row.f_inst = self.f_inst
                 tmplist.append(row)
+
+        print tmplist
 
         # sortlist
         for idx,elem in enumerate(tmplist):
@@ -157,6 +174,7 @@ class DILineStruct(object):
             if idx == 15:
                 sortlist.insert(9,elem)
 
+        print " GHDSJTDFUKASGLIDUGLIUGDdUIG ", len(self.time)
         sortlist.append(tmplist[8])
 
         for elem in sortlist:
@@ -377,6 +395,7 @@ class AbsoluteData(object):
         scalevalue = kwargs.get('scalevalue')
         iterator = kwargs.get('iterator')
         debugmode = kwargs.get('debugmode')
+        annualmeans = kwargs.get('annualmeans')
 
         ang_fac = 1
         if not deltaD:
@@ -643,7 +662,7 @@ class AbsoluteData(object):
             loggerabs.info("Using F from provided scalar path") 
         else:
             #meanf = 0.
-            meanf = (annualmeans[0]^2 + annualmeans[1]^2 + annualmeans[2]^2)
+            meanf = (annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
             #return emptyline, 20000.0, 0.0
 
         
@@ -863,7 +882,7 @@ class AbsoluteData(object):
         printresults - boolean - if True print results to screen
         """
 
-        plog = PyMagLog()
+        #plog = PyMagLog()
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
         annualmeans = kwargs.get('annualmeans')
@@ -881,20 +900,20 @@ class AbsoluteData(object):
             deltaD = 0.0
         if not scalevalue:
             scalevalue = [1.0,1.0,1.0]
-        if not incstart:
-            incstart = 45.0
-        if not xstart:
-            xstart = 20000.0
-        if not ystart:
-            ystart = 0.0
         if not usestep: 
             usestep = 0
         if not annualmeans:
             annualmeans = [20800,1200,43500]
+        if not xstart:
+            xstart = annualmeans[0]
+        if not ystart:
+            xstart = annualmeans[1]
+        if not incstart:
+            incstart = 180/np.pi * np.arctan(annualmeans[2] / np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1]))
 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
-            resultline = self._calcdec(xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,debugmode=debugmode)
+            resultline = self._calcdec(xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
                 print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
@@ -911,7 +930,7 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep)
+            outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
@@ -979,6 +998,7 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     username = kwargs.get('username')
     password = kwargs.get('password')
     archivepath = kwargs.get('archivepath')
+    output = kwargs.get('output')
 
     # -- No path
     if not path_or_url:
@@ -1029,6 +1049,8 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
     """
     Reads a single file into a ObsPy Stream object.
     """
+
+    output = kwargs.get('output')
     # get format type
     format_type = None
     if not dataformat:
