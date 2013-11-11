@@ -282,7 +282,7 @@ class AbsoluteData(object):
               to convert logical indices of NaNs to 'equivalent' indices
         Example:
             >>> # linear interpolation of NaNs
-            >>> nans, x= nan_helper(y)
+            >>> nans, x= _nan_helper(y)
             >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
         """
         return np.isnan(y), lambda z: z.nonzero()[0]

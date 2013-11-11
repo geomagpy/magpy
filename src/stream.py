@@ -128,22 +128,19 @@ if logpygen == '':
 # File Format Tests
 # ##################
 
-logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.DEBUG)
-#logging.basicConfig(filename='magpy.log',filemode='w',format='%(asctime)s %(levelname)s: %(message)s',level=logging.WARNING)
-#logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',level=logging.WARNING)
-# define a Handler which writes INFO messages or higher to the sys.stderr
+logging.basicConfig(filename='magpy.log',
+			filemode='w',
+			format='%(asctime)s %(levelname)-8s- %(name)-6s %(message)s',
+			level=logging.INFO)
+
+# define a Handler which writes "setLevel" messages or higher to the sys.stderr
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
-# set a format which is simpler for console use
-formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-# tell the handler to use this format
-console.setFormatter(formatter)
-# add the handler to the root logger
-logging.getLogger('').addHandler(console)
 
 # Package loggers to identify info/problem source
-loggerabs = logging.getLogger('abolutes')
-loggertransfer = logging.getLogger('transfer')
+loggerabs = logging.getLogger('abs')
+loggertransfer = logging.getLogger('transf')
+loggerdatabase = logging.getLogger('db')
 loggerstream = logging.getLogger('stream')
 loggerlib = logging.getLogger('lib')
 
@@ -154,19 +151,22 @@ stormlogger = logging.getLogger('stream')
 # Part 2: Define Dictionaries
 # ----------------------------------------------------------------------------
 
-KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz','df','str1','str2','str3','str4','flag','comment','typ','sectime']
-KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf','sectime':float('nan')}
+KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz',
+		'df','str1','str2','str3','str4','flag','comment','typ','sectime']
+KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),
+		'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),
+		'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'0000000000000000-',
+		'comment':'-','typ':'xyzf','sectime':float('nan')}
 FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
 PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2',
-				'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1',
-				'RMRCS', 'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
+				'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1','RMRCS', 
+				'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
 				'AUTODIF', 'AUTODIF_FREAD', 'PYCDF', 'PYBIN', 'POS1TXT', 
 				'POS1', 'PYNC', 'DTU1', 'SFDMI', 'SFGSM', 'BDV1', 'GFZKP', 
 				'NOAAACE','LATEX','CS','UNKOWN']
-
 
 # ----------------------------------------------------------------------------
 #  Part 3: Main classes -- DataStream, LineStruct and 
@@ -223,6 +223,7 @@ class DataStream(object):
     B. Internal Methods I: Line & column functions
     - self._get_column(key) -- returns a numpy array of selected columns from Stream
     - self._put_column(key) -- adds a column to a Stream
+    - self._move_column(key, put2key) -- moves one column to another key
     - self._clear_column(key) -- clears a column to a Stream
     - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
     - self._reduce_stream(self)
@@ -253,6 +254,26 @@ class DataStream(object):
     - self._drop_nans(self, key) -- Helper to drop lines with NaNs in any of the selected keys.
     - self._is_number(self, s) -- ?
     
+    Standard function description format:
+
+    DEFINITION:
+        Description of function purpose and usage.
+
+    PARAMETERS:
+    Variables:
+        - variable: 	(type) Description.
+    Kwargs:
+        - variable: 	(type) Description.
+
+    RETURNS:
+        - variable: 	(type) Description.
+
+    EXAMPLE:
+        >>> alldata = mergeStreams(pos_stream, lemi_stream, keys=['x','y','z'])
+
+    APPLICATION:
+        Code for simple application.
+
     """
 
     def __init__(self, container=None, header={}):
@@ -410,8 +431,20 @@ class DataStream(object):
 
     def _move_column(self, key, put2key):
 	'''
+    DEFINITION:
 	Move column of key "key" to key "put2key".
 	Simples.
+
+    PARAMETERS:
+    Variables:
+        - key: 		(str) Key to be moved.
+        - put2key: 	(str) Key for 'key' to be moved to.
+
+    RETURNS:
+        - stream: 	(DataStream) DataStream object.
+
+    EXAMPLE:
+        >>> data_stream._move_column('f', 'var1')
 	'''
 
         if not key in KEYLIST:
@@ -425,7 +458,9 @@ class DataStream(object):
                     exec('elem.'+key+' = "-"')
             loggerstream.info("_move_column: Column %s moved to column %s." % (key, put2key))
         except:
-            loggerstream.debug("_move_column: Error.")
+            loggerstream.debug("_move_column: It's an error.")
+
+        return self
 
 
     def _clear_column(self, key):
@@ -449,18 +484,30 @@ class DataStream(object):
 
     def _reduce_stream(self, **kwargs):
         """
+    DEFINITION:
         Reduces size of stream for plotting methods to save memory
         when plotting large data sets.
         Does NOT filter or smooth!
         This function purely removes data points (rows) in a 
         periodic fashion until size is <100000 data points.
-	(Point limit can also be definited.)
+	(Point limit can also be defined.)
+
+    PARAMETERS:
+    Kwargs:
+        - pointlimit: 	(int) Max number of points to include in stream. Default is 100000.
+
+    RETURNS:
+        - DataStream: 	(DataStream) New stream reduced to below pointlimit.
+
+    EXAMPLE:
+        >>> lessdata = ten_Hz_data._reduce_stream(pointlimit=500000)
+
         """
 
 	pointlimit = kwargs.get('pointlimit')
 
         if not pointlimit:
-            pointlimit = 100000.        
+            pointlimit = 100000      
 
         size = len(self)
         div = size/pointlimit
@@ -473,6 +520,8 @@ class DataStream(object):
                 if count%divisor == 0.:
                     lst.append(elem)
                 count += 1.
+
+        loggingstream.info("_reduce_stream: Stream size reduced from %s to %s points." % (size,len(lst)))
 
         return DataStream(lst, self.header)
 
@@ -1092,9 +1141,8 @@ class DataStream(object):
             elem.sectime = elem.time
             elem.time = date2num(newtime)
             newstream.add(elem)
-
         
-        loggerstream.info('Corrected time column by %s sec' % str(offset.seconds))
+        loggerstream.info('date_offset: Corrected time column by %s sec' % str(offset.seconds))
 
         return DataStream(newstream,header)
 
@@ -1727,7 +1775,7 @@ class DataStream(object):
         """
         returns the dominant sampling frequency in unit ! days !
         
-        for time savings, this function is only testing the first 1000 elements
+        for time savings, this function only tests the first 1000 elements
         """
         timedifflist = [[0,0]]
         domtd = [0,0]
@@ -1792,21 +1840,57 @@ class DataStream(object):
 
     def interpol(self, keys, **kwargs):
         """
-        interpolating streams:
-        kwargs support the following keywords:
-            - timerange (timedelta obsject) default=timedelta(hours=1)
-            - fitdegree (float)  default=4
-            - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
-            - flag 
+    DEFINITION:
+        Uses Numpy interpolate.interp1d to interpolate streams.
+
+    PARAMETERS:
+    Variables:
+        - keys: 	(list) List of keys to interpolate.
+    Kwargs:
+        - kind:		(str) type of interpolation. Options:
+			linear = linear - Default
+			slinear = spline (first order)
+			quadratic = spline (second order)
+			cubic = spline (third order)
+			nearest = ?
+			zero = ?
+	(TODO: add these?)
+        - timerange: 	(timedelta object) default=timedelta(hours=1).
+        - fitdegree: 	(float) default=4.
+        - knotstep: 	(float < 0.5) determines the amount of knots: 
+			amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
+
+    RETURNS:
+        - func: 	(list) Contains the following:
+			list[0]:	(dict) {'f+key': interpolate function}
+			list[1]:	(float) date2num value of minimum timestamp
+			list[2]:	(float) date2num value of maximum timestamp
+
+    EXAMPLE:
+        >>> int_data = pos_data.interpol(['f'])
+
+    APPLICATION: 
         """
+
+        kind = kwargs.get('kind')
+
+        if not kind:
+            kind = 'linear'
+
+        if kind not in ['linear','slinear','quadratic','cubic','nearest','zero']:
+            loggerstream.warning("interpol: Interpolation kind %s not valid. Using linear interpolation instead." % kind)
+            kind = 'linear'
+
         t = self._get_column('time')
         nt,sv,ev = self._normalize(t)
         sp = self.get_sampling_period()
         functionkeylist = {}
         
+        loggerstream.info("interpol: Interpolating stream with %s interpolation." % kind)
+
         for key in keys:
             if not key in KEYLIST[1:16]:
-                raise ValueError, "Column key not valid"
+                loggerstream.error("interpol: Column key not valid!")
             val = self._get_column(key)
             # interplolate NaN values
             nans, xxx= self._nan_helper(val)
@@ -1816,10 +1900,12 @@ class DataStream(object):
                 #val[nans]=int(nan)
                 pass
             if len(val)>1:
-                exec('f'+key+' = interpolate.interp1d(nt, val)')
+                exec('f'+key+' = interpolate.interp1d(nt, val, kind)')
                 exec('functionkeylist["f'+key+'"] = f'+key)
             else:
                 pass
+
+        loggerstream.info("interpol: Interpolation complete.")
             
         func = [functionkeylist, sv, ev]
 
@@ -1935,9 +2021,9 @@ class DataStream(object):
         if not percentage:
             percentage = 95
         if not isinstance( percentage, (int,long)):
-            raise ValueError, "Mean: Percentage needs to be an integer"
+            loggerstream.error("mean: Percentage needs to be an integer!")
         if not key in KEYLIST[:16]:
-            raise ValueError, "Mean: Column key not valid"
+            loggerstream.error("mean: Column key not valid!")
 
         ar = [eval('elem.'+key) for elem in self if not isnan(eval('elem.'+key))]
         div = float(len(ar))/float(len(self))*100.0
@@ -1945,7 +2031,7 @@ class DataStream(object):
         if div >= percentage:
             return eval('np.'+meanfunction+'(ar)')
         else:
-            loggerstream.warning('mean: To many nans in column, exceeding %d percent' % percentage)
+            loggerstream.warning('mean: Too many nans in column, exceeding %d percent' % percentage)
             return float("NaN")
 
 
@@ -2142,70 +2228,89 @@ class DataStream(object):
         : param offsets: looks like {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
         # 1.) assert that offsets is a dictionary {'x': 4.2, 'y':... }
         # 2.) apply offsets
+        kwargs:
+        starttime, endtime 
         """
-        #header = self.header
 
         for key in offsets:
             if key in KEYLIST:
                 val = self._get_column(key)
                 if key == 'time':
                     newval = [num2date(elem.time).replace(tzinfo=None) + offsets[key] for elem in val]
-                    loggerstream.info('Offset function: Corrected time column by %s sec' % str(offset.seconds))
+                    loggerstream.info('offset: Corrected time column by %s sec' % str(offset.seconds))
                 else:
                     newval = [elem + offsets[key] for elem in val]
-                    loggerstream.info('Offset function: Corrected column %s by %.3f' % (key, offsets[key]))
+                    loggerstream.info('offset: Corrected column %s by %.3f' % (key, offsets[key]))
                 self = self._put_column(newval, key)
+            else:
+                loggerstream.warning("offset: Key '%s' not in keylist." % key)
     
         return self
                             
 
     def plot(self, keys, debugmode=None, **kwargs):
         """
-        Creates a simple graph of the current stream. In order to run matplotlib from cron one need to include (matplotlib.use('Agg'))
+    DEFINITION:
+        Code for simple application.
+        Creates a simple graph of the current stream. 
+        In order to run matplotlib from cron one needs to include (matplotlib.use('Agg')).
 
-        Keys define the columns to be plotted.
-
-        Supports the following keywords:
+    PARAMETERS:
+    Variables:
+        - keys: 	(list) A list of the keys (str) to be plotted.
+    Kwargs:
         - annote: 	(bool) Annotate data using comments
-	- annoxy 	(dictionary) Define placement of annotation (in % of scale).
-                      Possible parameters:
-                      (called for annotated storm phases:) 
-		      sscx, sscy, mphx, mphy, recx, recy
-	- annophases	(bool) Annotate phase times with titles. Default False.
-	- bgcolor	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
-        - colorlist 	(list - default []) Provide a ordered color list of type ['b','g']
-	- confinex	(bool) Confines tags on x-axis to shorter values.
+	- annoxy:	(dictionary) Define placement of annotation (in % of scale).
+			Possible parameters:
+			(called for annotated storm phases:) 
+			sscx, sscy, mphx, mphy, recx, recy
+	- annophases:	(bool) Annotate phase times with titles. Default False.
+	- bgcolor:	(string) Define background color e.g. '0.5' greyscale, 'r' red, etc
+        - colorlist: 	(list - default []) Provide a ordered color list of type ['b','g']
+	- confinex:	(bool) Confines tags on x-axis to shorter values.
         - errorbar: 	(boolean - default False) plot dx,dy,dz,df values if True
-        - function: 	(func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue  Plot the content of function within the plot
-        - fullday: 	(boolean - default False) rounds first and last day two 0:00 respectively 24:00 if True
+        - function: 	(func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue
+			Plot the content of function within the plot.
+        - fullday: 	(boolean) - default False. Rounds first and last day two 0:00 respectively 24:00 if True
         - fmt: 		(string?) format of outfile 
-	- grid		(bool) show grid or not, default = True 
-	- gridcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
-	- labelcolor	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc 
+	- grid:		(bool) show grid or not, default = True 
+	- gridcolor:	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
+	- labelcolor:	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc 
         - noshow: 	(bool) don't call show at the end, just returns figure handle
         - outfile: 	string to save the figure, if path is not existing it will be created
         - padding: 	(integer - default 0) Value to add to the max-min data for adjusting y-scales
         - savedpi: 	(integer) resolution
         - savefigure: 	(string - default None) if provided a copy of the plot is saved to savefilename.png
-	- stormphases	(list) Should be a list with four datetime objects:
-		      [0 = date of SSC/start of initial phase,
-		       1 = start of main phase,
-		       2 = start of recovery phase,
-		       3 = end of recovery phase]
-		      (Added 24.09.2013 by RLB.)
-	- plotphases	(list) List of keys of plots to shade.
-	- specialdict	(dictionary) contains special information for specific plots. key
-                      key corresponds to the column
-                      input is a list with the following parameters
-                      ('None' if not used)
-                      ymin
-                      ymax
-                      ycolor
-                      bgcolor
-                      grid
-                      gridcolor
+	- stormphases:	(list) Should be a list with four datetime objects:
+			[0 = date of SSC/start of initial phase,
+			1 = start of main phase,
+			2 = start of recovery phase,
+			3 = end of recovery phase]
+	- plotphases:	(list) List of keys of plots to shade.
+	- specialdict:	(dictionary) contains special information for specific plots. key
+			key corresponds to the column
+			input is a list with the following parameters
+			('None' if not used)
+			ymin
+			ymax
+			ycolor
+			bgcolor
+			grid
+			gridcolor
         - symbol: 	(string - default '-') symbol for primary plot
         - symbol_func: 	(string - default '-') symbol of function plot 
+
+    RETURNS:
+        - matplotlib plot.show(), or plot.save() if variable outfile defined.
+
+    EXAMPLE:
+        >>> cs1_data.plot(['f'],
+		outfile = 'frequenz.png',
+		specialdict = {'f':[44184.8,44185.8]},
+		plottitle = 'Station Graz - Feldstaerke 05.08.2013',
+		bgcolor='white')
+
+    APPLICATION:
 
         """
 
@@ -2267,17 +2372,16 @@ class DataStream(object):
         n_subplots = len(keys)
 
         if n_subplots < 1:
-            raise  ValueError, "Provide valid key(s)"
+            loggerstream.error("plot: Number of keys not valid.")
         count = 0
         fig = plt.figure()
 
-        if debugmode:
-            print "Start plotting at %s" % datetime.utcnow()
+        loggerstream.info("plot: Start plotting.")
 
         t = np.asarray([row[0] for row in self])
         for key in keys:
             if not key in KEYLIST[1:16]:
-                raise ValueError, "Column key not valid"
+                loggerstream.error("plot: Column key not valid!")
             ind = KEYLIST.index(key)
             yplt = np.asarray([row[ind] for row in self])
             #yplt = self._get_column(key)
@@ -2400,7 +2504,7 @@ class DataStream(object):
                     if len(yerr) > 0: 
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
-                        loggerstream.warning('Plot: Errorbars (d%s) not found for key %s' % (key, key))
+                        loggerstream.warning('plot: Errorbars (d%s) not found for key %s' % (key, key))
 
 		# -- Add grid:
                 if grid:
@@ -2438,14 +2542,14 @@ class DataStream(object):
                             elemprev = elem
                     except:
                         if debugmode:
-                            loggerstream.debug('Plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+                            loggerstream.debug('plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
 
 		# -- Shade in areas of storm phases:
                 if plotphases:
                     if not stormphases:
-                        loggerstream.debug('Plot: Need phase definition times in "stormphases" list variable.')
+                        loggerstream.warning('plot: Need phase definition times in "stormphases" list variable.')
 		    if len(stormphases) < 4:
-		        loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
+		        loggerstream.warning('plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
                     else:
                         t_ssc = stormphases[0]
                         t_mphase = stormphases[1]
@@ -2458,8 +2562,7 @@ class DataStream(object):
         		    ax.axvspan(t_mphase, t_recphase, facecolor='yellow', alpha=0.3, linewidth=0)
         		    ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
 		        except:
-                            if debugmode:
-                                loggerstream.debug('Plot: Error plotting shaded phase regions.')
+                            loggerstream.error('plot: Error plotting shaded phase regions.')
 
 		# -- Plot phase types with shaded regions:
 
@@ -2467,11 +2570,9 @@ class DataStream(object):
                     annoxy = {}
                 if annophases:
                     if not stormphases:
-                        if debugmode:
-                            loggerstream.debug('Plot: Need phase definition times in "stormphases" variable to plot phases.')
+                        loggerstream.debug('Plot: Need phase definition times in "stormphases" variable to plot phases.')
 		    if len(stormphases) < 4:
-		        if debugmode: 
-                            loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required, %s given.' % len(stormphases))
+                        loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required, %s given.' % len(stormphases))
                     else:
                         t_ssc = stormphases[0]
                         t_mphase = stormphases[1]
@@ -2510,7 +2611,7 @@ class DataStream(object):
                                 y_rec = y_anno
 
                             if not yt_ssc > 0.:
-                                loggerstream.debug('MagPyPlot: No data value at point of SSC.')
+                                loggerstream.debug('plot: No data value at point of SSC.')
                             ax.annotate('SSC', xy=(t_ssc,yt_ssc), 
 					xytext=(x_ssc,y_ssc),
 					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
@@ -2522,8 +2623,7 @@ class DataStream(object):
                             ax.annotate('Recovery\nPhase', xy=(t_recphase,y_rec),xytext=(x_rec,y_rec),
 					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
                         except: 
-                            if debugmode:
-                                loggerstream.debug('Plot: Error annotating shaded phase regions.')
+                            loggerstream.error('Plot: Error annotating shaded phase regions.')
                   
 		# -- Plot given function:      
                 if function:
@@ -2557,13 +2657,13 @@ class DataStream(object):
                 ax.get_yaxis().set_major_formatter(myyfmt)
                 if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
                     ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
-                if debugmode:
-                    print "Finished plot %d at %s" % (count, datetime.utcnow())
+
+                loggerstream.info("plot: Finished plot %d at %s" % (count, datetime.utcnow()))
 
             # 4. END PLOTTING
 
             else:
-                loggerstream.warning("Plot: No data available for key %s" % key)
+                loggerstream.warning("plot: No data available for key %s" % key)
 
         fig.subplots_adjust(hspace=0)
 
@@ -2730,10 +2830,10 @@ class DataStream(object):
         # x,y,z (vector): pos 1
         # other (vector): pos 2
         
-        loggerstream.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
+        loggerstream.info('remove_outlier: Starting outlier removal.')
 
         if len(self) < 1:
-            loggerstream.info('--- No data - Stopping outlier removal at %s ' % (str(datetime.now())))
+            loggerstream.warning('remove_outlier: No data - Stopping outlier removal.')
             return self
         
         # Start here with for key in keys:
@@ -2772,7 +2872,7 @@ class DataStream(object):
                         md = np.median(selcol) 
                         whisker = md*0.005
                     except:
-                        loggerstream.warning("Eliminate outliers produced a problem: please check\n")
+                        loggerstream.warning("remove_outlier: Eliminate outliers produced a problem: please check.")
                         pass
 
                 for elem in lstpart:
@@ -2784,14 +2884,14 @@ class DataStream(object):
                         row.flag=''.join(fllist)
                         row.comment = "%s removed by automatic outlier removal" % key
                         if not isnan(eval('elem.'+key)):
-                            loggerstream.info("Outlier: removed %s (= %f) at time %s, " % (key, eval('elem.'+key), datetime.strftime(num2date(elem.time),"%Y-%m-%dT%H:%M:%S")))
+                            loggerstream.info("remove_outlier: removed %s (= %f)" % (key, eval('elem.'+key)))
                     else:
                         fllist = list(row.flag)
                         fllist[flagpos] = '0'
                         row.flag=''.join(fllist)
                     newst.add(row)
 
-        loggerstream.info('--- Outlier removal finished at %s ' % str(datetime.now()))
+        loggerstream.info('remove_outlier: Outlier removal finished.')
 
         return DataStream(newst, self.header)        
 
@@ -3035,8 +3135,7 @@ class DataStream(object):
         if not format_type:
             format_type = 'PYSTR'
         if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.info('Write: Output format not supported')
-            print "Format not supported"
+            loggerstream.warning('write: Output format not supported.')
             return
         if not dateformat:
             dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
@@ -3054,7 +3153,7 @@ class DataStream(object):
             mode= 'overwrite'
 
         if len(self) < 1:
-            loggerstream.info('Write: zero length of stream ')
+            loggerstream.warning('write: Stream is empty!')
             return
             
         # divide stream in parts according to coverage and save them
@@ -3472,27 +3571,41 @@ def send_mail(send_from, send_to, **kwargs):
 
 def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
-    The read functions trys to open the selected dats
-    dataformat: none - autodetection
-    supported formats - use extra packages: generalcdf, cdf, netcdf, MagStructTXT,
-    IAGA02, DIDD, PMAG, TIMEVAL
-    optional arguments are starttime, endtime and dateformat of file given in kwargs
+    DEFINITION:
+        The read functions trys to open the selected dats
 
-    :type path_or_url: string
-    :param path_or_url: pathname of the following kinds:
-                        a) c:\my\data\*
-                        b) c:\my\data\thefile.txt
-                        c) /home/data/*
-                        d) /home/data/thefile.txt
-                        e) ftp://server/directory/
-                        f) ftp://server/directory/thefile.txt
-                        g) http://www.thepage.at/file.tab
+    PARAMETERS:
+    Variables:
+        - dataformat: 	(str) Auto-detection.
+        - path_or_url:	(str) Path to data files in form:
+			a) c:\my\data\*
+			b) c:\my\data\thefile.txt
+			c) /home/data/*
+			d) /home/data/thefile.txt
+			e) ftp://server/directory/
+			f) ftp://server/directory/thefile.txt
+			g) http://www.thepage.at/file.tab
+    Kwargs:
+        - starttime: 	(str/datetime object) Description.
+
+    RETURNS:
+        - variable: 	(type) Description.
+
+    EXAMPLE:
+        >>> alldata = mergeStreams(pos_stream, lemi_stream, keys=['x','y','z'])
+
+    APPLICATION:
+
+    optional arguments are starttime, endtime and dateformat of file given in kwargs
     """
     messagecont = ""
 
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
     debugmode = kwargs.get('debugmode')
     disableproxy = kwargs.get('disableproxy')
     keylist = kwargs.get('keylist') # for PYBIN
+
     if disableproxy:
         proxy_handler = urllib2.ProxyHandler( {} )           
         opener = urllib2.build_opener(proxy_handler)
@@ -3560,23 +3673,21 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         if len(st) == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
-                loggerstream.critical("Check file/pathname - No file matching pattern: %s" % pathname)
-                raise Exception("No file matching file pattern: %s" % pathname)
+                loggerstream.error("read: Check file/pathname - No file matching pattern: %s" % pathname)
+                loggerstream.error("read: No file matching file pattern: %s" % pathname)
             elif not has_magic(pathname) and not os.path.isfile(pathname):
-                raise IOError(2, "No such file or directory", pathname)
+                loggerstream.error("read: No such file or directory:", pathname)
             # Only raise error if no starttime/endtime has been set. This
             # will return an empty stream if the user chose a time window with
             # no data in it.
             # XXX: Might cause problems if the data is faulty and the user
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
-                raise Exception("Cannot open file/files: %s" % pathname)
-    # Trim if times are given.
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
+                loggerstream.error("read: Cannot open file/files: %s" % pathname)
+
     if headonly and (starttime or endtime):
-        msg = "Keyword headonly cannot be combined with starttime or endtime."
-        raise Exception(msg)
+        msg = "read: Keyword headonly cannot be combined with starttime or endtime."
+        loggerstream.error(msg)
     # Sort the input data regarding time
     st = st.sorting()
     # eventually trim data
@@ -3594,7 +3705,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     Reads a single file into a ObsPy Stream object.
     """
     stream = DataStream()
-    # get format type
     format_type = None
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
@@ -3611,9 +3721,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         except IndexError:
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
-    # file format should be known by now
-    #loggerstream.info('Appending data - dataformat: %s' % format_type)
-    #print format_type
+
     """
     try:
         # search readFormat for given entry point
@@ -3624,56 +3732,78 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         raise TypeError(msg % (format_ep.name,
                                ', '.join(WAVEFORM_ENTRY_POINTS)))
     """
-    # read
-    #if not format_type == 'UNKNOWN':
-    #print format_type
+
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
 
     # set _format identifier for each trace
     #for trace in stream:
     #    trace.stats._format = format_ep.name
+
     return DataStream(stream, stream.header)
 
 
 def mergeStreams(stream_a, stream_b, **kwargs):
     """
-    combine the contents of two data stream:
-    basically two methods are possible:
-    1. replace data from specific columns of stream_a with data from stream_b
-    - requires keys
+    DEFINITION:
+        Combine the contents of two data streams.
+        Basically two methods are possible:
+        1. replace data from specific columns of stream_a with data from stream_b.
+        - requires keys
+        2. fill gaps in stream_a data with stream_b data without replacing any data.
+        - extend = True
 
-    2. fill gaps in stream_a data with stream_b data without replacing
-    - extend = true => any existing date which is not present in stream_a will be filled by stream_b
+    PARAMETERS:
+    Variables:
+        - stream_a	(DataStream object) main stream
+	- stream_b	(DataStream object) this stream is merged into stream_a
+    Kwargs:
+        - addall: 	(bool) Add all elements from stream_b
+        - comment: 	(str) Add comment to stream_b data in stream_a.
+        - extend:	(bool) Time range of stream b is eventually added to stream a. 
+			Default False.
+			If extend = true => any existing date which is not present in stream_a 
+			will be filled by stream_b
+        - keys:		(list) List of keys to add from stream_b into stream_a.
+        - offset: 	(float) Offset is added to stream b values. Default 0.
+        - replace: 	(bool) Allows existing stream_a values to be replaced by stream_b ones.
 
-    keywords:
-    keys
-    extend: time range of stream b is eventually added to stream a
-    offset: offset is added to stream b values
-    comment: add comment to stream_b data in stream_a
+    RETURNS:
+        - Datastream(stream_a):	(DataStream) DataStream object.
+
+    EXAMPLE:
+        >>> # Joining two datasets together:
+        >>> alldata = mergeStreams(pos_stream, lemi_stream, keys=['x','y','z'])
+
+    APPLICATION:
     """
-    keys = kwargs.get('keys')
-    extend = kwargs.get('extend') # add all elements from stream_b for which no time exists in stream_a
-    addall = kwargs.get('addall') # add all elements from stream_b
-    offset = kwargs.get('offset')
+
+    addall = kwargs.get('addall') 
     comment = kwargs.get('comment')
+    extend = kwargs.get('extend')
+    keys = kwargs.get('keys')
+    offset = kwargs.get('offset')
+    replace = kwargs.get('replace')
+
+    if not comment:
+        comment = '-'
     if not keys:
         keys = KEYLIST[1:16]
     if not offset:
         offset = 0
-    if not comment:
-        comment = '-'
+    if not replace:
+        replace = False
    
-    loggerstream.info('--- Start mergings at %s ' % str(datetime.now()))
+    loggerstream.info('mergeStreams: Start mergings at %s.' % str(datetime.now()))
 
     headera = stream_a.header
     headerb = stream_b.header
 
     # Test streams
     if len(stream_a) == 0:
-        loggerstream.info('mergeStreams: stream_a is empty - doing nothing')
+        loggerstream.debug('mergeStreams: stream_a is empty - doing nothing')
         return stream_a
     if len(stream_b) == 0:
-        loggerstream.info('mergeStreams: stream_b is empty - returning unchanged stream_a')
+        loggerstream.debug('mergeStreams: stream_b is empty - returning unchanged stream_a')
         return stream_a
     # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')
@@ -3693,7 +3823,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         sta.sort()
         return DataStream(sta, headera)
     else:
-        # interploate stream_b
+        # interpolate stream_b
         sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
         timeb = sb._get_column('time')
         timeb = sb._maskNAN(timeb)
@@ -3710,7 +3840,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 functime = (ta-function[1])/(function[2]-function[1])
                 for key in keys:
                     if not key in KEYLIST[1:16]:
-                        raise ValueError, "Column key not valid"
+                        loggerstream.error('mergeStreams: Column key (%s) not valid.' % key)
                     exec('keyval = stream_a[pos].'+key)
                     fkey = 'f'+key
                     if fkey in function[0] and (isnan(keyval) or not stream_a._is_number(keyval)):
@@ -3726,8 +3856,21 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                             stream_a[pos].flag=''.join(fllist)
                         except:
                             pass
+                    elif fkey in function[0] and not isnan(keyval) and replace == True:
+                        newval = function[0][fkey](functime)
+                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
+                        exec('stream_a['+str(pos)+'].comment = comment')
+                        ## Put flag 4 into the merged data if keyposition <= 8
+                        flagposlst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                        try:
+                            flagpos = flagposlst[0]
+                            fllist = list(stream_a[pos].flag)
+                            fllist[flagpos] = '4'
+                            stream_a[pos].flag=''.join(fllist)
+                        except:
+                            pass
 
-    loggerstream.info('--- Mergings finished at %s ' % str(datetime.now()))
+    loggerstream.info('mergeStreams: Mergings finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)      
 
@@ -3743,7 +3886,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     try:
         assert len(stream_a) > 0
     except:
-        loggerstream.error('Stream a empty - aborting merging function')
+        loggerstream.error('subtractStreams: stream_a empty - aborting merging function.')
         return stream_a
         
     keys = kwargs.get('keys')
@@ -3751,7 +3894,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     if not keys:
         keys = KEYLIST[1:16]
 
-    loggerstream.info('--- Start subtracting streams at %s ' % str(datetime.now()))
+    loggerstream.info('subtractStreams: Start subtracting streams.')
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -3793,7 +3936,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         stimeb = stime
         
     if (etime <= stime):
-        loggerstream.error('Subtracting streams: stream are not overlapping')
+        loggerstream.error('subtractStreams: Streams are not overlapping!')
         return stream_a
     
     # Take only the time range of the shorter stream
@@ -3803,7 +3946,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     samplingrate_b = stream_b.get_sampling_period()
 
-    loggerstream.info('Subtracting Streams: time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
+    loggerstream.info('subtractStreams: Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
     # Interpolate stream_b
     function = stream_b.interpol(keys)
@@ -3819,7 +3962,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             if ta-samplingrate_b < tb < ta+samplingrate_b and timeb[0]<ta<timeb[-1] :
                 for key in keys:
                     if not key in KEYLIST[1:16]:
-                        raise ValueError, "Column key not valid"
+                        loggerstream.error("subtractStreams: Column key %s not valid!" % key)
                     fkey = 'f'+key
                     try:
                         if fkey in function[0] and not isnan(eval('stream_b[itmp].' + key)):
@@ -3828,25 +3971,24 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                         else:
                             exec('elem.'+key+' = float(NaN)')
                     except:
-                            print "Check why exception was thrown in subtractStreams function"
-                            exec('elem.'+key+' = float(NaN)')
+                        loggerstream.warning("subtractStreams: Check why exception was thrown.")
+                        exec('elem.'+key+' = float(NaN)')
             else:
                 for key in keys:
                     if not key in KEYLIST[1:16]:
-                        raise ValueError, "Column key not valid"
+                        loggerstream.error("subtractStreams: Column key %s not valid!" % key)
                     fkey = 'f'+key
                     if fkey in function[0]:
                         exec('elem.'+key+' = float(NaN)')
         else: # put NaNs in cloumn if no interpolated values in b exist
             for key in keys:
                 if not key in KEYLIST[1:16]:
-                    raise ValueError, "Column key not valid"
+                    loggerstream.error("subtractStreams: Column key %s not valid!" % key)
                 fkey = 'f'+key
                 if fkey in function[0]:
                     exec('elem.'+key+' = float(NaN)')
                 
- 
-    loggerstream.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))
+    loggerstream.info('subtractStreams: Stream-subtraction finished.')
 
     return DataStream(stream_a, headera)      
 
@@ -3859,16 +4001,27 @@ def stackStreams(stream_a, stream_b, **kwargs): # TODO
 
 def compareStreams(stream_a, stream_b):
     '''
-    Default function will compare stream_a to stream_b. If data is missing in
-    a or is different, it will be filled in with that from b.
-    stream_b here is the reference stream.
-    ...
-    stream_a - first stream
-    stream_b - second stream, which is compared to stream_a for differences
-    kwargs:
-    replace (bool) - default False
-    insert (bool) - default False
-    TODO --> Add in support for comments.
+    DEFINITION:
+        Default function will compare stream_a to stream_b. If data is missing in
+        a or is different, it will be filled in with that from b.
+        stream_b here is the reference stream.
+
+    PARAMETERS:
+    Variables:
+        - stream_a: 	(DataStream) First stream
+        - stream_b: 	(DataStream) Second stream, which is compared to stream_a for differences
+
+    RETURNS:
+        - stream_a: 	(DataStream) Description.
+
+    EXAMPLE:
+        >>> compareStreams(db_stream, pos_stream)
+
+    APPLICATION:
+
+    TODO:
+        - Add in support for insert and replace to be optional. (Worthwhile?)
+
     '''
 
     insert = True
@@ -3896,7 +4049,7 @@ def compareStreams(stream_a, stream_b):
         etime = np.max(timeb)
         
     if (etime <= stime):
-        loggerstream.error('CompareStreams: Streams do not overlap!')
+        loggerstream.error('compareStreams: Streams do not overlap!')
         return stream_a
 
     # Trim to overlapping areas:
@@ -3906,7 +4059,7 @@ def compareStreams(stream_a, stream_b):
 				endtime=num2date(etime).replace(tzinfo=None))
 
 
-    loggerstream.info('CompareStreams: Starting comparison...')
+    loggerstream.info('compareStreams: Starting comparison...')
 
     # Compare value for value between the streams:
 
@@ -3917,7 +4070,7 @@ def compareStreams(stream_a, stream_b):
 
     # Check length:
     if len(t_a) < len(t_b):
-        print "Missing data in main stream."
+        loggerstream.debug("compareStreams: Missing data in main stream.")
         flag_len = True
 
     # If the lengths are the same, compare single values for differences:
@@ -3928,7 +4081,7 @@ def compareStreams(stream_a, stream_b):
                 exec('val_b = stream_b[i].'+key)
                 if not isnan(val_a):
                     if val_a != val_b:
-                        print "Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time)
+                        loggerstream.debug("compareStreams: Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time))
                         if replace == True:
                             exec('stream_a[i].'+key+' = stream_b[i].'+key)
 
@@ -3941,11 +4094,11 @@ def compareStreams(stream_a, stream_b):
                     exec('val_b = stream_b[i].'+key)
                     if not isnan(val_a):
                         if val_a != val_b:
-                            print "Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time)
+                            loggerstream.debug("compareStreams: Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time))
                             if replace == True:
                                 exec('stream_a[i].'+key+' = stream_b[i].'+key)
             else:	# insert row into stream_a
-                print "Line from secondary stream missing in main stream. Timestamp: %s." % stream_b[i].time
+                loggerstream.debug("compareStreams: Line from secondary stream missing in main stream. Timestamp: %s." % stream_b[i].time)
                 if insert == True:
                     row = LineStruct()
                     stream_a.add(row)
@@ -3956,7 +4109,7 @@ def compareStreams(stream_a, stream_b):
                                 exec('stream_a[j].'+key+' = temp[j-1]')
                             exec('stream_a[i].'+key+' = stream_b[i].'+key)
 
-    loggerstream.info('CompareStreams: Finished comparison!')
+    loggerstream.info('compareStreams: Finished comparison!')
     return stream_a
 
 

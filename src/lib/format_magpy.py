@@ -23,6 +23,8 @@ def isPYCDF(filename):
                 return False
     except:
         return False
+
+    loggerlib.info("format_magpy: Found PYCDF file %s" % filename)
     return True
 
 
@@ -36,6 +38,8 @@ def isPYSTR(filename):
         return False
     if not temp.startswith(' # MagPy - ASCII'):
         return False
+
+    loggerlib.info("format_magpy: Found PYSTR file %s" % filename)
     return True
 
 
@@ -49,6 +53,8 @@ def isPYBIN(filename):
         return False
     if not temp.startswith('# MagPyBin'):
         return False
+
+    loggerlib.info("format_magpy: Found PYBIN file %s" % filename)
     return True
 
 
@@ -57,13 +63,17 @@ def readPYSTR(filename, headonly=False, **kwargs):
     Reading ASCII PyMagStructure format data.
     """
     stream = DataStream()
+
     # Check whether header infromation is already present
     if stream.header == None:
         headers = {}
     else:
         headers = stream.header
+
+    loggerlib.info('readPYSTR: Reading %s' % (filename))
     qFile= file( filename, "rb" )
     csvReader= csv.reader( qFile )
+
     for elem in csvReader:
         if elem[0]=='#':
             # blank line
@@ -402,6 +412,7 @@ def writePYSTR(datastream, filename, **kwargs):
     """
 
     mode = kwargs.get('mode')
+    loggerlib.info("writePYSTR: Writing file to %s" % filename)
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -425,7 +436,7 @@ def writePYSTR(datastream, filename, **kwargs):
         wtr.writerow( [' # MagPy - ASCII'] )
         for key in headdict:
             if not key.find('col') >= 0:
-                line = [' # ' + key +':  ' + headdict[key]]
+                line = [' # ' + key +':  ' + str(headdict[key])]
                 wtr.writerow( line )
         wtr.writerow( ['# head:'] )
         for key in KEYLIST:

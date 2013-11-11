@@ -3,8 +3,6 @@ MagPy
 Auxiliary input filter - Lemi data
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
-For logging use:
-logging.debug(lib - format_lemi: Found Lemi Binary file %s % filename)
 '''
 
 
@@ -47,7 +45,8 @@ def isLEMIHF(filename):
             return False
     else:
         return False
-    logging.debug("lib - format_lemi: Found Lemi 10Hz ascii file %s" % filename)
+
+    loggerlib.info("format_lemi: Found Lemi 10Hz ascii file %s" % filename)
     return True
 
 
@@ -68,6 +67,7 @@ def isLEMIBIN(filename):
     except:
         return False
 
+    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s" % filename)
     return True
 
 def isLEMIBIN2(filename):
@@ -87,6 +87,7 @@ def isLEMIBIN2(filename):
     except:
         return False
 
+    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s" % filename)
     return True
 
 
@@ -126,11 +127,11 @@ def readLEMIHF(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        logging.warning("Wrong dateformat in Filename %s" % filename)
+        loggerlib.warning("readLEMIHF: Wrong dateformat in Filename %s" % filename)
         pass
 
     if getfile:
-        logging.info(' Read: %s Format: LEMI IAGA (txt) ' % (filename))
+        loggerlib.info('readLEMIHF: Reading %s' % (filename))
         for line in fh:
             if line.isspace():
                 # blank line
@@ -193,7 +194,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     if getfile:
 
-        logging.info(' Read: %s Format: LEMI BIN (WIK) ' % (filename))
+        loggerlib.info('readLEMIBIN: Reading %s' % (filename))
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -210,6 +211,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
+            headers['SensorID'] = line[0:4]
     	    newtime = []
     	    for i in range (5,11):
         	newtime.append(h2d(data[i]))
@@ -245,12 +247,15 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     return DataStream(stream, headers) 
 
 
-def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
-    y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
+def h2d(x):
+    '''
+    Hexadecimal to decimal (for format LEMIBIN2)
+    Because the binary for dates is in binary-decimal, not just binary.
+    '''
+    y = int(x/16)*10 + x%16
     return y
 
 def readLEMIBIN2(filename, headonly=False, **kwargs):
-
     '''
     # COMPLETE DATA STRUCTURE:
      --TAG:            data[0:4]		# L025
@@ -293,6 +298,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     data= struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
     if data[55] == 'L':
         # old format
+	loggerlib.info("readLEMIBIN2: Format is the out-dated lemi format.")
         packcode = '<4cb6B8hb30f3BcB'
         linelength = 153
         stime = False
@@ -303,8 +309,9 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
         stime = True
 
     fh = open(filename, 'rb')
-    # read file and split text into channels
+
     stream = DataStream()
+
     # Check whether header information is already present
     if stream.header is None:
         headers = {}
@@ -322,12 +329,11 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
             if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        # Date format not recognized. Need to read all files
         getfile = True 
 
     if getfile:
 
-        logging.info(' Read: %s Format: LEMI BIN (new)' % (filename))
+        loggerlib.info('readLEMIBIN2: Reading %s' % (filename))
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -346,6 +352,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
+            headers['SensorID'] = line[0:4]
 
             #time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))	# Lemi GPS time
             time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
@@ -361,7 +368,6 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.x = (data[20+i*3])*1000.
                     row.y = (data[21+i*3])*1000.
                     row.z = (data[22+i*3])*1000.
-                    #row.f = (row.x**2.+row.y**2.+row.z**2.)**.5
 
                     stream.add(row)
 
@@ -376,7 +382,8 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                 row.x = (data[20])*1000.
                 row.y = (data[21])*1000.
                 row.z = (data[22])*1000.
-                #row.f = (row.x**2.+row.y**2.+row.z**2.)**.5		# only when bfx etc. calculated in
+
+                #row.f = (((data[20]-bfx)*1000.)**2.+((data[21]-bfy)*1000.)**2.+((data[22]-bfz)*1000.)**2.)**.5
 
                 stream.add(row)    
 

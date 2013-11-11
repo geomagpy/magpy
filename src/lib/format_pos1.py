@@ -20,7 +20,7 @@ def isPOS1(filename):
     if not 'POS1' in temp:
         return False
 
-    logging.info("--- Lib - format_pos1: Found POS-1 Binary file %s" % filename)
+    loggerlib.info("format_pos1: Found POS-1 Binary file %s" % filename)
     return True
 
 def isPOS1TXT(filename):
@@ -37,7 +37,7 @@ def isPOS1TXT(filename):
         return False
     if not linebit == '+-':
         return False
-    logging.info("lib - format_pos1: Found POS-1 Text file %s" % filename)
+    loggerlib.info("format_pos1: Found POS-1 Text file %s" % filename)
     return True
 
 def readPOS1(filename, headonly=False, **kwargs):
@@ -69,14 +69,14 @@ def readPOS1(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        logging.warning("Could not identify date in %s. Reading all ..." % daystring)
+        logging.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % daystring)
         getfile = True
 
     if getfile:
 
         line = fh.readline()
 
-        logging.info('--- File: %s Format: POS-1 BIN ' % (filename))
+        loggerlib.info('readPOS1BIN: Reading %s' % (filename))
  
 	line = fh.read(45)
 	while line != "":
@@ -130,13 +130,13 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        logging.warning("Could not identify date in %s. Reading all ..." % daystring)
+        loggerlib.warning("readPOS1TXT: Could not identify date in %s. Reading all ..." % daystring)
         getfile = True
 
     if getfile:
 
 	line = fh.readline()
-        logging.info('--- File: %s Format: POS-1 TXT ' % (filename))
+        loggerlib.info('readPOS1TXT: Reading %s' % (filename))
 
 	while line != "":
             data = line.split()

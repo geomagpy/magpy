@@ -6,21 +6,26 @@ from transfer import *
 
 import MySQLdb
 
-DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits','DataFormat','DataSamplingFilter','DataDigitalSampling',
-			'DataComponents','DataSamplingRate','DataType','DataDeltaX','DataDeltaY',
-			'DataDeltaZ','DataDeltaF','DataDeltaReferencePier','DataDeltaReferenceEpoch','DataScaleX',
-			'DataScaleY','DataScaleZ','DataScaleUsed','DataCompensationX','DataCompensationY','DataCompensationZ','DataSensorOrientation',
+DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits','DataFormat',
+			'DataSamplingFilter','DataDigitalSampling','DataComponents','DataSamplingRate',
+			'DataType','DataDeltaX','DataDeltaY','DataDeltaZ','DataDeltaF',
+			'DataDeltaReferencePier','DataDeltaReferenceEpoch','DataScaleX',
+			'DataScaleY','DataScaleZ','DataScaleUsed','DataCompensationX',
+			'DataCompensationY','DataCompensationZ','DataSensorOrientation',
 			'DataSensorAzimuth','DataSensorTilt','DataAngularUnit','DataPier',
 			'DataAcquisitionLatitude','DataAcquisitionLongitude','DataLocationReference',
 			'DataElevation','DataElevationRef','DataFlagModification','DataAbsFunc',
 			'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate',
 			'DataRating','DataComments']
 
-SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger','SensorDataLoggerSerNum',
-        		'SensorDataLoggerRevision','SensorDataLoggerRevisionComment','SensorDescription','SensorElements',
-        		'SensorKeys','SensorModule','SensorDate','SensorRevision','SensorRevisionComment','SensorRevisionDate']
+SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
+			'SensorDataLoggerSerNum','SensorDataLoggerRevision','SensorDataLoggerRevisionComment',
+			'SensorDescription','SensorElements','SensorKeys','SensorModule','SensorDate',
+			'SensorRevision','SensorRevisionComment','SensorRevisionDate']
 
-STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo','StationEmail','StationDescription']
+STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
+			'StationCity','StationPostalCode','StationCountry','StationWebInfo',
+			'StationEmail','StationDescription']
 
 """
 Standardtables:
@@ -67,7 +72,7 @@ def dbalter(db):
     Can be used for changing (adding) contents to tables
     """
     if not db:
-        print "No database connected - aborting -- please create an empty database first"
+        loggerdatabase.error("dbalter: No database connected - aborting -- please create an empty database first")
         return
     cursor = db.cursor ()
 
