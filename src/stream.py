@@ -2374,7 +2374,6 @@ class DataStream(object):
         if n_subplots < 1:
             loggerstream.error("plot: Number of keys not valid.")
         count = 0
-        fig = plt.figure()
 
         loggerstream.info("plot: Start plotting.")
 
