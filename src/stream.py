@@ -2375,6 +2375,9 @@ class DataStream(object):
             loggerstream.error("plot: Number of keys not valid.")
         count = 0
 
+        fig = plt.figure()
+        #fig = matplotlib.figure.Figure()
+
         loggerstream.info("plot: Start plotting.")
 
         t = np.asarray([row[0] for row in self])

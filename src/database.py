@@ -142,7 +142,7 @@ def dbdelete(db,datainfoid,**kwargs):
     loggerdatabase.debug("dbdelete: selected timerange of %s days" % str(timerange))
 
     # 3. Delete time interval
-    loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange))
+    loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange)))
     try:
         deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
         cursor.execute(deletesql)

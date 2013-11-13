@@ -298,7 +298,7 @@ class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         # configure graph
-        #self.figure = matplotlib.figure.Figure()
+        #self.figure = Figure()
         self.figure = plt.figure()
         #self.axes = self.figure.add_subplot(111)
         #self.testPlot(x,y)
@@ -330,6 +330,27 @@ class PlotPanel(wx.Panel):
 	#self.toolbar.SetSize(wx.Size(fw, th))
 	#sizer.Add(self.toolbar, 0)
 	#self.toolbar.update()
+
+    def guiPlot(self,stream,keys,**kwargs):
+        # add here the plt order
+        #self.figure.clear()
+        #self.axes.clear()
+
+        #self.axes = self.figure.add_subplot(111)
+        #t = arange(0.0,3.0,0.01)
+        #s = sin(2*pi*t)
+
+        #self.axes.plot(t,s)
+        print "Creating figure..."
+        #self.axes = stream.plot(keys,noshow=True)
+        stream.plot(keys,noshow=True)
+        print "Now plotting"
+        #plt.show()
+
+        #self.canvas.draw()
+
+        #return self.figure
+        #stream.plot(keys)
 
     def testPlot(self,x,y):
         #self.axes = self.figure.add_subplot(111)
@@ -425,27 +446,6 @@ class PlotPanel(wx.Panel):
             for x,y,a in annotesToDraw:
                 self.drawAnnote(self.axis, x, y, a)
 
-    def guiPlot(self,stream,keys,**kwargs):
-        # add here the plt order
-        #self.axes.clear()
-        #self.figure.clear()
-
-        #self.axes = self.figure.add_subplot(111)
-        #t = arange(0.0,3.0,0.01)
-        #s = sin(2*pi*t)
-
-        #self.axes.plot(t,s)
-
-
-        print "Creating figure..."
-        stream.plot(keys,noshow=True)
-        print "Now plotting"
-        #plt.show()
-
-        #self.canvas.draw()
-
-        #return self.figure
-        #stream.plot(keys)
 
     def mainPlot(self,magdatastruct1,magdatastruct2,array3,xlimit,pltlist,symbol,errorbar,title):
         # add here the plt order
