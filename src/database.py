@@ -78,6 +78,93 @@ DATAINFO:
 # ----------------------------------------------------------------------------
 
 
+def dbdelete(db,datainfoid,**kwargs):
+    """
+    DEFINITION:
+       Delete contents of the database
+       If datainfoid is provided only this database contents are deleted
+       If before is specified all data before the given date are erased
+       Else before is determined according to the  samplingrateratio
+
+    PARAMETERS:
+    Variables:
+        - db:   	    (mysql database) defined by MySQLdb.connect().
+        - datainfoid:       (string) table and dataid    
+    Kwargs:
+        - samplingrateratio:(float) defines the ratio for deleting data older than (samplingperiod(sec)*samplingrateratio) DAYS
+                        default = 45
+        - timerange:        (int) time range to keep from now in days
+
+    RETURNS:
+        --
+
+    EXAMPLE:
+        >>> dbdelete(db,'DIDD_3121331_0002_0001')
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+
+    TODO:
+        - If sampling rate not given in DATAINFO get it from the datastream
+    """
+
+    samplingrateratio = kwargs.get("samplingrateratio")
+
+    if not samplingrateratio:
+        samplingrateratio = 45
+        
+    cursor = db.cursor()
+    timeunit = 'DAY'
+
+    # Do steps 1 to 2 if time interval is not given (parameter interval, before)
+    if not timerange:
+        # 1. Get sampling rate
+        # option a - get from db
+        try:
+            getsr = 'SELECT DataSamplingRate FROM DATAINFO WHERE DataID = "%s"' % datainfoid
+            cursor.execute(getsr)
+            samplingperiod = cursor.fetchone()[0]
+            loggerdatabase.debug("dbdelete: samplingperiod = %s" % str(samplingperiod))
+        except:
+            loggerdatabase.error("dbdelete: could not access DataSamplingRate in table %s" % datainfoid)
+            samplingperiod = None
+        # option b - get directly from stream
+        if samplingperiod == None:
+            # read stream and get sampling rate there
+            #db2stream(datainfoid)
+            timerange = 30
+        # 2. Determine time interval to delete
+        # factor depends on available space...
+        timerange = np.ceil(samplingperiod*samplingrateratio)
+
+    loggerdatabase.debug("dbdelete: selected timerange of %s days" % str(timerange))
+
+    # 3. Delete time interval
+    loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange))
+    try:
+        deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
+        cursor.execute(deletesql)
+    except:
+        loggerdatabase.error("dbdelete: error when deleting data")
+
+    # 4. Re-determine length for Datainfo
+    try:
+        newdatesql = "SELECT min(time),max(time) FROM %s" % datainfoid
+        cursor.execute(newdatesql)
+        value = cursor.fetchone()
+        mintime = value[0]
+        maxtime = value[1]
+        updatedatainfosql = 'UPDATE DATAINFO SET DataMinTime="%s", DataMaxTime="%s" WHERE DataID="%s"' % (mintime,maxtime,datainfoid)
+        cursor.execute(updatedatainfosql)
+    except:
+        loggerdatabase.error("dbdelete: error when re-determining dates for DATAINFO")
+
+    db.commit()
+    cursor.close ()
+
+
 def dbdict2fields(db,header_dict,**kwargs):
     """
     DEFINITION:
@@ -821,7 +908,6 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
         if not len(rows) > 0:
             loggerdatabase.error("stream2DB: Selected data table is not yet existing - check tablename")
             raise
-        print "Check finished"
     else:
         # SENSOR TABLE
         # Create sensor table input
@@ -844,12 +930,6 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
         # Create datainfo table
         datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
         createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
-
-        #print createsensortablesql
-        #print sensorsql
-        #print createstationtablesql
-        #print stationsql
-        #print createdatainfotablesql
 
         if mode == "delete":
             cursor.execute("DROP TABLE IF EXISTS SENSORS") 
@@ -931,11 +1011,35 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
     cursor.close ()
 
 
-def db2stream(db,sensorid=None, begin=None, end=None, tableext=None, sql=None):
+def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
     """
-    extract data streams from the data base
     sql: provide any additional search criteria
         example: sql = "DataSamplingRate=60 AND DataType='variation'"
+    DEFINITION:
+        extract data streams from the data base
+
+    PARAMETERS:
+    Variables:
+        - db:   	    (mysql database) defined by MySQLdb.connect().
+        - sensorid:       (string) table and dataid    
+        - sql:      (string) provide any additional search criteria
+                             example: sql = "DataSamplingRate=60 AND DataType='variation'"
+        - datainfoid:       (string) table and dataid    
+    Kwargs:
+
+    RETURNS:
+        data stream
+
+    EXAMPLE:
+        >>> db2stream(db,None,'DIDD_3121331_0002_0001')
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+
+    TODO:
+        - If sampling rate not given in DATAINFO get it from the datastream
     """
     wherelist = []
     stream = DataStream()
