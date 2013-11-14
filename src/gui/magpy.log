@@ -1,3 +1,12 @@
-2013-11-14 13:26:12,460 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-10.bin
-2013-11-14 13:26:13,294 INFO    - stream plot: Start plotting.
-2013-11-14 13:26:13,443 INFO    - stream plot: Finished plot 1 at 2013-11-14 12:26:13.443934
+2013-11-15 00:03:02,836 INFO    - stream plot: Start plotting.
+2013-11-15 00:03:03,170 INFO    - stream plot: Finished plot 1 at 2013-11-14 23:03:03.170764
+2013-11-15 00:03:03,382 INFO    - stream plot: Finished plot 2 at 2013-11-14 23:03:03.382784
+2013-11-15 00:03:03,593 INFO    - stream plot: Finished plot 3 at 2013-11-14 23:03:03.593211
+2013-11-15 00:03:03,804 INFO    - stream plot: Finished plot 4 at 2013-11-14 23:03:03.804222
+2013-11-15 00:03:16,102 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/332988040000/332988040000_2013-07-11.bin
+2013-11-15 00:03:16,453 INFO    - stream plot: Start plotting.
+2013-11-15 00:03:16,470 WARNING - stream plot: No data available for key x
+2013-11-15 00:03:16,478 WARNING - stream plot: No data available for key y
+2013-11-15 00:03:16,487 WARNING - stream plot: No data available for key z
+2013-11-15 00:03:16,497 WARNING - stream plot: No data available for key f
+2013-11-15 00:03:16,575 INFO    - stream plot: Finished plot 1 at 2013-11-14 23:03:16.575701

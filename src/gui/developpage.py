@@ -18,6 +18,217 @@ from wx.lib.pubsub import Publisher
 
 # Subclasses for Menu pages and their controls     
 
+class ScreenSelections(object):
+    def __init__(self, seldatelist=[], selvallist=[],shflag = False):
+        self.seldatelist = seldatelist
+        self.selvallist = selvallist
+        self.shflag = shflag
+
+    def clearList(self):
+        self.seldatelist = []
+        self.selvallist = []
+
+    def updateList(self):
+        print self.seldatelist[len(self.seldatelist)-1]
+        #panel = wx.Panel(self,-1)
+        #self.sp = MenuPanel(panel)
+        #self.menu_p.rep_page.logMsg
+               
+
+class DataContainer(object):
+    def __init__(self, magdatastruct1=[], magdatastruct2=[],struct1res=0,struct2res=0):
+        self.magdatastruct1 = magdatastruct1
+        self.magdatastruct2 = magdatastruct2
+        self.struct1res = struct1res
+        self.struct2res = struct2res
+
+    def test(self):
+        print len(self.magdatastruct1)
+    
+class FlagDateDialog(wx.Dialog):   
+    #def __init__(self, parent, title, choices, curflag):
+        #super(FlagDateDialog, self).__init__(parent=parent, 
+        #    title=title, size=(250, 400))
+    def __init__(self, parent, choices, comment, title ):
+        super(FlagDateDialog, self).__init__( parent=parent, choices=[], comment='', title=title )
+        self.choices = choices
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    #def doLayout(self):
+    #    self.logger.SetDimensions(x=10, y=20, width=200, height=300)
+    # Widgets
+    def createControls(self):
+        # single anaylsis
+        self.flagLabel = wx.StaticText(self, label="Add a flag to a single date")
+        self.flagsRadioBox = wx.RadioBox(self,
+            label="Select flag",
+            choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS)
+        self.commentText =  wx.TextCtrl(self, style=wx.TE_MULTILINE|wx.TE_READONLY)
+        self.okButton = wx.Button(self, label='Ok')
+        self.closeButton = wx.Button(self, label='Close')
+
+    def doLayout(self):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.flagLabel, noOptions),
+                  emptySpace,
+                 (self.flagsRadioBox, noOptions),
+                 (self.commentText, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+class OptionsObsDialog(wx.Dialog):
+    
+    def __init__(self, parent, title):
+        super(OptionsObsDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        # single anaylsis
+        self.obsnameLabel = wx.StaticText(self, label="Observatory name")
+        self.obsnameTextCtrl = wx.TextCtrl(self, value="--")
+        self.obscodeLabel = wx.StaticText(self, label="Observatory code")
+        self.obscodeTextCtrl = wx.TextCtrl(self, value="--")
+        self.obscityLabel = wx.StaticText(self, label="City")
+        self.obscityTextCtrl = wx.TextCtrl(self, value="--")
+        self.obscountryLabel = wx.StaticText(self, label="Country")
+        self.obscountryTextCtrl = wx.TextCtrl(self, value="--")
+        self.obslongLabel = wx.StaticText(self, label="Longitude")
+        self.obslongTextCtrl = wx.TextCtrl(self, value="--")
+        self.obslatLabel = wx.StaticText(self, label="Latitude")
+        self.obslatTextCtrl = wx.TextCtrl(self, value="--")
+        self.obsaltLabel = wx.StaticText(self, label="Altitude")
+        self.obsaltTextCtrl = wx.TextCtrl(self, value="--")
+        self.obsmirenLabel = wx.StaticText(self, label="Miren")
+        self.obsmirenTextCtrl = wx.TextCtrl(self, value="--")
+
+        self.pilnamesLabel = wx.StaticText(self, label="Pillars")
+        self.pilnamesTextCtrl = wx.TextCtrl(self, value="--")
+        self.pillocLabel = wx.StaticText(self, label="Pillar locations")
+        self.pillocTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
+        self.pilazimuthLabel = wx.StaticText(self, label="Pillar azimuths")
+        self.pilazimuthTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
+        self.pildfLabel = wx.StaticText(self, label="delta F")
+        self.pildfTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
+        self.pilddLabel = wx.StaticText(self, label="delta D")
+        self.pilddTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
+        self.pildiLabel = wx.StaticText(self, label="delta I")
+        self.pildiTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
+        self.pildfepochLabel = wx.StaticText(self, label="Epoch dF")
+        self.pildfepochTextCtrl = wx.TextCtrl(self, value="--")
+        self.pilddirepochLabel = wx.StaticText(self, label="Epoch dV")
+        self.pilddirepochTextCtrl = wx.TextCtrl(self, value="--")
+        
+        self.okButton = wx.Button(self, label='Ok')
+        self.closeButton = wx.Button(self, label='Close')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=5, cols=8, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.obsnameLabel, noOptions),
+                 (self.obscodeLabel, noOptions),
+                 (self.obscityLabel, noOptions),
+                 (self.obscountryLabel, noOptions),
+                 (self.obslongLabel, noOptions),
+                 (self.obslatLabel, noOptions),
+                 (self.obsaltLabel, noOptions),
+                 (self.obsmirenLabel, noOptions),
+                 (self.obsnameTextCtrl, expandOption),
+                 (self.obscodeTextCtrl, expandOption),
+                 (self.obscityTextCtrl, expandOption),
+                 (self.obscountryTextCtrl, expandOption),
+                 (self.obslongTextCtrl, expandOption),
+                 (self.obslatTextCtrl, expandOption),
+                 (self.obsaltTextCtrl, expandOption),
+                 (self.obsmirenTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.pilnamesLabel, noOptions),
+                 (self.pillocLabel, noOptions),
+                 (self.pilazimuthLabel, noOptions),
+                 (self.pildfLabel, noOptions),
+                 (self.pilddLabel, noOptions),
+                 (self.pildiLabel, noOptions),
+                 (self.pildfepochLabel, noOptions),
+                 (self.pilddirepochLabel, noOptions),
+                 (self.pilnamesTextCtrl, expandOption),
+                 (self.pillocTextCtrl, expandOption),
+                 (self.pilazimuthTextCtrl, expandOption),
+                 (self.pildfTextCtrl, expandOption),
+                 (self.pilddTextCtrl, expandOption),
+                 (self.pildiTextCtrl, expandOption),
+                 (self.pildfepochTextCtrl, expandOption),
+                 (self.pilddirepochTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+
+
 class GeneralPage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)

@@ -16,7 +16,67 @@ from matplotlib.figure import Figure
 
 from wx.lib.pubsub import Publisher
 
-# Subclasses for Menu pages and their controls     
+
+class LoadAbsDialog(wx.Dialog):
+    
+    def __init__(self, parent, title):
+        super(LoadAbsDialog, self).__init__(parent=parent, 
+            title=title, size=(250, 400))
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        # single anaylsis
+        self.abssingleLabel = wx.StaticText(self, label="Single anaylsis")
+        self.selectAbsFile = wx.Button(self,-1,"Select absolutes measurement")
+        self.overriderCheckBox = wx.CheckBox(self, label="Override header information")
+        self.overriderInfo =  wx.TextCtrl(self, value="oops...")
+        self.absmultiLabel = wx.StaticText(self, label="Multiple anaylsis")
+        self.selectdirLabel =  wx.TextCtrl(self, value="dir")
+        self.selectdirButton = wx.Button(self,-1,"Select directory")
+        self.okButton = wx.Button(self, label='Ok')
+        self.closeButton = wx.Button(self, label='Close')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=3, cols=3, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.abssingleLabel, noOptions),
+                 (self.selectAbsFile, dict(flag=wx.ALIGN_CENTER)),
+                 (self.overriderCheckBox, noOptions),
+                  emptySpace,
+                 (self.absmultiLabel, noOptions),
+                  emptySpace,
+                 (self.selectdirButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
 
 class AbsolutePage(wx.Panel):
     #def __init__(self, parent):

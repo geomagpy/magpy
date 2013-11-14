@@ -17,295 +17,19 @@ from matplotlib.figure import Figure
 from wx.lib.pubsub import Publisher
 
 from gui.streampage import *
+from gui.dialogclasses import *
 from gui.absolutespage import *
 from gui.developpage import *
-
-x = [1,2,2,1,3,6]
-y = [5,6,4,3,1,5]
-
-class ScreenSelections(object):
-    def __init__(self, seldatelist=[], selvallist=[],shflag = False):
-        self.seldatelist = seldatelist
-        self.selvallist = selvallist
-        self.shflag = shflag
-
-    def clearList(self):
-        self.seldatelist = []
-        self.selvallist = []
-
-    def updateList(self):
-        print self.seldatelist[len(self.seldatelist)-1]
-        #panel = wx.Panel(self,-1)
-        #self.sp = MenuPanel(panel)
-        #self.menu_p.rep_page.logMsg
-               
-
-class DataContainer(object):
-    def __init__(self, magdatastruct1=[], magdatastruct2=[],struct1res=0,struct2res=0):
-        self.magdatastruct1 = magdatastruct1
-        self.magdatastruct2 = magdatastruct2
-        self.struct1res = struct1res
-        self.struct2res = struct2res
-
-    def test(self):
-        print len(self.magdatastruct1)
-    
-class FlagDateDialog(wx.Dialog):   
-    #def __init__(self, parent, title, choices, curflag):
-        #super(FlagDateDialog, self).__init__(parent=parent, 
-        #    title=title, size=(250, 400))
-    def __init__(self, parent, choices, comment, title ):
-        super(FlagDateDialog, self).__init__( parent=parent, choices=[], comment='', title=title )
-        self.choices = choices
-        self.createControls()
-        self.doLayout()
-        self.bindControls()
-        
-    #def doLayout(self):
-    #    self.logger.SetDimensions(x=10, y=20, width=200, height=300)
-    # Widgets
-    def createControls(self):
-        # single anaylsis
-        self.flagLabel = wx.StaticText(self, label="Add a flag to a single date")
-        self.flagsRadioBox = wx.RadioBox(self,
-            label="Select flag",
-            choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS)
-        self.commentText =  wx.TextCtrl(self, style=wx.TE_MULTILINE|wx.TE_READONLY)
-        self.okButton = wx.Button(self, label='Ok')
-        self.closeButton = wx.Button(self, label='Close')
-
-    def doLayout(self):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.flagLabel, noOptions),
-                  emptySpace,
-                 (self.flagsRadioBox, noOptions),
-                 (self.commentText, expandOption),
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
-        self.Destroy()
-
-class OptionsObsDialog(wx.Dialog):
-    
-    def __init__(self, parent, title):
-        super(OptionsObsDialog, self).__init__(parent=parent, 
-            title=title, size=(400, 600))
-        self.createControls()
-        self.doLayout()
-        self.bindControls()
-        
-    # Widgets
-    def createControls(self):
-        # single anaylsis
-        self.obsnameLabel = wx.StaticText(self, label="Observatory name")
-        self.obsnameTextCtrl = wx.TextCtrl(self, value="--")
-        self.obscodeLabel = wx.StaticText(self, label="Observatory code")
-        self.obscodeTextCtrl = wx.TextCtrl(self, value="--")
-        self.obscityLabel = wx.StaticText(self, label="City")
-        self.obscityTextCtrl = wx.TextCtrl(self, value="--")
-        self.obscountryLabel = wx.StaticText(self, label="Country")
-        self.obscountryTextCtrl = wx.TextCtrl(self, value="--")
-        self.obslongLabel = wx.StaticText(self, label="Longitude")
-        self.obslongTextCtrl = wx.TextCtrl(self, value="--")
-        self.obslatLabel = wx.StaticText(self, label="Latitude")
-        self.obslatTextCtrl = wx.TextCtrl(self, value="--")
-        self.obsaltLabel = wx.StaticText(self, label="Altitude")
-        self.obsaltTextCtrl = wx.TextCtrl(self, value="--")
-        self.obsmirenLabel = wx.StaticText(self, label="Miren")
-        self.obsmirenTextCtrl = wx.TextCtrl(self, value="--")
-
-        self.pilnamesLabel = wx.StaticText(self, label="Pillars")
-        self.pilnamesTextCtrl = wx.TextCtrl(self, value="--")
-        self.pillocLabel = wx.StaticText(self, label="Pillar locations")
-        self.pillocTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
-        self.pilazimuthLabel = wx.StaticText(self, label="Pillar azimuths")
-        self.pilazimuthTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
-        self.pildfLabel = wx.StaticText(self, label="delta F")
-        self.pildfTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
-        self.pilddLabel = wx.StaticText(self, label="delta D")
-        self.pilddTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
-        self.pildiLabel = wx.StaticText(self, label="delta I")
-        self.pildiTextCtrl = wx.TextCtrl(self, style=wx.TE_MULTILINE) # get this value from obsini
-        self.pildfepochLabel = wx.StaticText(self, label="Epoch dF")
-        self.pildfepochTextCtrl = wx.TextCtrl(self, value="--")
-        self.pilddirepochLabel = wx.StaticText(self, label="Epoch dV")
-        self.pilddirepochTextCtrl = wx.TextCtrl(self, value="--")
-        
-        self.okButton = wx.Button(self, label='Ok')
-        self.closeButton = wx.Button(self, label='Close')
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=5, cols=8, vgap=10, hgap=10)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.obsnameLabel, noOptions),
-                 (self.obscodeLabel, noOptions),
-                 (self.obscityLabel, noOptions),
-                 (self.obscountryLabel, noOptions),
-                 (self.obslongLabel, noOptions),
-                 (self.obslatLabel, noOptions),
-                 (self.obsaltLabel, noOptions),
-                 (self.obsmirenLabel, noOptions),
-                 (self.obsnameTextCtrl, expandOption),
-                 (self.obscodeTextCtrl, expandOption),
-                 (self.obscityTextCtrl, expandOption),
-                 (self.obscountryTextCtrl, expandOption),
-                 (self.obslongTextCtrl, expandOption),
-                 (self.obslatTextCtrl, expandOption),
-                 (self.obsaltTextCtrl, expandOption),
-                 (self.obsmirenTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.pilnamesLabel, noOptions),
-                 (self.pillocLabel, noOptions),
-                 (self.pilazimuthLabel, noOptions),
-                 (self.pildfLabel, noOptions),
-                 (self.pilddLabel, noOptions),
-                 (self.pildiLabel, noOptions),
-                 (self.pildfepochLabel, noOptions),
-                 (self.pilddirepochLabel, noOptions),
-                 (self.pilnamesTextCtrl, expandOption),
-                 (self.pillocTextCtrl, expandOption),
-                 (self.pilazimuthTextCtrl, expandOption),
-                 (self.pildfTextCtrl, expandOption),
-                 (self.pilddTextCtrl, expandOption),
-                 (self.pildiTextCtrl, expandOption),
-                 (self.pildfepochTextCtrl, expandOption),
-                 (self.pilddirepochTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
-        self.Destroy()
-
-
-class LoadAbsDialog(wx.Dialog):
-    
-    def __init__(self, parent, title):
-        super(LoadAbsDialog, self).__init__(parent=parent, 
-            title=title, size=(250, 400))
-        self.createControls()
-        self.doLayout()
-        self.bindControls()
-        
-    # Widgets
-    def createControls(self):
-        # single anaylsis
-        self.abssingleLabel = wx.StaticText(self, label="Single anaylsis")
-        self.selectAbsFile = wx.Button(self,-1,"Select absolutes measurement")
-        self.overriderCheckBox = wx.CheckBox(self, label="Override header information")
-        self.overriderInfo =  wx.TextCtrl(self, value="oops...")
-        self.absmultiLabel = wx.StaticText(self, label="Multiple anaylsis")
-        self.selectdirLabel =  wx.TextCtrl(self, value="dir")
-        self.selectdirButton = wx.Button(self,-1,"Select directory")
-        self.okButton = wx.Button(self, label='Ok')
-        self.closeButton = wx.Button(self, label='Close')
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=3, vgap=10, hgap=10)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.abssingleLabel, noOptions),
-                 (self.selectAbsFile, dict(flag=wx.ALIGN_CENTER)),
-                 (self.overriderCheckBox, noOptions),
-                  emptySpace,
-                 (self.absmultiLabel, noOptions),
-                  emptySpace,
-                 (self.selectdirButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
-        self.Destroy()
 
    
 class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
-        # configure graph
         self.figure = plt.figure()
-        # Eventually call start graph here
         scsetmp = ScreenSelections()
         self.canvas = FigureCanvas(self,-1,self.figure)
         self.initialPlot()
         self.__do_layout()
-	# Possible solutions: 1) refer to a class outside this function which generates the plot and reads the data
-        # 2) generate a onDraw function with pass and a child class within the main function (e.g. OnFigDraw(PlotPanel)) which call the PlotPanel
         
     def __do_layout(self):
         # Resize graph and toolbar, create toolbar
@@ -315,17 +39,6 @@ class PlotPanel(wx.Panel):
         self.vbox.Add(self.toolbar, 0, wx.EXPAND)
         self.SetSizer(self.vbox)
         self.vbox.Fit(self)
-
-        #sizer = wx.BoxSizer(wx.VERTICAL)
-	#sizer.Add(self.canvas, 1, wx.EXPAND|wx.RIGHT, 0)
-	#self.SetSizer(sizer)
-	#self.toolbar = NavigationToolbar2Wx(self.canvas)
-	#self.toolbar.Realize()
-	#tw, th = self.toolbar.GetSizeTuple()
-	#fw, fh = self.canvas.GetSizeTuple()
-	#self.toolbar.SetSize(wx.Size(fw, th))
-	#sizer.Add(self.toolbar, 0)
-	#self.toolbar.update()
 
     def guiPlot(self,stream,keys,**kwargs):
         """
@@ -637,24 +350,13 @@ class MainFrame(wx.Frame):
         #self.changeStatusbar("Ready")
 
         # Some variable initializations
+        self.db = None
         self.filename = 'noname.txt'
         self.dirname = '.'
+
         self.compselect = "xyz"
         self.abscompselect = "xyz"
         self.bascompselect = "bspline"
-
-        # Initialization of data container
-        self.datacont = DataContainer()
-        self.scse = ScreenSelections()
-
-        # Initialization for Com Monitor
-        self.monitor_active = False
-        self.com_monitor = None
-        self.com_data_q = None
-        self.com_error_q = None
-        self.value_samples = []
-        self.timer = wx.Timer(self,-1)
-
 
         # Menu Bar
         self.MainMenu = wx.MenuBar()
@@ -663,23 +365,28 @@ class MainFrame(wx.Frame):
         self.FileMenu.AppendItem(self.FileOpen)
         self.DirOpen = wx.MenuItem(self.FileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DirOpen)
-        self.WebOpen = wx.MenuItem(self.FileMenu, 103, "Open &Web adress...\tCtrl+W", "Get data from the internet", wx.ITEM_NORMAL)
+        self.WebOpen = wx.MenuItem(self.FileMenu, 103, "Open &URL...\tCtrl+U", "Get data from the internet", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.WebOpen)
-        self.DBOpen = wx.MenuItem(self.FileMenu, 104, "&Select Database...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
+        self.DBOpen = wx.MenuItem(self.FileMenu, 104, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DBOpen)
+        self.DBOpen.Enable(False)
         self.FileMenu.AppendSeparator()
         self.FileQuitItem = wx.MenuItem(self.FileMenu, wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit the program", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileQuitItem)
         self.MainMenu.Append(self.FileMenu, "&File")
+        self.DatabaseMenu = wx.Menu()
+        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+C", "Connect Database", wx.ITEM_NORMAL)
+        self.DatabaseMenu.AppendItem(self.DBConnect)
+        self.MainMenu.Append(self.DatabaseMenu, "&MySQL Database")
         self.HelpMenu = wx.Menu()
-        self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 201, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
+        self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
         self.HelpMenu.AppendItem(self.HelpAboutItem)
         self.MainMenu.Append(self.HelpMenu, "&Help")
         self.OptionsMenu = wx.Menu()
-        self.OptionsCalcItem = wx.MenuItem(self.OptionsMenu, 301, "&Calculation parameter", "Modify calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
+        self.OptionsCalcItem = wx.MenuItem(self.OptionsMenu, 401, "&Calculation parameter", "Modify calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
         self.OptionsMenu.AppendItem(self.OptionsCalcItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 302, "&Observatory specifications", "Modify observatory specific initialization data (e.g. paths, pears, offsets)", wx.ITEM_NORMAL)
+        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 402, "&Observatory specifications", "Modify observatory specific initialization data (e.g. paths, pears, offsets)", wx.ITEM_NORMAL)
         self.OptionsMenu.AppendItem(self.OptionsObsItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.SetMenuBar(self.MainMenu)
@@ -691,9 +398,10 @@ class MainFrame(wx.Frame):
         # BindingControls on the menu
         self.Bind(wx.EVT_MENU, self.OnOpenDir, self.DirOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenFile, self.FileOpen)
-        self.Bind(wx.EVT_MENU, self.OnOpenWeb, self.WebOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenURL, self.WebOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenDB, self.DBOpen)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
+        self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
         self.Bind(wx.EVT_MENU, self.OnOptionsCalc, self.OptionsCalcItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
@@ -771,6 +479,15 @@ class MainFrame(wx.Frame):
         dialog.Destroy()
         return userProvidedFilename
 
+    def OnInitialPaint(self, stream):
+        """
+        DEFINITION:
+            read stream, extract columns with values and display up to three of them by defailt
+            executes guiPlot then
+        """
+        keylist = stream._get_key_headers(limit=9)
+        self.plot_p.guiPlot(stream,keylist)
+
     # Event hanlder:
     def OnHelpAbout(self, event):
         dlg = wx.MessageDialog(self, "This program is developed for\n"
@@ -787,79 +504,119 @@ class MainFrame(wx.Frame):
         textfile.write(self.control.GetValue())
         textfile.close()
 
+    def ReactivateStreamPage(self):
+            self.menu_p.str_page.fileTextCtrl.Enable()
+            self.menu_p.str_page.pathTextCtrl.Enable()
+            self.menu_p.str_page.startDatePicker.Enable()
+            self.menu_p.str_page.endDatePicker.Enable()
+            self.menu_p.str_page.startTimePicker.Enable()
+            self.menu_p.str_page.endTimePicker.Enable()
+            self.menu_p.str_page.openStreamButton.Enable()
+        
     def OnOpenDir(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
+            self.ReactivateStreamPage()
             self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
-            print dialog.GetPath()
+        self.menu_p.rep_page.logMsg('- Directory defined')
         dialog.Destroy()
-        #if self.askUserForFilename(style=wx.DirDialog,
-        #                           **self.defaultFileDialogOptions()):
-        #    textfile = open(os.path.join(self.dirname, self.filename), 'r')
-        #    self.control.SetValue(textfile.read())
-        #    textfile.close()
 
     def OnOpenFile(self, event):
         self.dirname = ''
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
+            stream = DataStream()
+            stream.header = {}
+            print stream.header
+            self.ReactivateStreamPage()
             self.filename = dlg.GetFilename()
             self.dirname = dlg.GetDirectory()
+            self.changeStatusbar("Loading data ...")
             stream = read(path_or_url=os.path.join(self.dirname, self.filename))
             self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
             self.menu_p.str_page.fileTextCtrl.Disable()
             self.menu_p.str_page.pathTextCtrl.Disable()
-            mintime = stream._get_min('time')
-            maxtime = stream._get_max('time')
-            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-            self.menu_p.str_page.startDatePicker.Disable()
-            self.menu_p.str_page.endDatePicker.Disable()
-            self.menu_p.str_page.startTimePicker.Disable()
-            self.menu_p.str_page.endTimePicker.Disable()
-            self.menu_p.str_page.openStreamButton.Disable()
+            if len(stream) > 0:
+                mintime = stream._get_min('time')
+                maxtime = stream._get_max('time')
+                self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+                self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+                self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+                self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+                self.menu_p.str_page.startDatePicker.Disable()
+                self.menu_p.str_page.endDatePicker.Disable()
+                self.menu_p.str_page.startTimePicker.Disable()
+                self.menu_p.str_page.endTimePicker.Disable()
+                self.menu_p.str_page.openStreamButton.Disable()
+        self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
         dlg.Destroy()
 
         # plot data
-        self.OnPaint(stream)
-        #self.plot_p.guiPlot(stream,["t1"])
+        self.OnInitialPaint(stream)
+        self.changeStatusbar("Ready")
 
-    def OnPaint(self, stream):
-        """
-        DEFINITION:
-            read stream, extract columns with values and display up to three of them by defailt
-            executes guiPlot then
-        """
-        stream._print_key_headers()
-        self.plot_p.guiPlot(stream,["t1"])
 
-    def OnOpenWeb(self, event):
-        dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-        if dialog.ShowModal() == wx.ID_OK:
-            self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
-            print dialog.GetPath()
-        dialog.Destroy()
-        #if self.askUserForFilename(style=wx.DirDialog,
-        #                           **self.defaultFileDialogOptions()):
-        #    textfile = open(os.path.join(self.dirname, self.filename), 'r')
-        #    self.control.SetValue(textfile.read())
-        #    textfile.close()
+    def OnOpenURL(self, event):
+        dlg = OpenWebAddressDialog(None, title='Open URL')
+        if dlg.ShowModal() == wx.ID_OK:
+            self.ReactivateStreamPage()
+            url = dlg.urlTextCtrl.GetValue()
+            if not url.endswith('/'):
+                self.changeStatusbar("Loading data ...")
+                self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
+                stream = read(path_or_url=url)
+                mintime = stream._get_min('time')
+                maxtime = stream._get_max('time')
+                self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+                self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+                self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+                self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+                self.menu_p.str_page.startDatePicker.Disable()
+                self.menu_p.str_page.endDatePicker.Disable()
+                self.menu_p.str_page.startTimePicker.Disable()
+                self.menu_p.str_page.endTimePicker.Disable()
+                self.menu_p.str_page.openStreamButton.Disable()
+                self.OnInitialPaint(stream)
+                self.changeStatusbar("Ready")
+            else:
+                self.menu_p.str_page.pathTextCtrl.SetValue(url)
+        self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
+        dlg.Destroy()        
+
 
     def OnOpenDB(self, event):
-        dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-        if dialog.ShowModal() == wx.ID_OK:
-            self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
-            print dialog.GetPath()
-        dialog.Destroy()
-        #if self.askUserForFilename(style=wx.DirDialog,
-        #                           **self.defaultFileDialogOptions()):
-        #    textfile = open(os.path.join(self.dirname, self.filename), 'r')
-        #    self.control.SetValue(textfile.read())
-        #    textfile.close()
+        # a) get all DATAINFO IDs and store them in a list
+        # b) disable pathTextCtrl (DB: dbname)
+        # c) Open dialog which lets the user select list and time window
+        # d) update stream menu
+        dlg = DatabaseContentDialog(None, title='MySQL Database: Get content')
+        if dlg.ShowModal() == wx.ID_OK:
+            #host = dlg.hostTextCtrl.GetValue()
+            #user = dlg.userTextCtrl.GetValue()
+            #passwd = dlg.passwdTextCtrl.GetValue()
+            #mydb = dlg.dbTextCtrl.GetValue()
+            #self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
+            #if self.db:
+            #    self.DBOpen.Enable(True)
+            pass
+        dlg.Destroy()        
+
+
+    def OnDBConnect(self, event):
+        dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
+        if dlg.ShowModal() == wx.ID_OK:
+            host = dlg.hostTextCtrl.GetValue()
+            user = dlg.userTextCtrl.GetValue()
+            passwd = dlg.passwdTextCtrl.GetValue()
+            mydb = dlg.dbTextCtrl.GetValue()
+            self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
+            if self.db:
+                self.DBOpen.Enable(True)
+        dlg.Destroy()        
+
 
     def OnSaveAs(self, event):
         if self.askUserForFilename(defaultFile=self.filename, style=wx.SAVE,
@@ -1289,6 +1046,7 @@ class MainFrame(wx.Frame):
     # Stream functions
 
     def onOpenStreamButton(self, event):
+        stream = DataStream()
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = self.menu_p.str_page.startTimePicker.GetValue()
         sd = datetime.fromtimestamp(stday.GetTicks()) 
@@ -1312,10 +1070,25 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
 
-        print stday, sttime
 
         try:
-            stream = read(path_or_url=os.path.join(path,files),starttime=stday, endtime=enday)
+            if path.endswith('/'):
+                address = path
+            else:
+                address = os.path.join(path,files)
+            stream = read(path_or_url=address,starttime=sd, endtime=ed)
+            mintime = stream._get_min('time')
+            maxtime = stream._get_max('time')
+            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+            self.menu_p.str_page.startDatePicker.Disable()
+            self.menu_p.str_page.endDatePicker.Disable()
+            self.menu_p.str_page.startTimePicker.Disable()
+            self.menu_p.str_page.endTimePicker.Disable()
+            self.menu_p.str_page.openStreamButton.Disable()
+
         except:
             dlg = wx.MessageDialog(self, "Could not read file(s)!\n"
                         "check your files and/or selected time range\n",

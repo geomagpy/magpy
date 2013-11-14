@@ -340,6 +340,40 @@ class DataStream(object):
                 unit = None
             print "%10s : %22s : %28s" % (key, header, unit)
 
+
+    def _get_key_headers(self,**kwargs):
+	"""
+    DEFINITION:
+	get a list of existing keys in stream.
+
+    PARAMETERS:
+    kwargs:
+	- limit:	(int) limit the lenght of the list
+    RETURNS:
+        - keylist: 	(array) a list like ['x','y','z']
+
+    EXAMPLE:
+        >>> data_stream._get_key_headers(limit=1)
+	"""
+
+        limit = kwargs.get('limit')
+
+        keylist = []
+        for key in FLAGKEYLIST[1:]:
+            try:
+                header = self.header['col-'+key]
+		keylist.append(key)
+            except:
+                header = None
+            try:
+                unit = self.header['unit-col-'+key]
+            except:
+                unit = None
+        if limit and len(keylist) > limit:
+            keylist = keylist[:limit]
+
+        return keylist
+
     def sorting(self):
         """
         Sorting data according to time (maybe generalize that to some key)
