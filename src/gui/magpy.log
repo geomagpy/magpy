@@ -1,6 +1,3 @@
-2013-11-14 01:13:49,715 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-09.bin
-2013-11-14 01:13:50,992 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-10.bin
-2013-11-14 01:13:51,720 INFO    - stream plot: Start plotting.
-2013-11-14 01:13:52,024 INFO    - stream plot: Finished plot 1 at 2013-11-14 00:13:52.024170
-2013-11-14 01:13:52,349 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-09.bin
-2013-11-14 01:13:53,620 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-10.bin
+2013-11-14 13:26:12,460 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-10.bin
+2013-11-14 13:26:13,294 INFO    - stream plot: Start plotting.
+2013-11-14 13:26:13,443 INFO    - stream plot: Finished plot 1 at 2013-11-14 12:26:13.443934

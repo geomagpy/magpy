@@ -800,21 +800,42 @@ class MainFrame(wx.Frame):
         #    textfile.close()
 
     def OnOpenFile(self, event):
-        print "Hello"
         self.dirname = ''
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             self.filename = dlg.GetFilename()
             self.dirname = dlg.GetDirectory()
             stream = read(path_or_url=os.path.join(self.dirname, self.filename))
-            #f = open(os.path.join(self.dirname, self.filename), 'r')
-            #self.control.SetValue(f.read())
-            #f.close()
             self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+            self.menu_p.str_page.fileTextCtrl.Disable()
+            self.menu_p.str_page.pathTextCtrl.Disable()
+            mintime = stream._get_min('time')
+            maxtime = stream._get_max('time')
+            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+            self.menu_p.str_page.startDatePicker.Disable()
+            self.menu_p.str_page.endDatePicker.Disable()
+            self.menu_p.str_page.startTimePicker.Disable()
+            self.menu_p.str_page.endTimePicker.Disable()
+            self.menu_p.str_page.openStreamButton.Disable()
         dlg.Destroy()
 
+        # plot data
+        self.OnPaint(stream)
+        #self.plot_p.guiPlot(stream,["t1"])
+
+    def OnPaint(self, stream):
+        """
+        DEFINITION:
+            read stream, extract columns with values and display up to three of them by defailt
+            executes guiPlot then
+        """
+        stream._print_key_headers()
+        self.plot_p.guiPlot(stream,["t1"])
 
     def OnOpenWeb(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
@@ -1269,6 +1290,7 @@ class MainFrame(wx.Frame):
 
     def onOpenStreamButton(self, event):
         stday = self.menu_p.str_page.startDatePicker.GetValue()
+        sttime = self.menu_p.str_page.startTimePicker.GetValue()
         sd = datetime.fromtimestamp(stday.GetTicks()) 
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         ed = datetime.fromtimestamp(enday.GetTicks()) 
@@ -1290,16 +1312,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
 
-        print os.path.join(path,files)
-        stream = read(path_or_url=os.path.join(path,files))
-        self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-
-        #self.plot_p.mainPlot(display1data,display2data,ardat,"auto",pltlist,['-','-'],0,"Magnetogram")
-        #self.plot_p.canvas.draw()
-
-        #fig = stream.plot(['t1'],noshow=True)
-        self.plot_p.guiPlot(stream,["t1"])
-        #self.plot_p.canvas.draw()
+        print stday, sttime
 
         try:
             stream = read(path_or_url=os.path.join(path,files),starttime=stday, endtime=enday)
@@ -1310,6 +1323,11 @@ class MainFrame(wx.Frame):
             dlg.ShowModal()
             dlg.Destroy()
             return
+
+        self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+        self.plot_p.guiPlot(stream,["t1"])
+        #self.plot_p.canvas.draw()
+
 
     """
     def onScalarDrawButton(self, event):

@@ -15,6 +15,7 @@ from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
 from wx.lib.pubsub import Publisher
+import wx.lib.masked as masked
 
 # Subclasses for Menu pages and their controls     
 
@@ -36,9 +37,17 @@ class StreamPage(wx.Panel):
         self.fileLabel = wx.StaticText(self, label="File:")
         self.fileTextCtrl = wx.TextCtrl(self, value="*")
         self.startdateLabel = wx.StaticText(self, label="Start date:")
-        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-10-22","%Y-%m-%d").timetuple())))
+        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-11-22","%Y-%m-%d").timetuple())))
+        self.startTimePicker = masked.timectrl.TimeCtrl(self,
+                                               fmt24hr=True, id=-1, name='startTimePicker',
+                                               style=0,useFixedWidthFont=True,
+                                               pos = (250,70))
         self.enddateLabel = wx.StaticText(self, label="End date:")
-        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-10-22","%Y-%m-%d").timetuple())))
+        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.now().timetuple())))
+        self.endTimePicker = masked.timectrl.TimeCtrl(self,
+                                               fmt24hr=True, id=-1, name='endTimePicker',
+                                               style=0,useFixedWidthFont=True,
+                                               value=datetime.now().strftime('%X'), pos = (250,70))
 
         self.openStreamButton = wx.Button(self,-1,"Open stream")
         self.lengthStreamLabel = wx.StaticText(self, label="N (values):")
@@ -93,37 +102,6 @@ class StreamPage(wx.Panel):
         """
 
     def doLayout(self):
-        """
-                 (self.primaryLabel, noOptions),
-                  emptySpace,
-                 (self.scalarComboBox, expandOption),
-                 (self.removeOutliersCheckBox, noOptions),
-                 (self.secondaryLabel, noOptions),
-                  emptySpace,
-                 (self.secscalarComboBox, expandOption),
-                 (self.secremoveOutliersCheckBox, noOptions),
-                  emptySpace,
-                  emptySpace,
-                 (self.analysisLabel, noOptions),
-                  emptySpace,
-                 (self.deltaFIniLabel, noOptions),
-                 (self.deltaFCurLabel, noOptions),
-                 (self.deltaFIniTextCtrl, expandOption),
-                 (self.deltaFCurTextCtrl, expandOption),
-                 (self.GetGraphMarksButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,        
-                 (self.curselecteddateLabel, noOptions),
-                  emptySpace,
-                 (self.curdateTextCtrl, expandOption),
-                 (self.flagSingleButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.prevselecteddateLabel, noOptions),
-                  emptySpace,
-                 (self.prevdateTextCtrl, expandOption),
-                 (self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                 (self.SaveScalarButton, dict(flag=wx.ALIGN_CENTER)),
-        """
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
@@ -142,9 +120,13 @@ class StreamPage(wx.Panel):
                  (self.fileLabel, noOptions),
                  (self.fileTextCtrl, expandOption),
                  (self.startdateLabel, noOptions),
-                 (self.enddateLabel, noOptions),
+                  emptySpace,
                  (self.startDatePicker, expandOption),
+                 (self.startTimePicker, expandOption),
+                 (self.enddateLabel, noOptions),
+                  emptySpace,
                  (self.endDatePicker, expandOption),
+                 (self.endTimePicker, expandOption),
                  (self.openStreamButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  (self.lengthStreamLabel, noOptions),
