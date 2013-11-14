@@ -298,21 +298,17 @@ class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         # configure graph
-        #self.figure = Figure()
         self.figure = plt.figure()
-        #self.axes = self.figure.add_subplot(111)
-        #self.testPlot(x,y)
-
-        #self.p = FigurePlot(self,x,y)
+        # Eventually call start graph here
         scsetmp = ScreenSelections()
         self.canvas = FigureCanvas(self,-1,self.figure)
+        self.initialPlot()
         self.__do_layout()
 	# Possible solutions: 1) refer to a class outside this function which generates the plot and reads the data
         # 2) generate a onDraw function with pass and a child class within the main function (e.g. OnFigDraw(PlotPanel)) which call the PlotPanel
         
     def __do_layout(self):
         # Resize graph and toolbar, create toolbar
-        #plt.axis('off')
         self.vbox = wx.BoxSizer(wx.VERTICAL)
         self.vbox.Add(self.canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
         self.toolbar = NavigationToolbar2Wx(self.canvas)
@@ -332,34 +328,33 @@ class PlotPanel(wx.Panel):
 	#self.toolbar.update()
 
     def guiPlot(self,stream,keys,**kwargs):
-        # add here the plt order
-        #self.figure.clear()
-        #self.axes.clear()
+        """
+        DEFINITION:
+            embbed matplotlib figure in canvas
 
-        #self.axes = self.figure.add_subplot(111)
-        #t = arange(0.0,3.0,0.01)
-        #s = sin(2*pi*t)
-
-        #self.axes.plot(t,s)
-        print "Creating figure..."
-        #self.axes = stream.plot(keys,noshow=True)
-        stream.plot(keys,noshow=True)
-        print "Now plotting"
-        #plt.show()
-
-        #self.canvas.draw()
-
-        #return self.figure
-        #stream.plot(keys)
-
-    def testPlot(self,x,y):
-        #self.axes = self.figure.add_subplot(111)
+        PARAMETERS:
+        kwargs:  - all plot args
+        """
         self.figure.clear()
-        self.axes.clear()
+        try:
+            self.axes.clear()
+        except:
+            pass
+        self.axes = stream.plot(keys,figure=self.figure)
+        self.canvas.draw()
+
+    def initialPlot(self):
+        """
+        DEFINITION:
+            loads an image for the startup screen
+        """
+
         self.axes = self.figure.add_subplot(111)
-        self.axes.plot(x,y)
-        #self.canvas = FigureCanvas(self,-1,self.figure)
-        #self.__do_layout()
+        plt.axis("off") # turn off axis
+        startupimage = 'magpy.png'
+        img = imread(startupimage)
+        self.axes.imshow(img)
+        self.canvas.draw()
 
     def linkRep(self):
         return ReportPage(self)
@@ -664,8 +659,14 @@ class MainFrame(wx.Frame):
         # Menu Bar
         self.MainMenu = wx.MenuBar()
         self.FileMenu = wx.Menu()
-        self.FileOpen = wx.MenuItem(self.FileMenu, 102, "&Select Dir...\tCtrl+O", "Select an existing directory", wx.ITEM_NORMAL)
+        self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+O", "Open file", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileOpen)
+        self.DirOpen = wx.MenuItem(self.FileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
+        self.FileMenu.AppendItem(self.DirOpen)
+        self.WebOpen = wx.MenuItem(self.FileMenu, 103, "Open &Web adress...\tCtrl+W", "Get data from the internet", wx.ITEM_NORMAL)
+        self.FileMenu.AppendItem(self.WebOpen)
+        self.DBOpen = wx.MenuItem(self.FileMenu, 104, "&Select Database...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
+        self.FileMenu.AppendItem(self.DBOpen)
         self.FileMenu.AppendSeparator()
         self.FileQuitItem = wx.MenuItem(self.FileMenu, wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit the program", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileQuitItem)
@@ -688,7 +689,10 @@ class MainFrame(wx.Frame):
 	self.__set_properties()
 
         # BindingControls on the menu
-        self.Bind(wx.EVT_MENU, self.OnOpen, self.FileOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenDir, self.DirOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenFile, self.FileOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenWeb, self.WebOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenDB, self.DBOpen)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsCalc, self.OptionsCalcItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
@@ -783,7 +787,48 @@ class MainFrame(wx.Frame):
         textfile.write(self.control.GetValue())
         textfile.close()
 
-    def OnOpen(self, event):
+    def OnOpenDir(self, event):
+        dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
+            print dialog.GetPath()
+        dialog.Destroy()
+        #if self.askUserForFilename(style=wx.DirDialog,
+        #                           **self.defaultFileDialogOptions()):
+        #    textfile = open(os.path.join(self.dirname, self.filename), 'r')
+        #    self.control.SetValue(textfile.read())
+        #    textfile.close()
+
+    def OnOpenFile(self, event):
+        print "Hello"
+        self.dirname = ''
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.filename = dlg.GetFilename()
+            self.dirname = dlg.GetDirectory()
+            stream = read(path_or_url=os.path.join(self.dirname, self.filename))
+            #f = open(os.path.join(self.dirname, self.filename), 'r')
+            #self.control.SetValue(f.read())
+            #f.close()
+            self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+            self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
+            self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+        dlg.Destroy()
+
+
+    def OnOpenWeb(self, event):
+        dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
+            print dialog.GetPath()
+        dialog.Destroy()
+        #if self.askUserForFilename(style=wx.DirDialog,
+        #                           **self.defaultFileDialogOptions()):
+        #    textfile = open(os.path.join(self.dirname, self.filename), 'r')
+        #    self.control.SetValue(textfile.read())
+        #    textfile.close()
+
+    def OnOpenDB(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
@@ -1246,7 +1291,7 @@ class MainFrame(wx.Frame):
             return
 
         print os.path.join(path,files)
-        stream = read(os.path.join(path,files))
+        stream = read(path_or_url=os.path.join(path,files))
         self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
 
         #self.plot_p.mainPlot(display1data,display2data,ardat,"auto",pltlist,['-','-'],0,"Magnetogram")
@@ -1257,7 +1302,7 @@ class MainFrame(wx.Frame):
         #self.plot_p.canvas.draw()
 
         try:
-            stream = read(os.path.join(path,files),starttime=stday, endtime=enday)
+            stream = read(path_or_url=os.path.join(path,files),starttime=stday, endtime=enday)
         except:
             dlg = wx.MessageDialog(self, "Could not read file(s)!\n"
                         "check your files and/or selected time range\n",
