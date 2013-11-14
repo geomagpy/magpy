@@ -2340,6 +2340,7 @@ class DataStream(object):
         specialdict = kwargs.get('specialdict')
         symbol_func = kwargs.get('symbol_func')
         symbollist = kwargs.get('symbollist')
+        figure = kwargs.get('figure')
 
         if not function:
             function = None
@@ -2375,7 +2376,11 @@ class DataStream(object):
             loggerstream.error("plot: Number of keys not valid.")
         count = 0
 
-        fig = plt.figure()
+        if not figure:
+            fig = plt.figure()
+        else:
+            fig = figure
+
         #fig = matplotlib.figure.Figure()
 
         loggerstream.info("plot: Start plotting.")
@@ -2670,6 +2675,8 @@ class DataStream(object):
         fig.subplots_adjust(hspace=0)
 
         # 5. SAVE TO FILE (or show)
+        if figure:
+            return ax
         if outfile:
             path = os.path.split(outfile)[0]
             if not path == '': 
@@ -2679,7 +2686,7 @@ class DataStream(object):
                 fig.savefig(outfile, format=fmt, dpi=savedpi) 
             else: 
                 fig.savefig(outfile, dpi=savedpi) 
-        elif noshow: 
+        elif noshow:
             return fig
         else: 
             plt.show()
