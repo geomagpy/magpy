@@ -15,6 +15,7 @@ from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
 from wx.lib.pubsub import Publisher
+import wx.lib.masked as masked
 
 # Subclasses for Dialogs called by magpy gui     
 
@@ -127,6 +128,64 @@ class DatabaseConnectDialog(wx.Dialog):
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+
+class DatabaseContentDialog(wx.Dialog):
+    """
+    Dialog for Database Menu - Connect MySQL
+    """
+    
+    def __init__(self, parent, title, datalst):
+        super(DatabaseContentDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        #self.datalst = ['test','jgg']
+        self.datalst = datalst
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        self.dataLabel = wx.StaticText(self, label="Data tables:")
+        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
+            style=wx.CB_DROPDOWN, value=self.datalst[0])
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.dataLabel, noOptions),
+                 (self.dataComboBox, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
 

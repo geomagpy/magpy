@@ -81,9 +81,13 @@ class DILineStruct(object):
 
 
     def getAbsDIStruct(self):
-        """
-        convert the DILineStruct to the AbsDataStruct used for calculations
-        """
+	"""
+	DEFINITION:
+            convert the DILineStruct to the AbsDataStruct used for calculations
+
+        EXAMPLE:
+            >>> abslinestruct.getAbsDIStruct()
+	"""
         try:
             mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
             if isnan(mu1):
@@ -109,9 +113,6 @@ class DILineStruct(object):
         except:
             md2 = self.hc[14]
 
-
-        print mu1,md1,mu2,md2
-
         mu = (mu1+mu2)/2
         md = (md1+md2)/2
         stream = AbsoluteData()
@@ -127,7 +128,7 @@ class DILineStruct(object):
 
         # The order needs to be changed according to the file list
         for i, elem in enumerate(self.time):
-            if 4 <= i < 12 or 16 <= i < 24:
+            if 4 <= i < 12 or 16 <= i < 25:
                 row = AbsoluteDIStruct()
                 row.time = self.time[i]
                 row.hc = self.hc[i] # add the leveling correction
@@ -145,8 +146,8 @@ class DILineStruct(object):
                 row.f_inst = self.f_inst
                 tmplist.append(row)
 
-        print tmplist
-
+        #print tmplist
+            
         # sortlist
         for idx,elem in enumerate(tmplist):
             if idx < 4:
@@ -174,8 +175,10 @@ class DILineStruct(object):
             if idx == 15:
                 sortlist.insert(9,elem)
 
-        print " GHDSJTDFUKASGLIDUGLIUGDdUIG ", len(self.time)
-        sortlist.append(tmplist[8])
+        if len(self.time) < 26:
+            sortlist.append(tmplist[8])
+        else:
+            sortlist.append(tmplist[-1])
 
         for elem in sortlist:
             stream.add(elem)        
@@ -376,18 +379,34 @@ class AbsoluteData(object):
 
     def _calcdec(self, **kwargs):
         """
-        Calculates declination values from input.
-        Returns results in terms of linestruct 
-        Supports the following optional keywords:
-        xstart, ystart - float - default 0.0 - strength of the horizontal component in nT
+        DEFINITION:
+            Calculates declination values from input.
+            Returns results in terms of linestruct 
+
+        PARAMETERS:
+        kwargs:
+            - annualmeans:	(list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
+            - xstart:		(float) strength of the north component in nT
+            - ystart: 		(float) default 0.0 - strength of the east component in nT
                        - if variometer is hdf oriented then xstart != 0, ystart = 0 
                        - if baselinecorrected data is used (or dIdD) use xstart = 0, ystart = 0 
-        unit - str - default 'deg' - can be either 'deg' or 'gon'
-        deltaD - float - default 0.0 - eventual correction factor for declination in angular units (dependent on 'unit')
-        usestep - int - use first, second or both of successive measurements
-        iterator - int - switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - deltaD: 		(float) - default 0.0 - eventual correction factor for declination in degree
+            - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
+            - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
+            - debugmode:	(bool) activate additional debug output
+
+        USED BY:
+
+        RETURNS:
+            - line: 		(LineStruct)  containing time, y = dec, typ = 'idff', 
+					var1 = s0d, var2 = deH, var3 = epZD, t2 = mirediff,
+					str1 = person, str2 = di_inst, str3 = f_inst
+
+        EXAMPLE:
+            >>> abstream._calcdec()
         """
-        plog = PyMagLog()
+
         xstart = kwargs.get('xstart')
         ystart = kwargs.get('ystart')
         deltaD = kwargs.get('deltaD')
@@ -406,6 +425,8 @@ class AbsoluteData(object):
             xstart = 20000.0
         if not ystart:
             ystart = 0.0
+        if not annualmeans:
+            annualmeans = [20800,1200,43000]
         if not usestep: 
             usestep = 0
         if not iterator:
@@ -433,8 +454,7 @@ class AbsoluteData(object):
             mireval = miremean+90.0
         mirediff = self._corrangle(expmire - mireval)
 
-        if debugmode:
-            print "Miren: ", expmire, poslst[1].mu, miremean
+        loggerabs.debug("_calcdec: Miren: %f, %f, %f" % (expmire, poslst[1].mu, miremean))
 
         # -- Get mean values for x and y
         # ------------------------------
@@ -486,8 +506,7 @@ class AbsoluteData(object):
             else:
                 variocorr.append(np.arctan((ystart+varioy)/(xstart+variox)))
             dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k])
-            if debugmode:
-                print "Horizontal angles: ", poslst[k].hc, rescorr, variocorr[k]
+            loggerabs.debug("_calcdec: Horizontal angles: %f, %f, %f" % (poslst[k].hc, rescorr, variocorr[k]))
 
         # use selected steps, default is average....
         for k in range(0,7,2):
@@ -499,11 +518,10 @@ class AbsoluteData(object):
                 try:
                     dl2mean = np.mean([dl1[k],dl1[k+1]])
                 except:
-                    loggerabs.error("%s : Data missing: check whether all fields are filled"% num2date(poslst[0].time).replace(tzinfo=None))
+                    loggerabs.error("_calcdec:  %s : Data missing: check whether all fields are filled"% num2date(poslst[0].time).replace(tzinfo=None))
                     pass
             dl2tmp.append(dl2mean)
-            if debugmode:
-                print "Selected Dec:", dl2mean*180/np.pi
+            loggerabs.debug("_calcdec: Selected Dec: %f" % (dl2mean*180/np.pi))
             if dl2mean < np.pi:
                 dl2mean += np.pi/2
             else:
@@ -513,8 +531,7 @@ class AbsoluteData(object):
 
         decmean = np.mean(dl2)*180.0/np.pi - 180.0
 
-        if debugmode:
-            print "Mean Dec: ", dl2, decmean, mirediff
+        loggerabs.debug("_calcdec:  Mean Dec: %f, %f" % (decmean, mirediff))
 
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
         
@@ -525,7 +542,7 @@ class AbsoluteData(object):
                     self[k].hc += decmean
         except:
             if iterator == 0:
-                loggerabs.warning("%s : No inclination measurements available"% num2date(poslst[0].time).replace(tzinfo=None))
+                loggerabs.warning("_calcdec: %s : No inclination measurements available"% num2date(poslst[0].time).replace(tzinfo=None))
             pass
 
         # Stupid test of validity - needs to be removed if input order is finally correct
@@ -537,27 +554,19 @@ class AbsoluteData(object):
             corrfac = 180.0
             mirediff = self._corrangle(mirediff - 180.0)
 
-        #print "Mirediff1: %.3f" % (mirediff + decmean)
-        #if expmire > 180.0:
-        #    mirediff = expmire - (miremean+90.0)
-        #else:
-        #    mirediff = expmire - (miremean-90.0)
-        #print "Mirediff2: %.3f" % (mirediff + decmean)
-
         if (np.max(dl2)-np.min(dl2))>0.1:
             if iterator == 0:
-                loggerabs.error('%s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
+                loggerabs.error('_calcdec: %s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
-        if debugmode:
-            print "Dec calc: ", decmean, mirediff, variocorr[0], deltaD
+        loggerabs.debug("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
 
         dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi + deltaD)
 
-        if debugmode:
-            print "All (dec, decmean, mirediff, variocorr, delta D and ang_fac, hstart): ", dec, decmean, mirediff, variocorr[0], deltaD, ang_fac, hstart
+        loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[0], deltaD, ang_fac, hstart))
 
         s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
         deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
+        loggerabs.debug("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
         if dl2tmp[0]<dl2tmp[1]:
             epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]+2*np.pi)/4*hstart
         else:
@@ -581,13 +590,35 @@ class AbsoluteData(object):
 
     def _calcinc(self, linestruct, **kwargs):
         """
-        Calculates inclination values from input.
-        Need input of a LineStruct Object containing the results of _calcdec 
-        Supports the following optional keywords:
-        incstart - float - default 45.0 - inclination value in 'unit'
-        unit - str - default 'deg' - can be either 'deg' or 'gon'
-        scalevalue - 3comp list - default [1.0,1.0,1.0] - contains scales for varx,vary,varz to nT (not essential if all are equal)
-        annualmeans - 3comp list - default [20800,1200,43500] - contains annual mean values - used for calc if no F instrument is provided)
+        DEFINITION:
+            Calculates inclination values from input.
+            Need input of a LineStruct Object containing the results of _calcdec 
+
+        PARAMETERS:
+        variable:
+            - line		(LineStruct) a line containing results from _calcdec()
+        kwargs:
+            - annualmeans:	(list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
+            - incstart		(float) - default 45.0 - inclination value in deg
+            - deltaI: 		(float) - default 0.0 - eventual correction factor for inclination in degree
+            - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
+            - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
+            - debugmode:	(bool) activate additional debug output
+  
+        USED BY:
+
+        REQUIRES:
+            a LineStruct element as returned by _calcdec
+
+        RETURNS:
+            - line,xstart,ystart: 	(LineStruct, float, float) last two for optimzing calcdec in an iterative process
+                                        LineStruct is extended by x = inc, typ = 'idff', z=fstart, f=fstart,
+					var4 = s0i, var5 = epzi, dx = basex, dy = basey,
+					dz = basez, df = deltaf, t2 = calcscaleval
+
+        EXAMPLE:
+            >>> abstream._calcinc()
         """
         
         incstart = kwargs.get('incstart')
@@ -617,9 +648,6 @@ class AbsoluteData(object):
         # Initialize variometer and scalar instruments .... maybe better not here
         variotype = 'None'
         scalartype = 'None'
-
-        #incstart = incstart*ang_fac
-        #plog = PyMagLog()
 
         # -- Get the variometer and scalar means from then absolute file
         # --------------------------------------------------------------
@@ -651,15 +679,15 @@ class AbsoluteData(object):
                     fvlist.append(elem.varf)
                     if foundfirstelem == 0:
                         if iterator == 0:
-                            loggerabs.info("%s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
+                            loggerabs.debug("_calcinc: %s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
                         foundfirstelem = 1
 
         if len(mflst)>0:
             meanf = np.mean(flist)
-            loggerabs.info("Using F from Absolute files") 
+            loggerabs.debug("_calcinc: Using F from Absolute files") 
         elif len(mfvlst)>0:
             meanf = np.mean(fvlist)
-            loggerabs.info("Using F from provided scalar path") 
+            loggerabs.debug("_calcinc: Using F from provided scalar path") 
         else:
             #meanf = 0.
             meanf = (annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
@@ -669,7 +697,7 @@ class AbsoluteData(object):
 
         if len(variox) == 0:
             if iterator == 0:
-                loggerabs.warning("%s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))
+                loggerabs.warning("_calcinc: %s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))
             # set means to zero...
             meanvariox = 0.0
             meanvarioy = 0.0
@@ -775,11 +803,7 @@ class AbsoluteData(object):
                             calcscaleval = 999.0
                         else:
                             calcscaleval = ppmval[cnt] * deltaB/deltaR * np.pi/180
-                        if debugmode:
-                            print "Scalevalue calculation in calcinc:"
-                            print 'Fieldchange ', fieldchange
-                            print 'Scaleval', calcscaleval
-                            print 'DeltaR', deltaR
+                        loggerabs.debug("_calcinc: Scalevalue calculation in calcinc - Fieldchange: %f, Scalevalue: %f, DeltaR: %f" % (fieldchange,calcscaleval,deltaR))
    
             cnt += 1
 
@@ -814,7 +838,7 @@ class AbsoluteData(object):
         # check for inclination error in file inc
         #   -- the following part may cause problems in case of close to polar positions and locations were X is larger than Y
         if (90-inc) < 0.1:
-            loggerabs.error('%s : Inclination warning... check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
+            loggerabs.error('_calcinc: %s : Inclination warning... check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
             #loggerabs.error(I0list)
             h_adder = 0.
         else:
@@ -830,7 +854,7 @@ class AbsoluteData(object):
             variotype = 'None'
             hstart = tmpH
             zstart = tmpZ
-            xstart = hstart
+            xstart = hstart # use dec to calc correctly
             ystart = 0.0
             fstart = np.sqrt(xstart**2 + ystart**2 + zstart**2)
             xDiff1 = 0.0
@@ -844,7 +868,7 @@ class AbsoluteData(object):
             s0i = -I0Diff1/4*fstart - xDiff1*np.sin(inc*np.pi/180) - zDiff1*np.cos(inc*np.pi/180) 
             epzi = (-I0Diff2/4 - (xDiff2*np.sin(inc*np.pi/180) - zDiff2*np.cos(inc*np.pi/180))/(4*fstart))*zstart;
         else:
-            loggerabs.warning("%s : no intensity measurement available - presently using an x value of 20000 nT for Dec"  % num2date(self[0].time).replace(tzinfo=None))
+            loggerabs.warning("_calcinc: %s : no intensity measurement available - presently using an x value of 20000 nT for Dec"  % num2date(self[0].time).replace(tzinfo=None))
             fstart, deltaF, s0i, epzi = float(nan),float(nan),float(nan),float(nan)
             xstart = 20000 ## arbitrary
             ystart = 0.0
@@ -940,7 +964,7 @@ class AbsoluteData(object):
             print 'Vector:'
             print 'Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f)
             print 'Collimation and Offset:'
-            print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5)
+            print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
 
         return outline
 

@@ -41,10 +41,10 @@ absdidd = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=0.0, beta=0.0,
 if absdidd:
     absdidd.write(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_didd_A2')
     absdidd = read(path_or_url=os.path.join(writeresultpath,'absolutes_didd_A2.txt'))
-    absdidd = absdidd.remove_outlier(timerange=timedelta(days=60),keys=['x','y','z','f','dx','dy','dz'],threshold=1.5)
+    #absdidd = absdidd.remove_outlier(timerange=timedelta(days=60),keys=['x','y','z','f','dx','dy','dz'],threshold=1.5)
     absdidd.write(writeresultpath,coverage='all',filenamebegins='absolutes_didd_A2')
     absdidd = absdidd.trim(starttime=start)
-    absdidd = absdidd.remove_flagged()
+    #absdidd = absdidd.remove_flagged()
     absdidd.plot(['x','y','z'],plottitle = "Analysis of absolute values - Using variocorr. data from DIDD", outfile=os.path.join(rawpath,"AutoAnalysisDIDD"))
 
 print "Analyzing absolutes data for dIdD"
@@ -65,10 +65,10 @@ absfge = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=3.35, beta=0.0,
 if absfge:
     absfge.write(writeresultpath,coverage='all',mode='replace',filenamebegins='absolutes_fge_A2')
     absfge = read(path_or_url=os.path.join(writeresultpath,'absolutes_fge_A2.txt'))
-    absfge = absfge.remove_outlier(timerange=timedelta(days=60),keys=['x','y','z','f','dx','dy','dz'],threshold=1.5)
+    #absfge = absfge.remove_outlier(timerange=timedelta(days=60),keys=['x','y','z','f','dx','dy','dz'],threshold=1.5)
     absfge.write(writeresultpath,coverage='all',filenamebegins='absolutes_fge_A2')
     absfge= absfge.trim(starttime=start)
-    absfge = absfge.remove_flagged()
+    #absfge = absfge.remove_flagged()
     absfge.plot(['x','y','z'],plottitle = "Analysis of absolute values - Using variocorr. data from FGE", outfile=os.path.join(rawpath,"AutoAnalysisFge"))
 
     # Calculate differences to easily identify errors in one instrument

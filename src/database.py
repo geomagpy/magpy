@@ -318,11 +318,11 @@ def dbfields2dict(db,datainfoid):
     metadatadict = {}
     cursor = db.cursor()
 
-    getids = 'SELECT sensorid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
-    #getids = 'SELECT sensorid,stationid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
+    #getids = 'SELECT sensorid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
+    getids = 'SELECT sensorid,stationid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
     cursor.execute(getids)
     ids = cursor.fetchone()
-    loggerdatabase.debug("dbfields2dict: Selected sensorid: %s" % ids)
+    loggerdatabase.debug("dbfields2dict: Selected sensorid: %s" % ids[0])
 
     for key in DATAINFOKEYLIST:
         if not key == 'StationID': # Remove that line when included into datainfo
@@ -332,11 +332,25 @@ def dbfields2dict(db,datainfoid):
             loggerdatabase.debug("dbfields2dict: got key from DATAINFO - %s" % getdata)
             if isinstance(row[0], basestring):
                 metadatadict[key] = row[0]
+                if key == 'ColumnContents':
+                    colsstr = row[0]
+                if key == 'ColumnUnits':
+                    colselstr = row[0]
             else:
                 if row[0] == None:
                     metadatadict[key] = row[0]
                 else:
                     metadatadict[key] = float(row[0])
+
+    try:
+        cols = colsstr.split('_')
+        colsel = colselstr.split('_')
+        for i, elem in enumerate(cols):
+            if not elem == '_':
+                key = 'col-'+elem
+                metadatadict[key] = colsel[i]
+    except:
+        loggerdatabase.warning("dbfields2dict: Could not assign column name")
 
     for key in SENSORSKEYLIST:
         getsens = 'SELECT '+ key +' FROM SENSORS WHERE SensorID = "'+ids[0]+'"'
@@ -344,14 +358,26 @@ def dbfields2dict(db,datainfoid):
         row = cursor.fetchone()
         if isinstance(row[0], basestring):
             metadatadict[key] = row[0]
+            if key == 'SensorKeys':
+                colsstr = row[0]
+            if key == 'SensorElements':
+                colselstr = row[0]
         else:
             if row[0] == None:
                 metadatadict[key] = row[0]
             else:
                 metadatadict[key] = float(row[0])
+    try:
+        cols = colsstr.split(',')
+        colsel = colselstr.split(',')
+        for i, elem in enumerate(cols):
+            key = 'col-'+elem
+            metadatadict[key] = colsel[i]
+    except:
+        loggerdatabase.warning("dbfields2dict: Could not assign column name")
 
     for key in STATIONSKEYLIST:
-        getstat = 'SELECT '+ key +' FROM SENSORS WHERE StationID = "'+ids[1]+'"'
+        getstat = 'SELECT '+ key +' FROM STATIONS WHERE StationID = "'+ids[1]+'"'
         cursor.execute(getstat)
         row = cursor.fetchone()
         if isinstance(row[0], basestring):
@@ -1040,6 +1066,7 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
 
     TODO:
         - If sampling rate not given in DATAINFO get it from the datastream
+        - begin needs to be string - generalize that 
     """
     wherelist = []
     stream = DataStream()
@@ -1126,6 +1153,9 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
                         #    elem = float(NaN)
                     exec('row.'+keylst[i]+' = elem')
             stream.add(row)
+
+    if tableext:
+        stream.header = dbfields2dict(db,tableext)
 
     cursor.close ()
     return stream

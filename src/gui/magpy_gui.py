@@ -377,7 +377,7 @@ class MainFrame(wx.Frame):
         self.DatabaseMenu = wx.Menu()
         self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+C", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
-        self.MainMenu.Append(self.DatabaseMenu, "&MySQL Database")
+        self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         self.HelpMenu = wx.Menu()
         self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
         self.HelpMenu.AppendItem(self.HelpAboutItem)
@@ -459,7 +459,9 @@ class MainFrame(wx.Frame):
         self.plot_p.SetMinSize((100, 100))
 
 
+    # ################
     # Helper methods:
+
     def defaultFileDialogOptions(self):
         ''' Return a dictionary with file dialog options that can be
             used in both the save file dialog as well as in the open
@@ -479,16 +481,20 @@ class MainFrame(wx.Frame):
         dialog.Destroy()
         return userProvidedFilename
 
-    def OnInitialPaint(self, stream):
+
+    def OnInitialPlot(self, stream):
         """
         DEFINITION:
             read stream, extract columns with values and display up to three of them by defailt
             executes guiPlot then
         """
+        keylist = []
         keylist = stream._get_key_headers(limit=9)
         self.plot_p.guiPlot(stream,keylist)
 
-    # Event hanlder:
+    # ################
+    # Top menu methods:
+
     def OnHelpAbout(self, event):
         dlg = wx.MessageDialog(self, "This program is developed for\n"
                         "geomagnetic analysis. Written by RL 2011/2012\n",
@@ -498,11 +504,6 @@ class MainFrame(wx.Frame):
 
     def OnExit(self, event):
         self.Close()  # Close the main window.
-
-    def OnSave(self, event):
-        textfile = open(os.path.join(self.dirname, self.filename), 'w')
-        textfile.write(self.control.GetValue())
-        textfile.close()
 
     def ReactivateStreamPage(self):
             self.menu_p.str_page.fileTextCtrl.Enable()
@@ -554,7 +555,7 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
         # plot data
-        self.OnInitialPaint(stream)
+        self.OnInitialPlot(stream)
         self.changeStatusbar("Ready")
 
 
@@ -579,7 +580,7 @@ class MainFrame(wx.Frame):
                 self.menu_p.str_page.startTimePicker.Disable()
                 self.menu_p.str_page.endTimePicker.Disable()
                 self.menu_p.str_page.openStreamButton.Disable()
-                self.OnInitialPaint(stream)
+                self.OnInitialPlot(stream)
                 self.changeStatusbar("Ready")
             else:
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
@@ -592,20 +593,60 @@ class MainFrame(wx.Frame):
         # b) disable pathTextCtrl (DB: dbname)
         # c) Open dialog which lets the user select list and time window
         # d) update stream menu
-        dlg = DatabaseContentDialog(None, title='MySQL Database: Get content')
-        if dlg.ShowModal() == wx.ID_OK:
-            #host = dlg.hostTextCtrl.GetValue()
-            #user = dlg.userTextCtrl.GetValue()
-            #passwd = dlg.passwdTextCtrl.GetValue()
-            #mydb = dlg.dbTextCtrl.GetValue()
-            #self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
-            #if self.db:
-            #    self.DBOpen.Enable(True)
-            pass
-        dlg.Destroy()        
+        if self.db:
+            self.menu_p.rep_page.logMsg('- Accessing database ...')
+            cursor = self.db.cursor()
+            sql = "SELECT DataID, DataMinTime, DataMaxTime FROM DATAINFO"
+            cursor.execute(sql)
+            output = cursor.fetchall()
+            datainfoidlist = [elem[0] for elem in output]
+            if len(datainfoidlist) < 1:
+                dlg = wx.MessageDialog(self, "No data tables available!\n"
+                            "please check your database\n",
+                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+                return
+            dlg = DatabaseContentDialog(None, title='MySQL Database: Get content',datalst=datainfoidlist)
+            if dlg.ShowModal() == wx.ID_OK:
+                datainfoid = dlg.dataComboBox.GetValue()
+                stream = DataStream()
+                mintime = stream._testtime([elem[1] for elem in output if elem[0] == datainfoid][0])
+                maxtime = stream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
+                self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mintime.timetuple())))
+                self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(maxtime.timetuple())))
+                self.menu_p.str_page.startTimePicker.SetValue(mintime.strftime('%X'))
+                self.menu_p.str_page.endTimePicker.SetValue(maxtime.strftime('%X'))
+                self.menu_p.str_page.pathTextCtrl.SetValue('MySQL Database')
+                self.menu_p.str_page.fileTextCtrl.SetValue(datainfoid)
+            dlg.Destroy()
+        else:
+            dlg = wx.MessageDialog(self, "Could not access database!\n"
+                        "please check your connection\n",
+                        "OpenDB", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
 
 
     def OnDBConnect(self, event):
+        """
+        Provide access for local network:
+        Open your /etc/mysql/my.cnf file in your editor.
+        scroll down to the entry:
+        bind-address = 127.0.0.1
+        and you can either hash that so it binds to all ip addresses assigned
+        #bind-address = 127.0.0.1
+        or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
+        Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
+        Login to your mysql console:
+        milkchunk@milkchunk-desktop:~$ mysql -uroot -p
+        GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
+        You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
+        Then issue the following:
+        FLUSH PRIVILEGES;
+        Be sure to restart your mysql (because of the config file editing):
+        /etc/init.d/mysql restart
+        """
         dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
         if dlg.ShowModal() == wx.ID_OK:
             host = dlg.hostTextCtrl.GetValue()
@@ -615,17 +656,25 @@ class MainFrame(wx.Frame):
             self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
             if self.db:
                 self.DBOpen.Enable(True)
+                self.menu_p.rep_page.logMsg('- MySQL Database selcted')
         dlg.Destroy()        
 
+
+
+    def OnFileQuit(self, event):
+	self.Close()
+
+
+    def OnSave(self, event):
+        textfile = open(os.path.join(self.dirname, self.filename), 'w')
+        textfile.write(self.control.GetValue())
+        textfile.close()
 
     def OnSaveAs(self, event):
         if self.askUserForFilename(defaultFile=self.filename, style=wx.SAVE,
                                    **self.defaultFileDialogOptions()):
             self.OnSave(event)
  
-
-    def OnFileQuit(self, event):
-	self.Close()
 
     def OnOptionsCalc(self, event):
         dlg = wx.MessageDialog(self, "Coming soon:\n"
@@ -656,6 +705,14 @@ class MainFrame(wx.Frame):
 
     def changeStatusbar(self,msg):
         self.SetStatusText(msg)
+
+
+    # ################
+    # page methods:
+
+    # pages: stream (plot, coordinate), analysis (smooth, filter, fit, baseline etc),
+    #          specials(spectrum, power), absolutes (), report (log), monitor (access web socket)
+
         
     def abs_test(self, event):
         xx = [10,9,8,7,6,5]
@@ -1070,13 +1127,22 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
 
+        start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
+        end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
+        stream = db2stream(self.db, None, start, end, files, None)
 
         try:
+            self.changeStatusbar("Loading data ...")
             if path.endswith('/'):
                 address = path
+                stream = read(path_or_url=address,starttime=sd, endtime=ed)
+            elif path.startswith('MySQL'):
+                start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
+                end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
+                stream = db2stream(self.db, None, start, end, files, None)
             else:
                 address = os.path.join(path,files)
-            stream = read(path_or_url=address,starttime=sd, endtime=ed)
+                stream = read(path_or_url=address,starttime=sd, endtime=ed)
             mintime = stream._get_min('time')
             maxtime = stream._get_max('time')
             self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
@@ -1088,7 +1154,6 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.startTimePicker.Disable()
             self.menu_p.str_page.endTimePicker.Disable()
             self.menu_p.str_page.openStreamButton.Disable()
-
         except:
             dlg = wx.MessageDialog(self, "Could not read file(s)!\n"
                         "check your files and/or selected time range\n",
@@ -1098,453 +1163,9 @@ class MainFrame(wx.Frame):
             return
 
         self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-        self.plot_p.guiPlot(stream,["t1"])
-        #self.plot_p.canvas.draw()
+        self.OnInitialPlot(stream)
+        self.changeStatusbar("Ready")
 
-
-    """
-    def onScalarDrawButton(self, event):
-        stday = self.menu_p.str_page.startDatePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks()) 
-        enday = self.menu_p.str_page.endDatePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks()) 
-        
-        instr = self.menu_p.str_page.scalarComboBox.GetValue()
-        secinstr = self.menu_p.str_page.secscalarComboBox.GetValue()
-        data1 = []
-        data2 = []
-        pltlist = [4]
-        datastruct = []
-        secdatastruct = []
-        display1data = []
-        display2data = []
-        msg =''
-        self.scse.seldatlist=[] # clear the list : does not work yet
-        self.menu_p.str_page.curdateTextCtrl.SetValue('--')
-        self.menu_p.str_page.prevdateTextCtrl.SetValue('--')
-        sf = self.menu_p.str_page.showFlaggedCheckBox.GetValue()
-
-        # ToDo: check this
-        self.scse.shflag = sf
-
-        # 1.) Select the datafiles for the instrument
-        self.menu_p.rep_page.logMsg('Starting Scalar analysis:')
-        # a) produce day list
-        day = sd
-        daylst = []
-        while ed >= day:
-            daylst.append(datetime.strftime(day,"%Y-%m-%d"))
-            day += timedelta(days=1)
-        # b) check whether raw or mod
-        datatype = self.menu_p.str_page.datatypeComboBox.GetValue()
-        loadres = self.menu_p.str_page.resolutionComboBox.GetValue()
-        if loadres == "hour":
-            strres = "hou"
-        elif loadres == "minute":
-            strres = "min"
-        elif loadres == "second":
-            strres = "sec"
-        else:
-            strres = "raw"
-        # c) if reviewed use day lst and check formats (cdf) - use raw if not available
-        for day in daylst:
-            if datatype == 'reviewed':
-                # ToDo: cdf-file read problem                
-                # - check for the presence of cdf and txt files
-                if os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr,'sc_'+day + '_'+ instr+'_' + strres + '.cdf'))):
-                    loadname = os.path.normpath(os.path.join(preliminarypath,instr,'sc_'+day + '_'+ instr+'_' + strres + '.cdf'))
-                    struct = read_magstruct_cdf(loadname)
-                    self.menu_p.rep_page.logMsg(' --- cdf for %s' % day)
-                elif os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr,'sc_'+day + '_'+ instr+'_' + strres + '.txt'))):
-                    loadname = os.path.normpath(os.path.join(preliminarypath,instr,'sc_'+day + '_'+ instr+'_' + strres + '.txt'))
-                    struct = read_magstruct(loadname)
-                    self.menu_p.rep_page.logMsg(' --- txt for %s' % day)
-                else:
-                    struct = readmagdata(day+"-00:00:00",day+"-23:59:59",instr)
-                    self.menu_p.rep_page.logMsg(' --- using raw data for %s' % day)
-                datastruct.extend(struct)
-
-                if secinstr != 'none':
-                    self.menu_p.rep_page.logMsg(' - Loading secondary data')
-                    if os.path.exists(os.path.normpath(os.path.join(preliminarypath,secinstr,'sc_'+day + '_'+ secinstr+'_' + strres + '.cdf'))):
-                        loadname = os.path.normpath(os.path.join(preliminarypath,secinstr,'sc_'+day + '_'+ secinstr+'_' + strres + '.cdf'))
-                        secstruct = read_magstruct_cdf(loadname)
-                        self.menu_p.rep_page.logMsg(' --- cdf for %s' % day)
-                    elif os.path.exists(os.path.normpath(os.path.join(preliminarypath,secinstr,'sc_'+day + '_'+ secinstr+'_' + strres + '.txt'))):
-                        loadname = os.path.normpath(os.path.join(preliminarypath,secinstr,'sc_'+day + '_'+ secinstr+'_' + strres + '.txt'))
-                        secstruct = read_magstruct(loadname)
-                        self.menu_p.rep_page.logMsg(' --- txt for %s' % day)
-                    else:
-                        secstruct = readmagdata(day+"-00:00:00",day+"-23:59:59",secinstr)
-                        self.menu_p.rep_page.logMsg(' --- using raw data for %s' % day)
-                    secdatastruct.extend(secstruct)
-            else:
-                struct = readmagdata(day+"-00:00:00",day+"-23:59:59",instr)
-                datastruct.extend(struct)
-                if secinstr != 'none':
-                    secstruct = readmagdata(day+"-00:00:00",day+"-23:59:59",secinstr)
-                    secdatastruct.extend(secstruct)
-                                
-        # 2.) Check resolution and give a warning if resolution is too low (provide choice accordingly
-        res = [-999,-999]
-        xa,xb = CheckTimeResolution(datastruct)
-        res[0] = xb[1]
-        self.datacont.struct1res = xb[1]
-
-        if secinstr != 'none' and len(secdatastruct) > 2:
-            ya,yb = CheckTimeResolution(secdatastruct)
-            res[1] = yb[1]
-            self.datacont.struct2res = yb[1]
-        lowestres = max(res)
-
-        primstruct = datastruct
-        secstruct = secdatastruct
-
-        # 3.) Remove outliers if selected
-        removeoutliers = self.menu_p.str_page.removeOutliersCheckBox.GetValue()
-        secremoveoutliers = self.menu_p.str_page.secremoveOutliersCheckBox.GetValue()
-        if removeoutliers == True:
-            datastep1, olmsg = RemoveOutliers(datastruct,1,4)
-            self.menu_p.rep_page.logMsg(' -- Following Outliers removed for %s' % instr)
-            self.menu_p.rep_page.logMsg(' --- \n%s ---' % olmsg)
-        else:
-            datastep1 = datastruct 
-        if secremoveoutliers == True:
-            secdatastep1, ol2msg = RemoveOutliers(secdatastruct,1,4)
-            self.menu_p.rep_page.logMsg(' -- Following Outliers removed for %s' % secinstr)
-            self.menu_p.rep_page.logMsg(' --- \n%s ---' % ol2msg)
-        else:
-            secdatastep1 = secdatastruct 
-
-        primstruct = datastep1
-        secstruct = secdatastep1
-
-        # 4.) Filter the data
-        #     a) check resolution and provide choice accordingly
-        
-        #     b) do the filtering
-        filteropt = [1.86506,0]
-        msg = ''
-        secmsg = ''
-        filterdata = []
-        secfilterdata = []
-        
-        if self.menu_p.str_page.resolutionComboBox.GetValue() == "intrinsic":
-            self.menu_p.rep_page.logMsg(' --- Using intrinsiy resolution:')
-            self.menu_p.rep_page.logMsg(' --- Primary data resolution: %f sec' % (res[0]*24*3600))
-            filterdata = primstruct
-            if secinstr != 'none':
-                self.menu_p.rep_page.logMsg(' --- Secondary data resolution: %f sec' % (res[1]*24*3600))
-                secfilterdata = secstruct
-        else:
-            if self.menu_p.str_page.resolutionComboBox.GetValue() == "hour":
-                increment = timedelta(hours=1)
-                offset = timedelta(hours=0.5)
-                incr = ahour
-            elif self.menu_p.str_page.resolutionComboBox.GetValue() == "minute":
-                increment = timedelta(minutes=1)
-                offset = 0
-                incr = aminute
-            elif self.menu_p.str_page.resolutionComboBox.GetValue() == "second":
-                increment = timedelta(seconds=1)
-                offset = 0
-                incr = asecond
-            # Prim data
-            if (res[0] < incr*0.9):
-                filterdata, msg = filtermag(increment,offset,datastep1,"linear",[],filteropt)
-                self.menu_p.rep_page.logMsg(' --- Filtering primary data\n %s' % msg)
-            else:
-                self.menu_p.rep_page.logMsg(' --- Primary data resolution equal or larger then requested: Skipping filtering')
-                filterdata = primstruct
-            # Sec data        
-            if secinstr != 'none' and secdatastep1 != []:
-                if (res[1] < incr*0.9):
-                    secfilterdata, secmsg = filtermag(increment,offset,secdatastep1,"linear",[],filteropt)
-                    self.menu_p.rep_page.logMsg(' --- Filtering secondary data\n %s' % secmsg)
-                else:
-                    self.menu_p.rep_page.logMsg(' --- Secondary data resolution equal or larger then requested: Skipping filtering')
-                    secfilterdata = secstruct
-
-        primstruct = filterdata
-        secstruct = secfilterdata
-
-        # 5.) Calculate dF if secondary file is activated
-        submsg = ''
-        if secinstr != 'none':
-            showdata,meandf,submsg = subtractStructs(primstruct,secstruct,[0,1,2,3,20,21,22,23])
-            self.menu_p.str_page.deltaFCurTextCtrl.SetValue(str(meandf))
-            calcdF = self.menu_p.str_page.deltaFCheckBox.GetValue()
-            if calcdF == True and secinstr != 'none':           
-                pltlist.append(8)
-        else:
-            showdata = primstruct
-
-        primstruct = showdata
-
-        # 6.) Draw recovery function (calculation should be earlier)
-        # add the recovvalue in var2 100% down to 0% relative to main spacing
-        # no - different way:
-        # use an independent array as recovery is not part of the magdatastruct
-        recovery = self.menu_p.str_page.recoveryCheckBox.GetValue()
-        if recovery:
-            recovwidth = 20 # width defines a factor (width/2*resolution) which specifies the window for counting availbale data
-            aa,bb = densityTimeFunc(primstruct,recovwidth)
-            xyz = [aa,bb]
-            ardat = array(zip(*xyz))
-        else:
-            ardat = array([])
-        
-
-        # 7.) Draw temperature function (if T is available)
-        drawt = self.menu_p.str_page.tCheckBox.GetValue()
-        if drawt == True:
-            pltlist.append(9)
-
-       # 7.) Add data to container
-        self.datacont.magdatastruct1 = primstruct
-        self.datacont.magdatastruct2 = secstruct
-
-        display2data, filtmsg = filterFlag(secstruct,[0,2,20,22])
-        print len(display2data)
-
-        # 8.) Showing flagged data
-        secdata = []
-        flagging = self.menu_p.str_page.showFlaggedCheckBox.GetValue()
-        if flagging:
-            try:
-                acceptedflags = [0,1,2,3,10,11,12,13,20,21,22,23,30,31,32,33]
-                secdata, msg = filterFlag(primstruct,acceptedflags)
-                self.menu_p.rep_page.logMsg(' --- flagged data added \n %s' % msg)
-                #self.menu_p.str_page.secremoveOutliersCheckBox.SetValue('False')
-                #self.menu_p.str_page.secremoveOutliersCheckBox.Disable()
-                #self.menu_p.str_page.secscalarComboBox.Disable()
-                display2data = secdata
-            except:
-                self.menu_p.rep_page.logMsg(' --- Unflagging failed')
-                pass
-        else:
-            self.menu_p.str_page.secscalarComboBox.Enable()
-
-        display1data, filtmsg = filterFlag(primstruct,[0,2,20,21,22,23])
-                          
-        self.plot_p.mainPlot(display1data,display2data,ardat,"auto",pltlist,['-','-'],0,"Magnetogram")
-        self.plot_p.canvas.draw()
-
-    def onSecscalarComboBox(self, event):
-        if event.GetString() != 'none':
-            self.menu_p.str_page.deltaFCheckBox.Enable()
-            self.menu_p.str_page.secremoveOutliersCheckBox.Enable()
-        else:
-            self.menu_p.str_page.deltaFCheckBox.SetValue(False)
-            self.menu_p.str_page.deltaFCheckBox.Disable()
-            self.menu_p.str_page.secremoveOutliersCheckBox.SetValue(False)
-            self.menu_p.str_page.secremoveOutliersCheckBox.Disable()
-        self.menu_p.rep_page.logMsg('Secondary inst: %s' % event.GetString())
-
-            
-    def onGetGraphMarksButton(self, event):
-        # 1.) Get the Parent page (useful for using the same function from different pages
-        btn = event.GetEventObject()
-        print '\n----  OnButton_GetMarks() for', btn.GetLabelText()
-        self.page = btn.GetParent()
-        self.page.curdateTextCtrl.SetValue('Two beers please')
-        # 2.) Get dates
-        self.scse = ScreenSelections()
-        self.sellength = len(self.scse.seldatelist)
-
-        if self.sellength >= 2:
-            ti2 = self.scse.seldatelist[self.sellength-2]
-            dat2 = datetime.strftime(num2date(ti2).replace(tzinfo=None),"%Y-%m-%d_%H:%M:%S")
-            try: # in case of Absolute page this wont work
-                self.page.prevdateTextCtrl.SetValue(dat2)
-            except:
-                pass
-        if self.sellength >= 1:
-            ti1 = self.scse.seldatelist[self.sellength-1]
-            dat1 = datetime.strftime(num2date(ti1).replace(tzinfo=None),"%Y-%m-%d_%H:%M:%S")
-            self.page.curdateTextCtrl.SetValue(dat1)
-            try:
-                com = 'not found'
-                #load the comment from file
-                for elem in self.datacont.magdatastruct1:
-                    if ti1 == elem.time:
-                        curflag = elem.flag
-                        curcomm = elem.comment
-                        com = curflag +": "+curcomm
-                        break
-                self.page.curcommentTextCtrl.SetValue(com)
-            except:
-                pass
-
-    def onFlagSingleButton(self, event):
-        # 1.) Get the Parent page (useful for using the same function from different pages
-        btn = event.GetEventObject()
-        self.menu_p.rep_page.logMsg('\n----  OnButton_FlagSingle() for %s' % btn.GetLabelText())
-        self.page = btn.GetParent()
-
-        date = self.page.curdateTextCtrl.GetValue()
-        try:
-            numdate = date2num(datetime.strptime(date,"%Y-%m-%d_%H:%M:%S"))
-
-            for idx, elem in enumerate(self.datacont.magdatastruct1):
-                if numdate == elem.time:
-                    number = idx
-                    curflag = elem.flag
-                    break
-
-            # in case of raw data a flag 0 is used
-            #    -> changed to range 10 to 19 for scalar
-            #    -> changed to range 20 to 29 for vario
-            
-            pagestr = str(self.page)
-            if pagestr.find("Scalar") > 5:
-                choicelst = [ '0: unchanged', '10: automatically removed',  '20: force use', '30: force remove' ]
-            else:
-                choicelst = [ '0: unchanged', '1: automatically removed',  '2: force use', '3: force remove' ]
-
-            # Create the dialog
-            dlg = wx.SingleChoiceDialog( None, message='Current flag: %s' % str(curflag), caption='Choose flag for %s' % date, choices=choicelst)
-            # Show the dialog
-            num = ''
-            if dlg.ShowModal() == wx.ID_OK:
-                response = dlg.GetStringSelection()
-                num = response.split(":")[0]
-                self.datacont.magdatastruct1[number].flag = int(num)
-            # Destroy the dialog
-            dlg.Destroy()
-
-            if num != '':
-                dlg = wx.TextEntryDialog(self, 'comment:', 'Edit comments', 
-                         style=wx.TE_MULTILINE|wx.OK|wx.CANCEL)
-                dlg.SetValue(self.datacont.magdatastruct1[number].comment)
-                if dlg.ShowModal() == wx.ID_OK:
-                    newcomment = dlg.GetValue()
-                    self.datacont.magdatastruct1[number].comment = newcomment
-                self.menu_p.rep_page.logMsg(' Changed flag on %s to %s: %s' % (date,response,newcomment))      
-        except:
-            pass
-        
-    def onFlagRangeButton(self, event):
-        # 1.) Get the Parent page (useful for using the same function from different pages
-        btn = event.GetEventObject()
-        self.menu_p.rep_page.logMsg('\n----  OnButton_FlagRange() for %s' % btn.GetLabelText())
-        self.page = btn.GetParent()
-
-        date = self.page.curdateTextCtrl.GetValue()
-        prevdate = self.page.prevdateTextCtrl.GetValue()
-
-        if date == '--':
-            self.menu_p.rep_page.logMsg(' --- Flagging not possible: Choose dates first!')
-            return
-        
-        try:
-            numdate = date2num(datetime.strptime(date,"%Y-%m-%d_%H:%M:%S"))
-            prevnumdate = date2num(datetime.strptime(prevdate,"%Y-%m-%d_%H:%M:%S"))
-            # Sort the date
-            datelst = sort([numdate,prevnumdate])
-            
-            for idx, elem in enumerate(self.datacont.magdatastruct1):
-                if datelst[0] == elem.time:
-                    stnumber = idx
-                    curflag = elem.flag
-                if datelst[1] == elem.time:
-                    ednumber = idx
-                    break
-
-            # in case of raw data a flag 0 is used
-            #    -> changed to range 10 to 90 for scalar
-            #    -> changed to range 0 to 9 for vario
-            # 00: good, 10: Scalar removed, Vario OK; 11: Scalar and Vario removed; etc
-            # Absolutesfile uses 0 to 9
-
-            pagestr = str(self.page)
-            if pagestr.find("Scalar") > 5:
-                choicelst = [ '0: use data', '10: automatically removed',  '20: force use', '30: force remove', '90: keep all flags but add comments' ]
-            else:
-                choicelst = [ '0: use data', '1: automatically removed',  '2: force use', '3: force remove', '9: keep all flags but add comments']
-
-            # Create the dialog
-            dlg = wx.SingleChoiceDialog( None, message='Current flag: %s' % str(curflag), caption='Choose flag for %s' % date, choices=choicelst)
-            # Show the dialog
-            num = ''
-            if dlg.ShowModal() == wx.ID_OK:
-                response = dlg.GetStringSelection()
-                num = response.split(":")[0]
-                for i in range(stnumber,ednumber):
-                    if int(num) != 90 or  int(num) != 9:
-                        self.datacont.magdatastruct1[i].flag = int(num)
-            # Destroy the dialog
-            dlg.Destroy()
-
-            if num != '':
-                dlg = wx.TextEntryDialog(self, 'comment:', 'Edit comments', 
-                         style=wx.TE_MULTILINE|wx.OK|wx.CANCEL)
-                dlg.SetValue(self.datacont.magdatastruct1[stnumber].comment)
-                if dlg.ShowModal() == wx.ID_OK:
-                    newcomment = dlg.GetValue()
-                    for i in range(stnumber,ednumber):
-                        self.datacont.magdatastruct1[i].comment = newcomment
-                self.menu_p.rep_page.logMsg(' Changed flag on %s to %s: %s' % (date,response,newcomment))      
-        except:
-            pass
-
-
-    def onSaveScalarButton(self, event):
-        self.menu_p.rep_page.logMsg('Save button pressed')
-        if len(self.datacont.magdatastruct1) > 0:
-            # 1.) open format choice dialog
-            choicelst = [ 'txt', 'cdf',  'netcdf' ]
-            # iaga and wdc do not make sense for scalar values
-            # ------ Create the dialog
-            dlg = wx.SingleChoiceDialog( None, message='Save data as', caption='Choose dataformat', choices=choicelst)
-            # ------ Show the dialog
-            if dlg.ShowModal() == wx.ID_OK:
-                response = dlg.GetStringSelection()
-            # ------ Destroy the dialog
-            dlg.Destroy()
-
-            # 2.) message box informing about predefined path
-            # a) generate predefined path and name: (scalar, instr, mod, resolution
-            firstday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[0].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
-            lastday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[-1].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
-            tmp,res = CheckTimeResolution(self.datacont.magdatastruct1)
-            loadres = self.menu_p.str_page.resolutionComboBox.GetValue()
-            if loadres == 'intrinsic':
-                resstr = 'raw'
-            else:
-                resstr = GetResolutionString(res[1])
-            instr = self.menu_p.str_page.scalarComboBox.GetValue()
-            # b) create day list
-            day = firstday
-            daylst = []
-            while lastday >= day:
-                daylst.append(datetime.strftime(day,"%Y-%m-%d"))
-                day += timedelta(days=1)
-
-            # 3.) save data
-            if not os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr))):
-                os.makedirs(os.path.normpath(os.path.join(preliminarypath,instr)))
-
-            curnum = 0
-            for day in daylst:
-                savestruct = []
-                idx = curnum
-                for idx, elem in enumerate(self.datacont.magdatastruct1):
-                    if datetime.strftime(num2date(elem.time), "%Y-%m-%d") == day:
-                        savestruct.append(self.datacont.magdatastruct1[idx])
-                        curnum = idx
-                    
-                if response == "txt":
-                    savename = os.path.normpath(os.path.join(preliminarypath,instr,'sc_'+day + '_'+ instr+'_' + resstr + '.txt'))
-                    write_magstruct(savename,savestruct)
-                    self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
-                if response == "cdf":
-                    savename = os.path.normpath(os.path.join(preliminarypath,instr,'sc_'+day + '_'+ instr+'_' + resstr + '.cdf'))
-                    write_magstruct_cdf(savename,savestruct)
-                    self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
-                    
-            # 4. Open a message Box to inform about save        
-    """
 
     # ####################
     # Absolute functions

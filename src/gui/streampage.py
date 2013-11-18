@@ -50,10 +50,11 @@ class StreamPage(wx.Panel):
                                                value=datetime.now().strftime('%X'), pos = (250,70))
 
         self.openStreamButton = wx.Button(self,-1,"Open stream")
+        self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
         self.lengthStreamLabel = wx.StaticText(self, label="N (values):")
         self.lengthStreamTextCtrl = wx.TextCtrl(self, value="")
 
-        self.DrawButton = wx.Button(self,-1,"Draw/Recalc")
+        self.DrawButton = wx.Button(self,-1,"ReDraw")
         """
         self.SaveScalarButton = wx.Button(self,-1,"Save data")
         self.primaryLabel = wx.StaticText(self, label="Primary instrument:")
@@ -128,6 +129,10 @@ class StreamPage(wx.Panel):
                  (self.endDatePicker, expandOption),
                  (self.endTimePicker, expandOption),
                  (self.openStreamButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.plotOptionsLabel, noOptions),
                   emptySpace,
                  (self.lengthStreamLabel, noOptions),
                  (self.lengthStreamTextCtrl, expandOption),

@@ -194,6 +194,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     print "Reading DI data ..."
     dirow = DILineStruct(25)
     count = 4
+    goon = False
 
     for line in fh:
         numelements = len(line.split())
@@ -270,7 +271,38 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             # Position mesurements
             row = AbsoluteDIStruct()
             posstr = line.split()
-            dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+            # correct sorting for DIline
+	    if count == 8:
+                count = 99
+            if count == 10:
+                count = 999
+            if count == 6:
+                count = 10
+            if count == 12:
+                count = 8
+            if count == 999:
+                count = 6
+            if count == 18:
+                count = 9999
+            if count == 14:
+                count = 999999
+            if count == 16:
+                count = 99999
+            if count == 99:
+                count = 18
+            if count == 20:
+                count = 16
+            if count == 9999:
+                count = 14
+            if count == 99999:
+                count = 12
+            if count == 999999:
+                count = 20
+            try:
+                dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+            except:
+                logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                return stream
             try:
                 row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
@@ -281,9 +313,10 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.hc = float(posstr[1])/ang_fac
                 row.vc = float(posstr[2])/ang_fac
                 row.res = float(posstr[3].replace(',','.'))
-                dirow.hc[count] = float(posstr[1])/ang_fac
+		dirow.hc[count] = float(posstr[1])/ang_fac
                 dirow.vc[count] = float(posstr[2])/ang_fac
                 dirow.res[count] = float(posstr[3].replace(',','.'))                
+                #print count, dirow.vc[count], dirow.res[count]
                 row.mu = mu
                 row.md = md
                 row.expectedmire = expectedmire
@@ -299,10 +332,10 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
         elif numelements == 8:
             # Miren mesurements
             mirestr = line.split()
-            dirow.hc[0] = float(mirestr[0])
-            dirow.hc[1] = float(mirestr[1])
-            dirow.hc[2] = float(mirestr[2])
-            dirow.hc[3] = float(mirestr[3])
+            dirow.hc[0] = float(mirestr[2])/ang_fac
+            dirow.hc[1] = float(mirestr[3])/ang_fac
+            dirow.hc[2] = float(mirestr[0])/ang_fac
+            dirow.hc[3] = float(mirestr[1])/ang_fac
             md = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])/ang_fac
             mu = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])/ang_fac
             mdstd = np.std([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
@@ -315,10 +348,10 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             pass
     fh.close()
 
-    dirow.hc.insert(12,float(mirestr[4]))
-    dirow.hc.insert(13,float(mirestr[5]))
-    dirow.hc.insert(14,float(mirestr[6]))
-    dirow.hc.insert(15,float(mirestr[7]))
+    dirow.hc.insert(12,float(mirestr[6])/ang_fac)
+    dirow.hc.insert(13,float(mirestr[7])/ang_fac)
+    dirow.hc.insert(14,float(mirestr[4])/ang_fac)
+    dirow.hc.insert(15,float(mirestr[5])/ang_fac)
     dirow.vc.insert(12,float(nan))
     dirow.vc.insert(13,float(nan))
     dirow.vc.insert(14,float(nan))
@@ -335,7 +368,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
 
     if output == "DIListStruct":
         # -- Return single row list ---- Works !!!!!!   Further Checks necessary
-        print dirow
+        #print dirow
         abslst = []
         abslst.append(dirow)
         return abslst
