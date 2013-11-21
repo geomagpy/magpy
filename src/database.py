@@ -939,7 +939,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
         # Create sensor table input
         headstr = ' CHAR(100), '.join(SENSORSKEYLIST) + ' CHAR(100)'
         headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
-        headstr = headstr.replace('SensorDescription CHAR(100)', 'SsensorDescription TEXT')
+        headstr = headstr.replace('SensorDescription CHAR(100)', 'SensorDescription TEXT')
         createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
         sensorsql = "INSERT INTO SENSORS(%s) VALUES (%s)" % (', '.join(sensorhead), '"'+'", "'.join(sensorvalue)+'"')
 
@@ -1072,13 +1072,13 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
     stream = DataStream()
 
     if not db:
-        print "No database connected - aborting"
+        loggerdatabase.error("DB2stream: No database connected - aborting")
         return stream
 
     cursor = db.cursor ()
     
     if not tableext and not sensorid:
-        print "Aborting ... either sensorid or table must be specified"
+        loggerdatabase.error("DB2stream: Aborting ... either sensorid or table must be specified")
         return
     if begin:
         wherelist.append('time >= "' + begin + '"')
@@ -1094,14 +1094,14 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
         else:
             whereclause = sql
 
-    print whereclause
+    #print whereclause
 
     if not tableext:
         getdatainfo = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + sensorid + '"'
         cursor.execute(getdatainfo)
         rows = cursor.fetchall()
         for table in rows:
-            print "Extracting field values from table ", table[0]
+            loggerdatabase.debug("DB2stream: Extracting field values from table %s" % str(table[0]))
             if len(whereclause) > 0:
                 getdatasql = 'SELECT * FROM ' + table[0] + ' WHERE ' + whereclause
             else:
@@ -1159,6 +1159,221 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
 
     cursor.close ()
     return stream
+
+def diline2db(db, dilinestruct, mode=None, **kwargs):
+    """
+    DEFINITION:
+        Method to write dilinestruct to a mysql database
+
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - dilinestruct: (magpy diline) 
+    Optional:
+        - mode:         (string) - default is insert
+                            mode: replace -- replaces existing table contents with new one, also replaces informations from sensors and station table
+                            mode: insert -- create new table with unique ID
+                            mode: delete -- like insert but drops the existing DIDATA table
+    kwargs:
+        - tablename:    (string) - specify tablename of the DI table (default is DIDATA)
+
+    EXAMPLE:
+        >>> diline2db(db,...)
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+    """
+
+    tablename = kwargs.get('tablename')
+
+    loggerdatabase.debug("diline2DB: ### Writing DI values to database ###")
+
+    if len(dilinestruct) < 1:
+        loggerdatabase.error("diline2DB: Empty diline. Aborting ...")
+        return
+
+    # 1. Create the diline table if not existing
+    # - DIDATA
+    DIDATAKEYLIST = ['DIID','StartTime','TimeArray','HcArray','VcArray','ResArray','OptArray','LaserArray','FTimeArray',
+                                 'FArray','Temperature','ScalevalueFluxgate','ScaleAngle','Azimuth','Pier','Observer','DIInst',
+                                 'FInst','FluxInst','InputDate','DIComment']
+
+    # DIDATA TABLE
+    if not tablename:
+        tablename = 'DIDATA'
+
+    cursor = db.cursor ()
+
+    headstr = ' CHAR(100), '.join(DIDATAKEYLIST) + ' CHAR(100)'
+    headstr = headstr.replace('DIID CHAR(100)', 'DIID CHAR(100) NOT NULL PRIMARY KEY')
+    headstr = headstr.replace('DIComment CHAR(100)', 'DIComment TEXT')
+    headstr = headstr.replace('Array CHAR(100)', 'Array TEXT')    
+    createDItablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,headstr)
+
+    if mode == 'delete':
+        try:
+            cursor.execute("DROP TABLE IF EXISTS %s" % tablename) 
+        except:
+            loggerdatabase.info("diline2DB: DIDATA table not yet existing")
+        loggerdatabase.info("diline2DB: Old DIDATA table has been deleted")
+    
+    try:
+        cursor.execute(createDItablesql)
+        loggerdatabase.info("diline2DB: New DIDATA table created")
+    except:
+        loggerdatabase.debug("diline2DB: DIDATA table already existing ?? TODO: -- check the validity of this message --")
+    
+    # 2. Add DI values to the table
+    #   Cycle through all lines of the dilinestruct
+    #   - a) convert arrays to underscore separated text like 'nan,nan,765,7656,879.6765,nan"
+
+    for line in dilinestruct:
+        insertlst = []
+        insertlst.append(str(line.pier)+'_'+datetime.strftime(num2date(line.time[4]),"%Y-%m-%d %H:%M:%S"))
+        insertlst.append(datetime.strftime(num2date(line.time[4]),"%Y-%m-%d %H:%M:%S"))
+        strlist = [str(elem) for elem in line.time]
+        timearray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.hc]
+        hcarray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.vc]
+        vcarray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.res]
+        resarray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.opt]
+        optarray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.laser]
+        laserarray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.ftime]
+        ftimearray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        strlist = [str(elem) for elem in line.f]
+        farray = '%s' % ('_'.join(strlist))
+        insertlst.append('%s' % ('_'.join(strlist)))
+        insertlst.append(str(line.t))
+        insertlst.append(str(line.scaleflux))
+        insertlst.append(str(line.scaleangle))
+        insertlst.append(str(line.azimuth))
+        insertlst.append(str(line.pier))
+        insertlst.append(str(line.person))
+        insertlst.append(str(line.di_inst))
+        insertlst.append(str(line.f_inst))
+        insertlst.append(str(line.fluxgatesensor))
+        insertlst.append(str(line.inputdate))
+        insertlst.append("No comment")
+
+        disql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename,', '.join(DIDATAKEYLIST), '"'+'", "'.join(insertlst)+'"')
+        if mode == "replace":
+            disql = disql.replace("INSERT","REPLACE")
+
+        cursor.execute(disql)
+
+    db.commit()
+    cursor.close ()
+
+def db2diline(db,**kwargs):
+    """
+    DEFINITION:
+        Method to read DI values from a database and write them to a list of DILineStruct's
+
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+    kwargs:
+        - starttime:    (string/datetime) - time range to select
+        - endtime:      (string/datetime) - 
+        - sql:          (string) - define any additional selection criteria (e.g. "Pier = 'A2'" AND "Observer = 'Mickey Mouse'")
+                                important: dont forget the ' ' 
+        - tablename:    (string) - specify tablename of the DI table (default is DIDATA)
+
+    EXAMPLE:
+        >>> resultlist = db2diline(db,starttime="2013-01-01",sql="Pier='A2'")
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+
+    RETURNS:
+        list of DILineStruct elements
+    """
+
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    sql = kwargs.get('sql')
+    tablename = kwargs.get('tablename')
+
+    stream = DataStream() # to access some time functions from the stream package
+
+    if not db:
+        loggerdatabase.error("DB2diline: No database connected - aborting")
+        return didata
+
+    cursor = db.cursor ()
+
+    resultlist = []
+
+    if not tablename:
+        tablename = 'DIDATA'
+
+    whereclause = ''
+    if starttime:
+        starttime = stream._testtime(starttime)
+        print starttime
+        st = datetime.strftime(starttime, "%Y-%m-%d %H:%M:%S")
+        whereclause += "StartTime >= '%s' " % st
+    if endtime:
+        if len(whereclause) > 1: 
+            whereclause += "AND "
+        endtime = stream._testtime(endtime)
+        et = datetime.strftime(endtime, "%Y-%m-%d %H:%M:%S")
+        whereclause += "StartTime <= '%s' " % et
+    if sql: 
+        if len(whereclause) > 1: 
+            whereclause += "AND "
+        whereclause += sql
+
+    if len(whereclause) > 0:
+        getdidata = 'SELECT * FROM ' + tablename + ' WHERE ' + whereclause
+    else:
+        getdidata = 'SELECT * FROM ' + tablename
+ 
+    print "Where: ", whereclause   
+    cursor.execute(getdidata)
+    rows = cursor.fetchall()
+    for di in rows:
+        loggerdatabase.debug("DB2stream: Extracting DI values for %s" % str(di[1]))
+        # Zerlege time column
+        timelst = [float(elem) for elem in di[2].split('_')]
+        distruct = DILineStruct(len(timelst))
+        distruct.time = timelst
+        distruct.hc = [float(elem) for elem in di[3].split('_')]
+        distruct.vc = [float(elem) for elem in di[4].split('_')]
+        distruct.res = [float(elem) for elem in di[5].split('_') if len(di[5].split('_')) > 1]
+        distruct.opt = [float(elem) for elem in di[6].split('_') if len(di[6].split('_')) > 1]
+        distruct.laser = [float(elem) for elem in di[7].split('_') if len(di[7].split('_')) > 1]
+        distruct.ftime = [float(elem) for elem in di[8].split('_') if len(di[8].split('_')) > 1]
+        distruct.f = [float(elem) for elem in di[9].split('_') if len(di[9].split('_')) > 1]
+        distruct.t = di[10]
+        distruct.scaleflux =  di[11]
+        distruct.scaleangle =  di[12]
+        distruct.azimuth =  di[13]
+        distruct.person =  di[14]
+        distruct.pier =  di[15]
+        distruct.di_inst =  di[16]
+        distruct.f_inst =  di[17]
+        distruct.fluxgatesensor =  di[18]
+        distruct.inputdate =  stream._testtime(di[19])
+        resultlist.append(distruct)
+
+    return resultlist
 
 
 def getBaselineProperties(db,datastream,distream=None):

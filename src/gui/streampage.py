@@ -22,10 +22,6 @@ import wx.lib.masked as masked
 class StreamPage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
-        self.datatype = ['raw', 'reviewed']
-        self.varios = ['didd', 'lemi', 'gdas']
-        self.scalars = ['didd', 'pmag', 'csmag','none']
-        self.resolution = ['intrinsic', 'second', 'minute', 'hour']
         self.comp = ['xyz', 'hdz', 'idf']
         self.createControls()
         self.doLayout()
@@ -50,10 +46,18 @@ class StreamPage(wx.Panel):
                                                value=datetime.now().strftime('%X'), pos = (250,70))
 
         self.openStreamButton = wx.Button(self,-1,"Open stream")
+        # Better add buttons which open dialogs for selecting components and filter columns (e.g. observer = 'berger')
+        #for elem in KEYLIST:
+        #    exec('self.'+elem+'CheckBox = wx.CheckBox(self,label="'+elem+'")')
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
-        self.lengthStreamLabel = wx.StaticText(self, label="N (values):")
-        self.lengthStreamTextCtrl = wx.TextCtrl(self, value="")
 
+        # Add the following selectors
+        # chooseCompButton -> select the shown components
+        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
+        # specify plot options ('o','-' etc
+        # coordinate transform (if xyz given and magnetic)
+        # show/edit meta info
+        
         self.DrawButton = wx.Button(self,-1,"ReDraw")
         """
         self.SaveScalarButton = wx.Button(self,-1,"Save data")
@@ -112,32 +116,36 @@ class StreamPage(wx.Panel):
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
+        emptySpace = '(0,0), noOptions'
+
+        elemlist = ['self.pathLabel, noOptions',
+                 'self.pathTextCtrl, expandOption',
+                 'self.fileLabel, noOptions',
+                 'self.fileTextCtrl, expandOption',
+                 'self.startdateLabel, noOptions',
+                  '(0,0), noOptions',
+                 'self.startDatePicker, expandOption',
+                 'self.startTimePicker, expandOption',
+                 'self.enddateLabel, noOptions',
+                 '(0,0), noOptions',
+                 'self.endDatePicker, expandOption',
+                 'self.endTimePicker, expandOption',
+                 'self.openStreamButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
+                 '(0,0), noOptions',
+                 '(0,0), noOptions',
+                 'self.plotOptionsLabel, noOptions',
+                 '(0,0), noOptions']
+
+        #checklist = ['self.'+elem+'CheckBox, noOptions' for elem in KEYLIST]
+        #elemlist.extend(checklist)
+        elemlist.append('self.DrawButton, dict(flag=wx.ALIGN_CENTER)')
 
         # Add the controls to the sizers:
-        for control, options in \
-                [(self.pathLabel, noOptions),
-                 (self.pathTextCtrl, expandOption),
-                 (self.fileLabel, noOptions),
-                 (self.fileTextCtrl, expandOption),
-                 (self.startdateLabel, noOptions),
-                  emptySpace,
-                 (self.startDatePicker, expandOption),
-                 (self.startTimePicker, expandOption),
-                 (self.enddateLabel, noOptions),
-                  emptySpace,
-                 (self.endDatePicker, expandOption),
-                 (self.endTimePicker, expandOption),
-                 (self.openStreamButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.plotOptionsLabel, noOptions),
-                  emptySpace,
-                 (self.lengthStreamLabel, noOptions),
-                 (self.lengthStreamTextCtrl, expandOption),
-                 (self.DrawButton, dict(flag=wx.ALIGN_CENTER))]:
-            gridSizer.Add(control, **options)
+        for elem in elemlist:
+            control = elem.split(', ')[0]
+            options = elem.split(', ')[1]
+            gridSizer.Add(eval(control), **eval(options))
 
         for control, options in \
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:

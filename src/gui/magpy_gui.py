@@ -534,7 +534,7 @@ class MainFrame(wx.Frame):
             self.dirname = dlg.GetDirectory()
             self.changeStatusbar("Loading data ...")
             stream = read(path_or_url=os.path.join(self.dirname, self.filename))
-            self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+            #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
             self.menu_p.str_page.fileTextCtrl.Disable()
@@ -1129,7 +1129,6 @@ class MainFrame(wx.Frame):
 
         start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
         end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
-        stream = db2stream(self.db, None, start, end, files, None)
 
         try:
             self.changeStatusbar("Loading data ...")
@@ -1162,7 +1161,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
 
-        self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+        #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
         self.changeStatusbar("Ready")
 

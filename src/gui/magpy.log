@@ -1,21 +1,11 @@
-2013-11-17 10:21:53,243 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/DACF54010000/DACF54010000_2013-11-17.bin
-2013-11-17 10:21:55,204 INFO    - stream plot: Start plotting.
-2013-11-17 10:21:55,482 INFO    - stream plot: Finished plot 1 at 2013-11-17 09:21:55.482214
-2013-11-17 10:21:55,662 INFO    - stream plot: Finished plot 2 at 2013-11-17 09:21:55.662407
-2013-11-17 10:21:55,844 INFO    - stream plot: Finished plot 3 at 2013-11-17 09:21:55.844540
-2013-11-17 10:21:56,033 INFO    - stream plot: Finished plot 4 at 2013-11-17 09:21:56.033948
-2013-11-17 10:21:56,223 INFO    - stream plot: Finished plot 5 at 2013-11-17 09:21:56.223675
-2013-11-17 10:22:28,317 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/60AA88040000/60AA88040000_2013-11-17.bin
-2013-11-17 10:22:29,361 INFO    - stream plot: Start plotting.
-2013-11-17 10:22:29,635 INFO    - stream plot: Finished plot 1 at 2013-11-17 09:22:29.635831
-2013-11-17 10:22:29,756 WARNING - stream plot: No data available for key var1
-2013-11-17 10:22:29,876 WARNING - stream plot: No data available for key var2
-2013-11-17 10:22:29,997 WARNING - stream plot: No data available for key var3
-2013-11-17 10:22:30,119 WARNING - stream plot: No data available for key var4
-2013-11-17 10:22:51,976 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-17.bin
-2013-11-17 10:22:52,843 INFO    - stream plot: Start plotting.
-2013-11-17 10:22:53,119 INFO    - stream plot: Finished plot 1 at 2013-11-17 09:22:53.119427
-2013-11-17 10:22:53,245 WARNING - stream plot: No data available for key var1
-2013-11-17 10:22:53,372 WARNING - stream plot: No data available for key var2
-2013-11-17 10:22:53,498 WARNING - stream plot: No data available for key var3
-2013-11-17 10:22:53,623 WARNING - stream plot: No data available for key var4
+2013-11-21 08:34:34,906 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-10.bin
+2013-11-21 08:34:35,152 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-16.bin
+2013-11-21 08:34:35,683 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-09.bin
+2013-11-21 08:34:36,250 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-17.bin
+2013-11-21 08:34:38,149 INFO    - stream plot: Start plotting.
+2013-11-21 08:34:38,995 INFO    - stream plot: Finished plot 1 at 2013-11-21 07:34:38.995185
+2013-11-21 08:35:02,015 INFO    - root    Read: /srv/ws/Earth/env2/2013/env2_2013-01-20.txt Format: CS (txt) 
+2013-11-21 08:35:02,462 INFO    - stream plot: Start plotting.
+2013-11-21 08:35:02,621 INFO    - stream plot: Finished plot 1 at 2013-11-21 07:35:02.621147
+2013-11-21 08:35:02,737 INFO    - stream plot: Finished plot 2 at 2013-11-21 07:35:02.737675
+2013-11-21 08:35:02,854 INFO    - stream plot: Finished plot 3 at 2013-11-21 07:35:02.854801

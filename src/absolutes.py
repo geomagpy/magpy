@@ -1,24 +1,41 @@
 #!/usr/bin/env python
 """
-MagPy-getabs: Downloads absolute files from specified ftp-server and analyses the data.
-Returns a data stream with either absolute avlues and variometer differences
+MagPy-absolutes: 
+Analysis of DI data.
+Uses mainly two classes 
+- DILineStruct (can contain multiple DI measurements; used for storage, database com and autodif)
+- AbsStruct (contains a single measurement, is extended by variation and scalar data, used for calculation)
+Calculation returns a data stream with absolute and baseline values for any selected variometer
 
-Written by Roman Leonhardt 2011/2012
+Systematische Tests:
+1.  (11/2013, OK) Laden von Raw-Datem
+2.  Laden von alten Raw-Daten
+3.  (11/2013, OK) Laden von AutoDIF Daten
+4.  (11/2013, OK) Auswertung von gon/deg Daten
+5.  (11/2013, OK) Richtigkeit von Gon-Auswertungen: Vergleich mit Juergens Excel
+6.  (11/2013, OK) Auswertung ohne Vario und/oder Scalardaten
+7.  (11/2013, OK) Systematischer Test - Einfluss der Variometerkorrektur (Korrektur mit basis und nicht basiskorr Variation - sollte identisch sein, korrektur mit unterschiedlichen Varios)
+8.  (11/2013, OK) Systematischer Test der Winkelabhaengigkeit (AutoDiff - Bestimme Tagesvariation in Abhaengigkeit von verschiedenen Winkeln)
+9.  (11/2013, not necessary: raw data is always available and the file wold not contain any additional info - use database if comments are required) Laden und Speichern von DIListStructs
+10. (11/2013, OK) Datenbankspeicherung
+11. Create a direct DataBase input formular in php (and magpy-gui?? -> better refer to php there) 
+11. Laden von mehreren Files gleichzeitig (mit DILineStruct) - not really necessary
+12. Basislinien-Stabilitaet (Berechnung der Zuverlaessigkeit der Basislinien-Extrapolation)
+13. Write the documentation with citations of the underlying procedures
+14. Show Stereoplot
+15. Briefly descripe some related bin files
+
+zu 8:
+look at bin_angulardependency.py
+
+Related bins:
+bin_absolute (analyse DI measurements)
+bin_angulardependency (test the influence of variometerorientation several DI measurements during a day (e.g. autodif))
+bin_baselinestability (too be written)
+
+
+Written by Roman Leonhardt 2011/2012/2013
 Version 1.0 (from the 23.02.2012)
-Procedure:
- 1. Contact ftp-server
- 2. Get file list with absolute data
- 3. Compare to local file list
- 4. Download all new files to a working directory
- 5. Analyze data
-    a) if successful append result and move file to preliminary archive
-        three directories:
-        1) Analysis
-        2) Archive-preliminary (tested by program)
-        3) Archive-final (tested by observer)
-    b) if not leave file in Analysis and send e-mail to obs
- 6. Delete files from FTP Server (maybe at step 4
- 7. Recalculate baseline and check for its quasi-final character
 
 """
 
@@ -292,10 +309,23 @@ class AbsoluteData(object):
 
     def _insert_function_values(self, function,**kwargs):
         """
-        Add a function to the selected values of the data stream -> e.g. get baseline
-        Optional:
-        keys (default = 'x','y','z','f')        
+        DEFINITION:
+            Add a function-output to the selected values of the data stream -> e.g. get baseline
+
+        PARAMETERS:
+        kwargs:
+            - funckeys 		(KEYLIST) (default = 'x','y','z','f') 
+            - offset 		(float) provide an offset for keys
+
+        USED BY:
+
+        RETURNS:
+ 	    stream with function values added
+
+        EXAMPLE:
+            >>> abstream._calcdec()
         """
+
         funckeys = kwargs.get('funckeys')
         offset = kwargs.get('offset')
         if not funckeys:
@@ -604,7 +634,7 @@ class AbsoluteData(object):
             - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
             - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
             - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
-            - debugmode:	(bool) activate additional debug output
+            - debugmode:	(bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
   
         USED BY:
 
@@ -895,15 +925,45 @@ class AbsoluteData(object):
 
     def calcabsolutes(self, debugmode=None, **kwargs):
         """
-        Interation of dec and inc calculation
-        Need input of a LineStruct Object containing the results of _calcdec
-        Returns a resultsline according to line struct 
-        Supports the following optional keywords:
-        incstart - float - default 45.0 - inclination value in 'unit'
-        ### Important: removed unit completely from calculations - unit conversion is done during file reading
-        unit - str - default 'deg' - can be either 'deg' or 'gon'
-        scalevalue - float - default 1.0 - convert varx,vary,varz to nT
-        printresults - boolean - if True print results to screen
+        DEFINITION:
+            Calculates DI values by calling calcdec and calcinc methods.
+            Uses an iterative approach of dec and inc calculation.
+            Provide variometer and scalar values for optimal results.
+            If no variometervalues are provided then only dec and inc are calculated correctly
+
+        PARAMETERS:
+        variable:
+            - line		(LineStruct) a line containing results from _calcdec()
+        kwargs:
+            - annualmeans:	(list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
+            - incstart		(float) - default 45.0 - inclination value in deg
+            - deltaI: 		(float) - default 0.0 - eventual correction factor for inclination in degree
+            - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
+            - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
+            - debugmode:	(bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
+            - printresults      (bool) - if True print results to screen
+  
+        USED BY:
+
+        REQUIRES:
+
+        RETURNS:
+
+        EXAMPLE:
+            >>> stream.calcabsolutes(usestep=2,annualmeans=[20000,1200,43000],printresults=True)
+
+        APPLICATION:
+            absst = absRead(path_or_url=abspath,azimuth=azimuth,output='DIListStruct')
+            stream = elem.getAbsDIStruct()
+            variostr = read(variopath)
+            variostr =variostr.rotation(alpha=varioorientation_alpha, beta=varioorientation_beta)
+            vafunc = variostr.interpol(['x','y','z'])
+            stream = stream._insert_function_values(vafunc)
+            scalarstr = read(scalarpath)
+            scfunc = scalarstr.interpol(['f'])
+            stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
+            result = stream.calcabsolutes(usestep=2,annualmeans=[20000,1200,43000],printresults=True)
         """
 
         #plog = PyMagLog()
