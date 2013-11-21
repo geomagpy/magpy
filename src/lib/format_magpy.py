@@ -324,7 +324,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         if not h_elem[1] == 'MagPyBin':
             print 'No MagPyBin format - aborting'
             return
-        #print "Length ", len(h_elem)
+        #print "Length ", len(h_elem), h_elem[2]
 
         #Test whether element 3,4,5 (and 6) are lists of equal length 
         if len(h_elem) == 8:
@@ -359,7 +359,14 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 return stream
         elif len(h_elem) == 10:
             #print "Special format"
+	    loggerlib.debug("readPYBIN: Special format detected. May not be able to read file.")
             nospecial = False
+	    if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
+                keylist = h_elem[3].strip('[').strip(']').split(',')
+                elemlist = h_elem[4].strip('[').strip(']').split(',')
+                unitlist = h_elem[5].strip('[').strip(']').split(',')
+                multilist = map(float,h_elem[7].strip('[').strip(']').split(','))
+                nospecial = True
         else:
             print 'No valid MagPyBin format, inadequate header length - aborting'
             return stream

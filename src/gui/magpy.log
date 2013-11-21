@@ -1,11 +1,6 @@
-2013-11-21 08:34:34,906 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-10.bin
-2013-11-21 08:34:35,152 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-16.bin
-2013-11-21 08:34:35,683 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-09.bin
-2013-11-21 08:34:36,250 INFO    - lib    format_magpy: Found PYBIN file /srv/ws/Earth/B1C687040000/B1C687040000_2013-11-17.bin
-2013-11-21 08:34:38,149 INFO    - stream plot: Start plotting.
-2013-11-21 08:34:38,995 INFO    - stream plot: Finished plot 1 at 2013-11-21 07:34:38.995185
-2013-11-21 08:35:02,015 INFO    - root    Read: /srv/ws/Earth/env2/2013/env2_2013-01-20.txt Format: CS (txt) 
-2013-11-21 08:35:02,462 INFO    - stream plot: Start plotting.
-2013-11-21 08:35:02,621 INFO    - stream plot: Finished plot 1 at 2013-11-21 07:35:02.621147
-2013-11-21 08:35:02,737 INFO    - stream plot: Finished plot 2 at 2013-11-21 07:35:02.737675
-2013-11-21 08:35:02,854 INFO    - stream plot: Finished plot 3 at 2013-11-21 07:35:02.854801
+2013-11-21 15:08:46,924 INFO    - lib    format_lemi: Found Lemi 10Hz binary file /srv/data/GS-W-30/raw/LEMI025_22_0001_2013-07-21.bin
+2013-11-21 15:08:46,925 INFO    - lib    readLEMIBIN2: Reading /srv/data/GS-W-30/raw/LEMI025_22_0001_2013-07-21.bin
+2013-11-21 15:08:50,785 INFO    - stream plot: Start plotting.
+2013-11-21 15:08:52,101 INFO    - stream plot: Finished plot 1 at 2013-11-21 15:08:52.101402
+2013-11-21 15:08:52,772 INFO    - stream plot: Finished plot 2 at 2013-11-21 15:08:52.772195
+2013-11-21 15:08:53,445 INFO    - stream plot: Finished plot 3 at 2013-11-21 15:08:53.445061

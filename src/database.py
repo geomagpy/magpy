@@ -111,9 +111,10 @@ def dbdelete(db,datainfoid,**kwargs):
     """
 
     samplingrateratio = kwargs.get("samplingrateratio")
+    timerange = kwargs.get("timerange")
 
     if not samplingrateratio:
-        samplingrateratio = 45
+        samplingrateratio = 45.0
         
     cursor = db.cursor()
     timeunit = 'DAY'
@@ -125,7 +126,7 @@ def dbdelete(db,datainfoid,**kwargs):
         try:
             getsr = 'SELECT DataSamplingRate FROM DATAINFO WHERE DataID = "%s"' % datainfoid
             cursor.execute(getsr)
-            samplingperiod = cursor.fetchone()[0]
+            samplingperiod = float(cursor.fetchone()[0])
             loggerdatabase.debug("dbdelete: samplingperiod = %s" % str(samplingperiod))
         except:
             loggerdatabase.error("dbdelete: could not access DataSamplingRate in table %s" % datainfoid)
@@ -133,8 +134,8 @@ def dbdelete(db,datainfoid,**kwargs):
         # option b - get directly from stream
         if samplingperiod == None:
             # read stream and get sampling rate there
-            #db2stream(datainfoid)
-            timerange = 30
+            #stream = db2stream(db,datainfoid)
+            samplingperiod = 5	# TODO
         # 2. Determine time interval to delete
         # factor depends on available space...
         timerange = np.ceil(samplingperiod*samplingrateratio)
@@ -143,11 +144,11 @@ def dbdelete(db,datainfoid,**kwargs):
 
     # 3. Delete time interval
     loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange)))
-    try:
-        deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
-        cursor.execute(deletesql)
-    except:
-        loggerdatabase.error("dbdelete: error when deleting data")
+    #try:
+    deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
+    cursor.execute(deletesql)
+    #except:
+    loggerdatabase.error("dbdelete: error when deleting data")
 
     # 4. Re-determine length for Datainfo
     try:
@@ -322,6 +323,8 @@ def dbfields2dict(db,datainfoid):
     getids = 'SELECT sensorid,stationid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
     cursor.execute(getids)
     ids = cursor.fetchone()
+    if not ids:
+        return {}
     loggerdatabase.debug("dbfields2dict: Selected sensorid: %s" % ids[0])
 
     for key in DATAINFOKEYLIST:
@@ -394,7 +397,7 @@ def dbfields2dict(db,datainfoid):
 def dbalter(db):
     """
     DEFINITION:
-        Use KEYLISTS and chnages the columns of standard tables
+        Use KEYLISTS and changes the columns of standard tables
         DATAINFO, SENSORS, and STATIONS.
         Can be used for changing (adding) contents to tables
 
@@ -696,9 +699,12 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
         # Get maximum number
         for i in range(len(rows)):
             rowval = rows[i][0].replace(sensorid + '_','')
+            print len(rows), rowval, sensorid+'_', rows[i][0]
             try:
                 numlst.append(int(rowval))
+		print numlst
             except:
+                print "crap"
                 pass
         maxnum = max(numlst)
         loggerdatabase.debug("dbdatainfo: Maxnum: %i" % maxnum)
@@ -978,13 +984,13 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
                 cursor.execute(sensorsql)
             except:
                 loggerdatabase.warning("stream2DB: Sensor data already existing: use mode 'replace' to overwrite")
-                loggerdatabase.warning("stream2DB: Eventually a field is not existing")
+                loggerdatabase.warning("stream2DB: Perhaps this field does not exist")
                 pass
             try:
                 cursor.execute(stationsql)
             except:
                 loggerdatabase.warning("stream2DB: Station data already existing: use mode 'replace' to overwrite")
-                loggerdatabase.warning("stream2DB: Eventually a field is not existing")
+                loggerdatabase.warning("stream2DB: Perhaps this field does not exist")
                 pass
 
         # DATAINFO TABLE
@@ -1273,7 +1279,10 @@ def diline2db(db, dilinestruct, mode=None, **kwargs):
         if mode == "replace":
             disql = disql.replace("INSERT","REPLACE")
 
-        cursor.execute(disql)
+        try:
+            cursor.execute(disql)
+        except:
+            loggerdatabase.debug("diline2DB: data already existing")
 
     db.commit()
     cursor.close ()

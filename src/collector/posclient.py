@@ -91,7 +91,8 @@ class PubSubClient(WampClientProtocol):
                 if eventdict['id'] in [1,10,14,40]: # replace by some eol parameter
                      self.line.append(eventdict['value'])
             else:
-                sql = "INSERT INTO %s(time, f, df, var2, flag, typ) VALUES ('%s', %f, %f, %f, '0000000000000000-', 'xyz')" % (sensorid, self.line[0], self.line[1], self.line[2], self.line[3])
+                datainfoid = sensorid +'_0001'
+                sql = "INSERT INTO %s(time, f, var1, df, flag, typ) VALUES ('%s', %f, %f, %f, '0000000000000000-', 'xyz')" % (datainfoid, self.line[0], self.line[1], self.line[2], self.line[3])
                 self.line = []
                 # Prepare SQL query to INSERT a record into the database.
                 try:

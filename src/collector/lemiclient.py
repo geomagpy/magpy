@@ -97,7 +97,8 @@ class PubSubClient(WampClientProtocol):
                      self.line.append(eventdict['value'])
             else:
                 # TODO: check Bx, By, Bz values of header and eventually create new data table
-                sql = "INSERT INTO %s(time, x, y, z, t1, t2, flag, typ) VALUES ('%s', %f, %f, %f, %f, %f, '0000000000000000-', 'xyz')" % (sensorid, self.line[0], self.line[1], self.line[2], self.line[3], self.line[4], self.line[5])
+                datainfoid = sensorid+'_0001'
+                sql = "INSERT INTO %s(time, x, y, z, t1, t2, flag, typ) VALUES ('%s', %f, %f, %f, %f, %f, '0000000000000000-', 'xyz')" % (datainfoid, self.line[0], self.line[1], self.line[2], self.line[3], self.line[4], self.line[5])
                 self.line = []
                 # Prepare SQL query to INSERT a record into the database.
                 try:
