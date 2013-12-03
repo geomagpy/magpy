@@ -322,26 +322,26 @@ def readPYBIN(filename, headonly=False, **kwargs):
         header = fh.readline()
         h_elem = header.strip().split()
         if not h_elem[1] == 'MagPyBin':
-            print 'No MagPyBin format - aborting'
+            loggerlib.error('readPYBIN: No MagPyBin format - aborting.')
             return
         #print "Length ", len(h_elem), h_elem[2]
 
         #Test whether element 3,4,5 (and 6) are lists of equal length 
         if len(h_elem) == 8:
-            #print "Very old import format"
+            loggerlib.info('readPYBIN: Very old PYBIN format.')
             nospecial = True
             try:
                 if not keylist:
-                    print 'keylist of length elemlist must be specified'
+                    loggerlib.error('readPYBIN: For old format keylist of length elemlist must be specified.')
                     return
                 elemlist = h_elem[3].strip('[').strip(']').split(',')
                 unitlist = h_elem[4].strip('[').strip(']').split(',')
                 multilist = map(float,h_elem[5].strip('[').strip(']').split(','))
             except:
-                print "readPYBIN: Could not extract lists from header - check format - aborting..."
+                loggerlib.error("readPYBIN: Could not extract lists from header - check format - aborting.")
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
-                print "readPYBIN: Provided lists from header of differenet lengths - check format - aborting..."
+                loggerlib.error("readPYBIN: Provided lists from header of different lengths - check format - aborting.")
                 return stream
         elif len(h_elem) == 9:
             #print "The current format"
@@ -352,13 +352,13 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 unitlist = h_elem[5].strip('[').strip(']').split(',')
                 multilist = map(float,h_elem[6].strip('[').strip(']').split(','))
             except:
-                print "readPYBIN: Could not extract lists from header - check format - aborting..."
+                loggerlib.error("readPYBIN: Could not extract lists from header - check format - aborting.")
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
-                print "readPYBIN: Provided lists from header of differenet lengths - check format - aborting..."
+                loggerlib.error("readPYBIN: Provided lists from header of different lengths - check format - aborting.")
                 return stream
         elif len(h_elem) == 10:
-            #print "Special format"
+            loggerlib.debug("readPYBIN: Special format detected. May not be able to read file.")
 	    loggerlib.debug("readPYBIN: Special format detected. May not be able to read file.")
             nospecial = False
 	    if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
@@ -368,7 +368,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 multilist = map(float,h_elem[7].strip('[').strip(']').split(','))
                 nospecial = True
         else:
-            print 'No valid MagPyBin format, inadequate header length - aborting'
+            loggerlib.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting.')
             return stream
             
         packstr = '<'+h_elem[-2]+'B'
@@ -376,7 +376,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
         lengthgiven = int(h_elem[-1])+1
         length = lengthgiven
         if not lengthcode == lengthgiven:
-            logging.debug("Check your packing code!")
+            loggerlib.debug("readPYBIN: Check your packing code! Code given: %s, packing code (%s) length: %s" %
+			(lengthgiven, packstr, lengthcode))
             if lengthcode < lengthgiven:
                 missings = lengthgiven-lengthcode
                 for i in range(missings):

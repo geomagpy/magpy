@@ -296,6 +296,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
     data= struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
+
     if data[55] == 'L':
         # old format
 	loggerlib.info("readLEMIBIN2: Format is the out-dated lemi format.")
@@ -304,6 +305,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
         stime = False
     else:
         # new format
+	loggerlib.info("readLEMIBIN2: Format is the current lemi format.")
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
         stime = True

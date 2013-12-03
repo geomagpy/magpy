@@ -2321,7 +2321,7 @@ class DataStream(object):
 			2 = start of recovery phase,
 			3 = end of recovery phase]
 	- plotphases:	(list) List of keys of plots to shade.
-	- specialdict:	(dictionary) contains special information for specific plots. key
+	- specialdict:	(dictionary) contains special information for specific plots.
 			key corresponds to the column
 			input is a list with the following parameters
 			('None' if not used)
@@ -2728,8 +2728,37 @@ class DataStream(object):
 
     def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None):
         """
+    DEFINITION:
         Calculating the power spectrum
         following the numpy fft example
+
+    PARAMETERS:
+    Variables:
+        - key:		(str) Key to analyse
+    Kwargs:
+	- axes:		(?) ?
+        - debugmode: 	(bool) Variable to show steps
+	- fmt:		(str) Format of outfile, e.g. "png"
+	- outfile:	(str) Filename to save plot to
+	- title:	(str) Title to display on plot
+
+    RETURNS:
+        - plot: 	(matplotlib plot) A plot of the powerspectrum
+
+    EXAMPLE:
+        >>> data_stream.powerspectrum('x')
+
+    APPLICATION:
+        >>> import magpy
+	1. Requires DataStream object:
+        >>> data_path = '/usr/lib/python2.7/magpy/examples/*'
+        >>> data = read(path_or_url=data_path,
+			starttime='2013-06-10 00:00:00',
+			endtime='2013-06-11 00:00:00')
+	2. Call for data stream:
+        >>> data.powerspectrum('f',
+			title='Power
+			outfile='ps.png')
         """
         if debugmode:
             print "Start powerspectrum at %s" % datetime.utcnow()
@@ -2979,34 +3008,39 @@ class DataStream(object):
 
 
     def smooth(self, keys, **kwargs):
-        """smooth the data using a window with requested size.
+        """
+    DEFINITION:
+	Smooth the data using a window with requested size.
         (taken from Cookbook/Signal Smooth)
         This method is based on the convolution of a scaled window with the signal.
         The signal is prepared by introducing reflected copies of the signal 
         (with the window size) in both ends so that transient parts are minimized
         in the begining and end part of the output signal.
-        
-        input:
-            x: the input signal 
-            window_len: the dimension of the smoothing window; should be an odd integer
-            window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
-                flat window will produce a moving average smoothing.
 
-        output:
-            the smoothed signal
-            
-        example:
-
-        t=linspace(-2,2,0.1)
-        x=sin(t)+randn(len(t))*0.1
-        y=smooth(x)
-        
-        see also: 
-        
+    PARAMETERS:
+    Variables: 
+        - keys: 	(list) List of keys to smooth 
+    Kwargs:
+        - window_len: 	(int,odd) dimension of the smoothing window
+        - window: 	(str) the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'. A flat window will produce a moving average smoothing.
+        (See also: 
         numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-        scipy.signal.lfilter
+        scipy.signal.lfilter)
+
+    RETURNS:
+        - self: 	(DataStream) The smoothed signal
+
+    EXAMPLE:
+        >>> nice_data = bad_data.smooth(['x','y','z'])
+	or
+        >>> t=linspace(-2,2,0.1)
+        >>> x=sin(t)+randn(len(t))*0.1
+        >>> y=smooth(x)
+
+    APPLICATION:
      
-        TODO: the window parameter could be the window itself if an array instead of a string   
+    TODO: 
+	the window parameter could be the window itself if an array instead of a string   
         """
         # Defaults:
         window_len = kwargs.get('window_len')
@@ -3017,22 +3051,24 @@ class DataStream(object):
             window='hanning'
 
         
-        loggerstream.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
+        loggerstream.info('smooth: Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
 
         for key in keys:
             if not key in KEYLIST:
-                raise ValueError, "Column key not valid"
+                loggerstream.error("Column key %s not valid." % key)
 
             x = self._get_column(key)
 
             if x.ndim != 1:
-                raise ValueError, "smooth only accepts 1 dimension arrays."
+                loggerstream.error("smooth: Only accepts 1 dimensional arrays.")
             if x.size < window_len:
-                raise ValueError, "Input vector needs to be bigger than window size."
+                print x.size, window_len
+                loggerstream.error("smooth: Input vector needs to be bigger than window size.")
             if window_len<3:
                 return x
             if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-                raise ValueError, "Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+                loggerstream.error("smooth: Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+                loggerstream.debug("smooth: You entered string %s as a window." % window)
 
             s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
             #print(len(s))
@@ -3045,7 +3081,7 @@ class DataStream(object):
 
             self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
 
-        loggerstream.info(' --- Finished smoothing at %s' % (str(datetime.now())))
+        loggerstream.info('smooth: Finished smoothing at %s' % (str(datetime.now())))
         
         return self
 
@@ -3719,7 +3755,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                 loggerstream.error("read: Check file/pathname - No file matching pattern: %s" % pathname)
                 loggerstream.error("read: No file matching file pattern: %s" % pathname)
             elif not has_magic(pathname) and not os.path.isfile(pathname):
-                loggerstream.error("read: No such file or directory:", pathname)
+                loggerstream.error("read: No such file or directory: %s" % pathname)
             # Only raise error if no starttime/endtime has been set. This
             # will return an empty stream if the user chose a time window with
             # no data in it.
