@@ -201,10 +201,13 @@ if onewire:
                     humidity = float(ow.owfs_get('/uncached%s/HIH4000/humidity' % sensor._path))
                 except:
                     humidity = float(nan)
-                temp = float(sensor.temperature)
-                vdd = float(sensor.VDD)
-                vad = float(sensor.VAD)
-                vis = float(sensor.vis)
+                try:
+                    temp = float(sensor.temperature)
+                    vdd = float(sensor.VDD)
+                    vad = float(sensor.VAD)
+                    vis = float(sensor.vis)
+                except:
+                    log.err("OW: readBattery: Could not asign value") 
 
                 # Appending data to buffer which contains pcdate, pctime and sensordata
                 # extract time data
@@ -212,6 +215,8 @@ if onewire:
 
                 try:
                     datearray.append(int(temp*1000))
+                    if humidity < 0:
+                        humidity = 999
                     datearray.append(int(humidity*100))
                     datearray.append(int(vdd*100))
                     datearray.append(int(vad*100))

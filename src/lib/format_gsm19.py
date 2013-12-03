@@ -103,6 +103,7 @@ def roman_to_int(input):
    nums = ['M', 'D', 'C', 'L', 'X', 'V', 'I']
    ints = [1000, 500, 100, 50,  10,  5,   1]
    places = []
+   print "Ckeck: ", input
    for c in input:
       if not c in nums:
          raise ValueError, "input is not a valid roman numeral: %s" % input
@@ -194,7 +195,9 @@ def readGSM19(filename, headonly=False, **kwargs):
         elif line.startswith('ID') or line.startswith('/ID'):
             tester = line.split('.')
             typus = tester[1].split()
-            print typus[0]
+            #logging.debug(' Read: %s Format: GSM19' % (filename))
+            #logger.debug("format gsm19: print typus, len(typus)
+            #print typus[0]
             # typus[0] can be b, m, g, wg, ...
             if len(typus) == 2:
                 da = typus[1][:2]
@@ -203,13 +206,17 @@ def readGSM19(filename, headonly=False, **kwargs):
                 inp = typus[1][2:yecnt]
                 mo = roman_to_int(inp)
                 day = str(YeT)+str(ye)+'-'+str(mo)+'-'+str(da)
-            else:
+            elif len(typus) == 3:
                 da = typus[1]
                 yecnt = len(typus[2])-2
                 ye = typus[2][yecnt:]
                 inp = typus[2][:yecnt]
                 mo = roman_to_int(inp)
                 day = str(YeT)+str(ye)+'-'+str(mo)+'-'+str(da)
+            else:
+                da = typus[1]
+                mo = roman_to_int(typus[2])
+                day = str(YeT)+str(typus[3])+'-'+str(mo)+'-'+str(da)
             # data header
             pass
         elif line.startswith('datum'):

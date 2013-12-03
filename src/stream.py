@@ -31,6 +31,7 @@ try:
     import warnings
     from glob import glob, iglob, has_magic
     from StringIO import StringIO
+    import operator # used for stereoplot legend
 except ImportError:
     print "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed"
 
@@ -2036,24 +2037,38 @@ class DataStream(object):
 
     def mean(self, key, **kwargs):
         """
+    DEFINITION:
         Calculates mean values for the specified key, Nan's are regarded for.
         Means are only calculated if more then "amount" in percent are non-nan's
         Returns a float if successful or NaN.
-        :type percentage: int 
-        :param percentage: Define required percentage of non-nan values, if not met that nan will be returned. Default is 95 (%) 
-        :type meanfunction: string 
-        :param meanfunction: accepts 'mean' and 'median'. Default is 'mean' 
+
+    PARAMETERS:
+    Variables:
+        - key:   	(KEYLIST) element of Keylist like 'x' .
+    Kwargs:
+        - percentage:   (int) Define required percentage of non-nan values, if not 
+                               met that nan will be returned. Default is 95 (%)
+        - meanfunction: (string) accepts 'mean' and 'median'. Default is 'mean' 
+        - std: 		(bool) if true, the standard deviation is returned as well 
         
-        Example:
-        meanx = datastream.mean('x',meanfunction='median',percentage=90)
+    RETURNS:
+        - mean/median(, std) (float) 
+    EXAMPLE:
+        >>> meanx = datastream.mean('x',meanfunction='median',percentage=90)
+
+    APPLICATION:
         """
         percentage = kwargs.get('percentage')
         meanfunction = kwargs.get('meanfunction')
+        std = kwargs.get('std')
 
         if not meanfunction:
             meanfunction = 'mean'
         if not percentage:
             percentage = 95
+        if not std:
+            std = False
+
         if not isinstance( percentage, (int,long)):
             loggerstream.error("mean: Percentage needs to be an integer!")
         if not key in KEYLIST[:16]:
@@ -2063,7 +2078,10 @@ class DataStream(object):
         div = float(len(ar))/float(len(self))*100.0
 
         if div >= percentage:
-            return eval('np.'+meanfunction+'(ar)')
+            if std:
+                return eval('np.'+meanfunction+'(ar)'), np.std(ar)
+            else:
+                return eval('np.'+meanfunction+'(ar)')
         else:
             loggerstream.warning('mean: Too many nans in column, exceeding %d percent' % percentage)
             return float("NaN")
@@ -2331,7 +2349,7 @@ class DataStream(object):
 			bgcolor
 			grid
 			gridcolor
-        - symbol: 	(string - default '-') symbol for primary plot
+        - symbollist: 	(string - default '-') symbol for primary plot
         - symbol_func: 	(string - default '-') symbol of function plot 
 
     RETURNS:
@@ -2464,6 +2482,8 @@ class DataStream(object):
 		# -- If dates to be confined, set value types:
                 if confinex:
                     trange = np.max(t) - np.min(t)
+                    loggerstream.debug('plot: x range = %s' % str(trange))
+                    #print trange
                     if trange < 0.0001: # 8 sec level
                         #set 0.5 second
                         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%S'))
@@ -2490,8 +2510,8 @@ class DataStream(object):
                         setp(ax.get_xticklabels(),rotation='70')
                         timeunit = '[Day]'
                     elif trange < 150: # year level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b%y'))
-                        setp(ax.get_xticklabels(),rotation='70')
+                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%Y'))
+                        setp(ax.get_xticklabels(),rotation='0')
                         timeunit = '[Day]'
                     elif trange < 600: # minute level
                         if trange < 300:
@@ -3114,6 +3134,252 @@ class DataStream(object):
                     outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale, 
                     mult=mult, cmap=cmap, zorder=zorder, title=title, show=show, 
                     sphinx=sphinx, clip=clip)
+
+
+    def stereoplot(self, **kwargs):
+        """
+            DEFINITION:
+                plots a dec and inc values in stereographic projection
+                will abort if no idff typ is provided
+                full circles denote positive inclinations, open negative
+
+            PARAMETERS:
+            variable:
+                - stream		(DataStream) a magpy datastream object
+            kwargs:
+                - focus:	        (string) defines the plot area - can be either:
+                                            all - -90 to 90 deg inc, 360 deg dec (default)
+                                            q1 - first quadrant
+                                            q2 - first quadrant
+                                            q3 - first quadrant
+                                            q4 - first quadrant
+                                            data - focus on data (if angular spread is less then 10 deg
+                - groups		(KEY) - key of keylist which defines color of points
+                                             (e.g. ('str2') in absolutes to select
+                                             different colors for different instruments 
+                - legend		(bool) - draws legend only if groups is given - default True
+                - legendposition    (string) - draws the legend at chosen position (e.g. "upper right", "lower center") - default is "lower left" 
+                - labellimit        (integer)- maximum length of label in legend
+                - noshow: 	        (bool) don't call show at the end, just returns figure handle
+                - outfile: 	        (string) to save the figure, if path is not existing it will be created
+                - gridcolor:	(string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
+                - savedpi: 	        (integer) resolution
+                - figure: 	        (bool) True for GUI
+                
+            REQUIRES:
+                - package operator for color selection
+
+            RETURNS:
+                - plot
+
+            ToDo:
+                - add alpha 95 calc
+
+            EXAMPLE:
+                >>> stream.stereoplot(focus='data',groups='str2')
+
+            """
+        focus = kwargs.get('focus')
+        groups = kwargs.get('groups')
+        bgcolor  = kwargs.get('bgcolor')
+        colorlist = kwargs.get('colorlist')
+        outfile = kwargs.get('outfile')
+        savedpi = kwargs.get('savedpi')
+        gridinccolor = kwargs.get('gridinccolor')
+        griddeccolor = kwargs.get('griddeccolor')
+        noshow = kwargs.get('noshow')
+        legend = kwargs.get('legend')
+        legendposition = kwargs.get('legendposition')
+        labellimit = kwargs.get('labellimit')
+        figure = kwargs.get('figure')
+
+        if not colorlist:
+            colorlist = ['b','r','g','c','m','y','k']
+        if not bgcolor:
+            bgcolor = '#d5de9c'
+        if not griddeccolor:
+            griddeccolor = '#316931'
+        if not gridinccolor:
+            gridinccolor = '#316931'
+        if not savedpi:
+            savedpi = 80
+        if not focus:
+            focus = 'all'
+        if not legend:
+            legend = 'True'
+        if not labellimit:
+            labellimit = 11
+        if not legendposition:
+            legendposition = "lower left"
+
+        if not self[0].typ == 'idff':
+            loggerstream.error('Stereoplot: you need to provide idf data')
+            return
+
+        inc = self._get_column('x')
+        dec = self._get_column('y')
+
+        col = ['']
+        if groups:
+            sel = self._get_column(groups)
+            col = list(set(list(sel)))
+            if len(col) > 7:
+                col = col[:7]
+
+        if not len(dec) == len(inc):
+            loggerstream.error('Stereoplot: check you data file - unequal inc and dec data?')
+            return
+
+        if not figure:
+            fig = plt.figure()
+        else:
+            fig = figure
+        ax = plt.gca()
+        ax.cla() # clear things for fresh plot
+        ax.set_aspect('equal')
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        # Define koordinates:
+        basic1=plt.Circle((0,0),90,color=bgcolor,fill=True)
+        basic1a=plt.Circle((0,0),90,color=gridinccolor,fill=False)
+        basic2=plt.Circle((0,0),30,color=gridinccolor,fill=False,linestyle='dotted')
+        basic3=plt.Circle((0,0),60,color=gridinccolor,fill=False,linestyle='dotted')
+        basic4=plt.Line2D([0,0],[-90,90],color=griddeccolor,linestyle='dashed')
+        basic5=plt.Line2D([-90,90],[0,0],color=griddeccolor,linestyle='dashed')
+        fig.gca().add_artist(basic1)
+        fig.gca().add_artist(basic1a)
+        fig.gca().add_artist(basic2)
+        fig.gca().add_artist(basic3)
+        fig.gca().add_artist(basic4)
+        fig.gca().add_artist(basic5)
+
+        for j in range(len(col)):
+            color = colorlist[j]
+
+            xpos,ypos,xneg,yneg,xabs,y = [],[],[],[],[],[]
+            for i,el in enumerate(inc):
+                if groups:
+                    if sel[i] == col[j]:
+                        coinc = 90-np.abs(el)
+                        sindec = np.sin(np.pi/180*dec[i])
+                        cosdec = np.cos(np.pi/180*dec[i])
+                        xabs.append(coinc*sindec)
+                        y.append(coinc*cosdec)
+                        if el < 0:
+                            xneg.append(coinc*sindec)
+                            yneg.append(coinc*cosdec)
+                        else:
+                            xpos.append(coinc*sindec)
+                            ypos.append(coinc*cosdec)
+                else:
+                    coinc = 90-np.abs(el)
+                    sindec = np.sin(np.pi/180*dec[i])
+                    cosdec = np.cos(np.pi/180*dec[i])
+                    xabs.append(coinc*sindec)
+                    y.append(coinc*cosdec)
+                    if el < 0:
+                        xneg.append(coinc*sindec)
+                        yneg.append(coinc*cosdec)
+                    else:
+                        xpos.append(coinc*sindec)
+                        ypos.append(coinc*cosdec)
+                    
+
+            xmax = np.ceil(max(xabs))
+            xmin = np.floor(min(xabs))
+            xdif = xmax-xmin 
+            ymax = np.ceil(max(y))
+            ymin = np.floor(min(y))
+            ydif = ymax-ymin
+            maxdif = max([xdif,ydif])
+            mindec = np.floor(min(dec))
+            maxdec = np.ceil(max(dec)) 
+            mininc = np.floor(min(np.abs(inc)))
+            maxinc = np.ceil(max(np.abs(inc))) 
+
+            if focus == 'data' and maxdif <= 10:
+                # decs
+                startdec = mindec
+                decline,inclst = [],[]
+                startinc = mininc
+                incline = []
+                while startdec <= maxdec:
+                    xl = 90*np.sin(np.pi/180*startdec)
+                    yl = 90*np.cos(np.pi/180*startdec)
+                    decline.append([xl,yl,startdec])
+                    startdec = startdec+1
+                while startinc <= maxinc:
+                    inclst.append(90-np.abs(startinc))
+                    startinc = startinc+1
+
+            if focus == 'all':
+                ax.set_xlim((-90,90))
+                ax.set_ylim((-90,90))
+            if focus == 'q1':
+                ax.set_xlim((0,90))
+                ax.set_ylim((0,90))
+            if focus == 'q2':
+                ax.set_xlim((-90,0))
+                ax.set_ylim((0,90))
+            if focus == 'q3':
+                ax.set_xlim((-90,0))
+                ax.set_ylim((-90,0))
+            if focus == 'q4':
+                ax.set_xlim((0,90))
+                ax.set_ylim((-90,0))
+            if focus == 'data':
+                ax.set_xlim((xmin,xmax))
+                ax.set_ylim((ymin,ymax))
+                #ax.annotate('Test', xy=(1.2, 25.2))
+            ax.plot(xpos,ypos,'o',color=color, label=col[j][:labellimit])
+            ax.plot(xneg,yneg,'o',color='white')
+            ax.annotate('60', xy=(0, 30))
+            ax.annotate('30', xy=(0, 60))
+            ax.annotate('0', xy=(0, 90))
+            ax.annotate('90', xy=(90, 0))
+            ax.annotate('180', xy=(0, -90))
+            ax.annotate('270', xy=(-90, 0))
+
+        if focus == 'data' and maxdif <= 10:
+            for elem in decline:
+                pline = plt.Line2D([0,elem[0]],[0,elem[1]],color=griddeccolor,linestyle='dotted')
+                xa = elem[0]/elem[1]*((ymax - ymin)/2+ymin)
+                ya = (ymax - ymin)/2 + ymin
+                annotext = "D:%i" % int(elem[2]) 
+                ax.annotate(annotext, xy=(xa,ya))
+                fig.gca().add_artist(pline)
+            for elem in inclst:
+                pcirc = plt.Circle((0,0),elem,color=gridinccolor,fill=False,linestyle='dotted')
+                xa = (xmax-xmin)/2 + xmin
+                ya = sqrt((elem*elem)-(xa*xa))
+                annotext = "I:%i" % int(90-elem) 
+                ax.annotate(annotext, xy=(xa,ya))
+                fig.gca().add_artist(pcirc)
+
+        if groups and legend: 
+            handles, labels = ax.get_legend_handles_labels()
+            hl = sorted(zip(handles, labels),key=operator.itemgetter(1))
+            handles2, labels2 = zip(*hl)
+            ax.legend(handles2, labels2, loc=legendposition)
+            
+        # 5. SAVE TO FILE (or show)
+        if figure:
+            return ax
+        if outfile:
+            path = os.path.split(outfile)[0]
+            if not path == '': 
+                if not os.path.exists(path):
+                    os.makedirs(path)
+            if fmt: 
+                fig.savefig(outfile, format=fmt, dpi=savedpi) 
+            else: 
+                fig.savefig(outfile, dpi=savedpi) 
+        elif noshow:
+            return fig
+        else: 
+            plt.show()
 
 
     def trim(self, starttime=None, endtime=None):
