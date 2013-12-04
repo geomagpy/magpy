@@ -19,10 +19,10 @@ Systematische Tests:
 9.  (11/2013, not necessary: raw data is always available and the file wold not contain any additional info - use database if comments are required) Laden und Speichern von DIListStructs
 10. (11/2013, OK) Datenbankspeicherung
 11. Create a direct DataBase input formular in php (and magpy-gui?? -> better refer to php there) 
-11. Laden von mehreren Files gleichzeitig (mit DILineStruct) - not really necessary
+11. (12/2013, not necessary) Laden von mehreren Files gleichzeitig (mit DILineStruct) - not really necessary
 12. Basislinien-Stabilitaet (Berechnung der Zuverlaessigkeit der Basislinien-Extrapolation)
 13. Write the documentation with citations of the underlying procedures
-14. Show Stereoplot
+14. (12/2013, OK) Show Stereoplot
 15. Briefly descripe some related bin files
 
 zu 8:
