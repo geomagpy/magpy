@@ -483,7 +483,11 @@ class DataStream(object):
 	'''
 
         if not key in KEYLIST:
-            raise ValueError, "Column key not valid"
+            loggerstream.error("_move_column: Column key %s not valid!" % key)
+        if key == 'time':
+            loggerstream.error("_move_column: Cannot move time column!")
+        if not put2key in KEYLIST:
+            loggerstream.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
         try:
             for i, elem in enumerate(self):
                 exec('elem.'+put2key+' = '+'elem.'+key)
@@ -491,9 +495,16 @@ class DataStream(object):
 	            exec('elem.'+key+' = float("NaN")')
                 else:
                     exec('elem.'+key+' = "-"')
+            try:
+                exec('self.header["col-%s"] = self.header["col-%s"]' % (put2key, key))
+                exec('self.header["unit-col-%s"] = self.header["unit-col-%s"]' % (put2key, key))
+                exec('self.header["col-%s"] = ""' % (key))
+                exec('self.header["unit-col-%s"] = ""' % (key))
+            except:
+                loggerstream.error("_move_column: Error updating headers.")
             loggerstream.info("_move_column: Column %s moved to column %s." % (key, put2key))
         except:
-            loggerstream.debug("_move_column: It's an error.")
+            loggerstream.error("_move_column: It's an error.")
 
         return self
 

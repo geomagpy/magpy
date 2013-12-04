@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-import sys
-sys.path.append('/home/leon/Software/magpy/trunk/src')
-
 from stream import *
 from absolutes import *
 from transfer import *

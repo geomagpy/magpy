@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-import sys
-sys.path.append('/home/leon/Software/magpy/trunk/src')
-
 from stream import *
 from absolutes import *
 from transfer import *
@@ -1248,8 +1245,10 @@ class MainFrame(wx.Frame):
         #self.menu_p.rep_page.logMsg('msg')
         #self.menu_p.str_page.deltaFTextCtrl.SendTextUpdatedEvent()
 
-        
+'''
+# To run:        
 app = wx.App(redirect=False)
 frame = MainFrame(None,-1,"")
 frame.Show()
 app.MainLoop()
+'''
