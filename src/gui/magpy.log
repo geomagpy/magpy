@@ -1,0 +1,5 @@
+2013-12-04 15:45:53,714 INFO    - lib    format_magpy: Found PYBIN file /srv/data/saturn/TSE/pos1/pos1_2013-08-05.bin
+2013-12-04 15:45:55,805 INFO    - stream plot: Start plotting.
+2013-12-04 15:45:56,115 INFO    - stream plot: Finished plot 1 at 2013-12-04 14:45:56.115433
+2013-12-04 15:45:56,292 INFO    - stream plot: Finished plot 2 at 2013-12-04 14:45:56.292249
+2013-12-04 15:45:56,469 INFO    - stream plot: Finished plot 3 at 2013-12-04 14:45:56.469152

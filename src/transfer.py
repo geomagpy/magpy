@@ -6,7 +6,6 @@ Written by Roman Leonhardt 2011/2012
 Version 1.0 (from the 23.02.2012)
 """
 
-
 from stream import *
 import ftplib
 
@@ -39,12 +38,39 @@ def _checklogfile(logfile):
 # ####################
 def ftpdatatransfer (**kwargs):
     """
-    Tranfering data to a ftp server
-    :type cleanup: bool
-    :param cleanup: if true, transfered files are removed from the local directory
-    Example:
+    DEFINITION:
+        Tranfering data to an ftp server
 
-    ftpdatatransfer(localfile='/home/leon/file.txt', ftppath='/stories/currentdata/radon',myproxy='',login='login',passwd='passwd',logfile='radon.log')
+    PARAMETERS:
+    Variables:
+        - ftppath:	(str) Path within ftp to send file to.
+	- myproxy:	(str) URL/IP to connect to.
+        - localfile:	(str) Direct path to file to send.
+    Kwargs:
+        - cleanup: 	(bool) If True, transfered files are removed from the local directory.
+        - filestr: 	(str) Name of file if in current directory (replaces localfile, combine with localpath).
+        - localpath: 	(str) Path to folder containing file (replaces localfile, combine with filestr).
+        - login: 	(str) Login username for ftp server.
+        - logfile: 	(str) Path to logfile. Failed transfers are listed here to send later.
+        - passwd: 	(str) Login password for ftp server.
+        - port: 	(int) Port to connect to, if required.
+	- raiseerror:	(bool) If True, raises error when ftp transfer fails.
+
+    RETURNS:
+        - Nada.
+
+    EXAMPLE:
+        >>> ftpdatatransfer(
+		localfile='/home/me/file.txt',
+		ftppath='/data/magnetism/this',
+		myproxy='www.example.com',
+		login='mylogin',
+		passwd='mypassword',
+		logfile='/home/me/Logs/magpy-transfer.log'
+		            )
+
+    APPLICATION:
+        >>> 
     """
     plog = PyMagLog()
     localfile = kwargs.get('localfile')
@@ -57,6 +83,7 @@ def ftpdatatransfer (**kwargs):
     passwd = kwargs.get('passwd')
     logfile = kwargs.get('logfile')
     cleanup = kwargs.get('cleanup')
+    raiseerror = kwargs.get('raiseerror')
 
     if not localpath:
         localpath = ''
@@ -97,6 +124,8 @@ def ftpdatatransfer (**kwargs):
             lfile.write(localpath + '  ' + filestr + '  ' + ftppath )
             lfile.write(newline)
             lfile.close()
+        if raiseerror:
+            raise
 
 
 # ####################
