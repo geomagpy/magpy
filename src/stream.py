@@ -129,7 +129,7 @@ if logpygen == '':
 # File Format Tests
 # ##################
 
-logging.basicConfig(filename='magpy.log',
+logging.basicConfig(filename='/tmp/magpy.log',
 			filemode='w',
 			format='%(asctime)s %(levelname)-8s- %(name)-6s %(message)s',
 			level=logging.INFO)
