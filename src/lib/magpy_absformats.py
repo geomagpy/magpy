@@ -5,7 +5,7 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from core.magpy_stream import *
+from stream import *
 # absolute data / DI
 from lib.format_abs_magpy import *
 
