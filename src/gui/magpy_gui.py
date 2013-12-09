@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 
-from stream import *
-from absolutes import *
-from transfer import *
-from database import *
-
 import wx
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -13,11 +8,28 @@ from matplotlib.figure import Figure
 
 from wx.lib.pubsub import Publisher
 
+from stream import *
+from absolutes import *
+from transfer import *
+from database import *
+
 from gui.streampage import *
 from gui.dialogclasses import *
 from gui.absolutespage import *
 from gui.developpage import *
 
+"""
+When package is installed use:
+from magpy.stream import *
+from magpy.absolutes import *
+from magpy.transfer import *
+from magpy.database import *
+
+from magpy.gui.streampage import *
+from magpy.gui.dialogclasses import *
+from magpy.gui.absolutespage import *
+from magpy.gui.developpage import *
+"""
    
 class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):

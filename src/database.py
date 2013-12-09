@@ -77,6 +77,60 @@ DATAINFO:
 #      dbalter, dbsensorinfo, dbdatainfo, dbdict2fields, dbfields2dict and 
 # ----------------------------------------------------------------------------
 
+def dbinit(db):
+    """
+    DEFINITION:
+        set up standard tables of magpy:
+        DATAINFO, SENSORS, and STATIONS (and FlAGGING).
+        
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+    Kwargs:
+        --
+    RETURNS:
+        --
+    EXAMPLE:
+        >>> dbinit(db)
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        1. Connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        2. use method
+        dbinit(db)
+    """
+
+    # SENSORS TABLE
+    # Create station table input
+    headstr = ' CHAR(100), '.join(SENSORSKEYLIST) + ' CHAR(100)'
+    headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
+    headstr = headstr.replace('SensorDescription CHAR(100)', 'SensorDescription TEXT')
+    createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
+
+    # STATIONS TABLE
+    # Create station table input
+    stationstr = ' CHAR(100), '.join(STATIONSKEYLIST) + ' CHAR(100)'
+    stationstr = stationstr.replace('StationID CHAR(100)', 'StationID CHAR(50) NOT NULL PRIMARY KEY')
+    stationstr = stationstr.replace('StationDescription CHAR(100)', 'StationDescription TEXT')
+    stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
+    createstationtablesql = "CREATE TABLE IF NOT EXISTS STATIONS (%s)" % stationstr
+
+    # DATAINFO TABLE
+    # Create datainfo table
+    datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
+    createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
+
+    cursor = db.cursor()
+
+    cursor.execute(createsensortablesql)
+    cursor.execute(createstationtablesql)
+    cursor.execute(createdatainfotablesql)
+
+    db.commit()
+    cursor.close ()
+    dbalter(db)
+
 
 def dbdelete(db,datainfoid,**kwargs):
     """
@@ -253,7 +307,7 @@ def dbdict2fields(db,header_dict,**kwargs):
                     if value <> header_dict[key]:
                         loggerdatabase.warning("dbdict2fields: StationID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
         except:
-            loggerdatabase.debug("dbdict2fields: STATIONS table not existing?")
+            loggerdatabase.warning("dbdict2fields: STATIONS table not existing?")
     try:
         insertsql = 'INSERT INTO SENSORS (%s) VALUE (%s)' %  (', '.join(sensorfieldlst), '"'+'", "'.join(sensorvaluelst)+'"')
         if mode == 'replace':
@@ -270,7 +324,7 @@ def dbdict2fields(db,header_dict,**kwargs):
                     if value <> header_dict[key]:
                         loggerdatabase.warning("dbdict2fields: SensorID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
         except:
-            loggerdatabase.debug("dbdict2fields: SENSORS table not existing?")
+            loggerdatabase.warning("dbdict2fields: SENSORS table not existing?")
     try:
         insertsql = 'INSERT INTO DATAINFO (%s) VALUE (%s)' %  (', '.join(datainfofieldlst), '"'+'", "'.join(datainfovaluelst)+'"')
         if mode == 'replace':
@@ -287,7 +341,7 @@ def dbdict2fields(db,header_dict,**kwargs):
                     if value <> header_dict[key]:
                         loggerdatabase.warning("dbdict2fields: DataID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
         except:
-            loggerdatabase.debug("dbdict2fields: DATAINFO table not existing?")
+            loggerdatabase.warning("dbdict2fields: DATAINFO table not existing?")
 
     db.commit()
     cursor.close ()
@@ -341,7 +395,8 @@ def dbfields2dict(db,datainfoid):
                     colselstr = row[0]
             else:
                 if row[0] == None:
-                    metadatadict[key] = row[0]
+                    #metadatadict[key] = row[0]
+                    pass
                 else:
                     metadatadict[key] = float(row[0])
 
@@ -367,7 +422,8 @@ def dbfields2dict(db,datainfoid):
                 colselstr = row[0]
         else:
             if row[0] == None:
-                metadatadict[key] = row[0]
+                pass
+                #metadatadict[key] = row[0]
             else:
                 metadatadict[key] = float(row[0])
     try:
@@ -387,7 +443,8 @@ def dbfields2dict(db,datainfoid):
             metadatadict[key] = row[0]
         else:
             if row[0] == None:
-                metadatadict[key] = row[0]
+                pass
+                #metadatadict[key] = row[0]
             else:
                 metadatadict[key] = float(row[0])
 
@@ -606,7 +663,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
     return sensorid
 
 
-def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
+def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',updatedb=True):
     """
     DEFINITION:
         provide sensorid and any relevant meta information for datainfo tab
@@ -623,7 +680,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
                If tablenum = 'new', a new number is generated e.g. 0006 if no DATAINFO matching the provided info is found 
                If no tablenum is selected all data including all Datainfo is appended to the latest numbe if no DATAINFO matching the provided info is found and no conflict with the existing DATAINFO is found 
         - defaultstation: (string) provide a default station code.
-               An important keyword is the StationID. Please make sure to provide it. Otherwise the defaultvalue 'WIC' is used 
+               An important keyword is the StationID. Please make sure to provide it. Otherwise the defaultvalue 'WIC' is used
+
+        - updatedb:      (bool) if true (default) then the new infoid is added into the database
     Kwargs:
         --
     RETURNS:
@@ -655,10 +714,13 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
     datainfohead,datainfovalue=[],[]
     if datakeydict:
         for key in datakeydict:
-            if key in DATAINFOKEYLIST: 
+            if key in DATAINFOKEYLIST:
                 datainfohead.append(key)
                 datainfovalue.append(str(datakeydict[key]))
-                searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
+                if key == 'DataID' or key.startswith('Column'):
+                    pass
+                else:
+                    searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
 
     datainfonum = '0001'
     numlst,intnumlst = [],[]
@@ -713,6 +775,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
         loggerdatabase.debug("dbdatainfo: Searchlist: %s" % intensivesearch)
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
+        print "Found: ", intensiverows
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
             for i in range(len(intensiverows)):
@@ -735,7 +798,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
                 datainfovalue.append(sensorid + '_' + datainfonum)
             datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), '"'+'", "'.join(datainfovalue)+'"')
             loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
-            cursor.execute(datainfosql)
+            if updatedb:
+                cursor.execute(datainfosql)
         datainfoid = sensorid + '_' + datainfonum
     else:
         # return 0001
@@ -745,7 +809,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC'):
         # and create datainfo input
         loggerdatabase.debug("dbdatainfo: %s, %s" % (datainfohead, datainfovalue))
         datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), '"'+'", "'.join(datainfovalue)+'"')
-        cursor.execute(datainfosql)
+        if updatedb:
+            cursor.execute(datainfosql)
 
     db.commit()
     cursor.close ()

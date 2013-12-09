@@ -25,6 +25,8 @@ class StreamPage(wx.Panel):
         
     # Widgets
     def createControls(self):
+        self.lineLabel1 = wx.StaticText(self, label="__________________")
+        self.lineLabel2 = wx.StaticText(self, label="__________________")
         self.pathLabel = wx.StaticText(self, label="Path:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
         self.fileLabel = wx.StaticText(self, label="File:")
@@ -50,7 +52,9 @@ class StreamPage(wx.Panel):
 
         # Add the following selectors
         # chooseCompButton -> select the shown components
+        self.selectCompButton = wx.Button(self,-1,"Select Columns")
         # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
+        self.extractValuesButton = wx.Button(self,-1,"Extract Values")
         # specify plot options ('o','-' etc
         # coordinate transform (if xyz given and magnetic)
         # show/edit meta info
@@ -129,7 +133,13 @@ class StreamPage(wx.Panel):
                  'self.endTimePicker, expandOption',
                  'self.openStreamButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
+                 'self.lineLabel1, noOptions',
+                 'self.lineLabel2, noOptions',
+                 'self.plotOptionsLabel, noOptions',
+                 '(0,0), noOptions']
+                 'self.selectCompButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
+                 'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
                  'self.plotOptionsLabel, noOptions',
                  '(0,0), noOptions']

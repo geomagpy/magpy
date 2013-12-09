@@ -10,4 +10,10 @@ Various Format descriptions for MagPy.
 """
 
 # import order matters - NamedTemporaryFile must be one of the first!
-from stream import *
+#from stream import *
+__all__ = ['streampage','dialogclasses','absolutespage','developpage']
+
+from streampage import *
+from dialogclasses import *
+from absolutespage import *
+from developpage import *

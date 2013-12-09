@@ -125,11 +125,15 @@ except:
 if logpygen == '':
     logpygen = "OK"
 
-# ##################
-# File Format Tests
-# ##################
 
-logging.basicConfig(filename='/tmp/magpy.log',
+# Logging
+# ---------
+
+from os.path import expanduser  # select the home directory of the user - platform independent
+home = expanduser("~")
+logfile = os.path.join(home,'magpy.log')
+
+logging.basicConfig(filename=logfile,
 			filemode='w',
 			format='%(asctime)s %(levelname)-8s- %(name)-6s %(message)s',
 			level=logging.INFO)
@@ -1564,8 +1568,8 @@ class DataStream(object):
                     lowlim = 0
 
         # Add filtering information to header:
-        #self.header['DigitalSamplingWidth'] = str(trange.seconds)+' sec'
-        self.header['DataSamplingFilter'] = filter_type + str(filter_width.seconds)+' sec'
+        self.header['DataSamplingRate'] = str(filter_width.seconds) + ' sec'
+        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange.seconds) + ' sec'
         #self.header['DataInterval'] = str(filter_width.seconds)+' sec'
         
         loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))

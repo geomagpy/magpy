@@ -2,7 +2,7 @@ import sys
 from socket import gethostname
 
 planet = gethostname()
-leonplanets = ['earth', 'uranus', 'saturn']
+leonplanets = ['Earth', 'uranus', 'saturn']
 
 if planet in leonplanets:
     magpypath = '/home/leon/Software/magpy/trunk/src/'
