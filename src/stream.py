@@ -195,6 +195,7 @@ class DataStream(object):
     - stream.extrapolate() -- read absolute stream and extrapolate the data
     - stream.fit(keys) -- returns function
     - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...) 
+    - stream.find_offset() -- Finds offset of two data streams. (Not optimised.) 
     - stream.flag_stream() -- Add flags to specific times or time ranges
     - stream.func_add() -- Add a function to the selected values of the data stream
     - stream.func_subtract() -- Subtract a function from the selected values of the data stream
@@ -211,6 +212,7 @@ class DataStream(object):
     - stream.powerspectrum() -- Calculating the power spectrum following the numpy fft example
     - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
     - stream.remove_outlier() -- returns stream (adds flags and comments)
+    - stream.resample(period) -- Resample stream to given sampling period.
     - stream.rotation() -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
     - stream.smooth(key) -- smooth the data using a window with requested size
     - stream.spectrogram() -- Creates a spectrogram plot of selected keys
@@ -231,7 +233,7 @@ class DataStream(object):
     - self._move_column(key, put2key) -- moves one column to another key
     - self._clear_column(key) -- clears a column to a Stream
     - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
-    - self._reduce_stream(self)
+    - self._reduce_stream(self) -- Reduces stream below a certain limit.
     - self._remove_lines(self, key, value) -- removes lines with value within the selected key
 
     B. Internal Methods II: Data manipulation functions
@@ -1237,7 +1239,7 @@ class DataStream(object):
         put2key
         """
         
-        loggerstream.info('--- Calculating derivative started at %s ' % str(datetime.now()))
+        loggerstream.info('differentiate: Calculating derivative started.')
 
         keys = kwargs.get('keys')
         put2keys = kwargs.get('put2keys')
@@ -1574,7 +1576,7 @@ class DataStream(object):
         
         loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
 
-        return DataStream(resdata,self.header)             
+        return DataStream(resdata,self.header)  
 
         
     def fit(self, keys, **kwargs):
@@ -3003,6 +3005,69 @@ class DataStream(object):
         return DataStream(newst, self.header)        
 
 
+    def resample(self, keys, period, **kwargs):
+        """
+    DEFINITION:
+        Uses Numpy interpolate.interp1d to resample stream to requested period.
+
+    PARAMETERS:
+    Variables:
+        - keys: 	(list) keys to be resampled.
+        - period: 	(float) sampling period in seconds, e.g. 5s (0.2 Hz).
+    Kwargs:
+
+    RETURNS:
+        - stream: 	(DataStream object) Stream containing resampled data.
+
+    EXAMPLE:
+        >>> resampled_stream = pos_data.resample(['f'],1)
+
+    APPLICATION: 
+        """
+
+	sp = self.get_sampling_period()*24.*60.*60.
+
+	loggerstream.info("resample: Reducing stream of sampling period %s to period %s." % (sp,period))
+
+	t_min = self._get_min('time')
+	t_max = self._get_max('time')
+	print t_min, t_max
+	t_list = []
+        time = num2date(t_min)
+        while time <= num2date(t_max):
+           t_list.append(time)
+           time = time + timedelta(seconds=period)
+
+	res_stream = DataStream()
+        for item in t_list:
+            row = LineStruct()
+            row.time = item
+            res_stream.add(row)
+
+        for key in keys:
+            if key not in KEYLIST[1:16]:
+                loggerstream.error("resample: Key %s not supported!" % key)
+            try:
+                int_data = self.interpol(['f'],kind='cubic')
+            except:
+                loggerstream.error("resample: Error interpolating stream. Stream too large?")
+
+            int_func = int_data[0]['ff']
+            int_min = int_data[1]
+            int_max = int_data[2]
+
+	    key_list = []
+            for item in t_list:
+                functime = (date2num(item) - int_min)/(int_max - int_min)
+                tempval = int_func(functime)
+                key_list.append(tempval)
+
+            res_stream._put_column(key_list,key)
+
+        loggerstream.info("resample: Data resampling complete.")
+	return res_stream
+
+
     def rotation(self,**kwargs):
         """
         Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
@@ -3469,18 +3534,41 @@ class DataStream(object):
 
     def write(self, filepath, **kwargs):
         """
-        Writing Stream to a file
-        filepath (string): provding path/filename for saving
-        Keywords:
-        format_type (string): in which format - default pystr
-        period (string) : supports hour, day, month, year, all - default day
-        filenamebegins (string): providing the begin of savename (e.g. "WIK_")
-        filenameends (string): providing the end of savename (e.g. ".min")
-        wformat (string): outputformat
-        dateformat (string):  outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22"
-        coverage: (timedelta): day files or hour or month or year or all - default day
-        mode: (append, overwrite, replace, skip) mode for handling existing files/data in files
-        --- > Example output: "WIK_2011-11-22.min"
+    DEFINITION:
+        Code for simple application: write Stream to a file.
+
+    PARAMETERS:
+    Variables:
+        - filepath: 	(str) Providing path/filename for saving.
+    Kwargs:
+        - coverage: 	(timedelta) day files or hour or month or year or all - default day.
+        - dateformat: 	(str) outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22".
+        - filenamebegins: 	(str) providing the begin of savename (e.g. "WIK_").
+        - filenameends: 	(str) providing the end of savename (e.g. ".min").
+        - format_type: 	(str) Which format - default pystr.
+        - keys: 	(list) Keys to write to file.
+			Current supported formats: PYSTR, PYCDF, IAGA, WDC, DIDD,
+				PMAG1, PMAG2, DTU1,  GDASA1, RMRCS, AUTODIF_FREAD, 
+				USBLOG, CR800, LATEX
+        - mode: 	(str) Mode for handling existing files/data in files.
+			Options: append, overwrite, replace, skip
+        [- period: 	(str) Supports hour, day, month, year, all - default day.]
+	[--> Where is this?]
+        - wformat: 	(str) outputformat.
+
+    RETURNS:
+        - ...		(bool) True if successful.
+
+    EXAMPLE:
+        >>> stream.write('/home/user/data',
+			filenamebegins='WIK_',
+			filenameends='.min',
+			dateformat='%Y-%m-%d',
+			format_type='IAGA')
+	(Output file = 'WIK_2013-08-10.min')
+
+    APPLICATION:
+
         """
         format_type = kwargs.get('format_type')
         filenamebegins = kwargs.get('filenamebegins')
@@ -3488,8 +3576,8 @@ class DataStream(object):
         dateformat = kwargs.get('dateformat')
         coverage = kwargs.get('coverage')
         mode = kwargs.get('mode')
-        offsets = kwargs.get('offsets')
-        createlatex = kwargs.get('createlatex')
+        #period = kwargs.get('period')		# TODO
+        #offsets = kwargs.get('offsets')	# retired? TODO
         keys = kwargs.get('keys')
         
         if not format_type:
@@ -3504,7 +3592,7 @@ class DataStream(object):
         if not filenamebegins:
             filenamebegins = ''
         if not filenameends:
-            # Extension for cfd files is automatically attached
+            # Extension for cdf files is automatically attached
             if format_type == 'PYCDF':
                 filenameends = ''
             else:
@@ -4233,6 +4321,191 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     loggerstream.info('mergeStreams: Mergings finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)      
+
+
+
+def find_offset(stream1, stream2, **kwargs):
+    '''
+    DEFINITION:
+        Uses least-squares method for a rough estimate of the offset in the time 
+	axis of two different streams. Both streams must contain the same key, e.g. 'f'.
+	GENTLE WARNING: This method is FAR FROM OPTIMISED.
+			Interpolation brings in errors, *however* does allow for
+			a more exact result.
+
+    PARAMETERS:
+    Variables:
+        - stream1: 	(DataStream object) First stream to compare.
+        - stream2: 	(DataStream object) Second stream to compare.
+    Kwargs:
+        - deltat_step:	(float) Time value to iterate over. Accuracy is higher with
+			smaller values.
+	- guess_low:	(float) Low guess for offset. Function will iterate from here.
+	- guess_high:	(float) High guess for offset. Function will iterate till here.
+	- log_chi:	(bool) If True, log chi values.
+	- plot:		(bool) Filename of plot to save chi-sq values to, e.g. "chisq.png"
+
+    RETURNS:
+        - t_offset: 	(float) The offset (in seconds) calculated by least-squares method
+			of stream_b.
+
+    EXAMPLE:
+        >>> offset = find_offset(gdas_data, pos_data, guess=-30.,deltat_min = 0.1)
+
+    APPLICATION: 
+        """
+    '''
+
+    # 1. Define starting parameters:
+    deltat_step = kwargs.get('deltat_step')
+    guess_low = kwargs.get('guess_low')
+    guess_high = kwargs.get('guess_high')
+    log_chi = kwargs.get('log_chi')
+
+    if not deltat_step:
+        deltat_step = 0.1
+    if not guess_low:
+        guess_low = -60.
+    if not guess_high:
+        guess_high = 60.
+    N_iter = 0.
+
+    # Interpolate the function with the smaller sample period.
+    # Should hopefully lower error factors.
+
+    sp1 = stream1.get_sampling_period()
+    sp2 = stream2.get_sampling_period()
+
+    if sp1 > sp2:
+        stream_a = stream1
+        stream_b = stream2
+        main_a = True
+    elif sp1 < sp2:
+        stream_a = stream2
+        stream_b = stream1
+        main_a = False
+    else:
+        stream_a = stream1
+        stream_b = stream2
+        main_a = True
+
+    # Important for least-squares method. Streams must have same length.
+    timeb = stream_b._get_column('time')
+    stime = np.min(timeb)
+    etime = np.max(timeb)
+
+    timespan = guess_high-guess_low
+
+    stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None)+timedelta(seconds=timespan*2), 
+				endtime=num2date(etime).replace(tzinfo=None)+timedelta(seconds=-timespan*2))
+
+    mean_a = stream_a.mean('f')
+    mean_b = stream_b.mean('f')
+    difference = mean_a - mean_b
+
+    # Interpolate one stream:
+    # Note: higher errors with lower degree of interpolation. Highest degree possible is desirable, linear terrible.
+    try:
+        int_data = stream_b.interpol(['f'],kind='cubic')
+    except MemoryError:
+        try:
+            loggerstream.warning("find_offset: Not enough memory for cubic spline. Attempting quadratic...")
+            int_data = stream_b.interpol(['f'],kind='quadratic')
+        except MemoryError:
+            loggerstream.error("find_offset: Too much data! Cannot interpolate function with high enough accuracy.")
+            return "nan"
+
+    int_func = int_data[0]['ff']
+    int_min = date2num(num2date(int_data[1])+timedelta(milliseconds=guess_low*1000.))
+    int_max = date2num(num2date(int_data[2])+timedelta(milliseconds=guess_low*1000.))
+
+    timea = stream_a._get_column('f')
+    datarray_base = np.zeros((len(stream_a)))
+    count = 0
+
+    # 5. Create array of delta-f with offset times:
+    for elem in stream_a:
+        time = stream_a[count].time
+        if time > int_min and time < int_max:
+            functime = (time - int_min)/(int_max - int_min)
+            tempval = stream_a[count].f - int_func(functime)
+            datarray_base[count] += tempval
+        count = count+1
+
+    # 3. From data array calculate chi-squared array of null-offset as a base comparison:
+    chisq_ = 0.
+    for item in datarray_base:
+        chisq_ = chisq_ + (item)**2.
+        #chisq_ = chisq_ + (item-difference)**2.		# Correction may be needed for reasonable values.
+    deltat = guess_low
+
+    # (Write data to file for logging purposes.)
+    if log_chi:
+        newfile = open('chisq.txt','a')
+        writestring = str(deltat)+' '+str(chisq_)+' '+str(chisq_)+' '+str(len(datarray_base))+'\n'
+        newfile.write(writestring)
+        newfile.close()
+
+    # 4. Start iteration to find best chi-squared minimisation:
+
+    loggerstream.info("find_offset: Starting chi-squared iterations...")
+
+    chi_lst = []
+    time_lst = []
+    min_lst = []
+    max_lst = []
+    results = []
+
+    while True:
+        deltat = deltat + deltat_step
+        if deltat > guess_high: break
+        N_iter = N_iter + 1.
+        flag == 0.
+
+        datarray = np.zeros((len(stream_a)))
+
+        count = 0
+        newc = 0
+        int_min = float(date2num(num2date(int_data[1]) + timedelta(milliseconds=deltat*1000.)))
+        int_max = float(date2num(num2date(int_data[2]) + timedelta(milliseconds=deltat*1000.)))
+
+        for elem in stream_a:
+            time = stream_a[count].time
+            if time > int_min and time < int_max:
+                functime = (time - int_min)/(int_max - int_min)
+                tempval = stream_a[count].f - int_func(functime)
+                datarray[count] += tempval
+            count = count+1
+
+        chisq = 0.
+        for item in datarray:
+            chisq = chisq + (item-difference)**2.
+
+        if log_chi:
+            newfile = open('chisq.txt','a')
+            writestring = str(deltat)+' '+str(chisq)+' '+str(chisq_)+' '+str(len(datarray))+'\n'
+            newfile.write(writestring)
+            newfile.close()
+
+	# Catch minimum:
+        if chisq < chisq_:
+            chisq_ = chisq
+	    t_offset = deltat
+
+        chi_lst.append(chisq)
+        time_lst.append(deltat)
+
+    if plot:
+        plt.plot(time_lst,chi_lst,'-')
+        plt.show()
+
+    if not main_a:
+        t_offset = t_offset * (-1)
+
+    loggerstream.info("find_offset: Found an offset of stream_a of %s seconds." % t_offset)
+
+    # RESULTS
+    return t_offset           
 
 
 def subtractStreams(stream_a, stream_b, **kwargs):
