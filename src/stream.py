@@ -3035,7 +3035,7 @@ class DataStream(object):
 	t_list = []
         time = num2date(t_min)
         while time <= num2date(t_max):
-           t_list.append(time)
+           t_list.append(date2num(time))
            time = time + timedelta(seconds=period)
 
 	res_stream = DataStream()
@@ -3058,7 +3058,7 @@ class DataStream(object):
 
 	    key_list = []
             for item in t_list:
-                functime = (date2num(item) - int_min)/(int_max - int_min)
+                functime = (item - int_min)/(int_max - int_min)
                 tempval = int_func(functime)
                 key_list.append(tempval)
 
