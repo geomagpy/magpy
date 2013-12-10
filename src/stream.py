@@ -195,7 +195,7 @@ class DataStream(object):
     - stream.extrapolate() -- read absolute stream and extrapolate the data
     - stream.fit(keys) -- returns function
     - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...) 
-    - stream.find_offset() -- Finds offset of two data streams. (Not optimised.) 
+    - stream.find_offset(stream_a, stream_b) -- Finds offset of two data streams. (Not optimised.) 
     - stream.flag_stream() -- Add flags to specific times or time ranges
     - stream.func_add() -- Add a function to the selected values of the data stream
     - stream.func_subtract() -- Subtract a function from the selected values of the data stream
@@ -3027,11 +3027,11 @@ class DataStream(object):
 
 	sp = self.get_sampling_period()*24.*60.*60.
 
-	loggerstream.info("resample: Reducing stream of sampling period %s to period %s." % (sp,period))
+	loggerstream.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
 
 	t_min = self._get_min('time')
 	t_max = self._get_max('time')
-	print t_min, t_max
+
 	t_list = []
         time = num2date(t_min)
         while time <= num2date(t_max):
