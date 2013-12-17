@@ -28,10 +28,16 @@ from lib.format_sfs import *
 from lib.format_bdv import *
 from lib.format_dtu import *
 from lib.format_gfz import *
+
+from lib.format_imf import *
 try:
     from lib.format_autodif_fread import *
 except:
-    logging.warning("Format package autodif-F not available")
+    logging.warning("magpy-formats: Format package autodif-F not available")
+#try:
+#except:
+#    logging.warning("magpy-formats: Format package intermagnet not available")
+
 
 def isFormat(filename, format_type):
     if (format_type == "IAGA"):
@@ -103,9 +109,18 @@ def isFormat(filename, format_type):
     elif (format_type == "POS1TXT"): # Text POS1 data (0.2 Hz)
         if (isPOS1TXT(filename)):
             return True
-    #elif (format_type == "AUTODIF"): # Text AUTODIF baseline (2/Hr)
-    #    if (isAUTODIF(filename)):
-    #        return True
+    elif (format_type == "IMF"): # Intermagnet v1.22,v1.23 data (60 sec)
+        try:
+            if (isIMF(filename)):
+                return True
+        except:
+            pass
+    elif (format_type == "BLV"): # Intermagnet IBFV2.00
+        try:
+            if (isBLV(filename)):
+                return True
+        except:
+            pass
     elif (format_type == "AUTODIF_FREAD"): # Text AUTODIF F for baseline (0.2 Hz, from POS1)
         try:
             if (isAUTODIF_FREAD(filename)):
@@ -140,6 +155,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIAGA(filename, headonly, **kwargs)
     elif (format_type == "WDC"):
         return readWDC(filename, headonly, **kwargs)
+    elif (format_type == "IMF"):
+        return readIMF(filename, headonly, **kwargs)
+    elif (format_type == "BLV"): # Intermagnet IBFV2.00
+        return readBLV(filename, headonly, **kwargs)
     elif (format_type == "DIDD"):
         return readDIDD(filename, headonly, **kwargs)
     elif (format_type == "GDASA1"):
@@ -166,8 +185,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPOS1(filename, headonly, **kwargs)
     elif (format_type == "POS1TXT"):
         return readPOS1TXT(filename, headonly, **kwargs)
-    #elif (format_type == "AUTODIF"):
-    #    return readAUTODIF(filename, headonly, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return readAUTODIF_FREAD(filename, headonly, **kwargs)
     elif (format_type == "ENV05"):
@@ -215,6 +232,10 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeIAGA(datastream, filename, **kwargs)
     elif (format_type == "WDC"):
         return writeWDC(datastream, filename, **kwargs)
+    elif (format_type == "IMF"):
+        return writeIMF(datastream, filename, **kwargs)
+    elif (format_type == "BLV"):
+        return writeBLV(datastream, filename, **kwargs)
     elif (format_type == "DIDD"):
         return writeDIDD(datastream, filename, **kwargs)
     elif (format_type == "PMAG1"):
@@ -240,7 +261,7 @@ def writeFormat(datastream, filename, format_type, **kwargs):
     elif (format_type == "LATEX"):
         return writeLATEX(datastream, filename, **kwargs)
     else:
-        return "Writing not succesful - format not recognized"
+        logging.warning("magpy-formats: Writing not succesful - format not recognized")
 
 
 

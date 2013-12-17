@@ -166,7 +166,7 @@ FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2',
+PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'IMF', 'BLV', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2',
 				'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1','RMRCS', 
 				'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
 				'AUTODIF', 'AUTODIF_FREAD', 'PYCDF', 'PYBIN', 'POS1TXT', 
@@ -1070,6 +1070,7 @@ class DataStream(object):
 
         stabilitytest (bool)
         """
+        keys = kwargs.get('keys')
         fitfunc = kwargs.get('fitfunc')
         fitdegree = kwargs.get('fitdegree')
         knotstep = kwargs.get('knotstep')
@@ -1086,10 +1087,16 @@ class DataStream(object):
             fitdegree = 5
         if not knotstep:
             knotstep = 0.05
-
+        if not keys:
+            keys = ['x','y','z']
 
         starttime = self[0].time
         endtime = self[-1].time
+
+        self.header['DataAbsFunc'] = fitfunc
+	self.header['DataAbsDegree'] = fitdegree
+        self.header['DataAbsKnots'] = knotstep
+        self.header['DataAbsDate'] = datetime.strftime(datetime.utcnow(),'%Y-%m-%d %H:%M:%S')
 
         usestepinbetween = False # for better extrapolation
 
@@ -1158,7 +1165,7 @@ class DataStream(object):
         col = bas._get_column('dz')
         bas = bas._put_column(col,'z')
 
-        func = bas.fit(['x','y','z'],fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
+        func = bas.fit(keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
 
         if plotbaseline:
             if plotfilename:
@@ -1171,6 +1178,8 @@ class DataStream(object):
         # add baseline
         self = self.func_add(func)
 
+        self.header['DataAbsMinTime'] = basestarttime
+        self.header['DataAbsMaxTime'] = baseendtime
         loggerstream.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
         if returnfunction:
@@ -1624,6 +1633,8 @@ class DataStream(object):
         
         for key in keys:
             tmpst = self._drop_nans(key)
+            if len(tmpst) < 1:
+                break
             t = tmpst._get_column('time')
             nt,sv,ev = self._normalize(t)
             sp = self.get_sampling_period()
@@ -3587,6 +3598,19 @@ class DataStream(object):
         [- period: 	(str) Supports hour, day, month, year, all - default day.]
 	[--> Where is this?]
         - wformat: 	(str) outputformat.
+       --- specific functions for baseline file
+        - fitfunc       (str) fit function for baselinefit
+        - fitdegree     
+        - knotstep    
+        - extradays
+        - year          (int) year
+        - meanh         (float) annual mean of H component
+        - meanf         (float) annual mean of F component
+       --- specific functions for intermagnet file
+        - version       (str) file version
+        - gin           (gin) information node code
+        - datatype      (str) R: reported, A: adjusted, Q: quasi-definit, D: definite
+
 
     RETURNS:
         - ...		(bool) True if successful.
@@ -3611,6 +3635,33 @@ class DataStream(object):
         #period = kwargs.get('period')		# TODO
         #offsets = kwargs.get('offsets')	# retired? TODO
         keys = kwargs.get('keys')
+        fitfunc = kwargs.get('fitfunc')
+        fitdegree = kwargs.get('fitdegree')
+        knotstep = kwargs.get('knotstep')
+        extradays = kwargs.get('extradays')
+        year = kwargs.get('year')
+        meanh = kwargs.get('meanh')
+        meanf = kwargs.get('meanf')
+        version = kwargs.get('version')
+        gin = kwargs.get('gin')
+        datatype = kwargs.get('datatype')
+
+        # Preconfigure some fileformats - can be overwritten by keywords
+        if format_type == 'IMF':
+            dateformat = '%b%d%y'
+            try:
+                extension = (self.header['StationID']).lower()
+            except:
+                extension = 'txt'
+            filenameends = '.'+extension
+        if format_type == 'BLV':
+            blvyear = datetime.strftime(num2date(self[-1].time).replace(tzinfo=None),'%Y')
+            try:
+                filenamebegins = (self.header['StationID']).upper()+blvyear
+            except:
+                filenamebegins = 'XXX'+blvyear
+            filenameends = '.blv'
+            coverage = 'all'
         
         if not format_type:
             format_type = 'PYSTR'
@@ -3631,6 +3682,7 @@ class DataStream(object):
                 filenameends = '.txt'
         if not mode:
             mode= 'overwrite'
+
 
         if len(self) < 1:
             loggerstream.warning('write: Stream is empty!')
@@ -3669,13 +3721,15 @@ class DataStream(object):
                 lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                 newst = DataStream(lst,self.header)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                if format_type == 'IMF':
+                    filename = filename.upper()
                 if len(lst) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype)
                 starttime = endtime
                 endtime = endtime + coverage
         else:
             filename = filenamebegins + filenameends
-            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,meanh=meanh,meanf=meanf,year=year,extradays=extradays)
 
         return True
 
@@ -4304,7 +4358,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         return DataStream(sta, headera)
     else:
         # interpolate stream_b
-        sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
+        # changed the following trim section to prevent removal of first input in trim method 
+        if stream_b[0].time == np.min(timea):
+            sb = stream_b.trim(endtime=np.max(timea))
+        else:
+            sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
         timeb = sb._get_column('time')
         timeb = sb._maskNAN(timeb)
 
@@ -4315,7 +4373,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
             foundina = sb._find_nearest(timea,elem.time)
             pos = foundina[1]
             ta = foundina[0]
-            if (ta > taprev) and (np.min(timeb) < ta < np.max(timeb)):
+            if (ta > taprev) and (np.min(timeb) <= ta <= np.max(timeb)):
                 taprev = ta
                 functime = (ta-function[1])/(function[2]-function[1])
                 for key in keys:

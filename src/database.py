@@ -77,6 +77,63 @@ DATAINFO:
 #      dbalter, dbsensorinfo, dbdatainfo, dbdict2fields, dbfields2dict and 
 # ----------------------------------------------------------------------------
 
+def dbsamplingrate(stream):
+    """
+    DEFINITION:
+        returns a rounded value of the sampling rate
+    headerdict = 
+    """
+    sr = stream.get_sampling_period()*24*3600
+    if np.round(sr,0) == 0:
+        return np.round(sr,1)
+    else:
+        return np.round(sr,0)
+
+
+def dbupload(db, path,stationid,**kwargs):
+    """
+    DEFINITION:
+        method to upload data to a database and to create an archive
+    headerdict = 
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    headerdict = kwargs.get('headerdict')
+    archivepath = kwargs.get('archivepath')
+    sensorid = kwargs.get('sensorid')
+
+    stream = read(path,starttime=starttime,endtime=endtime)
+    stream.header['StationID']=stationid
+    if headerdict:
+        stream.header = headerdict
+    stream.header['DataSamplingRate'] = str(dbsamplingrate(stream)) + ' sec'
+    if sensorid:
+        stream.header['SensorID']=sensorid
+
+    try:
+        stream2db(db,stream,mode='insert')
+    except:
+        stream2db(db,stream,mode='extend')
+
+    if archivepath:
+        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+        archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
+        stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
+
+    stream = stream.filter(filter_type='gauss',filter_width=timedelta(minutes=1))
+
+    try:
+        stream2db(db,stream,mode='insert')
+    except:
+        stream2db(db,stream,mode='extend')
+
+    if archivepath:
+        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+        archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
+        stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
+
+
+
 def dbinit(db):
     """
     DEFINITION:
