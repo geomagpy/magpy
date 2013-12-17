@@ -136,7 +136,7 @@ class StreamPage(wx.Panel):
                  'self.lineLabel1, noOptions',
                  'self.lineLabel2, noOptions',
                  'self.plotOptionsLabel, noOptions',
-                 '(0,0), noOptions']
+                 '(0,0), noOptions',
                  'self.selectCompButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',

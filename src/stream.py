@@ -1394,13 +1394,29 @@ class DataStream(object):
 
     def filter(self, **kwargs):
         """
-        Filtering function
-        kwargs support the following keywords:
-            - filter_type   (gaussian, linear or special) default=gaussian
-            - filter_width (timedelta-object) default=timedelta(minutes=1)
-            - filter_offset   (timedelta-object) default=0
-            - gauss_win (int) default=1.86506 (corresponds to +/-45 sec in case of min or 45 min in case of hour
-            - fmi_initial_data (DataStream containing dH values (dx)  default=[]
+    DEFINITION:
+        Code for simple application, filtering function.
+	Returns stream with filtered data with sampling period of
+	filter_width.
+
+    PARAMETERS:
+    Variables:
+        - variable: 	(type) Description.
+    Kwargs:
+        - filter_type: 	(str) Options: gaussian, linear or special. Default = gaussian.
+        - filter_width: (timedelta object) Default = timedelta(minutes=1)
+        - filter_offset: 	(timedelta object) Default=0
+        - gauss_win: 	(int) Default = 1.86506 (corresponds to +/-45 sec in case of min or 45 min in case of hour).
+        - fmi_initial_data: 	(DataStream containing dH values (dx)) Default=[].
+
+    RETURNS:
+        - stream: 	(DataStream object) Stream containing filtered data.
+
+    EXAMPLE:
+        >>> stream_filtered = stream.filter(filter_width=timedelta(minutes=3))
+
+    APPLICATION:
+
         """
 
         # Defaults:
@@ -1428,16 +1444,16 @@ class DataStream(object):
 
         # check whether data is valid
         if len(self) < 2:
-            loggerstream.warning('FilterFunc: No valid stream provided')
+            loggerstream.warning('filter: No valid stream provided')
             return self
 
         # check whether requested filter_width >= sampling interval within 1 millisecond accuracy
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         if filter_width - si <= timedelta(microseconds=1000):
-            loggerstream.warning('FilterFunc: Requested filter_width does not exceed sampling interval - aborting filtering')
+            loggerstream.warning('filter: Requested filter_width does not exceed sampling interval - aborting filtering')
             return self
 
-        loggerstream.info('--- Start filtering at %s ' % str(datetime.now()))
+        loggerstream.info('filter: Start filtering.')
 
         starray = np.asarray(self)
         firstday = 0
@@ -1548,7 +1564,7 @@ class DataStream(object):
                         if len(colf) >0:
                             resrow.df = np.max(colf)-np.min(colf)
                 else:
-                    loggerstream.warning("FilterFunc: Filter not recognized - aborting filering")
+                    loggerstream.warning("filter: Filter not recognized - aborting filtering.")
                 resrow.typ = starray[0].typ
             else: # in case of removed flagged sequences - add time and leave "NaN" value in file 
                 resrow.time = abscurrtime
@@ -1574,7 +1590,7 @@ class DataStream(object):
         self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange.seconds) + ' sec'
         #self.header['DataInterval'] = str(filter_width.seconds)+' sec'
         
-        loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
+        loggerstream.info('filter: Finished filtering.')
 
         return DataStream(resdata,self.header)  
 
@@ -2895,17 +2911,9 @@ class DataStream(object):
 
     def remove_outlier(self, **kwargs):
         """
-        uses quartiles: threshold should be 1.5
-        treshold 5 keeps storm onsets in
-        treshold 4 seems to be the best compromise
-        Get start time and add (e.g.) one hour for upper limit
-        kwargs support the following keywords:
-            - timerange (timedelta obsject) default=timedelta(hours=1)
-            - threshold (float)  default=4
-            - flag
-            - keys  (from KEYLIST) default 'f'
-
-        Position of flag in flagstring
+    DEFINITION:
+        Flags outliers in data, uses quartiles.
+        Notes: Position of flag in flagstring:
         f (intensity): pos 0
         x,y,z (vector): pos 1
         other (vector): pos 2
@@ -2923,6 +2931,25 @@ class DataStream(object):
         0000000, 0001000, etc
         012 = take f, automatically removed v, and force use of other
         300 = force remove f, take v, and take other
+
+    PARAMETERS:
+    Variables:
+        - None.
+    Kwargs:
+	- keys:		(list) List of keys to evaluate. Default=['f']
+        - threshold: 	(float) Determines threshold for outliers.
+			1.5 = standard
+			5 = keeps storm onsets in
+			4 = Default as comprimise.
+        - timerange: 	(timedelta Object) Time range. Default = timedelta(hours=1)
+
+    RETURNS:
+        - stream: 	(DataStream Object) Stream with flagged data.
+
+    EXAMPLE:
+        >>> stream.remove_outlier(keys=['x','y','z'], threshold=2)
+
+    APPLICATION:
         """
         # Defaults:
         timerange = kwargs.get('timerange')
@@ -3005,7 +3032,7 @@ class DataStream(object):
         return DataStream(newst, self.header)        
 
 
-    def resample(self, keys, period, **kwargs):
+    def resample(self, keys, **kwargs):
         """
     DEFINITION:
         Uses Numpy interpolate.interp1d to resample stream to requested period.
@@ -3013,8 +3040,8 @@ class DataStream(object):
     PARAMETERS:
     Variables:
         - keys: 	(list) keys to be resampled.
-        - period: 	(float) sampling period in seconds, e.g. 5s (0.2 Hz).
     Kwargs:
+        - period: 	(float) sampling period in seconds, e.g. 5s (0.2 Hz).
 
     RETURNS:
         - stream: 	(DataStream object) Stream containing resampled data.
@@ -3024,6 +3051,11 @@ class DataStream(object):
 
     APPLICATION: 
         """
+
+        period = kwargs.get('period')
+
+        if not period:
+            period = 60.
 
 	sp = self.get_sampling_period()*24.*60.*60.
 
@@ -3046,13 +3078,13 @@ class DataStream(object):
 
         for key in keys:
             if key not in KEYLIST[1:16]:
-                loggerstream.error("resample: Key %s not supported!" % key)
+                loggerstream.warning("resample: Key %s not supported!" % key)
             try:
-                int_data = self.interpol(['f'],kind='cubic')
+                int_data = self.interpol([key],kind='linear')#'cubic')
             except:
                 loggerstream.error("resample: Error interpolating stream. Stream too large?")
 
-            int_func = int_data[0]['ff']
+            int_func = int_data[0]['f'+key]
             int_min = int_data[1]
             int_max = int_data[2]
 
@@ -3065,7 +3097,7 @@ class DataStream(object):
             res_stream._put_column(key_list,key)
 
         loggerstream.info("resample: Data resampling complete.")
-	return res_stream
+	return DataStream(res_stream,self.headers)
 
 
     def rotation(self,**kwargs):
