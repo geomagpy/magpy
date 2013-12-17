@@ -103,17 +103,12 @@ def dbupload(db, path,stationid,**kwargs):
     sensorid = kwargs.get('sensorid')
 
     stream = read(path,starttime=starttime,endtime=endtime)
-    stream.header['StationID']=stationid
     if headerdict:
         stream.header = headerdict
+    stream.header['StationID']=stationid
     stream.header['DataSamplingRate'] = str(dbsamplingrate(stream)) + ' sec'
     if sensorid:
         stream.header['SensorID']=sensorid
-
-    try:
-        currentfilter = stream.header['DataSamplingFilter']
-    except:
-        currentfilter = 'None'
 
     try:
         stream2db(db,stream,mode='insert')
@@ -122,8 +117,10 @@ def dbupload(db, path,stationid,**kwargs):
 
     if archivepath:
         datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+        stream.header = dbfields2dict(db,datainfoid)
         archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
         stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
+        datainfoorg = datainfoid
 
     stream = stream.filter(filter_type='gauss',filter_width=timedelta(minutes=1))
 
@@ -137,7 +134,7 @@ def dbupload(db, path,stationid,**kwargs):
         archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
         stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
     # Reset filter
-    stream.header['DataSamplingFilter'] = currentfilter
+    stream.header = dbfields2dict(db,datainfoorg)
 
 
 
@@ -839,7 +836,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: Searchlist: %s" % intensivesearch)
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
-        print "Found: ", intensiverows
+        print "Found matching table: ", intensiverows
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
             for i in range(len(intensiverows)):
