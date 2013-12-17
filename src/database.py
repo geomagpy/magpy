@@ -110,6 +110,7 @@ def dbupload(db, path,stationid,**kwargs):
     if sensorid:
         stream.header['SensorID']=sensorid
 
+    currentfilter = stream.header['DataSamplingFilter']
     try:
         stream2db(db,stream,mode='insert')
     except:
@@ -131,6 +132,8 @@ def dbupload(db, path,stationid,**kwargs):
         datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
         archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
         stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
+    # Reset filter
+    stream.header['DataSamplingFilter'] = currentfilter
 
 
 
