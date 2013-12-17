@@ -110,7 +110,11 @@ def dbupload(db, path,stationid,**kwargs):
     if sensorid:
         stream.header['SensorID']=sensorid
 
-    currentfilter = stream.header['DataSamplingFilter']
+    try:
+        currentfilter = stream.header['DataSamplingFilter']
+    except:
+        currentfilter = 'None'
+
     try:
         stream2db(db,stream,mode='insert')
     except:
