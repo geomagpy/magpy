@@ -172,7 +172,7 @@ def readGDASB1(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     day = datetime.strftime(theday,"%Y-%m-%d")
     year = datetime.strftime(theday,"%Y")
-    print day, year
+    #print day, year
     #try:
     #     # remove some common prefixes from filename
     #    tmpdate = daystring[0][-8:]
@@ -194,7 +194,7 @@ def readGDASB1(filename, headonly=False, **kwargs):
         while line != "":
             row = LineStruct()
             data= struct.unpack("<BBBBlllllc", line)
-            print data
+            #print data
             date = year + '-' + str(data[0]) + '-' + str(data[1]) + 'T' + str(data[2]) + ':' + str(data[3]) + ':00'
             row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
             if not data[4] == 99999:
