@@ -702,7 +702,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
                 sensorserialnum = sensorid
             sensorhead.append('SensorSerialNum')
             sensorvalue.append(sensorserialnum)
-        loggerdatabase.debug("dbsensorinfo: sensor %s, %s" % (sensoridsplit, sensorserialnum))
+            loggerdatabase.debug("dbsensorinfo: sensor %s, %s" % (sensoridsplit, sensorserialnum))
         if not 'SensorRevision' in sensorhead:
             sensorhead.append('SensorRevision')
             sensorvalue.append(sensorrevision)
