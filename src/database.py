@@ -101,6 +101,8 @@ def dbupload(db, path,stationid,**kwargs):
     headerdict = kwargs.get('headerdict')
     archivepath = kwargs.get('archivepath')
     sensorid = kwargs.get('sensorid')
+    tablenum1 = kwargs.get('tablenum1')
+    tablenum2 = kwargs.get('tablenum2')
 
     stream = read(path,starttime=starttime,endtime=endtime)
     if headerdict:
@@ -111,9 +113,15 @@ def dbupload(db, path,stationid,**kwargs):
         stream.header['SensorID']=sensorid
 
     try:
-        stream2db(db,stream,mode='insert')
+        if tablenum1:
+            stream2db(db,stream,mode='insert',tableext=sensorid+'_'+tablenum1)
+        else:
+            stream2db(db,stream,mode='insert')
     except:
-        stream2db(db,stream,mode='extend')
+        if tablenum1:
+            stream2db(db,stream,mode='extend',tableext=sensorid+'_'+tablenum1)
+        else:
+            stream2db(db,stream,mode='extend')
 
     if archivepath:
         datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
@@ -125,9 +133,15 @@ def dbupload(db, path,stationid,**kwargs):
     stream = stream.filter(filter_type='gauss',filter_width=timedelta(minutes=1))
 
     try:
-        stream2db(db,stream,mode='insert')
+        if tablenum2:
+            stream2db(db,stream,mode='insert',tableext=sensorid+'_'+tablenum2)
+        else:
+            stream2db(db,stream,mode='insert')
     except:
-        stream2db(db,stream,mode='extend')
+        if tablenum2:
+            stream2db(db,stream,mode='extend',tableext=sensorid+'_'+tablenum2)
+        else:
+            stream2db(db,stream,mode='extend')
 
     if archivepath:
         datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
