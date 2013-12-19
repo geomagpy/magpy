@@ -478,6 +478,7 @@ def dbfields2dict(db,datainfoid):
     try:
         cols = colsstr.split('_')
         colsel = colselstr.split('_')
+        print cols, colsel
         for i, elem in enumerate(cols):
             if not elem == '_':
                 key = 'col-'+elem
@@ -810,7 +811,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         datainfovalue[index] = sensorid
     loggerdatabase.debug("dbdatainfo:  -- SensorID is now %s" % sensorid) 
 
-    checkinput = 'SELECT StationID FROM DATAINFO WHERE sensorid = "'+sensorid+'"'
+    checkinput = 'SELECT StationID FROM DATAINFO WHERE SensorID = "'+sensorid+'"'
     try:
         cursor.execute(checkinput)
         rows = cursor.fetchall()
@@ -822,6 +823,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     checkinput = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"'
     loggerdatabase.debug("dbdatainfo: %s " % checkinput) 
     try:
+        print checkinput
         cursor.execute(checkinput)
         rows = cursor.fetchall()
         loggerdatabase.debug("dbdatainfo: Number of existing DATAINFO lines: %s" % rows)
