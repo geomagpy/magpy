@@ -255,7 +255,7 @@ def dbdelete(db,datainfoid,**kwargs):
         try:
             getsr = 'SELECT DataSamplingRate FROM DATAINFO WHERE DataID = "%s"' % datainfoid
             cursor.execute(getsr)
-            samplingperiod = float(cursor.fetchone()[0])
+            samplingperiod = float(cursor.fetchone()[0].strip(' sec'))
             loggerdatabase.debug("dbdelete: samplingperiod = %s" % str(samplingperiod))
         except:
             loggerdatabase.error("dbdelete: could not access DataSamplingRate in table %s" % datainfoid)
@@ -819,7 +819,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         stationaddstr = 'ALTER TABLE DATAINFO ADD StationID CHAR(50) AFTER SensorID'
         cursor.execute(stationaddstr)
 
-    checkinput = 'SELECT DataID FROM DATAINFO WHERE sensorid = "'+sensorid+'"'
+    checkinput = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"'
     loggerdatabase.debug("dbdatainfo: %s " % checkinput) 
     try:
         cursor.execute(checkinput)
@@ -851,6 +851,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
         print "Found matching table: ", intensiverows
+        print "using searchlist ", intensivesearch
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
             for i in range(len(intensiverows)):
