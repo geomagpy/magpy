@@ -114,12 +114,12 @@ def dbupload(db, path,stationid,**kwargs):
 
     try:
         if tablenum1:
-            stream2db(db,stream,mode='insert',tableext=sensorid+'_'+tablenum1)
+            stream2db(db,stream,mode='insert',tablename=sensorid+'_'+tablenum1)
         else:
             stream2db(db,stream,mode='insert')
     except:
         if tablenum1:
-            stream2db(db,stream,mode='extend',tableext=sensorid+'_'+tablenum1)
+            stream2db(db,stream,mode='extend',tablename=sensorid+'_'+tablenum1)
         else:
             stream2db(db,stream,mode='extend')
 
