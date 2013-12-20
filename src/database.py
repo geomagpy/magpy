@@ -826,7 +826,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         print checkinput
         cursor.execute(checkinput)
         rows = cursor.fetchall()
-        loggerdatabase.debug("dbdatainfo: Number of existing DATAINFO lines: %s" % rows)
+        loggerdatabase.debug("dbdatainfo: Number of existing DATAINFO lines: %s" % str(rows))
     except:
         loggerdatabase.warning("dbdatainfo: Could not access table DATAINFO in database")
         datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
@@ -838,10 +838,10 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         # Get maximum number
         for i in range(len(rows)):
             rowval = rows[i][0].replace(sensorid + '_','')
-            print len(rows), rowval, sensorid+'_', rows[i][0]
+            #print len(rows), rowval, sensorid+'_', rows[i][0]
             try:
                 numlst.append(int(rowval))
-		print numlst
+		#print numlst
             except:
                 print "crap"
                 pass

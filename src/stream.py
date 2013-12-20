@@ -4152,7 +4152,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         return [],messagecont
 
     # 2. Create DataStream
-    st = DataStream()
+    st = DataStream([],{})
 
     # 3. Read data
     if not isinstance(path_or_url, basestring):
