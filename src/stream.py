@@ -4201,6 +4201,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some file name
         pathname = path_or_url
         for file in iglob(pathname):
+            stp = DataStream([],{})
             stp = _read(file, dataformat, headonly, **kwargs)
             st.extend(stp.container,stp.header)
             #del stp
@@ -4238,7 +4239,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     """
     Reads a single file into a ObsPy Stream object.
     """
-    stream = DataStream()
+    stream = DataStream([],{})
     format_type = None
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
@@ -4273,7 +4274,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     #for trace in stream:
     #    trace.stats._format = format_ep.name
 
-    return DataStream(stream, stream.header)
+    return stream
 
 
 def mergeStreams(stream_a, stream_b, **kwargs):

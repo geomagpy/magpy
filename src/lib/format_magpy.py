@@ -62,7 +62,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
     """
     Reading ASCII PyMagStructure format data.
     """
-    stream = DataStream()
+    stream = DataStream([],{})
 
     # Check whether header infromation is already present
     if stream.header == None:
@@ -122,7 +122,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
     """
     Reading CDF format data - DTU type.
     """
-    stream = DataStream()
+    stream = DataStream([],{})
 
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -305,7 +305,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    stream = DataStream()
+    stream = DataStream([],{})
 
     theday = extractDateFromString(filename)
     try:
