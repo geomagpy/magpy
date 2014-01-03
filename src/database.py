@@ -35,6 +35,13 @@ STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstituti
 			'StationCity','StationPostalCode','StationCountry','StationWebInfo',
 			'StationEmail','StationDescription']
 
+FLAGSKEYLIST = ['FlagID','SensorID','FlagBeginTime','FlagEndTime','FlagComponents','FlagNum','FlagReason','ModificationDate']
+
+BASELINEKEYLIST = ['SensorID','MinTime','MaxTime','TmpMaxTime','BaseFunction','BaseDegree','BaseKnots','BaseComment']
+
+# Optional (if acquisition routine is used)
+MOONSKEYLIST = ['Moon','MoonIP','MoonSensors','MoonType','MoonLocationLat','MoonLocationLong','MoonSystem','MoonMainUser','MoonComment']
+
 """
 Standard tables:
 
@@ -69,7 +76,13 @@ STATION:
         StationWebInfo: 'http://www.zamg.ac.at',
         StationDescription: 'Running since 1951.'
 DATAINFO:
-	DataID: 
+	DataID:
+
+FLAGS: (used to store flagging information)
+
+BASELINE: (used to store baseline fit parameters)
+
+
 """
 
 # ----------------------------------------------------------------------------
@@ -196,11 +209,33 @@ def dbinit(db):
     datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
     createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
 
+    # FLAGS TABLE
+    # Create flagging table
+    flagstr = ' CHAR(100), '.join(FLAGSKEYLIST) + ' CHAR(100)'
+    flagstr = flagstr.replace('FlagID CHAR(100)', 'FlagID CHAR(50) NOT NULL PRIMARY KEY')
+    flagstr = flagstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL')
+    createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
+
+    # BASELINE TABLE
+    # Create baseline table
+    basestr = ' CHAR(100), '.join(BASELINEKEYLIST) + ' CHAR(100)'
+    basestr = basestr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL')
+    createbaselinetablesql = "CREATE TABLE IF NOT EXISTS BASELINE (%s)" % basestr
+
+    # MOON TABLE
+    # Create baseline table
+    moonstr = ' CHAR(100), '.join(MOONSKEYLIST) + ' CHAR(100)'
+    moonstr = moonstr.replace('MoonComment CHAR(100)', 'MoonComment TEXT')
+    createbaselinetablesql = "CREATE TABLE IF NOT EXISTS MOONS (%s)" % moonstr
+
+
     cursor = db.cursor()
 
     cursor.execute(createsensortablesql)
     cursor.execute(createstationtablesql)
     cursor.execute(createdatainfotablesql)
+    cursor.execute(createflagtablesql)
+    cursor.execute(createbaselinetablesql)
 
     db.commit()
     cursor.close ()
@@ -1680,4 +1715,128 @@ def getBaselineProperties(db,datastream,distream=None):
     return DataStream(streamdat,datastream.header)
     
     db.commit()
+
+
+def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
+    """
+    Function to converts a python list (actually an array)
+    within flagging information to a data base table
+    required parameters are the 
+    db: name of the mysql data base
+    cursor: a pointer to the data base
+    flaglist: the list containing flagging information of format:
+                [[starttime, endtime, singlecomp, flagNum, flagReason, (SensorID, ModificationDate)],...]
+
+    Optional:
+    mode: default inserts information if not existing
+          use 'replace' to replace any existing information (check auto_increment with flag ID !!!!!!!)
+          use 'delete' to remove any preexisting FLAG Table from data base first
+    sensorid: a string with the sensor id, if not provided within the list
+    modificationdate: a string with the flagging modificationdate, if not provided within the list
+
+    Flag Table looks like:
+    data base format: flagID, sensorID, starttime, endtime, components, flagNum, flagReason, ModificationDate
+    """
+    if not sensorid:
+        sensorid = 'defaultsensor'
+    if not modificationdate:
+        sensorid = '1971-11-22 11:22:00'
+
+    if not db:
+        print "No database connected - aborting"
+        return
+    cursor = db.cursor ()
+
+    lentype = len(flaglist[0])
+
+    if lentype <= 5:
+        listwithoutcomp = [[elem[0],elem[1],elem[3],elem[4]] for elem in flaglist]
+    else:
+        listwithoutcomp = [[elem[0],elem[1],elem[3],elem[4],elem[5],elem[6]] for elem in flaglist]
+
+    newlst = []
+    for elem in listwithoutcomp:
+        elem[0] = datetime.strftime(elem[0],"%Y-%m-%d %H:%M:%S.%f")
+        elem[1] = datetime.strftime(elem[1],"%Y-%m-%d %H:%M:%S.%f")
+        if elem not in newlst:
+            newlst.append(elem)
+
+    for elem in newlst:
+        complst = []
+        for elem2 in flaglist:
+            comp = elem2[2]
+            if lentype <= 5:
+                el2 = [datetime.strftime(elem2[0],"%Y-%m-%d %H:%M:%S.%f"),datetime.strftime(elem2[1],"%Y-%m-%d %H:%M:%S.%f"),elem2[3],elem2[4]]
+            else:
+                el2 = [datetime.strftime(elem2[0],"%Y-%m-%d %H:%M:%S.%f"),datetime.strftime(elem2[1],"%Y-%m-%d %H:%M:%S.%f"),elem2[3],elem2[4],elem2[5],elem2[6]]
+            if el2 == elem:
+                complst.append(comp)
+        compstr = '_'.join(complst)
+        if lentype <= 5:
+            elem.extend([sensorid,modificationdate])
+        elem.append(compstr)
+
+    # Flagging TABLE
+    # Create flagging table
+    if mode == 'delete':
+        cursor.execute("DROP TABLE IF EXISTS FLAGS") 
+
+    flagstr = 'FlagID INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, SensorID CHAR(50), FlagBeginTime CHAR(50), FlagEndTime CHAR(50), FlagComponents CHAR(50), FlagNum INT, FlagReason TEXT, ModificationDate CHAR(50)'
+    createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
+    cursor.execute(createflagtablesql)
+
+    # add flagging data
+    #if lentype <= 4:
+    #    flaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagNum, FlagReason, FlagComponents'
+    flaghead = 'FlagBeginTime, FlagEndTime, FlagNum, FlagReason, SensorID, ModificationDate, FlagComponents'
+
+    for elem in newlst:
+        elem = [str(el) for el in elem]
+        flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
+        if mode == "replace":
+            try:
+                cursor.execute(flagsql.replace("INSERT","REPLACE"))
+            except:
+                print "Write MySQL: Replace failed"
+        else:
+            try:
+                cursor.execute(flagsql)
+            except:
+                print "Record already existing: use mode 'replace' to override"
+
+    db.commit()
+    cursor.close ()
+
+
+def db2flaglist(db,sensorid, begin=None, end=None):
+    """
+    Read flagging information for specified sensor from data base and return a flagging list
+    """
+
+    if not db:
+        print "No database connected - aborting"
+        return []
+    cursor = db.cursor ()
+
+    searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS WHERE SensorID = "%s"' % sensorid
+    if begin:
+        addbeginsql = ' AND FlagBeginTime >= "%s"' % begin
+    else:
+        addbeginsql = '' 
+    if end:
+        addendsql = ' AND FlagEndTime <= "%s"' % end 
+    else:
+        addendsql = '' 
+    
+    cursor.execute (searchsql + addbeginsql + addendsql)
+    rows = cursor.fetchall()
+
+    res=[]
+    for line in rows:
+        comps = line[2].split('_')
+        for elem in comps:
+            res.append([line[0],line[1],elem,int(line[3]),line[4],line[5],line[6]])
+
+    cursor.close ()
+    return res
 

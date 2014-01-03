@@ -497,7 +497,7 @@ class DataStream(object):
         try:
             for i, elem in enumerate(self):
                 exec('elem.'+put2key+' = '+'elem.'+key)
-                if key in ['x','y','z','f','dx','dy','dz','df','var1','var2','var3','var4']:
+                if key in ['x','y','z','f','dx','dy','dz','df','t1','t2','var1','var2','var3','var4']:
 	            exec('elem.'+key+' = float("NaN")')
                 else:
                     exec('elem.'+key+' = "-"')
@@ -527,7 +527,7 @@ class DataStream(object):
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
         for idx, elem in enumerate(self):
-            if key in ['x','y','z','f','dx','dy','dz','df','var1','var2','var3','var4']:
+            if key in ['x','y','z','f','dx','dy','dz','df','t1','t2','var1','var2','var3','var4']:
                 exec('elem.'+key+' = float("NaN")')
             else:
                 exec('elem.'+key+' = "-"')
