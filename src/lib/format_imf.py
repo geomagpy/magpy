@@ -206,7 +206,7 @@ def writeIMF(datastream, filename, **kwargs):
         minute = int(datetime.strftime(date, "%M"))
         strcola = '%3.f' % (colat*10)
         strlong = '%3.f' % (longi*10)
-        decbasis = str(np.round(decbas*60*10))
+        decbasis = str(int(np.round(decbas*60*10)))
         blockline = "%s %s %s %s %s %s %s %s%s %s %s\r\n" % (idc.upper(),day.upper(),doy, hh, elem.typ.upper(), datatype, gin, strcola.zfill(4), strlong.zfill(4), decbasis.zfill(6),'RRRRRRRRRRRRRRRR')
         if minute == 0 and not i == 0:
             #print blockline
