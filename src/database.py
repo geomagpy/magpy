@@ -40,7 +40,7 @@ FLAGSKEYLIST = ['FlagID','SensorID','FlagBeginTime','FlagEndTime','FlagComponent
 BASELINEKEYLIST = ['SensorID','MinTime','MaxTime','TmpMaxTime','BaseFunction','BaseDegree','BaseKnots','BaseComment']
 
 # Optional (if acquisition routine is used)
-MOONSKEYLIST = ['Moon','MoonIP','MoonSensors','MoonType','MoonLocationLat','MoonLocationLong','MoonSystem','MoonMainUser','MoonComment']
+IPKEYLIST = ['IpName','IP','IpSensors','IpDuty','IpType','IpAccess','IpLocation','IpLocationLat','IpLocationLong','IpSystem','IpMainUser','IpComment']
 
 """
 Standard tables:
@@ -81,6 +81,20 @@ DATAINFO:
 FLAGS: (used to store flagging information)
 
 BASELINE: (used to store baseline fit parameters)
+
+IP:
+	IpName		name of the machine
+	IP		IP address
+	IpSensors	comma separated list of sensors eventually attached to the system
+	IpDuty		Job of the system behind the ip address: (acquisition, collector, fileserver, backup)
+	IpType		Logger type (e.g. eBox 4310 JSK)
+	IpAccess	e.g. global, local, only from ip xy
+	IpLocation	Location name (GMO-Lab1)
+	IpLocationLat	Lat
+	IpLocationLong	Long
+	IpSystem	operating system (e.g. Ubuntu12.04)
+	IpMainUser	add the user
+	IpComment	optional comments
 
 
 """
@@ -222,11 +236,13 @@ def dbinit(db):
     basestr = basestr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL')
     createbaselinetablesql = "CREATE TABLE IF NOT EXISTS BASELINE (%s)" % basestr
 
-    # MOON TABLE
+    # IP TABLE
     # Create baseline table
-    moonstr = ' CHAR(100), '.join(MOONSKEYLIST) + ' CHAR(100)'
-    moonstr = moonstr.replace('MoonComment CHAR(100)', 'MoonComment TEXT')
-    createbaselinetablesql = "CREATE TABLE IF NOT EXISTS MOONS (%s)" % moonstr
+    ipstr = ' CHAR(100), '.join(IPKEYLIST) + ' CHAR(100)'
+    ipstr = ipstr.replace('IP CHAR(100)', 'IP CHAR(50) NOT NULL')
+    ipstr = ipstr.replace('IpComment CHAR(100)', 'IpComment TEXT')
+    ipstr = ipstr.replace('IpSensors CHAR(100)', 'IpSensors TEXT')
+    createiptablesql = "CREATE TABLE IF NOT EXISTS IPS (%s)" % ipstr
 
 
     cursor = db.cursor()
@@ -236,6 +252,7 @@ def dbinit(db):
     cursor.execute(createdatainfotablesql)
     cursor.execute(createflagtablesql)
     cursor.execute(createbaselinetablesql)
+    cursor.execute(createiptablesql)
 
     db.commit()
     cursor.close ()
