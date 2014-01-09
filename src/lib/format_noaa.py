@@ -50,14 +50,20 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     splitpath = os.path.split(filename)
     try:
         splitname = splitpath[1].split('_')
-        if len(splitname) == 4:
+	print splitname
+	if len(splitname) == 3: # file is current file
+	    tmpdaystring = datetime.strftime(datetime.utcnow(),'%Y%m%d')
+            datatype = splitpath[1].split('_')[1]
+        elif len(splitname) == 4:
             tmpdaystring = splitpath[1].split('_')[0]
+            datatype = splitpath[1].split('_')[2]
         elif len(splitname) == 5:
             tmpdaystring = splitpath[1].split('_')[1]
+            datatype = splitpath[1].split('_')[2]
         elif len(splitname) == 6:
             tmpdaystring = splitpath[1].split('_')[2]
+            datatype = splitpath[1].split('_')[2]
         daystring = re.findall(r'\d+',tmpdaystring)[0]
-        datatype = splitpath[1].split('_')[2]
         day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
