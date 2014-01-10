@@ -91,7 +91,6 @@ class PubSubClient(WampClientProtocol):
         eventdict = self.convertUnicode(event)
         time = ''
         eol = ''
-        print "getting events"
         try:
             sensorid = topicUri.split('/')[-1].split('-')[0].split('#')[1]
             print sensorid
@@ -113,7 +112,10 @@ class PubSubClient(WampClientProtocol):
                 if eventdict['id'] in [5,7,8,12,13,14]: # replace by some eol parameter
                      self.line.append(eventdict['value'])
             else:
-                print len(self.line)
+                #print len(self.line)
+                rev = '_0001'
+                did = '_0001'
+                dataid = sensorid+rev+did
                 # get available sensor parameters from db
                 #query = "SELECT * FROM SENSORS WHERE SENSOR_ID = sensorid;"
                 # TODO: generalize the information function below (maybe by parameters provided in DB)
