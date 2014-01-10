@@ -51,22 +51,23 @@ class PubSubClient(WampClientProtocol):
                  module = row[2]
                  param = row[3]
                  print row, len(param.split(',')) 
-                 self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
+                 #datainfoid = (db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
                  # Create Sensor Table if it does not yet exist
                  # TODO: check the length of param for other then temperatur data 
                  if len(param.split(',')) == 1:
-                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid+'_0001')
                  if len(param.split(',')) == 3:
-                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid+'_0001')
                  if len(param.split(',')) == 5:
-                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid+'_0001')
                  try:
                      print createtable
                      cursor.execute(createtable)
                  except:
                      log.msg("Table exists already.")
                  subscriptionstring = "%s:%s-value" % (module, sensid.replace('OW_',''))
+                 print subscriptionstring
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result
                  print "sensid=%s,sensdesc=%s,module=%s,param=%s" % \
@@ -90,6 +91,7 @@ class PubSubClient(WampClientProtocol):
         eventdict = self.convertUnicode(event)
         time = ''
         eol = ''
+        print "getting events"
         try:
             sensorid = topicUri.split('/')[-1].split('-')[0].split('#')[1]
             print sensorid
@@ -111,7 +113,6 @@ class PubSubClient(WampClientProtocol):
                 if eventdict['id'] in [5,7,8,12,13,14]: # replace by some eol parameter
                      self.line.append(eventdict['value'])
             else:
-                
                 print len(self.line)
                 # get available sensor parameters from db
                 #query = "SELECT * FROM SENSORS WHERE SENSOR_ID = sensorid;"
@@ -146,16 +147,14 @@ class PubSubClient(WampClientProtocol):
         cursor.execute(checkdatainfoexists)
         rows = cursor.fetchall()
         if len(rows) < 1:
-            datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree CHAR(10), DataAbsKnots CHAR(10), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
-            createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
-            cursor.execute(createdatainfotablesql)
-
-        getlastnumsql = 'SELECT DataID FROM DATAINFO WHERE SensorID LIKE "%s"' % sensorid
+            print "No datainfo so far - use dbinit to generate"
+        getlastnumsql = 'SELECT DataID FROM DATAINFO WHERE SensorID LIKE "%s%"' % sensorid
         cursor.execute(getlastnumsql)
         rows = cursor.fetchall()
         if not len(rows) >= 1:
-            datainfohead = 'DataID, SensorID, DataPier'
-            datainfovalue = '"' + sensorid + '", "' + sensorid + '", "' + pier + '"'
+            stationid = 'WIC'
+            datainfohead = 'DataID, SensorID, StationID'
+            datainfovalue = '"' + sensorid + '", "' + sensorid + '", "' + stationid + '"'
             datainfosql = "INSERT INTO DATAINFO(%s) VALUES (%s)" % (datainfohead, datainfovalue)
             cursor.execute(datainfosql)
 
