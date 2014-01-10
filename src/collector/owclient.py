@@ -93,7 +93,7 @@ class PubSubClient(WampClientProtocol):
         eol = ''
         try:
             sensorid = topicUri.split('/')[-1].split('-')[0].split('#')[1]
-            print sensorid
+            #print sensorid
             if eventdict['id'] == 8:
                 time = eventdict['value']
             elif eventdict['id'] == 5:
@@ -120,11 +120,11 @@ class PubSubClient(WampClientProtocol):
                 #query = "SELECT * FROM SENSORS WHERE SENSOR_ID = sensorid;"
                 # TODO: generalize the information function below (maybe by parameters provided in DB)
                 if sensorid in ["3AD754010000","0EB354010000"]:
-                    sql = "INSERT INTO %s(time, t1, var2, var3, var4, flag, typ) VALUES ('%s', %f, %f, %f, %f, '0000000000000000-', 'ow')" % (sensorid, self.line[0], self.line[1], self.line[3], self.line[4], self.line[5])
+                    sql = "INSERT INTO %s(time, t1, var2, var3, var4, flag, typ) VALUES ('%s', %f, %f, %f, %f, '0000000000000000-', 'ow')" % (dataid, self.line[0], self.line[1], self.line[3], self.line[4], self.line[5])
                 elif sensorid == "05CE54010000" or sensorid == "CBC454010000":
-                    sql = "INSERT INTO %s(time, t1, var1, var2, flag, typ) VALUES ('%s', %f, %f, %f, '0000000000000000-', 'ow')" % (sensorid, self.line[0], self.line[1], self.line[2], self.line[3])
+                    sql = "INSERT INTO %s(time, t1, var1, var2, flag, typ) VALUES ('%s', %f, %f, %f, '0000000000000000-', 'ow')" % (dataid, self.line[0], self.line[1], self.line[2], self.line[3])
                 else:
-                    sql = "INSERT INTO %s(time, t1, flag, typ) VALUES ('%s', %f, '0000000000000000-', 'ow')" % (sensorid, self.line[0], self.line[1])
+                    sql = "INSERT INTO %s(time, t1, flag, typ) VALUES ('%s', %f, '0000000000000000-', 'ow')" % (dataid, self.line[0], self.line[1])
                 self.line = []
                 # Prepare SQL query to INSERT a record into the database.
                 try:
