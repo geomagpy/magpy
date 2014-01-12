@@ -121,6 +121,31 @@ def dbupload(db, path,stationid,**kwargs):
     """
     DEFINITION:
         method to upload data to a database and to create an archive
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - path:   	path wher to fine the data (e.g. /home/data/*).
+        - stationid:   	station code (e.g. WIC).
+    Kwargs:
+        - starttime = kwargs.get('starttime')
+        - endtime = kwargs.get('endtime')
+        - headerdict = kwargs.get('headerdict')
+        - archivepath = kwargs.get('archivepath')
+        - sensorid = kwargs.get('sensorid')
+        - tablenum1 = kwargs.get('tablenum1')
+        - tablenum2 = kwargs.get('tablenum2')
+        --
+    RETURNS:
+        --
+    EXAMPLE:
+        >>> dbinit(db)
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        1. Connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        2. use method
+        dbinit(db)
     headerdict = 
     """
     starttime = kwargs.get('starttime')
@@ -131,7 +156,16 @@ def dbupload(db, path,stationid,**kwargs):
     tablenum1 = kwargs.get('tablenum1')
     tablenum2 = kwargs.get('tablenum2')
 
-    stream = read(path,starttime=starttime,endtime=endtime)
+    if starttime:
+        if endtime:
+            stream = read(path,starttime=starttime,endtime=endtime)
+        else:
+            stream = read(path,starttime=starttime)
+    elif endtime: 
+            stream = read(path,endtime=endtime)
+    else:
+            stream = read(path)
+
     if headerdict:
         stream.header = headerdict
     stream.header['StationID']=stationid
@@ -157,25 +191,26 @@ def dbupload(db, path,stationid,**kwargs):
         stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
         datainfoorg = datainfoid
 
-    stream = stream.filter(filter_type='gauss',filter_width=timedelta(minutes=1))
+    if not int(np.round(float(stream.header['DataSamplingRate'].strip(' sec')))) == 60:
+        stream = stream.filter(filter_type='gauss',filter_width=timedelta(minutes=1))
 
-    try:
-        if tablenum2:
-            stream2db(db,stream,mode='insert',tableext=sensorid+'_'+tablenum2)
-        else:
-            stream2db(db,stream,mode='insert')
-    except:
-        if tablenum2:
-            stream2db(db,stream,mode='extend',tableext=sensorid+'_'+tablenum2)
-        else:
-            stream2db(db,stream,mode='extend')
+        try:
+            if tablenum2:
+               stream2db(db,stream,mode='insert',tableext=sensorid+'_'+tablenum2)
+            else:
+               stream2db(db,stream,mode='insert')
+        except:
+            if tablenum2:
+               stream2db(db,stream,mode='extend',tableext=sensorid+'_'+tablenum2)
+            else:
+               stream2db(db,stream,mode='extend')
 
-    if archivepath:
-        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
-        archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
-        stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
-    # Reset filter
-    stream.header = dbfields2dict(db,datainfoorg)
+        if archivepath:
+            datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+            archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
+            stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
+        # Reset filter
+        stream.header = dbfields2dict(db,datainfoorg)
 
 
 
@@ -372,6 +407,7 @@ def dbdict2fields(db,header_dict,**kwargs):
         db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
     """
     mode = kwargs.get('mode')
+    update = kwargs.get('update')
 
     if not mode:
         mode = 'insert'
@@ -428,11 +464,14 @@ def dbdict2fields(db,header_dict,**kwargs):
         try:
             for key in header_dict:
                 if key in STATIONSKEYLIST:
-                    searchsql = "SELECT %s FROM STATIONS WHERE StationID = '%s'" % (key,header_dict['SensorID'])
+                    searchsql = "SELECT %s FROM STATIONS WHERE StationID = '%s'" % (key,header_dict['StationID'])
                     cursor.execute(searchsql)
                     value = cursor.fetchone()[0]
                     if value <> header_dict[key]:
                         loggerdatabase.warning("dbdict2fields: StationID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
+                        updatesql = 'UPDATE STATIONS SET ' + key + ' = "' + header_dict[key] +'" WHERE StationID = "' + header_dict['StationID'] + '"'
+                        if update:
+                            cursor.execute(updatesql)
         except:
             loggerdatabase.warning("dbdict2fields: STATIONS table not existing?")
     try:
@@ -450,6 +489,9 @@ def dbdict2fields(db,header_dict,**kwargs):
                     value = cursor.fetchone()[0]
                     if value <> header_dict[key]:
                         loggerdatabase.warning("dbdict2fields: SensorID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
+                        updatesql = 'UPDATE SENSORS SET ' + key + ' = "' + header_dict[key] +'" WHERE SensorID = "' + header_dict['SensorID'] + '"'
+                        if update:
+                            cursor.execute(updatesql)
         except:
             loggerdatabase.warning("dbdict2fields: SENSORS table not existing?")
     try:
@@ -462,11 +504,14 @@ def dbdict2fields(db,header_dict,**kwargs):
         try:
             for key in header_dict:
                 if key in DATAINFOKEYLIST:
-                    searchsql = "SELECT %s FROM DATAINFO WHERE DataID = '%s'" % (key,header_dict['SensorID'])
+                    searchsql = "SELECT %s FROM DATAINFO WHERE DataID = '%s'" % (key,header_dict['DataID'])
                     cursor.execute(searchsql)
                     value = cursor.fetchone()[0]
                     if value <> header_dict[key]:
                         loggerdatabase.warning("dbdict2fields: DataID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
+                        updatesql = 'UPDATE DATAINFO SET ' + key + ' = "' + header_dict[key] +'" WHERE DataID = "' + header_dict['DataID'] + '"'
+                        if update:
+                            cursor.execute(updatesql)
         except:
             loggerdatabase.warning("dbdict2fields: DATAINFO table not existing?")
 
@@ -948,7 +993,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     return datainfoid
 
 
-def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
+def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs):
     """
     DEFINITION:
         Method to write datastreams to a mysql database
@@ -971,7 +1016,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
                     Mode 'replace' checks for the existance of existing inputs in sensor, station and datainfo, and replaces the stored information: optional tablename can be given.
                          if tablename is given, then data from this table is replaced - otherwise only data from station and sensor are replaced
                     Mode 'delete' completely deletes all tables and creates new ones. 
-
+                    Mode 'force' does not check sensors and datainfo tabs. Just creates table tablename 
+         - clear:	(bool) If true it will delete the selected table before adding new data
     REQUIRES:
         dbdatainfo, dbsensorinfo
         
@@ -992,6 +1038,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
     TODO:
         - make it possible to create spezial tables by defining an extension (e.g. _sp2013min) where sp indicates special        
     """
+
+    clear = kwargs.get('clear')
 
     if not mode:
         mode = 'insert'
@@ -1021,51 +1069,53 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
         loggerdatabase.error("stream2DB: Empty datastream. Aborting ...")
         return
 
-    # check SENSORS information
-    loggerdatabase.debug("stream2DB: --- Checking SENSORS table ...")
-    sensorid = dbsensorinfo(db,headdict['SensorID'],headdict)
-    loggerdatabase.debug("stream2DB: Working with sensor: %s" % sensorid)
-    # updating dict
-    headdict['SensorID'] = sensorid
-    # HEADER INFO - TABLE
-    # read Header information
-    for key in headdict:
-        if key.startswith('Sensor'):
-            if key == "SensorID":
-                #sensorid = headdict[key]
-                sensorhead.append(key)
-                sensorvalue.append(sensorid)
-            else:
-                sensorhead.append(key)
-                sensorvalue.append(headdict[key])
-        elif key.startswith('Data'):
-            if not key == 'DataInterval': 
-                datainfohead.append(key)
-                datainfovalue.append(headdict[key])
-        elif key.startswith('Station'):
-            if key == "StationID":
-                stationid = headdict[key]
-                stationhead.append(key)
-            else:
-                if not key == "Station": 
-                    stationhead.append(key)
-            if not key == "Station": 
-                stationvalue.append(headdict[key].replace('http://',''))
-        elif key.startswith('col'):
-            pass            
-        elif key.startswith('unit'):
-            pass
-        else:
-            #key not transferred to DB
-            loggerdatabase.debug("stream2DB: --- unkown key: %s, %s" % (key, headdict[key]))
 
-    # If no sensorid is available then report error and return:
-    if not sensorid:
-        loggerdatabase.error("stream2DB:  --- stream2DB: no SensorID specified in stream header. Cannot proceed ...")
-        return
-    if not stationid:
-        loggerdatabase.error("stream2DB: --- stream2DB: no StationID specified in stream header. Cannot proceed ...")
-        return
+    if not mode == 'force':
+        # check SENSORS information
+        loggerdatabase.debug("stream2DB: --- Checking SENSORS table ...")
+        sensorid = dbsensorinfo(db,headdict['SensorID'],headdict)
+        loggerdatabase.debug("stream2DB: Working with sensor: %s" % sensorid)
+        # updating dict
+        headdict['SensorID'] = sensorid
+        # HEADER INFO - TABLE
+        # read Header information
+        for key in headdict:
+            if key.startswith('Sensor'):
+                if key == "SensorID":
+                    #sensorid = headdict[key]
+                    sensorhead.append(key)
+                    sensorvalue.append(sensorid)
+                else:
+                    sensorhead.append(key)
+                    sensorvalue.append(headdict[key])
+            elif key.startswith('Data'):
+                if not key == 'DataInterval': 
+                    datainfohead.append(key)
+                    datainfovalue.append(headdict[key])
+            elif key.startswith('Station'):
+                if key == "StationID":
+                    stationid = headdict[key]
+                    stationhead.append(key)
+                else:
+                    if not key == "Station": 
+                        stationhead.append(key)
+                if not key == "Station": 
+                    stationvalue.append(headdict[key].replace('http://',''))
+            elif key.startswith('col'):
+                pass            
+            elif key.startswith('unit'):
+                pass
+            else:
+                #key not transferred to DB
+                loggerdatabase.debug("stream2DB: --- unkown key: %s, %s" % (key, headdict[key]))
+
+        # If no sensorid is available then report error and return:
+        if not sensorid:
+            loggerdatabase.error("stream2DB:  --- stream2DB: no SensorID specified in stream header. Cannot proceed ...")
+            return
+        if not stationid:
+            loggerdatabase.error("stream2DB: --- stream2DB: no StationID specified in stream header. Cannot proceed ...")
+            return
 
     loggerdatabase.debug("stream2DB: --- Checking column contents ...")
     # HEADER INFO - DATA TABLE
@@ -1102,96 +1152,104 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None):
     st = datetime.strftime(num2date(datastream[0].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
     et = datetime.strftime(num2date(datastream[-1].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
 
-    loggerdatabase.debug("stream2DB: --- Checking/Updating existing tables ...")
-    
-    if mode=='extend':
-        if not tablename:
-            loggerdatabase.error("stream2DB: tablename must be specified for mode 'extend'" )
-            return
-        # Check for the existance of data base contents and sufficient header information
-        searchstation = 'SELECT * FROM STATIONS WHERE StationID = "'+stationid+'"' 
-        searchsensor = 'SELECT * FROM SENSORS WHERE SensorID = "'+sensorid+'"'
-        searchdatainfo = 'SHOW TABLES LIKE "'+tablename+'"'
+    if not mode == 'force':
+        loggerdatabase.debug("stream2DB: --- Checking/Updating existing tables ...")
+        
+        if mode=='extend':
+            if not tablename:
+                loggerdatabase.error("stream2DB: tablename must be specified for mode 'extend'" )
+                return
+            # Check for the existance of data base contents and sufficient header information
+            searchstation = 'SELECT * FROM STATIONS WHERE StationID = "'+stationid+'"' 
+            searchsensor = 'SELECT * FROM SENSORS WHERE SensorID = "'+sensorid+'"'
+            searchdatainfo = 'SHOW TABLES LIKE "'+tablename+'"'
 
-        try:
-            cursor.execute(searchstation)
-        except:
-            loggerdatabase.error("stream2DB: Station table not existing - use mode 'insert' - aborting with error")
-            raise
-
-        rows = cursor.fetchall()
-        if not len(rows) > 0:
-            loggerdatabase.error("stream2DB: Station is not yet existing - use mode 'insert' - aborting with error")
-            raise
-            #return
-
-        cursor.execute(searchsensor)
-        rows = cursor.fetchall()
-        if not len(rows) > 0:
-            loggerdatabase.error("stream2DB: Sensor is not yet existing - use mode 'insert'")
-            raise
-        cursor.execute(searchdatainfo)
-        rows = cursor.fetchall()
-        if not len(rows) > 0:
-            loggerdatabase.error("stream2DB: Selected data table is not yet existing - check tablename")
-            raise
-    else:
-        # SENSOR TABLE
-        # Create sensor table input
-        headstr = ' CHAR(100), '.join(SENSORSKEYLIST) + ' CHAR(100)'
-        headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
-        headstr = headstr.replace('SensorDescription CHAR(100)', 'SensorDescription TEXT')
-        createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
-        sensorsql = "INSERT INTO SENSORS(%s) VALUES (%s)" % (', '.join(sensorhead), '"'+'", "'.join(sensorvalue)+'"')
-
-        # STATION TABLE
-        # Create station table input
-        stationstr = ' CHAR(100), '.join(STATIONSKEYLIST) + ' CHAR(100)'
-        stationstr = stationstr.replace('StationID CHAR(100)', 'StationID CHAR(50) NOT NULL PRIMARY KEY')
-        stationstr = stationstr.replace('StationDescription CHAR(100)', 'StationDescription TEXT')
-        stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
-        createstationtablesql = "CREATE TABLE IF NOT EXISTS STATIONS (%s)" % stationstr
-        stationsql = "INSERT INTO STATIONS(%s) VALUES (%s)" % (', '.join(stationhead), '"'+'", "'.join(stationvalue)+'"')
-
-        # DATAINFO TABLE
-        # Create datainfo table
-        datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
-        createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
-
-        if mode == "delete":
-            cursor.execute("DROP TABLE IF EXISTS SENSORS") 
-            cursor.execute("DROP TABLE IF EXISTS STATIONS") 
-            cursor.execute("DROP TABLE IF EXISTS DATAINFO") 
-
-        cursor.execute(createsensortablesql)
-        cursor.execute(createstationtablesql)
-        cursor.execute(createdatainfotablesql)
-
-        if mode == "replace":
             try:
-                cursor.execute(sensorsql.replace("INSERT","REPLACE"))
-                cursor.execute(stationsql.replace("INSERT","REPLACE"))
+                cursor.execute(searchstation)
             except:
-                loggerdatabase.warning("stream2DB: Write MySQL: Replace failed")
+                loggerdatabase.error("stream2DB: Station table not existing - use mode 'insert' - aborting with error")
+                raise
+
+            rows = cursor.fetchall()
+            if not len(rows) > 0:
+                loggerdatabase.error("stream2DB: Station is not yet existing - use mode 'insert' - aborting with error")
+                raise
+                #return
+
+            cursor.execute(searchsensor)
+            rows = cursor.fetchall()
+            if not len(rows) > 0:
+                loggerdatabase.error("stream2DB: Sensor is not yet existing - use mode 'insert'")
+                raise
+            cursor.execute(searchdatainfo)
+            rows = cursor.fetchall()
+            if not len(rows) > 0:
+                loggerdatabase.error("stream2DB: Selected data table is not yet existing - check tablename")
+                raise
         else:
-            try:
-                loggerdatabase.debug("stream2DB: executing: %s" % sensorsql)
-                cursor.execute(sensorsql)
-            except:
-                loggerdatabase.warning("stream2DB: Sensor data already existing: use mode 'replace' to overwrite")
-                loggerdatabase.warning("stream2DB: Perhaps this field does not exist")
-                pass
-            try:
-                cursor.execute(stationsql)
-            except:
-                loggerdatabase.warning("stream2DB: Station data already existing: use mode 'replace' to overwrite")
-                loggerdatabase.warning("stream2DB: Perhaps this field does not exist")
-                pass
+            # SENSOR TABLE
+            # Create sensor table input
+            headstr = ' CHAR(100), '.join(SENSORSKEYLIST) + ' CHAR(100)'
+            headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
+            headstr = headstr.replace('SensorDescription CHAR(100)', 'SensorDescription TEXT')
+            createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
+            sensorsql = "INSERT INTO SENSORS(%s) VALUES (%s)" % (', '.join(sensorhead), '"'+'", "'.join(sensorvalue)+'"')
 
-        # DATAINFO TABLE
-        # check whether contents exists
+            # STATION TABLE
+            # Create station table input
+            stationstr = ' CHAR(100), '.join(STATIONSKEYLIST) + ' CHAR(100)'
+            stationstr = stationstr.replace('StationID CHAR(100)', 'StationID CHAR(50) NOT NULL PRIMARY KEY')
+            stationstr = stationstr.replace('StationDescription CHAR(100)', 'StationDescription TEXT')
+            stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
+            createstationtablesql = "CREATE TABLE IF NOT EXISTS STATIONS (%s)" % stationstr
+            stationsql = "INSERT INTO STATIONS(%s) VALUES (%s)" % (', '.join(stationhead), '"'+'", "'.join(stationvalue)+'"')
 
-        tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
+            # DATAINFO TABLE
+            # Create datainfo table
+            datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
+            createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
+
+            if mode == "delete":
+                cursor.execute("DROP TABLE IF EXISTS SENSORS") 
+                cursor.execute("DROP TABLE IF EXISTS STATIONS") 
+                cursor.execute("DROP TABLE IF EXISTS DATAINFO") 
+
+            cursor.execute(createsensortablesql)
+            cursor.execute(createstationtablesql)
+            cursor.execute(createdatainfotablesql)
+
+            if mode == "replace":
+                try:
+                    cursor.execute(sensorsql.replace("INSERT","REPLACE"))
+                    cursor.execute(stationsql.replace("INSERT","REPLACE"))
+                except:
+                    loggerdatabase.warning("stream2DB: Write MySQL: Replace failed")
+            else:
+                try:
+                    loggerdatabase.debug("stream2DB: executing: %s" % sensorsql)
+                    cursor.execute(sensorsql)
+                except:
+                    loggerdatabase.warning("stream2DB: Sensor data already existing: use mode 'replace' to overwrite")
+                    loggerdatabase.warning("stream2DB: Perhaps this field does not exist")
+                    pass
+                try:
+                    cursor.execute(stationsql)
+                except:
+                    loggerdatabase.warning("stream2DB: Station data already existing: use mode 'replace' to overwrite")
+                    loggerdatabase.warning("stream2DB: Perhaps this field does not exist")
+                    pass
+
+            # DATAINFO TABLE
+            # check whether contents exists
+
+            tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
+
+    if not tablename:
+        loggerdatabase.error("stream2DB: No Tablename specified")    
+        return
+
+    if clear:
+        cursor.execute("DROP TABLE IF EXISTS " + tablename) 
 
 
     loggerdatabase.info("stream2DB: Creating/updating data table " + tablename)

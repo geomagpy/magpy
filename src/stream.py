@@ -2953,7 +2953,7 @@ class DataStream(object):
 			5 = keeps storm onsets in
 			4 = Default as comprimise.
         - timerange: 	(timedelta Object) Time range. Default = timedelta(hours=1)
-
+        - markall :	marks all data except forcing has already been applied
     RETURNS:
         - stream: 	(DataStream Object) Stream with flagged data.
 
@@ -2966,6 +2966,7 @@ class DataStream(object):
         timerange = kwargs.get('timerange')
         threshold = kwargs.get('threshold')
         keys = kwargs.get('keys')
+        markall = kwargs.get('markall')
         if not timerange:
             timerange = timedelta(hours=1)
         if not keys:
@@ -3027,15 +3028,21 @@ class DataStream(object):
                     row = elem
                     if not md-whisker < eval('elem.'+key) < md+whisker:
                         fllist = list(row.flag)
-                        fllist[flagpos] = '1'
-                        row.flag=''.join(fllist)
-                        row.comment = "%s removed by automatic outlier removal" % key
-                        if not isnan(eval('elem.'+key)):
-                            loggerstream.info("remove_outlier: removed %s (= %f)" % (key, eval('elem.'+key)))
+                        if not int(fllist[flagpos]) > 1:
+                            if markall:
+                                for n in range(len(fllist)):
+                                    if not int(fllist[flagpos]) > 1:
+                                        fllist[n] = '1'
+                            fllist[flagpos] = '1'
+                            row.flag=''.join(fllist)
+                            row.comment = "%s removed by automatic outlier removal" % key
+                            if not isnan(eval('elem.'+key)):
+                                loggerstream.info("remove_outlier: removed %s (= %f)" % (key, eval('elem.'+key)))
                     else:
                         fllist = list(row.flag)
-                        fllist[flagpos] = '0'
-                        row.flag=''.join(fllist)
+                        if not int(fllist[flagpos]) > 1:
+                            fllist[flagpos] = '0'
+                            row.flag=''.join(fllist)
                     newst.add(row)
 
         loggerstream.info('remove_outlier: Outlier removal finished.')
