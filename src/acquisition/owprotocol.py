@@ -39,10 +39,11 @@ if onewire:
         Save path ? folders ?
 
         """
-        def __init__(self, wsMcuFactory, outputdir):
+        def __init__(self, wsMcuFactory, source, outputdir):
             self.wsMcuFactory = wsMcuFactory
             #self.sensor = 'ow'
-            ow.init("u")
+            self.source = source
+            ow.init(source)
             self.root = ow.Sensor('/').sensorList()
             self.hostname = socket.gethostname()
             self.outputdir = outputdir
@@ -55,7 +56,7 @@ if onewire:
 
                 if not (self.root == owsensorlist):
                     log.msg('Rereading sensor list')                
-                    ow.init("u")
+                    ow.init(self.source)
                     self.root = ow.Sensor('/').sensorList()
                     owsensorlist = self.root
                     self.connectionMade(self.root)
