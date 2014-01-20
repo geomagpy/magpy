@@ -4,10 +4,13 @@ from socket import gethostname
 planet = gethostname()
 leonplanets = ['Earth', 'uranus', 'saturn']
 
-if planet in leonplanets:
-    magpypath = '/home/leon/Software/magpy/trunk/src/'
+
 if planet == 'zagll1':
     magpypath = '/home/rachel/Software/MagPyDev/magpy/trunk/src/'
+elif planet in leonplanets:
+    magpypath = '/home/leon/Software/magpy/trunk/src/'
+else:
+    magpypath = '/home/leon/Software/magpy/trunk/src/'
 
 sys.path.append(magpypath)
 

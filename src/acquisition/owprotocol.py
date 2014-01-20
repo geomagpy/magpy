@@ -48,6 +48,8 @@ if onewire:
             self.hostname = socket.gethostname()
             self.outputdir = outputdir
             self.reconnectcount = 0
+            self.plist = ["A6B154010000"]
+            self.hlist = ["DACF54010000"]
 
         def owConnected(self):
             global owsensorlist
@@ -80,15 +82,25 @@ if onewire:
                 log.msg('Type: %s, ID: %s' % (sensor.type, sensor.id))
 
         def oneWireInstruments(self,root):
-            for sensor in root:
-                if sensor.type == 'DS18B20':             
-                    #sensor.useCache( False ) # Important for below 15 sec resolution (by default a 15 sec cache is used))
-                    self.readTemperature(sensor)
-                #if sensor.type == 'DS2406':
-                #    self.readSHT(sensor)
-                elif sensor.type == 'DS2438':
-                    #sensor.useCache( False ) # Important for below 15 sec resolution (by default a 15 sec cache is used))
-                    self.readBattery(sensor)
+            try:
+                for sensor in root:
+                    if sensor.type == 'DS18B20':             
+                        #sensor.useCache( False ) # Important for below 15 sec resolution (by default a 15 sec cache is used))
+                        self.readTemperature(sensor)
+                    #if sensor.type == 'DS2406':
+                    #    self.readSHT(sensor)
+                    elif sensor.type == 'DS2438':
+                        #sensor.useCache( False ) # Important for below 15 sec resolution (by default a 15 sec cache is used))
+                        # test for sensorids and provide sensortypus to function (e.g. humidity, pressure, none, etc)
+                        if sensor.id in self.plist:
+                            sensortypus = "pressure"
+                        else:
+                            sensortypus = "voltage"
+                        self.readBattery(sensor, sensortypus)
+            except:
+                global owsensorlist
+                owsensorlist = []
+                self.owConnected()
 
         def alias(self, sensorid):
             #define a alias dictionary
@@ -105,6 +117,36 @@ if onewire:
                 return sensordict[sensorid]
             except:
                 return sensorid
+
+        def mpxa4100(self,vad,temp):
+            # Calculates pressure for the MPXA4100A6U
+            # calibration values (take them from an ini file for the requested sensor.id) 
+            va = 4.7 # Volts taken from data sheet
+            pa = 105 # kPa taken from data sheet
+            vb = 0.6 # Volts taken from data sheet
+            pb = 20 # kPa taken from data sheet
+            # Linear transfer function according to datasheet (MPXA4100A6U)
+            mp = (va-vb)/(pa-pb)
+            tp = va-((va-vb)/(pa-pb)*pa)
+            ph = (vad-tp)/mp*10.0 # Pressure at current altitude in hPa
+            #http://de.wikipedia.org/wiki/Barometrische_H%C3%B6henformel
+            g = 9.80665
+            R = 287.05
+            h = 600
+            Ch = 0.12
+            a = 0.0065
+            T = temp + 273.15
+            #print "Check the following, maybe numpy not active"
+            #if temp < 9.1:
+            #    E = 5.6402*(-0.0916 + 1*np.exp(0.06*temp))
+            #else:
+            #    E = 18.2194*(1.0463 - 1*np.exp(-0.0666*temp))
+            #print "E", E
+            #x = (g/(R*(T + Ch*E + a*(h/2))))*h
+            #pm = ph*np.exp(x)
+            #print "Pressure [hPA] sealevel ", pm 
+
+            return (vad-tp)/mp*10.0
 
         def timeToArray(self, timestring):
             # Converts time string of format 2013-12-12T23:12:23.122324
@@ -151,7 +193,7 @@ if onewire:
             timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
             outtime = datetime.strftime(currenttime, "%H:%M:%S")
             #header = "# MagPyBin, sensor_id, [parameterlist], [unit-conversion-list], packing string, length"
-            packcode = '6hLL'
+            packcode = '6hLl'
             header = "# MagPyBin %s %s %s %s %s %s %d" % (sensor.id, '[t1]', '[T]', '[degC]', '[1000]', packcode, struct.calcsize(packcode))
 
             try:
@@ -193,21 +235,24 @@ if onewire:
                     log.err('Unable to parse data at %s' % actualtime)
             except:
                 log.err('OW - readTemperature: Lost temperature sensor -- reconnecting')
+                global owsensorlist
+                owsensorlist = []
                 self.owConnected()
                 
 
-        def readBattery(self,sensor):
+        def readBattery(self,sensor,sensortypus):
             dispatch_url =  "http://example.com/"+self.hostname+"/ow#"+sensor.id+"-value"
             currenttime = datetime.utcnow()
             filename = datetime.strftime(currenttime, "%Y-%m-%d")
             actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
             timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
             outtime = datetime.strftime(currenttime, "%H:%M:%S")
-            packcode = '6hLLLLLf'
+            packcode = '6hLlLLLf'
             header = "# MagPyBin %s %s %s %s %s %s %d" % (sensor.id, '[t1,var1,var2,var3,var4]', '[T,rh,vdd,vad,vis]', '[deg_C,per,V,V,V]', '[1000,100,100,100,1]', packcode, struct.calcsize(packcode))
 
             try:
                 # Extract data
+                print "Sensor: ", sensor.id, sensortypus
                 try:
                     humidity = float(ow.owfs_get('/uncached%s/HIH4000/humidity' % sensor._path))
                 except:
@@ -221,6 +266,9 @@ if onewire:
                     vad = float(sensor.VAD)
                     print "Battery sens: vis = ", sensor.vis
                     vis = float(sensor.vis)
+                    if sensortypus == "pressure":
+                        print "Pressure [hPa]: ", self.mpxa4100(vad,temp)
+                        humidity = self.mpxa4100(vad,temp)
                 except:
                     log.err("OW - readBattery: Could not asign value") 
 
@@ -231,7 +279,7 @@ if onewire:
                 try:
                     datearray.append(int(temp*1000))
                     if humidity < 0:
-                        humidity = 999
+                        humidity = 9999
                     datearray.append(int(humidity*100))
                     datearray.append(int(vdd*100))
                     datearray.append(int(vad*100))
@@ -276,4 +324,6 @@ if onewire:
                     log.err('OW - readBattery: Unable to parse data at %s' % actualtime)
             except:
                 log.err('OW - readBattery: Lost battery sensor -- reconnecting')
+                global owsensorlist
+                owsensorlist = []
                 self.owConnected()
