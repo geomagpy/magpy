@@ -12,17 +12,22 @@ import sys, time, os, socket
 import struct, binascii, re
 from datetime import datetime, timedelta
 
+# Twisted
 from twisted.protocols.basic import LineReceiver
-from autobahn.wamp import exportRpc
-
 from twisted.internet import reactor
-
 from twisted.python import usage, log
 from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
-from autobahn.websocket import listenWS
+# Autobahn
+#1. check version
+from autobahn import version as autovers
+print autovers
+#if autovers > 0.7.0:
+from autobahn.twisted.websocket import listenWS
+#else:
+#    from autobahn.websocket import listenWS
 from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
 
 if onewire:
@@ -93,7 +98,8 @@ if onewire:
                           "E2FE87040000": "1. Stock: Speis",
                           "BED887040000": "Dach: Flur", "2F3488040000": "1. Stock: Bad (T)", "0EB354010000": "Dach: Nico",
                           "3AD754010000": "Dach: Tina", "CBC454010000": "1. Stock: Kinderzimmer",
-                          "05CE54010000": "1. Stock: Bad"}      
+                          "05CE54010000": "1. Stock: Bad", "B1C687040000": "Vogel",
+                          "DACF54010000": "Aussen Kaefig"}      
             try:
                 return sensordict[sensorid]
             except:
@@ -165,11 +171,15 @@ if onewire:
                 self.dataToFile(sensor.id, filename, data_bin, header)
 
                 # Provide data to websocket
-                evt1 = {'id': 0, 'value': outtime}
-                evt6 = {'id': 8, 'value': timestamp}
-                evt2 = {'id': 5, 'value': temp}
-                evt5 = {'id': 10, 'value': self.hostname}
-                evt8 = {'id': 99, 'value': 'eol'}
+                try:
+                    evt1 = {'id': 0, 'value': outtime}
+                    evt6 = {'id': 8, 'value': timestamp}
+                    print "Temperature = ", temp
+                    evt2 = {'id': 5, 'value': temp}
+                    evt5 = {'id': 10, 'value': self.hostname}
+                    evt8 = {'id': 99, 'value': 'eol'}
+                except:
+                    print "read Temp: Problem assigning values to dict"
 
                 try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)
@@ -202,6 +212,7 @@ if onewire:
                 except:
                     humidity = float(nan)
                 try:
+                    print "Battery sens: T = ", sensor.temperatur
                     temp = float(sensor.temperature)
                     vdd = float(sensor.VDD)
                     vad = float(sensor.VAD)
@@ -230,18 +241,21 @@ if onewire:
                 # File Operations
                 self.dataToFile(sensor.id, filename, data_bin, header)
 
-                evt1 = {'id': 0, 'value': outtime}
-                evt9 = {'id': 8, 'value': timestamp}
-                evt2 = {'id': 5, 'value': temp}
-                if humidity < 100:
-                    evt3 = {'id': 7, 'value': humidity}
-                else:
-                    evt3 = {'id': 7, 'value': 0}
-                evt4 = {'id': 11, 'value': self.alias(sensor.id)}
-                evt5 = {'id': 12, 'value': vdd}
-                evt6 = {'id': 13, 'value': vad}
-                evt7 = {'id': 14, 'value': vis}
-                evt8 = {'id': 99, 'value': 'eol'}
+                try:
+                    evt1 = {'id': 0, 'value': outtime}
+                    evt9 = {'id': 8, 'value': timestamp}
+                    evt2 = {'id': 5, 'value': temp}
+                    if humidity < 100:
+                        evt3 = {'id': 7, 'value': humidity}
+                    else:
+                        evt3 = {'id': 7, 'value': 0}
+                    evt4 = {'id': 11, 'value': self.alias(sensor.id)}
+                    evt5 = {'id': 12, 'value': vdd}
+                    evt6 = {'id': 13, 'value': vad}
+                    evt7 = {'id': 14, 'value': vis}
+                    evt8 = {'id': 99, 'value': 'eol'}
+                except:
+                    print "read Battery: Problem assigning values to dict"
 
                 try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)
