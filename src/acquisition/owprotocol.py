@@ -119,7 +119,7 @@ if onewire:
                 datearray = map(int,datearray)
                 return datearray
             except:
-                log.msg('Error while extracting time array')
+                log.msg('OW - timetoArray: Error while extracting time array')
                 return []
 
         def dataToFile(self, sensorid, filedate, bindata, header):
@@ -137,7 +137,7 @@ if onewire:
                     with open(savefile, "a") as myfile:
                         myfile.write(bindata + "\n")
             except:
-                log.err("OW - Protocol: Error while saving file")        
+                log.err("OW - datatofile: Error while saving file")        
             
         def readTemperature(self, sensor):
 
@@ -165,7 +165,7 @@ if onewire:
                     #data_bin = struct.pack(packcode,datearray[0],datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6],datearray[7])
                     data_bin = struct.pack(packcode,*datearray)
                 except:
-                    log.msg('Error while packing binary data')
+                    log.msg('OW - readTemperature: Error while packing binary data')
                     pass
 
                 # File Operations
@@ -175,12 +175,12 @@ if onewire:
                 try:
                     evt1 = {'id': 0, 'value': outtime}
                     evt6 = {'id': 8, 'value': timestamp}
-                    print "Temperature = ", temp
+                    print "read Temperature = ", temp
                     evt2 = {'id': 5, 'value': temp}
                     evt5 = {'id': 10, 'value': self.hostname}
                     evt8 = {'id': 99, 'value': 'eol'}
                 except:
-                    print "read Temp: Problem assigning values to dict"
+                    print "OW - readTemperature: Problem assigning values to dict"
 
                 try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)
@@ -192,7 +192,7 @@ if onewire:
                 except ValueError:
                     log.err('Unable to parse data at %s' % actualtime)
             except:
-                log.err('Lost temperature sensor -- reconnecting')
+                log.err('OW - readTemperature: Lost temperature sensor -- reconnecting')
                 self.owConnected()
                 
 
@@ -215,11 +215,14 @@ if onewire:
                 try:
                     print "Battery sens: T = ", sensor.temperatur
                     temp = float(sensor.temperature)
+                    print "Battery sens: VDD = ", sensor.VDD
                     vdd = float(sensor.VDD)
+                    print "Battery sens: VAD = ", sensor.VAD
                     vad = float(sensor.VAD)
+                    print "Battery sens: vis = ", sensor.vis
                     vis = float(sensor.vis)
                 except:
-                    log.err("OW: readBattery: Could not asign value") 
+                    log.err("OW - readBattery: Could not asign value") 
 
                 # Appending data to buffer which contains pcdate, pctime and sensordata
                 # extract time data
@@ -236,7 +239,7 @@ if onewire:
                     #data_bin = struct.pack(packcode,datearray[0],datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6],datearray[7],datearray[8],datearray[9],datearray[10],datearray[11])
                     data_bin = struct.pack(packcode,*datearray)
                 except:
-                    log.msg('Error while packing binary data')
+                    log.msg('OW - readBattery: Error while packing binary data')
                     pass
 
                 # File Operations
@@ -256,7 +259,7 @@ if onewire:
                     evt7 = {'id': 14, 'value': vis}
                     evt8 = {'id': 99, 'value': 'eol'}
                 except:
-                    print "read Battery: Problem assigning values to dict"
+                    print "OW - readBattery: Problem assigning values to dict"
 
                 try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)
@@ -270,7 +273,7 @@ if onewire:
                     self.wsMcuFactory.dispatch(dispatch_url, evt8)
                     pass
                 except ValueError:
-                    log.err('Unable to parse data at %s' % actualtime)
+                    log.err('OW - readBattery: Unable to parse data at %s' % actualtime)
             except:
-                log.err('Lost battery sensor -- reconnecting')
+                log.err('OW - readBattery: Lost battery sensor -- reconnecting')
                 self.owConnected()
