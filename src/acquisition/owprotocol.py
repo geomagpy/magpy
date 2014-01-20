@@ -157,6 +157,7 @@ if onewire:
             try:
                 # Extract data
                 temp = float(sensor.temperature)
+                print "read Temperature: ", sensor.id, temp
 
                 # extract time data
                 datearray = self.timeToArray(timestamp)
@@ -175,7 +176,6 @@ if onewire:
                 try:
                     evt1 = {'id': 0, 'value': outtime}
                     evt6 = {'id': 8, 'value': timestamp}
-                    print "read Temperature = ", temp
                     evt2 = {'id': 5, 'value': temp}
                     evt5 = {'id': 10, 'value': self.hostname}
                     evt8 = {'id': 99, 'value': 'eol'}
@@ -213,7 +213,7 @@ if onewire:
                 except:
                     humidity = float(nan)
                 try:
-                    print "Battery sens: T = ", sensor.temperatur
+                    print "Battery sens: T = ", sensor.temperature
                     temp = float(sensor.temperature)
                     print "Battery sens: VDD = ", sensor.VDD
                     vdd = float(sensor.VDD)
