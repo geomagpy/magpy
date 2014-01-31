@@ -27,7 +27,7 @@ def isWDC(filename):
 def readWDC(filename, headonly=False, **kwargs):
     """
     Reading WDC format data.
-    Looks like:
+    Hourly looks like:
     WIK1209F01  20 4355059506150605058505950585053504750395034503850385043504850515049505150545056505750575057506050575052
     WIK1209F02  20 4355056505950565055505750515049504150395036503750405041504550565059506250605058506750565053505250495052
     WIK1209F03  20 4355047505050535054505550525045503950315021502050315053505250605064506750685071506550615067505950625052
@@ -455,6 +455,266 @@ def writeWDC(datastream, filename, **kwargs):
         pass
     else:
         logging.warning("Could not save WDC data. Please provide hour or minute data")
+
+    # 3.)
+    if minute:
+        '''
+COLUMNS   FORMAT   DESCRIPTION
+
+1-6       I6       Observatory's North Polar distance.  
+                   the north geographic pole in thousandths 
+                   of a degree. Decimal point is implied between positions 3 
+                   and 4.
+7-12      I6       Observatory's Geographic longitude. 
+                   of a degree. Decimal point is implied between positions 9 
+                   and 10.
+13-14     I2       Year. Last 2 digits, 1996 = 96. See also column 26.
+15-16     I2       Month (01-12)
+17-18     I2       Day of month (01-31)
+19        Al       Element (D,I,H,X,Y,Z, or F)
+20-21     I2       Hour of day (00-23)
+22-24     A3       Observatory 3-letter code.
+25        A1       Arbitrary.
+26        I1       Century digit.
+                   Year = 2014, Century digit = 0.
+                   Year = 1889, Century digit = 8.
+                   Year = 1996, Century digit = 9 or 'SPACE' for backwards
+                   compatibility.
+27        A1       Preliminary or Definitive data.
+                   Preliminary = P , Definitive = D
+28-34     A7       Blanks
+35-394    60I6     60 6-digit 1-minute values for the given element for that
+                   data hour.
+                   The values are in tenth-minutes for D and I, and in
+                   nanoTeslas for the intensity elements.
+395-400   I6       Hourly Mean.
+                   The average of the preceeding 60 1-minute values.
+401-402            Record end marker.
+                   Two chars 'cr'= 13 and 'nl'= 10.
+        '''
+
+	# http://www.wdc.bgs.ac.uk/catalog/format.html
+        #try:
+	northpolardistance = (90-47.93)*10000 # (90 degrees - COBS latitude)
+	longitude = 15.865 * 10000
+        line, textable = [],[]
+        rowx, rowy, rowz, rowf = '','','',''
+        latexrowx = ''
+        for elem in datastream:
+            arb = '  '
+            for key in KEYLIST:
+                if key == 'time':
+                    try:
+                        year = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y")
+                        month = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%m")
+                        day = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%d")
+                        hour = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%H")
+                        ar = year[2:]
+                        ye = year[:-2]
+                        century = ye[1:]
+			data_predef = 'P' # P for preliminary, D for definitive
+                    except:
+                        rowx, rowy, rowz, rowf = '','','',''
+                        pass
+                elif key == 'x':
+                    preamble = '%06d'%float(northpolardistance)+'%06d'%float(longitude)+ar+month+day+header['col-y'].upper()+hour+iagacode+' '+century+data_predef+'       '
+		    XDATA = minutedata.zfill(6)
+		    line = preamble+XDATA+XMEAN+'10'+'\n'
+                    if rowx[:16] == xname:
+                        if not isnan(elem.x):
+                            xel.append(elem.x)
+                            xhourel.append(int(hour))
+                    elif rowx == '':
+                        rowx = xname
+                        if not isnan(elem.x):
+                            xel = [elem.x]
+                            xhourel = [int(hour)]
+                        else:
+                            xel = []
+                            xhourel = []
+                    else:
+                        if len(xel)<1:
+                            xdailymean = int(9999)
+                            xbase = int(9999)
+                        else:
+                            xmean = round(np.mean(xel),0)
+                            xbase = xmean - 5000.0
+                            xbase = int(xbase/100)
+                            xdailymean = int(xmean - xbase*100)
+                        rowx += "%4i" % xbase
+                        count = 0
+                        for i in range(24):
+                            if len(xhourel) > 0 and count < len(xhourel) and xhourel[count] == i:
+                                xval = int(xel[count] - xbase*100)
+                                count = count+1
+                            else:
+                                xval = int(9999)
+                                xdailymean = int(9999)
+                            rowx+='%4i' % xval
+                        eol = '\n'
+                        rowx+='%4i%s' % (xdailymean,eol)
+                        line.append(rowx)
+                        rowx = xname
+                        xel, xhourel = [], []
+                        if not isnan(elem.x):
+                            xel.append(elem.x)
+                            xhourel.append(int(hour))
+                elif key == 'y':
+                    yname = iagacode + ye + month + header['col-y'].upper() + day + '  ' + arb  + ar
+                    if rowy[:16] == yname:
+                        if not isnan(elem.y):
+                            yel.append(elem.y)
+                            yhourel.append(int(hour))
+                    elif rowy == '':
+                        rowy = yname
+                        if not isnan(elem.y):
+                            yel = [elem.y]
+                            yhourel = [int(hour)]
+                        else:
+                            yel = []
+                            yhourel = []
+                    else:
+                        if len(yel)<1:
+                            ydailymean = int(9999)
+                            ybase = int(9999)
+                        else:
+                            ymean = round(np.mean(yel),0)
+                            ybase = ymean - 5000.0
+                            ybase = int(ybase/100)
+                            ydailymean = int(ymean - ybase*100)
+                        rowy += "%4i" % ybase
+                        count = 0
+                        for i in range(24):
+                            if len(yhourel) > 0 and count < len(yhourel) and yhourel[count] == i:
+                                yval = int(yel[count] - ybase*100)
+                                count = count+1
+                            else:
+                                yval = int(9999)
+                                ydailymean = int(9999)
+                            rowy+='%4i' % yval
+                        rowy+='%4i\n' % ydailymean
+                        line.append(rowy)
+                        rowy = yname
+                        yel, yhourel = [], []
+                        if not isnan(elem.y):
+                            yel.append(elem.y)
+                            yhourel.append(int(hour))
+                elif key == 'z':
+                    zname = iagacode + ye + month + header['col-z'].upper() + day + '  ' + arb  + ar
+                    if rowz[:16] == zname:
+                        if not isnan(elem.z):
+                            zel.append(elem.z)
+                            zhourel.append(int(hour))
+                    elif rowz == '':
+                        rowz = zname
+                        if not isnan(elem.z):
+                            zel = [elem.z]
+                            zhourel = [int(hour)]
+                        else:
+                            zel = []
+                            zhourel = []
+                    else:
+                        if len(zel)<1:
+                            zdailymean = int(9999)
+                            zbase = int(9999)
+                        else:
+                            zmean = round(np.mean(zel),0)
+                            zbase = zmean - 5000.0
+                            zbase = int(zbase/100)
+                            zdailymean = int(zmean - zbase*100)
+                        rowz += "%4i" % zbase
+                        count = 0
+                        for i in range(24):
+                            if len(zhourel) > 0 and count < len(zhourel) and zhourel[count] == i:
+                                zval = int(zel[count] - zbase*100)
+                                count = count+1
+                            else:
+                                zval = int(9999)
+                                zdailymean = int(9999)
+                            rowz+='%4i' % zval
+                        rowz+='%4i\n' % zdailymean
+                        line.append(rowz)
+                        rowz = zname
+                        zel, zhourel = [], []
+                        if not isnan(elem.z):
+                            zel.append(elem.z)
+                            zhourel.append(int(hour))
+                elif key == 'f':
+                    fname = iagacode + ye + month + header['col-f'].upper() + day + '  ' + arb  + ar
+                    if rowf[:16] == fname:
+                        if not isnan(elem.f):
+                            fel.append(elem.f)
+                            fhourel.append(int(hour))
+                    elif rowf == '':
+                        rowf = fname
+                        if not isnan(elem.f):
+                            fel = [elem.f]
+                            fhourel = [int(hour)]
+                        else:
+                            fel = []
+                            fhourel = []
+                    else:
+                        if len(fel)<1:
+                            fdailymean = int(9999)
+                            fbase = int(9999)
+                        else:
+                            fmean = round(np.mean(fel),0)
+                            fbase = fmean - 5000.0
+                            fbase = int(fbase/100)
+                            fdailymean = int(fmean - fbase*100)
+                        rowf += "%4i" % fbase
+                        count = 0
+                        for i in range(24):
+                            if len(fhourel) > 0 and count < len(fhourel) and fhourel[count] == i:
+                                fval = int(fel[count] - fbase*100)
+                                count = count+1
+                            else:
+                                fval = int(9999)
+                                fdailymean = int(9999)
+                            rowf+='%4i' % fval
+                        rowf+='%4i\n' % fdailymean
+                        line.append(rowf)
+                        rowf = fname
+                        fel, fhourel = [], []
+                        if not isnan(elem.f):
+                            fel.append(elem.f)
+                            fhourel.append(int(hour))
+        # Finally save data of the last day, which dropped out by above procedure
+        for comp in ['x','y','z','f']:
+            if len(eval(comp+'el'))<1:
+                exec(comp+'dailymean = int(9999)')
+                exec(comp+'base = int(9999)') 
+            else:
+                exec(comp+'mean = round(np.mean(' + comp +'el),0)') 
+                exec(comp+'base = ' + comp +'mean - 5000.0') 
+                exec(comp+'base = int(' + comp +'base/100)') 
+                exec(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)') 
+            exec('row'+comp+'+= "%4i" % '+comp+'base')
+            count = 0
+            for i in range(24):
+                if len(eval(comp+'hourel')) > 0 and count < len(eval(comp+'hourel')) and eval(comp+'hourel[count]') == i:
+                    exec(comp+'val = int(' + comp +'el[count] - ' + comp + 'base*100)')
+                    count = count+1
+                else:
+                    exec(comp+'val = int(9999)')
+                    exec(comp+'dailymean = int(9999)')
+                exec('row' + comp + '+="%4i" % ' + comp + 'val')
+            eol = '\n'
+            exec('row' + comp + '+="%4i%s" % (' + comp + 'dailymean,eol)')
+            line.append(eval('row'+comp))
+        line.sort()
+        try:
+            myFile.writelines( line )
+            pass
+        finally:
+           myFile.close()
+        #except IOError:
+        #    pass
+    elif minute:
+        pass
+    else:
+        logging.warning("Could not save WDC data. Please provide hour or minute data")
+   
 
 """
 def textable_preamble(fp, kwargs**):
