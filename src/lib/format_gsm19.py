@@ -163,7 +163,23 @@ def readGSM19(filename, headonly=False, **kwargs):
     115019.0  48487.17 99
     115020.0  48487.44 99
 
-    Others look like
+    WG looks like:
+    /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs                      
+    /ID 1 file 24survey.wg  02VIII12
+    /00106 sensor distance cm 
+    /X Y elevation nT nT/m sq cor-nT sat time picket-x picket-y 
+    line  000017
+    047.9263435  015.8653717  001089  48382.35  0012.61 99  000000.00 07 115950.0  4.00  39.00 
+    047.9263438  015.8653840  001089  48386.04  0017.18 99  000000.00 07 115951.0 * * 
+    or like (if no GPS):
+   /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs                      
+   /ID 1 file 07survey.wg  30  I 14
+   /00100 sensor distance cm 
+   /X Y nT nT/m sq cor-nT time picket-x picket-y 
+   0  0  48420.59  0002.90 99 * 110804.0  0  0 
+   0  0  48420.21  0002.58 99 * 110805.0 * * 
+
+
     """
     timestamp = os.path.getmtime(filename)
     creationdate = datetime.fromtimestamp(timestamp)
@@ -222,6 +238,10 @@ def readGSM19(filename, headonly=False, **kwargs):
         elif line.startswith('datum'):
             # data header
             pass
+        elif line.find('sensor distance') > 0:
+            diststr = line.split()[0]
+            dist = int(diststr.strip('/'))/100
+            #print "Distance =", dist
         elif headonly:
             # skip data for option headonly
             continue
@@ -267,24 +287,48 @@ def readGSM19(filename, headonly=False, **kwargs):
                 headers['col-var3'] = 'Elevation'
                 try:
                     row = LineStruct()
-                    hour = elem[8][:2]
-                    minute = elem[8][2:4]
-                    second = elem[8][4:]
-                    # add day
-                    try:
-                        strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
-                    except:
-                         strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
-                    row.time=date2num(strtime)
-                    row.f = float(elem[3])
-                    row.df = float(elem[4])
-                    row.var5 = float(elem[5])
-                    row.var1 = float(elem[0])
-                    row.var2 = float(elem[1])
-                    row.var3 = float(elem[2])
-                    row.var4 = float(elem[7])
-                    stream.add(row)
+                    if elem[0] == '0': # No GPS data -> no altitude
+                       hour = elem[6][:2]
+                       minute = elem[6][2:4]
+                       second = elem[6][4:]
+                       # add day
+                       try:
+                           strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
+                       except:
+                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
+                       row.time=date2num(strtime)
+                       row.f = float(elem[2])
+                       row.df = float(elem[3])
+                       if dist:
+                           row.z = row.f-(row.df*dist)
+                       row.var5 = float(elem[4])
+                       row.var1 = float(elem[0])
+                       row.var2 = float(elem[1])
+                       #row.var3 = float(elem[2])
+                       row.var4 = 0
+                       stream.add(row)
+                    else:
+                       hour = elem[8][:2]
+                       minute = elem[8][2:4]
+                       second = elem[8][4:]
+                       # add day
+                       try:
+                           strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
+                       except:
+                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
+                       row.time=date2num(strtime)
+                       print row.time
+                       row.f = float(elem[3])
+                       row.df = float(elem[4])
+                       print row.f
+                       row.var5 = float(elem[5])
+                       row.var1 = float(elem[0])
+                       row.var2 = float(elem[1])
+                       row.var3 = float(elem[2])
+                       row.var4 = float(elem[7])
+                       stream.add(row)
                 except:
+                    #print "Error"
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
                     pass
             else:

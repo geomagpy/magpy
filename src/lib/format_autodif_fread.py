@@ -74,7 +74,7 @@ def readAUTODIF_FREAD(filename, headonly=False, **kwargs):
             row = LineStruct()
 
             timestring = data[3] + ' ' + data[4]
-            time = datetime.strptime(timestring, "%d.%m.%y %H:%M:%S,%f")
+            time = datetime.strptime(timestring, "%m.%d.%y %H:%M:%S,%f")
 
             row.time = date2num(time)
             row.f = float(data[0])/1000.
