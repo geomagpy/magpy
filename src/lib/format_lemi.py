@@ -291,7 +291,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     getfile = True
 
     # Define frequency of output data:
-    tenHz =  False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO
+    tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO
 
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)

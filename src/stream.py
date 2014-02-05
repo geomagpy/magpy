@@ -573,7 +573,7 @@ class DataStream(object):
                     lst.append(elem)
                 count += 1.
 
-        loggingstream.info("_reduce_stream: Stream size reduced from %s to %s points." % (size,len(lst)))
+        loggerstream.info("_reduce_stream: Stream size reduced from %s to %s points." % (size,len(lst)))
 
         return DataStream(lst, self.header)
 
@@ -2130,6 +2130,44 @@ class DataStream(object):
             loggerstream.warning('mean: Too many nans in column, exceeding %d percent' % percentage)
             return float("NaN")
 
+    def multiply(self, factors):
+        """
+    DEFINITION:
+        A function to multiply the datastream, should one ever have the need to,
+	for whatever bizarre reasons.
+
+    PARAMETERS:
+    Variables:
+        - factors: 	(dict) Dictionary of multiplcation factors with keys to apply to 
+			e.g. {'x': -1, 'f': 2}
+    Kwargs:
+        - starttime: 	(Datetime object) Start time to apply offsets
+        - endtime : 	(Datetime object) End time to apply offsets
+
+    RETURNS:
+        - self: 	(DataStream) Multiplied datastream.
+
+    EXAMPLE:
+        >>> data.multiply({'x':-1})
+
+    APPLICATION:
+
+        """
+
+        for key in factors:
+            if key in KEYLIST:
+                val = self._get_column(key)
+                if key == 'time':
+                    loggerstream.error("factor: Multiplying time? That's just plain silly.")
+                else:
+                    newval = [elem * factors[key] for elem in val]
+                    loggerstream.info('factor: Multiplied column %s by %s.' % (key, factors[key]))
+                self = self._put_column(newval, key)
+            else:
+                loggerstream.warning("factor: Key '%s' not in keylist." % key)
+    
+        return self
+
 
     def obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False, 
                     outfile=None, fmt=None, axes=None, dbscale=False, 
@@ -2316,16 +2354,26 @@ class DataStream(object):
 
     def offset(self, offsets):
         """
-        Offset treatment: offsets argument is a dictionary
+    DEFINITION:
         Apply constant offsets to elements of the datastream
-        the Offsets arguments is a dictionary which refers to keys fo the datastream
-        Important: Time offsets have to be timedelta objects
-        : type offsets: dict
-        : param offsets: looks like {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
-        # 1.) assert that offsets is a dictionary {'x': 4.2, 'y':... }
-        # 2.) apply offsets
-        kwargs:
-        starttime, endtime 
+
+    PARAMETERS:
+    Variables:
+        - offsets: 	(dict) Dictionary of offsets with keys to apply to 
+			e.g. {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
+			Important: Time offsets have to be timedelta objects
+    Kwargs:
+        - starttime: 	(Datetime object) Start time to apply offsets
+        - endtime : 	(Datetime object) End time to apply offsets
+
+    RETURNS:
+        - variable: 	(type) Description.
+
+    EXAMPLE:
+        >>> data.offset({'x':7.5})
+
+    APPLICATION:
+
         """
 
         for key in offsets:
@@ -2355,7 +2403,7 @@ class DataStream(object):
     Variables:
         - keys: 	(list) A list of the keys (str) to be plotted.
     Kwargs:
-        - annote: 	(bool) Annotate data using comments
+        - annotate: 	(bool) Annotate data using comments
 	- annoxy:	(dictionary) Define placement of annotation (in % of scale).
 			Possible parameters:
 			(called for annotated storm phases:) 
@@ -3120,15 +3168,29 @@ class DataStream(object):
 
     def rotation(self,**kwargs):
         """
-        Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
-        alpha is the horizontal rotation in degree,
-        beta the vertical
+    DEFINITION:
+	Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
+
+    PARAMETERS:
+    Variables: 
+    Kwargs:
+        - alpha: 	(float) The horizontal rotation in degrees
+        - beta: 	(float) The vertical rotation in degrees
+
+    RETURNS:
+        - self: 	(DataStream) The rotated stream
+
+    EXAMPLE:
+        >>> data.rotation(alpha=2.74)
+
+    APPLICATION:
+     
         """
-        
         
         unit = kwargs.get('unit')
         alpha = kwargs.get('alpha')
         beta = kwargs.get('beta')
+
         if unit == 'gon':
             ang_fac = 400./360.
         elif unit == 'rad':
@@ -3140,7 +3202,7 @@ class DataStream(object):
         if not beta:
             beta = 0.
 
-        loggerstream.info('--- Applying rotation matrix: %s ' % (str(datetime.now())))
+        loggerstream.info('rotation: Applying rotation matrix.')
 
         for elem in self:
             ra = np.pi*alpha/(180.*ang_fac)
@@ -3152,7 +3214,7 @@ class DataStream(object):
             elem.y = ys
             elem.z = zs
 
-        loggerstream.info('--- finished reorientation: %s ' % (str(datetime.now())))
+        loggerstream.info('rotation: Finished reorientation.')
 
         return self
 

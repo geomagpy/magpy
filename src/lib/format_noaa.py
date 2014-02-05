@@ -50,7 +50,6 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     splitpath = os.path.split(filename)
     try:
         splitname = splitpath[1].split('_')
-	print splitname
 	if len(splitname) == 3: # file is current file
 	    tmpdaystring = datetime.strftime(datetime.utcnow(),'%Y%m%d')
             datatype = splitpath[1].split('_')[1]
