@@ -3653,7 +3653,8 @@ class DataStream(object):
     Variables:
         - filepath: 	(str) Providing path/filename for saving.
     Kwargs:
-        - coverage: 	(timedelta) day files or hour or month or year or all - default day.
+        - coverage: 	(str/timedelta) day files or hour or month or year or all - default day. 
+			'month','year','all',etc., otherwise timedelta object
         - dateformat: 	(str) outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22".
         - filenamebegins: 	(str) providing the begin of savename (e.g. "WIK_").
         - filenameends: 	(str) providing the end of savename (e.g. ".min").

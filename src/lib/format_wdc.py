@@ -7,7 +7,7 @@ ToDo: Filter for minute data
 """
 
 from stream import *
-
+from datetime import timedelta
 
 def isWDC(filename):
     """
@@ -494,191 +494,90 @@ COLUMNS   FORMAT   DESCRIPTION
         '''
 
 	# http://www.wdc.bgs.ac.uk/catalog/format.html
-        #try:
-	northpolardistance = (90-47.93)*10000 # (90 degrees - COBS latitude)
-	longitude = 15.865 * 10000
-        line, textable = [],[]
-        rowx, rowy, rowz, rowf = '','','',''
-        latexrowx = ''
+	northpolardistance = int((90-47.93)*1000) # (90 degrees - COBS latitude)
+	longitude = int(15.865 * 1000)
+        header = datastream.header
+        iagacode = header.get('StationIAGAcode'," ").upper()
+	data_predef = 'P' # P for preliminary, D for definitive. TODO: change this later
+        min_dict, hour_dict, day_dict = {}, {}, {}
+	write_KEYLIST = ['x','y','z','f']
+        for key in write_KEYLIST:
+            min_dict[key] = ''
+        day, hour = '0', '0'
+
+        for day in range(1,31):		# TODO: make this exact for given month
+            day_dict[str(day).zfill(2)] = ''
+	# Read data into dictionaries for ease of writing:
         for elem in datastream:
-            arb = '  '
-            for key in KEYLIST:
-                if key == 'time':
-                    try:
-                        year = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y")
-                        month = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%m")
-                        day = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%d")
-                        hour = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%H")
-                        ar = year[2:]
-                        ye = year[:-2]
-                        century = ye[1:]
-			data_predef = 'P' # P for preliminary, D for definitive
-                    except:
-                        rowx, rowy, rowz, rowf = '','','',''
-                        pass
-                elif key == 'x':
-                    preamble = '%06d'%float(northpolardistance)+'%06d'%float(longitude)+ar+month+day+header['col-y'].upper()+hour+iagacode+' '+century+data_predef+'       '
-		    XDATA = minutedata.zfill(6)
-		    line = preamble+XDATA+XMEAN+'10'+'\n'
-                    if rowx[:16] == xname:
-                        if not isnan(elem.x):
-                            xel.append(elem.x)
-                            xhourel.append(int(hour))
-                    elif rowx == '':
-                        rowx = xname
-                        if not isnan(elem.x):
-                            xel = [elem.x]
-                            xhourel = [int(hour)]
-                        else:
-                            xel = []
-                            xhourel = []
-                    else:
-                        if len(xel)<1:
-                            xdailymean = int(9999)
-                            xbase = int(9999)
-                        else:
-                            xmean = round(np.mean(xel),0)
-                            xbase = xmean - 5000.0
-                            xbase = int(xbase/100)
-                            xdailymean = int(xmean - xbase*100)
-                        rowx += "%4i" % xbase
-                        count = 0
-                        for i in range(24):
-                            if len(xhourel) > 0 and count < len(xhourel) and xhourel[count] == i:
-                                xval = int(xel[count] - xbase*100)
-                                count = count+1
-                            else:
-                                xval = int(9999)
-                                xdailymean = int(9999)
-                            rowx+='%4i' % xval
-                        eol = '\n'
-                        rowx+='%4i%s' % (xdailymean,eol)
-                        line.append(rowx)
-                        rowx = xname
-                        xel, xhourel = [], []
-                        if not isnan(elem.x):
-                            xel.append(elem.x)
-                            xhourel.append(int(hour))
-                elif key == 'y':
-                    yname = iagacode + ye + month + header['col-y'].upper() + day + '  ' + arb  + ar
-                    if rowy[:16] == yname:
-                        if not isnan(elem.y):
-                            yel.append(elem.y)
-                            yhourel.append(int(hour))
-                    elif rowy == '':
-                        rowy = yname
-                        if not isnan(elem.y):
-                            yel = [elem.y]
-                            yhourel = [int(hour)]
-                        else:
-                            yel = []
-                            yhourel = []
-                    else:
-                        if len(yel)<1:
-                            ydailymean = int(9999)
-                            ybase = int(9999)
-                        else:
-                            ymean = round(np.mean(yel),0)
-                            ybase = ymean - 5000.0
-                            ybase = int(ybase/100)
-                            ydailymean = int(ymean - ybase*100)
-                        rowy += "%4i" % ybase
-                        count = 0
-                        for i in range(24):
-                            if len(yhourel) > 0 and count < len(yhourel) and yhourel[count] == i:
-                                yval = int(yel[count] - ybase*100)
-                                count = count+1
-                            else:
-                                yval = int(9999)
-                                ydailymean = int(9999)
-                            rowy+='%4i' % yval
-                        rowy+='%4i\n' % ydailymean
-                        line.append(rowy)
-                        rowy = yname
-                        yel, yhourel = [], []
-                        if not isnan(elem.y):
-                            yel.append(elem.y)
-                            yhourel.append(int(hour))
-                elif key == 'z':
-                    zname = iagacode + ye + month + header['col-z'].upper() + day + '  ' + arb  + ar
-                    if rowz[:16] == zname:
-                        if not isnan(elem.z):
-                            zel.append(elem.z)
-                            zhourel.append(int(hour))
-                    elif rowz == '':
-                        rowz = zname
-                        if not isnan(elem.z):
-                            zel = [elem.z]
-                            zhourel = [int(hour)]
-                        else:
-                            zel = []
-                            zhourel = []
-                    else:
-                        if len(zel)<1:
-                            zdailymean = int(9999)
-                            zbase = int(9999)
-                        else:
-                            zmean = round(np.mean(zel),0)
-                            zbase = zmean - 5000.0
-                            zbase = int(zbase/100)
-                            zdailymean = int(zmean - zbase*100)
-                        rowz += "%4i" % zbase
-                        count = 0
-                        for i in range(24):
-                            if len(zhourel) > 0 and count < len(zhourel) and zhourel[count] == i:
-                                zval = int(zel[count] - zbase*100)
-                                count = count+1
-                            else:
-                                zval = int(9999)
-                                zdailymean = int(9999)
-                            rowz+='%4i' % zval
-                        rowz+='%4i\n' % zdailymean
-                        line.append(rowz)
-                        rowz = zname
-                        zel, zhourel = [], []
-                        if not isnan(elem.z):
-                            zel.append(elem.z)
-                            zhourel.append(int(hour))
-                elif key == 'f':
-                    fname = iagacode + ye + month + header['col-f'].upper() + day + '  ' + arb  + ar
-                    if rowf[:16] == fname:
-                        if not isnan(elem.f):
-                            fel.append(elem.f)
-                            fhourel.append(int(hour))
-                    elif rowf == '':
-                        rowf = fname
-                        if not isnan(elem.f):
-                            fel = [elem.f]
-                            fhourel = [int(hour)]
-                        else:
-                            fel = []
-                            fhourel = []
-                    else:
-                        if len(fel)<1:
-                            fdailymean = int(9999)
-                            fbase = int(9999)
-                        else:
-                            fmean = round(np.mean(fel),0)
-                            fbase = fmean - 5000.0
-                            fbase = int(fbase/100)
-                            fdailymean = int(fmean - fbase*100)
-                        rowf += "%4i" % fbase
-                        count = 0
-                        for i in range(24):
-                            if len(fhourel) > 0 and count < len(fhourel) and fhourel[count] == i:
-                                fval = int(fel[count] - fbase*100)
-                                count = count+1
-                            else:
-                                fval = int(9999)
-                                fdailymean = int(9999)
-                            rowf+='%4i' % fval
-                        rowf+='%4i\n' % fdailymean
-                        line.append(rowf)
-                        rowf = fname
-                        fel, fhourel = [], []
-                        if not isnan(elem.f):
-                            fel.append(elem.f)
-                            fhourel.append(int(hour))
+	    timestamp = num2date(elem.time).replace(tzinfo=None)
+	    minute = datetime.strftime(timestamp, "%M")
+            if minute == '00':
+                if len(min_dict['x']) != 360:
+                    loggerlib.error('format_wdc: Error in writing data.')
+                minutedata = dict(min_dict)
+                hour_dict[hour] = minutedata
+                for key in write_KEYLIST:
+                    min_dict[key] = ''
+            hour = datetime.strftime(timestamp, "%H")
+            if hour == '00' and minute == '00':
+                hourdata = dict(hour_dict)
+                day_dict[day] = hourdata
+		if minute == '00':
+                    for hour in range(0,24):
+                        hour_dict[str(hour).zfill(2)] = ''
+            year = datetime.strftime(timestamp, "%Y")
+            day = datetime.strftime(timestamp, "%d")
+            for key in write_KEYLIST:
+                exec('value = elem.'+key)
+                if not isnan(value):
+                    if value >= 10000:
+                        value = int(round(value))
+                    val_f = str(value).rjust(6)
+                else:
+                    val_f = '999999'
+                min_dict[key] = min_dict[key] + val_f
+
+	minutedata = dict(min_dict)
+	hour_dict[hour] = minutedata
+	hourdata = dict(hour_dict)
+        day_dict[day] = hourdata
+        ar = year[2:]
+        ye = year[:-2]
+        century = ye[1:]
+        month = datetime.strftime(timestamp, "%m")
+
+	# TODO write routine to check for missing data and fill in spaces?
+
+	# Write data in beliebiges Format:
+	if int(month) < 12:
+	    nextmonth = datetime(int(year),int(month)+1,1) - timedelta(days=1)
+	else:
+	    nextmonth = datetime(int(year)+1,1,1) - timedelta(days=1)
+
+	pre_geopos = str(northpolardistance).rjust(6) + str(longitude).rjust(6)
+	day = datetime(int(year),int(month),1)
+
+	while day < nextmonth:
+	    for key in write_KEYLIST:
+                for hour_ in range(0,24):
+	            pre_date = ar + month + datetime.strftime(day,'%d')
+	            pre_rest = key.upper() + hour + iagacode + ' ' + century + data_predef + '       '
+		    preamble = pre_geopos + pre_date + pre_rest
+		    hour = str(hour_).zfill(2)
+		    dom = datetime.strftime(day,"%d")
+
+		    # Calculate mean:
+		    data = day_dict[dom][hour][key]
+		    data_values = data.split()
+		    total = 0.
+		    for item in data_values:
+		        total = total + float(item)
+		    hourly_mean = str(total/60.).rjust(6)
+		    line = preamble + data + hourly_mean + '\n'
+		    myFile.write(line)
+            day = day + timedelta(days=1)
+
+        '''
         # Finally save data of the last day, which dropped out by above procedure
         for comp in ['x','y','z','f']:
             if len(eval(comp+'el'))<1:
@@ -714,6 +613,7 @@ COLUMNS   FORMAT   DESCRIPTION
         pass
     else:
         logging.warning("Could not save WDC data. Please provide hour or minute data")
+        '''
    
 
 """
