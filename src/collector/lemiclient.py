@@ -55,16 +55,18 @@ class PubSubClient(WampClientProtocol):
                  sensdesc = row[1]
                  module = row[2].lower()
                  param = row[3]
-                 print row, len(param.split(',')) 
-                 self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
+                 print "Row: ", row, len(param.split(',')) 
+                 #datainforid = dbdatainfo(db,sensid)
+                 #self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
                  # Create Sensor Table if it does not yet exist
-                 createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, x FLOAT, y FLOAT, z FLOAT, t1 FLOAT, t2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
-                 try:
-                     cursor.execute(createtable)
-                 except:
-                     log.msg("Table exists already.")
+                 #createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, x FLOAT, y FLOAT, z FLOAT, t1 FLOAT, t2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                 #try:
+                 #    cursor.execute(createtable)
+                 #except:
+                 #    log.msg("Table exists already.")
                  subscriptionstring = "%s:%s-value" % (module, sensid)
+                 #print subscriptionstring
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result
                  print "sensid=%s,sensdesc=%s,module=%s,param=%s" % \

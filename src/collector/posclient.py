@@ -51,14 +51,14 @@ class PubSubClient(WampClientProtocol):
                  module = row[2].lower()
                  param = row[3]
                  print row, len(param.split(',')) 
-                 self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
+                 #self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
                  # Create Sensor Table if it does not yet exist  # TODO: check the length of param for other then temperatur data 
-                 createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, f FLOAT, df FLOAT, var2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
-                 try:
-                     cursor.execute(createtable)
-                 except:
-                     log.msg("Table exists already.")
+                 #createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, f FLOAT, df FLOAT, var2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                 #try:
+                 #    cursor.execute(createtable)
+                 #except:
+                 #    log.msg("Table exists already.")
                  subscriptionstring = "%s:%s-value" % (module, sensid)
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result

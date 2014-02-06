@@ -621,7 +621,10 @@ class MainFrame(wx.Frame):
                 datainfoid = dlg.dataComboBox.GetValue()
                 stream = DataStream()
                 mintime = stream._testtime([elem[1] for elem in output if elem[0] == datainfoid][0])
-                maxtime = stream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
+                lastupload = stream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
+                maxtime = stream._testtime(datetime.strftime(lastupload,'%Y-%m-%d')+' 23:59:59')
+                #maxtime = stream._testtime(datetime.strftime(datetime.utcnow(),'%Y-%m-%d')+' 23:59:59')
+                #maxtime = datestream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
                 self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mintime.timetuple())))
                 self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(maxtime.timetuple())))
                 self.menu_p.str_page.startTimePicker.SetValue(mintime.strftime('%X'))
@@ -665,7 +668,7 @@ class MainFrame(wx.Frame):
             self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
             if self.db:
                 self.DBOpen.Enable(True)
-                self.menu_p.rep_page.logMsg('- MySQL Database selcted')
+                self.menu_p.rep_page.logMsg('- MySQL Database selected.')
         dlg.Destroy()        
 
 

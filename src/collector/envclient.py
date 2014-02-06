@@ -34,7 +34,7 @@ class PubSubClient(WampClientProtocol):
 
     def subscribeInst(self, db, cursor, client):
         self.prefix("env", "http://example.com/" + client +"/env#")
-        sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorDataLogger = 'ENV05'"
+        sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorID LIKE 'ENV05%'"
         try:
             # Execute the SQL command
             cursor.execute(sql)
@@ -48,17 +48,20 @@ class PubSubClient(WampClientProtocol):
             for row in results:
                  sensid = str(row[0])
                  sensdesc = row[1]
-                 module = row[2].lower()[:3]
+                 try:
+                     module = row[2].lower()[:3]
+                 except:
+                     module = 'env'
                  param = row[3]
                  print row, len(param.split(',')) 
-                 self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
+                 #self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
                  # Create Sensor Table if it does not yet exist  # TODO: check the length of param for other then temperatur data 
-                 createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var2 FLOAT, t2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
-                 try:
-                     cursor.execute(createtable)
-                 except:
-                     log.msg("Table exists already.")
+                 #createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var2 FLOAT, t2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
+                 #try:
+                 #    cursor.execute(createtable)
+                 #except:
+                 #    log.msg("Table exists already.")
                  subscriptionstring = "%s:%s-value" % (module, sensid)
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result
@@ -86,6 +89,7 @@ class PubSubClient(WampClientProtocol):
         eol = ''
         try:
             sensorid = topicUri.split('/')[-1].split('-')[0].split('#')[1]
+            #print sensorid
             if eventdict['id'] == 99:
                 eol = eventdict['value']
             if eol == '':

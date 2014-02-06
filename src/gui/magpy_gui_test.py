@@ -9,6 +9,8 @@ if planet == 'zagll1':
     magpypath = '/home/rachel/Software/MagPyDev/magpy/trunk/src/'
 elif planet in leonplanets:
     magpypath = '/home/leon/Software/magpy/trunk/src/'
+elif planet == 'Venus':
+    magpypath = '/home/leon/Software/magpy/'
 else:
     magpypath = '/home/leon/Software/magpy/trunk/src/'
 
