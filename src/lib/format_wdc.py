@@ -494,10 +494,6 @@ COLUMNS   FORMAT   DESCRIPTION
         '''
 
 	# http://www.wdc.bgs.ac.uk/catalog/format.html
-	northpolardistance = int((90-47.93)*1000) # (90 degrees - COBS latitude)
-	longitude = int(15.865 * 1000)
-        header = datastream.header
-        iagacode = header.get('StationIAGAcode'," ").upper()
 	data_predef = 'P' # P for preliminary, D for definitive. TODO: change this later
         min_dict, hour_dict, day_dict = {}, {}, {}
 	write_KEYLIST = ['x','y','z','f']
@@ -505,15 +501,16 @@ COLUMNS   FORMAT   DESCRIPTION
             min_dict[key] = ''
         day, hour = '0', '0'
 
-        for day in range(1,31):		# TODO: make this exact for given month
+        for day in range(1,32):		# TODO: make this exact for given month
             day_dict[str(day).zfill(2)] = ''
+
 	# Read data into dictionaries for ease of writing:
         for elem in datastream:
 	    timestamp = num2date(elem.time).replace(tzinfo=None)
 	    minute = datetime.strftime(timestamp, "%M")
             if minute == '00':
                 if len(min_dict['x']) != 360:
-                    loggerlib.error('format_wdc: Error in writing data.')
+                    loggerlib.error('format_wdc: Error in formatting data for %s.' % datetime.strftime(timestamp,'%Y-%m-%d %H:%M'))
                 minutedata = dict(min_dict)
                 hour_dict[hour] = minutedata
                 for key in write_KEYLIST:
@@ -522,57 +519,107 @@ COLUMNS   FORMAT   DESCRIPTION
             if hour == '00' and minute == '00':
                 hourdata = dict(hour_dict)
                 day_dict[day] = hourdata
-		if minute == '00':
-                    for hour in range(0,24):
-                        hour_dict[str(hour).zfill(2)] = ''
+                for hour in range(0,24):
+                    hour_dict[str(hour).zfill(2)] = ''
             year = datetime.strftime(timestamp, "%Y")
             day = datetime.strftime(timestamp, "%d")
             for key in write_KEYLIST:
                 exec('value = elem.'+key)
                 if not isnan(value):
-                    if value >= 10000:
-                        value = int(round(value))
+                    if len(str(value)) > 6:
+                        if value >= 10000:
+                            value = int(round(value))
+			elif value >= 1000:
+                            value = round(value,1)
+			else:
+			    value = round(value,2)
                     val_f = str(value).rjust(6)
                 else:
                     val_f = '999999'
                 min_dict[key] = min_dict[key] + val_f
 
+	# Save last day of data, which is left out in loop:
 	minutedata = dict(min_dict)
 	hour_dict[hour] = minutedata
 	hourdata = dict(hour_dict)
         day_dict[day] = hourdata
+
+	# Find data for preamble tags at line beginning:
         ar = year[2:]
         ye = year[:-2]
         century = ye[1:]
         month = datetime.strftime(timestamp, "%m")
 
-	# TODO write routine to check for missing data and fill in spaces?
-
-	# Write data in beliebiges Format:
-	if int(month) < 12:
-	    nextmonth = datetime(int(year),int(month)+1,1) - timedelta(days=1)
-	else:
-	    nextmonth = datetime(int(year)+1,1,1) - timedelta(days=1)
+        header = datastream.header
+	try:
+            iagacode = header.get('StationIAGAcode'," ").upper()
+	except:
+	    iagacode = 'WIC'
+	try:
+	    station_lat = header.get('DataAcquisitionLatitude'," ")
+	except:
+	    station_lat = 47.93
+	try:
+	    station_long = header.get('DataAcquisitionLongitude'," ")
+	except:
+	    station_long = 15.865
+	northpolardistance = int(round((90-float(station_lat))*1000))
+	longitude = int(round(float(station_long) * 1000))
 
 	pre_geopos = str(northpolardistance).rjust(6) + str(longitude).rjust(6)
 	day = datetime(int(year),int(month),1)
 
+	# TODO write routine to check for missing data and fill in spaces?
+
+	# Find time range:
+	if int(month) < 12:
+	    nextmonth = datetime(int(year),int(month)+1,1)
+	else:
+	    nextmonth = datetime(int(year)+1,1,1)
+
+	# Write data in beliebiges Format:
 	while day < nextmonth:
 	    for key in write_KEYLIST:
                 for hour_ in range(0,24):
+		    hour = str(hour_).zfill(2)
+		    dom = datetime.strftime(day,"%d")
 	            pre_date = ar + month + datetime.strftime(day,'%d')
 	            pre_rest = key.upper() + hour + iagacode + ' ' + century + data_predef + '       '
 		    preamble = pre_geopos + pre_date + pre_rest
-		    hour = str(hour_).zfill(2)
-		    dom = datetime.strftime(day,"%d")
 
-		    # Calculate mean:
-		    data = day_dict[dom][hour][key]
-		    data_values = data.split()
-		    total = 0.
-		    for item in data_values:
-		        total = total + float(item)
-		    hourly_mean = str(total/60.).rjust(6)
+		    # Get data + calculate mean:
+                    try:
+		        data = day_dict[dom][hour][key]
+		        total = 0.
+			try:
+		            for i in range(0,60):
+		                total = total + float(data[i*6:(i+1)*6])
+		            hourly_mean = total/60.
+			except:
+			    hourly_mean = 999999
+                        if len(str(hourly_mean)) > 6:
+                            if hourly_mean >= 10000:
+                                hourly_mean = int(round(hourly_mean))
+			    elif hourly_mean >= 1000:
+                                hourly_mean = round(hourly_mean,1)
+			    else:
+				hourly_mean = round(hourly_mean,2)
+                        hourly_mean = str(hourly_mean).rjust(6)
+		    except KeyError:
+			loggerlib.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
+				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
+			data = '999999'*60
+		        hourly_mean = '999999'
+		    except TypeError:
+			loggerlib.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
+				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
+			data = '999999'*60
+		        hourly_mean = '999999'
+		    if len(data) != 360:
+			loggerlib.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
+				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
+			data = '999999'*60
+		        hourly_mean = '999999'
 		    line = preamble + data + hourly_mean + '\n'
 		    myFile.write(line)
             day = day + timedelta(days=1)
