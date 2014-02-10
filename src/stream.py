@@ -68,6 +68,10 @@ try:
     import scipy as sp
     from scipy import interpolate
     from scipy import stats
+    from scipy import signal
+    from scipy.interpolate import UnivariateSpline
+    from scipy.ndimage import filters
+    import scipy.optimize as op
     import math
 except ImportError:
     logpygen += "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
@@ -235,6 +239,7 @@ class DataStream(object):
     - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
     - self._reduce_stream(self) -- Reduces stream below a certain limit.
     - self._remove_lines(self, key, value) -- removes lines with value within the selected key
+    - self.findtime(self,time) -- returns index and line for which time equals self.time
 
     B. Internal Methods II: Data manipulation functions
     - self._aic(self, signal, k, debugmode=None) -- returns float -- determines Akaki Information Criterion for a specific index k
@@ -333,6 +338,20 @@ class DataStream(object):
     def extend(self,datlst,header):
         self.container.extend(datlst)
         self.header = header
+
+    def findtime(self,time):
+        """
+        DESCRIPTION:
+            Find a line within the container which contains the selected time step
+        RETURNS:
+            The index position of the line and the line itself
+        """
+        st = date2num(self._testtime(time))
+        for index, line in enumerate(self):
+            if line.time == st:
+                return index, line
+        loggerstream.waring("findtime: didn't find selected time - returning 0")
+        return 0, []
 
     def _print_key_headers(self):
         print "%10s : %22s : %28s" % ("MAGPY KEY", "VARIABLE", "UNIT")
@@ -1399,6 +1418,188 @@ class DataStream(object):
         self = self.sorting()
 
         return self
+
+
+    def nfilter(self,**kwargs):
+        """
+        DEFINITION:
+            Uses a selected window to filter the datastream - similar to the smooth function.
+            (take a look at the Scipy Cookbook/Signal Smooth)
+            This method is based on the convolution of a scaled window with the signal.
+            The signal is prepared by introducing reflected copies of the signal 
+            (with the window size) in both ends so that transient parts are minimized
+            in the begining and end part of the output signal.
+            This function is approximately twice as fast as the previous version.
+
+        PARAMETERS:
+        Kwargs:
+            - keys: 	(list) List of keys to smooth 
+            - filter_type   (string) name of the window. One of 'flat','barthann','bartlett','blackman','blackmanharris','bohman',
+                                                   'boxcar','cosine','flattop','hamming','hann','nuttall',
+                                                   'parzen','triang','gaussian','wiener','spline','butterworth'
+                                     see http://docs.scipy.org/doc/scipy/reference/signal.html
+            - filter_width  (timedelta) window width of the filter
+            - noresample      (bool) if True the data set is resampled at filter_width positions
+            - resamplestart (datetime) starting resampling at this time 
+            - resamplemode  (string) if 'fast' then fast resampling is used
+            - gaussian_factor (float) factor to multiply filterwidth. 
+                                        1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
+            - testplot      (bool) provides a plot of unfiltered and filtered data for each key if true 
+
+        RETURNS:
+            - self: 	(DataStream) containing the filtered signal within the selected columns
+
+        EXAMPLE:
+            >>> nice_data = bad_data.filter(keys=['x','y','z'])
+            or
+            >>> nice_data = bad_data.filter(keys=['x','y','z'],filter_type='gaussian',resample=true)
+
+        APPLICATION:
+         
+        """
+
+        # ########################
+        # Kwargs and definitions
+        # ########################
+        filterlist = ['flat','barthann','bartlett','blackman','blackmanharris','bohman','boxcar','cosine','flattop','hamming','hann','nuttall','parzen','triang','gaussian','wiener','spline','butterworth']
+
+        # To be added
+        #kaiser(M, beta[, sym]) 	Return a Kaiser window.
+        #slepian(M, width[, sym]) 	Return a digital Slepian (DPSS) window.
+        #chebwin(M, at[, sym]) 	Return a Dolph-Chebyshev window.
+        # see http://docs.scipy.org/doc/scipy/reference/signal.html
+
+        keys = kwargs.get('keys')
+        filter_type = kwargs.get('filter_type')
+        filter_width = kwargs.get('filter_width')
+        filter_offset = kwargs.get('filter_offset')
+        noresample = kwargs.get('noresample')
+        resamplemode = kwargs.get('resamplemode')
+        resamplestart = kwargs.get('resamplestart')
+        resamplestarttime = kwargs.get('resamplestarttime')
+        gaussian_factor = kwargs.get('gaussian_factor')
+        testplot = kwargs.get('testplot')
+
+        if not keys:
+            keys = self._get_key_headers()
+        if not filter_width:
+            filter_width = timedelta(minutes=1)
+        if not noresample:
+            resample = True
+        else:
+            resample = False
+        if not resamplemode:
+            resamplefast = True
+        else:
+            if resamplemode == 'fast':
+                resamplefast = True
+            else:
+                resamplefast = False
+        if not filter_type: 
+            filter_type = 'gaussian'
+        if not gaussian_factor: 
+            gaussian_factor = 1.86506  # optimzed for a 45 sec window with less then 1 % outside the window
+                                       # 1.86506: is the ideal numeric values (IAGA recommended for 45 sec fit)
+
+        # ########################
+        # Basic validity checks and window size definitions
+        # ########################
+        if not filter_type in filterlist:
+            loggerstream.error("smooth: Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+            loggerstream.debug("smooth: You entered non-existing filter type -  %s  - " % filter_type)
+            return self
+
+        if not len(self) > 1:
+            loggerstream.error("Filter: stream needs to contain data - returning.")
+            return self
+
+        window_period = filter_width.seconds
+        si = timedelta(seconds=self.get_sampling_period()*24*3600)
+        sampling_period = si.seconds
+
+        # window_len defines the window size in data points assuming the major sampling period to be valid for the dataset
+        if filter_type == 'gaussian':
+            # For a gaussian fit
+            window_len = np.round(gaussian_factor*(window_period/sampling_period))
+            # Window length needs to be odd number:
+            if window_len % 2 == 0:
+                window_len = window_len +1
+            std = 0.83255461*window_len/(2*np.pi)
+            trange = timedelta(seconds=(self._det_trange(gaussian_factor*window_period)*24*3600)).seconds
+            print "Window character: ", window_len, std, trange
+        else:
+            window_len = np.round(window_period/sampling_period)
+            if window_len % 2:
+                window_len = window_len+1
+            trange = window_period/2
+
+        if sampling_period >= window_period:
+            loggerstream.warning("Filter: Sampling period is equal or larger then projected filter window - returning.")
+            return self
+
+        # ########################
+        # Reading data of each selected column in stream
+        # ########################
+
+        t = self._get_column('time')
+
+        for key in keys:
+            if not key in KEYLIST:
+                loggerstream.error("Column key %s not valid." % key)
+            v = self._get_column(key)
+            if v.ndim != 1:
+                loggerstream.error("Filter: Only accepts 1 dimensional arrays.")
+            if window_len<3:
+                loggerstream.error("Filter: Window lenght defined by filter_width needs to cover at least three data points")
+
+            print key, v.size
+
+            if v.size >= window_len:
+                s=np.r_[v[window_len-1:0:-1],v,v[-1:-window_len:-1]]
+
+                if filter_type == 'gaussian':
+                    w = signal.gaussian(window_len, std=std)
+                    y=np.convolve(w/w.sum(),s,mode='valid')
+                    res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
+                elif filter_type == 'wiener':
+                    res = signal.wiener(v, window_len, noise=0.5)
+                elif filter_type == 'butterworth':
+                    dt = 800/float(len(v))
+                    nyf = 0.5/dt
+                    b, a = signal.butter(4, 1.5/nyf)
+                    res = signal.filtfilt(b, a, v)
+                elif filter_type == 'spline':
+                    res = UnivariateSpline(t, v, s=240)
+                elif filter_type == 'flat':
+                    w=np.ones(window_len,'d')
+                    y=np.convolve(w/w.sum(),s,mode='valid')
+                    res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
+                else:
+                    w = eval('signal.'+filter_type+'(window_len)')
+                    y=np.convolve(w/w.sum(),s,mode='valid')
+                    res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
+
+                if testplot == True:
+                    fig, ax1 = plt.subplots(1,1, figsize=(10,4))
+                    ax1.plot(t, v, 'b.-', linewidth=2, label = 'raw data')
+                    ax1.plot(t, res, 'r.-', linewidth=2, label = filter_type)
+                    plt.show()
+
+                self._put_column(res,key)
+
+
+        if resample:
+            print keys
+            self = self.resample(keys[0],period=window_period,fast=resamplefast,startperiod=resamplestart)
+            self.header['DataSamplingRate'] = str(filter_width.seconds) + ' sec'
+
+        # ########################
+        # Update header information
+        # ########################
+        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange) + ' sec'
+
+        return self
+
 
 
     def filter(self, **kwargs):
@@ -3108,6 +3309,8 @@ class DataStream(object):
         - keys: 	(list) keys to be resampled.
     Kwargs:
         - period: 	(float) sampling period in seconds, e.g. 5s (0.2 Hz).
+        - fast:		(bool) use fast approximation
+        - startperiod   (integer) starttime in sec (e.g. 60 each minute, 900 each quarter hour
 
     RETURNS:
         - stream: 	(DataStream object) Stream containing resampled data.
@@ -3119,6 +3322,8 @@ class DataStream(object):
         """
 
         period = kwargs.get('period')
+        fast = kwargs.get('fast')
+        startperiod = kwargs.get('startperiod')
 
         if not period:
             period = 60.
@@ -3127,12 +3332,43 @@ class DataStream(object):
 
 	loggerstream.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
 
-	t_min = self._get_min('time')
-	t_max = self._get_max('time')
+        # Determine the minimum time
+	t_min = num2date(self._get_min('time'))
+
+        if startperiod:
+            t_min = ceil_dt(t_min,period)
+
+        if fast:
+            try:
+         	loggerstream.info("resample: Using fast algorythm")
+                si = timedelta(seconds=sp)
+                sampling_period = si.seconds
+
+                if period <= sampling_period:
+                    loggerstream.warning("resample: Resampling period must be larger than original sampling period")
+                    return self
+
+                if not startperiod:
+                    startperiod = 0
+                else:
+                    startperiod, line = self.findtime(t_min)                    
+
+                if not line == []:
+                    xx = np.round(period/sampling_period)
+                    newstream = DataStream()
+                    for line in self[startperiod::xx]:
+                        newstream.add(line)
+                    return newstream
+                loggerstream.warning("resample: Fast resampling failed - switching to slow mode")
+            except:
+                pass
+
+
+	t_max = num2date(self._get_max('time'))
 
 	t_list = []
-        time = num2date(t_min)
-        while time <= num2date(t_max):
+        time = t_min
+        while time <= t_max:
            t_list.append(date2num(time))
            time = time + timedelta(seconds=period)
 
@@ -3163,7 +3399,8 @@ class DataStream(object):
             res_stream._put_column(key_list,key)
 
         loggerstream.info("resample: Data resampling complete.")
-	return DataStream(res_stream,self.headers)
+	#return DataStream(res_stream,self.headers)
+	return res_stream
 
 
     def rotation(self,**kwargs):
@@ -4112,6 +4349,33 @@ def isNumber(s):
         return True
     except ValueError:
         return False
+
+
+def ceil_dt(dt,seconds):
+    """
+    DESCRIPTION:
+        Function to round time to the next time step as given by its seconds
+        minute: 60 sec
+        quater hour: 900 sec
+        hour: 	3600 sec
+    PARAMETER:
+        dt: (datetime object)
+        seconds: (integer)
+    USAGE:
+        >>>print ceil_dt(datetime(2014,01,01,14,12,04),60)
+        >>>2014-01-01 14:13:00
+        >>>print ceil_dt(datetime(2014,01,01,14,12,04),3600)
+        >>>2014-01-01 15:00:00
+        >>>print ceil_dt(datetime(2014,01,01,14,7,0),60)
+        >>>2014-01-01 14:07:00
+    """
+    #how many secs have passed this hour
+    nsecs = dt.minute*60+dt.second+dt.microsecond*1e-6
+    if nsecs % seconds:
+        delta = (nsecs//seconds)*seconds+seconds-nsecs
+        return dt + timedelta(seconds=delta)
+    else:
+        return dt
 
 
 def send_mail(send_from, send_to, **kwargs):

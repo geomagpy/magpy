@@ -67,13 +67,15 @@ Trimming data with starttime and/or endtime limits. Starttime and endtime format
 
 \subsection{Filtering/Smoothing/Interpolation}
 
+Filtering and smoothing are similar subjects: Recovering a signal from a time series is called smoothing if we have data from all time points available to work with. If we only know x(t) up to the current time point t(n) then the problem is called filtering. MagPy includes three different functions, of which one, the nfilter function is the most general and useful. An old "brute force" version is also available (filter), only supporting gaussian and flat filter, which should be used only if the input signal is very unevenly spaced. The smooth function is similarly included into the nfilter function but does not modify the header information.
+   
 The first example shows how to filter data using gaussian and linear filters.
 \begin{verbatim}
-    st = pmRead(...)
-    st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    st.pmplot(['x','y','z'])
-    st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-    st.pmplot(['x','y','z'])
+    st = read(...)
+    st = st.nfilter(filter_type='gaussian',filter_width=timedelta(minutes=1))
+    st.plot(['x','y','z'])
+    st.nfilter(filter_type='flat',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+    st.plot(['x','y','z'])
 \end{verbatim}
 
 Smoothing:
