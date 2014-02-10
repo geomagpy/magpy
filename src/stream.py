@@ -1505,7 +1505,7 @@ class DataStream(object):
         # Basic validity checks and window size definitions
         # ########################
         if not filter_type in filterlist:
-            loggerstream.error("smooth: Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+            loggerstream.error("smooth: Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman', etc")
             loggerstream.debug("smooth: You entered non-existing filter type -  %s  - " % filter_type)
             return self
 
