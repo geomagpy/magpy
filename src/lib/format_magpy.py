@@ -515,7 +515,9 @@ def writePYCDF(datastream, filename, **kwargs):
             key = 'Epoch'
             mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
         elif len(col) > 0:
-            mycdf[key] = col
+            nonetest = [elem for elem in col if not elem == None]
+            if len(nonetest) > 0:
+                mycdf[key] = col
         for keydic in headdict:
             if keydic == ('col-'+key):
                 try:
