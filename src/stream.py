@@ -3275,6 +3275,9 @@ class DataStream(object):
                 for elem in lstpart:
                     row = LineStruct()
                     row = elem
+                    if isNumber(row.flag): # if somehow the flag has been transfered to a number - create a string again
+                        num = str(int(row.flag))[:-1]
+                        row.flag = num+'-'
                     if not md-whisker < eval('elem.'+key) < md+whisker:
                         fllist = list(row.flag)
                         if not int(fllist[flagpos]) > 1:
@@ -4106,11 +4109,11 @@ class PyMagLog(object):
         subject = kwargs.get('subject')
 
         if not smtpserver:
-            smtpserver = 'smtp.web.de'
+            smtpserver = 'smtp.internet.at'
         if not sender:
-           sender = 'roman_leonhardt@web.de'
+           sender = 'frau.musterfrau@internet.at'
         if not destination:
-            destination = ['roman.leonhardt@zamg.ac.at']
+            destination = ['fuer.mich@my.institution.at']
         if not user:
             user = "FrauMusterfrau"
         if not pwd:

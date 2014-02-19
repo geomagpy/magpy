@@ -1340,6 +1340,8 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
         loggerdatabase.error("DB2stream: Aborting ... either sensorid or table must be specified")
         return
     if begin:
+        #starttime = stream._testtime(begin)
+        #begin = datetime.strftime(starttime,"%Y-%m%d %H:%M%:%S")
         wherelist.append('time >= "' + begin + '"')
     if end:
         wherelist.append('time <= "' + end + '"')
