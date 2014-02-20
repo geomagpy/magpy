@@ -9,6 +9,8 @@ Version 1.0 (from the 23.02.2012)
 from stream import *
 import ftplib
 import pexpect
+import subprocess
+
 
 # Define defaults:
 
@@ -210,6 +212,71 @@ def ssh_remotefilelist(remotepath, filepat, user, host, passwd):
     result = child.before
     resultlst = result.split('\r\n')
     return resultlst 
+
+
+# ####################
+# Upload data to Edinborough GIN
+# ####################
+def ginupload(filename, user, password, url,**kwargs):
+    """
+    DEFINITION:
+        Method to upload data to the Intermagnet GINs using curl
+        tries to upload data to the gin - if not succesful ...
+    PARAMETERS:
+      required:
+        filename	(string) filename including path
+        user		(string) GIN user
+        password	(string) GIN passwd
+        url		(string) url address (e.g. http://app.geomag.bgs.ac.uk/GINFileUpload/Cache)
+      kwargs:
+        faillog		(bool) if True the current string will be saved once to a TODO file if the upload fails. 
+				Additionally the TODO file will be checked and any data within will be tried to be uploaded.
+        stdout		(bool) if True the return will be printed
+        logpath		(string) provide the full pathname (e.g. C:\MyLogs\myginuploadlog.txt) for the log 
+    REQUIRES:
+        - a working installation of curl
+        - the package subprocess
+    """
+
+    faillog = kwargs.get('faillog')
+    logpath = kwargs.get('logpath')
+    stdout = kwargs.get('stdout')
+
+    if not logpath:
+        logpath = "/tmp/ginupload.log"
+
+    commandlist = []
+
+    # Read any eventually existing file with failed uploads
+    # -----------------------------------------------------
+    if faillog:
+        try:
+            lines = [line.rstrip('\n') for line in open(logpath)]
+            commandlist = lines
+            if stdout:
+                print commandlist
+            os.remove(logpath)
+        except:
+            if stdout:
+                print "No faillog existing" 
+            pass
+
+    curlstring = 'curl -F "File=@'+filename+';type=text/plain" -F "Format=plain" -F "Request=Upload" -u '+user+':'+password+' --digest '+url
+    if not curlstring in commandlist:
+        commandlist.append(curlstring)
+
+    # Process each upload 
+    # -----------------------------------------------------
+    for command in commandlist: 
+        p = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        out, error = p.communicate()
+        if stdout:
+            print out, error
+        if faillog:
+            if not "Success" in out:
+                with open(logpath, 'a') as f:
+                    f.write(command+'\n')
+
 
 
 # ####################
