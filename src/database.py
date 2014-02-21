@@ -185,7 +185,7 @@ def dbupload(db, path,stationid,**kwargs):
             stream2db(db,stream,mode='extend')
 
     if archivepath:
-        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header,updatedb=False)
         stream.header = dbfields2dict(db,datainfoid)
         archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
         stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
@@ -206,7 +206,7 @@ def dbupload(db, path,stationid,**kwargs):
                stream2db(db,stream,mode='extend')
 
         if archivepath:
-            datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+            datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header,updatedb=False)
             archivedir = os.path.join(archivepath,stream.header['StationID'],stream.header['SensorID'],datainfoid)
             stream.write(archivedir, filenamebegins=datainfoid+'_', format_type='PYCDF')
         # Reset filter
