@@ -192,20 +192,18 @@ if onewire:
             actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
             timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
             outtime = datetime.strftime(currenttime, "%H:%M:%S")
-            #header = "# MagPyBin, sensor_id, [parameterlist], [unit-conversion-list], packing string, length"
             packcode = '6hLl'
             header = "# MagPyBin %s %s %s %s %s %s %d" % (sensor.id, '[t1]', '[T]', '[degC]', '[1000]', packcode, struct.calcsize(packcode))
 
             try:
                 # Extract data
                 temp = float(sensor.temperature)
-                print "read Temperature: ", sensor.id, temp
+                #print "read Temperature: ", sensor.id, temp
 
                 # extract time data
                 datearray = self.timeToArray(timestamp)
                 try:
                     datearray.append(int(temp*1000))
-                    #data_bin = struct.pack(packcode,datearray[0],datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6],datearray[7])
                     data_bin = struct.pack(packcode,*datearray)
                 except:
                     log.msg('OW - readTemperature: Error while packing binary data')
@@ -284,7 +282,6 @@ if onewire:
                     datearray.append(int(vdd*100))
                     datearray.append(int(vad*100))
                     datearray.append(vis)
-                    #data_bin = struct.pack(packcode,datearray[0],datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6],datearray[7],datearray[8],datearray[9],datearray[10],datearray[11])
                     data_bin = struct.pack(packcode,*datearray)
                 except:
                     log.msg('OW - readBattery: Error while packing binary data')
