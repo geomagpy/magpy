@@ -47,8 +47,12 @@ except:
 
 try:
     version = matplotlib.__version__.replace('svn', '')
-    version = map(int, version.strip("rc").split("."))
-    MATPLOTLIB_VERSION = version
+    try:
+        version = map(int, version.replace("rc","").split("."))
+        MATPLOTLIB_VERSION = version
+    except:
+        version = version.strip("rc")
+        MATPLOTLIB_VERSION = version
     print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize 

@@ -286,13 +286,25 @@ def writeIAGA(datastream, filename, **kwargs):
                         row = ''
                         pass
                 elif key == 'x':
-                    row += '%13.2f' % elem.x
+                    if isnan(elem.x):
+                        row += '%13.2f' % 88888.0
+                    else:
+                        row += '%13.2f' % elem.x
                 elif key == 'y':
-                    row += '%10.2f' % elem.y
+                    if isnan(elem.y):
+                        row += '%10.2f' % 88888.0
+                    else:
+                        row += '%10.2f' % elem.y
                 elif key == 'z':
-                    row += '%10.2f' % elem.z
+                    if isnan(elem.z):
+                        row += '%10.2f' % 88888.0
+                    else:
+                        row += '%10.2f' % elem.z
                 elif key == 'f':
-                    row += '  %.2f' % elem.f
+                    if isnan(elem.f):
+                        row += '  %.2f' % 88888.0
+                    else:
+                        row += '  %.2f' % elem.f
             line.append(row + '\n')
         try:
             myFile.writelines( line )
