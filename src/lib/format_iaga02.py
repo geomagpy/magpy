@@ -5,7 +5,7 @@ Written by Roman Leonhardt June 2012
 - contains test, read and write function
 """
 
-from stream import *
+from magpy.stream import *
 
 
 def isIAGA(filename):
