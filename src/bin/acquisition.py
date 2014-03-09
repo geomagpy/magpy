@@ -45,15 +45,25 @@ from twisted.web.server import Site
 from twisted.web.static import File
 from twisted.internet import task
 
-from autobahn.websocket import listenWS
-from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
-# WAMP: WepSocket Application Message Protocol
+from autobahn import version as autobahnversion
+print "Autobahn Version: ", autobahnversion
+try: # version > 0.8.0
+    from autobahn.wamp1.protocol import WampServerFactory, WampServerProtocol, exportRPC
+except:
+    from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRPC
+try: # version > 0.7.0
+    from autobahn.twisted.websocket import listenWS
+except:
+    from autobahn.websocket import listenWS
 
 from datetime import datetime, timedelta
 import re
 #from matplotlib.dates import date2num, num2date
 
-from acquisition.cobs_ws_protocols import *
+try:
+    from magpy.acquisition.owprotocols import *
+except:
+    from acquisition.owprotocols import *
 
 hostname = socket.gethostname()
 

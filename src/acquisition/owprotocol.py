@@ -20,6 +20,7 @@ from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
+"""
 # Autobahn
 #1. check version
 from autobahn import version as autovers
@@ -29,6 +30,7 @@ from autobahn.twisted.websocket import listenWS
 #else:
 #    from autobahn.websocket import listenWS
 from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
+"""
 
 if onewire:
     class OwProtocol():
@@ -46,6 +48,7 @@ if onewire:
             ow.init(source)
             self.root = ow.Sensor('/').sensorList()
             self.hostname = socket.gethostname()
+            # TODO: create outputdir if not existing
             self.outputdir = outputdir
             self.reconnectcount = 0
             self.plist = ["A6B154010000"]

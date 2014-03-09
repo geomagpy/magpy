@@ -1519,7 +1519,9 @@ class DataStream(object):
 
         window_period = filter_width.seconds
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
-        sampling_period = si.seconds
+        sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
+
+        print si, sampling_period
 
         # window_len defines the window size in data points assuming the major sampling period to be valid for the dataset
         if filter_type == 'gaussian':
@@ -1529,7 +1531,11 @@ class DataStream(object):
             if window_len % 2 == 0:
                 window_len = window_len +1
             std = 0.83255461*window_len/(2*np.pi)
-            trange = timedelta(seconds=(self._det_trange(gaussian_factor*window_period)*24*3600)).seconds
+            trangetmp = self._det_trange(gaussian_factor*window_period)*24*3600
+            if trangetmp < 1:
+                trange = np.round(trangetmp,3)
+            else:
+                trange = timedelta(seconds=(self._det_trange(gaussian_factor*window_period)*24*3600)).seconds
             print "Window character: ", window_len, std, trange
         else:
             window_len = np.round(window_period/sampling_period)
@@ -1595,7 +1601,7 @@ class DataStream(object):
         if resample:
             print keys
             self = self.resample(keys[0],period=window_period,fast=resamplefast,startperiod=resamplestart)
-            self.header['DataSamplingRate'] = str(filter_width.seconds) + ' sec'
+            self.header['DataSamplingRate'] = str(sampling_period) + ' sec'
 
         # ########################
         # Update header information

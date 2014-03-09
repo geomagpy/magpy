@@ -283,6 +283,10 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
      --TIME (PC):      2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
 
     Data is in 10Hz, currently only putting 1Hz data into stream to save time and space.
+    
+    KWARGS:
+        tenHz:		(bool) to use 10Hz data
+        timeshift:	(float) given time shift of GPS reading
     '''
 
     #Reading Lemi025 Binary format data.
@@ -290,8 +294,17 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
+    tenHz = kwargs.get('tenHz')
+    timeshift = kwargs.get('timeshift')
+    gpstime = kwargs.get('gpstime')
+
     # Define frequency of output data:
-    tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO
+    if not tenHz:
+        tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO
+    if not timeshift:
+        timeshift = -300 #milliseconds
+    if not gpstime:
+        gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column 
 
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
@@ -356,8 +369,11 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
             headers['DataCompensationZ'] = bfz
             headers['SensorID'] = line[0:4]
 
-            #time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))	# Lemi GPS time
-            time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+            if gpstime:
+                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(milliseconds=-300)	# Lemi GPS time
+                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+            else:
+                time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
 
             if tenHz:
                 for i in range(10):
@@ -370,6 +386,8 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.x = (data[20+i*3])*1000.
                     row.y = (data[21+i*3])*1000.
                     row.z = (data[22+i*3])*1000.
+                    if gpstime:
+                        row.sectime = date2num(sectime+timedelta(milliseconds=(100.*i)))
 
                     stream.add(row)
 
@@ -384,6 +402,8 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                 row.x = (data[20])*1000.
                 row.y = (data[21])*1000.
                 row.z = (data[22])*1000.
+                if gpstime:
+                    row.sectime = date2num(sectime)
 
                 #row.f = (((data[20]-bfx)*1000.)**2.+((data[21]-bfy)*1000.)**2.+((data[22]-bfz)*1000.)**2.)**.5
 

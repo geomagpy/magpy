@@ -70,13 +70,15 @@ class PlotPanel(wx.Panel):
         DEFINITION:
             loads an image for the startup screen
         """
-
-        self.axes = self.figure.add_subplot(111)
-        plt.axis("off") # turn off axis
-        startupimage = 'magpy.png'
-        img = imread(startupimage)
-        self.axes.imshow(img)
-        self.canvas.draw()
+        try:
+            self.axes = self.figure.add_subplot(111)
+            plt.axis("off") # turn off axis
+            startupimage = 'magpy.png'
+            img = imread(startupimage)
+            self.axes.imshow(img)
+            self.canvas.draw()
+        except:
+            pass
 
     def linkRep(self):
         return ReportPage(self)

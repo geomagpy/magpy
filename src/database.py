@@ -111,6 +111,7 @@ def dbsamplingrate(stream):
     headerdict = 
     """
     sr = stream.get_sampling_period()*24*3600
+    print "SR ", len(stream), sr
     if np.round(sr,0) == 0:
         return np.round(sr,1)
     else:
@@ -1040,6 +1041,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     """
 
     clear = kwargs.get('clear')
+    usekeys = kwargs.get('usekeys')
 
     if not mode:
         mode = 'insert'
@@ -1059,6 +1061,15 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     datakeys, dataheads = [],[]
     datavals = []
 
+    if usekeys:
+        keylst = usekeys
+        if not 'flag' in keylst:
+            keylst.append('flag')
+        if not 'typ' in keylst:
+            keylst.append('typ')
+    else:
+        keylst = KEYLIST
+    
     if not noheader:
         pass
 
@@ -1069,6 +1080,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         loggerdatabase.error("stream2DB: Empty datastream. Aborting ...")
         return
 
+    print "stream2db1: ", datetime.utcnow()
 
     if not mode == 'force':
         # check SENSORS information
@@ -1110,22 +1122,42 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                 loggerdatabase.debug("stream2DB: --- unkown key: %s, %s" % (key, headdict[key]))
 
         # If no sensorid is available then report error and return:
-        if not sensorid:
+        try:
+            loggerdatabase.info("stream2DB: --- SensorID = %s" % sensorid)
+        except:
             loggerdatabase.error("stream2DB:  --- stream2DB: no SensorID specified in stream header. Cannot proceed ...")
             return
-        if not stationid:
-            loggerdatabase.error("stream2DB: --- stream2DB: no StationID specified in stream header. Cannot proceed ...")
+        try:
+            loggerdatabase.info("stream2DB: --- StationID = %s" % stationid)
+        except:
+            loggerdatabase.error("stream2DB: --- stream2DB: no StationID specified in stream header. To define use mystream.header['StationID'] = 'MyStationCode'. Cannot proceed ...")
             return
+
+        # If no sensorid is available then report error and return:
+        try:
+            print "Trying sampling rate"
+            sr = datastream.header['DataSamplingRate']
+            loggerdatabase.info("stream2DB: --- DataSamplingRate = %s" % sr)
+        except:
+            print "Setting sampling rate"
+            datastream.header['DataSamplingRate'] = str(dbsamplingrate(datastream))+' sec'
+            sr = datastream.header['DataSamplingRate']
+            loggerdatabase.info("stream2DB: --- DataSamplingRate = %s" % sr)
+
+    print "stream2db2: ", datetime.utcnow()
 
     loggerdatabase.debug("stream2DB: --- Checking column contents ...")
     # HEADER INFO - DATA TABLE
     # select only columss which contain data and get units and column contents
     for key in KEYLIST:
+    #for key in keylst:
        #print key
        colstr = '-'
        unitstr = '-'
-       if not key == 'time':
+       if not key.endswith('time') and key in keylst:
            ind = KEYLIST.index(key)
+           """ old version
+           print "stream2db2a: ", key, datetime.utcnow()
            try:
                keylst = np.asarray([row[ind] for row in datastream if not isnan(row[ind])])
                if len(keylst) > 0:
@@ -1136,6 +1168,22 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                if len(keylst) > 0:
                    dataheads.append(key + ' CHAR(100)')
                    datakeys.append(key)
+           print "stream2db2b: ", datetime.utcnow()
+           """
+           testlst = [row[ind] for row in datastream]
+           try:
+               tester = np.array(testlst)
+               tester = tester[~isnan(tester)]
+               if len(tester)>0:
+                   if datastream._is_number(testval):
+                       print "Number"
+                       dataheads.append(key + ' FLOAT')
+                       datakeys.append(key)
+           except:
+               print "String"
+               dataheads.append(key + ' CHAR(100)')
+               datakeys.append(key)                
+           print "stream2db2c: ", key, datetime.utcnow()
        for hkey in headdict:
            if key == hkey.replace('col-',''):
                colstr = headdict[hkey]            
@@ -1148,9 +1196,12 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     unitstr = '_'.join(unitlst)
 
     # Update the column data at the end together with time
+    print "stream2db3: ", datetime.utcnow(), datakeys
 
     st = datetime.strftime(num2date(datastream[0].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
     et = datetime.strftime(num2date(datastream[-1].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+
+    print st, et
 
     if not mode == 'force':
         loggerdatabase.debug("stream2DB: --- Checking/Updating existing tables ...")
@@ -1244,6 +1295,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
             tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
 
+    print "stream2db4: ", datetime.utcnow()
+
     if not tablename:
         loggerdatabase.error("stream2DB: No Tablename specified")    
         return
@@ -1254,20 +1307,87 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
     loggerdatabase.info("stream2DB: Creating/updating data table " + tablename)
 
-    createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (time CHAR(40) NOT NULL PRIMARY KEY, %s)" % (tablename,', '.join(dataheads))
+    if not isnan(datastream[0].sectime) and datastream._is_number(datastream[0].sectime):
+        createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (time CHAR(40) NOT NULL PRIMARY KEY, sectime CHAR(40),  %s)" % (tablename,', '.join(dataheads))
+        dollarstring = ['%s' for amount in range(len(datakeys)+2)]
+        insertmanysql = "INSERT INTO %s(time, sectime, %s) VALUES (%s)" % (tablename, ', '.join(datakeys), ', '.join(dollarstring))
+    else:
+        createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (time CHAR(40) NOT NULL PRIMARY KEY, %s)" % (tablename,', '.join(dataheads))
+        dollarstring = ['%s' for amount in range(len(datakeys)+1)]
+        insertmanysql = "INSERT INTO %s(time, %s) VALUES (%s)" % (tablename, ', '.join(datakeys), ', '.join(dollarstring))
+
     cursor.execute(createdatatablesql)
 
+    values = []
+    #print "Keys: ", datakeys
     for elem in datastream:
         for el in datakeys:
+            val = str(eval('elem.'+el))
+            """
             if datastream._is_number(eval('elem.'+el)):
                 val = str(eval('elem.'+el))
             else:
                 val = '"'+str(eval('elem.'+el))+'"'
+            """
             if val=='nan':
                 val = 'null'
             datavals.append(val)
         ct = datetime.strftime(num2date(elem.time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
-        insertdatasql = "INSERT INTO %s(time, %s) VALUES (%s, %s)" % (tablename, ', '.join(datakeys), '"'+ct+'"', ', '.join(datavals))
+        # Take the insertstring creation out of loop
+        if not isnan(elem.sectime) and datastream._is_number(elem.sectime): 
+            cst = datetime.strftime(num2date(elem.sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+            #print insertmanysql
+            #lst = '"'+ct+'"' + ', "'+cst+'" ,'
+            #lst = ['"'+ct+'"', '"'+cst+'"']
+            lst = [ct, cst]
+        else:
+            #lst = '"'+ct+'" ,'
+            #lst = '"'+ct+'"'
+            lst = [ct]
+
+        #print "Times: ", lst
+        #print "Data: ", datavals
+        #fulllist = lst + ', '.join(datavals)
+
+        #print "Lst: ", fulllist
+        values.append(tuple(lst+datavals))
+        #print values
+        datavals  = []
+
+    print len(values)
+
+    #print insertmanysql
+    print values[1]
+    #cursor.executemany(insertmanysql,values)
+    #db.commit()    
+
+    if mode == "replace":
+        try:
+            insertsql = insertmanysql
+            insertsql.replace("INSERT","REPLACE")
+            cursor.executemany(insertsql,values)
+        except:
+            try:
+                cursor.executemany(insertmanysql,values)
+            except:
+                loggerdatabase.warning("stream2DB: Write MySQL: Replace failed")
+    else:
+        try:
+            print "Got here"
+            cursor.executemany(insertmanysql,values)
+        except:
+            loggerdatabase.debug("stream2DB: Record at %s already existing: use mode replace to overwrite" % ct)
+
+
+    """ old version
+        if not isnan(elem.sectime) and datastream._is_number(elem.sectime): 
+            cst = datetime.strftime(num2date(elem.sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+            dollarstring = ['%s' for amount in range(len(datakeys)+2)]
+            insertmanysql = "INSERT INTO %s(time, sectime, %s) VALUES (%s)" % (tablename, ', '.join(datakeys), ', '.join(dollarstring))
+            print insertmanysql
+            insertdatasql = "INSERT INTO %s(time, sectime, %s) VALUES (%s, %s, %s)" % (tablename, ', '.join(datakeys), '"'+ct+'"', '"'+cst+'"', ', '.join(datavals))
+        else:
+            insertdatasql = "INSERT INTO %s(time, %s) VALUES (%s, %s)" % (tablename, ', '.join(datakeys), '"'+ct+'"', ', '.join(datavals))
         if mode == "replace":
             try:
                 cursor.execute(insertdatasql.replace("INSERT","REPLACE"))
@@ -1282,11 +1402,15 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             except:
                 loggerdatabase.debug("stream2DB: Record at %s already existing: use mode replace to overwrite" % ct)
         datavals  = []
+    """
+
+    print "stream2db5: ", datetime.utcnow()
 
     # Select MinTime and MaxTime from datatable and eventually update datainfo
     getminmaxtimesql = "Select MIN(time),MAX(time) FROM " + tablename
     cursor.execute(getminmaxtimesql)
     rows = cursor.fetchall()
+    print rows
     loggerdatabase.info("stream2DB: Table now covering a time range from " + str(rows[0][0]) + " to " + str(rows[0][1]))
     updatedatainfotimesql = 'UPDATE DATAINFO SET DataMinTime = "' + rows[0][0] + '", DataMaxTime = "' + rows[0][1] +'", ColumnContents = "' + colstr +'", ColumnUnits = "' + unitstr +'" WHERE DataID = "'+ tablename + '"'
     #print updatedatainfotimesql
@@ -1294,6 +1418,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     
     db.commit()
     cursor.close ()
+
+    print "stream2db6: ", datetime.utcnow()
 
 
 def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
@@ -1316,7 +1442,7 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
         data stream
 
     EXAMPLE:
-        >>> db2stream(db,None,'DIDD_3121331_0002_0001')
+        >>> db2stream(db,None,None,None,'DIDD_3121331_0002_0001')
 
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
