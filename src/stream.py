@@ -3049,7 +3049,7 @@ class DataStream(object):
             plt.show()
 
 
-    def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None):
+    def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs):
         """
     DEFINITION:
         Calculating the power spectrum
@@ -3086,14 +3086,22 @@ class DataStream(object):
         if debugmode:
             print "Start powerspectrum at %s" % datetime.utcnow()
 
+        noshow = kwargs.get('noshow')
+    
+        if noshow:
+            show = False
+        else:
+            show = True
+
         dt = self.get_sampling_period()*24*3600
 
         t = np.asarray(self._get_column('time'))
         val = np.asarray(self._get_column(key))
+        mint = np.min(t)
         tnew, valnew = [],[]
         for idx, elem in enumerate(val):
             if not isnan(elem):
-                tnew.append((t[idx]-np.min(t))*24*3600)
+                tnew.append((t[idx]-mint)*24*3600)
                 valnew.append(elem)
 
         tnew = np.asarray(tnew)
