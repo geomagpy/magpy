@@ -18,6 +18,7 @@ from gui.dialogclasses import *
 from gui.absolutespage import *
 from gui.developpage import *
 
+import glob
 """
 When package is installed use:
 from magpy.stream import *
@@ -501,6 +502,7 @@ class MainFrame(wx.Frame):
         """
         keylist = []
         keylist = stream._get_key_headers(limit=9)
+        print "Found keys: ", keylist
         self.plot_p.guiPlot(stream,keylist)
 
     # ################
@@ -526,10 +528,18 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.openStreamButton.Enable()
         
     def OnOpenDir(self, event):
-        dialog = wx.DirDialog(None, "Choose a directory:",style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        dialog = wx.DirDialog(None, "Choose a directory:",'/srv',style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             self.ReactivateStreamPage()
+            filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
+            files = sorted(filelist, key=os.path.getctime)
+            oldest = extractDateFromString(files[0])
+            old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
+            newest = extractDateFromString(files[-1])
+            new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
             self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
+            self.menu_p.str_page.startDatePicker.SetValue(old)
+            self.menu_p.str_page.endDatePicker.SetValue(new)
         self.menu_p.rep_page.logMsg('- Directory defined')
         dialog.Destroy()
 
@@ -672,8 +682,6 @@ class MainFrame(wx.Frame):
                 self.DBOpen.Enable(True)
                 self.menu_p.rep_page.logMsg('- MySQL Database selected.')
         dlg.Destroy()        
-
-
 
     def OnFileQuit(self, event):
 	self.Close()
@@ -1175,6 +1183,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             return
 
+        print "Stream loaded of length ", len(stream) 
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
         self.changeStatusbar("Ready")

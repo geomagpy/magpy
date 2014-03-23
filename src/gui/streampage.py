@@ -60,6 +60,7 @@ class StreamPage(wx.Panel):
         # show/edit meta info
         
         self.DrawButton = wx.Button(self,-1,"ReDraw")
+
         """
         self.SaveScalarButton = wx.Button(self,-1,"Save data")
         self.primaryLabel = wx.StaticText(self, label="Primary instrument:")

@@ -402,6 +402,12 @@ class DataStream(object):
         if limit and len(keylist) > limit:
             keylist = keylist[:limit]
 
+        if not len(keylist) > 0:  # e.g. header col-? does not contain any info
+            for key in FLAGKEYLIST[1:]: # use the long way
+                col = self._get_column(key)
+                if len(col) > 1:
+                    keylist.append(key)
+
         return keylist
 
     def sorting(self):
@@ -2743,7 +2749,7 @@ class DataStream(object):
         t = np.asarray([row[0] for row in self])
         for key in keys:
             if not key in KEYLIST[1:16]:
-                loggerstream.error("plot: Column key not valid!")
+                loggerstream.error("plot: Column key - %s - not valid!" % key)
             ind = KEYLIST.index(key)
             yplt = np.asarray([row[ind] for row in self])
             #yplt = self._get_column(key)
