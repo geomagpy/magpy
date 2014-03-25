@@ -124,14 +124,16 @@ def ftpdatatransfer (**kwargs):
             #plog.addlog(' -- FTP Upload failed - appending %s to missing value logfile' % filestr)
             newline = "\n"
             #os.chdir(logpath)
-            lfile = open(os.path.join(logfile),"a")
+            lfile = open(os.path.join(logfile),"r")
             for line in lfile:
                 if filestr in line:
                     existing = True
+            lfile.close()
             if not existing:
+                lfile = open(os.path.join(logfile),"a")
                 lfile.write(localpath + '  ' + filestr + '  ' + ftppath )
                 lfile.write(newline)
-            lfile.close()
+                lfile.close()
         if raiseerror:
             raise
 
