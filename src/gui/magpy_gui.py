@@ -366,6 +366,8 @@ class MainFrame(wx.Frame):
         self.filename = 'noname.txt'
         self.dirname = '.'
 
+        self.stream = DataStream()
+
         self.compselect = "xyz"
         self.abscompselect = "xyz"
         self.bascompselect = "bspline"
@@ -382,6 +384,10 @@ class MainFrame(wx.Frame):
         self.DBOpen = wx.MenuItem(self.FileMenu, 104, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DBOpen)
         self.DBOpen.Enable(False)
+        self.FileMenu.AppendSeparator()
+        self.ExportData = wx.MenuItem(self.FileMenu, 105, "&Export data...\tCtrl+E", "Export data to a file", wx.ITEM_NORMAL)
+        self.FileMenu.AppendItem(self.ExportData)
+        self.ExportData.Enable(False)
         self.FileMenu.AppendSeparator()
         self.FileQuitItem = wx.MenuItem(self.FileMenu, wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit the program", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileQuitItem)
@@ -412,6 +418,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnOpenFile, self.FileOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenURL, self.WebOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenDB, self.DBOpen)
+        self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
         self.Bind(wx.EVT_MENU, self.OnOptionsCalc, self.OptionsCalcItem)
@@ -504,6 +511,9 @@ class MainFrame(wx.Frame):
         keylist = stream._get_key_headers(limit=9)
         print "Found keys: ", keylist
         self.plot_p.guiPlot(stream,keylist)
+        if len(stream) > 0 and len(keylist) > 0:
+            self.ExportData.Enable(True)
+
 
     # ################
     # Top menu methods:
@@ -576,6 +586,7 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
         # plot data
+        self.stream = stream
         self.OnInitialPlot(stream)
         self.changeStatusbar("Ready")
 
@@ -606,6 +617,7 @@ class MainFrame(wx.Frame):
             else:
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
         self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
+        self.stream = stream
         dlg.Destroy()        
 
 
@@ -650,6 +662,43 @@ class MainFrame(wx.Frame):
                         "OpenDB", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
+
+
+    def OnExportData(self, event):
+        dlg = ExportDataDialog(None, title='Export Data')
+        if dlg.ShowModal() == wx.ID_OK:
+            filenamebegins = dlg.beginTextCtrl.GetValue()
+            filenameends = dlg.endTextCtrl.GetValue()
+            datetyp = dlg.dateComboBox.GetValue()
+            if datetyp == '2000-11-22':
+                dateformat = '%Y-%m-%d'
+            elif datetyp == '20001122':
+                dateformat = '%Y%m%d'
+            else:
+                dateformat = '%b%d%y'
+            path = dlg.selectedTextCtrl.GetValue()
+            fileformat = dlg.formatComboBox.GetValue()
+            coverage = dlg.coverageComboBox.GetValue()
+            if coverage == 'hour':
+                coverage = timedelta(hour=1)
+            elif coverage == 'day':
+                coverage = timedelta(days=1)
+            elif coverage == 'year':
+                coverage = timedelta(year=1)
+            mode = dlg.modeComboBox.GetValue()
+            print "Stream: ", len(self.stream)
+            print "Main : ", dateformat, fileformat, coverage, mode
+            try:
+                self.stream.write(path,
+	   	    		filenamebegins=filenamebegins,
+	  	  		filenameends=filenameends,
+	    			dateformat=dateformat,
+	    			mode=mode,
+	    			coverage=coverage,
+	    			format_type=fileformat)
+            except:
+                print "Writing failed - Permission?"
+        dlg.Destroy()        
 
 
     def OnDBConnect(self, event):
@@ -1184,6 +1233,7 @@ class MainFrame(wx.Frame):
             return
 
         print "Stream loaded of length ", len(stream) 
+        self.stream = stream
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
         self.changeStatusbar("Ready")
