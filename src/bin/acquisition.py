@@ -121,7 +121,7 @@ class WsMcuProtocol(WampServerProtocol):
        		self.registerForPubSub("http://example.com/"+hostname+"/lemi#", True)
 	    elif sensor[:2].upper() == 'OW': # OW Sensor
        		self.registerForPubSub("http://example.com/"+hostname+"/ow#", True) 
-	    elif sensor[:2].upper() == 'POS': # POS-1 Overhauzer Sensor
+	    elif sensor[:3].upper() == 'POS': # POS-1 Overhauzer Sensor
        		self.registerForPubSub("http://example.com/"+hostname+"/pos1#", True)
 	    elif sensor[:3].upper() == 'G82': # GSM CS Sensor
        		self.registerForPubSub("http://example.com/"+hostname+"/cs#", True) 
