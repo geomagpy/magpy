@@ -124,7 +124,7 @@ class LemiProtocol(LineReceiver):
             temp_sensor = data_array[11]/100.
             temp_el = data_array[12]/100.
             gps_array = datetime(2000+h2d(data_array[5]),h2d(data_array[6]),h2d(data_array[7]),h2d(data_array[8]),h2d(data_array[9]),h2d(data_array[10]))
-            gps_time = datetime.strftime(gps_array, "%Y-%m-%d %H:%M:%S")
+            gps_time = datetime.strftime(gps_array, "%Y-%m-%d %H:%M:%S")-timedelta(seconds=0.3)
         except:
             log.err("LEMI - Protocol: Number conversion error.")
 
