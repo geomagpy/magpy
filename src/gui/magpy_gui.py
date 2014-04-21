@@ -17,6 +17,7 @@ from gui.streampage import *
 from gui.dialogclasses import *
 from gui.absolutespage import *
 from gui.developpage import *
+from gui.analysispage import *
 
 import glob
 """
@@ -455,7 +456,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onCalcAbsButton, self.menu_p.abs_page.CalcAbsButton)
         self.Bind(wx.EVT_RADIOBOX, self.onAbsCompchanged, self.menu_p.abs_page.drawRadioBox)
         #        Analysis Page
-        self.Bind(wx.EVT_BUTTON, self.onDrawAnalysisButton, self.menu_p.ana_page.DrawButton)
+        self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
         #        Auxiliary Page
         self.Bind(wx.EVT_BUTTON, self.onOpenAuxButton, self.menu_p.gen_page.OpenAuxButton)
         
@@ -507,16 +508,19 @@ class MainFrame(wx.Frame):
             read stream, extract columns with values and display up to three of them by defailt
             executes guiPlot then
         """
+        self.changeStatusbar("Plotting...")
         keylist = []
         keylist = stream._get_key_headers(limit=9)
         print "Found keys: ", keylist
         self.plot_p.guiPlot(stream,keylist)
         if len(stream) > 0 and len(keylist) > 0:
             self.ExportData.Enable(True)
+        self.changeStatusbar("Ready")
 
 
     # ################
     # Top menu methods:
+
 
     def OnHelpAbout(self, event):
         dlg = wx.MessageDialog(self, "This program is developed for\n"
@@ -536,7 +540,37 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.startTimePicker.Enable()
             self.menu_p.str_page.endTimePicker.Enable()
             self.menu_p.str_page.openStreamButton.Enable()
-        
+
+
+    def SetPageValues(self, stream):
+        """
+        Method to update all pages with the streams values
+        """
+        # Length
+        n = len(stream)
+        # keys
+        keys = stream._get_key_headers()
+        keystr = ','.join(keys)
+        # Sampling rate
+        sr = stream.get_sampling_period()*24*3600
+        if (sr < 1):
+            sr = np.round(sr,3)
+        elif (1 <= sr < 10):
+            sr = np.round(sr,1)
+        else:
+            sr = np.round(sr,0)
+        # Coverage
+        mintime = stream._get_min('time')
+        maxtime = stream._get_max('time')
+
+        self.menu_p.ana_page.amountTextCtrl.SetValue(str(n))
+        self.menu_p.ana_page.samplingrateTextCtrl.SetValue(str(sr))
+        self.menu_p.ana_page.keysTextCtrl.SetValue(keystr)
+        self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+        self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+       
     def OnOpenDir(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",'/srv',style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
@@ -571,12 +605,15 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.fileTextCtrl.Disable()
             self.menu_p.str_page.pathTextCtrl.Disable()
             if len(stream) > 0:
+                self.SetPageValues(stream)
+                """
                 mintime = stream._get_min('time')
                 maxtime = stream._get_max('time')
                 self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
                 self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
                 self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
                 self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+                """
                 self.menu_p.str_page.startDatePicker.Disable()
                 self.menu_p.str_page.endDatePicker.Disable()
                 self.menu_p.str_page.startTimePicker.Disable()
@@ -601,12 +638,7 @@ class MainFrame(wx.Frame):
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
                 self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                 stream = read(path_or_url=url)
-                mintime = stream._get_min('time')
-                maxtime = stream._get_max('time')
-                self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-                self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-                self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-                self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+                self.SetPageValues(stream)
                 self.menu_p.str_page.startDatePicker.Disable()
                 self.menu_p.str_page.endDatePicker.Disable()
                 self.menu_p.str_page.startTimePicker.Disable()
@@ -790,27 +822,25 @@ class MainFrame(wx.Frame):
         yy = [7,3,8,3,4,2]
         FigurePlot(plot_p,xx,yy)
 
-    def onDrawAnalysisButton(self, event):
-        datastruct = []
-        fstruct = []
-        tmpfstruct = []
-        msg = ''
-        pltlist = [1,2,3]
-        fval = 0 # 0: no reviewed files->only vario, 1: reviewed files
+    # ################
+    # analysis page methods:
 
-        # get from options
-        duration = 380
-        bspldeg = 2
-        func = "bspline"
-        funcweight = 1
-        
-        stday = self.menu_p.ana_page.startDatePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks()) 
-        enday = self.menu_p.ana_page.endDatePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks()) 
-        instr = self.menu_p.ana_page.varioComboBox.GetValue()
-        finstr = self.menu_p.ana_page.scalarComboBox.GetValue()
-        pass
+    def onFilterButton(self, event):
+        """
+        Method for filtering
+        """
+        self.changeStatusbar("Filtering...")
+        keystr = self.menu_p.ana_page.keysTextCtrl.GetValue().encode('ascii','ignore')
+        keys = keystr.split(',')
+
+        filtertype = self.menu_p.ana_page.selectfilterComboBox.GetValue()
+        filterlength = self.menu_p.ana_page.selectlengthComboBox.GetValue()
+
+        self.stream = self.stream.nfilter(keys=keys,filter_type=filtertype,resample=True)
+
+        self.SetPageValues(self.stream)
+        self.OnInitialPlot(self.stream)
+
     
     def onDrawBaseButton(self, event):
         instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
@@ -1236,7 +1266,6 @@ class MainFrame(wx.Frame):
         self.stream = stream
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
-        self.changeStatusbar("Ready")
 
 
     # ####################

@@ -1605,8 +1605,8 @@ class DataStream(object):
 
 
         if resample:
-            print keys
-            self = self.resample(keys[0],period=window_period,fast=resamplefast,startperiod=resamplestart)
+            print "Resampling: ", keys
+            self = self.resample(keys,period=window_period,fast=resamplefast,startperiod=resamplestart)
             self.header['DataSamplingRate'] = str(sampling_period) + ' sec'
 
         # ########################
@@ -3358,6 +3358,8 @@ class DataStream(object):
 	sp = self.get_sampling_period()*24.*60.*60.
 
 	loggerstream.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
+
+	loggerstream.info("resample: Resampling keys %s " % (','.join(keys)))
 
         # Determine the minimum time
 	t_min = num2date(self._get_min('time'))
