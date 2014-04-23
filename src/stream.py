@@ -345,7 +345,7 @@ class DataStream(object):
 
     def findtime(self,time):
         """
-        DESCRIPTION:
+        DEFINITION:
             Find a line within the container which contains the selected time step
         RETURNS:
             The index position of the line and the line itself
@@ -354,7 +354,7 @@ class DataStream(object):
         for index, line in enumerate(self):
             if line.time == st:
                 return index, line
-        loggerstream.waring("findtime: didn't find selected time - returning 0")
+        loggerstream.warning("findtime: Didn't find selected time - returning 0")
         return 0, []
 
     def _print_key_headers(self):
@@ -1902,25 +1902,50 @@ class DataStream(object):
 
     def flag_stream(self, key, flag, comment, startdate, enddate=None):
         """
-        Add flags to specific times or time ranges if enddate is provided:
-        Requires the following input:
-        key: (char) the column (f, x,y,z)
-        flag: (int) 0 ok, 1 remove, 2 force ok, 3 force remove, 4 merged from other instrument
-        comment: (string) the reason
-        startdate: the date of the (first) datapoint to remove
-        optional:
-        enddate: the enddate of a time range to be flagged in a identical way
+    DEFINITION:
+        Add flags to specific times or time ranges (if enddate is provided).
+
+    PARAMETERS:
+    Variables:
+        - key: 		(str) Column to apply flag to, e.g. 'x'
+	- flag:		(int) 0 ok, 1 remove, 2 force ok, 3 force remove, 
+			4 merged from other instrument
+	- comment:	(str) The reason for flag
+	- startdate:	(datetime object) the date of the (first) datapoint to remove
+    Kwargs:
+        - enddate: 	(datetime object) the enddate of a time range to be flagged
+
+    RETURNS:
+        - DataStream: 	Input stream with flags and comments.
+
+    EXAMPLE:
+        >>> data.flat_stream('x',0,'Lawnmower',flag1,flag1_end)
+
+    APPLICATION:
         """
         
         if not key in KEYLIST:
-            raise ValueError, "Wrong Key"
+            loggerstream.error("flag_stream: %s is not a valid key." % key)
         if not flag in [0,1,2,3,4]:
-            raise ValueError, "Wrong Flag"            
+            loggerstream.error("flag_stream: %s is not a valid flag." % flag)
 
         startdate = self._testtime(startdate)
 
         if not enddate:
-            enddate = startdate
+	    start = date2num(startdate)
+            check_startdate, val = self.findtime(start)
+	    if check_startdate == 0:
+	        loggerstream.info("flag_stream: No data at given date for flag. Finding nearest data point.")
+	        time = self._get_column('time')
+	        new_endtime, index = self._find_nearest(time, start)
+	        if new_endtime > start:
+		    startdate = num2date(start)
+		    enddate = num2date(new_endtime)
+		else:
+		    startdate = num2date(new_endtime)
+		    enddate = num2date(start)
+	    else:
+                enddate = startdate
         else:
             enddate = self._testtime(enddate)
 
@@ -1934,10 +1959,10 @@ class DataStream(object):
                 elem.flag=''.join(fllist)
                 elem.comment = comment
         if flag == 1 or flag == 3:
-            if enddate:
-                loggerstream.info("Removed data from %s to %s ->  (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
+            if enddate:	# TODO: Says "removed" but nothing is removed.
+                loggerstream.info("flag_stream: Removed data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
             else:
-                loggerstream.info("Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
+                loggerstream.info("flag_stream: Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
         return self
             
         
@@ -2885,13 +2910,13 @@ class DataStream(object):
                     flag = self._get_column('flag')
                     comm = self._get_column('comment')
                     elemprev = "-"
-                    try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
-                        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-                        indexflag = int(poslst[0])
-                        for idx, elem in enumerate(comm):
+                    #try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
+                    poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                    indexflag = int(poslst[0])
+                    for idx, elem in enumerate(comm):
                             if not elem == elemprev:
+                                annotecount = idx
                                 if not elem == "-" and flag[idx][indexflag] in ['0','3']:
-                                    annotecount = idx
                                     ax.annotate(r'%s' % (elem),
                                         xy=(t[idx], yplt[idx]),
                                         xycoords='data', xytext=(20, 20),
@@ -2910,9 +2935,10 @@ class DataStream(object):
                                         shrinkA=0, shrinkB=1,
                                         connectionstyle="angle,angleA=0,angleB=90,rad=10"))
                             elemprev = elem
-                    except:
-                        if debugmode:
-                            loggerstream.debug('plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+                    #except:
+			#print "oops"
+                       # if debugmode:
+                        #    loggerstream.debug('plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
 
 		# -- Shade in areas of storm phases:
                 if plotphases:
