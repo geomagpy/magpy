@@ -2910,13 +2910,13 @@ class DataStream(object):
                     flag = self._get_column('flag')
                     comm = self._get_column('comment')
                     elemprev = "-"
-                    #try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
-                    poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-                    indexflag = int(poslst[0])
-                    for idx, elem in enumerate(comm):
+                    try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
+                        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                        indexflag = int(poslst[0])
+                        for idx, elem in enumerate(comm):
                             if not elem == elemprev:
-                                annotecount = idx
                                 if not elem == "-" and flag[idx][indexflag] in ['0','3']:
+                                    annotecount = idx
                                     ax.annotate(r'%s' % (elem),
                                         xy=(t[idx], yplt[idx]),
                                         xycoords='data', xytext=(20, 20),
@@ -2935,10 +2935,9 @@ class DataStream(object):
                                         shrinkA=0, shrinkB=1,
                                         connectionstyle="angle,angleA=0,angleB=90,rad=10"))
                             elemprev = elem
-                    #except:
-			#print "oops"
-                       # if debugmode:
-                        #    loggerstream.debug('plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
+                    except:
+                        if debugmode:
+                            loggerstream.debug('plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
 
 		# -- Shade in areas of storm phases:
                 if plotphases:
