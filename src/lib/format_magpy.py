@@ -305,6 +305,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
+    print "Reading Magpy binary data"
+
     stream = DataStream([],{})
 
     theday = extractDateFromString(filename)

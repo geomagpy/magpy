@@ -1374,11 +1374,23 @@ class DataStream(object):
 
     def extract(self, key, value, compare=None, debugmode=None):
         """
-        read stream and extract data of which key meets the criteria
-        example:
-        compare is string like ">, <, ==, !="
-        st.extract('x',20000,'>')
-        st.extract('str1','Berger')
+        DEFINITION:
+            Read stream and extract data of the selected key which meets the choosen criteria
+
+        PARAMETERS:
+        Variables:
+            - key: 	(str) streams key e.g. 'x'.
+            - value: 	(str/float/int) any selected input which should be tested for
+         Kwargs:
+            - compare:  (str) criteria, one out of ">=", "<=",">", "<", "==", "!=", default is '=='
+            - debugmode:(bool) if true several additional outputs will be created
+
+        RETURNS:
+            - DataStream with selected values only
+
+        EXAMPLES:
+            >>> extractedstream = stream.extract('x',20000,'>')
+            >>> extractedstream = stream.extract('str1','Berger')
         """
 
         if not compare:
@@ -2286,12 +2298,12 @@ class DataStream(object):
             loggerstream.error('K-FMI: please check the sampling rate of the input file - should be second or minute data - current sampling rate is %d seconds' % samprate)
             return
         if samprate == 1:
-            fmistream = fmistream.filtered(filter_type='gauss',filter_width=timedelta(seconds=45))
-            fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+            fmistream = fmistream.filter(filter_type='gauss',filter_width=timedelta(seconds=45))
+            fmi1stream = fmistream.filter(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
         if samprate == 60:
-            fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
+            fmi1stream = fmistream.filter(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
          
-        fmi2stream = fmistream.filtered(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
+        fmi2stream = fmistream.filter(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 
         loggerstream.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
 
@@ -2310,7 +2322,7 @@ class DataStream(object):
             stream.extend(fmitmpstream,self.header)
             iprev = iend
 
-        fmi3stream = stream.filtered(filter_type='linear',filter_width=timedelta(minutes=180),filter_offset=timedelta(minutes=90))
+        fmi3stream = stream.filter(filter_type='linear',filter_width=timedelta(minutes=180),filter_offset=timedelta(minutes=90))
         fmi4stream = fmi3stream._get_k(put2key=put2key)
 
         self.header['col-'+put2key] = 'k'
@@ -3095,6 +3107,9 @@ class DataStream(object):
 	- fmt:		(str) Format of outfile, e.g. "png"
 	- outfile:	(str) Filename to save plot to
 	- title:	(str) Title to display on plot
+	- marks:	(dict) add some text to the plot
+	- returndata:	(bool) return freq and asd 
+	- freqlevel:	(float) print noise level at that frequency 
 
     RETURNS:
         - plot: 	(matplotlib plot) A plot of the powerspectrum
@@ -3111,13 +3126,16 @@ class DataStream(object):
 			endtime='2013-06-11 00:00:00')
 	2. Call for data stream:
         >>> data.powerspectrum('f',
-			title='Power
+			title='PSD of f', marks={'day':0.000011574},
 			outfile='ps.png')
         """
         if debugmode:
             print "Start powerspectrum at %s" % datetime.utcnow()
 
         noshow = kwargs.get('noshow')
+        returndata = kwargs.get('returndata')
+        marks = kwargs.get('marks')
+        freqlevel = kwargs.get('freqlevel')
     
         if noshow:
             show = False
@@ -3126,10 +3144,23 @@ class DataStream(object):
 
         dt = self.get_sampling_period()*24*3600
 
+        if not len(self) > 0:
+            loggerstream.error("Powerspectrum: Stream of zero length -- aborting")
+            return
+
         t = np.asarray(self._get_column('time'))
         val = np.asarray(self._get_column(key))
         mint = np.min(t)
         tnew, valnew = [],[]
+
+        nfft = int(self._nearestPow2(len(t)))
+        print "NFFT:", nfft
+
+        if nfft > len(t): 
+            nfft = int(self._nearestPow2(len(t) / 2.0)) 
+
+        print "NFFT now:", nfft
+
         for idx, elem in enumerate(val):
             if not isnan(elem):
                 tnew.append((t[idx]-mint)*24*3600)
@@ -3141,14 +3172,14 @@ class DataStream(object):
         if debugmode:
             print "Extracted data for powerspectrum at %s" % datetime.utcnow()
 
-        freq = np.fft.fftfreq(tnew.shape[-1],dt)
-        freq = freq[range(len(tnew)/2)] # one side frequency range
-        freq = freq[1:]
-
-        s = np.fft.fft(valnew)
-        s = s[range(len(valnew)/2)] # one side data range
-        s = s[1:]
-        ps = np.real(s*np.conjugate(s))
+        #freq = np.fft.fftfreq(tnew.shape[-1],dt)
+        #freq = freq[range(len(tnew)/2)] # one side frequency range
+        #freq = freq[1:]
+        #print "Maximum frequency:", max(freq)
+        #s = np.fft.fft(valnew)
+        #s = s[range(len(valnew)/2)] # one side data range
+        #s = s[1:]
+        #ps = np.real(s*np.conjugate(s))
 
         if not axes: 
             fig = plt.figure() 
@@ -3156,11 +3187,37 @@ class DataStream(object):
         else: 
             ax = axes 
 
-        ax.loglog(freq,ps,'r-')
+        psdm = mlab.psd(valnew, nfft, 1/dt) 
+        asdm = np.sqrt(psdm[0]) 
+        freqm = psdm[1] 
 
-        ax.set_xlabel('Frequency [Hz]') 
-        ax.set_ylabel('PSD') 
-        if title: 
+        ax.loglog(freqm, asdm,'b-')
+
+        print "Maximum frequency:", max(freqm)
+
+        if freqlevel:
+            val, idx = find_nearest(freqm, freqlevel)
+            print "Maximum Noise Level at %s Hz: %s" % (val,asdm[idx])
+
+        if not marks:
+            pass
+        else:
+            for elem in marks:
+                ax.annotate(elem, xy=(marks[elem],min(asdm)), 
+	  			xytext=(marks[elem],max(asdm)-(max(asdm)-min(asdm))*0.3),
+				bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
+				arrowprops=dict(arrowstyle="->",
+				shrinkA=0, shrinkB=1,
+				connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+
+        try:
+            unit = self.header['unit-col-'+key]
+        except:
+            unit = 'unit'
+
+        ax.set_xlabel('Frequency [Hz]')
+        ax.set_ylabel(('Amplitude spectral density [%s/sqrt(Hz)]') % unit) 
+        if title:
             ax.set_title(title)
 
         if debugmode:
@@ -3171,13 +3228,12 @@ class DataStream(object):
                 fig.savefig(outfile, format=fmt) 
             else: 
                 fig.savefig(outfile) 
+        elif returndata: 
+            return freqm, asdm
         elif show: 
             plt.show() 
         else: 
-            return fig
-
-        return freq, ps
-    
+            return fig    
 
     def remove_flagged(self, **kwargs):
         """
@@ -3607,6 +3663,10 @@ class DataStream(object):
             samp_rate_multiplicator = 24*3600
 
         t = self._get_column('time')
+
+        if not len(t) > 0:
+            loggerstream.error('Spectrogram: stream of zero length -- aborting')
+            return
 
         for key in keys:
             val = self._get_column(key)
@@ -4403,6 +4463,13 @@ def isNumber(s):
         return True
     except ValueError:
         return False
+
+def find_nearest(array,value):
+    """
+    Find the nearest element within an array
+    """
+    idx = (np.abs(array-value)).argmin()
+    return array[idx], idx
 
 
 def ceil_dt(dt,seconds):

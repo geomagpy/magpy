@@ -104,6 +104,63 @@ IP:
 #      dbalter, dbsensorinfo, dbdatainfo, dbdict2fields, dbfields2dict and 
 # ----------------------------------------------------------------------------
 
+def dbgetfloat(db,tablename,sensorid,columnid,revision=None):
+    """
+    DEFINITION:
+        Perform a select search and return floats
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - tablename:   	name of the table 
+        - sensorid:   	sensor to match
+        - columnid:   	column in which search is performed
+    Kwargs:
+        - revision:     optional sensor revision (not used so far)
+    APPLICATION:
+        >>>deltaf =  dbgetfloat(db, 'DATAINFO', Sensor, 'DataDeltaF')
+        returns deltaF from the DATAINFO table which matches the Sensor
+    """
+    sql = 'SELECT ' + columnid + ' FROM ' + tablename + ' WHERE SensorID = "' + sensorid + '"';
+    cursor = db.cursor()
+    cursor.execute(sql)
+    row = cursor.fetchone()
+    if not row[0] == None:
+        try:
+            fl = float(row[0])
+            return fl
+        except:
+            print "no float found"
+            return row[0] 
+    else:
+        return 0.0
+
+def dbgetstring(db,tablename,sensorid,columnid,revision=None):
+    """
+    DEFINITION:
+        Perform a select search and return strings
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - tablename:   	name of the table 
+        - sensorid:   	sensor to match
+        - columnid:   	column in which search is performed
+    Kwargs:
+        - revision:     optional sensor revision (not used so far)
+    APPLICATION:
+        >>>stationid =  dbgetstring(db, 'DATAINFO', 'LEMI25_22_0001', 'StationID')
+        returns the stationid from the DATAINFO table which matches the Sensor
+    """
+    sql = 'SELECT ' + columnid + ' FROM ' + tablename + ' WHERE SensorID = "' + sensorid + '"';
+    cursor = db.cursor()
+    cursor.execute(sql)
+    row = cursor.fetchone()
+    try:
+        fl = float(row[0])
+        return fl
+    except:
+        return row[0]
+
+
 def dbsamplingrate(stream):
     """
     DEFINITION:
