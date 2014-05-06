@@ -68,6 +68,7 @@ class CsProtocol(LineReceiver):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
         self.outputdir = outputdir
+	self.hostname = socket.gethostname()
 
     def connectionMade(self):
         log.msg('%s connected.' % self.sensor)
@@ -78,10 +79,9 @@ class CsProtocol(LineReceiver):
         currenttime = datetime.utcnow()
         filename = datetime.strftime(currenttime, "%Y-%m-%d")
         actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
+	lastActualtime = currenttime
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
-
-        global lastActualtime
 
         packcode = '6hLL'
         header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
@@ -94,7 +94,7 @@ class CsProtocol(LineReceiver):
                 intensity = 0.0
         except ValueError:
             log.err("CS - Protocol: Not a number. Instead found:", data[0])
-            intensity = float(NaN)
+            intensity = 88888
 
         datearray = timeToArray(timestamp)
         try:
@@ -111,11 +111,11 @@ class CsProtocol(LineReceiver):
         
         #return value every second
         if lastActualtime+timedelta(microseconds=999000) <= currenttime:   # Using ms instead of s accounts for only small errors, not all.
-           # evt1 = {'id': 1, 'value': 0}
-           # evt3 = {'id': 3, 'value': 0}
-           # evt10 = {'id': 10, 'value': 0}
-           # evt99 = {'id': 99, 'value': 'eol'}
-        #else:
+            evt1 = {'id': 1, 'value': 0}
+            evt3 = {'id': 3, 'value': 0}
+            evt10 = {'id': 10, 'value': 0}
+            evt99 = {'id': 99, 'value': 'eol'}
+        else:
             evt1 = {'id': 1, 'value': timestamp}
             evt3 = {'id': 3, 'value': outtime}
             evt10 = {'id': 10, 'value': intensity}
@@ -125,13 +125,13 @@ class CsProtocol(LineReceiver):
         return evt1,evt3,evt10,evt99
 
     def lineReceived(self, line):
-        dispatch_url =  "http://example.com/"+hostname+"/cs#"+self.sensor+"-value"
+        dispatch_url =  "http://example.com/"+self.hostname+"/cs#"+self.sensor+"-value"
         try:
             data = line.strip('$').split(',')
             evt1, evt3, evt10, evt99 = self.processData(data)
         except ValueError:
             log.err('CS - Protocol: Unable to parse data %s' % line)
-            #return
+            return
         except:
             pass
 
