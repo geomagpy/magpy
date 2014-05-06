@@ -1768,7 +1768,7 @@ def db2diline(db,**kwargs):
     resultlist = []
 
     if not tablename:
-        tablename = 'DIDATA'
+        tablename = 'DIDATA_WIC'
 
     whereclause = ''
     if starttime:

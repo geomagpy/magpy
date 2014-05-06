@@ -1931,7 +1931,7 @@ class DataStream(object):
         - DataStream: 	Input stream with flags and comments.
 
     EXAMPLE:
-        >>> data.flat_stream('x',0,'Lawnmower',flag1,flag1_end)
+        >>> data.flag_stream('x',0,'Lawnmower',flag1,flag1_end)
 
     APPLICATION:
         """
@@ -1941,6 +1941,9 @@ class DataStream(object):
         if not flag in [0,1,2,3,4]:
             loggerstream.error("flag_stream: %s is not a valid flag." % flag)
 
+        if not len(self) > 0:
+            return DataStream()
+
         startdate = self._testtime(startdate)
 
         if not enddate:
@@ -1949,6 +1952,7 @@ class DataStream(object):
 	    if check_startdate == 0:
 	        loggerstream.info("flag_stream: No data at given date for flag. Finding nearest data point.")
 	        time = self._get_column('time')
+                #print start, len(time)
 	        new_endtime, index = self._find_nearest(time, start)
 	        if new_endtime > start:
 		    startdate = num2date(start)
