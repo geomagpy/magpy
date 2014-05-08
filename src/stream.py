@@ -2645,7 +2645,7 @@ class DataStream(object):
                     loggerstream.info('offset: Corrected column %s by %.3f' % (key, offsets[key]))
                 self = self._put_column(newval, key)
             else:
-                loggerstream.warning("offset: Key '%s' not in keylist." % key)
+                loggerstream.error("offset: Key '%s' not in keylist." % key)
     
         return self
                             
@@ -3150,7 +3150,7 @@ class DataStream(object):
 
         if not len(self) > 0:
             loggerstream.error("Powerspectrum: Stream of zero length -- aborting")
-            return
+            raise Exception("Can't analyse stream of zero length!")
 
         t = np.asarray(self._get_column('time'))
         val = np.asarray(self._get_column(key))
@@ -3158,12 +3158,12 @@ class DataStream(object):
         tnew, valnew = [],[]
 
         nfft = int(self._nearestPow2(len(t)))
-        print "NFFT:", nfft
+        #print "NFFT:", nfft
 
         if nfft > len(t): 
             nfft = int(self._nearestPow2(len(t) / 2.0)) 
 
-        print "NFFT now:", nfft
+        #print "NFFT now:", nfft
 
         for idx, elem in enumerate(val):
             if not isnan(elem):
@@ -3197,7 +3197,7 @@ class DataStream(object):
 
         ax.loglog(freqm, asdm,'b-')
 
-        print "Maximum frequency:", max(freqm)
+        #print "Maximum frequency:", max(freqm)
 
         if freqlevel:
             val, idx = find_nearest(freqm, freqlevel)
@@ -3454,12 +3454,12 @@ class DataStream(object):
 
         if fast:
             try:
-         	loggerstream.info("resample: Using fast algorythm")
+         	loggerstream.info("resample: Using fast algorithm.")
                 si = timedelta(seconds=sp)
                 sampling_period = si.seconds
 
                 if period <= sampling_period:
-                    loggerstream.warning("resample: Resampling period must be larger than original sampling period")
+                    loggerstream.warning("resample: Resampling period must be larger than original sampling period.")
                     return self
 
                 if not startperiod:
@@ -4110,8 +4110,8 @@ class DataStream(object):
 
 
         if len(self) < 1:
-            loggerstream.warning('write: Stream is empty!')
-            return
+            loggerstream.error('write: Stream is empty!')
+            raise Exception("Can't write an empty stream to file!")
             
         # divide stream in parts according to coverage and save them
         newst = DataStream()
@@ -4565,33 +4565,37 @@ def send_mail(send_from, send_to, **kwargs):
 def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
     DEFINITION:
-        The read functions trys to open the selected dats
+        The read functions tries to open the selected files. Calls on
+	function _read() for help.
 
     PARAMETERS:
     Variables:
-        - dataformat: 	(str) Auto-detection.
+        - dataformat: 	(str) Format of data file. Works as auto-detection.
         - path_or_url:	(str) Path to data files in form:
-			a) c:\my\data\*
-			b) c:\my\data\thefile.txt
-			c) /home/data/*
-			d) /home/data/thefile.txt
-			e) ftp://server/directory/
-			f) ftp://server/directory/thefile.txt
-			g) http://www.thepage.at/file.tab
+				a) c:\my\data\*
+				b) c:\my\data\thefile.txt
+				c) /home/data/*
+				d) /home/data/thefile.txt
+				e) ftp://server/directory/
+				f) ftp://server/directory/thefile.txt
+				g) http://www.thepage.at/file.tab
+	- headonly:	(?) ???
     Kwargs:
         - starttime: 	(str/datetime object) Description.
+        - endtime: 	(str/datetime object) Description.
+        - disableproxy: (bool) If True, will use urllib2.install_opener()
 
     RETURNS:
-        - variable: 	(type) Description.
+        - stream: 	(DataStream object) Stream containing data in file
+			under path_or_url.
 
     EXAMPLE:
-        >>> alldata = mergeStreams(pos_stream, lemi_stream, keys=['x','y','z'])
+        >>> stream = read('/srv/archive/WIC/LEMI025/LEMI025_2014-05-05.bin')
+	OR
+	>>> stream = read('http://www.swpc.noaa.gov/ftpdir/lists/ace/20140507_ace_sis_5m.txt')
 
     APPLICATION:
-
-    optional arguments are starttime, endtime and dateformat of file given in kwargs
     """
-    messagecont = ""
 
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -4607,8 +4611,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 
     # 1. No path
     if not path_or_url:
-        messagecont = "File not specified"
-        return [],messagecont
+        loggerstream.error("read: File not specified.")
+        raise Exception("No path given for data in read function!")
 
     # 2. Create DataStream
     st = DataStream([],{})
@@ -4669,8 +4673,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             if has_magic(pathname) and not glob(pathname):
                 loggerstream.error("read: Check file/pathname - No file matching pattern: %s" % pathname)
                 loggerstream.error("read: No file matching file pattern: %s" % pathname)
+                raise Exception("Cannot read non-existent file!")
             elif not has_magic(pathname) and not os.path.isfile(pathname):
                 loggerstream.error("read: No such file or directory: %s" % pathname)
+                raise Exception("Cannot read non-existent file!")
             # Only raise error if no starttime/endtime has been set. This
             # will return an empty stream if the user chose a time window with
             # no data in it.
@@ -4696,7 +4702,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 #@uncompressFile
 def _read(filename, dataformat=None, headonly=False, **kwargs):
     """
-    Reads a single file into a ObsPy Stream object.
+    Reads a single file into a MagPy DataStream object.
+    Internal function only.
     """
     stream = DataStream([],{})
     format_type = None
@@ -5373,202 +5380,195 @@ from lib.magpy_formats import *
 
 
 if __name__ == '__main__':
-    print "Starting a Test run of the MagPy program:"
-    
 
-    # Environmental Data
-    # ------------------
-    #rcs = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-RCS\RCS-T7-2012-02-01_00-00-00_c.txt'))
-    #print "Plotting raw data:"
-    #rcs.plot(['x','y','z','f'])
-    #print "Applying Outlier removal:"
-    #rcs = rcs.remove_outlier(keys=['x','y','z'])
-    #rcs = rcs.remove_flagged(key='x')
-    #rcs = rcs.remove_flagged(key='y')
-    #rcs = rcs.remove_flagged(key='z')
-    #rcs = rcs.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    #rcs = rcs.smooth(['y'],window_len=21)
-    #rcs.plot(['x','y','z','f'])
-    #print "Header information RCS"
-    #print rcs.header
+    import subprocess
+
+    print
+    print "----------------------------------------------------------"
+    print "THIS IS A TEST RUN OF THE MAGPY STREAM PACKAGE."
+    print "All main methods will be tested. This may take a while."
+    print "A summary will be presented at the end. Any protocols"
+    print "or functions with errors will be listed."
+    print "----------------------------------------------------------"
+    print
+
+    print "Please enter path of a (variometer) data file for testing:"
+    print "(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)"
+    while True:
+        filepath = raw_input("> ")
+        if os.path.exists(filepath):
+            break
+        else:
+            print "Sorry, that file doesn't exist. Try again."
+        
+    now = datetime.utcnow()
+    testrun = 'streamtest_'+datetime.strftime(now,'%Y%m%d-%H%M')
+    t_start_test = time.time()
+    errors = {}
+    print 
+    print datetime.utcnow(), "- Starting stream package test. This run: %s." % testrun
+
+    while True:
+
+        # Step 1 - Read data
+        try:
+            teststream = read(filepath)
+            print datetime.utcnow(), "- Stream read in."
+        except Exception as excep:
+            errors['read'] = str(excep)
+            print datetime.utcnow(), "ERROR reading stream. Aborting test."
+            #break
+
+        # Step 2 - Rotate data (why not?)
+        try:
+            teststream.rotation(alpha=1.0)
+            print datetime.utcnow(), "- Rotated."
+        except Exception as excep:
+            errors['rotation'] = str(excep)
+            print datetime.utcnow(), "ERROR rotating stream."
+
+        # Step 3 - Offset data
+        try:
+            test_offset = {'x': 150, 'y': -2000, 'z': 3.2}
+            teststream.offset(test_offset)
+            print datetime.utcnow(), "- Offset."
+        except Exception as excep:
+            errors['offset'] = str(excep)
+            print datetime.utcnow(), "ERROR offsetting stream."
+
+        # Step 4 - Find outliers
+        try:
+            teststream.remove_outlier()
+            print datetime.utcnow(), "- Flagged outliers."
+        except Exception as excep:
+            errors['remove_outlier'] = str(excep)
+            print datetime.utcnow(), "ERROR flagging outliers."
+
+        # Step 5 - Remove flagged
+        try:
+            teststream.remove_flagged()
+            print datetime.utcnow(), "- Removed flagged outliers."
+        except Exception as excep:
+            errors['remove_flagged'] = str(excep)
+            print datetime.utcnow(), "ERROR removing flagged outliers."
+
+        # Step 6 - Power spectrum
+        try:
+	    test_outfile = "%s.png" % testrun
+            teststream.powerspectrum('x',outfile=test_outfile)
+            print datetime.utcnow(), "- Power spectrum plotted."
+        except Exception as excep:
+            errors['powerspectrum'] = str(excep)
+            print datetime.utcnow(), "ERROR plotting power spectrum."
+
+        # Step 7 - Filter
+        try:
+            teststream.filter()
+            print datetime.utcnow(), "- Filtered."
+        except Exception as excep:
+            errors['filter'] = str(excep)
+            print datetime.utcnow(), "ERROR filtering."
+
+        # Step 8 - Write
+        try:
+            teststream.write('.',
+			filenamebegins='%s_' % testrun,
+			filenameends='.min',
+			dateformat='%Y-%m-%d',
+			format_type='IAGA')
+            print datetime.utcnow(), "- Data written out to file."
+        except Exception as excep:
+            errors['write'] = str(excep)
+            print datetime.utcnow(), "ERROR writing data to file."
+
+	# STILL TO ADD:
+	# - smooth?
+	# - plot
+	# - mergeStreams
+	# - subtractStreams
+	# - date_offset
+	# - interpol
+	# - fit
+	# - differentiate
+	# - aic_calc
+	# - k_fmi
+	# - integrate
+	# - baseline
+	# - trim
+	# - resample
+
+        # If end of routine is reached... break.
+        break
+
+    t_end_test = time.time()
+    time_taken = t_end_test - t_start_test
+    print datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken
+
+    print
+    print "----------------------------------------------------------"
+    if errors == {}:
+        print "0 errors! Great! :)"
+    else:
+        print len(errors), "errors were found in the following functions:"
+        print str(errors.keys())
+        print "Would you like to print the exceptions thrown?"
+        excep_answer = raw_input("(Y/n) > ")
+        if excep_answer.lower() == 'y':
+            i = 0
+            for item in errors:
+                print errors.keys()[i] + " error string:"
+                print "    " + errors[errors.keys()[i]]
+                i += 1
+    print
+    print "Hit enter to delete temporary files. (Or type N to keep.)"
+    tempfile_answer = raw_input("> ")
+    if tempfile_answer.lower() != 'n':
+        del_test_files = 'rm %s*' % testrun
+        subprocess.call(del_test_files,shell=True)
+    print
+    print "Good-bye!"
+    print "----------------------------------------------------------"
 
 
-    # Temperature measurements and corrections to time columns
-    #usb = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\T-Logs\Schacht*'))
-    #usb = usb.date_offset(-timedelta(hours=2)) # correcting times e.g. MET to UTC
-    #usb = usb.filtered(filter_type='gauss',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),respect_flags=True)
-    #func = usb.interpol(['t1','t2','var1'])
-    #usb.plot(['t1','t2','var1'],function=func)
-
-    #rcs.clear_header()
-    #print rcs.header
-
-    # Variometer and Scalar Data
-    # --------------------------
-
-    # Storm analysis and fit functions
-    #
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*'),starttime='2011-9-8',endtime='2011-9-14')
-    #func = st.fit(['x','y','z'],fitfunc='spline',knotstep=0.1)
-    #st = st.aic_calc('x',timerange=timedelta(hours=1))
-    #st.plot(['x','y','z','var2'],function=func)
-    #fmi = st.k_fmi(fitdegree=2)
-    #fmi = st.k_fmi(fitfunc='spline',knotstep=0.4)
-    #col = st._get_column('var2')
-    #st = st._put_column(col,'y')
-    #st = st.differentiate()
-    #st.plot(['x','var2','dy','t2'],symbollist = ['-','-','-','z'])
-    #
-    # Seconds data and filtering
-    #
-    #st = read(path_or_url=os.path.normpath('e:\\leon\\Observatory\\Messdaten\\Data-Magnetism\\gdas\\rawdata\\*'),starttime='2011-7-8',endtime='2011-7-9')
-    #st.plot(['x','y','z'])
-    #st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    #st.plot(['x','y','z'])
-    #st = st.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-    #st.plot(['x','y','z'])
-    #
-    # Smoothing, differentiating, integrating, interpolating data
-    #
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\Lemi\*'),starttime='2010-7-14',endtime=datetime(2010,7,15))
-    #st = st.smooth(['x'],window_len=21)
-    #st = st.differentiate()
-    #col = st._get_column('dx')
-    #st = st._put_column(col,'x')
-    #st = st.integrate(keys=['x'])
-    #func = st.interpol(['x','y','z'])
-    #
-    # Intensity values, Outlier removal and flagging
-    #
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\Proton\CO091231.CAP'))
-    #st = st.remove_outlier()
-    #st = st.remove_flagged()
-    #st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    #st.plot(['f'])
-    # --
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\proton\ZAGCPMAG-LOG_2010_07_18.txt'))
-    #st = st.remove_outlier()
-    #st = st.flag_stream('f',3,"Moaing",datetime(2010,7,18,12,0,0,0),datetime(2010,7,18,13,0,0,0))
-    #st = st.remove_flagged()
-    #func = st.fit(['f'],fitfunc='spline',knotstep=0.05)
-    #st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    #st.plot(['f'],function=func)
-    #st = st.get_gaps(gapvariable=True)
-    #st.plot(['f','var2'])
-    # 
-    # Merging data streams and filling of missing values
-    #
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')) #,starttime='2011-3-1')
-    #newst = mergeStreams(st,usb,keys=['t1','var1'])
-    #newst.plot(['x','y','z','t1','var1'],symbollist = ['-','-','-','-','-'],plottype='continuous')
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')) #,starttime='2011-3-1')
-    #print "Lenght before filling gaps"
-    #print len(st)
-    #st.plot(['x','y','z'])
-    #st = st.get_gaps(gapvariable=True)
-    #print "Lenght after filling gaps"
-    #print len(st)
-    #st.plot(['x','y','z','var2'])
 
 
-    # Further functions -- incomplete
-    # ---------------
-    #st = st.func_subtract(func)
-
-    #st.powerspectrum('x')
-
-    #st = st.differentiate()
-    #col = st._get_column('dx')
-    #st = st._put_column(col,'x')
-    #st = st.integrate(keys=['x'])
-    #func = st.interpol(['x','y','z'])
-
-    #st.plot(['x','y','z','var2'],function=func)
-    #st.plot(['f'])
-
-    # Absolute Values
-    # ---------------
-    #st = read(path_or_url=os.path.normpath(r'e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*'),starttime='2011-9-1',endtime='2011-9-02')
-    #st = read(path_or_url=os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\*'),starttime='2011-8-20',endtime='2011-8-21')
-    #bas = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_didd.txt'))
-    #bas.plot(['x','y','z'])
-    #func = bas.fit(['dx','dy','dz'],fitfunc='spline',knotstep=0.05)
-    #bas.plot(['dx','dy','dz'],function=func)
-
-    #st.plot(['x','y','z'])
-    #st = st.baseline(bas,knotstep=0.05,plotbaseline=True)
-    #st.plot(['x','y','z'])
 
 
-    #stle = read(path_or_url=os.path.normpath(r'f:\Vario-Cobenzl\dIdD-System\LEMI\*'),starttime='2011-8-20',endtime='2011-8-21')
-    #basle = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_lemi.txt'))
-    #stle = stle.baseline(basle,knotstep=0.05,plotbaseline=True)
-    #stle.plot(['x','y','z'])
 
 
-    # Baseline Correction and RotationMatrix
-    # ---------------
-    # alpha and beta describe the rotation matrix (alpha is the horizontal angle (D) and beta the vertical)
-    #didd = read(path_or_url=os.path.normpath('g:\Vario-Cobenzl\dIdD-System\*'),starttime='2011-01-1',endtime='2011-12-31')
-    #basdidd = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_didd.txt'))
-    #lemi = read(path_or_url=os.path.normpath('g:\Vario-Cobenzl\dIdD-System\LEMI\*'),starttime='2011-01-1',endtime='2011-12-31')
-    #baslemi = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_lemi.txt'))
-    #lemi = lemi.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-    #didd = didd.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-    #lemi = lemi.rotation(alpha=3.3,beta=0.0)
-    #didd = didd.baseline(basdidd,knotstep=0.05,plotbaseline=True)
-    #lemi = lemi.baseline(baslemi,knotstep=0.05,plotbaseline=True)
- 
-    #didd.plot(['x','y','z'])
-    #lemi.plot(['x','y','z'])
-    #newst = subtractStreams(didd,lemi,keys=['x','y','z'],getmeans=True)
-    # for some reason first and last points are not subtracted
-    #newst = newst.trim(starttime=datetime(2011,1,1,02,00),endtime=datetime(2011,12,30,22,00))
-    #newst = newst.remove_outlier(keys=['x','y','z'])
-    #print "Mean x: %f" % np.mean(newst._get_column('x'))
-    #print "Mean y: %f" % np.mean(newst._get_column('y'))
-    #print "Mean z: %f" % np.mean(newst._get_column('z'))
 
-    #newst.plot(['x','y','z'])
 
-    # DTU data
-    # ---------------
-    #dtust = read(path_or_url=os.path.normpath(r'g:\VirtualBox\Ny mappe\GDH4_20091215.cdf'))
-    #st = read(path_or_url=os.path.normpath(r'g:\VirtualBox\Ny mappe\FHB*.sec'))
-    #st = st.filtered(filter_type='gauss',filter_width=timedelta(minutes=1))
-    #st = st.aic_calc('x',timerange=timedelta(hours=1))
-    #col = st._get_column('var2')
-    #st = st._put_column(col,'y')
-    #st = st.differentiate()
-    #st.plot(['x','var2','dy'],symbollist = ['-','-','-'])
-    #dtust = dtust.filtered(filter_type='linear',filter_width=timedelta(hours=1))
-    #dtust.plot(['x','y','z'])
 
-    # Comparison of baseline calculated with and without correct orientation of sensor
-    # ---------------
-    #baslemi1 = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_lemi_alpha3.3.txt'))
-    #baslemi2 = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\absolutes_didd.txt'))
-    #newst = subtractStreams(baslemi1,baslemi2,keys=['x','y','z'])
-    #newst = newst.trim(starttime=datetime(2010,7,10,00,02),endtime=datetime(2011,10,1,23,58))
-    #newst.plot(['x','y','z'])
 
-    #testarray = np.array(baslemi1)
-    #print testarray[1][2]
-    #print testarray.ndim
-    # Testing new funcs
-    #lemi = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\lemi\*'),starttime='2010-7-17',endtime='2010-7-18')
-    #baslemi = read(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder\AbsAnalysis\absolutes_lemi.txt'))
-    #lemi = lemi.rotation(alpha=3.30,beta=-4.5)
-    #lemi = lemi.baseline(baslemi,knotstep=0.05,plotbaseline=True)
-    #lemi.plot(['x','y','z'])
 
-    
-    #st = read(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*'),starttime='2011-9-1',endtime='2011-9-30')
-    #st.plot(['x','y','z'])
-    #newst = subtractStreams(bas,st,keys=['x','y','z'])
-    #newst.plot(['x','y','z'])
 
-    #print len(st)
-    #print "Current header information:"
-    #print st.header
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# That's all, folks!
+
