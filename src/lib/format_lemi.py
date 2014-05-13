@@ -359,7 +359,13 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
 	line = fh.read(linelength)
 
 	while line != '':
-            data= struct.unpack(packcode,line)
+            try:
+                data= struct.unpack(packcode,line)
+            except Exception as e:
+                loggerlib.warning('readLEMIBIN2: Error reading data. There is probably a broken line.')
+                loggerlib.warning('readLEMIBIN2: Error string: "%s"' % e)
+                loggerlib.warning('readLEMIBIN2: Aborting data read.')
+                line = ''
             bfx = data[16]/400.
             bfy = data[17]/400.
             bfz = data[18]/400.

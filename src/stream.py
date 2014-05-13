@@ -380,7 +380,7 @@ class DataStream(object):
     kwargs:
 	- limit:	(int) limit the lenght of the list
     RETURNS:
-        - keylist: 	(array) a list like ['x','y','z']
+        - keylist: 	(list) a list like ['x','y','z']
 
     EXAMPLE:
         >>> data_stream._get_key_headers(limit=1)
@@ -2776,6 +2776,7 @@ class DataStream(object):
 
         if n_subplots < 1:
             loggerstream.error("plot: Number of keys not valid.")
+            raise Exception("Need keys to plot!")
         count = 0
 
         if not figure:
@@ -2790,7 +2791,8 @@ class DataStream(object):
         t = np.asarray([row[0] for row in self])
         for key in keys:
             if not key in KEYLIST[1:16]:
-                loggerstream.error("plot: Column key - %s - not valid!" % key)
+                loggerstream.error("plot: Column key (%s) not valid!" % key)
+                raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
             yplt = np.asarray([row[ind] for row in self])
             #yplt = self._get_column(key)
@@ -3961,7 +3963,7 @@ class DataStream(object):
             """
             for idx, elem in enumerate(self):
                 if not isnan(elem.time):
-                    if num2date(elem.time).replace(tzinfo=None) > starttime:
+                    if num2date(elem.time).replace(tzinfo=None) > starttime.replace(tzinfo=None):
                         #stval = idx-1 # changed because of latex output
                         stval = idx
                         break
@@ -3990,7 +3992,7 @@ class DataStream(object):
             edval = len(self)
             for idx, elem in enumerate(self):
                 if not isnan(elem.time):
-                    if num2date(elem.time).replace(tzinfo=None) > endtime:
+                    if num2date(elem.time).replace(tzinfo=None) > endtime.replace(tzinfo=None):
                         edval = idx
                         #edval = idx-1
                         break
@@ -5417,7 +5419,7 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['read'] = str(excep)
             print datetime.utcnow(), "ERROR reading stream. Aborting test."
-            #break
+            break
 
         # Step 2 - Rotate data (why not?)
         try:

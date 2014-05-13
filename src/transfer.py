@@ -217,7 +217,7 @@ def ssh_remotefilelist(remotepath, filepat, user, host, passwd):
 
 
 # ####################
-# Upload data to Edinborough GIN
+# Upload data to Edinburgh GIN
 # ####################
 def ginupload(filename, user, password, url,**kwargs):
     """
