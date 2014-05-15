@@ -156,6 +156,7 @@ loggertransfer = logging.getLogger('transf')
 loggerdatabase = logging.getLogger('db')
 loggerstream = logging.getLogger('stream')
 loggerlib = logging.getLogger('lib')
+loggerplot = logging.getLogger('plot')
 
 # Special loggers for event notification
 stormlogger = logging.getLogger('stream')
@@ -2682,7 +2683,6 @@ class DataStream(object):
         - outfile: 	string to save the figure, if path is not existing it will be created
         - padding: 	(integer - default 0) Value to add to the max-min data for adjusting y-scales
         - savedpi: 	(integer) resolution
-        - savefigure: 	(string - default None) if provided a copy of the plot is saved to savefilename.png
 	- stormphases:	(list) Should be a list with four datetime objects:
 			[0 = date of SSC/start of initial phase,
 			1 = start of main phase,
