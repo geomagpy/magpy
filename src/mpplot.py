@@ -29,7 +29,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 	**kwargs):
     '''
     DEFINITION:
-        This function plots multiple streams in one plot for easy comparison.
+        This function creates a graph from a single stream.
 
     PARAMETERS:
     Variables:
@@ -181,7 +181,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
     loggerplot.info("plot: Plotting completed.")
 
 
-def plotlots(plotlist,padding=[],specialdict=[],errorbars=[],
+def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 	colorlist=colorlist,symbollist=symbollist,
 	annotate=[],includeid=False,**kwargs):
     '''
@@ -190,10 +190,13 @@ def plotlots(plotlist,padding=[],specialdict=[],errorbars=[],
 
     PARAMETERS:
     Variables:
-        - plotlist: 	(list(list)) A list containing the stream and the 
+        - streamlist: 	(list(list)) A list containing the stream and the 
 			variables from each stream to be plotted in a list, e.g.:
-			[ [stream1,[var11,var12]] , [stream2,[var21]] , etc...]
-			[ [fge,['z']], [pos1,['f']], [env1,['t1','t2']] ]
+			[ stream1, stream2, etc...]
+			[ fge, pos1, env1 ]
+	- variables:	(list(list)) List containing the variables to be plotted
+			from each stream, e.g:
+			[ ['x'], ['f'], ['t1', 't2'] ]
     Args:
 	LISTED VARIABLES:
 	(NOTE: All listed variables must correspond in size to streamlist.)
@@ -230,11 +233,11 @@ def plotlots(plotlist,padding=[],specialdict=[],errorbars=[],
 	- symbollist:	(list) List of symbols to plot with. Default= '-' for all.
 
     RETURNS:
-        - plot: 	(Pyplot plot) Returns plot as plt.show or savedfile
+        - plot: 	(Pyplot plot) Returns plot as plt.show or saved file
 			if outfile is specified.
 
     EXAMPLE:
-        >>> plotlots(streamlist, padding=padding, includeid=True, outfile='plots.png')
+        >>> plotStreams(streamlist, padding=padding, includeid=True, outfile='plots.png')
 
     APPLICATION:
         fge_file = fge_id + '_' + date + '.cdf'
@@ -245,20 +248,21 @@ def plotlots(plotlist,padding=[],specialdict=[],errorbars=[],
         pos = read(pos_file)
         lemi025 = read(lemi025_file,tenHz=True)
         cs = read(cs_file)
-        streamlist = 	[ [fge,['x','y','z']],	[cs,['f']],		[lemi025,['z']],[pos,['f']]	]
+        streamlist = 	[ fge,			cs,			lemi025,	pos		]
+	variables =	[ ['x','y','z'],	['f'],			['z'],		['f'] 		]
         specialdict = 	[ {}, 			{'f':[48413,48414]},	{},		{}		]
         errorbars =	[ [False,False,False],	[False],		[False],	[True]		]
         padding = 	[ [1,1,1], 		[1],			[1] ,		[1]		]
         annotate = 	[ [False,False,False],	[True],			[True] ,	[True]		]
-        plotlots(streamlist, padding=padding,specialdict=specialdict,
+        plotStreams(streamlist, variables, padding=padding,specialdict=specialdict,
 		annotate=annotate,includeid=True,errorbars=errorbars,
 		outfile='plots/all_magn_cut1.png',
 		plottitle="WIC: All Magnetometers (%s)" % date)
     '''
 
     num_of_var = 0
-    for item in plotlist:
-        num_of_var += len(item[1])
+    for item in variables:
+        num_of_var += len(item)
     if num_of_var > 9:
         loggerplot.error("plotStreams: Can't plot more than 9 variables, sorry.")
 	raise Exception("Can't plot more than 9 variables!")
@@ -273,12 +277,12 @@ def plotlots(plotlist,padding=[],specialdict=[],errorbars=[],
     plot_dict = []
     count = 0
 
-    for i in range(len(plotlist)):
-        stream = plotlist[i][0]
+    for i in range(len(streamlist)):
+        stream = streamlist[i]
         t = np.asarray([row[0] for row in stream])
-        for j in range(len(plotlist[i][1])):
+        for j in range(len(variables[i])):
             data_dict = {}
-            key = plotlist[i][1][j]
+            key = variables[i][j]
             if not key in KEYLIST[1:16]:
                 loggerplot.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
@@ -331,7 +335,7 @@ def plotlots(plotlist,padding=[],specialdict=[],errorbars=[],
                     if len(errors) > 0: 
                         data_dict['errors'] = errors
                     else:
-                        loggerplot.warning("No errors for key %s. Leaving empty." % key)
+                        loggerplot.warning("plotStreams: No errors for key %s. Leaving empty." % key)
 
             if annotate:
                 if annotate[i][j]:
