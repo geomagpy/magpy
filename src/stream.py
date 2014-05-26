@@ -3627,12 +3627,33 @@ class DataStream(object):
 
         loggerstream.info('rotation: Applying rotation matrix.')
 
+        """
+	a[0][0] = cos(p)*cos(b);
+	a[0][1] = -sin(b);
+	a[0][2] = sin(p)*cos(b);
+	a[1][0] = cos(p)*sin(b);
+	a[1][1] = cos(b);
+	a[1][2] = sin(p)*sin(b);
+	a[2][0] = -sin(p);
+	a[2][1] = 0.0;
+	a[2][2] = cos(p);
+
+	xyz.l = ortho.l*a[0][0]+ortho.m*a[0][1]+ortho.n*a[0][2];
+	xyz.m = ortho.l*a[1][0]+ortho.m*a[1][1]+ortho.n*a[1][2];
+	xyz.n = ortho.l*a[2][0]+ortho.m*a[2][1]+ortho.n*a[2][2];
+        """
+
         for elem in self:
             ra = np.pi*alpha/(180.*ang_fac)
             rb = np.pi*beta/(180.*ang_fac)
+            # Testing the conservation of f ##### Error corrected in May 2014 by leon
+            #fbefore = sqrt(elem.x**2+elem.y**2+elem.z**2)
             xs = elem.x*np.cos(rb)*np.cos(ra)-elem.y*np.sin(ra)+elem.z*np.sin(rb)*np.cos(ra)
             ys = elem.x*np.cos(rb)*np.sin(ra)+elem.y*np.cos(ra)+elem.z*np.sin(rb)*np.sin(ra)
-            zs = elem.x*np.sin(rb)+elem.z*np.cos(rb)
+            zs = -elem.x*np.sin(rb)+elem.z*np.cos(rb)
+            #fafter = sqrt(xs**2+ys**2+zs**2)
+            #print "f:", fbefore,fafter,fbefore-fafter
+
             elem.x = xs
             elem.y = ys
             elem.z = zs
