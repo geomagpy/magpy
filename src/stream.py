@@ -1217,6 +1217,51 @@ class DataStream(object):
         else:
             return self
 
+
+    def calc_f(self, **kwargs):
+        """
+        DEFINITION:
+            Calculates the f form  x^2+y^2+z^2
+        PARAMETERS:
+         Kwargs:
+            - offset:  (array) containing three elements [xoffset,yoffset,zoffset],
+        RETURNS:
+            - DataStream with f and, if given, offset corrected xyz values
+
+        EXAMPLES:
+            >>> fstream = stream.calc_f()
+            >>> fstream = stream.calc_f(offset=[20000,0,43000])
+        """
+
+        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
+
+        offset = kwargs.get('offset')
+        if not offset:
+            offset = [0,0,0]
+        else:
+            if not len(offset) == 3:
+                loggerstream.error('calc_f: offset with wrong dimension given - needs to contain a three dim array like [a,b,c] - returning stream without changes')
+                return self 
+
+        try:
+            if len(self) < 1:
+                loggerstream.error('calc_f: empty stream - aborting')
+                return self 
+        except:
+            loggerstream.error('calc_f: inapropriate data provided - aborting')
+            return self
+
+        loggerstream.info('calc_f: --- Calculating f started at %s ' % str(datetime.now()))
+        for elem in self:
+            elem.f = np.sqrt((elem.x+offset[0])**2+(elem.y+offset[1])**2+(elem.z+offset[2])**2)
+
+        self.header['col-f'] = 'f'
+        self.header['unit-col-f'] = 'nT'
+        
+        loggerstream.info('calc_f: --- Calculating f finished at %s ' % str(datetime.now()))
+
+        return self
+
     
     def date_offset(self, offset, **kwargs):
         """
@@ -2372,6 +2417,15 @@ class DataStream(object):
         if not std:
             std = False
 
+        try:
+            assert len(self) > 0
+        except:
+            loggerstream.error('mean: empty stream - aborting')
+            if std:
+                return float("NaN"), float("NaN")
+            else:
+                return float("NaN")
+
         if not isinstance( percentage, (int,long)):
             loggerstream.error("mean: Percentage needs to be an integer!")
         if not key in KEYLIST[:16]:
@@ -2387,7 +2441,10 @@ class DataStream(object):
                 return eval('np.'+meanfunction+'(ar)')
         else:
             loggerstream.warning('mean: Too many nans in column, exceeding %d percent' % percentage)
-            return float("NaN")
+            if std:
+                return float("NaN"), float("NaN")
+            else:
+                return float("NaN")
 
     def multiply(self, factors):
         """
@@ -3480,15 +3537,28 @@ class DataStream(object):
                 pass
 
 
+        # Create a list containing time steps
 	t_max = num2date(self._get_max('time'))
-
 	t_list = []
         time = t_min
         while time <= t_max:
            t_list.append(date2num(time))
            time = time + timedelta(seconds=period)
 
+        # check original file whether enough data is present for each new step
+        
+        #tn_list = []
+        #realtime = self._get_column('time')
+        #for t in t_list:
+        #    texist, tit = self._find_nearest(realtime,t)
+        #    if not abs(texist-t) >= period*24*3600:
+        #        tn_list.append(t)
+
+        #print "Resampling: ", len(t_list), len(tn_list)
+        # Was equal despite missing values ???
+
 	res_stream = DataStream()
+	res_stream.header = self.header
         for item in t_list:
             row = LineStruct()
             row.time = item
@@ -3510,7 +3580,7 @@ class DataStream(object):
             for item in t_list:
                 functime = (item - int_min)/(int_max - int_min)
                 tempval = int_func(functime)
-                key_list.append(tempval)
+                key_list.append(float(tempval))
 
             res_stream._put_column(key_list,key)
 
@@ -3568,6 +3638,66 @@ class DataStream(object):
             elem.z = zs
 
         loggerstream.info('rotation: Finished reorientation.')
+
+        return self
+
+
+    def scale_correction(self, keys, scales, **kwargs):
+        """
+        DEFINITION:
+            multiplies the selected keys by the given scale values
+        PARAMETERS:
+         Kwargs:
+            - offset:  (array) containing constant offsets for the given keys
+        RETURNS:
+            - DataStream 
+
+        EXAMPLES:
+            >>> stream = stream.scale_correction(['x','y','z'],[1,0.988,1])
+        """
+
+        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
+
+        offset = kwargs.get('offset')
+        if not offset:
+            offset = [0]*len(keys)
+        else:
+            if not len(offset) == len(keys):
+                loggerstream.error('scale_correction: offset with wrong dimension given - needs to have the same length as given keys - returning stream without changes')
+                return self 
+
+        try:
+            assert len(self) > 0
+        except:
+            loggerstream.error('scale_correction: empty stream - aborting')
+            return self
+
+        offsetlst = []
+        for key in KEYLIST:
+            if key in keys:
+                pos = keys.index(key)
+                offsetlst.append(offset[pos])
+            else:
+                offsetlst.append(0.0)
+
+        loggerstream.info('scale_correction:  --- Scale correction started at %s ' % str(datetime.now()))
+        for elem in self:
+            for i,key in enumerate(keys):
+                exec('elem.'+key+' = (elem.'+key+'+offset[i]) * scales[i]')
+
+        scalelst = []
+        for key in KEYLIST:
+            if key in keys:
+                pos = keys.index(key)
+                scalelst.append(scales[pos])
+            else:
+                scalelst.append(1.)
+
+        #print '_'.join(map(str,offsetlst)), scalelst        
+        self.header['DataScaleValues'] = '_'.join(map(str,scalelst))
+        self.header['DataOffsets'] = '_'.join(map(str,offsetlst))
+        
+        loggerstream.info('scale_correction:  --- Scale correction finished at %s ' % str(datetime.now()))
 
         return self
 
@@ -5082,6 +5212,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         return stream_a
         
     keys = kwargs.get('keys')
+    newway = kwargs.get('newway')
     getmeans = kwargs.get('getmeans')
     if not keys:
         keys = KEYLIST[1:16]
@@ -5093,7 +5224,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     newst = DataStream()
 
-    # take stream_b data and fine nearest element in time from stream_a
+    # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')
     timea = stream_a._maskNAN(timea)
     timeb = stream_b._get_column('time')
@@ -5130,6 +5261,66 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     if (etime <= stime):
         loggerstream.error('subtractStreams: Streams are not overlapping!')
         return stream_a
+    
+
+    # ----------------------------------------------
+    # --------- if loop for new technique ----------
+    # ----------------------------------------------
+    # changes from 23 May 2014 by leon
+    # modification to keep original streams unbiased 
+    # need to check all subsequent functions !!!
+    if newway == True:
+        
+        subtractedstream = DataStream()
+        sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
+        sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None))
+        samplingrate_b = sb.get_sampling_period()
+
+        subtractedstream.header = sa.header
+
+        loggerstream.info('subtractStreams (newway): Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
+
+        # Interpolate stream_b
+        # --------------------
+        function = sb.interpol(keys)
+        taprev = 0
+
+        for elem in sa:
+            tb, itmp = sb._find_nearest(timeb,elem.time)
+            # --------------------------------------------------------------------
+            # test whether data points are present within a sampling rate distance 
+            # and whether the timestep is within the interpolation range
+            # --------------------------------------------------------------------
+            if abs(tb-elem.time) < samplingrate_b  and function[1]<=elem.time<=function[2]:
+                newline = LineStruct()
+                for key in keys:
+                    newline.time = elem.time
+                    newval = eval('elem.'+key) - float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
+                    exec('newline.'+key+' = float(newval)')
+                subtractedstream.add(newline)
+
+        # XXX Take care: New header info replaces header information of stream a and b
+        for key in keys:
+            try:
+                subtractedstream.header['col-'+key] = 'delta '+key
+            except:
+                pass
+            try:
+                subtractedstream.header['unit-col-'+key] = sa.header['unit-col-'+key] 
+            except:
+                pass
+            try:
+                subtractedstream.header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
+            except:
+                pass
+
+        return subtractedstream      
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # XXX If not newway:
+    # Traditional version is used which replaces stream_a with the subtracted info
+    # TODO test the stablilty of newway and make it default
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     # Take only the time range of the shorter stream
     # Important for baselines: extend the absfile to start and endtime of the stream to be corrected

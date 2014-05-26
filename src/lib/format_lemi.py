@@ -300,7 +300,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
 
     # Define frequency of output data:
     if not tenHz:
-        tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO
+        tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO  happens only when start and endtime are used.. single files can be imported
     if not timeshift:
         timeshift = -300 #milliseconds
     if not gpstime:
@@ -355,6 +355,12 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
         headers['unit-col-y'] = 'nT'
         headers['col-z'] = 'z'
         headers['unit-col-z'] = 'nT'
+        headers['col-t1'] = 'Ts'
+        headers['unit-col-t1'] = 'deg'
+        headers['col-t2'] = 'Te'
+        headers['unit-col-t2'] = 'deg'
+
+        timediff = []
 
 	line = fh.read(linelength)
 
@@ -376,8 +382,9 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
             headers['SensorID'] = line[0:4]
 
             if gpstime:
-                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(milliseconds=-300)	# Lemi GPS time
+                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)	# Lemi GPS time
                 sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+                timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds
             else:
                 time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
 
@@ -385,7 +392,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                 for i in range(10):
                     row = LineStruct()
 
-                    row.time = date2num(time+timedelta(milliseconds=(100.*i)))
+                    row.time = date2num(time+timedelta(microseconds=(100000.*i)))
                     row.t1 = data[11]/100.
                     row.t2 = data[12]/100.
 
@@ -393,7 +400,7 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
                     row.y = (data[21+i*3])*1000.
                     row.z = (data[22+i*3])*1000.
                     if gpstime:
-                        row.sectime = date2num(sectime+timedelta(milliseconds=(100.*i)))
+                        row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
 
                     stream.add(row)
 
@@ -418,6 +425,9 @@ def readLEMIBIN2(filename, headonly=False, **kwargs):
     	    line = fh.read(linelength)
 
     fh.close()
+    if gpstime:
+        loggerlib.info("readLEMIBIN2: Time difference between GPS and PC (GPS-PC): %f , %f" % (np.mean(timediff), np.std(timediff)))
+        print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
    
     return DataStream(stream, headers)    
 

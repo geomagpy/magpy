@@ -81,9 +81,13 @@ def readPYSTR(filename, headonly=False, **kwargs):
         elif elem[0]=='#':
             # blank header
             pass
-        elif elem[0]==' #':
-            # attributes
-            pass
+        elif elem[0].startswith(' #') and not elem[0].startswith(' # MagPy - ASCII'):
+            # attributes - assign header values
+            headlst = elem[0].strip(' # ').split(':')
+            headkey = headlst[0]
+            headval = headlst[1]
+            if not headkey.startswith('Column'):
+                headers[headkey] = headval
         elif elem[0]=='Epoch[]':
             for i in range(len(elem)):
                 headval = elem[i].split('[')                

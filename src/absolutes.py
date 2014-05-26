@@ -477,6 +477,13 @@ class AbsoluteData(object):
         expmire = np.mean([elem for elem in expmire if not isnan(elem)])
         poslst = [elem for elem in self if not isnan(elem.hc) and not isnan(elem.vc)]
 
+        try:
+            if len(poslst) < 1:
+                loggerabs.warning("_calcdec: could not identify measurement positions - aborting")
+                return LineStruct()
+        except:
+            loggerabs.warning("_calcdec: could not assign measurement positions - aborting")
+            return LineStruct()
 
         # Check that: Should be correct if the order of input values is correct
         miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
@@ -541,6 +548,14 @@ class AbsoluteData(object):
                 variocorr.append(np.arctan((ystart+varioy)/(xstart+variox)))
             dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k])
             loggerabs.debug("_calcdec: Horizontal angles: %f, %f, %f" % (poslst[k].hc, rescorr, variocorr[k]))
+
+        try:
+            if len(dl1) < 8:
+                loggerabs.warning("_calcdec: horizontal angles could not be assigned - aborting")
+                return LineStruct()
+        except:
+            loggerabs.warning("_calcdec: horizontal angles could not be assigned - aborting")
+            return LineStruct()
 
         # use selected steps, default is average....
         for k in range(0,7,2):
@@ -1008,7 +1023,10 @@ class AbsoluteData(object):
                 print "All results: " , resultline
             # requires succesful declination determination
             if isnan(resultline.y):
-                loggerabs.error('%s : CalcAbsolutes: Declination could not be determined - aborting' % num2date(self[0].time).replace(tzinfo=None))
+                try:
+                    loggerabs.error('%s : CalcAbsolutes: Declination could not be determined - aborting' % num2date(self[0].time).replace(tzinfo=None))
+                except:
+                    loggerabs.error('unkown : CalcAbsolutes: Declination could not be determined - aborting')
                 break
             # use incstart and ystart as boundary conditions
             try: # check, whether outline already exists
@@ -1019,16 +1037,29 @@ class AbsoluteData(object):
             except:
                 inc = incstart
             outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
+            
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
-        loggerabs.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
 
-        if printresults:
-            print 'Vector:'
-            print 'Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f)
-            print 'Collimation and Offset:'
-            print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
+        #test whether outline is a linestruct object - if not use an empty object
+        try:
+            test = outline.x
+
+            loggerabs.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
+
+            if printresults:
+                print 'Vector:'
+                print 'Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f)
+                print 'Collimation and Offset:'
+                print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
+
+        except:
+            text = 'calcabsolutes: invalid LineStruct Object returned from calcinc function'
+            loggerabs.warning(text)
+            if printresults:
+                print text
+            outline = LineStruct()
 
         return outline
 
@@ -1160,6 +1191,12 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
     print format_type
 
     stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
+
+    # If stream could not be read return an empty datastream object
+    try:
+        xxx = len(stream)
+    except:
+        stream = DataStream()
 
     return stream
 
