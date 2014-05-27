@@ -1,32 +1,109 @@
-#!/usr/bin/env python
-"""
-MagPy-Plotting: Functions for pretty plotting
+'''
+Path:			magpy.plot
+Part of package:	stream (plot)
+Type:			Library of matplotlib plotting functions
 
-Written by Rachel Bailey, 8th May 2014
-"""
+PURPOSE:
+	This script provides multiple functions for plotting a stream as well
+        as analysing various properties of a stream.
+        All plots are done with python's matplotlib package.
+
+CONTAINS:
+	plot:		(Func) Will plot variables from a single stream.
+	plotStreams:	(Func) Plots multiple variables from multiple streams.
+        plotPS: 	(Func) Plots the power spectrum of a given key.
+        plotSpectrogram:(Func) Plots spectrogram of a given key.
+	plotStereoplot:	(Func) Plots stereoplot of inc and dec values.
+	obspySpectrogram:(Func) Spectrogram plotting function taken from ObsPy.
+	_plot:		(Func) ... internal function to funnel plot information
+			into a matplotlib plot object.
+	_confinex:	(Func) ... utility function of _plot.
+	_maskNan:	(Func) ... utility function of _plot.
+	_nanHelper:	(Func) ... utility function of _plot.
+	__denormalize:	(Func) ... utility function of _plot.
+	_nearestPower2(x)(Func) ... utility function of obspySpectrogram.
+
+DEPENDENCIES:
+        magpy.stream
+	matplotlib
+
+CALLED BY:
+	External data plotting and analysis scripts only.
+'''
 
 from stream import *
+'''
+try:
+    import matplotlib
+    if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
+        print "No terminal connected - assuming cron job and using Agg for matplotlib"
+        matplotlib.use('Agg') # For using cron
+except:
+    print "Prob with matplotlib"
 
-# TODO: Add in general plot function so that it works with same variables
-#	as original plot function.
+try:
+    version = matplotlib.__version__.replace('svn', '')
+    try:
+        version = map(int, version.replace("rc","").split("."))
+        MATPLOTLIB_VERSION = version
+    except:
+        version = version.strip("rc")
+        MATPLOTLIB_VERSION = version
+    print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import Normalize 
+    from matplotlib import mlab 
+    from matplotlib.dates import date2num, num2date
+    import matplotlib.cm as cm
+    from pylab import *
+    from datetime import datetime, timedelta
+except ImportError as e:
+    loggerplot.error("plot package: Matplotlib import error. If missing, please install to proceed.")
+    loggerplot.error("Error string: %s" % e)
+    raise Exception("CRITICAL IMPORT ERROR FOR PLOT PACKAGE: Matplotlib import error.")
+'''
+
+# TODO:
+# - Move all plotting functions over from stream.
+#	STILL TO FIX:
+#	spectrogram()
+#		TODO: ORIGINAL FUNCTION HAS ERRORS.
+#		renamed to plotSpectrogram
+#		changed variable title to plottitle
+#	obspyspectrogram()
+#		renamed to obspySpectrogram.
+#	DONE:
+#	plot() + plotStreams()
+#	powerspectrum()
+#		renamed to plotPS
+#		changed variable title to plottitle
+#	stereoplot()
+#		renamed to plotStereoplot
+#
+# KNOWN BUGS:
+# - Does not plot ACE data...
+#	--> may have to do with plotting discontinuously.
 
 colorlist =  ['b','g','m','c','y','k','b','g','m','c','y','k']
 symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-']
 
 def ploteasy(stream):
-    #import plot TODO
     keys = stream._get_key_headers()
-    sensorid = stream.header['SensorID']
+    try:
+        sensorid = stream.header['SensorID']
+    except:
+        sensorid = ''
     datadate = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d')
     plottitle = "%s (%s)" % (sensorid,datadate)
-    stream.plot(keys,
+    print "Plotting keys:", keys
+    plot_new(stream, keys,
 		fullday = True,
 		confinex = True,
                 plottitle = plottitle)
 
 def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
-	annotate=False,colorlist=colorlist,symbollist=symbollist,
-	**kwargs):
+	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
+	t_stormphases={},includeid=False,**kwargs):
     '''
     DEFINITION:
         This function creates a graph from a single stream.
@@ -64,7 +141,14 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 			key corresponds to the column
 			input is a list with the following parameters
 			{'x':[ymin,ymax]}
+	- stormphases:	(bool/list) If True, will plot shaded and annotated storm phases.
+			NOTE: Also requires variable t_stormphases.
 	- symbollist:	(list) List of symbols to plot with. Default= '-' for all.
+	- t_stormphases:(dict) Dictionary (2 <= len(dict) <= 4) containing datetime objects.
+			dict('ssc') = time of SSC
+			dict('mphase') = time of start of main phase / end of SSC
+			dict('rphase') = time of start of recovery phase / end of main phase
+			dict('stormend') = end of recovery phase
 
     RETURNS:
         - plot: 	(Pyplot plot) Returns plot as plt.show or savedfile
@@ -77,6 +161,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         
     '''
 
+    # Check lists for variables have correct length:
     num_of_var = len(variables)
     if num_of_var > 9:
         loggerplot.error("plot: Can't plot more than 9 variables, sorry.")
@@ -92,6 +177,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
     plot_dict = []
     count = 0
 
+    # Iterate through each variable, create dict for each:
     for i in range(num_of_var):
         t = np.asarray([row[0] for row in stream])
         key = variables[i]
@@ -106,6 +192,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         data_dict['color'] = colorlist[i]
         data_dict['symbol'] = symbollist[i]
 
+        # Each variable can have different padding values:
         if padding:
             if type(padding) == list:
                 ypadding = padding[i]
@@ -114,6 +201,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         else:
             ypadding = 0
 
+        # If there are specified limits, use these:
         if key in specialdict:
             specialparams = specialdict[key]
             data_dict['ymin'] = specialparams[0] - ypadding
@@ -138,6 +226,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
             label = ylabel
         data_dict['ylabel'] = label
 
+        # Create array for errors:
         if errorbars:
             if type(errorbars) == list:
                 if errorbars[i]:
@@ -155,6 +244,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
                 else:
                     loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
 
+        # Annotate flagged data points:
         if annotate:
 	    if type(annotate) == list:
                 if annotate[i]:
@@ -174,6 +264,27 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         else:
             data_dict['annotate'] = False
 
+        # Plot shaded storm phases:
+        if stormphases:
+            if not t_stormphases:
+                loggerplot.error("plot: No variable t_stormphases for plotting phases.")
+                raise Exception("Require variable t_stormphases when stormphases=True!")
+            if len(t_stormphases) not in [1,2,3,4]:
+                loggerplot.error("plot: Length of variable t_stormphases incorrect.")
+                raise Exception("Something is wrong with length of variable t_stormphases!")
+            if type(stormphases) == list:
+                if stormphases[i][j]:
+                    data_dict['stormphases'] = t_stormphases
+            else:
+                data_dict['stormphases'] = t_stormphases
+
+        # Include sensor IDs:
+        try:
+            sensor_id = stream.header['SensorID']
+            data_dict['sensorid'] = sensor_id
+        except:
+            data_dict['sensorid'] = ''
+
         plot_dict.append(data_dict)
 
     loggerplot.info("plot: Starting plotting function...")
@@ -182,8 +293,8 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 
 
 def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
-	colorlist=colorlist,symbollist=symbollist,
-	annotate=[],includeid=False,**kwargs):
+	colorlist=colorlist,symbollist=symbollist,annotate=[],stormphases=[],
+	t_stormphases={},includeid=False,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -199,7 +310,7 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 			[ ['x'], ['f'], ['t1', 't2'] ]
     Args:
 	LISTED VARIABLES:
-	(NOTE: All listed variables must correspond in size to streamlist.)
+	(NOTE: All listed variables must correspond in size to the variable list.)
 	- annotate:	(list(bool)) If True, will annotate plot with flags, e.g.:
 			[ [True], [True], [False, False] ]
 	- errorbars:	(list(bool)) If True, will plot corresponding errorbars:
@@ -207,6 +318,8 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
         - padding: 	(list(list)) List of lists containing paddings for each
 			respective variable, e.g:
 			[ [5], [5], [0.1, 0.2] ]
+	- stormphases:	(list(bool)) If True, will plot shaded and annotated storm phases.
+			NOTE: Also requires variable t_stormphases.
 	- specialdict:	(list(dict)) Same as plot variable, e.g:
 			[ {'z': [100,150]}, {}, {'t1':[7,8]} ]
 	NORMAL VARIABLES:
@@ -231,13 +344,18 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 	- plottype:	(NumPy str='discontinuous') Can also be 'continuous'.
 	- savedpi:	(float=80) Determines dpi of outfile.
 	- symbollist:	(list) List of symbols to plot with. Default= '-' for all.
+	- t_stormphases:(dict) Dictionary (2 <= len(dict) <= 4) containing datetime objects.
+			dict('ssc') = time of SSC
+			dict('mphase') = time of start of main phase / end of SSC
+			dict('rphase') = time of start of recovery phase / end of main phase
+			dict('stormend') = end of recovery phase
 
     RETURNS:
         - plot: 	(Pyplot plot) Returns plot as plt.show or saved file
 			if outfile is specified.
 
     EXAMPLE:
-        >>> plotStreams(streamlist, padding=padding, includeid=True, outfile='plots.png')
+        >>> plotStreams(streamlist, variables, padding=5, outfile='plots.png')
 
     APPLICATION:
         fge_file = fge_id + '_' + date + '.cdf'
@@ -267,6 +385,7 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
         loggerplot.error("plotStreams: Can't plot more than 9 variables, sorry.")
 	raise Exception("Can't plot more than 9 variables!")
 
+    # Check lists for variables have correct length:
     if len(symbollist) < num_of_var:
         loggerplot.error("plotStreams: Length of symbol list does not match number of variables.")
 	raise Exception("Length of symbol list does not match number of variables.")
@@ -277,6 +396,7 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
     plot_dict = []
     count = 0
 
+    # Iterate through each variable, create dict for each:
     for i in range(len(streamlist)):
         stream = streamlist[i]
         t = np.asarray([row[0] for row in stream])
@@ -293,11 +413,13 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
             data_dict['color'] = colorlist[count]
             data_dict['symbol'] = symbollist[count]
 
+            # Define padding for each variable:
             if padding:
                 ypadding = padding[i][j]
             else:
                 ypadding = 0
 
+            # If limits are specified, use these:
             if specialdict:
                 if key in specialdict[i]:
                     specialparams = specialdict[i][key]
@@ -328,6 +450,7 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                 label = ylabel
             data_dict['ylabel'] = label
 
+            # Create array for errorbars:
             if errorbars:
                 if errorbars[i][j]:
                     ind = KEYLIST.index('d'+key)
@@ -337,6 +460,7 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                     else:
                         loggerplot.warning("plotStreams: No errors for key %s. Leaving empty." % key)
 
+            # Annotate flagged data points:
             if annotate:
                 if annotate[i][j]:
                     flag = stream._get_column('flag')
@@ -349,9 +473,23 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
             else:
                 data_dict['annotate'] = False
 
-            if includeid:
+            # Plot shaded storm phases:
+            if stormphases:
+                if not t_stormphases:
+                    loggerplot.error("plotStreams: No variable t_stormphases for plotting phases.")
+                    raise Exception("Require variable t_stormphases when stormphases=True!")
+                if len(t_stormphases) not in [1,2,3,4]:
+                    loggerplot.error("plotStreams: Length of variable t_stormphases incorrect.")
+                    raise Exception("Something is wrong with length of variable t_stormphases!")
+                if stormphases[i][j]:
+                    data_dict['stormphases'] = t_stormphases
+
+            # Include sensor IDs:
+            try:
                 sensor_id = stream.header['SensorID']
-                data_dict['includeid'] = sensor_id
+                data_dict['sensorid'] = sensor_id
+            except:
+                data_dict['sensorid'] = ''
 
             plot_dict.append(data_dict)
             count += 1
@@ -361,14 +499,632 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
     loggerplot.info("plotStreams: Plotting completed.")
 
 
+def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
+	returndata=False,freqlevel=None,marks={},fmt=None,
+	axes=None,plottitle=None,**kwargs):
+    """
+    DEFINITION:
+        Calculate the power spectrum following the numpy fft example
+	and plot the results.
+
+    PARAMETERS:
+    Variables:
+        - stream:	(DataStream object) Stream to analyse
+        - key:		(str) Key to analyse
+    Kwargs:
+	- axes:		(?) ?
+        - debugmode: 	(bool) Variable to show steps
+	- fmt:		(str) Format of outfile, e.g. "png"
+	- freqlevel:	(float) print noise level at that frequency.
+	- marks:	(dict) Contains list of marks to add, e.g:
+			{'here',1}
+	- outfile:	(str) Filename to save plot to
+	- plottitle:	(str) Title to display on plot
+	- returndata:	(bool) Return frequency and asd 
+
+    RETURNS:
+        - plot: 	(matplotlib plot) A plot of the powerspectrum
+	If returndata = True:
+	- freqm:	(float) Maximum frequency
+	- asdm:	(float) ?
+
+    EXAMPLE:
+        >>> plotPS(stream, 'x')
+	OR
+	>>> freq, a = plotPS(stream, 'x', returndata=True)
+
+    APPLICATION:
+        >>> import magpy
+	1. Requires DataStream object:
+        >>> data_path = '/usr/lib/python2.7/magpy/examples/*'
+        >>> data = read(path_or_url=data_path,
+			starttime='2013-06-10 00:00:00',
+			endtime='2013-06-11 00:00:00')
+	2. Call for data stream:
+        >>> data.powerspectrum('f',
+			plottitletitle='PSD of f', marks={'day':0.000011574},
+			outfile='ps.png')
+    """
+
+    loggerplot.info("plotPS: Starting powerspectrum calculation.")
+    
+    if noshow:
+        show = False
+    else:
+        show = True
+
+    dt = stream.get_sampling_period()*24*3600
+
+    if not len(stream) > 0:
+        loggerplot.error("plotPS: Stream of zero length -- aborting.")
+        raise Exception("Can't analyse power spectrum of stream of zero length!")
+
+    t = np.asarray(stream._get_column('time'))
+    val = np.asarray(stream._get_column(key))
+    t_min = np.min(t)
+    t_new, val_new = [],[]
+
+    nfft = int(stream._nearestPower2(len(t)))
+
+    if nfft > len(t): 
+        nfft = int(stream._nearestPower2(len(t) / 2.0)) 
+
+    for idx, elem in enumerate(val):
+        if not isnan(elem):
+            t_new.append((t[idx]-t_min)*24*3600)
+            val_new.append(elem)
+
+    t_new = np.asarray(t_new)
+    val_new = np.asarray(val_new)
+
+    if debugmode:
+        print "Extracted data for powerspectrum at %s" % datetime.utcnow()
+
+    if not axes: 
+        fig = plt.figure() 
+        ax = fig.add_subplot(111) 
+    else: 
+        ax = axes 
+
+    psdm = mlab.psd(val_new, nfft, 1/dt) 
+    asdm = np.sqrt(psdm[0]) 
+    freqm = psdm[1] 
+
+    ax.loglog(freqm, asdm,'b-')
+
+    if debugmode:
+        print "Maximum frequency:", max(freqm)
+
+    if freqlevel:
+        val, idx = find_nearest(freqm, freqlevel)
+        if debugmode:
+            print "Maximum Noise Level at %s Hz: %s" % (val,asdm[idx])
+
+    if not marks:
+        pass
+    else:
+        for elem in marks:
+            ax.annotate(elem, xy=(marks[elem],min(asdm)), 
+			xytext=(marks[elem],max(asdm)-(max(asdm)-min(asdm))*0.3),
+			bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
+			arrowprops=dict(arrowstyle="->",
+			shrinkA=0, shrinkB=1,
+			connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+
+    try:
+        unit = stream.header['unit-col-'+key]
+    except:
+        unit = 'unit'
+
+    ax.set_xlabel('Frequency $[Hz]$')
+    ax.set_ylabel(('Amplitude spectral density $[%s/sqrt(Hz)]$') % unit) 
+    if plottitle:
+        ax.set_title(plottitle)
+
+    loggerplot.info("Finished powerspectrum.")
+
+    if outfile: 
+        if fmt: 
+            fig.savefig(outfile, format=fmt) 
+        else: 
+            fig.savefig(outfile) 
+    elif returndata: 
+        return freqm, asdm
+    elif show: 
+        plt.show() 
+    else: 
+        return fig 
+
+
+def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False, 
+	outfile=None, fmt=None, axes=None, dbscale=False, 
+	samp_rate_multiplicator=None,mult=8.0, cmap=None,zorder=None, 
+	plottitle=None, show=True, sphinx=False, clip=[0.0, 1.0], **kwargs):
+    """
+    DEFINITION:
+        Creates a spectrogram plot of selected keys.
+        Parameter description at function obspyspectrogram
+
+    PARAMETERS:
+    Variables:
+        - stream:	(DataStream object) Stream to analyse
+        - keys:		(list) Keys to analyse
+    Kwargs:
+	- per_lap:	(?) ?
+        - wlen: 	(?) ?
+	- log:		(bool) ?
+	- outfile:	(str) Filename to save plot to
+	- fmt:		(str) Format of outfile, e.g. 'png'
+	- axes:		(?) ?
+	- dbscale:	(?) ?
+	- mult:		(?) ?
+	- cmap:		(?) ?
+	- zorder:	(?) ?
+	- plottitle:	(?) ?
+	- samp_rate_multiplicator:
+			(float=24*3600) Change the frequency relative to one day
+			sampling rate given as days -> multiplied by x to create Hz, 
+			Default 24, which means 1/3600 Hz
+	- show:		(?) ?
+	- sphinx:	(?) ?
+
+    RETURNS:
+        - plot: 	(matplotlib plot) A plot of the spectrogram.
+
+    EXAMPLE:
+        >>> plotSpectrogram(stream, ['x','y'])
+
+    APPLICATION:
+        >>>  
+    """
+
+    if not samp_rate_multiplicator:
+        samp_rate_multiplicator = 24*3600
+
+    t = stream._get_column('time')
+
+    if not len(t) > 0:
+        loggerplot.error('plotSpectrogram: stream of zero length -- aborting')
+        return
+
+    for key in keys:
+        val = stream._get_column(key)
+        val = stream._maskNAN(val)
+        dt = stream.get_sampling_period()*(samp_rate_multiplicator)
+        Fs = float(1.0/dt)
+        obspySpectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log, 
+                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale, 
+                    mult=mult, cmap=cmap, zorder=zorder, title=plottitle, show=show, 
+                    sphinx=sphinx, clip=clip)
+
+
+def obspySpectrogram(data, samp_rate, per_lap=0.9, wlen=None, log=False, 
+	outfile=None, fmt=None, axes=None, dbscale=False, 
+	mult=8.0, cmap=None, zorder=None, title=None, show=True, 
+	sphinx=False, clip=[0.0, 1.0]): 
+    """
+        Function taken from ObsPy
+        Computes and plots spectrogram of the input data. 
+        :param data: Input data 
+        :type samp_rate: float 
+        :param samp_rate: Samplerate in Hz 
+        :type per_lap: float 
+        :param per_lap: Percentage of overlap of sliding window, ranging from 0 
+            to 1. High overlaps take a long time to compute. 
+        :type wlen: int or float 
+        :param wlen: Window length for fft in seconds. If this parameter is too 
+            small, the calculation will take forever. 
+        :type log: bool 
+        :param log: Logarithmic frequency axis if True, linear frequency axis 
+            otherwise. 
+        :type outfile: String 
+        :param outfile: String for the filename of output file, if None 
+            interactive plotting is activated. 
+        :type fmt: String 
+        :param fmt: Format of image to save 
+        :type axes: :class:`matplotlib.axes.Axes` 
+        :param axes: Plot into given axes, this deactivates the fmt and 
+            outfile option. 
+        :type dbscale: bool 
+        :param dbscale: If True 10 * log10 of color values is taken, if False the 
+            sqrt is taken. 
+        :type mult: float 
+        :param mult: Pad zeros to lengh mult * wlen. This will make the spectrogram 
+            smoother. Available for matplotlib > 0.99.0. 
+        :type cmap: :class:`matplotlib.colors.Colormap` 
+        :param cmap: Specify a custom colormap instance 
+        :type zorder: float 
+        :param zorder: Specify the zorder of the plot. Only of importance if other 
+            plots in the same axes are executed. 
+        :type title: String 
+        :param title: Set the plot title 
+        :type show: bool 
+        :param show: Do not call `plt.show()` at end of routine. That way, further 
+            modifications can be done to the figure before showing it. 
+        :type sphinx: bool 
+        :param sphinx: Internal flag used for API doc generation, default False 
+        :type clip: [float, float] 
+        :param clip: adjust colormap to clip at lower and/or upper end. The given 
+            percentages of the amplitude range (linear or logarithmic depending 
+            on option `dbscale`) are clipped. 
+    """ 
+
+    # enforce float for samp_rate
+    samp_rate = float(samp_rate) 
+
+    # set wlen from samp_rate if not specified otherwise 
+    if not wlen: 
+        wlen = samp_rate / 100. 
+
+    npts = len(data) 
+
+    # nfft needs to be an integer, otherwise a deprecation will be raised 
+    #XXX add condition for too many windows => calculation takes for ever 
+    nfft = int(_nearestPower2(wlen * samp_rate))
+
+    if nfft > npts:
+        print npts
+        nfft = int(_nearestPower2(npts / 8.0)) 
+
+    if mult != None: 
+        mult = int(_nearestPower2(mult)) 
+        mult = mult * nfft 
+
+    nlap = int(nfft * float(per_lap)) 
+
+    data = data - data.mean() 
+    end = npts / samp_rate 
+
+    # Here we call not plt.specgram as this already produces a plot 
+    # matplotlib.mlab.specgram should be faster as it computes only the 
+    # arrays 
+    # XXX mlab.specgram uses fft, would be better and faster use rfft 
+
+    if MATPLOTLIB_VERSION >= [0, 99, 0]: 
+        print "1", nfft, nlap
+	# TODO: ERROR IS IN HERE
+	#nfft = 256
+	#nlap = 128
+	# Default values don't help...
+        specgram, freq, time = mlab.specgram(data, Fs=samp_rate, 
+                                                    NFFT=nfft, noverlap=nlap) 
+        print "2"
+    else: 
+        specgram, freq, time = mlab.specgram(data, Fs=samp_rate, 
+                                                    NFFT=nfft, noverlap=nlap) 
+
+    # db scale and remove zero/offset for amplitude 
+    if dbscale: 
+        specgram = 10 * np.log10(specgram[1:, :]) 
+    else: 
+        specgram = np.sqrt(specgram[1:, :]) 
+
+    freq = freq[1:] 
+
+    vmin, vmax = clip 
+
+    if vmin < 0 or vmax > 1 or vmin >= vmax: 
+        msg = "Invalid parameters for clip option." 
+        raise ValueError(msg) 
+
+    _range = float(specgram.max() - specgram.min()) 
+    vmin = specgram.min() + vmin * _range 
+    vmax = specgram.min() + vmax * _range 
+    norm = Normalize(vmin, vmax, clip=True) 
+
+    if not axes: 
+        fig = plt.figure() 
+        ax = fig.add_subplot(111) 
+    else: 
+        ax = axes 
+
+    # calculate half bin width 
+    halfbin_time = (time[1] - time[0]) / 2.0 
+    halfbin_freq = (freq[1] - freq[0]) / 2.0 
+
+    if log: 
+        # pcolor expects one bin more at the right end 
+        freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq])) 
+        time = np.concatenate((time, [time[-1] + 2 * halfbin_time])) 
+        # center bin 
+        time -= halfbin_time 
+        freq -= halfbin_freq 
+        # pcolormesh issue was fixed in matplotlib r5716 (2008-07-07) 
+        # inbetween tags 0.98.2 and 0.98.3 
+        # see:
+        #  - http://matplotlib.svn.sourceforge.net/viewvc/... 
+        #    matplotlib?revision=5716&view=revision 
+        #  - http://matplotlib.sourceforge.net/_static/CHANGELOG 
+
+        if MATPLOTLIB_VERSION >= [0, 98, 3]: 
+            # Log scaling for frequency values (y-axis) 
+            ax.set_yscale('log') 
+            # Plot times 
+            ax.pcolormesh(time, freq, specgram, cmap=cmap, zorder=zorder, 
+                              norm=norm) 
+        else: 
+            X, Y = np.meshgrid(time, freq) 
+            ax.pcolor(X, Y, specgram, cmap=cmap, zorder=zorder, norm=norm) 
+            ax.semilogy() 
+    else: 
+        # this method is much much faster! 
+        specgram = np.flipud(specgram) 
+        # center bin 
+        extent = (time[0] - halfbin_time, time[-1] + halfbin_time,
+                  freq[0] - halfbin_freq, freq[-1] + halfbin_freq) 
+        ax.imshow(specgram, interpolation="nearest", extent=extent, 
+                  cmap=cmap, zorder=zorder) 
+
+    # set correct way of axis, whitespace before and after with window 
+    # length 
+    ax.axis('tight') 
+    ax.set_xlim(0, end) 
+    ax.grid(False) 
+
+    if axes: 
+        return ax 
+
+    ax.set_xlabel('Time [s]') 
+    ax.set_ylabel('Frequency [Hz]') 
+    if title: 
+        ax.set_title(title)
+            
+    if not sphinx: 
+        # ignoring all NumPy warnings during plot 
+        temp = np.geterr() 
+        np.seterr(all='ignore') 
+        plt.draw() 
+        np.seterr(**temp) 
+
+    if outfile: 
+        if fmt: 
+            fig.savefig(outfile, format=fmt) 
+        else: 
+            fig.savefig(outfile) 
+    elif show: 
+        plt.show() 
+    else: 
+        return fig 
+
+
+def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
+	bgcolor='#d5de9c',griddeccolor='#316931',gridinccolor='#316931',
+	savedpi=80,legend=True,labellimit=11,legendposition="lower left",
+	figure=False,noshow=False,plottitle=None,groups=None,outfile=None,**kwargs):
+    """
+    DEFINITION:
+        Plots declination and inclination values in stereographic projection.
+        Will abort if no idff typ is provided
+        Full circles denote positive inclinations, open negative
+
+    PARAMETERS:
+    Variables:
+	- stream	(DataStream) a magpy datastream object
+    Kwargs:
+	- bgcolor:	(colour='#d5de9c') Background colour
+	- figure:	(bool) Show figure if True
+	- focus:	(str) defines the plot area. Options:
+                        all (default) - -90 to 90 deg inc, 360 deg dec
+                        q1 - first quadrant
+			q2 - first quadrant
+			q3 - first quadrant
+			q4 - first quadrant
+			data - focus on data (if angular spread is less then 10 deg
+	- gridcolor:	(str) Define grid color e.g. '0.5' greyscale, 'r' red, etc
+	- griddeccolor: (colour='#316931') Grid colour for inclination
+	- gridinccolor: (colour='#316931') Grid colour for declination
+	- groups	(KEY) - key of keylist which defines color of points
+                        (e.g. ('str2') in absolutes to select
+                        different colors for different instruments 
+	- legend:	(bool) - draws legend only if groups is given - default True
+	- legendposition:
+			(str) - draws the legend at chosen position,
+			(e.g. "upper right", "lower center") - default is "lower left" 
+	- labellimit:	(int)- maximum length of label in legend
+	- noshow:	(bool) If True, will not call show at the end,
+	- outfile:	(str) to save the figure, if path is not existing it will be created
+	- savedpi:	(int) resolution
+	- plottitle:	(str) Title at top of plot
+                
+    REQUIRES:
+	- package operator for color selection
+
+    RETURNS:
+        - plot: 	(matplotlib plot) The stereoplot.
+
+            ToDo:
+                - add alpha 95 calc
+
+    EXAMPLE:
+	>>> stream.stereoplot(focus='data',groups='str2')
+
+    APPLICATION:
+	>>> 
+    """
+
+    loggerplot.info('plotStereoplot: Starting plot of stereoplot.')
+
+    if not stream[0].typ == 'idff':
+        loggerplot.error('plotStereoplot: idf data required for stereoplot.')
+        raise Exception("Idf data required for plotting a stereoplot!")
+
+    inc = stream._get_column('x')
+    dec = stream._get_column('y')
+
+    col = ['']
+    if groups:
+        sel = stream._get_column(groups)
+        col = list(set(list(sel)))
+        if len(col) > 7:
+            col = col[:7]
+
+    if not len(dec) == len(inc):
+        loggerplot.error('plotStereoplot: Check input file - unequal inc and dec data?')
+        return
+
+    if not figure:
+        fig = plt.figure()
+    else:
+        fig = figure
+    ax = plt.gca()
+    ax.cla() # clear things for fresh plot
+    ax.set_aspect('equal')
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    # Define coordinates:
+    basic1=plt.Circle((0,0),90,color=bgcolor,fill=True)
+    basic1a=plt.Circle((0,0),90,color=gridinccolor,fill=False)
+    basic2=plt.Circle((0,0),30,color=gridinccolor,fill=False,linestyle='dotted')
+    basic3=plt.Circle((0,0),60,color=gridinccolor,fill=False,linestyle='dotted')
+    basic4=plt.Line2D([0,0],[-90,90],color=griddeccolor,linestyle='dashed')
+    basic5=plt.Line2D([-90,90],[0,0],color=griddeccolor,linestyle='dashed')
+    fig.gca().add_artist(basic1)
+    fig.gca().add_artist(basic1a)
+    fig.gca().add_artist(basic2)
+    fig.gca().add_artist(basic3)
+    fig.gca().add_artist(basic4)
+    fig.gca().add_artist(basic5)
+    for j in range(len(col)):
+        color = colorlist[j]
+
+        xpos,ypos,xneg,yneg,xabs,y = [],[],[],[],[],[]
+        for i,el in enumerate(inc):
+            if groups:
+                if sel[i] == col[j]:
+                    coinc = 90-np.abs(el)
+                    sindec = np.sin(np.pi/180*dec[i])
+                    cosdec = np.cos(np.pi/180*dec[i])
+                    xabs.append(coinc*sindec)
+                    y.append(coinc*cosdec)
+                    if el < 0:
+                        xneg.append(coinc*sindec)
+                        yneg.append(coinc*cosdec)
+                    else:
+                        xpos.append(coinc*sindec)
+                        ypos.append(coinc*cosdec)
+            else:
+                coinc = 90-np.abs(el)
+                sindec = np.sin(np.pi/180*dec[i])
+                cosdec = np.cos(np.pi/180*dec[i])
+                xabs.append(coinc*sindec)
+                y.append(coinc*cosdec)
+                if el < 0:
+                    xneg.append(coinc*sindec)
+                    yneg.append(coinc*cosdec)
+                else:
+                    xpos.append(coinc*sindec)
+                    ypos.append(coinc*cosdec)
+                   
+        xmax = np.ceil(max(xabs))
+        xmin = np.floor(min(xabs))
+        xdif = xmax-xmin 
+        ymax = np.ceil(max(y))
+        ymin = np.floor(min(y))
+        ydif = ymax-ymin
+        maxdif = max([xdif,ydif])
+        mindec = np.floor(min(dec))
+        maxdec = np.ceil(max(dec)) 
+        mininc = np.floor(min(np.abs(inc)))
+        maxinc = np.ceil(max(np.abs(inc))) 
+
+        if focus == 'data' and maxdif <= 10:
+            # decs
+            startdec = mindec
+            decline,inclst = [],[]
+            startinc = mininc
+            incline = []
+            while startdec <= maxdec:
+                xl = 90*np.sin(np.pi/180*startdec)
+                yl = 90*np.cos(np.pi/180*startdec)
+                decline.append([xl,yl,startdec])
+                startdec = startdec+1
+            while startinc <= maxinc:
+                inclst.append(90-np.abs(startinc))
+                startinc = startinc+1
+
+        if focus == 'all':
+            ax.set_xlim((-90,90))
+            ax.set_ylim((-90,90))
+        if focus == 'q1':
+            ax.set_xlim((0,90))
+            ax.set_ylim((0,90))
+        if focus == 'q2':
+            ax.set_xlim((-90,0))
+            ax.set_ylim((0,90))
+        if focus == 'q3':
+            ax.set_xlim((-90,0))
+            ax.set_ylim((-90,0))
+        if focus == 'q4':
+            ax.set_xlim((0,90))
+            ax.set_ylim((-90,0))
+        if focus == 'data':
+            ax.set_xlim((xmin,xmax))
+            ax.set_ylim((ymin,ymax))
+            #ax.annotate('Test', xy=(1.2, 25.2))
+        ax.plot(xpos,ypos,'o',color=color, label=col[j][:labellimit])
+        ax.plot(xneg,yneg,'o',color='white')
+        ax.annotate('60', xy=(0, 30))
+        ax.annotate('30', xy=(0, 60))
+        ax.annotate('0', xy=(0, 90))
+        ax.annotate('90', xy=(90, 0))
+        ax.annotate('180', xy=(0, -90))
+        ax.annotate('270', xy=(-90, 0))
+
+    if focus == 'data' and maxdif <= 10:
+        for elem in decline:
+            pline = plt.Line2D([0,elem[0]],[0,elem[1]],color=griddeccolor,linestyle='dotted')
+            xa = elem[0]/elem[1]*((ymax - ymin)/2+ymin)
+            ya = (ymax - ymin)/2 + ymin
+            annotext = "D:%i" % int(elem[2]) 
+            ax.annotate(annotext, xy=(xa,ya))
+            fig.gca().add_artist(pline)
+        for elem in inclst:
+            pcirc = plt.Circle((0,0),elem,color=gridinccolor,fill=False,linestyle='dotted')
+            xa = (xmax-xmin)/2 + xmin
+            ya = sqrt((elem*elem)-(xa*xa))
+            annotext = "I:%i" % int(90-elem) 
+            ax.annotate(annotext, xy=(xa,ya))
+            fig.gca().add_artist(pcirc)
+
+    if groups and legend: 
+        handles, labels = ax.get_legend_handles_labels()
+        hl = sorted(zip(handles, labels),key=operator.itemgetter(1))
+        handles2, labels2 = zip(*hl)
+        ax.legend(handles2, labels2, loc=legendposition)
+
+    if plottitle:
+        ax.set_title(plottitle)
+            
+    # SAVE TO FILE (or show)
+    if figure:
+        return ax
+
+    if outfile:
+        path = os.path.split(outfile)[0]
+        if not path == '': 
+            if not os.path.exists(path):
+                os.makedirs(path)
+        if fmt: 
+            fig.savefig(outfile, format=fmt, dpi=savedpi) 
+        else: 
+            fig.savefig(outfile, dpi=savedpi) 
+    elif noshow:
+        return fig
+    else: 
+        plt.show()
+
+
 def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
-	labelcolor='0.2',confinex=False,outfile=None,
-	fmt=None,plottype='discontinuous',**kwargs):
+	labelcolor='0.2',confinex=False,outfile=None,includeid=False,
+	stormanno_s=True,stormanno_m=True,stormanno_r=True,
+	fmt=None,plottype='discontinuous'):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
-    DICTIONARY OF EVERY SUBPLOT:
+    DICTIONARY STRUCTURE FOR EVERY SUBPLOT:
     [ { ***REQUIRED***
 	'tdata' : t		(np.ndarray) Time
 	'ydata' : y		(np.ndarray) Data y(t)
@@ -378,13 +1134,13 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	'color' : 'b'		(str)	   Colour of plotted line
 	'ylabel': 'F [nt]'	(str)	   Label on y-axis
 	'annotate': False	(bool)	   If this is True, must have 'flags' key
+        'sensorid': 'LEMI025'	(str) 	   String pulled from header data. If available,
+				will be plotted alongside data for clarity.
 
 	OPTIONAL:
 	'errorbars': eb		(np.ndarray) Errorbars to plot in subplot	
 	'flags' : flags		(np.ndarray) Flags to add into subplot.
 				Note: must be 2-dimensional, flags & comments.
-        'includeid': LEMI025	(str) String pulled from header data. If available,
-				will be plotted alongside data for clarity.
 	'function': fn		(function object) Plot a function within the subplot.
 	} ,
 
@@ -417,18 +1173,18 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
         symbol = data[i]['symbol']
 
         # Deal with discontinuities:
-        # TODO : how to deal with this?
-        '''
+        # TODO : does this work?
+
         if plottype == 'discontinuous':
-            y = self._maskNAN(y)
+            y = _maskNan(y)
         else: 
-            nans, test = self._nan_helper(y)
+            nans, test = _nanHelper(y)
             newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
             t = newt
             y = [el for idx, el in enumerate(y) if not nans[idx]]
-        '''
 
         # CREATE SUBPLOT OBJECT & ADD TITLE:
+        loggerplot.info("_plot: Adding subplot for key %s..." % data[i]['ylabel'])
         if i == 0:
             ax = fig.add_subplot(subplt, axisbg=bgcolor)
             if plottitle:
@@ -444,13 +1200,17 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
             for num in range(len(t)):
                 if bartrange < t[num] < np.max(t)-bartrange:
                     ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
-				bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],
-				facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
+				bartrange],[0,0,y[num]+0.1,y[num]+0.1],
+				facecolor=cm.RdYlGn((9-y[num])/9.,1),alpha=1,edgecolor='k')
             ax.plot_date(t,y,color+'|')
 
         # --> Otherwise plot as normal:
         else:
             ax.plot_date(t,y,color+symbol)
+
+        # DEFINE MIN AND MAX ON Y-AXIS:
+        ymin = data[i]['ymin']
+        ymax = data[i]['ymax']
 
         # PLOT ERROR BARS (if available):
         if 'errors' in data[i]:
@@ -481,19 +1241,68 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
             if fkey in function[0]:
 		# --> Get the minimum and maximum relative times
                 ttmp = arange(0,1,0.0001)
-                ax.plot_date(self._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+                ax.plot_date(stream._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+
+        # PLOT SHADED AND ANNOTATED STORM PHASES:
+        if 'stormphases' in data[i]:
+            timespan = num2date(t[-1]) - num2date(t[0])
+            y_pos = 0.9 # have at height 90% of total plot, x_pos(n)=1-(1-y_pos)*n
+            y_anno = ymin + (1-(1-y_pos)*n_subplots)*(ymax-ymin)
+            t_phases = data[i]['stormphases']
+            if 'ssc' and 'mphase' in t_phases:
+                t_ssc = t_phases['ssc']
+                t_mphase = t_phases['mphase']
+                ax.axvspan(t_ssc, t_mphase, facecolor='red', alpha=0.3, linewidth=0)
+                if stormanno_s: # requirement so that only one plot is annotated
+                    x_anno = t_ssc-timedelta(seconds=(timespan.seconds*0.1))
+                    t_ssc_stream, idx_ssc = find_nearest(t, date2num(t_ssc))
+                    y_ssc = y[idx_ssc]
+                    ax.annotate('SSC', xy=(t_ssc,y_ssc), 
+				xytext=(x_anno,y_anno),
+				bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
+				arrowprops=dict(arrowstyle="->",
+				shrinkA=0, shrinkB=1,
+				connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                    stormanno_s = False
+            if 'mphase' and 'rphase' in t_phases:
+                t_mphase = t_phases['mphase']
+                t_rphase = t_phases['rphase']
+        	ax.axvspan(t_mphase, t_rphase, facecolor='yellow', alpha=0.3, linewidth=0)
+                if stormanno_m:
+                    x_anno = t_mphase+timedelta(seconds=(timespan.seconds*0.03))
+                    t_mphase_stream, idx_mphase = find_nearest(t, date2num(t_mphase))
+                    y_mphase = y[idx_mphase]
+                    ax.annotate('Main\nPhase', xy=(t_mphase,y_mphase), 
+				xytext=(x_anno,y_anno),
+				bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
+                    stormanno_m = False
+            if 'rphase' and 'stormend' in t_phases:
+                t_rphase = t_phases['rphase']
+                t_stormend = t_phases['stormend']
+        	ax.axvspan(t_rphase, t_stormend, facecolor='green', alpha=0.3, linewidth=0)
+                if stormanno_r:
+                    x_anno = t_rphase+timedelta(seconds=(timespan.seconds*0.03))
+                    t_rphase_stream, idx_rphase = find_nearest(t, date2num(t_rphase))
+                    y_rphase = y[idx_rphase]
+                    ax.annotate('Recovery\nPhase', xy=(t_rphase,y_rphase),
+				xytext=(x_anno,y_anno),
+				bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
+                    stormanno_r = False
 
 	#------------------------------------------------------------
 	# PART 2: Formatting the plot
 	#------------------------------------------------------------
 
         # ADD SENSOR IDS TO DATA PLOTS:
-	if 'includeid' in data[i]:
-            sensorid = data[i]['includeid']
-            ydistance = [10,13,15,15,15,15,15,15]
-            ax.annotate(sensorid, xy=(10, ydistance[n_subplots-1]),
-                xycoords='axes points',
-                horizontalalignment='left', verticalalignment='top')
+	if includeid:
+            sensorid = data[i]['sensorid']
+            if sensorid == '':
+                loggerplot.warning("plot: SensorID for stream #%s does not exist. Cannot plot." % str(i+1))
+            else:
+                ydistance = [10,13,15,15,15,15,15,15]
+                ax.annotate(sensorid, xy=(10, ydistance[n_subplots-1]),
+            	    xycoords='axes points',
+            	    horizontalalignment='left', verticalalignment='top')
 
         # ADD GRID:
         if grid:
@@ -517,13 +1326,9 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
             ax.yaxis.tick_right()
             ax.yaxis.set_label_position("right")
 
-        # DEFINE MIN AND MAX ON Y-AXIS:
-        ymin = data[i]['ymin']
-        ymax = data[i]['ymax']
-        ax.set_ylim(ymin,ymax)
-
         # APPLY FORMATTERS:
         label = data[i]['ylabel']
+        ax.set_ylim(ymin,ymax)
         ax.set_ylabel(label, color=labelcolor)
         ax.get_yaxis().set_major_formatter(plt_fmt)
 
@@ -554,6 +1359,10 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 
 
 def _confinex(ax, tmax, tmin, timeunit):
+    """
+    Automatically determines t-range so that the x-axis is easier
+    on the eye.
+    """
 
     trange = tmax - tmin
     loggerstream.debug('plot: x range = %s' % str(trange))
@@ -598,94 +1407,252 @@ def _confinex(ax, tmax, tmin, timeunit):
         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
         timeunit = '[Year]'
 
-# TODO: This part of plot still needs to be added into new _plot.
-'''
+def _nanHelper(y):
+    """
+    Helper to handle indices and logical indices of NaNs. 
+    Taken from eat (http://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array)
 
-    def plot(self, keys, debugmode=None, **kwargs):
-
-
-		# -- Shade in areas of storm phases:
-                if plotphases:
-                    if not stormphases:
-                        loggerstream.warning('plot: Need phase definition times in "stormphases" list variable.')
-		    if len(stormphases) < 4:
-		        loggerstream.warning('plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
-                    else:
-                        t_ssc = stormphases[0]
-                        t_mphase = stormphases[1]
-                        t_recphase = stormphases[2]
-                        t_end = stormphases[3]
-
-                    if key in plotphases:
-                        try: 
-                            ax.axvspan(t_ssc, t_mphase, facecolor='red', alpha=0.3, linewidth=0)
-        		    ax.axvspan(t_mphase, t_recphase, facecolor='yellow', alpha=0.3, linewidth=0)
-        		    ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
-		        except:
-                            loggerstream.error('plot: Error plotting shaded phase regions.')
-
-		# -- Plot phase types with shaded regions:
-
-                if not annoxy:
-                    annoxy = {}
-                if annophases:
-                    if not stormphases:
-                        loggerstream.debug('Plot: Need phase definition times in "stormphases" variable to plot phases.')
-		    if len(stormphases) < 4:
-                        loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required, %s given.' % len(stormphases))
-                    else:
-                        t_ssc = stormphases[0]
-                        t_mphase = stormphases[1]
-                        t_recphase = stormphases[2]
-                        t_end = stormphases[3]
-
-		    if key == plotphases[0]:
-                        try: 
-                            y_auto = [0.85, 0.75, 0.70, 0.6, 0.5, 0.5, 0.5] 
-                            y_anno = ymin + y_auto[len(keys)-1]*(ymax-ymin)
-                            tssc_anno, issc_anno = self._find_nearest(np.asarray(t), date2num(t_ssc))
-                            yt_ssc = yplt[issc_anno]
-		            if 'sscx' in annoxy:	# parameters for SSC annotation.
-                                x_ssc = annoxy['sscx']
-                            else:
-                                x_ssc = t_ssc-timedelta(hours=2)
-		            if 'sscy' in annoxy:
-                                y_ssc = ymin + annoxy['sscy']*(ymax-ymin)
-                            else:
-                                y_ssc = y_anno
-		            if 'mphx' in annoxy:	# parameters for main-phase annotation.
-                                x_mph = annoxy['mphx']
-                            else:
-                                x_mph = t_mphase+timedelta(hours=1.5)
-		            if 'mphy' in annoxy:
-                                y_mph = ymin + annoxy['mphy']*(ymax-ymin)
-                            else:
-                                y_mph = y_anno
-		            if 'recx' in annoxy:	# parameters for recovery-phase annotation.
-                                x_rec = annoxy['recx']
-                            else:
-                                x_rec = t_recphase+timedelta(hours=1.5)
-		            if 'recy' in annoxy:
-                                y_rec = ymin + annoxy['recy']*(ymax-ymin)
-                            else:
-                                y_rec = y_anno
-
-                            if not yt_ssc > 0.:
-                                loggerstream.debug('plot: No data value at point of SSC.')
-                            ax.annotate('SSC', xy=(t_ssc,yt_ssc), 
-					xytext=(x_ssc,y_ssc),
-					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
-					arrowprops=dict(arrowstyle="->",
-					shrinkA=0, shrinkB=1,
-					connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                            ax.annotate('Main\nPhase', xy=(t_mphase,y_mph), xytext=(x_mph,y_mph),
-					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
-                            ax.annotate('Recovery\nPhase', xy=(t_recphase,y_rec),xytext=(x_rec,y_rec),
-					bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
-                        except: 
-                            loggerstream.error('Plot: Error annotating shaded phase regions.')
-                  
+    Input:
+            - y, 1d numpy array with possible NaNs
+    Output:
+            - nans, logical indices of NaNs
+            - index, a function, with signature indices= index(logical_indices),
+              to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+            >>> # linear interpolation of NaNs
+            >>> nans, x= _nanHelper(y)
+            >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+    return np.isnan(y), lambda z: z.nonzero()[0]
 
 
+def _maskNan(y):
+    """
+    Tests for NAN values in column and usually masks them.
+    """
+        
+    try: # Test for the presence of nan values
+        val = np.mean(y)
+        numdat = True
+        if isnan(val): # found at least one nan value
+            for el in y:
+                if not isnan(el): # at least on number is present - use masked_array
+                    num_found = True
+            if num_found:
+                mcolumn = np.ma.masked_invalid(y)
+                numdat = True
+                y = mcolumn
+            else:
+                numdat = False
+                loggerstream.warning("_plot: Only nan in column.")
+                return []
+    except:
+        numdat = False
+        loggerplot.warning("_plot: Only nan in column.")
+        return []
 
-'''
+    return y
+
+def _nearestPower2(x): 
+    """
+        Function taken from ObsPy nearestPow2
+        Find power of two nearest to x 
+        >>> _nearestPow2(3) 
+        2.0 
+        >>> _nearestPow2(15) 
+        16.0 
+        :type x: Float 
+        :param x: Number 
+        :rtype: Int 
+        :return: Nearest power of 2 to x 
+    """ 
+
+    a = pow(2, ceil(np.log2(x))) 
+    b = pow(2, floor(np.log2(x))) 
+    if abs(a - x) < abs(b - x): 
+        return a 
+    else: 
+        return b 
+
+
+if __name__ == '__main__':
+
+    print
+    print "----------------------------------------------------------"
+    print "TESTING: PLOTTING PACKAGE"
+    print "All plotting methods will be tested. This may take a while."
+    print "A summary will be presented at the end. Any protocols"
+    print "or functions with errors will be listed."
+    print
+    print "NOTE: This test requires graphical user interface"
+    print "confirmation of package integrity for the majority of"
+    print "functions. The plot titles specify what should be present"
+    print "in the plot for it to have plotted successfully."
+    print "    So get comfy and have a good look."
+    print "----------------------------------------------------------"
+    print
+    '''
+    print "Please enter path of a variometer data file for testing:"
+    print "(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)"
+    while True:
+        filepath = raw_input("> ")
+        if os.path.exists(filepath):
+            break
+        else:
+            print "Sorry, that file doesn't exist. Try again."
+    print 
+    '''
+    filepath = '/home/rachel/cobs/20140403_tractor_analysis/FGE_S0252_0001_0001_2014-04-03.cdf'
+        
+    now = datetime.utcnow()
+    testrun = 'plottest_'+datetime.strftime(now,'%Y%m%d-%H%M')
+    t_start_test = time.time()
+    errors = {}
+
+    print datetime.utcnow(), "- Starting plot package test. This run: %s." % testrun
+
+    while True:
+
+        # Step 1 - Read data
+        try:
+            teststream = read(filepath)
+            print datetime.utcnow(), "- Stream read in successfully."
+        except Exception as excep:
+            errors['read'] = str(excep)
+            print datetime.utcnow(), "--- ERROR reading stream. Aborting test."
+            break
+        
+        # Step 2 - Pick standard key for all other plots
+        try:
+            keys = teststream._get_key_headers()
+            key = [keys[0]]
+            key2 = [keys[0], keys[1]]
+            print datetime.utcnow(), "- Using %s key for all subsequent plots." % key[0]
+        except Exception as excep:
+            errors['_get_key_headers'] = str(excep)
+            print datetime.utcnow(), "--- ERROR getting default keys. Aborting test."
+            break
+        '''
+        # Step 3 - Simple single plot with ploteasy
+        try:
+            ploteasy(teststream)
+            print datetime.utcnow(), "- Plotted using ploteasy function."
+        except Exception as excep:
+            errors['ploteasy'] = str(excep)
+            print datetime.utcnow(), "--- ERROR with ploteasy function. Aborting test."
+            break
+        
+        # Step 4 - Standard plot
+        try:
+            plot_new(teststream,key,
+			plottitle = "Simple plot of %s" % key[0])
+            print datetime.utcnow(), "- Plotted standard plot."
+        except Exception as excep:
+            errors['plot-vanilla'] = str(excep)
+            print datetime.utcnow(), "--- ERROR with standard plot. Aborting test."
+            break
+        
+        # Step 5 - Multiple streams
+        streamlist = 	[teststream, 	teststream	]
+        variables =	[key,		key2		]
+        try:
+            plotStreams(streamlist, variables,
+			plottitle = "Multiple streams: Three bars, top two should look the same.")
+            print datetime.utcnow(), "- Plotted multiple streams."
+        except Exception as excep:
+            errors['plotStreams-vanilla'] = str(excep)
+            print datetime.utcnow(), "--- ERROR with plotting mutiple streams. Aborting test."
+            break
+
+        # Step 6 - Flagged plot
+        # ...
+
+        # Step 7a - Plot with phases (single)
+        t_start, t_end = teststream._find_t_limits()
+        timespan = t_end - t_start
+        t_stormphases = {}
+        t_stormphases['ssc'] = t_start + timedelta(seconds=(timespan.seconds*0.2))
+        t_stormphases['mphase'] = t_start + timedelta(seconds=(timespan.seconds*0.4))
+        t_stormphases['rphase'] = t_start + timedelta(seconds=(timespan.seconds*0.6))
+        t_stormphases['stormend'] = t_start + timedelta(seconds=(timespan.seconds*0.8))
+
+        try:
+            plot_new(teststream,key,
+                        stormphases = True,
+                        t_stormphases = t_stormphases,
+			plottitle = "Single plot showing all THREE storm phases, annotated")
+            print datetime.utcnow(), "- Plotted annotated single plot of storm phases."
+        except Exception as excep:
+            errors['plot-stormphases'] = str(excep)
+            print datetime.utcnow(), "--- ERROR with storm phases plot."
+
+        # Step 7b - Plot with phases (multiple)
+        try:
+            stormphases = [ [True], [True, True] ]
+            plotStreams(streamlist,variables,
+                        stormphases = stormphases,
+                        t_stormphases = t_stormphases,
+			plottitle = "Multiple plot showing all THREE storm phases, annotated")
+            print datetime.utcnow(), "- Plotted annotated multiple plot of storm phases."
+        except Exception as excep:
+            errors['plotStreams-stormphases'] = str(excep)
+            print datetime.utcnow(), "--- ERROR with storm phases multiple plot."
+        
+        # Step 8 - Plot power spectrum
+        try:
+            freqm, asdm = plotPS(teststream,key[0],
+			returndata=True,
+			marks={'Look here!':0.0001, '...and here!':0.01},
+			plottitle = "Simple power spectrum plot with two marks")
+            print datetime.utcnow(), "- Plotted power spectrum. Max frequency is at %s." % max(freqm)
+        except Exception as excep:
+            errors['plotPS'] = str(excep)
+            print datetime.utcnow(), "--- ERROR plotting power spectrum."
+        '''
+        # Step 9 - Plot normal spectrogram
+        #try:
+        #teststream.spectrogram(key2)
+        plotSpectrogram(teststream,key2,
+			plottitle = "Spectrogram of two keys")
+        #    print datetime.utcnow(), "- Plotted spectrogram."
+        #except Exception as excep:
+        #    errors['plotSpectrogram'] = str(excep)
+        #    print datetime.utcnow(), "--- ERROR plotting spectrogram."
+
+        # Step 10 - Plot normal stereoplot
+	# (This should stay as last step due to coordinate conversion.)
+        try:
+            teststream._convertstream('xyz2idf')
+            plotStereoplot(teststream,
+			plottitle="Standard stereoplot")
+            print datetime.utcnow(), "- Plotted stereoplot."
+        except Exception as excep:
+            errors['plotStereoplot'] = str(excep)
+            print datetime.utcnow(), "--- ERROR plotting stereoplot."
+
+        # If end of routine is reached... break.
+        break
+
+    t_end_test = time.time()
+    time_taken = t_end_test - t_start_test
+    print datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken
+
+    print
+    print "----------------------------------------------------------"
+    if errors == {}:
+        print "0 errors! Great! :)"
+    else:
+        print len(errors), "errors were found in the following functions:"
+        print str(errors.keys())
+        print "Would you like to print the exceptions thrown?"
+        excep_answer = raw_input("(Y/n) > ")
+        if excep_answer.lower() == 'y':
+            i = 0
+            for item in errors:
+                print errors.keys()[i] + " error string:"
+                print "    " + errors[errors.keys()[i]]
+                i += 1
+    print
+    print "Good-bye!"
+    print "----------------------------------------------------------"
+

@@ -1,23 +1,179 @@
+'''
+Path:			magpy.acquisition.pos1protocol
+Part of package:	acquisition
+Type:			Acquisition protocol, part of data acquisition library
+
+PURPOSE:
+	This contains everything needed to get a Russian POS-1 magnetometer
+	up and running and saving + sending data.
+
+CONTAINS:
+	*Pos1Protocol:	(Class - twisted.protocols.basic.LineReceiver)
+			Class for handling data acquisition of POS-1 magnetometer.
+			Includes internal class functions: processPos1Data
+	_timeToArray:	(Func) ... utility function for Pos1Protocol.
+	_dataToFile:	(Func) ... utility function for Pos1Protocol.
+	startPOS1:	(Func) Starts POS-1 magnetometer and acquisition.
+			Note: REQUIRED for data acquisition.
+	_hexifyCommand:	(Func) ... utility function for startPOS1.
+	_serReadline:	(Func) ... utility function for startPOS1.
+
+DEPENDENCIES:
+	twisted, autobahn
+
+CALLED BY:
+	magpy.bin.acquisition
+'''
+
 import sys, time, os, socket
 import struct, binascii, re
+from binascii import hexlify
 from datetime import datetime, timedelta
 
 from twisted.protocols.basic import LineReceiver
-from autobahn.wamp import exportRpc
-
 from twisted.internet import reactor
-
 from twisted.python import usage, log
 from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
 from autobahn.websocket import listenWS
+from autobahn.wamp import exportRpc
 from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
 
-def timeToArray(timestring):
-    # Converts time string of format 2013-12-12T23:12:23.122324
-    # to an array similiat to a datetime object
+def startPOS1(port,commands):
+    '''
+    DEFINITION:
+    Call this function to initiate POS-1 measurements.
+    NOTE: Measurements will not start automatically with power supply.
+    THIS FUNCTION IS REQUIRED TO START MEASUREMENTS.
+
+    PARAMETERS:
+    Variables:
+        - port: 	(str) Port of POS-1 magnetometer, e.g. '/dev/ttyS1'
+	- commands:	(list) List of commands to send to POS-1.
+			Standard for startup:
+    			commands = ['mode text','time ' + timestr,'date ' + datestr,'auto 5']
+
+    RETURNS:
+        - None
+
+    EXAMPLE:
+        >>> 
+
+    APPLICATION:
+        >>> 
+
+    COMMAND DICTIONARY:
+	Note: these commands must usually be entered in the order shown here.
+	For responses to be read out, "mode text" must be called as the first command.
+	command_dict = {
+    'ENQ': 'gives information about the connected equipment',
+    'NAK': 'the previous answer is repeated',
+    'about': 'brief information about the manufacturer is given',
+    'standby on/off': 'sets lowered power consumption on/off',
+    'mode text/binary': 'determines form of data output',
+    'time': 'gives current internal time in hh:mm:ss',
+    'time hh:mm:ss': 'establishes an internal time counter',
+    'date': 'gives current internal date in mm-dd-yy',
+    'date mm-dd-yy': 'establishes the internal current date',
+    'range': 'gives the current measured range in nT',
+    'range CENTER': 'defines the centre of the working range',
+    'run': 'starts measurement of a magnetic field',
+    'auto PRM': 'set the automatic measurement mode, PRM is period (1-86400)',
+    	}
+
+    ERROR DICTIONARIES:
+    An error code is always made up of two digits. Errors1 describes
+    the first digit, Errors2 the second digit.
+	Errors1 = {
+    '1': 'out of range',
+    '2': 'No signal',
+    '3': 'No signal & out of range',
+    '4': 'Low power',
+    '5': 'Low power & out of range',
+    '6': 'Low power & no signal',
+    '7': 'Low power & no signal & out of range',
+    '8': 'No errors'
+	}
+
+	Errors2 = {
+    '0': 'No warnings',
+    '1': 'Diapason error',
+    '2': 'Short time',
+    '3': 'Diapason error & short time',
+    '4': 'Low S/N ratio',
+    '5': 'Low S/N & diapason error',
+    '6': 'Low S/N & short time',
+    '7': 'Low S/N & short time & diapason error'
+	}
+    '''
+
+    # Specify parameters:
+    eol = '\x00'
+    currenttime = datetime.utcnow()
+    datestr = str(datetime.strftime(currenttime,'%m-%d-%y'))
+    timestr = str(datetime.strftime(currenttime,'%H:%M:%S'))
+
+    # Initiation commands:
+    # NOTE: These only have to be called once to initiate the device.
+    # Once called, the device will continue to read unless interrupted.
+    try:
+        pos_ser = serial.Serial(port, baudrate=9600, parity='N', bytesize=8, stopbits=1)
+        print 'Connection to POS-1 made.'
+    except: 
+        print 'Connection to POS-1 flopped.'
+    print ''
+
+    # Send commands and read output from serial device:
+    print 'Parameters entered:'
+    for item in commands:
+        command_hex = _hexifyCommand(item,eol)
+        print 'Command:  ', command
+        ser.write(command_hex)
+        response = _serReadline(pos_ser,eol)
+        print 'Response: ', response
+    print ''
+
+
+def _hexifyCommand(command,eol):
+    '''
+    This function translates the command text string into a hex
+    string that the serial device can read. 'eol' is the 
+    end-of-line character, '\x00' for the POS-1 magnetometer.
+    '''
+
+    commandstr = []
+    for character in command:
+        hexch = binascii.hexlify(character)
+        commandstr.append(('\\x' + hexch).decode('string_escape'))
+
+    command_hex = ''.join(commandstr) + (eol)
+
+    return command_hex
+
+
+def _serReadline(ser,eol):
+    '''
+    Useful little function for reading lines from a serial port
+    with non-standard end-of-line characters ('\x00').
+    '''
+
+    ser_str = ''
+    while True:
+        char = ser.read()
+        if char == eol:
+            break
+        ser_str += char
+    return ser_str
+
+
+def _timeToArray(timestring):
+    '''
+    Converts time string of format 2013-12-12T23:12:23.122324
+    to an array similiar to a datetime object
+    '''
+
     try:
         splittedfull = timestring.split(' ')
         splittedday = splittedfull[0].split('-')
@@ -31,7 +187,8 @@ def timeToArray(timestring):
         log.msg('Error while extracting time array')
         return []
 
-def dataToFile(outputdir, sensorid, filedate, bindata, header):
+
+def _dataToFile(outputdir, sensorid, filedate, bindata, header):
     # File Operations
     try:
         hostname = socket.gethostname()
@@ -120,8 +277,8 @@ class Pos1Protocol(LineReceiver):
             err_code = 0.0
         try:
             # extract time data
-            datearray = timeToArray(timestamp)
-            gpsarray = timeToArray(gps_time)
+            datearray = _timeToArray(timestamp)
+            gpsarray = _timeToArray(gps_time)
             try:
                 datearray.append(int(intensity*1000))
                 datearray.append(int(sigma_int*1000))

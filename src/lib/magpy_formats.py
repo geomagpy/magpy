@@ -1,13 +1,45 @@
-"""
-MagPy
-GSM 19 input filter
-Written by Roman Leonhardt June 2012
-- contains test and read function, toDo: write function
-"""
+'''
+Path:			magpy.lib.magpy_formats
+Part of package:	stream (read/write)
+Type:			Input tester, call to read library
 
+PURPOSE:
+	Tests which format a file has using the read library.
+
+CONTAINS:
+        isFormat:	(Func) Runs through datatypes in library to find fitting type.
+	readFormat:	(Func) When format is found, reads data file into DataStream.
+	writeFormat:	(Func) Writes DataStream object to given format.
+
+DEPENDENCIES:
+	magpy.lib...
+		.format_gsm19
+		.format_didd
+		.format_gdas
+		.format_lemi
+		.format_pos1
+		.format_env05
+		.format_cr800
+		.format_iaga02
+		.format_wdc
+		.format_magpy
+		.format_noaa
+		.format_latex
+		.format_wik
+		.format_wic
+		.format_sfs
+		.format_bdv
+		.format_dtu
+		.format_gfz
+		.format_imf
+
+CALLED BY:
+	magpy.stream._read()
+'''
 
 from stream import *
-# instrument specific
+
+# IMPORT INSTRUMENT SPECIFIC DATA FORMATS:
 from lib.format_gsm19 import *
 from lib.format_didd import *
 from lib.format_gdas import *
@@ -15,13 +47,15 @@ from lib.format_lemi import *
 from lib.format_pos1 import *
 from lib.format_env05 import *
 from lib.format_cr800 import *
-# general purpose
+
+# IMPORT GENERAL PURPOSE FORMATS:
 from lib.format_iaga02 import *
 from lib.format_wdc import *
 from lib.format_magpy import *
 from lib.format_noaa import *
 from lib.format_latex import *
-# observatory/group specific
+
+# IMPORT OBSERVATORY/GROUP SPECIFIC FORMATS:
 from lib.format_wik import *
 from lib.format_wic import *
 from lib.format_sfs import *
@@ -34,9 +68,6 @@ try:
     from lib.format_autodif_fread import *
 except:
     logging.warning("magpy-formats: Format package autodif-F not available")
-#try:
-#except:
-#    logging.warning("magpy-formats: Format package intermagnet not available")
 
 
 def isFormat(filename, format_type):
@@ -100,8 +131,8 @@ def isFormat(filename, format_type):
     elif (format_type == "LEMIBIN"): # Binary Lemi data (10 Hz)
         if (isLEMIBIN(filename)):
             return True
-    elif (format_type == "LEMIBIN2"): # Binary Lemi data (10 Hz)
-        if (isLEMIBIN2(filename)):
+    elif (format_type == "LEMIBIN1"): # Binary Lemi data (10 Hz)
+        if (isLEMIBIN1(filename)):
             return True
     elif (format_type == "POS1"): # Binary POS1 data (0.2 Hz)
         if (isPOS1(filename)):
@@ -179,8 +210,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readLEMIHF(filename, headonly, **kwargs)
     elif (format_type == "LEMIBIN"):
         return readLEMIBIN(filename, headonly, **kwargs)
-    elif (format_type == "LEMIBIN2"):
-        return readLEMIBIN2(filename, headonly, **kwargs)
+    elif (format_type == "LEMIBIN1"):
+        return readLEMIBIN1(filename, headonly, **kwargs)
     elif (format_type == "POS1"):
         return readPOS1(filename, headonly, **kwargs)
     elif (format_type == "POS1TXT"):

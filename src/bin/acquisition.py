@@ -1,3 +1,37 @@
+'''
+Path:			magpy.bin.acquisition
+Part of package:	acquisition
+Type:			Top-level data acquisition script
+
+PURPOSE:
+	This script:
+	    1) Reads in available sensors from ~/sensors.txt.
+	    2) Sets up internal webserver through autobahn software-
+	    3) Initiates protocols for data acquisition of available
+		sensors.
+	    4) Starts twisted logging system.
+
+CONTAINS:
+	*WsMcuProtocol:	(Class - autobahn.wamp.WampServerProtocol)
+			Server factory for Wamp RPC/PubSub.
+	*WsMcuFactory:	(Class - autobahn.wamp.WampServerFactory)
+			... hand-in-hand with WsMcuProtocol.
+
+DEPENDENCIES:
+	magpy.acquisition...
+		.lemiprotocol		LEMI025/LEMI036 Variometers
+		.pos1protocol		POS-1 magnetometer
+		.csprotocol		G823A Cs-magnetometer
+		.gsm90protocol		GSM90 magnetomer
+		.envprotocol		Env05 sensor
+		.owprotocol		OneWire sensor
+	twisted, autobahn
+
+CALLED BY:
+	Top-level MagPy script - called by MARTAS hardware only.
+'''
+
+# Autobahn software copyright:
 #####################################################################
 ##
 ## Copyright 2012 Tavendo GmbH
@@ -15,15 +49,6 @@
 ## limitations under the License.
 ##
 #####################################################################
-
-"""
-Code adopted by leon (2012/2013) to be used in the Conrad Observatory.
-
-The main part remained unchanged. I added instrument specific parts for serial communictaion.
-
-ToDo: Use instrument specific classes for each instrument (even for identical systems), put these classes in a library
-
-"""
 
 # -------------------------------------------------------------------
 # Import software
@@ -57,13 +82,13 @@ from twisted.web.static import File
 from autobahn.websocket import listenWS
 from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
 
-# IMPORT EQUIPMENT-SPECIFIC PROTOCOLS
-from lemiprotocol import *
-from owprotocol import *
-from pos1protocol import *
-from envprotocol import *
-from csprotocol import *
-from gsm90protocol import *
+# IMPORT EQUIPMENT-SPECIFIC PROTOCOLS FROM MAGPY
+from acquisition.lemiprotocol import *
+from acquisition.owprotocol import *
+from acquisition.pos1protocol import *
+from acquisition.envprotocol import *
+from acquisition.csprotocol import *
+from acquisition.gsm90protocol import *
 
 lastActualtime = datetime.utcnow() # required for cs output
 
@@ -71,7 +96,7 @@ hostname = socket.gethostname()
 outputdir = '/srv/ws'
 
 # -------------------------------------------------------------------
-# Read data of sensors attached to PC:
+# 1) Read data of sensors attached to PC:
 # 
 # "Sensors.txt" should have the following format:
 # SENSORNAME	SENSORPORT	SENSORBAUDRATE
@@ -83,7 +108,9 @@ outputdir = '/srv/ws'
 # Notes: OneWire devices do not need this data, all others do.
 # -------------------------------------------------------------------
 
-sensors = open('/home/cobs/sensors.txt','r')
+home = os.path.expanduser("~")
+sensorfile = os.path.join(home,'sensors.txt')
+sensors = open(sensorfile,'r')
 sensordata = sensors.readlines()
 sensorlist = []
 baudratedict, portdict = {}, {}
@@ -104,6 +131,9 @@ outputdir = '/srv/ws' 		# Directory for storing files
 # -------------------------------------------------------------------
 
 class WsMcuProtocol(WampServerProtocol):
+    '''
+    Server factory for Wamp RPC/PubSub.
+    '''
 
     def onSessionOpen(self):
         ## register topic prefix under which we will publish MCU measurements
@@ -135,6 +165,9 @@ class WsMcuProtocol(WampServerProtocol):
 # -------------------------------------------------------------------
 
 class WsMcuFactory(WampServerFactory):
+    '''
+    Server factory for Wamp RPC/PubSub.
+    '''
 
     protocol = WsMcuProtocol
 

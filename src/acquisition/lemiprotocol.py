@@ -1,3 +1,27 @@
+'''
+Filename:		lemiprotocol
+Part of package:	acquisition
+Type:			Part of data acquisition library
+
+PURPOSE:
+	This package will initiate LEMI025 / LEMI036 data acquisition and streaming
+	and saving of data.
+
+CONTAINS:
+	*LemiProtocol:	(Class - twisted.protocols.basic.LineReceiver)
+			Class for handling data acquisition of LEMI variometers.
+			Includes internal class functions: processLemiData
+	_timeToArray:	(Func) ... utility function for LemiProtocol.
+	h2d:		(Func) ... utility function for LemiProtocol.
+			Convert hexadecimal to decimal.
+
+DEPENDENCIES:
+	twisted, autobahn
+
+CALLED BY:
+	magpy.bin.acquisition
+'''
+
 import sys, time, os, socket
 import struct, binascii, re
 from datetime import datetime, timedelta
@@ -15,13 +39,21 @@ from twisted.web.static import File
 from autobahn.websocket import listenWS
 from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
 
-def h2d(x):		# Hexadecimal to decimal (for format LEMIBIN2)
-    y = int(x/16)*10 + x%16		# Because the binary for dates is in binary-decimal, not just binary.
+def h2d(x):
+    '''	
+    Hexadecimal to decimal (for format LEMIBIN2)
+    ... Because the binary for dates is in binary-decimal, not just binary.
+    '''
+
+    y = int(x/16)*10 + x%16
     return y
 
-def timeToArray(timestring):
-    # Converts time string of format 2013-12-12T23:12:23.122324
-    # to an array similiat to a datetime object
+def _timeToArray(timestring):
+    '''
+    Converts time string of format 2013-12-12T23:12:23.122324
+    to an array similiat to a datetime object
+    '''
+
     try:
         splittedfull = timestring.split(' ')
         splittedday = splittedfull[0].split('-')
@@ -85,11 +117,10 @@ class LemiProtocol(LineReceiver):
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
 
-        datearray = timeToArray(timestamp)
+        datearray = _timeToArray(timestamp)
         date_bin = struct.pack('6hL',datearray[0]-2000,datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6])
 
         # define pathname for local file storage (default dir plus hostname plus sensor plus year) and create if not existing
-        #hostname = socket.gethostname()
         path = os.path.join(self.outputdir,self.hostname,self.sensor)
         if not os.path.exists(path):
             os.makedirs(path)

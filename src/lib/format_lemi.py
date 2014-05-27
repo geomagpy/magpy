@@ -1,33 +1,35 @@
 '''
-MagPy
-Auxiliary input filter - Lemi data
-Written by Roman Leonhardt June 2012
-- contains test and read function, toDo: write function
-'''
+Path:			magpy.lib.format_lemi
+Part of package:	stream (read/write)
+Type:			Input filter, part of read library
 
+PURPOSE:
+	Auxiliary input filter for Lemi data.
+
+CONTAINS:
+        isLEMIBIN2:	(Func) Checks if file is LEMI format binary file.
+	readLEMIBIN2:	(Func) Reads current LEMI data format binary files.
+        isLEMIBIN:	(Func) Checks if file is LEMI format data file.
+	readLEMIBIN:	(Func) Reads outdated LEMI data format binary files.
+        isLEMIHF:	(Func) Checks if file is LEMI format data file.
+	readLEMIHF:	(Func) Reads outdated LEMI data format text files.
+
+DEPENDENCIES:
+	None.
+
+CALLED BY:
+	magpy.lib.magpy_formats
+'''
 
 from stream import *
 
-
-def correct_bin_time(time):
+def h2d(x):
     '''
-    Used to correct the time reading of the LEMI025 binary type
-    The binary type puts any date record in a range from 0 to 90 (except 0 to 60)
-    jumps of 6 occur between 9 and 16, 26 and 32, 42 and 48, 60 and 66, 
+    Hexadecimal to decimal (for format LEMIBIN2)
+    Because the binary for dates is in binary-decimal, not just binary.
     '''
-    if time < 10:
-        tmp = time
-    elif 10 < time < 30:
-        tmp = time-6
-    elif 30 < time < 45:
-        tmp = time-12
-    elif 45 < time < 60:
-        tmp = time-18
-    elif 60 < time < 79:
-        tmp = time-24
-    else:
-        tmp = time-30   
-    return tmp
+    y = int(x/16)*10 + x%16
+    return y
 
 def isLEMIHF(filename):
     '''
@@ -46,11 +48,11 @@ def isLEMIHF(filename):
     else:
         return False
 
-    loggerlib.info("format_lemi: Found Lemi 10Hz ascii file %s" % filename)
+    loggerlib.info("format_lemi: Found Lemi 10Hz ascii file %s." % filename)
     return True
 
 
-def isLEMIBIN(filename):
+def isLEMIBIN1(filename):
     '''
     Checks whether a file is Binary Lemi file format.
     '''
@@ -67,10 +69,11 @@ def isLEMIBIN(filename):
     except:
         return False
 
-    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s" % filename)
+    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
     return True
 
-def isLEMIBIN2(filename):
+
+def isLEMIBIN(filename):
     '''
     Checks whether a file is Binary Lemi025 file format. (2nd format. Used at Conrad Observatory.)
     '''
@@ -87,14 +90,15 @@ def isLEMIBIN2(filename):
     except:
         return False
 
-    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s" % filename)
+    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
     return True
 
 
 def readLEMIHF(filename, headonly=False, **kwargs):
     '''
-    Reading IAGA2002 format data.
+    Reading IAGA2002 LEMI format data.
     '''
+
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
@@ -102,7 +106,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     if stream.header is None:
         headers = {}
     else:
@@ -127,11 +131,11 @@ def readLEMIHF(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        loggerlib.warning("readLEMIHF: Wrong dateformat in Filename %s" % filename)
+        loggerlib.warning("readLEMIHF: Wrong dateformat in Filename %s." % filename)
         pass
 
     if getfile:
-        loggerlib.info('readLEMIHF: Reading %s' % (filename))
+        loggerlib.info('readLEMIHF: Reading %s...' % (filename))
         for line in fh:
             if line.isspace():
                 # blank line
@@ -163,8 +167,188 @@ def readLEMIHF(filename, headonly=False, **kwargs):
 
 
 def readLEMIBIN(filename, headonly=False, **kwargs):
-    #Reading Lemi Binary format data.
-    # Timeshift of ~0.3 seconds must be regarded for 
+    '''
+    Function for reading current data format of LEMI data.
+
+    KWARGS:
+        tenHz:		(bool) to use 10Hz data
+        timeshift:	(float) given time shift of GPS reading
+
+    COMPLETE DATA STRUCTURE:
+     --TAG:            data[0:4]		# L025
+     --TIME (LEMI):    2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10])
+     --T (sensor):     data[11]/100.
+     --T (electr.):    data[12]/100.
+     --BIAS:           data[13],data[14],data[15]
+     --BIAS FIELD:     data[16]/400.,data[17]/400.,data[18]/400.
+     --(EMPTY)         data[19]
+     --DATA1:          data[20]*1000.,data[21]*1000.,data[22]*1000.
+     --DATA2:          data[23]*1000.,data[24]*1000.,data[25]*1000.
+     --DATA3:          data[26]*1000.,data[27]*1000.,data[28]*1000.
+     --DATA4:          data[29]*1000.,data[30]*1000.,data[31]*1000.
+     --DATA5:          data[32]*1000.,data[33]*1000.,data[34]*1000.
+     --DATA6:          data[35]*1000.,data[36]*1000.,data[37]*1000.
+     --DATA7:          data[38]*1000.,data[39]*1000.,data[40]*1000.
+     --DATA8:          data[41]*1000.,data[42]*1000.,data[43]*1000.
+     --DATA9:          data[44]*1000.,data[45]*1000.,data[46]*1000.
+     --DATA10:         data[47]*1000.,data[48]*1000.,data[49]*1000.
+     --MODE:           data[50]		# Mode: 1, 2 or 3
+     --FLASH % FREE:   data[51]	
+     --BATTERY (V):    data[52]	
+     --GPS STATUS:     data[53]		# A (active) or P (passive)
+     --(EMPTY)         data[54]
+     --TIME (PC):      2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
+    '''
+
+    # Reading Lemi025 Binary format data.
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
+    tenHz = kwargs.get('tenHz')
+    timeshift = kwargs.get('timeshift')
+    gpstime = kwargs.get('gpstime')
+
+    # Define frequency of output data:
+    if not tenHz:
+        tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO  happens only when start and endtime are used.. single files can be imported
+    if not timeshift:
+        timeshift = -300 #milliseconds
+    if not gpstime:
+        gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column 
+
+    # Check whether its the new (with ntp time) or old (without ntp) format
+    temp = open(filename, 'rb').read(169)
+    data= struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
+
+    if data[55] == 'L':
+        # old format
+	loggerlib.info("readLEMIBIN: Format is the out-dated lemi format.")
+        packcode = '<4cb6B8hb30f3BcB'
+        linelength = 153
+        stime = False
+    else:
+        # new format
+	loggerlib.info("readLEMIBIN: Format is the current lemi format.")
+        packcode = '<4cb6B8hb30f3BcB6hL'
+        linelength = 169
+        stime = True
+
+    fh = open(filename, 'rb')
+
+    stream = DataStream()
+
+    # Check whether header information is already present
+    if stream.header is None:
+        headers = {}
+    else:
+        headers = stream.header
+    data = []
+    key = None
+
+    theday = extractDateFromString(filename)
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        getfile = True 
+
+    if getfile:
+
+        loggerlib.info('readLEMIBIN: Reading %s...' % (filename))
+        headers['col-x'] = 'x'
+        headers['unit-col-x'] = 'nT'
+        headers['col-y'] = 'y'
+        headers['unit-col-y'] = 'nT'
+        headers['col-z'] = 'z'
+        headers['unit-col-z'] = 'nT'
+        headers['col-t1'] = 'Ts'
+        headers['unit-col-t1'] = 'deg'
+        headers['col-t2'] = 'Te'
+        headers['unit-col-t2'] = 'deg'
+
+        timediff = []
+
+	line = fh.read(linelength)
+
+	while line != '':
+            try:
+                data= struct.unpack(packcode,line)
+            except Exception as e:
+                loggerlib.warning('readLEMIBIN: Error reading data. There is probably a broken line.')
+                loggerlib.warning('readLEMIBIN: Error string: "%s"' % e)
+                loggerlib.warning('readLEMIBIN: Aborting data read.')
+                line = ''
+            bfx = data[16]/400.
+            bfy = data[17]/400.
+            bfz = data[18]/400.
+
+            headers['DataCompensationX'] = bfx
+            headers['DataCompensationY'] = bfy
+            headers['DataCompensationZ'] = bfz
+            headers['SensorID'] = line[0:4]
+
+            if gpstime:
+                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
+                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+                timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
+            else:
+                time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+
+            if tenHz:
+                for i in range(10):
+                    row = LineStruct()
+
+                    row.time = date2num(time+timedelta(microseconds=(100000.*i)))
+                    row.t1 = data[11]/100.
+                    row.t2 = data[12]/100.
+
+                    row.x = (data[20+i*3])*1000.
+                    row.y = (data[21+i*3])*1000.
+                    row.z = (data[22+i*3])*1000.
+                    if gpstime:
+                        row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
+
+                    stream.add(row)
+
+            else:
+    	        newtime = []
+                row = LineStruct()   
+
+                row.time = date2num(time)
+                row.t1 = data[11]/100.
+                row.t2 = data[12]/100.
+
+                row.x = (data[20])*1000.
+                row.y = (data[21])*1000.
+                row.z = (data[22])*1000.
+                if gpstime:
+                    row.sectime = date2num(sectime)
+
+                stream.add(row)    
+
+    	    line = fh.read(linelength)
+
+    fh.close()
+    if gpstime:
+        loggerlib.info("readLEMIBIN2: Time difference between GPS and PC (GPS-PC): %f , %f" % (np.mean(timediff), np.std(timediff)))
+        print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
+   
+    return DataStream(stream, headers)    
+
+
+def readLEMIBIN1(filename, headonly=False, **kwargs):
+    '''
+    Function for reading LEMI format data.
+    NOTE: This function reads an outdated data format.
+    Timeshift of ~0.3 seconds must be accounted for.
+    (This timeshift is corrected for in current acquisition.lemiprotocol.)
+    '''
+
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
@@ -193,8 +377,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         getfile = True 
 
     if getfile:
-
-        loggerlib.info('readLEMIBIN: Reading %s' % (filename))
+        loggerlib.info('readLEMIBIN1: Reading %s' % (filename))
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -245,189 +428,4 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     #print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers) 
-
-
-def h2d(x):
-    '''
-    Hexadecimal to decimal (for format LEMIBIN2)
-    Because the binary for dates is in binary-decimal, not just binary.
-    '''
-    y = int(x/16)*10 + x%16
-    return y
-
-def readLEMIBIN2(filename, headonly=False, **kwargs):
-    '''
-    # COMPLETE DATA STRUCTURE:
-     --TAG:            data[0:4]		# L025
-     --TIME (LEMI):    2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10])
-     --T (sensor):     data[11]/100.
-     --T (electr.):    data[12]/100.
-     --BIAS:           data[13],data[14],data[15]
-     --BIAS FIELD:     data[16]/400.,data[17]/400.,data[18]/400.
-     --(EMPTY)         data[19]
-     --DATA1:          data[20]*1000.,data[21]*1000.,data[22]*1000.
-     --DATA2:          data[23]*1000.,data[24]*1000.,data[25]*1000.
-     --DATA3:          data[26]*1000.,data[27]*1000.,data[28]*1000.
-     --DATA4:          data[29]*1000.,data[30]*1000.,data[31]*1000.
-     --DATA5:          data[32]*1000.,data[33]*1000.,data[34]*1000.
-     --DATA6:          data[35]*1000.,data[36]*1000.,data[37]*1000.
-     --DATA7:          data[38]*1000.,data[39]*1000.,data[40]*1000.
-     --DATA8:          data[41]*1000.,data[42]*1000.,data[43]*1000.
-     --DATA9:          data[44]*1000.,data[45]*1000.,data[46]*1000.
-     --DATA10:         data[47]*1000.,data[48]*1000.,data[49]*1000.
-     --MODE:           data[50]		# Mode: 1, 2 or 3
-     --FLASH % FREE:   data[51]	
-     --BATTERY (V):    data[52]	
-     --GPS STATUS:     data[53]		# A (active) or P (passive)
-     --(EMPTY)         data[54]
-     --TIME (PC):      2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
-
-    Data is in 10Hz, currently only putting 1Hz data into stream to save time and space.
-    
-    KWARGS:
-        tenHz:		(bool) to use 10Hz data
-        timeshift:	(float) given time shift of GPS reading
-    '''
-
-    #Reading Lemi025 Binary format data.
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-    getfile = True
-
-    tenHz = kwargs.get('tenHz')
-    timeshift = kwargs.get('timeshift')
-    gpstime = kwargs.get('gpstime')
-
-    # Define frequency of output data:
-    if not tenHz:
-        tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO  happens only when start and endtime are used.. single files can be imported
-    if not timeshift:
-        timeshift = -300 #milliseconds
-    if not gpstime:
-        gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column 
-
-    # Check whether its the new (with ntp time) or old (without ntp) format
-    temp = open(filename, 'rb').read(169)
-    data= struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
-
-    if data[55] == 'L':
-        # old format
-	loggerlib.info("readLEMIBIN2: Format is the out-dated lemi format.")
-        packcode = '<4cb6B8hb30f3BcB'
-        linelength = 153
-        stime = False
-    else:
-        # new format
-	loggerlib.info("readLEMIBIN2: Format is the current lemi format.")
-        packcode = '<4cb6B8hb30f3BcB6hL'
-        linelength = 169
-        stime = True
-
-    fh = open(filename, 'rb')
-
-    stream = DataStream()
-
-    # Check whether header information is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
-    data = []
-    key = None
-
-    theday = extractDateFromString(filename)
-    try:
-        if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
-                getfile = False
-        if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
-                getfile = False
-    except:
-        getfile = True 
-
-    if getfile:
-
-        loggerlib.info('readLEMIBIN2: Reading %s' % (filename))
-        headers['col-x'] = 'x'
-        headers['unit-col-x'] = 'nT'
-        headers['col-y'] = 'y'
-        headers['unit-col-y'] = 'nT'
-        headers['col-z'] = 'z'
-        headers['unit-col-z'] = 'nT'
-        headers['col-t1'] = 'Ts'
-        headers['unit-col-t1'] = 'deg'
-        headers['col-t2'] = 'Te'
-        headers['unit-col-t2'] = 'deg'
-
-        timediff = []
-
-	line = fh.read(linelength)
-
-	while line != '':
-            try:
-                data= struct.unpack(packcode,line)
-            except Exception as e:
-                loggerlib.warning('readLEMIBIN2: Error reading data. There is probably a broken line.')
-                loggerlib.warning('readLEMIBIN2: Error string: "%s"' % e)
-                loggerlib.warning('readLEMIBIN2: Aborting data read.')
-                line = ''
-            bfx = data[16]/400.
-            bfy = data[17]/400.
-            bfz = data[18]/400.
-
-            headers['DataCompensationX'] = bfx
-            headers['DataCompensationY'] = bfy
-            headers['DataCompensationZ'] = bfz
-            headers['SensorID'] = line[0:4]
-
-            if gpstime:
-                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)	# Lemi GPS time
-                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
-                timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds
-            else:
-                time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
-
-            if tenHz:
-                for i in range(10):
-                    row = LineStruct()
-
-                    row.time = date2num(time+timedelta(microseconds=(100000.*i)))
-                    row.t1 = data[11]/100.
-                    row.t2 = data[12]/100.
-
-                    row.x = (data[20+i*3])*1000.
-                    row.y = (data[21+i*3])*1000.
-                    row.z = (data[22+i*3])*1000.
-                    if gpstime:
-                        row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
-
-                    stream.add(row)
-
-            else:
-    	        newtime = []
-                row = LineStruct()   
-
-                row.time = date2num(time)
-                row.t1 = data[11]/100.
-                row.t2 = data[12]/100.
-
-                row.x = (data[20])*1000.
-                row.y = (data[21])*1000.
-                row.z = (data[22])*1000.
-                if gpstime:
-                    row.sectime = date2num(sectime)
-
-                #row.f = (((data[20]-bfx)*1000.)**2.+((data[21]-bfy)*1000.)**2.+((data[22]-bfz)*1000.)**2.)**.5
-
-                stream.add(row)    
-
-    	    line = fh.read(linelength)
-
-    fh.close()
-    if gpstime:
-        loggerlib.info("readLEMIBIN2: Time difference between GPS and PC (GPS-PC): %f , %f" % (np.mean(timediff), np.std(timediff)))
-        print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
-   
-    return DataStream(stream, headers)    
 

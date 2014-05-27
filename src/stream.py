@@ -9,11 +9,11 @@ Version 1.0 (from the 23.02.2012)
 # Part 1: Import routines for packages
 # ----------------------------------------------------------------------------
 
-logpygen = '' 		# loggerstream variable
-netcdf = True 		# Export routines for netcdf
-spacecdf = True 	# Export routines for Nasa cdf
-mailingfunc = True 	# E-mail notifications
+logpygen = '' 		# temporary loggerstream variable
+badimports = []		# List of missing packages
 nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
+
+print "Initiating MagPy..."
 
 # Standard packages
 # -----------------
@@ -32,8 +32,9 @@ try:
     from glob import glob, iglob, has_magic
     from StringIO import StringIO
     import operator # used for stereoplot legend
-except ImportError:
-    print "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed"
+except ImportError as e:
+    logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
+    badimports.append(e)
 
 # Matplotlib
 # ----------
@@ -43,7 +44,8 @@ try:
         print "No terminal connected - assuming cron job and using Agg for matplotlib"
         matplotlib.use('Agg') # For using cron
 except:
-    print "Prob with matplotlib"
+    logpygen += "CRITICAL MagPy initiation ImportError: problem with matplotlib.\n"
+    badimports.append(e)
 
 try:
     version = matplotlib.__version__.replace('svn', '')
@@ -62,12 +64,14 @@ try:
     import matplotlib.cm as cm
     from pylab import *
     from datetime import datetime, timedelta
-except ImportError:
-    logpygen += "Init MagPy: Critical Import failure: Python matplotlib required - please install to proceed\n"
+except ImportError as e:
+    logpygen += "CRITICAL MagPy initiation ImportError with matplotlib package. Please install to proceed.\n"
+    badimports.append(e)
 
 # Numpy & SciPy
 # -------------
 try:
+    print "Loading Numpy and SciPy..."
     import numpy as np
     import scipy as sp
     from scipy import interpolate
@@ -77,25 +81,23 @@ try:
     from scipy.ndimage import filters
     import scipy.optimize as op
     import math
-except ImportError:
-    logpygen += "Init MagPy: Critical Import failure: Python numpy-scipy required - please install to proceed\n"
+except ImportError as e:
+    logpygen += "CRITICAL MagPy initiation ImportError: Python numpy-scipy required - please install to proceed.\n"
+    badimports.append(e)
 
 # NetCDF
 # ------
 try:
     print "Loading Netcdf4 support ..."
     from netCDF4 import Dataset
-    print "success"
-except ImportError:
-    netcdf = False
-    print " -failed- "
-    logpygen += "Init MagPy: Import failure: Netcdf not available\n"
-    pass
+except ImportError as e:
+    logpygen += "CRITICAL MagPy initiation ImportError: NetCDF not available.\n"
+    badimports.append(e)
 
 # NASACDF - SpacePy
 # -----------------
 try:
-    print "Loading Spacepy package cdf support ..."
+    print "Loading SpacePy package cdf support ..."
     try:
         os.putenv("CDF_LIB", nasacdfdir)
         print "trying CDF lib at %s" % nasacdfdir
@@ -106,10 +108,9 @@ try:
         print "trying CDF lib in /usr/local/cdf"
         import spacepy.pycdf as cdf      
         print "... success"
-except:
-    logpygen += "Init MagPy: Import failure: Nasa cdf not available\n"
-    print " -failed- check spacepy package"
-    pass
+except ImportError as e:
+    logpygen += "CRITICAL MagPy initiation ImportError: Nasa cdf not available.\n"
+    badimports.append(e)
 
 # Utilities
 # ---------
@@ -125,19 +126,24 @@ try:
     #from smtplib import SMTP_SSL as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
     from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
     #from email.MIMEText import MIMEText
-except:
-    mailingfunc = False
-    logpygen += "pymag-general: Import failure: Mailing functions not available\n"
-    pass
+except ImportError as e:
+    logpygen += "MagPy initiation ImportError: Mailing functions not available.\n"
+    badimports.append(e)
 
 if logpygen == '':
     logpygen = "OK"
-
+else:
+    print logpygen
+    print "Missing packages:"
+    for item in badimports:
+        print item
+    print
+    check = raw_input("Do you want to continue anyway? ")
 
 # Logging
 # ---------
-
-from os.path import expanduser  # select the home directory of the user - platform independent
+# Select the home directory of the user (platform independent)
+from os.path import expanduser  
 home = expanduser("~")
 logfile = os.path.join(home,'magpy.log')
 
@@ -146,7 +152,7 @@ logging.basicConfig(filename=logfile,
 			format='%(asctime)s %(levelname)-8s- %(name)-6s %(message)s',
 			level=logging.INFO)
 
-# define a Handler which writes "setLevel" messages or higher to the sys.stderr
+# Define a Handler which writes "setLevel" messages or higher to the sys.stderr
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 
@@ -165,22 +171,84 @@ stormlogger = logging.getLogger('stream')
 # Part 2: Define Dictionaries
 # ----------------------------------------------------------------------------
 
-KEYLIST = ['time','x','y','z','f','t1','t2','var1','var2','var3','var4','var5','dx','dy','dz',
-		'df','str1','str2','str3','str4','flag','comment','typ','sectime']
-KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),'t1':float('nan'),'t2':float('nan'),
-		'var1':float('nan'),'var2':float('nan'),'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),
-		'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-','str3':'-','str4':'-','flag':'0000000000000000-',
-		'comment':'-','typ':'xyzf','sectime':float('nan')}
+# Keys available in DataStream Object:
+KEYLIST = [	'time',		# Timestamp (date2num object)
+		'x',		# X or I component of magnetic field (float)
+		'y',		# Y or D component of magnetic field (float)
+		'z',		# Z component of magnetic field (float)
+		'f',		# Magnetic field strength (float)
+		't1',		# Temperature variable (e.g. ambient temp) (float)
+		't2',		# Secondary temperature variable (e.g. sensor temp) (float)
+		'var1',		# Extra variable #1 (float)
+		'var2',		# Extra variable #2 (float)
+		'var3',		# Extra variable #3 (float)
+		'var4',		# Extra variable #4 (float)
+		'var5',		# Extra variable #5 (float)
+		'dx',		# Errors in X (float)
+		'dy',		# Errors in Y (float)
+		'dz',		# Errors in Z (float)
+		'df',		# Errors in F (float)
+		'str1',		# Extra string variable #1 (str)
+		'str2',		# Extra string variable #2 (str)
+		'str3',		# Extra string variable #3 (str)
+		'str4',		# Extra string variable #4 (str)
+		'flag',		# Variable for flags. (str='0000000000000000-') 
+		'comment',	# Space for comments on flags (str)
+		'typ',		# Type of data (str='xyzf')
+		'sectime'	# Secondary time variable (date2num)
+	    ]
+
+# Empty key values at initiation of stream:
+KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),
+		't1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),
+		'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),
+		'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-',
+		'str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf',
+		'sectime':float('nan')}
 FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[:8] # only primary values with time
 # KEYLIST[1:8] # only primary values without time
 
-PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'IMF', 'BLV', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 'LEMIBIN2',
-				'OPT', 'PMAG1', 'PMAG2', 'GDASA1', 'GDASB1','RMRCS', 
-				'CR800','RADON', 'USBLOG', 'SERSIN', 'SERMUL', 'PYSTR',
-				'AUTODIF', 'AUTODIF_FREAD', 'PYCDF', 'PYBIN', 'POS1TXT', 
-				'POS1', 'PYNC', 'DTU1', 'SFDMI', 'SFGSM', 'BDV1', 'GFZKP', 
-				'NOAAACE','LATEX','CS','UNKOWN']
+# Formats supported by MagPy read function:
+PYMAG_SUPPORTED_FORMATS = [
+		'IAGA',		# IAGA 2002 text format
+		'WDC',		# World Data Centre format
+		'IMF',		# ?
+		'BLV',		# ?
+		'DIDD',		# Output format from DIDD
+		'GSM19',	# Output format from GSM19 magnetometer
+		'LEMIHF',	# LEMI text format data
+		'LEMIBIN',	# Current LEMI binary data format at WIC
+		'LEMIBIN1',	# Deprecated LEMI binary format at WIC
+		'OPT',		# ?
+		'PMAG1',	# ?
+		'PMAG2',	# ?
+		'GDASA1',	# ?
+		'GDASB1',	# ?
+		'RMRCS', 	# ?
+		'CR800',	# Data from the CR800 datalogger
+		'RADON',	# ?
+		'USBLOG',	# ?
+		'SERSIN',	# ?
+		'SERMUL',	# ?
+		'PYSTR',	# ?
+		'AUTODIF',	# AutoDIF ouput data
+		'AUTODIF_FREAD',# Special format for AutoDIF read-in
+		'PYCDF',	# ?
+		'PYBIN',	# MagPy own format
+		'POS1TXT',	# POS-1 text format output data
+		'POS1',		# POS-1 binary output at WIC
+		'PYNC',		# ?
+		'DTU1',		# ASCII Data from the DTU's FGE systems
+		'SFDMI',	# ?
+		'SFGSM',	# ?
+		'BDV1',		# ?
+		'GFZKP',	# GeoForschungsZentrum KP-Index format
+		'NOAAACE',	# NOAA ACE satellite data format
+		'LATEX',	# LateX data
+		'CS',		# ?
+		'UNKOWN'	# 'Unknown'?
+			]
 
 # ----------------------------------------------------------------------------
 #  Part 3: Main classes -- DataStream, LineStruct and 
@@ -217,7 +285,6 @@ class DataStream(object):
     - stream.obspyspectrogram() -- Computes and plots spectrogram of the input data
     - stream.offset() -- Apply constant offsets to elements of the datastream
     - stream.plot() -- plot keys from stream
-    - stream.pmspectrogram(keys)
     - stream.powerspectrum() -- Calculating the power spectrum following the numpy fft example
     - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
     - stream.remove_outlier() -- returns stream (adds flags and comments)
@@ -233,7 +300,6 @@ class DataStream(object):
     A. Standard functions and overrides for list like objects
     - self.clear_header(self) -- Clears headers
     - self.extend(self,datlst,header) -- Extends stream object
-    - self._print_key_headers(self) -- Prints keys in datastream with variable and unit.
     - self.sorting(self) -- Sorts object
 
     B. Internal Methods I: Line & column functions
@@ -259,6 +325,7 @@ class DataStream(object):
     - self._convertstream(self, coordinate, **kwargs) -- Convert coordinates of x,y,z columns in stream
     - self._det_trange(self, period) -- starting with coefficients above 1%
     - self._find_nearest(self, array, value) -- find point in array closest to value
+    - self._find_t_limits(self) -- return times of first and last stream data points
     - self._testtime(time) -- returns datetime object
     - self._get_min(key) -- returns float
     - self._get_max(key) -- returns float
@@ -268,9 +335,12 @@ class DataStream(object):
     - self._maskNAN(self, column) -- Tests for NAN values in column and usually masks them
     - self._nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
     - self._nearestPow2(self, x) -- Find power of two nearest to x
+    - self._print_key_headers(self) -- Prints keys in datastream with variable and unit.
+    - self._get_key_headers(self) -- Returns keys in datastream.
     - self._drop_nans(self, key) -- Helper to drop lines with NaNs in any of the selected keys.
     - self._is_number(self, s) -- ?
     
+*********************************************************************
     Standard function description format:
 
     DEFINITION:
@@ -291,6 +361,29 @@ class DataStream(object):
     APPLICATION:
         Code for simple application.
 
+*********************************************************************
+    Standard file description format:
+
+Path:			*path*     (magpy.acquisition.pos1protocol)
+Part of package:	*package*  (acquisition)
+Type:			*type*	   (type of file/package)
+
+PURPOSE:
+	Description...
+
+CONTAINS:
+	*ThisClass:	(Class)
+			What is this class for?
+	thisFunction:	(Func) Description
+
+DEPENDENCIES:
+	List all non-standard packages required for file.
+	+ paths of all MagPy package dependencies.
+
+CALLED BY:
+	Path to magpy packages that call this part, e.g. magpy.bin.acquisition
+
+*********************************************************************
     """
 
     def __init__(self, container=None, header={}):
@@ -357,6 +450,18 @@ class DataStream(object):
                 return index, line
         loggerstream.warning("findtime: Didn't find selected time - returning 0")
         return 0, []
+
+    def _find_t_limits(self):
+        """
+        DEFINITION:
+            Find start and end times in stream.
+        RETURNS:
+            Two datetime objects, start and end.
+        """
+        t_start = num2date(self[0].time)
+        t_end = num2date(self[-1].time)
+
+        return t_start, t_end
 
     def _print_key_headers(self):
         print "%10s : %22s : %28s" % ("MAGPY KEY", "VARIABLE", "UNIT")
@@ -564,10 +669,10 @@ class DataStream(object):
                    
         return self
 
-    def _reduce_stream(self, **kwargs):
+    def _reduce_stream(self, pointlimit=100000):
         """
     DEFINITION:
-        Reduces size of stream for plotting methods to save memory
+        Reduces size of stream by picking for plotting methods to save memory
         when plotting large data sets.
         Does NOT filter or smooth!
         This function purely removes data points (rows) in a 
@@ -584,12 +689,7 @@ class DataStream(object):
     EXAMPLE:
         >>> lessdata = ten_Hz_data._reduce_stream(pointlimit=500000)
 
-        """
-
-	pointlimit = kwargs.get('pointlimit')
-
-        if not pointlimit:
-            pointlimit = 100000      
+        """    
 
         size = len(self)
         div = size/pointlimit
@@ -1263,10 +1363,25 @@ class DataStream(object):
         return self
 
     
-    def date_offset(self, offset, **kwargs):
+    def date_offset(self, offset):
         """
+    DEFINITION:
         Corrects the time column of the selected stream by the offst
         offset is a timedelta object (e.g. timedelta(hours=1))
+
+    PARAMETERS:
+    Variables:
+        - offset: 	(timedelta object) Offset to apply to stream.
+    Kwargs:
+        - None
+
+    RETURNS:
+        - stream: 	(DataStream object) Stream with offset applied.
+
+    EXAMPLE:
+        >>> data = data.offset(timedelta(minutes=3))
+
+    APPLICATION:
         """
 
         header = self.header
@@ -1501,21 +1616,22 @@ class DataStream(object):
 
         PARAMETERS:
         Kwargs:
-            - keys: 	(list) List of keys to smooth 
-            - filter_type   (string) name of the window. One of 'flat','barthann','bartlett','blackman','blackmanharris','bohman',
-                                                   'boxcar','cosine','flattop','hamming','hann','nuttall',
-                                                   'parzen','triang','gaussian','wiener','spline','butterworth'
-                                     see http://docs.scipy.org/doc/scipy/reference/signal.html
-            - filter_width  (timedelta) window width of the filter
-            - noresample      (bool) if True the data set is resampled at filter_width positions
-            - resamplestart (datetime) starting resampling at this time 
-            - resamplemode  (string) if 'fast' then fast resampling is used
-            - gaussian_factor (float) factor to multiply filterwidth. 
-                                        1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
-            - testplot      (bool) provides a plot of unfiltered and filtered data for each key if true 
+            - keys: 		(list) List of keys to smooth 
+            - filter_type:   	(string) name of the window. One of                  
+                                'flat','barthann','bartlett','blackman','blackmanharris','bohman',
+                                'boxcar','cosine','flattop','hamming','hann','nuttall',
+                                'parzen','triang','gaussian','wiener','spline','butterworth'
+                                See http://docs.scipy.org/doc/scipy/reference/signal.html
+            - filter_width:	(timedelta) window width of the filter
+            - noresample:	(bool) if True the data set is resampled at filter_width positions
+            - resamplestart:	(datetime) starting resampling at this time 
+            - resamplemode:	(string) if 'fast' then fast resampling is used
+            - gaussian_factor:	(float) factor to multiply filterwidth. 
+                                1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
+            - testplot:		(bool) provides a plot of unfiltered and filtered data for each key if true 
 
         RETURNS:
-            - self: 	(DataStream) containing the filtered signal within the selected columns
+            - self: 		(DataStream) containing the filtered signal within the selected columns
 
         EXAMPLE:
             >>> nice_data = bad_data.filter(keys=['x','y','z'])
@@ -1529,7 +1645,9 @@ class DataStream(object):
         # ########################
         # Kwargs and definitions
         # ########################
-        filterlist = ['flat','barthann','bartlett','blackman','blackmanharris','bohman','boxcar','cosine','flattop','hamming','hann','nuttall','parzen','triang','gaussian','wiener','spline','butterworth']
+        filterlist = ['flat','barthann','bartlett','blackman','blackmanharris','bohman',
+		'boxcar','cosine','flattop','hamming','hann','nuttall','parzen','triang',
+		'gaussian','wiener','spline','butterworth']
 
         # To be added
         #kaiser(M, beta[, sym]) 	Return a Kaiser window.
@@ -4084,7 +4202,23 @@ class DataStream(object):
 
     def trim(self, starttime=None, endtime=None):
         """
+    DEFINITION:
         Removing dates outside of range between start- and endtime
+
+    PARAMETERS:
+    Variables:
+        - starttime: 	(datetime/str) Start of period to trim with
+	- endtime:	(datetime/str) End of period to trim to
+    Kwargs:
+        - None
+
+    RETURNS:
+        - stream: 	(DataStream object) Trimmed stream
+
+    EXAMPLE:
+        >>> data = data.trim(starttime, endtime)
+
+    APPLICATION:
         """
         # include test - does not work yet
         #if date2num(self._testtime(starttime)) > date2num(self._testtime(endtime)):
@@ -4723,7 +4857,6 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 
     PARAMETERS:
     Variables:
-        - dataformat: 	(str) Format of data file. Works as auto-detection.
         - path_or_url:	(str) Path to data files in form:
 				a) c:\my\data\*
 				b) c:\my\data\thefile.txt
@@ -4734,9 +4867,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
 				g) http://www.thepage.at/file.tab
 	- headonly:	(?) ???
     Kwargs:
-        - starttime: 	(str/datetime object) Description.
-        - endtime: 	(str/datetime object) Description.
+        - dataformat: 	(str) Format of data file. Works as auto-detection.
         - disableproxy: (bool) If True, will use urllib2.install_opener()
+        - endtime: 	(str/datetime object) Description.
+        - starttime: 	(str/datetime object) Description.
 
     RETURNS:
         - stream: 	(DataStream object) Stream containing data in file
@@ -4837,6 +4971,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 loggerstream.error("read: Cannot open file/files: %s" % pathname)
+                raise Exception("Stream is empty!")
 
     if headonly and (starttime or endtime):
         msg = "read: Keyword headonly cannot be combined with starttime or endtime."
@@ -4874,6 +5009,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
             format_type = formats[0]
         except IndexError:
             msg = "Format \"%s\" is not supported. Supported types: %s"
+            loggerstream.error(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
             raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
 
     """
@@ -4888,10 +5024,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     """
 
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
-
-    # set _format identifier for each trace
-    #for trace in stream:
-    #    trace.stats._format = format_ep.name
 
     return stream
 
@@ -5034,7 +5166,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
 
 
-def find_offset(stream1, stream2, **kwargs):
+def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
+	deltat_step=0.1,log_chi=False,**kwargs):
     '''
     DEFINITION:
         Uses least-squares method for a rough estimate of the offset in the time 
@@ -5048,10 +5181,10 @@ def find_offset(stream1, stream2, **kwargs):
         - stream1: 	(DataStream object) First stream to compare.
         - stream2: 	(DataStream object) Second stream to compare.
     Kwargs:
-        - deltat_step:	(float) Time value to iterate over. Accuracy is higher with
+        - deltat_step:	(float) Time value in s to iterate over. Accuracy is higher with
 			smaller values.
-	- guess_low:	(float) Low guess for offset. Function will iterate from here.
-	- guess_high:	(float) High guess for offset. Function will iterate till here.
+	- guess_low:	(float) Low guess for offset in s. Function will iterate from here.
+	- guess_high:	(float) High guess for offset in s. Function will iterate till here.
 	- log_chi:	(bool) If True, log chi values.
 	- plot:		(bool) Filename of plot to save chi-sq values to, e.g. "chisq.png"
 
@@ -5063,21 +5196,19 @@ def find_offset(stream1, stream2, **kwargs):
         >>> offset = find_offset(gdas_data, pos_data, guess=-30.,deltat_min = 0.1)
 
     APPLICATION: 
+
+    Challenge in this function:
+    --> Needs to be able to compare two non harmonic signals with different sampling
+	rates and a presumed time offset. The time offset may be smaller than the
+	sampling rate itself.
+    How to go about it:
+	1. Take arrays of key to compare
+	2. Resample arrays to same sampling period (or interpolate)
+	3. Determine offset between two arrays
         """
     '''
 
     # 1. Define starting parameters:
-    deltat_step = kwargs.get('deltat_step')
-    guess_low = kwargs.get('guess_low')
-    guess_high = kwargs.get('guess_high')
-    log_chi = kwargs.get('log_chi')
-
-    if not deltat_step:
-        deltat_step = 0.1
-    if not guess_low:
-        guess_low = -60.
-    if not guess_high:
-        guess_high = 60.
     N_iter = 0.
 
     # Interpolate the function with the smaller sample period.
@@ -5086,11 +5217,13 @@ def find_offset(stream1, stream2, **kwargs):
     sp1 = stream1.get_sampling_period()
     sp2 = stream2.get_sampling_period()
 
-    if sp1 > sp2:
+    #if sp1 > sp2:
+    if sp1 < sp2:
         stream_a = stream1
         stream_b = stream2
         main_a = True
-    elif sp1 < sp2:
+    #elif sp1 < sp2:
+    elif sp1 > sp2:
         stream_a = stream2
         stream_b = stream1
         main_a = False
@@ -5106,6 +5239,7 @@ def find_offset(stream1, stream2, **kwargs):
 
     timespan = guess_high-guess_low
 
+    # TODO: Remove this trim function. It's destructive.
     stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None)+timedelta(seconds=timespan*2), 
 				endtime=num2date(etime).replace(tzinfo=None)+timedelta(seconds=-timespan*2))
 
@@ -5117,11 +5251,11 @@ def find_offset(stream1, stream2, **kwargs):
     # Note: higher errors with lower degree of interpolation. Highest degree possible is desirable, linear terrible.
     try:
         int_data = stream_b.interpol(['f'],kind='cubic')
-    except MemoryError:
+    except:
         try:
             loggerstream.warning("find_offset: Not enough memory for cubic spline. Attempting quadratic...")
             int_data = stream_b.interpol(['f'],kind='quadratic')
-        except MemoryError:
+        except:
             loggerstream.error("find_offset: Too much data! Cannot interpolate function with high enough accuracy.")
             return "nan"
 
@@ -5215,7 +5349,7 @@ def find_offset(stream1, stream2, **kwargs):
     loggerstream.info("find_offset: Found an offset of stream_a of %s seconds." % t_offset)
 
     # RESULTS
-    return t_offset           
+    return t_offset               
 
 
 def subtractStreams(stream_a, stream_b, **kwargs):
@@ -5599,6 +5733,7 @@ if __name__ == '__main__':
 
     print
     print "----------------------------------------------------------"
+    print "TESTING: STREAM PACKAGE"
     print "THIS IS A TEST RUN OF THE MAGPY STREAM PACKAGE."
     print "All main methods will be tested. This may take a while."
     print "A summary will be presented at the end. Any protocols"
@@ -5630,7 +5765,7 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Stream read in."
         except Exception as excep:
             errors['read'] = str(excep)
-            print datetime.utcnow(), "ERROR reading stream. Aborting test."
+            print datetime.utcnow(), "--- ERROR reading stream. Aborting test."
             break
 
         # Step 2 - Rotate data (why not?)
@@ -5639,7 +5774,7 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Rotated."
         except Exception as excep:
             errors['rotation'] = str(excep)
-            print datetime.utcnow(), "ERROR rotating stream."
+            print datetime.utcnow(), "--- ERROR rotating stream."
 
         # Step 3 - Offset data
         try:
@@ -5648,7 +5783,7 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Offset."
         except Exception as excep:
             errors['offset'] = str(excep)
-            print datetime.utcnow(), "ERROR offsetting stream."
+            print datetime.utcnow(), "--- ERROR offsetting stream."
 
         # Step 4 - Find outliers
         try:
@@ -5656,7 +5791,7 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Flagged outliers."
         except Exception as excep:
             errors['remove_outlier'] = str(excep)
-            print datetime.utcnow(), "ERROR flagging outliers."
+            print datetime.utcnow(), "--- ERROR flagging outliers."
 
         # Step 5 - Remove flagged
         try:
@@ -5664,26 +5799,17 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Removed flagged outliers."
         except Exception as excep:
             errors['remove_flagged'] = str(excep)
-            print datetime.utcnow(), "ERROR removing flagged outliers."
+            print datetime.utcnow(), "--- ERROR removing flagged outliers."
 
-        # Step 6 - Power spectrum
-        try:
-	    test_outfile = "%s.png" % testrun
-            teststream.powerspectrum('x',outfile=test_outfile)
-            print datetime.utcnow(), "- Power spectrum plotted."
-        except Exception as excep:
-            errors['powerspectrum'] = str(excep)
-            print datetime.utcnow(), "ERROR plotting power spectrum."
-
-        # Step 7 - Filter
+        # Step 6 - Filter
         try:
             teststream.filter()
             print datetime.utcnow(), "- Filtered."
         except Exception as excep:
             errors['filter'] = str(excep)
-            print datetime.utcnow(), "ERROR filtering."
+            print datetime.utcnow(), "--- ERROR filtering."
 
-        # Step 8 - Write
+        # Step 7 - Write
         try:
             teststream.write('.',
 			filenamebegins='%s_' % testrun,
@@ -5693,7 +5819,7 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Data written out to file."
         except Exception as excep:
             errors['write'] = str(excep)
-            print datetime.utcnow(), "ERROR writing data to file."
+            print datetime.utcnow(), "--- ERROR writing data to file."
 
 	# STILL TO ADD:
 	# - smooth?
@@ -5737,8 +5863,9 @@ if __name__ == '__main__':
     print "Hit enter to delete temporary files. (Or type N to keep.)"
     tempfile_answer = raw_input("> ")
     if tempfile_answer.lower() != 'n':
-        del_test_files = 'rm %s*' % testrun
-        subprocess.call(del_test_files,shell=True)
+        if os.path.exists('%s*' % testrun):
+            del_test_files = 'rm %s*' % testrun
+            subprocess.call(del_test_files,shell=True)
     print
     print "Good-bye!"
     print "----------------------------------------------------------"
