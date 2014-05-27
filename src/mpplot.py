@@ -21,7 +21,6 @@ CONTAINS:
 	_maskNan:	(Func) ... utility function of _plot.
 	_nanHelper:	(Func) ... utility function of _plot.
 	__denormalize:	(Func) ... utility function of _plot.
-	_nearestPower2(x)(Func) ... utility function of obspySpectrogram.
 
 DEPENDENCIES:
         magpy.stream
@@ -564,10 +563,10 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
     t_min = np.min(t)
     t_new, val_new = [],[]
 
-    nfft = int(stream._nearestPower2(len(t)))
+    nfft = int(stream._nearestPow2(len(t)))
 
     if nfft > len(t): 
-        nfft = int(stream._nearestPower2(len(t) / 2.0)) 
+        nfft = int(stream._nearestPow2(len(t) / 2.0)) 
 
     for idx, elem in enumerate(val):
         if not isnan(elem):
@@ -1453,6 +1452,7 @@ def _maskNan(y):
 
     return y
 
+
 def _nearestPower2(x): 
     """
         Function taken from ObsPy nearestPow2
@@ -1491,7 +1491,7 @@ if __name__ == '__main__':
     print "    So get comfy and have a good look."
     print "----------------------------------------------------------"
     print
-    '''
+    
     print "Please enter path of a variometer data file for testing:"
     print "(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)"
     while True:
@@ -1501,8 +1501,6 @@ if __name__ == '__main__':
         else:
             print "Sorry, that file doesn't exist. Try again."
     print 
-    '''
-    filepath = '/home/rachel/cobs/20140403_tractor_analysis/FGE_S0252_0001_0001_2014-04-03.cdf'
         
     now = datetime.utcnow()
     testrun = 'plottest_'+datetime.strftime(now,'%Y%m%d-%H%M')
@@ -1532,7 +1530,7 @@ if __name__ == '__main__':
             errors['_get_key_headers'] = str(excep)
             print datetime.utcnow(), "--- ERROR getting default keys. Aborting test."
             break
-        '''
+        
         # Step 3 - Simple single plot with ploteasy
         try:
             ploteasy(teststream)
@@ -1557,7 +1555,7 @@ if __name__ == '__main__':
         variables =	[key,		key2		]
         try:
             plotStreams(streamlist, variables,
-			plottitle = "Multiple streams: Three bars, top two should look the same.")
+			plottitle = "Multiple streams: Three bars, top two should match.")
             print datetime.utcnow(), "- Plotted multiple streams."
         except Exception as excep:
             errors['plotStreams-vanilla'] = str(excep)
@@ -1608,16 +1606,15 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['plotPS'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting power spectrum."
-        '''
+        
         # Step 9 - Plot normal spectrogram
-        #try:
-        #teststream.spectrogram(key2)
-        plotSpectrogram(teststream,key2,
+        try:
+            plotSpectrogram(teststream,key2,
 			plottitle = "Spectrogram of two keys")
-        #    print datetime.utcnow(), "- Plotted spectrogram."
-        #except Exception as excep:
-        #    errors['plotSpectrogram'] = str(excep)
-        #    print datetime.utcnow(), "--- ERROR plotting spectrogram."
+            print datetime.utcnow(), "- Plotted spectrogram."
+        except Exception as excep:
+            errors['plotSpectrogram'] = str(excep)
+            print datetime.utcnow(), "--- ERROR plotting spectrogram."
 
         # Step 10 - Plot normal stereoplot
 	# (This should stay as last step due to coordinate conversion.)

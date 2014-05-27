@@ -34,7 +34,8 @@ DEPENDENCIES:
 		.format_imf
 
 CALLED BY:
-	magpy.stream._read()
+	magpy.stream.read()
+	magpy.stream.write()
 '''
 
 from stream import *

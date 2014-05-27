@@ -7,10 +7,10 @@ PURPOSE:
 	Auxiliary input filter for Lemi data.
 
 CONTAINS:
-        isLEMIBIN2:	(Func) Checks if file is LEMI format binary file.
-	readLEMIBIN2:	(Func) Reads current LEMI data format binary files.
-        isLEMIBIN:	(Func) Checks if file is LEMI format data file.
-	readLEMIBIN:	(Func) Reads outdated LEMI data format binary files.
+        isLEMIBIN:	(Func) Checks if file is LEMI format binary file.
+	readLEMIBIN:	(Func) Reads current LEMI data format binary files.
+        isLEMIBIN1:	(Func) Checks if file is LEMI format data file.
+	readLEMIBIN1:	(Func) Reads outdated LEMI data format binary files.
         isLEMIHF:	(Func) Checks if file is LEMI format data file.
 	readLEMIHF:	(Func) Reads outdated LEMI data format text files.
 

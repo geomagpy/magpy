@@ -10,6 +10,7 @@ PURPOSE:
 	    3) Initiates protocols for data acquisition of available
 		sensors.
 	    4) Starts twisted logging system.
+	Code adapted from Tavendo for use in Conrad Observatory.
 
 CONTAINS:
 	*WsMcuProtocol:	(Class - autobahn.wamp.WampServerProtocol)
