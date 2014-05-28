@@ -4230,7 +4230,7 @@ CALLED BY:
         if newway:
 	# Non-destructive trimming of stream
             trimmedstream = DataStream()
-            trimmedstream.headers = self.headers
+            trimmedstream.header = self.header
             starttime = self._testtime(starttime)
             starttime = self._testtime(endtime)
             stval = 0
