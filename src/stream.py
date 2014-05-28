@@ -4227,12 +4227,12 @@ CALLED BY:
         loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
 
 #--------------------------------------------------
+
         if newway:
-	# Non-destructive trimming of stream
+	# Non-destructive trimming of stream 
             trimmedstream = DataStream()
-            trimmedstream.header = self.header
             starttime = self._testtime(starttime)
-            starttime = self._testtime(endtime)
+            endtime = self._testtime(endtime)
             stval = 0
             for idx, elem in enumerate(self):
                 newline = LineStruct()
@@ -4244,6 +4244,7 @@ CALLED BY:
                         trimmedstream.add(newline)
 
             return trimmedstream
+
 #--------------------------------------------------
 
         stream = DataStream()
