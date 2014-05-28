@@ -4200,7 +4200,7 @@ CALLED BY:
             plt.show()
 
 
-    def trim(self, starttime=None, endtime=None):
+    def trim(self, starttime=None, endtime=None, newway=False):
         """
     DEFINITION:
         Removing dates outside of range between start- and endtime
@@ -4210,7 +4210,7 @@ CALLED BY:
         - starttime: 	(datetime/str) Start of period to trim with
 	- endtime:	(datetime/str) End of period to trim to
     Kwargs:
-        - None
+        - newway:	(bool) Testing method for non-destructive trimming
 
     RETURNS:
         - stream: 	(DataStream object) Trimmed stream
@@ -4225,6 +4225,26 @@ CALLED BY:
         #    raise ValueError, "Starttime is larger then Endtime"
         # remove data prior to starttime input
         loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
+
+#--------------------------------------------------
+        if newway:
+	# Non-destructive trimming of stream
+            trimmedstream = DataStream()
+            trimmedstream.headers = self.headers
+            starttime = self._testtime(starttime)
+            starttime = self._testtime(endtime)
+            stval = 0
+            for idx, elem in enumerate(self):
+                newline = LineStruct()
+                if not isnan(elem.time):
+                    if elem.time > date2num(starttime) and elem.time <= date2num(endtime):
+                        newline.time = elem.time
+                        for key in KEYLIST:
+                            exec('newline.'+key+' = elem.'+key)
+                        trimmedstream.add(newline)
+
+            return trimmedstream
+#--------------------------------------------------
 
         stream = DataStream()
 
@@ -5354,7 +5374,7 @@ def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
 
 def subtractStreams(stream_a, stream_b, **kwargs):
     """
-    combine the contents of two data stream:
+    combine the contents of two data streams:
     basically two methods are possible:
     1. replace all data from stream_a with differences (stream_a-stream_b)
 
