@@ -174,7 +174,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         tenHz:		(bool) to use 10Hz data
         timeshift:	(float) given time shift of GPS reading
 
-    COMPLETE DATA STRUCTURE:
+    COMPLETE DATA STRUCTURE:'<4cb6B8hb30f3BcBcc5hL'
      --TAG:            data[0:4]		# L025
      --TIME (LEMI):    2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10])
      --T (sensor):     data[11]/100.
@@ -270,6 +270,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         headers['unit-col-t1'] = 'deg'
         headers['col-t2'] = 'Te'
         headers['unit-col-t2'] = 'deg'
+        headers['col-var1'] = 'Voltage'
+        headers['unit-col-var1'] = 'V'
 
         timediff = []
 
@@ -310,6 +312,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                     row.x = (data[20+i*3])*1000.
                     row.y = (data[21+i*3])*1000.
                     row.z = (data[22+i*3])*1000.
+                    row.var1 = data[52]/10.	# Voltage information
                     if gpstime:
                         row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
 
@@ -326,6 +329,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                 row.x = (data[20])*1000.
                 row.y = (data[21])*1000.
                 row.z = (data[22])*1000.
+                row.var1 = data[52]/10.
                 if gpstime:
                     row.sectime = date2num(sectime)
 

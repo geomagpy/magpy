@@ -102,7 +102,7 @@ def ploteasy(stream):
 
 def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-	t_stormphases={},includeid=False,**kwargs):
+	t_stormphases={},includeid=False,function=None,**kwargs):
     '''
     DEFINITION:
         This function creates a graph from a single stream.
@@ -186,6 +186,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         data_dict = {}
         ind = KEYLIST.index(key)
         y = np.asarray([row[ind] for row in stream])
+        data_dict['key'] = key
         data_dict['tdata'] = t
         data_dict['ydata'] = y
         data_dict['color'] = colorlist[i]
@@ -206,8 +207,13 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
             data_dict['ymin'] = specialparams[0] - ypadding
             data_dict['ymax'] = specialparams[1] + ypadding
         else:
-            data_dict['ymin'] = np.min(y) - ypadding
-            data_dict['ymax'] = np.max(y) + ypadding
+            if not (np.min(y) == np.max(y)):
+                data_dict['ymin'] = np.min(y) - ypadding
+                data_dict['ymax'] = np.max(y) + ypadding
+            else:
+                loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
+                data_dict['ymin'] = np.min(y) - 0.5
+                data_dict['ymax'] = np.max(y) + 0.5
 
         # Define y-labels:
         try:
@@ -263,6 +269,10 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         else:
             data_dict['annotate'] = False
 
+        # Plot a function:
+        if function:
+            data_dict['function'] = function
+
         # Plot shaded storm phases:
         if stormphases:
             if not t_stormphases:
@@ -293,7 +303,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 
 def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 	colorlist=colorlist,symbollist=symbollist,annotate=[],stormphases=[],
-	t_stormphases={},includeid=False,**kwargs):
+	t_stormphases={},includeid=False,function=None,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -407,6 +417,7 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
             y = np.asarray([row[ind] for row in stream])
+            data_dict['key'] = key
             data_dict['tdata'] = t
             data_dict['ydata'] = y
             data_dict['color'] = colorlist[count]
@@ -425,11 +436,21 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                     data_dict['ymin'] = specialparams[0] - ypadding
                     data_dict['ymax'] = specialparams[1] + ypadding
                 else:
+                    if not (np.min(y) == np.max(y)):
+                        data_dict['ymin'] = np.min(y) - ypadding
+                        data_dict['ymax'] = np.max(y) + ypadding
+                    else:
+                        loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
+                        data_dict['ymin'] = ymin - 0.5
+                        data_dict['ymax'] = ymax + 0.5
+            else:
+                if not (np.min(y) == np.max(y)):
                     data_dict['ymin'] = np.min(y) - ypadding
                     data_dict['ymax'] = np.max(y) + ypadding
-            else:
-                data_dict['ymin'] = np.min(y) - ypadding
-                data_dict['ymax'] = np.max(y) + ypadding
+                else:
+                    loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
+                    data_dict['ymin'] = np.min(y) - 0.5
+                    data_dict['ymax'] = np.max(y) + 0.5
 
             # Define y-labels:
             try:
@@ -471,6 +492,10 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                     data_dict['annotate'] = False
             else:
                 data_dict['annotate'] = False
+
+            # Plot a function:
+            if function:
+                data_dict['function'] = function
 
             # Plot shaded storm phases:
             if stormphases:
@@ -1125,6 +1150,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
     Every dictionary should contain all data needed for one single subplot.
     DICTIONARY STRUCTURE FOR EVERY SUBPLOT:
     [ { ***REQUIRED***
+	'key'   : 'x'		(str) MagPy key
 	'tdata' : t		(np.ndarray) Time
 	'ydata' : y		(np.ndarray) Data y(t)
 	'ymin'  : ymin		(float)	   Minimum of y-axis
@@ -1166,6 +1192,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	#------------------------------------------------------------
 
         # DEFINE DATA:
+        key = data[i]['key']
         t = data[i]['tdata']
         y = data[i]['ydata']
         color = data[i]['color']
@@ -1240,7 +1267,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
             if fkey in function[0]:
 		# --> Get the minimum and maximum relative times
                 ttmp = arange(0,1,0.0001)
-                ax.plot_date(stream._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+                ax.plot_date(__denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
 
         # PLOT SHADED AND ANNOTATED STORM PHASES:
         if 'stormphases' in data[i]:
@@ -1351,7 +1378,6 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
         if fmt: 
             fig.savefig(outfile, format=fmt, dpi=savedpi) 
         else: 
-            print savedpi
             fig.savefig(outfile, dpi=savedpi) 
     else: 
         plt.show()
@@ -1473,6 +1499,23 @@ def _nearestPower2(x):
         return a 
     else: 
         return b 
+
+
+def __denormalize(column, startvalue, endvalue):
+    """
+    converts [0:1] back with given start and endvalue
+    """
+    normcol = []
+    if startvalue>0:
+        if endvalue < startvalue:
+            raise ValueError, "start and endval must be given, endval must be larger"
+        else:
+            for elem in column:
+                normcol.append((elem*(endvalue-startvalue)) + startvalue)
+    else:
+        raise ValueError, "start and endval must be given as absolute times"
+            
+    return normcol
 
 
 if __name__ == '__main__':
@@ -1616,7 +1659,16 @@ if __name__ == '__main__':
             errors['plotSpectrogram'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting spectrogram."
 
-        # Step 10 - Plot normal stereoplot
+        # Step 10 - Plot function
+        try:
+            function = teststream.interpol(key,kind='quadratic')
+            plot_new(teststream,key,function=function,
+			plottitle = "Quadratic function plotted over original data.")
+        except Exception as excep:
+            errors['plot(function)'] = str(excep)
+            print datetime.utcnow(), "--- ERROR plotting function."
+
+        # Step 11 - Plot normal stereoplot
 	# (This should stay as last step due to coordinate conversion.)
         try:
             teststream._convertstream('xyz2idf')

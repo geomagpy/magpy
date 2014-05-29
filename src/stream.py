@@ -815,18 +815,24 @@ CALLED BY:
         return k
 
 
-    def _get_max(self, key):
+    def _get_max(self, key, returntime=False):
         if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
         elem = max(self, key=lambda tmp: eval('tmp.'+key))
-        return eval('elem.'+key)
+        if returntime:
+            return eval('elem.'+key), elem.time
+        else:
+            return eval('elem.'+key)
 
 
-    def _get_min(self, key):
+    def _get_min(self, key, returntime=False):
         if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
         elem = min(self, key=lambda tmp: eval('tmp.'+key))
-        return eval('elem.'+key)
+        if returntime:
+            return eval('elem.'+key), elem.time
+        else:
+            return eval('elem.'+key)
 
 
     def _gf(self, t, tau):
@@ -4231,13 +4237,14 @@ CALLED BY:
         if newway:
 	# Non-destructive trimming of stream 
             trimmedstream = DataStream()
+            trimmedstream.header = self.header
             starttime = self._testtime(starttime)
             endtime = self._testtime(endtime)
             stval = 0
             for idx, elem in enumerate(self):
                 newline = LineStruct()
                 if not isnan(elem.time):
-                    if elem.time > date2num(starttime) and elem.time <= date2num(endtime):
+                    if elem.time >= date2num(starttime) and elem.time <= date2num(endtime):
                         newline.time = elem.time
                         for key in KEYLIST:
                             exec('newline.'+key+' = elem.'+key)
