@@ -1040,8 +1040,9 @@ CALLED BY:
         1) absolute time: as provided by date2num
         2) strings: 2011-11-22 or 2011-11-22T11:11:00
         3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-        
+        	
         """
+
         if isinstance(time, float) or isinstance(time, int):
             try:
                 timeobj = num2date(time).replace(tzinfo=None)
@@ -1434,7 +1435,7 @@ CALLED BY:
         return self
 
 
-    def differentiate(self, **kwargs):
+    def differentiate(self, compensate=True,**kwargs):
         """
         Method to differentiate all columns with respect to time.
         -- Using successive gradients
@@ -1461,11 +1462,14 @@ CALLED BY:
         for i, key in enumerate(keys):
             val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
-            # gradient is shifted towards +x (compensate that by a not really good trick)
-            dvaltmp = dval[1:]
-            ndval = np.append(dvaltmp,float('NaN'))
-            
-            self._put_column(ndval, put2keys[i])
+            if compensate:
+                # TODO: why is this here? Brought errors into data.
+                # gradient is shifted towards +x (compensate that by a not really good trick)
+                dvaltmp = dval[1:]
+                ndval = np.append(dvaltmp,float('NaN'))
+                self._put_column(ndval, put2keys[i])
+            else:
+                self._put_column(dval, put2keys[i])
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self

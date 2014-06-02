@@ -63,6 +63,9 @@ except ImportError as e:
 '''
 
 # TODO:
+# - Make sure it handles NaNs well. Right now _maskNAN does not
+#	seem to be doing its job and nans are plotted with 
+#	incorrect limits.
 # - Move all plotting functions over from stream.
 #	STILL TO FIX:
 #	spectrogram()
@@ -82,6 +85,7 @@ except ImportError as e:
 # KNOWN BUGS:
 # - Does not plot ACE data...
 #	--> may have to do with plotting discontinuously.
+#	--> or NaNs? I think NaNs.
 
 colorlist =  ['b','g','m','c','y','k','b','g','m','c','y','k']
 symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-']
