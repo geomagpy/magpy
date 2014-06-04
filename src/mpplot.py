@@ -314,8 +314,8 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 
     PARAMETERS:
     Variables:
-        - streamlist: 	(list(list)) A list containing the stream and the 
-			variables from each stream to be plotted in a list, e.g.:
+        - streamlist: 	(list) A list containing the streams to be plotted 
+			in a list, e.g.:
 			[ stream1, stream2, etc...]
 			[ fge, pos1, env1 ]
 	- variables:	(list(list)) List containing the variables to be plotted
@@ -1173,13 +1173,13 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	'function': fn		(function object) Plot a function within the subplot.
 	} ,
 
-      {	'tdata' : ...				} ... ]
+      {	'key' : ...				} ... ]
 
     GENERAL VARIABLES:
     plottitle = "Data from 2014-05-02"
     confinex = False
     bgcolor = 'blue'
-    etc. ...
+    etc. ... (all are listed in plot() and plotStreams() functions)
     '''
 
     # CREATE MATPLOTLIB FIGURE OBJECT:
@@ -1264,7 +1264,6 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
                                 connectionstyle="angle,angleA=0,angleB=90,rad=10"))
 
 	# PLOT A GIVEN FUNCTION:     
-	# TODO: This doesn't work yet 
         if 'function' in data[i]:
             fkey = 'f'+key
             function = data[i]['function']
@@ -1560,7 +1559,7 @@ if __name__ == '__main__':
 
         # Step 1 - Read data
         try:
-            teststream = read(filepath)
+            teststream = read(filepath,tenHz=True)
             print datetime.utcnow(), "- Stream read in successfully."
         except Exception as excep:
             errors['read'] = str(excep)

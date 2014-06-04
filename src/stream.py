@@ -1435,7 +1435,7 @@ CALLED BY:
         return self
 
 
-    def differentiate(self, compensate=True,**kwargs):
+    def differentiate(self, **kwargs):
         """
         Method to differentiate all columns with respect to time.
         -- Using successive gradients
@@ -1462,14 +1462,7 @@ CALLED BY:
         for i, key in enumerate(keys):
             val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
-            if compensate:
-                # TODO: why is this here? Brought errors into data.
-                # gradient is shifted towards +x (compensate that by a not really good trick)
-                dvaltmp = dval[1:]
-                ndval = np.append(dvaltmp,float('NaN'))
-                self._put_column(ndval, put2keys[i])
-            else:
-                self._put_column(dval, put2keys[i])
+            self._put_column(dval, put2keys[i])
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
@@ -2618,6 +2611,7 @@ CALLED BY:
                     mult=8.0, cmap=None, zorder=None, title=None, show=True, 
                     sphinx=False, clip=[0.0, 1.0]): 
 
+	#TODO: Discuss with Ramon which kind of window should be used (cos^2(2*pi (t/T))) 
         """
         Function taken from ObsPy
         Computes and plots spectrogram of the input data. 
@@ -4248,7 +4242,7 @@ CALLED BY:
             for idx, elem in enumerate(self):
                 newline = LineStruct()
                 if not isnan(elem.time):
-                    if elem.time >= date2num(starttime) and elem.time <= date2num(endtime):
+                    if elem.time >= date2num(starttime) and elem.time < date2num(endtime):
                         newline.time = elem.time
                         for key in KEYLIST:
                             exec('newline.'+key+' = elem.'+key)
@@ -5459,8 +5453,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     if newway == True:
         
         subtractedstream = DataStream()
-        sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
-        sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None))
+        sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None),newway=True)
+        sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None),newway=True)
         samplingrate_b = sb.get_sampling_period()
 
         subtractedstream.header = sa.header

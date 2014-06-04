@@ -36,8 +36,20 @@ from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
-from autobahn.websocket import listenWS
-from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
+# TODO: Add these into all protocols?
+from autobahn import version as autovers
+print autovers
+try: # version > 0.8.0
+    from autobahn.wamp1.protocol import WampServerFactory, WampServerProtocol, $
+except:
+    from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
+try: # autovers > 0.7.0:
+    from autobahn.twisted.websocket import listenWS
+except:
+    from autobahn.websocket import listenWS
+
+#from autobahn.websocket import listenWS
+#from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
 
 def h2d(x):
     '''	
