@@ -63,9 +63,6 @@ except ImportError as e:
 '''
 
 # TODO:
-# - Make sure it handles NaNs well. Right now _maskNAN does not
-#	seem to be doing its job and nans are plotted with 
-#	incorrect limits.
 # - Move all plotting functions over from stream.
 #	STILL TO FIX:
 #	spectrogram()
@@ -83,9 +80,7 @@ except ImportError as e:
 #		renamed to plotStereoplot
 #
 # KNOWN BUGS:
-# - Does not plot ACE data...
-#	--> may have to do with plotting discontinuously.
-#	--> or NaNs? I think NaNs.
+# - None? :)
 
 colorlist =  ['b','g','m','c','y','k','b','g','m','c','y','k']
 symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-']
@@ -190,6 +185,16 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
         data_dict = {}
         ind = KEYLIST.index(key)
         y = np.asarray([row[ind] for row in stream])
+
+	# Fix if NaNs are present:
+        if plottype == 'discontinuous':
+            y = _maskNan(y)
+        else: 
+            nans, test = _nanHelper(y)
+            newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+            t = newt
+            y = [el for idx, el in enumerate(y) if not nans[idx]]
+
         data_dict['key'] = key
         data_dict['tdata'] = t
         data_dict['ydata'] = y
@@ -286,7 +291,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
                 loggerplot.error("plot: Length of variable t_stormphases incorrect.")
                 raise Exception("Something is wrong with length of variable t_stormphases!")
             if type(stormphases) == list:
-                if stormphases[i][j]:
+                if stormphases[i]:
                     data_dict['stormphases'] = t_stormphases
             else:
                 data_dict['stormphases'] = t_stormphases
@@ -307,7 +312,8 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 
 def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 	colorlist=colorlist,symbollist=symbollist,annotate=[],stormphases=[],
-	t_stormphases={},includeid=False,function=None,**kwargs):
+	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
+	**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -362,6 +368,9 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 			dict('mphase') = time of start of main phase / end of SSC
 			dict('rphase') = time of start of recovery phase / end of main phase
 			dict('stormend') = end of recovery phase
+			WARNING: If recovery phase is defined as past the end of
+			the data to plot, it will be plotted in addition to the
+			actual data.
 
     RETURNS:
         - plot: 	(Pyplot plot) Returns plot as plt.show or saved file
@@ -421,6 +430,16 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
             y = np.asarray([row[ind] for row in stream])
+
+	    # Fix if NaNs are present:
+            if plottype == 'discontinuous':
+                y = _maskNan(y)
+            else: 
+                nans, test = _nanHelper(y)
+                newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+                t = newt
+                y = [el for idx, el in enumerate(y) if not nans[idx]]
+
             data_dict['key'] = key
             data_dict['tdata'] = t
             data_dict['ydata'] = y
@@ -1148,7 +1167,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
 	labelcolor='0.2',confinex=False,outfile=None,includeid=False,
 	stormanno_s=True,stormanno_m=True,stormanno_r=True,
-	fmt=None,plottype='discontinuous'):
+	fmt=None):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
@@ -1201,17 +1220,6 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
         y = data[i]['ydata']
         color = data[i]['color']
         symbol = data[i]['symbol']
-
-        # Deal with discontinuities:
-        # TODO : does this work?
-
-        if plottype == 'discontinuous':
-            y = _maskNan(y)
-        else: 
-            nans, test = _nanHelper(y)
-            newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
-            t = newt
-            y = [el for idx, el in enumerate(y) if not nans[idx]]
 
         # CREATE SUBPLOT OBJECT & ADD TITLE:
         loggerplot.info("_plot: Adding subplot for key %s..." % data[i]['ylabel'])
