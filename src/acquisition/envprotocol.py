@@ -157,16 +157,43 @@ class EnvProtocol(LineReceiver):
             else:
                 print 'Data error'
 
-
             ## publish event to all clients subscribed to topic
             ##
-            self.wsMcuFactory.dispatch(dispatch_url, evt0)
-            self.wsMcuFactory.dispatch(dispatch_url, evt1)
-            self.wsMcuFactory.dispatch(dispatch_url, evt3)
-            self.wsMcuFactory.dispatch(dispatch_url, evt30)
-            self.wsMcuFactory.dispatch(dispatch_url, evt33)
-            self.wsMcuFactory.dispatch(dispatch_url, evt34)
-            self.wsMcuFactory.dispatch(dispatch_url, evt99)
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt0)
+            except:
+                log.err("Missing hostname")
+                pass
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt1)
+            except:
+                log.err("Missing timestamp")
+                pass
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt3)
+            except:
+                log.err("Missing outime")
+                pass
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt30)
+            except:
+                log.err("Missing temp")
+                pass
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt33)
+            except:
+                log.err("Missing humidity")
+                pass
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt34)
+            except:
+                log.err("Missing dew")
+                pass
+            try:
+                self.wsMcuFactory.dispatch(dispatch_url, evt99)
+            except:
+                log.err("Missing EOL")
+                pass
             #log.msg("Analog value: %s" % str(evt4))
 
         except ValueError:
