@@ -1074,7 +1074,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                     Mode 'replace' checks for the existance of existing inputs in sensor, station and datainfo, and replaces the stored information: optional tablename can be given.
                          if tablename is given, then data from this table is replaced - otherwise only data from station and sensor are replaced
                     Mode 'delete' completely deletes all tables and creates new ones. 
-                    Mode 'force' does not check sensors and datainfo tabs. Just creates table tablename 
+                    Mode 'force' does not check sensors and datainfo tabs. Just creates table tablename. All other conditions follow mode 'replace'.
          - clear:	(bool) If true it will delete the selected table before adding new data
     REQUIRES:
         dbdatainfo, dbsensorinfo
@@ -1137,7 +1137,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         loggerdatabase.error("stream2DB: Empty datastream. Aborting ...")
         return
 
-    print "stream2db1: ", datetime.utcnow()
+    #print "stream2db1: ", datetime.utcnow()
 
     if not mode == 'force':
         # check SENSORS information
@@ -1192,16 +1192,16 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
         # If no sensorid is available then report error and return:
         try:
-            print "Trying sampling rate"
+            #print "Trying sampling rate"
             sr = datastream.header['DataSamplingRate']
             loggerdatabase.info("stream2DB: --- DataSamplingRate = %s" % sr)
         except:
-            print "Setting sampling rate"
+            #print "Setting sampling rate"
             datastream.header['DataSamplingRate'] = str(dbsamplingrate(datastream))+' sec'
             sr = datastream.header['DataSamplingRate']
             loggerdatabase.info("stream2DB: --- DataSamplingRate = %s" % sr)
 
-    print "stream2db2: ", datetime.utcnow()
+    #print "stream2db2: ", datetime.utcnow()
 
     loggerdatabase.debug("stream2DB: --- Checking column contents ...")
     # HEADER INFO - DATA TABLE
@@ -1233,14 +1233,14 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                tester = tester[~isnan(tester)]
                if len(tester)>0:
                    if datastream._is_number(testval):
-                       print "Number"
+                       #print "Number"
                        dataheads.append(key + ' FLOAT')
                        datakeys.append(key)
            except:
-               print "String"
+               #print "String"
                dataheads.append(key + ' CHAR(100)')
                datakeys.append(key)                
-           print "stream2db2c: ", key, datetime.utcnow()
+           #print "stream2db2c: ", key, datetime.utcnow()
        for hkey in headdict:
            if key == hkey.replace('col-',''):
                colstr = headdict[hkey]            
@@ -1253,12 +1253,12 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     unitstr = '_'.join(unitlst)
 
     # Update the column data at the end together with time
-    print "stream2db3: ", datetime.utcnow(), datakeys
+    #print "stream2db3: ", datetime.utcnow(), datakeys
 
     st = datetime.strftime(num2date(datastream[0].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
     et = datetime.strftime(num2date(datastream[-1].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
 
-    print st, et
+    #print st, et
 
     if not mode == 'force':
         loggerdatabase.debug("stream2DB: --- Checking/Updating existing tables ...")
@@ -1352,7 +1352,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
             tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
 
-    print "stream2db4: ", datetime.utcnow()
+    #print "stream2db4: ", datetime.utcnow()
 
     if not tablename:
         loggerdatabase.error("stream2DB: No Tablename specified")    
@@ -1376,52 +1376,41 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     cursor.execute(createdatatablesql)
 
     values = []
-    #print "Keys: ", datakeys
+    
+    # Drop nan lines
+    datastream = [x for x in datastream if not isnan(x.time)]
+    #print "Datastream: ", datastream
+
     for elem in datastream:
         for el in datakeys:
             val = str(eval('elem.'+el))
-            """
-            if datastream._is_number(eval('elem.'+el)):
-                val = str(eval('elem.'+el))
-            else:
-                val = '"'+str(eval('elem.'+el))+'"'
-            """
             if val=='nan':
                 val = 'null'
             datavals.append(val)
+
         ct = datetime.strftime(num2date(elem.time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
         # Take the insertstring creation out of loop
         if not isnan(elem.sectime) and datastream._is_number(elem.sectime): 
             cst = datetime.strftime(num2date(elem.sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
-            #print insertmanysql
-            #lst = '"'+ct+'"' + ', "'+cst+'" ,'
-            #lst = ['"'+ct+'"', '"'+cst+'"']
             lst = [ct, cst]
         else:
-            #lst = '"'+ct+'" ,'
-            #lst = '"'+ct+'"'
             lst = [ct]
 
-        #print "Times: ", lst
-        #print "Data: ", datavals
-        #fulllist = lst + ', '.join(datavals)
-
-        #print "Lst: ", fulllist
         values.append(tuple(lst+datavals))
         #print values
         datavals  = []
 
-    print len(values)
+    #print len(values)
 
     #print insertmanysql
-    print values[1]
+    #print values[1]
     #cursor.executemany(insertmanysql,values)
     #db.commit()    
 
-    if mode == "replace":
+    if mode == "replace" or mode == "force":
         try:
             insertsql = insertmanysql
-            insertsql.replace("INSERT","REPLACE")
+            insertsql = insertsql.replace("INSERT","REPLACE")
             cursor.executemany(insertsql,values)
         except:
             try:
@@ -1430,7 +1419,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                 loggerdatabase.warning("stream2DB: Write MySQL: Replace failed")
     else:
         try:
-            print "Got here"
+            #print "Got here"
             cursor.executemany(insertmanysql,values)
         except:
             loggerdatabase.debug("stream2DB: Record at %s already existing: use mode replace to overwrite" % ct)
@@ -1461,13 +1450,13 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         datavals  = []
     """
 
-    print "stream2db5: ", datetime.utcnow()
+    #print "stream2db5: ", datetime.utcnow()
 
     # Select MinTime and MaxTime from datatable and eventually update datainfo
     getminmaxtimesql = "Select MIN(time),MAX(time) FROM " + tablename
     cursor.execute(getminmaxtimesql)
     rows = cursor.fetchall()
-    print rows
+    #print rows
     loggerdatabase.info("stream2DB: Table now covering a time range from " + str(rows[0][0]) + " to " + str(rows[0][1]))
     updatedatainfotimesql = 'UPDATE DATAINFO SET DataMinTime = "' + rows[0][0] + '", DataMaxTime = "' + rows[0][1] +'", ColumnContents = "' + colstr +'", ColumnUnits = "' + unitstr +'" WHERE DataID = "'+ tablename + '"'
     #print updatedatainfotimesql
@@ -1476,7 +1465,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     db.commit()
     cursor.close ()
 
-    print "stream2db6: ", datetime.utcnow()
+    #print "stream2db6: ", datetime.utcnow()
 
 
 def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
@@ -1751,6 +1740,12 @@ def db2diline(db,**kwargs):
     RETURNS:
         list of DILineStruct elements
     """
+
+    # importing absolute classes again....
+    try:
+        from absolutes import DILineStruct
+    except:
+        from magpy.absolutes import DILineStruct
 
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')

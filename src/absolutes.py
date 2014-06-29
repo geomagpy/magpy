@@ -40,8 +40,8 @@ Version 1.0 (from the 23.02.2012)
 """
 
 from stream import *
-from transfer import *
 from database import *
+from transfer import *
 
 import dateutil.parser as dparser
 
@@ -1603,7 +1603,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         - endtime:      (string/datetime) define end
         - abstype:      (string) default manual, can be autodif
         - db:   	(mysql database) defined by MySQLdb.connect().
-        - dbadd:        (bool) if True and read files will be added to the database
+        - dbadd:        (bool) if True DI-raw data will be added to the database
         - alpha:        (float) orientation angle 1 in deg (if z is vertical, alpha is the horizontal rotation angle)
         - beta:         (float) orientation angle 2 in deg 
         - deltaF:       (float) difference between scalar measurement point and pier (TODO: check the sign)
@@ -1612,23 +1612,30 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         - usestep:      (int) which step to use for analysis, usually both, in autodif only 2
         - annualmeans:  (list) provide annualmean for x,y,z as [x,y,z] with floats
         - azimuth:      (float) required for Autodif measurements
-        - movetoarchive:(string) define a local directory to store archived data
+        - movetoarchive:(string) define a local directory to store archived data (only works when reading files)
     RETURNS:
         --
     EXAMPLE:
         (1) >>> stream = absoluteAnalysis('/home/leon/Dropbox/Daten/Magnetism/DI-WIC/autodif',variopath,'',abstype='autodif',azimuth=267.4242,starttime='2014-02-10',endtime='2014-02-25')
         (2) >>> stream = absoluteAnalysis('DIDATA_WIK',variopath,'',starttime='2013-12-20',endtime='2013-12-30',db=db)
         (3) >>> stream = absoluteAnalysis('/home/leon/Dropbox/Daten/Magnetism/DI-WIC/raw/',variopath,scalarpath,diid='A2_WIC.txt',starttime='2014-02-10',endtime='2014-02-25',db=db,dbadd=True)
+        (3) >>> stream = absoluteAnalysis('http://localhost/mydata.html',variopath,scalarpath,diid='A2_WIC.txt',db=db,dbadd=True)
 
     PERFORMED TESTS:
         (OK)1. Read data from database and files
         (OK)2. Read data from autodif and manual analysis 
         (OK)3. Put data to database (dbadd) 
         (OK)4. Check parameter for all possibilities: a) no db, b) db, c) db and override by input
-        5. Archiving function
+        (OK)5. Archiving function
         6. Appropriate information on failed analyses
-        7. is the usestep variable correctly applied for autodif and normal?
-        8. overwrite of existing database lines?
+        (OK)7. is the usestep variable correctly applied for autodif and normal?
+        (OK)8. overwrite of existing database lines?
+        (OK)9. Order of saving data when analyzing older data sets - requires reload and delete
+        10. Test memory capabilities for large data sets
+        (OK)11. Check URL/FTP read, single file and directory read
+        
+        Bugs: 
+        when importing db2diline from database, the DILineStruct, defined in absolutes is missing.... why???????? see Test4 in FullAbsoluteAnalysis -- order of import is very important
       
     """
     db = kwargs.get('db')
@@ -1717,6 +1724,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     readfile = True
     filelist, datelist = [],[]
     failinglist = []
+    successlist = []
     if db:        
         # Check whether absdata exists as table
         cursor.execute("SHOW TABLES LIKE '%s'" % absdata)
@@ -1739,8 +1747,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         
     if readfile:
         # Get list of files
-        # XXX ftp and url access
-        if os.path.isfile(absdata):
+        if "://" in absdata:
+            print "Found URL code - requires name of data set with date" 
+            filelist.append(absdata)
+            movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
+        elif os.path.isfile(absdata):
             print "Found single file"
             filelist.append(absdata)
         else:
@@ -1758,6 +1769,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 failinglist.append(elem)
 
         datelist = list(set(datelist))
+
 
     datetimelist = [datetime.strptime(elem,'%Y-%m-%d') for elem in datelist]
 
@@ -1780,12 +1792,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     for date in sorted(datetimelist):
         variofound = True
         scalarfound = True
-        print date
+        print ""
+        print "------------------------------------------------------"
+        print "Starting analysis for ", date
+        print "------------------------------------------------------"
         # a) Read variodata
-        print "-----------------"
-        print "Reading Variodata"
         variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-        print "Variolength:", len(variostr)
+        print "Length of Variodata:", len(variostr)
         if len(variostr) > 3: # can contain ([], 'File not specified')
             variostr =variostr.rotation(alpha=alpha, beta=beta)
             vafunc = variostr.interpol(['x','y','z'])
@@ -1795,9 +1808,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             
         # b) Load Scalardata
         print "-----------------"
-        print "Reading Scalars"
         scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
-        print "Scalarlength:", len(scalarstr)
+        print "Length of Scalardata:", len(scalarstr)
         if len(scalarstr) > 3: # Because scalarstr can contain ([], 'File not specified')
             scfunc = scalarstr.interpol(['f'])
         else:
@@ -1809,9 +1821,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         if readfile:
             datestr = datetime.strftime(date,"%Y-%m-%d")
             datestr2 = datetime.strftime(date,"%Y%m%d") # autodif
-            print "Starting caclulation"
-            print "-------------------------------------------------"
-            print datestr
+            print "-----------------"
+            #print datestr
             if abstype == 'autodif':
                 difiles = [di for di in filelist if datestr2 in di]
             else:
@@ -1819,13 +1830,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if len(difiles) > 0:
                 for elem in difiles:
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
-                    print "LENGTH:",len(absst)
+                    #print "LENGTH:",len(absst)
                     try:
                         if not len(absst) > 1:
                             stream = absst[0].getAbsDIStruct()
                             abslist.append(absst)
                             if db and dbadd:
-                                print "stationid", stationid
                                 diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
                         else:
                             for a in absst:
@@ -1833,6 +1843,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                                 abslist.append(a)
                             if db and dbadd:
                                 diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
+                        #print "absoluteAnalysis: Successful analyse of %s" % elem 
+                        successlist.append(elem)
                     except:
                         print "absoluteAnalysis: Failed to analyse %s" % elem 
                         failinglist.append(elem)
@@ -1922,17 +1934,31 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         resultstream.header['col-z'] = 'z'
         resultstream.header['unit-col-z'] = 'nT'
 
+    #print "Files for archive:"
+    #print "---------------------------"
+    archivelist = [x for x in successlist if x not in failinglist]
+    print "------------------------------------------------------"
+    print "Failed files:"
+    print "------------------------------------------------------"
+    if len(failinglist) > 0:
+        for el in failinglist:
+            print el
+    else:
+        print "None"
+    print "------------------------------------------------------"
+
+
     # 3.2 Eventually archive the data 
     # --------------------
     # XXX possible issues: direct ftp reading or url reading
     if movetoarchive:
         if readfile:
-            for fi in filelist:
+            for fi in archivelist:
                 print fi     
                 if not "://" in fi: 
                     src = fi
                     fname = os.path.split(src)[1]
-                    dst = os.path.join(archivepath,fname)
+                    dst = os.path.join(movetoarchive,fname)
                     shutil.move(src,dst)
                 else:
                     fname = fi.split('/')[-1]
@@ -1955,11 +1981,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
 
     resultstream = resultstream.sorting()
-
-    print "Failed files:"
-    print "---------------------------"
-    for elem in failinglist:
-        print elem
 
     return resultstream
 

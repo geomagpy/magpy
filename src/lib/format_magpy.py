@@ -24,7 +24,7 @@ def isPYCDF(filename):
     except:
         return False
 
-    loggerlib.info("format_magpy: Found PYCDF file %s" % filename)
+    loggerlib.debug("format_magpy: Found PYCDF file %s" % filename)
     return True
 
 
@@ -39,7 +39,7 @@ def isPYSTR(filename):
     if not temp.startswith(' # MagPy - ASCII'):
         return False
 
-    loggerlib.info("format_magpy: Found PYSTR file %s" % filename)
+    loggerlib.debug("format_magpy: Found PYSTR file %s" % filename)
     return True
 
 
@@ -54,7 +54,7 @@ def isPYBIN(filename):
     if not temp.startswith('# MagPyBin'):
         return False
 
-    loggerlib.info("format_magpy: Found PYBIN file %s" % filename)
+    loggerlib.debug("format_magpy: Found PYBIN file %s" % filename)
     return True
 
 

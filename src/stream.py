@@ -43,7 +43,7 @@ try:
     if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
         print "No terminal connected - assuming cron job and using Agg for matplotlib"
         matplotlib.use('Agg') # For using cron
-except:
+except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: problem with matplotlib.\n"
     badimports.append(e)
 
@@ -96,9 +96,16 @@ except ImportError as e:
 
 # NASACDF - SpacePy
 # -----------------
+def findpath(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return root
 try:
     print "Loading SpacePy package cdf support ..."
     try:
+        # check for windows
+        nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
+        #print nasacdfdir
         os.putenv("CDF_LIB", nasacdfdir)
         print "trying CDF lib at %s" % nasacdfdir
         import spacepy.pycdf as cdf
@@ -5111,9 +5118,12 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     headerb = stream_b.header
 
     # Test streams
-    if len(stream_a) == 0:
-        loggerstream.debug('mergeStreams: stream_a is empty - doing nothing')
+    if len(stream_a) == 0 and len(stream_b) == 0:
+        loggerstream.debug('mergeStreams: stream_a and _b are empty - doing nothing')
         return stream_a
+    if len(stream_a) == 0:
+        loggerstream.debug('mergeStreams: stream_a is empty - retruning stream_b')
+        return stream_b
     if len(stream_b) == 0:
         loggerstream.debug('mergeStreams: stream_b is empty - returning unchanged stream_a')
         return stream_a
@@ -5131,6 +5141,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     elif extend:
         for elem in stream_b:
             if not elem.time in timea:
+                #print timea, elem.time
                 sta.append(elem)
         sta.sort()
         return DataStream(sta, headera)

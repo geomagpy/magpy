@@ -191,7 +191,6 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     expectedmire,temp = 0.0,0.0
     key = None
     headfound = False
-    print "Reading DI data ..."
     dirow = DILineStruct(25)
     count = 4
     goon = False
@@ -452,7 +451,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
 
     newset = False  # To distinguish between different absolute sets within one file
 
-    print "Reading DI data ..."
+    #print "Reading DI data ..."
     row = DILineStruct(24)
 
     for line in fh:
