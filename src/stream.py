@@ -40,9 +40,13 @@ except ImportError as e:
 # ----------
 try:
     import matplotlib
-    if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
-        print "No terminal connected - assuming cron job and using Agg for matplotlib"
-        matplotlib.use('Agg') # For using cron
+    try:
+        if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
+            print "No terminal connected - assuming cron job and using Agg for matplotlib"
+            matplotlib.use('Agg') # For using cron
+    except:
+        print "Problems with identfying cron job - windows system?"
+        pass 
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: problem with matplotlib.\n"
     badimports.append(e)
