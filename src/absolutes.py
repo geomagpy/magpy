@@ -1631,7 +1631,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         (OK)7. is the usestep variable correctly applied for autodif and normal?
         (OK)8. overwrite of existing database lines?
         (OK)9. Order of saving data when analyzing older data sets - requires reload and delete
-        10. Test memory capabilities for large data sets
+        10. Test memory capabilities for large data sets (~ 6month with two varios, one scalar, no vario and scalar data)
         (OK)11. Check URL/FTP read, single file and directory read
         
         Bugs: 

@@ -111,7 +111,7 @@ try:
         nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
         #print nasacdfdir
         os.putenv("CDF_LIB", nasacdfdir)
-        print "trying CDF lib at %s" % nasacdfdir
+        print "trying CDF lib in %s" % nasacdfdir
         import spacepy.pycdf as cdf
         print "... success"
     except:
@@ -149,7 +149,8 @@ else:
     for item in badimports:
         print item
     print
-    check = raw_input("Do you want to continue anyway? ")
+    print "Moving on anyway..."
+    #check = raw_input("Do you want to continue anyway? ")
 
 # Logging
 # ---------
