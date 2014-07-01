@@ -18,9 +18,9 @@ CONTAINS:
 	_plot:		(Func) ... internal function to funnel plot information
 			into a matplotlib plot object.
 	_confinex:	(Func) ... utility function of _plot.
-	_maskNan:	(Func) ... utility function of _plot.
-	_nanHelper:	(Func) ... utility function of _plot.
-	__denormalize:	(Func) ... utility function of _plot.
+	maskNAN:	(Func) ... utility function of _plot.
+	nan_helper:	(Func) ... utility function of _plot.
+	denormalize:	(Func) ... utility function of _plot.
 
 DEPENDENCIES:
         magpy.stream
@@ -101,7 +101,8 @@ def ploteasy(stream):
 
 def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-	t_stormphases={},includeid=False,function=None,**kwargs):
+	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
+	**kwargs):
     '''
     DEFINITION:
         This function creates a graph from a single stream.
@@ -188,9 +189,9 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 
 	# Fix if NaNs are present:
         if plottype == 'discontinuous':
-            y = _maskNan(y)
+            y = maskNAN(y)
         else: 
-            nans, test = _nanHelper(y)
+            nans, test = nan_helper(y)
             newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
             t = newt
             y = [el for idx, el in enumerate(y) if not nans[idx]]
@@ -433,9 +434,9 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 
 	    # Fix if NaNs are present:
             if plottype == 'discontinuous':
-                y = _maskNan(y)
+                y = maskNAN(y)
             else: 
-                nans, test = _nanHelper(y)
+                nans, test = nan_helper(y)
                 newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
                 t = newt
                 y = [el for idx, el in enumerate(y) if not nans[idx]]
@@ -611,10 +612,10 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
     t_min = np.min(t)
     t_new, val_new = [],[]
 
-    nfft = int(stream._nearestPow2(len(t)))
+    nfft = int(nearestPow2(len(t)))
 
     if nfft > len(t): 
-        nfft = int(stream._nearestPow2(len(t) / 2.0)) 
+        nfft = int(nearestPow2(len(t) / 2.0)) 
 
     for idx, elem in enumerate(val):
         if not isnan(elem):
@@ -736,7 +737,7 @@ def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False,
 
     for key in keys:
         val = stream._get_column(key)
-        val = stream._maskNAN(val)
+        val = maskNAN(val)
         dt = stream.get_sampling_period()*(samp_rate_multiplicator)
         Fs = float(1.0/dt)
         obspySpectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log, 
@@ -807,14 +808,14 @@ def obspySpectrogram(data, samp_rate, per_lap=0.9, wlen=None, log=False,
 
     # nfft needs to be an integer, otherwise a deprecation will be raised 
     #XXX add condition for too many windows => calculation takes for ever 
-    nfft = int(_nearestPower2(wlen * samp_rate))
+    nfft = int(nearestPow2(wlen * samp_rate))
 
     if nfft > npts:
         print npts
-        nfft = int(_nearestPower2(npts / 8.0)) 
+        nfft = int(nearestPow2(npts / 8.0)) 
 
     if mult != None: 
-        mult = int(_nearestPower2(mult)) 
+        mult = int(nearestPow2(mult)) 
         mult = mult * nfft 
 
     nlap = int(nfft * float(per_lap)) 
@@ -1278,7 +1279,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
             if fkey in function[0]:
 		# --> Get the minimum and maximum relative times
                 ttmp = arange(0,1,0.0001)
-                ax.plot_date(__denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+                ax.plot_date(_denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
 
         # PLOT SHADED AND ANNOTATED STORM PHASES:
         if 'stormphases' in data[i]:
@@ -1443,7 +1444,7 @@ def _confinex(ax, tmax, tmin, timeunit):
         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
         timeunit = '[Year]'
 
-def _nanHelper(y):
+def nan_helper(y):
     """
     Helper to handle indices and logical indices of NaNs. 
     Taken from eat (http://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array)
@@ -1456,77 +1457,10 @@ def _nanHelper(y):
               to convert logical indices of NaNs to 'equivalent' indices
     Example:
             >>> # linear interpolation of NaNs
-            >>> nans, x= _nanHelper(y)
+            >>> nans, x= nan_helper(y)
             >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
     """
     return np.isnan(y), lambda z: z.nonzero()[0]
-
-
-def _maskNan(y):
-    """
-    Tests for NAN values in column and usually masks them.
-    """
-        
-    try: # Test for the presence of nan values
-        val = np.mean(y)
-        numdat = True
-        if isnan(val): # found at least one nan value
-            for el in y:
-                if not isnan(el): # at least on number is present - use masked_array
-                    num_found = True
-            if num_found:
-                mcolumn = np.ma.masked_invalid(y)
-                numdat = True
-                y = mcolumn
-            else:
-                numdat = False
-                loggerstream.warning("_plot: Only nan in column.")
-                return []
-    except:
-        numdat = False
-        loggerplot.warning("_plot: Only nan in column.")
-        return []
-
-    return y
-
-
-def _nearestPower2(x): 
-    """
-        Function taken from ObsPy nearestPow2
-        Find power of two nearest to x 
-        >>> _nearestPow2(3) 
-        2.0 
-        >>> _nearestPow2(15) 
-        16.0 
-        :type x: Float 
-        :param x: Number 
-        :rtype: Int 
-        :return: Nearest power of 2 to x 
-    """ 
-
-    a = pow(2, ceil(np.log2(x))) 
-    b = pow(2, floor(np.log2(x))) 
-    if abs(a - x) < abs(b - x): 
-        return a 
-    else: 
-        return b 
-
-
-def __denormalize(column, startvalue, endvalue):
-    """
-    converts [0:1] back with given start and endvalue
-    """
-    normcol = []
-    if startvalue>0:
-        if endvalue < startvalue:
-            raise ValueError, "start and endval must be given, endval must be larger"
-        else:
-            for elem in column:
-                normcol.append((elem*(endvalue-startvalue)) + startvalue)
-    else:
-        raise ValueError, "start and endval must be given as absolute times"
-            
-    return normcol
 
 
 if __name__ == '__main__':
@@ -1669,7 +1603,7 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['plotSpectrogram'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting spectrogram."
-
+        
         # Step 10 - Plot function
         try:
             function = teststream.interpol(key,kind='quadratic')
@@ -1678,7 +1612,7 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['plot(function)'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting function."
-
+        
         # Step 11 - Plot normal stereoplot
 	# (This should stay as last step due to coordinate conversion.)
         try:
@@ -1689,7 +1623,7 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['plotStereoplot'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting stereoplot."
-
+        
         # If end of routine is reached... break.
         break
 
@@ -1704,6 +1638,7 @@ if __name__ == '__main__':
     else:
         print len(errors), "errors were found in the following functions:"
         print str(errors.keys())
+        print
         print "Would you like to print the exceptions thrown?"
         excep_answer = raw_input("(Y/n) > ")
         if excep_answer.lower() == 'y':

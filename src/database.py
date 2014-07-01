@@ -1965,7 +1965,7 @@ def getBaselineProperties(db,datastream,distream=None):
             fkey = 'f'+key
             if fkey in elem[0]:
                 ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
-                #ax.plot_date(self._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+                #ax.plot_date(denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
             
     return DataStream(streamdat,datastream.header)
     

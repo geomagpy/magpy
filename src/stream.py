@@ -307,7 +307,8 @@ class DataStream(object):
     - stream.trim() -- returns stream within new time frame
     - stream.write() -- Writing Stream to a file
 
-    Supporting internal methods are:
+    Supporting INTERNAL methods:
+    ----------------------------
 
     A. Standard functions and overrides for list like objects
     - self.clear_header(self) -- Clears headers
@@ -336,21 +337,25 @@ class DataStream(object):
     B. Internal Methods III: General utility & NaN handlers
     - self._convertstream(self, coordinate, **kwargs) -- Convert coordinates of x,y,z columns in stream
     - self._det_trange(self, period) -- starting with coefficients above 1%
-    - self._find_nearest(self, array, value) -- find point in array closest to value
     - self._find_t_limits(self) -- return times of first and last stream data points
     - self._testtime(time) -- returns datetime object
     - self._get_min(key) -- returns float
     - self._get_max(key) -- returns float
-    - self._nearestPow2(self, x) -- Find power of two nearest to x 
     - self._normalize(column) -- returns list,float,float -- normalizes selected column to range 0,1
-    - self._denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
-    - self._maskNAN(self, column) -- Tests for NAN values in column and usually masks them
-    - self._nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
-    - self._nearestPow2(self, x) -- Find power of two nearest to x
+    - nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
     - self._print_key_headers(self) -- Prints keys in datastream with variable and unit.
     - self._get_key_headers(self) -- Returns keys in datastream.
     - self._drop_nans(self, key) -- Helper to drop lines with NaNs in any of the selected keys.
     - self._is_number(self, s) -- ?
+
+    Supporting EXTERNAL methods:
+    ----------------------------
+
+    Useful functions:
+    - denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
+    - find_nearest(array, value) -- find point in array closest to value
+    - maskNAN(column) -- Tests for NAN values in array and usually masks them
+    - nearestPow2(x) -- Find power of two nearest to x 
     
 *********************************************************************
     Standard function description format:
@@ -921,34 +926,12 @@ CALLED BY:
         return DataStream(outstream,outstream.header)
 
 
-    def _denormalize(self, column, startvalue, endvalue):
-        """
-        converts [0:1] back with given start and endvalue
-        """
-        normcol = []
-        if startvalue>0:
-            if endvalue < startvalue:
-                raise ValueError, "start and endval must be given, endval must be larger"
-            else:
-                for elem in column:
-                    normcol.append((elem*(endvalue-startvalue)) + startvalue)
-        else:
-            raise ValueError, "start and endval must be given as absolute times"
-            
-        return normcol
-
-
     def _det_trange(self, period):
         """
         starting with coefficients above 1%
         is now returning a timedelta object
         """
         return np.sqrt(-np.log(0.01)*2)*self._tau(period)
-
-
-    def _find_nearest(self, array, value):
-        idx=(np.abs(array-value)).argmin()
-        return array[idx], idx
 
         
     def _is_number(self, s):
@@ -960,73 +943,6 @@ CALLED BY:
             return True
         except ValueError:
             return False
-
-
-    def _maskNAN(self, column):
-        """
-        Tests for NAN values in column and usually masks them
-        """
-        
-        try: # Test for the presence of nan values
-            val = np.mean(column)
-            numdat = True
-            if isnan(val): # found at least one nan value
-                for el in column:
-                    if not isnan(el): # at least on number is present - use masked_array
-                        num_found = True
-                if num_found:
-                    mcolumn = np.ma.masked_invalid(column)
-                    numdat = True
-                    column = mcolumn
-                else:
-                    numdat = False
-                    loggerstream.warning("NAN warning: only nan in column")
-                    return []
-        except:
-            numdat = False
-            #loggerstream.warning("Here: NAN warning: only nan in column")
-            return []
-
-        return column
-
-
-    def _nan_helper(self, y):
-        """Helper to handle indices and logical indices of NaNs. Taken from eat (http://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array)
-
-        Input:
-            - y, 1d numpy array with possible NaNs
-        Output:
-            - nans, logical indices of NaNs
-            - index, a function, with signature indices= index(logical_indices),
-              to convert logical indices of NaNs to 'equivalent' indices
-        Example:
-            >>> # linear interpolation of NaNs
-            >>> nans, x= nan_helper(y)
-            >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-        """
-        return np.isnan(y), lambda z: z.nonzero()[0]
-
-
-    def _nearestPow2(self, x): 
-        """
-        Function taken from ObsPy
-        Find power of two nearest to x 
-        >>> _nearestPow2(3) 
-        2.0 
-        >>> _nearestPow2(15) 
-        16.0 
-        :type x: Float 
-        :param x: Number 
-        :rtype: Int 
-        :return: Nearest power of 2 to x 
-        """ 
-
-        a = pow(2, ceil(np.log2(x))) 
-        b = pow(2, floor(np.log2(x))) 
-        if abs(a - x) < abs(b - x): 
-            return a 
-        else: 
-            return b 
 
 
     def _normalize(self, column):
@@ -1148,7 +1064,7 @@ CALLED BY:
 
         while iend < len(t)-1:
             istart = iprev
-            ta, iend = self._find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
+            ta, iend = find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
             if iend == istart:
                  iend += 60 # approx for minute files and 1 hour timedelta (used when no data available in time range) should be valid for any other time range as well
             else:
@@ -1618,7 +1534,7 @@ CALLED BY:
         return self
 
 
-    def nfilter(self,**kwargs):
+    def nfilter(self,debugmode=None,**kwargs):
         """
         DEFINITION:
             Uses a selected window to filter the datastream - similar to the smooth function.
@@ -1718,7 +1634,8 @@ CALLED BY:
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
 
-        print si, sampling_period
+        if debugmode:
+            print si, sampling_period
 
         # window_len defines the window size in data points assuming the major sampling period to be valid for the dataset
         if filter_type == 'gaussian':
@@ -1733,7 +1650,8 @@ CALLED BY:
                 trange = np.round(trangetmp,3)
             else:
                 trange = timedelta(seconds=(self._det_trange(gaussian_factor*window_period)*24*3600)).seconds
-            print "Window character: ", window_len, std, trange
+            if debugmode:
+                print "Window character: ", window_len, std, trange
         else:
             window_len = np.round(window_period/sampling_period)
             if window_len % 2:
@@ -1759,7 +1677,8 @@ CALLED BY:
             if window_len<3:
                 loggerstream.error("Filter: Window lenght defined by filter_width needs to cover at least three data points")
 
-            print key, v.size
+            if debugmode:
+                print key, v.size
 
             if v.size >= window_len:
                 s=np.r_[v[window_len-1:0:-1],v,v[-1:-window_len:-1]]
@@ -1796,7 +1715,8 @@ CALLED BY:
 
 
         if resample:
-            print "Resampling: ", keys
+            if debugmode:
+                print "Resampling: ", keys
             self = self.resample(keys,period=window_period,fast=resamplefast,startperiod=resamplestart)
             self.header['DataSamplingRate'] = str(sampling_period) + ' sec'
 
@@ -1958,7 +1878,7 @@ CALLED BY:
                             #if not isnan(eval('starray[k].'+el))  and not isinf(eval('starray[k].'+el)):
                             exec('col'+el+'.append(starray[k].'+el+'*nor)')
                     # mask NaNs of the columns
-                    exec('col'+el+' = self._maskNAN(col'+el+')')
+                    exec('col'+el+' = maskNAN(col'+el+')')
                     resrow.time = abscurrtime
                     for el in KEYLIST[1:16]:
                         exec('resrow.'+el+' = np.sum(col'+el+')')
@@ -2052,7 +1972,7 @@ CALLED BY:
                 raise ValueError, "Column key not valid"
             val = tmpst._get_column(key)
             # interplolate NaN values
-            #nans, xxx= self._nan_helper(val)
+            #nans, xxx= nan_helper(val)
             #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
             #print np.min(nt), np.max(nt), sp, len(self)
             x = arange(np.min(nt),np.max(nt),sp)
@@ -2132,7 +2052,7 @@ CALLED BY:
 	        loggerstream.info("flag_stream: No data at given date for flag. Finding nearest data point.")
 	        time = self._get_column('time')
                 #print start, len(time)
-	        new_endtime, index = self._find_nearest(time, start)
+	        new_endtime, index = find_nearest(time, start)
 	        if new_endtime > start:
 		    startdate = num2date(start)
 		    enddate = num2date(new_endtime)
@@ -2409,7 +2329,7 @@ CALLED BY:
                 loggerstream.error("interpol: Column key not valid!")
             val = self._get_column(key)
             # interplolate NaN values
-            nans, xxx= self._nan_helper(val)
+            nans, xxx= nan_helper(val)
             try: # Try to interpolate nan values
                 val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
             except:
@@ -2494,7 +2414,7 @@ CALLED BY:
 
         while iend < len(t)-1:
             istart = iprev
-            ta, iend = self._find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timedelta(hours=24)))
+            ta, iend = find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timedelta(hours=24)))
             currsequence = fmi2stream[istart:iend+1]
             fmitmpstream = DataStream()
             for el in currsequence:
@@ -2682,13 +2602,13 @@ CALLED BY:
 
         # nfft needs to be an integer, otherwise a deprecation will be raised 
         #XXX add condition for too many windows => calculation takes for ever 
-        nfft = int(self._nearestPow2(wlen * samp_rate))
+        nfft = int(nearestPow2(wlen * samp_rate))
 
         if nfft > npts: 
-            nfft = int(self._nearestPow2(npts / 8.0)) 
+            nfft = int(nearestPow2(npts / 8.0)) 
 
         if mult != None: 
-            mult = int(self._nearestPow2(mult)) 
+            mult = int(nearestPow2(mult)) 
             mult = mult * nfft 
 
         nlap = int(nfft * float(per_lap)) 
@@ -2992,9 +2912,9 @@ CALLED BY:
             if debugmode:
                 print "column extracted at %s" % datetime.utcnow()
             if plottype == 'discontinuous':
-                yplt = self._maskNAN(yplt)
+                yplt = maskNAN(yplt)
             else: 
-                nans, test = self._nan_helper(yplt)
+                nans, test = nan_helper(yplt)
                 newt = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
                 t = newt
                 yplt = [el for idx, el in enumerate(yplt) if not nans[idx]]
@@ -3187,7 +3107,7 @@ CALLED BY:
                         try: 
                             y_auto = [0.85, 0.75, 0.70, 0.6, 0.5, 0.5, 0.5] 
                             y_anno = ymin + y_auto[len(keys)-1]*(ymax-ymin)
-                            tssc_anno, issc_anno = self._find_nearest(np.asarray(t), date2num(t_ssc))
+                            tssc_anno, issc_anno = find_nearest(np.asarray(t), date2num(t_ssc))
                             yt_ssc = yplt[issc_anno]
 		            if 'sscx' in annoxy:	# parameters for SSC annotation.
                                 x_ssc = annoxy['sscx']
@@ -3234,7 +3154,7 @@ CALLED BY:
                     fkey = 'f'+key
                     if fkey in function[0]:
                         ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
-                        ax.plot_date(self._denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+                        ax.plot_date(denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
                 # -- Add Y-axis ticks:
                 if bool((count-1) & 1):
                     ax.yaxis.tick_right()
@@ -3350,11 +3270,11 @@ CALLED BY:
         mint = np.min(t)
         tnew, valnew = [],[]
 
-        nfft = int(self._nearestPow2(len(t)))
+        nfft = int(nearestPow2(len(t)))
         #print "NFFT:", nfft
 
         if nfft > len(t): 
-            nfft = int(self._nearestPow2(len(t) / 2.0)) 
+            nfft = int(nearestPow2(len(t) / 2.0)) 
 
         #print "NFFT now:", nfft
 
@@ -3550,8 +3470,8 @@ CALLED BY:
 
             newst = DataStream()
             while st < et:
-                tmpar, idxst = self._find_nearest(arraytime,st)
-                tmpar, idxat = self._find_nearest(arraytime,at)
+                tmpar, idxst = find_nearest(arraytime,st)
+                tmpar, idxat = find_nearest(arraytime,at)
                 if idxat == len(arraytime)-1:
                     idxat = len(arraytime)
                 st = at
@@ -3684,7 +3604,7 @@ CALLED BY:
         #tn_list = []
         #realtime = self._get_column('time')
         #for t in t_list:
-        #    texist, tit = self._find_nearest(realtime,t)
+        #    texist, tit = find_nearest(realtime,t)
         #    if not abs(texist-t) >= period*24*3600:
         #        tn_list.append(t)
 
@@ -3961,7 +3881,7 @@ CALLED BY:
 
         for key in keys:
             val = self._get_column(key)
-            val = self._maskNAN(val)
+            val = maskNAN(val)
             dt = self.get_sampling_period()*(samp_rate_multiplicator)
             Fs = float(1.0/dt)
             self.obspyspectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log, 
@@ -5134,7 +5054,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         return stream_a
     # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')
-    timea = stream_a._maskNAN(timea)
+    timea = maskNAN(timea)
 
     sta = list(stream_a)
     stb = list(stream_b)
@@ -5158,13 +5078,13 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         else:
             sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
         timeb = sb._get_column('time')
-        timeb = sb._maskNAN(timeb)
+        timeb = maskNAN(timeb)
 
         function = sb.interpol(keys)
 
         taprev = 0
         for elem in sb:
-            foundina = sb._find_nearest(timea,elem.time)
+            foundina = find_nearest(timea,elem.time)
             pos = foundina[1]
             ta = foundina[0]
             if (ta > taprev) and (np.min(timeb) <= ta <= np.max(timeb)):
@@ -5423,9 +5343,9 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     # take stream_b data and find nearest element in time from stream_a
     timea = stream_a._get_column('time')
-    timea = stream_a._maskNAN(timea)
+    timea = maskNAN(timea)
     timeb = stream_b._get_column('time')
-    timeb = stream_b._maskNAN(timeb)
+    timeb = maskNAN(timeb)
 
     if np.min(timeb) < np.min(timea):
         stime = np.min(timea)
@@ -5483,7 +5403,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         taprev = 0
 
         for elem in sa:
-            tb, itmp = sb._find_nearest(timeb,elem.time)
+            tb, itmp = find_nearest(timeb,elem.time)
             # --------------------------------------------------------------------
             # test whether data points are present within a sampling rate distance 
             # and whether the timestep is within the interpolation range
@@ -5537,7 +5457,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             functime = (ta-function[1])/(function[2]-function[1])
             # Do the subtraction if there is is an element within stream b within twice the sampling rate distance
             # If not wite NaN to the diffs
-            tb, itmp = stream_b._find_nearest(timeb,ta)
+            tb, itmp = find_nearest(timeb,ta)
             #Test whether a time_b event exists in the vicinity of ta and whether tb is within the time_b range otherwise interpolation fails
             if ta-samplingrate_b < tb < ta+samplingrate_b and timeb[0]<ta<timeb[-1] :
                 for key in keys:
@@ -5694,6 +5614,7 @@ def compareStreams(stream_a, stream_b):
 
 
 # Some helpful methods
+
 def extractDateFromString(datestring):
     """
     Function to extract dates from a string (e.g. a filename within a path)
@@ -5759,6 +5680,95 @@ def extractDateFromString(datestring):
                 pass
 
     return date
+
+
+def denormalize(column, startvalue, endvalue):
+    """
+    converts [0:1] back with given start and endvalue
+    """
+    normcol = []
+    if startvalue>0:
+        if endvalue < startvalue:
+            raise ValueError, "start and endval must be given, endval must be larger"
+        else:
+            for elem in column:
+                normcol.append((elem*(endvalue-startvalue)) + startvalue)
+    else:
+        raise ValueError, "start and endval must be given as absolute times"
+            
+    return normcol
+
+
+def find_nearest(array, value):
+    idx = (np.abs(array-value)).argmin()
+    return array[idx], idx
+
+
+def maskNAN(column):
+    """
+    Tests for NAN values in column and usually masks them
+    """
+        
+    try: # Test for the presence of nan values
+        val = np.mean(column)
+        numdat = True
+        if isnan(val): # found at least one nan value
+            for el in column:
+                if not isnan(el): # at least on number is present - use masked_array
+                    num_found = True
+            if num_found:
+                mcolumn = np.ma.masked_invalid(column)
+                numdat = True
+                column = mcolumn
+            else:
+                numdat = False
+                loggerstream.warning("NAN warning: only nan in column")
+                return []
+    except:
+        numdat = False
+        #loggerstream.warning("Here: NAN warning: only nan in column")
+        return []
+
+    return column
+
+
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs. Taken from eat (http://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array)
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+         to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+    return np.isnan(y), lambda z: z.nonzero()[0]
+
+
+def nearestPow2(x): 
+    """
+    Function taken from ObsPy
+    Find power of two nearest to x 
+    >>> nearestPow2(3) 
+    2.0 
+    >>> nearestPow2(15) 
+    16.0 
+    :type x: Float 
+    :param x: Number 
+    :rtype: Int 
+    :return: Nearest power of 2 to x 
+    """ 
+
+    a = pow(2, ceil(np.log2(x))) 
+    b = pow(2, floor(np.log2(x))) 
+    if abs(a - x) < abs(b - x): 
+        return a 
+    else: 
+        return b 
 
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -5893,6 +5903,7 @@ if __name__ == '__main__':
     else:
         print len(errors), "errors were found in the following functions:"
         print str(errors.keys())
+        print
         print "Would you like to print the exceptions thrown?"
         excep_answer = raw_input("(Y/n) > ")
         if excep_answer.lower() == 'y':
@@ -5905,9 +5916,8 @@ if __name__ == '__main__':
     print "Hit enter to delete temporary files. (Or type N to keep.)"
     tempfile_answer = raw_input("> ")
     if tempfile_answer.lower() != 'n':
-        if os.path.exists('%s*' % testrun):
-            del_test_files = 'rm %s*' % testrun
-            subprocess.call(del_test_files,shell=True)
+        del_test_files = 'rm %s*' % testrun
+        subprocess.call(del_test_files,shell=True)
     print
     print "Good-bye!"
     print "----------------------------------------------------------"
