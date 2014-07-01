@@ -225,16 +225,16 @@ FLAGKEYLIST = KEYLIST[:16]
 PYMAG_SUPPORTED_FORMATS = [
 		'IAGA',		# IAGA 2002 text format
 		'WDC',		# World Data Centre format
-		'IMF',		# ?
-		'BLV',		# ?
+		'IMF',		# Intermagnet Format
+		'BLV',		# Baseline format Intermagnet
 		'DIDD',		# Output format from DIDD
 		'GSM19',	# Output format from GSM19 magnetometer
 		'LEMIHF',	# LEMI text format data
 		'LEMIBIN',	# Current LEMI binary data format at WIC
 		'LEMIBIN1',	# Deprecated LEMI binary format at WIC
-		'OPT',		# ?
-		'PMAG1',	# ?
-		'PMAG2',	# ?
+		'OPT',		# Optical hourly data from WIK
+		'PMAG1',	# Deprecated ELSEC from WIK
+		'PMAG2',	# Current ELSEC from WIK
 		'GDASA1',	# ?
 		'GDASB1',	# ?
 		'RMRCS', 	# ?
@@ -243,14 +243,15 @@ PYMAG_SUPPORTED_FORMATS = [
 		'USBLOG',	# ?
 		'SERSIN',	# ?
 		'SERMUL',	# ?
-		'PYSTR',	# ?
+		'PYSTR',	# MagPy full ascii
 		'AUTODIF',	# AutoDIF ouput data
 		'AUTODIF_FREAD',# Special format for AutoDIF read-in
-		'PYCDF',	# ?
+		'PYCDF',	# MagPy CDF variant
 		'PYBIN',	# MagPy own format
+		'PYASCII',	# MagPy basic ASCII
 		'POS1TXT',	# POS-1 text format output data
 		'POS1',		# POS-1 binary output at WIC
-		'PYNC',		# ?
+		'PYNC',		# MagPy NetCDF variant (too be developed)
 		'DTU1',		# ASCII Data from the DTU's FGE systems
 		'SFDMI',	# ?
 		'SFGSM',	# ?

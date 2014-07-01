@@ -256,22 +256,22 @@ if onewire:
 
             try:
                 # Extract data
-                print "Sensor: ", sensor.id, sensortypus
+                #print "Sensor: ", sensor.id, sensortypus
                 try:
                     humidity = float(ow.owfs_get('/uncached%s/HIH4000/humidity' % sensor._path))
                 except:
                     humidity = float(nan)
                 try:
-                    print "Battery sens: T = ", sensor.temperature
+                    #print "Battery sens: T = ", sensor.temperature
                     temp = float(sensor.temperature)
-                    print "Battery sens: VDD = ", sensor.VDD
+                    #print "Battery sens: VDD = ", sensor.VDD
                     vdd = float(sensor.VDD)
-                    print "Battery sens: VAD = ", sensor.VAD
+                    #print "Battery sens: VAD = ", sensor.VAD
                     vad = float(sensor.VAD)
-                    print "Battery sens: vis = ", sensor.vis
+                    #print "Battery sens: vis = ", sensor.vis
                     vis = float(sensor.vis)
                     if sensortypus == "pressure":
-                        print "Pressure [hPa]: ", self.mpxa4100(vad,temp)
+                        #print "Pressure [hPa]: ", self.mpxa4100(vad,temp)
                         humidity = self.mpxa4100(vad,temp)
                 except:
                     log.err("OW - readBattery: Could not asign value") 

@@ -537,3 +537,56 @@ def writePYCDF(datastream, filename, **kwargs):
                     pass
                     
     mycdf.close()
+
+
+def writePYASCII(datastream, filename, **kwargs):
+    """
+    Function to write basic ASCII data 
+    """
+
+    mode = kwargs.get('mode')
+    loggerlib.info("writePYASCII: Writing file to %s" % filename)
+
+    if os.path.isfile(filename):
+        if mode == 'skip': # skip existing inputs
+            exst = read(path_or_url=filename)
+            datastream = mergeStreams(exst,datastream,extend=True)
+            myFile= open( filename, "wb" )
+        elif mode == 'replace': # replace existing inputs
+            exst = read(path_or_url=filename)
+            datastream = mergeStreams(datastream,exst,extend=True)
+            myFile= open( filename, "wb" )
+        elif mode == 'append':
+            myFile= open( filename, "ab" )
+        else:
+            myFile= open( filename, "wb" )
+    else:
+        myFile= open( filename, "wb" )
+    wtr= csv.writer( myFile )
+    headdict = datastream.header
+    head, line = [],[]
+
+    keylst = datastream._get_key_headers()
+    keylst[:0] = ['time']
+
+    if not mode == 'append':
+        for key in keylst:
+            title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit-col-'+key,'') + ']'
+            head.append(title)
+        head[0] = 'Time'
+        wtr.writerow( [' # ASCII'] )
+        wtr.writerow( head )
+    for elem in datastream:
+        row = []
+        for key in keylst:
+            if key.find('time') >= 0:
+                try:
+                    row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                except:
+                    row.append( float('nan') )
+                    pass
+            else:
+                row.append(eval('elem.'+key))
+        wtr.writerow( row )
+    myFile.close()
+

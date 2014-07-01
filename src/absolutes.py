@@ -1597,6 +1597,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         - usestep:      (int) which step to use for analysis, usually both, in autodif only 2
         - annualmeans:  (list) provide annualmean for x,y,z as [x,y,z] with floats
         - azimuth:      (float) required for Autodif measurements
+        - expD:         (float) expected Declination - failure produced when D differs by more than expT deg
+        - expI:         (float) expected Inclination - failure produced when I differs by more than expT deg
+        - expT:         (float) expected value threshold - default 1 deg
         - movetoarchive:(string) define a local directory to store archived data (only works when reading files)
     RETURNS:
         --
@@ -1612,7 +1615,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         (OK)3. Put data to database (dbadd) 
         (OK)4. Check parameter for all possibilities: a) no db, b) db, c) db and override by input
         (OK)5. Archiving function
-        6. Appropriate information on failed analyses
+        6. Appropriate information on failed analyses -> add test for expected values 
         (OK)7. is the usestep variable correctly applied for autodif and normal?
         (OK)8. overwrite of existing database lines?
         (OK)9. Order of saving data when analyzing older data sets - requires reload and delete
@@ -1638,6 +1641,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     annualmeans = kwargs.get('annualmeans')
     azimuth = kwargs.get('azimuth') # 267.4242 # A16 to refelctor
     abstype = kwargs.get('abstype')
+    expT = kwargs.get('expT')
+    expI = kwargs.get('expI')
+    expD = kwargs.get('expD')
     movetoarchive = kwargs.get('movetoarchive')
 
     if not outputformat:
@@ -1651,6 +1657,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         if not azimuth:
             print "Azimuth needs ro be provided for AutoDIF measurements"
             return
+    if not expT:
+        expT = 1
 
     # ####################################
     # 1. Get parameters from db or input (input overrides)
@@ -1831,7 +1839,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         #print "absoluteAnalysis: Successful analyse of %s" % elem 
                         successlist.append(elem)
                     except:
-                        print "absoluteAnalysis: Failed to analyse %s" % elem 
+                        print "absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem 
                         failinglist.append(elem)
                         # TODO Drop that line from filelist
                         pass
@@ -1863,8 +1871,23 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if scalarfound:
                 stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
             result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False)
-       
-            resultstream.add(result)
+            dataok = True
+            if expD:
+                if not expD-expT < result.y < expD+expT:
+                    test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
+                    xl = [ el for el in difiles if test in el]
+                    failinglist.append(xl[0])
+                    print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
+                    dataok = False
+            if expI and dataok:
+                if not expI-expT < result.x < expI+expT:
+                    test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
+                    xl = [ el for el in difiles if test in el]
+                    failinglist.append(xl[0])
+                    print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
+                    dataok = False
+            if dataok:
+                resultstream.add(result)
 
     # ####################################
     # 3. Format output
@@ -1939,7 +1962,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if movetoarchive:
         if readfile:
             for fi in archivelist:
-                print fi     
                 if not "://" in fi: 
                     src = fi
                     fname = os.path.split(src)[1]

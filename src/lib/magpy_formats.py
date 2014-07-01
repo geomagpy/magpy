@@ -282,6 +282,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeRMRCS(datastream, filename, **kwargs)
     elif (format_type == "PYSTR"):
         return writePYSTR(datastream, filename, **kwargs)
+    elif (format_type == "PYASCII"):
+        return writePYASCII(datastream, filename, **kwargs)
     elif (format_type == "PYCDF"):
         return writePYCDF(datastream, filename, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
