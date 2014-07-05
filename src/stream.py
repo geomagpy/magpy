@@ -1568,7 +1568,7 @@ CALLED BY:
         EXAMPLE:
             >>> nice_data = bad_data.filter(keys=['x','y','z'])
             or
-            >>> nice_data = bad_data.filter(keys=['x','y','z'],filter_type='gaussian',resample=true)
+            >>> nice_data = bad_data.filter(keys=['x','y','z'],filter_type='gaussian',filter_width=timedelta(hours=1))
 
         APPLICATION:
          

@@ -84,10 +84,10 @@ def isFormat(filename, format_type):
     elif (format_type == "OPT"):
         if (isOPT(filename)):
             return True
-    elif (format_type == "PMAG1"):
+    elif (format_type == "PMAG1"): # Data from the ELSEC820 System 
         if (isPMAG1(filename)):
             return True
-    elif (format_type == "PMAG2"):
+    elif (format_type == "PMAG2"): # Data from the ELSEC820 System via Cobenzl RCS
         if (isPMAG2(filename)):
             return True
     elif (format_type == "GDASA1"): # Data from the Conrad Observatory GDAS System
@@ -111,19 +111,22 @@ def isFormat(filename, format_type):
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
             return True
+    elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
+        if (isGRAVSG(filename)):
+            return True
     elif (format_type == "CR800"): # Data from the CR800 datalogger
         if (isCR800(filename)):
             return True
     elif (format_type == "RADON"): # Data from the CR800 datalogger
         if (isRADON(filename)):
             return True
-    elif (format_type == "USBLOG"):
+    elif (format_type == "USBLOG"): # Data from the USB temperature logger
         if (isUSBLOG(filename)):
             return True
     elif (format_type == "CS"):
         if (isCS(filename)):
             return True
-    elif (format_type == "GSM19"):
+    elif (format_type == "GSM19"): # Data from the GEM GSM 19 Overhauzer sensor
         if (isGSM19(filename)):
             return True
     elif (format_type == "LEMIHF"): # High frequency Lemi data (10 Hz)
@@ -223,6 +226,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readENV05(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
+    elif (format_type == "GRAVSG"):
+        return readGRAVSG(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
         return readCR800(filename, headonly, **kwargs)
     elif (format_type == "RADON"):

@@ -418,11 +418,11 @@ def dbdelete(db,datainfoid,**kwargs):
 
     # 3. Delete time interval
     loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange)))
-    #try:
-    deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
-    cursor.execute(deletesql)
-    #except:
-    loggerdatabase.error("dbdelete: error when deleting data")
+    try:
+        deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
+        cursor.execute(deletesql)
+    except:
+        loggerdatabase.error("dbdelete: error when deleting data")
 
     # 4. Re-determine length for Datainfo
     try:
@@ -433,6 +433,7 @@ def dbdelete(db,datainfoid,**kwargs):
         maxtime = value[1]
         updatedatainfosql = 'UPDATE DATAINFO SET DataMinTime="%s", DataMaxTime="%s" WHERE DataID="%s"' % (mintime,maxtime,datainfoid)
         cursor.execute(updatedatainfosql)
+        loggerdatabase.info("dbdelete: DATAINFO for %s now covering %s to %s" % (datainfoid, mintime, maxtime))
     except:
         loggerdatabase.error("dbdelete: error when re-determining dates for DATAINFO")
 
@@ -831,6 +832,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
                 numlst.append(int(rowval))
             except:
                 pass
+        print "Existing revisions", numlst
         try:
             maxnum = max(numlst)
         except:
@@ -960,13 +962,16 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     
     # check for appropriate sensorid
     loggerdatabase.debug("dbdatainfo: Reselecting SensorID")
+    print "dbdatainfo: (1)", sensorid, datakeydict
     sensorid = dbsensorinfo(db,sensorid,datakeydict)
+    print "dbdatainfo: (2)", sensorid
     if 'SensorID' in datainfohead:
         index = datainfohead.index('SensorID') 
         datainfovalue[index] = sensorid
     loggerdatabase.debug("dbdatainfo:  -- SensorID is now %s" % sensorid) 
 
     checkinput = 'SELECT StationID FROM DATAINFO WHERE SensorID = "'+sensorid+'"'
+    #print checkinput
     try:
         cursor.execute(checkinput)
         rows = cursor.fetchall()
@@ -978,7 +983,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     checkinput = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"'
     loggerdatabase.debug("dbdatainfo: %s " % checkinput) 
     try:
-        print checkinput
+        #print checkinput
         cursor.execute(checkinput)
         rows = cursor.fetchall()
         loggerdatabase.debug("dbdatainfo: Number of existing DATAINFO lines: %s" % str(rows))
@@ -1083,7 +1088,11 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         --
 
     EXAMPLE:
-        >>> stream2db(db,stream,mode='extend',tablename=datainfoid)
+        >>> stream.header['StationID'] = 'MyStation'
+        >>> stream2db(db,stream)
+        dont't use >>> stream2db(db,stream,mode='extend',tablename=datainfoid)
+        >>> stream2db(db,stream,mode='replace')
+        >>> stream2db(db,stream,mode='force',tablename='myid_0001_0001')
 
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
@@ -1091,12 +1100,15 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         stream = read('/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK/raw/*', starttime='2013-01-01',endtime='2013-02-01')
         datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
-        stream2db(db,stream,mode='extend',tablename=datainfoid)
+        stream2db(db,stream)
 
     TODO:
         - make it possible to create spezial tables by defining an extension (e.g. _sp2013min) where sp indicates special        
     """
 
+    # ----------------------------------------------------------------------------
+    # -----  Parameter definition and basic vaildity tests  ----------------------
+    # ----------------------------------------------------------------------------
     clear = kwargs.get('clear')
     usekeys = kwargs.get('usekeys')
 
@@ -1130,14 +1142,26 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     if not noheader:
         pass
 
-    loggerdatabase.debug("stream2DB: ### Writing stream to database ###")
-    loggerdatabase.debug("stream2DB: --- Starting header extraction ...")
-
     if len(datastream) < 1:
         loggerdatabase.error("stream2DB: Empty datastream. Aborting ...")
         return
 
-    #print "stream2db1: ", datetime.utcnow()
+    # Testing whether SensorID is existing
+    try:
+        if headdict['SensorID'] == '':
+             loggerdatabase.error("stream2DB: Please select a suitable SensorID. Aborting ...")        
+             return
+    except KeyError: 
+        loggerdatabase.error("stream2DB: SensorID not provided within header. Pleased do that by stream.header['SensorID'] = 'MyID' before calling stream2db.  Aborting ...")
+        raise
+
+
+    # ----------------------------------------------------------------------------
+    # --------------------- Checking header information --------------------------
+    # ----------------------------------------------------------------------------
+
+    loggerdatabase.debug("stream2DB: ### Writing stream to database ###")
+    loggerdatabase.debug("stream2DB: --- Starting header extraction ...")
 
     if not mode == 'force':
         # check SENSORS information
@@ -1146,8 +1170,22 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         loggerdatabase.debug("stream2DB: Working with sensor: %s" % sensorid)
         # updating dict
         headdict['SensorID'] = sensorid
+        print "Test 1 - checked for existing sensorid info in db (if not existing it is created):", sensorid, headdict
+        # Header inf has been updated by dbsensorinfo
+        # Now get the new info and add it to the existing headdict
+        getsensinfo = 'SELECT * FROM SENSORS WHERE SensorID = "'+sensorid+'"'
+        cursor.execute(getsensinfo)
+        ids = cursor.fetchone()
+        print ids
+        for i, el in enumerate(ids):
+            if not el == None:
+                print el
+                headdict[SENSORSKEYLIST[i]] = el
+        
+        print "Test 1 - continued", headdict
+
         # HEADER INFO - TABLE
-        # read Header information
+        # read Header information and put it to the respective tables
         for key in headdict:
             if key.startswith('Sensor'):
                 if key == "SensorID":
@@ -1207,26 +1245,10 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     # HEADER INFO - DATA TABLE
     # select only columss which contain data and get units and column contents
     for key in KEYLIST:
-    #for key in keylst:
-       #print key
        colstr = '-'
        unitstr = '-'
        if not key.endswith('time') and key in keylst:
            ind = KEYLIST.index(key)
-           """ old version
-           print "stream2db2a: ", key, datetime.utcnow()
-           try:
-               keylst = np.asarray([row[ind] for row in datastream if not isnan(row[ind])])
-               if len(keylst) > 0:
-                   dataheads.append(key + ' FLOAT')
-                   datakeys.append(key)
-           except:
-               keylst = np.asarray([row[ind] for row in datastream if not row[ind]=='-'])
-               if len(keylst) > 0:
-                   dataheads.append(key + ' CHAR(100)')
-                   datakeys.append(key)
-           print "stream2db2b: ", datetime.utcnow()
-           """
            testlst = [row[ind] for row in datastream]
            try:
                tester = np.array(testlst)
@@ -1258,7 +1280,21 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     st = datetime.strftime(num2date(datastream[0].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
     et = datetime.strftime(num2date(datastream[-1].time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
 
-    #print st, et
+    # Test whether DATAINFO table is existing - if not abort as an initialization seems to be required
+    getdatainfo = 'SHOW TABLES LIKE "DATAINFO"'
+    try:
+        cursor.execute(getdatainfo)
+        rows = cursor.fetchall()
+        if not len(rows) > 0:
+            loggerdatabase.error("stream2DB: DATAINFO table not found - use dbinit() first")
+            return
+    except:
+        loggerdatabase.error("stream2DB: DATAINFO table error - use dbinit() first")
+        raise
+
+    # ----------------------------------------------------------------------------
+    # --------------------- Updating existing tables    --------------------------
+    # ----------------------------------------------------------------------------
 
     if not mode == 'force':
         loggerdatabase.debug("stream2DB: --- Checking/Updating existing tables ...")
@@ -1350,7 +1386,11 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             # DATAINFO TABLE
             # check whether contents exists
 
+            print "Test 2 - waht about sensor id now?? (headdict should contain revision!!):", sensorid, headdict 
+
             tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
+
+            print "Test 3 - what now??:", sensorid, tablename
 
     #print "stream2db4: ", datetime.utcnow()
 

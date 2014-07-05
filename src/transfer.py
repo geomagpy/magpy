@@ -2,15 +2,20 @@
 """
 MagPy-transfer: Procedures for data transfer
 
-Written by Roman Leonhardt 2011/2012
+Written by Roman Leonhardt and Rachel Bailey 2011/2012/2013/2014
 Version 1.0 (from the 23.02.2012)
 """
 
 from stream import *
 import ftplib
-import pexpect
 import subprocess
 
+try:
+    import pexpect
+    ssh = True
+except:
+    print "SSH support not active - please install package pexpect to use this functionality"
+    ssh = False
 
 # Define defaults:
 
@@ -154,66 +159,67 @@ def _missingvals(myproxy, port, login, passwd, logfile):
         ftpdatatransfer (localpath=npath, ftppath=nftppath, filestr=filetosend, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile) 
 
 
-def scptransfer(src,dest,passwd):
-    """
-    DEFINITION:
-        copy file by scp
+if ssh:
+    def scptransfer(src,dest,passwd):
+        """
+        DEFINITION:
+            copy file by scp
 
-    PARAMETERS:
-    Variables:
-        - src:        (string) e.g. /path/to/local/file or user@remotehost:/path/to/remote/file
-        - dest:       (string) e.g. /path/to/local/file or user@remotehost:/path/to/remote/file
-        - passwd:     (string) users password
+        PARAMETERS:
+        Variables:
+            - src:        (string) e.g. /path/to/local/file or user@remotehost:/path/to/remote/file
+            - dest:       (string) e.g. /path/to/local/file or user@remotehost:/path/to/remote/file
+            - passwd:     (string) users password
 
-    REQUIRES:
-        Requires package pexpect
+        REQUIRES:
+            Requires package pexpect
 
-    USED BY:
-       cleanup
-    """
+        USED BY:
+           cleanup
+        """
 
-    COMMAND="scp -oPubKeyAuthentication=no %s %s" % (src, dest)
+        COMMAND="scp -oPubKeyAuthentication=no %s %s" % (src, dest)
 
-    child = pexpect.spawn(COMMAND)
-    child.expect('password:')
-    child.sendline(passwd)
-    child.expect(pexpect.EOF)
-    print child.before
+        child = pexpect.spawn(COMMAND)
+        child.expect('password:')
+        child.sendline(passwd)
+        child.expect(pexpect.EOF)
+        print child.before
 
-def ssh_remotefilelist(remotepath, filepat, user, host, passwd):
-    """
-    DEFINITION:
-        login via ssh into remote directory and return list of all files (including path) 
-        which contain a given file pattern
+    def ssh_remotefilelist(remotepath, filepat, user, host, passwd):
+        """
+        DEFINITION:
+            login via ssh into remote directory and return list of all files (including path) 
+            which contain a given file pattern
 
-    PARAMETERS:
-    Variables:
-        - remotepath:  	  (string) basepath, all files and directories above are searched.
-        - filepat:   	  (string) filepattern
-        - user:   	  (string) user for ssh login
-        - host:   	  (string) host (IP or name)
-        - passwd:   	  (string) passwd for user
+        PARAMETERS:
+        Variables:
+            - remotepath:  	  (string) basepath, all files and directories above are searched.
+            - filepat:   	  (string) filepattern
+            - user:   	  (string) user for ssh login
+            - host:   	  (string) host (IP or name)
+            - passwd:   	  (string) passwd for user
 
-    RETURNS:
-       list with full file paths matching filepattern
+        RETURNS:
+           list with full file paths matching filepattern
 
-    USED BY:
-       cleanup
+        USED BY:
+           cleanup
 
-    EXAMPLE:
-        >>> filelist = ssh_remotefilelist('/path/to/mydata', '.bin', user,host,passwd)
-    """
+        EXAMPLE:
+            >>> filelist = ssh_remotefilelist('/path/to/mydata', '.bin', user,host,passwd)
+        """
 
-    searchstr = 'find %s -type f | grep "%s"' % (remotepath,filepat)
-    COMMAND= "ssh %s@%s '%s';" % (user,host,searchstr)
+        searchstr = 'find %s -type f | grep "%s"' % (remotepath,filepat)
+        COMMAND= "ssh %s@%s '%s';" % (user,host,searchstr)
 
-    child = pexpect.spawn(COMMAND)
-    child.expect('password:')
-    child.sendline(passwd)
-    child.expect(pexpect.EOF)
-    result = child.before
-    resultlst = result.split('\r\n')
-    return resultlst 
+        child = pexpect.spawn(COMMAND)
+        child.expect('password:')
+        child.sendline(passwd)
+        child.expect(pexpect.EOF)
+        result = child.before
+        resultlst = result.split('\r\n')
+        return resultlst 
 
 
 # ####################

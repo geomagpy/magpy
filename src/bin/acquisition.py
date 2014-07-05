@@ -1,60 +1,19 @@
-'''
-Path:			magpy.bin.acquisition
-Part of package:	acquisition
-Type:			Top-level data acquisition script
+"""
+Main Acquisition routine of MARTAS: 
+Code from TAVENDO GmbH adepted by Roman Leonhardt and Rachel Bailey to be used in the Conrad Observatory.
+The main part remained unchanged. I added instrument specific parts for serial communictaion.
+The application is mainly based on twisted, autobahn and magpy modules. Please note that autobahn in the past frequently changed its module positions.
+Additional requirements:
+1) please change the user specific part acclording your system and attached instruments
+2) 
+Usage:
+sudo python acquisition.py
 
-PURPOSE:
-	This script:
-	    1) Reads in available sensors from ~/sensors.txt.
-	    2) Sets up internal webserver through autobahn software-
-	    3) Initiates protocols for data acquisition of available
-		sensors.
-	    4) Starts twisted logging system.
-	Code adapted from Tavendo for use in Conrad Observatory.
-
-CONTAINS:
-	*WsMcuProtocol:	(Class - autobahn.wamp.WampServerProtocol)
-			Server factory for Wamp RPC/PubSub.
-	*WsMcuFactory:	(Class - autobahn.wamp.WampServerFactory)
-			... hand-in-hand with WsMcuProtocol.
-
-DEPENDENCIES:
-	magpy.acquisition...
-		.lemiprotocol		LEMI025/LEMI036 Variometers
-		.pos1protocol		POS-1 magnetometer
-		.csprotocol		G823A Cs-magnetometer
-		.gsm90protocol		GSM90 magnetomer
-		.envprotocol		Env05 sensor
-		.owprotocol		OneWire sensor
-	twisted, autobahn
-
-CALLED BY:
-	Top-level MagPy script - called by MARTAS hardware only.
-'''
-
-# Autobahn software copyright:
-#####################################################################
-##
-## Copyright 2012 Tavendo GmbH
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
-##
-#####################################################################
+"""
 
 # -------------------------------------------------------------------
 # Import software
 # -------------------------------------------------------------------
-
 import sys, time, os, socket
 from datetime import datetime, timedelta
 import re
@@ -66,38 +25,54 @@ if sys.platform == 'win32':
     ##
     from twisted.internet import win32eventreactor
     win32eventreactor.install()
-
 # IMPORT TWISTED
 from twisted.internet import reactor
 print "Using Twisted reactor", reactor.__class__
 print
-
 from twisted.python import usage, log
 from twisted.protocols.basic import LineReceiver
 from twisted.internet.serialport import SerialPort
 from twisted.internet import task
 from twisted.web.server import Site
 from twisted.web.static import File
-
-# IMPORT WAMP: WepSocket Application Message Protocol
-from autobahn.websocket import listenWS
-from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
-
-# IMPORT EQUIPMENT-SPECIFIC PROTOCOLS FROM MAGPY
-from acquisition.lemiprotocol import *
-from acquisition.owprotocol import *
-from acquisition.pos1protocol import *
-from acquisition.envprotocol import *
-from acquisition.csprotocol import *
-from acquisition.gsm90protocol import *
+from autobahn import version as autobahnversion
+print "Autobahn Version: ", autobahnversion
+try: # version > 0.8.0
+    from autobahn.wamp1.protocol import WampServerFactory, WampServerProtocol, exportRpc
+except:
+    from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
+try: # version > 0.7.0
+    from autobahn.twisted.websocket import listenWS
+except:
+    from autobahn.websocket import listenWS
 
 lastActualtime = datetime.utcnow() # required for cs output
-
 hostname = socket.gethostname()
+
+# ------------------------------------------------------------------------
+# User specific data
+# ------------------------------------------------------------------------
+
+# IMPORT EQUIPMENT-SPECIFIC PROTOCOLS
+# ########
+from magpy.acquisition.owprotocol import OwProtocol
+# Other possible protocals are: lemiprotocol, pos1protocol, envprotocol, csprotocol, gsm90protocol
+# SELECT DIRECTORY FOR BUFFER FILES
 outputdir = '/srv/ws'
+# SELECT DIRECTORY WITH SCRIPTS (usually the home dir of the MARTAS user)
+homedir = '/home/leon'
+# WEBPORTS AND COMMUNICATION
+webport = 8080                  # Web port to use for embedded Web server
+wsurl = "ws://localhost:9100"   # WebSocket port to use for embedded WebSocket $
+# INSTRUMENT PORTS
+owport = 'u' 			# u for usb
+serialport = '/dev/tty' 	# dev/tty for linux like systems
+# ONEWIRE SPECIFIC
+timeoutow = 30.0		# Defining a measurement frequency in secs (should be >= amount of sensors connected)
+ 
 
 # -------------------------------------------------------------------
-# 1) Read data of sensors attached to PC:
+# Read data of sensors attached to PC:
 # 
 # "Sensors.txt" should have the following format:
 # SENSORNAME	SENSORPORT	SENSORBAUDRATE
@@ -109,32 +84,34 @@ outputdir = '/srv/ws'
 # Notes: OneWire devices do not need this data, all others do.
 # -------------------------------------------------------------------
 
-home = os.path.expanduser("~")
-sensorfile = os.path.join(home,'sensors.txt')
-sensors = open(sensorfile,'r')
-sensordata = sensors.readlines()
-sensorlist = []
-baudratedict, portdict = {}, {}
+def GetSensors():
+    sensors = open(os.path.join(homedir,'MARTAS','sensors.txt'),'r')
+    sensordata = sensors.readlines()
+    sensorlist = []
+    baudratedict, portdict = {}, {}
 
-for item in sensordata:
-    bits = item.split()
-    sensorname = bits[0]
-    sensorlist.append(sensorname)
-    portdict[sensorname] = bits[1]
-    baudratedict[sensorname] = float(bits[2])
+    for item in sensordata:
+        try:
+            bits = item.split()
+            sensorname = bits[0]
+            sensorlist.append(sensorname)
+            portdict[sensorname] = bits[1]
+            try:
+                baudratedict[sensorname] = float(bits[2])
+            except:
+                # no float, assuming ow
+                baudratedict[sensorname] = 0.0
+        except:
+            # Possible issue - empty line
+            pass
+    return sensorlist, portdict, baudratedict
 
-webport = 8080  		# Web port to use for embedded Web server
-wsurl = "ws://localhost:9100" 	# WebSocket port to use for embedded WebSocket server
-outputdir = '/srv/ws' 		# Directory for storing files
 
 # -------------------------------------------------------------------
 # WS-MCU protocol:
 # -------------------------------------------------------------------
 
 class WsMcuProtocol(WampServerProtocol):
-    '''
-    Server factory for Wamp RPC/PubSub.
-    '''
 
     def onSessionOpen(self):
         ## register topic prefix under which we will publish MCU measurements
@@ -166,19 +143,15 @@ class WsMcuProtocol(WampServerProtocol):
 # -------------------------------------------------------------------
 
 class WsMcuFactory(WampServerFactory):
-    '''
-    Server factory for Wamp RPC/PubSub.
-    '''
 
     protocol = WsMcuProtocol
-
     def __init__(self, url):
         WampServerFactory.__init__(self, url)
         for sensor in sensorlist:
             if sensor[:3].upper() == 'ENV':
                 self.envProtocol = EnvProtocol(self,sensor.strip(), outputdir)
 	    if sensor[:2].upper() == 'OW':
-	        self.owProtocol = OwProtocol(self,'u',outputdir)
+	        self.owProtocol = OwProtocol(self,owport,outputdir)
             if sensor[:3].upper() == 'POS':
                 self.pos1Protocol = Pos1Protocol(self,sensor.strip(), outputdir)
             if sensor[:3].upper() == 'LEM':
@@ -194,21 +167,24 @@ class WsMcuFactory(WampServerFactory):
 
 if __name__ == '__main__':
 
-    # Start Twisted logging system
 
+    sensorlist, portdict, baudratedict = GetSensors()
+
+    ##  Start Twisted logging system
+    ##
     #log.startLogging(sys.stdout)
-    logfile = '/home/cobs/Logs/twisted_'+hostname+'.log'
+    logfile = os.path.join(homedir,'MARTAS','Logs','twisted_'+hostname+'.log')
     log.startLogging(open(logfile,'a'))
 
     ## create Serial2Ws gateway factory
     ##
     wsMcuFactory = WsMcuFactory(wsurl)
     listenWS(wsMcuFactory)
-
+   
     ## create serial port and serial port protocol; modify this according to attached sensors
     ##
     for sensor in sensorlist:
-	port = '/dev/tty'+portdict[sensor]
+	port = serialport+portdict[sensor]
 	baudrate = baudratedict[sensor]
 
         if sensor[:3].upper() == 'LEM':
@@ -225,7 +201,6 @@ if __name__ == '__main__':
         if sensor[:2].upper() == 'OW':
 	    try:
 	        log.msg('OneWire: Initiating sensor...')
-        	timeoutow = 30.0
                 oprot = task.LoopingCall(wsMcuFactory.owProtocol.owConnected)
                 oprot.start(timeoutow)
             except:

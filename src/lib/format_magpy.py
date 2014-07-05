@@ -309,7 +309,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    loggerlib.info('readPYBIN: Reading Magpy binary data.')
+    loggerlib.info('readPYBIN: Reading Magpy binary data - %s' % filename)
 
     stream = DataStream([],{})
 
@@ -341,8 +341,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
             nospecial = True
             try:
                 if not keylist:
-                    loggerlib.error('keylist of length elemlist must be specified')
-                    return
+                    loggerlib.error('readPYBIN: keylist of length(elemlist) needs to be specified')
+                    return stream
                 elemlist = h_elem[3].strip('[').strip(']').split(',')
                 unitlist = h_elem[4].strip('[').strip(']').split(',')
                 multilist = map(float,h_elem[5].strip('[').strip(']').split(','))
