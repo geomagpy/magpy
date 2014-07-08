@@ -58,7 +58,7 @@ def loadobj(filename):
         return pickle.load(f)
 
 
-def cc(typus, name, user=None,passwd=None,smtp=None,db=None,adress=None,host=None):
+def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,host=None):
     """
     Method for creating credentials
     """
@@ -68,8 +68,8 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,adress=None,host=Non
         passwd = ''
     if not db:
         db = ''
-    if not adress:
-        adress = ''
+    if not address:
+        address = ''
     if not host:
         host = ''
     if not smtp:
@@ -117,11 +117,11 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,adress=None,host=Non
         pwd = base64.b64encode(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'smtp':smtp}
     if typus == 'transfer':
-        if not adress:
-            print 'Credentials: adress missing'
+        if not address:
+            print 'Credentials: address missing'
             return
         pwd = base64.b64encode(passwd)
-        dictionary = {'user': user, 'passwd': pwd, 'adress':adress}
+        dictionary = {'user': user, 'passwd': pwd, 'address':address}
         
     dictslist.append([name,dictionary])
     

@@ -421,7 +421,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print "To be done ..."
             pass
 
-    #print stream.header        
+    #print stream.header     
     return stream 
 
 

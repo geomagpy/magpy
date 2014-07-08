@@ -11,3 +11,6 @@ Various Format descriptions for MagPy.
 
 # import order matters - NamedTemporaryFile must be one of the first!
 from stream import *
+
+from owclient import *
+

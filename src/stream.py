@@ -1556,7 +1556,7 @@ CALLED BY:
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:	(timedelta) window width of the filter
             - noresample:	(bool) if True the data set is resampled at filter_width positions
-            - resamplestart:	(datetime) starting resampling at this time 
+            - resamplestart:	(bool) if True resampling will try to be performed at full time intervals depending on filter_width 
             - resamplemode:	(string) if 'fast' then fast resampling is used
             - gaussian_factor:	(float) factor to multiply filterwidth. 
                                 1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
@@ -1719,7 +1719,7 @@ CALLED BY:
             if debugmode:
                 print "Resampling: ", keys
             self = self.resample(keys,period=window_period,fast=resamplefast,startperiod=resamplestart)
-            self.header['DataSamplingRate'] = str(sampling_period) + ' sec'
+            self.header['DataSamplingRate'] = str(window_period) + ' sec'
 
         # ########################
         # Update header information
@@ -4890,7 +4890,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     fh.write(content)
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
-                    st.extend(stp.container,stp.header)
+                    if len(stp) > 0: # important - otherwise header is going to be deleted
+                        st.extend(stp.container,stp.header)
                     os.remove(fh.name)
         else:            
             # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -4912,7 +4913,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for file in iglob(pathname):
             stp = DataStream([],{})
             stp = _read(file, dataformat, headonly, **kwargs)
-            st.extend(stp.container,stp.header)
+            if len(stp) > 0: # important - otherwise header is going to be deleted
+                st.extend(stp.container,stp.header)
             #del stp
         if len(st) == 0:
             # try to give more specific information why the stream is empty

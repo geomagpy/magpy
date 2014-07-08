@@ -1,20 +1,78 @@
-import sys
+import sys, os
 from twisted.python import log
 from twisted.internet import reactor 
 from autobahn.websocket import connectWS
 from autobahn.wamp import WampClientFactory, WampClientProtocol
 # For converting Unicode text
 import collections
+# Timing
+from datetime import datetime, timedelta
 # Database
 import MySQLdb
 
-clientname = 'default'
-#clientname
+sys.path.append('/home/leon/Software/magpy/trunk/src')
 
-def defineclient(cname):
+import stream as st
+import database
+from opt import cred as mpcred
+from transfer import scptransfer
+
+clientname = 'default'
+o = []
+marcospath = ''
+
+def defineclient(cname,cip):
     global clientname
     clientname = cname
+    global clientip
+    clientip = cip
     return    
+
+def putparameter(owlist,marcospath):
+    global o
+    o = owlist
+    global destpath
+    destpath = marcospath
+    return    
+
+IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
+                10:'f',11:'x',12:'y',13:'z',14:'df',
+                30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',40:'var2'} 
+
+def timeToArray(timestring):
+    # Converts time string of format 2013-12-12T23:12:23.122324
+    # to an array similiat to a datetime object
+    try:
+        splittedfull = timestring.split(' ')
+        splittedday = splittedfull[0].split('-')
+        splittedsec = splittedfull[1].split('.')
+        splittedtime = splittedsec[0].split(':')
+        datearray = splittedday + splittedtime
+        datearray.append(splittedsec[1])
+        datearray = map(int,datearray)
+        return datearray
+    except:
+        log.msg('Error while extracting time array')
+        return []
+
+def dataToFile(outputdir, sensorid, filedate, bindata, header):
+    # File Operations
+    try:
+        hostname = socket.gethostname()
+        path = os.path.join(outputdir,hostname,sensorid)
+        # outputdir defined in main options class
+        if not os.path.exists(path):
+            os.makedirs(path)
+        savefile = os.path.join(path, sensorid+'_'+filedate+".bin")
+        if not os.path.isfile(savefile):
+            with open(savefile, "wb") as myfile:
+                myfile.write(header + "\n")
+                myfile.write(bindata + "\n")
+        else:
+            with open(savefile, "a") as myfile:
+                myfile.write(bindata + "\n")
+    except:
+        log.err("OW - Protocol: Error while saving file")        
 
 class PubSubClient(WampClientProtocol):
     """
@@ -22,58 +80,61 @@ class PubSubClient(WampClientProtocol):
     """ 
     def onSessionOpen(self):
         global clientname
+        global clientip
+        global o
+        global marcospath
         log.msg("Starting " + clientname + " session")
+        # TODO Make all the necessary parameters variable
+        # Basic definitions to change
+        self.stationid = 'MyHome'
+        self.output = 'db' # can be either 'db' or 'file', if not db, then file is used
         # Open database connection
         self.db = MySQLdb.connect("localhost","cobs","8ung2rad","wic" )
         # prepare a cursor object using cursor() method
         self.cursor = self.db.cursor()
         # Initiate subscriptions
         self.line = []
-        self.subscribeInst(self.db, self.cursor, clientname)
+        self.subscribeInst(self.db, self.cursor, clientname, self.output)
 
-
-    def subscribeInst(self, db, cursor, client):
+    def subscribeInst(self, db, cursor, client, output):
+        print "Starting Subscription ...."
         self.prefix("ow", "http://example.com/" + client +"/ow#")
-        sql = "SELECT SensorID, SensorDescription, SensorModule, SensorKeys FROM SENSORS WHERE SensorModule = 'ow'"
-        try:
-            # Execute the SQL command
-            cursor.execute(sql)
-            # Fetch all the rows in a list of lists.
-            results = self.cursor.fetchall()
-            if len(results) < 1:
-                 # Initialize ow-table
-                 log.msg("No sensors registered so far: Please use something like the following command in your main prog:")
-                 log.msg("You need to define a SensorID in the database first so that the program access the proper websocket id:")
-                 log.msg("INSERT INTO SENSORS(SensorID, SensorDescription, SensorModule, SensorElements, SensorKeys, SensorType, SensorGroup) VALUES ('OW_332988040000', 'Mobil', 'ow', 'T', 't1', 'DS18B20', 'Environment'")
-            for row in results:
-                 sensid = str(row[0])
-                 sensdesc = row[1]
-                 module = row[2]
-                 param = row[3]
-                 print row, len(param.split(',')) 
-                 #datainfoid = (db,cursor,sensid,sensdesc)
-                 #cursor.execute("DROP TABLE %s" % sensid)
-                 # Create Sensor Table if it does not yet exist
-                 # TODO: check the length of param for other then temperatur data 
-                 if len(param.split(',')) == 1:
-                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid+'_0001')
-                 if len(param.split(',')) == 3:
-                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid+'_0001')
-                 if len(param.split(',')) == 5:
-                     createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, t1 FLOAT, var1 FLOAT, var2 FLOAT, var3 FLOAT, var4 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid+'_0001')
-                 try:
-                     print createtable
-                     cursor.execute(createtable)
-                 except:
-                     log.msg("Table exists already.")
-                 subscriptionstring = "%s:%s-value" % (module, sensid.replace('OW_','').replace('_0001',''))
-                 print subscriptionstring
-                 self.subscribe(subscriptionstring, self.onEvent)
-                 # Now print fetched result
-                 print "sensid=%s,sensdesc=%s,module=%s,param=%s" % \
-                            (sensid, sensdesc, module, param )
-        except:
-            print "Error: unable to fetch data"
+        # -------------------------------------------------------
+        # 1. Get available Sensors - read sensors.txt
+        # -------------------------------------------------------
+        if not len(o) > 0:
+            log.msg("No OW sensors available")            
+        
+        if output == 'db':
+            # -------------------------------------------------------
+            # 2. Create database input 
+            # -------------------------------------------------------
+            # ideal way: upload an already existing file from moon for each sensor
+            # check client for existing file:
+            for row in o:
+                print "Running for sensor", row[0]
+                #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
+                day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
+                destfile = os.path.join(destpath,'MoonsFiles', row[0]+'_'+day+'.bin') 
+                print "Destfile", destfile
+                datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
+                print "Datafile", datafile
+                scptransfer(mpcred.lc('leon','user')+'@'+clientip+':'+datafile,destfile,mpcred.lc('leon','passwd'))
+                stream = st.read(destfile)
+                stream.header['StationID'] = self.stationid
+                print "Loaded data of length", len(stream)
+                stream2db(db,stream)
+
+                subscriptionstring = "%s:%s-value" % (module, row[0])
+                print subscriptionstring
+                #self.subscribe(subscriptionstring, self.onEvent)
+
+        elif output == 'file':
+            for row in o:
+                print "Running for sensor", row[0]
+                subscriptionstring = "%s:%s-value" % (module, row[0])
+                print subscriptionstring
+                #self.subscribe(subscriptionstring, self.onEvent)
    
        
     def convertUnicode(self, data):
@@ -139,26 +200,4 @@ class PubSubClient(WampClientProtocol):
         except:
             pass
 
-
-    def checkDB4DataInfo(self,db,cursor,sensorid,pier):
- 
-        # DATAINFO TABLE
-        # Test whether a datainfo table is already existing
-        # if not create one with first number 
-        checkdatainfoexists = 'SHOW TABLES LIKE "DATAINFO"'
-        cursor.execute(checkdatainfoexists)
-        rows = cursor.fetchall()
-        if len(rows) < 1:
-            print "No datainfo so far - use dbinit to generate"
-        getlastnumsql = 'SELECT DataID FROM DATAINFO WHERE SensorID LIKE "%s%"' % sensorid
-        cursor.execute(getlastnumsql)
-        rows = cursor.fetchall()
-        if not len(rows) >= 1:
-            stationid = 'WIC'
-            datainfohead = 'DataID, SensorID, StationID'
-            datainfovalue = '"' + sensorid + '", "' + sensorid + '", "' + stationid + '"'
-            datainfosql = "INSERT INTO DATAINFO(%s) VALUES (%s)" % (datainfohead, datainfovalue)
-            cursor.execute(datainfosql)
-
- 
 

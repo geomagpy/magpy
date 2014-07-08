@@ -832,7 +832,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
                 numlst.append(int(rowval))
             except:
                 pass
-        print "Existing revisions", numlst
+        #print "Existing revisions", numlst
         try:
             maxnum = max(numlst)
         except:
@@ -962,9 +962,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     
     # check for appropriate sensorid
     loggerdatabase.debug("dbdatainfo: Reselecting SensorID")
-    print "dbdatainfo: (1)", sensorid, datakeydict
+    #print "dbdatainfo: (1)", sensorid, datakeydict
     sensorid = dbsensorinfo(db,sensorid,datakeydict)
-    print "dbdatainfo: (2)", sensorid
+    #print "dbdatainfo: (2)", sensorid
     if 'SensorID' in datainfohead:
         index = datainfohead.index('SensorID') 
         datainfovalue[index] = sensorid
@@ -1170,19 +1170,19 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         loggerdatabase.debug("stream2DB: Working with sensor: %s" % sensorid)
         # updating dict
         headdict['SensorID'] = sensorid
-        print "Test 1 - checked for existing sensorid info in db (if not existing it is created):", sensorid, headdict
+        #print "Test 1 - checked for existing sensorid info in db (if not existing it is created):", sensorid, headdict
         # Header inf has been updated by dbsensorinfo
         # Now get the new info and add it to the existing headdict
         getsensinfo = 'SELECT * FROM SENSORS WHERE SensorID = "'+sensorid+'"'
         cursor.execute(getsensinfo)
         ids = cursor.fetchone()
-        print ids
+        #print ids
         for i, el in enumerate(ids):
             if not el == None:
-                print el
+                #print el
                 headdict[SENSORSKEYLIST[i]] = el
         
-        print "Test 1 - continued", headdict
+        #print "Test 1 - continued", headdict
 
         # HEADER INFO - TABLE
         # read Header information and put it to the respective tables
@@ -1386,11 +1386,11 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             # DATAINFO TABLE
             # check whether contents exists
 
-            print "Test 2 - waht about sensor id now?? (headdict should contain revision!!):", sensorid, headdict 
+            #print "Test 2 - waht about sensor id now?? (headdict should contain revision!!):", sensorid, headdict 
 
             tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
 
-            print "Test 3 - what now??:", sensorid, tablename
+            #print "Test 3 - what now??:", sensorid, tablename
 
     #print "stream2db4: ", datetime.utcnow()
 
@@ -1464,31 +1464,6 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         except:
             loggerdatabase.debug("stream2DB: Record at %s already existing: use mode replace to overwrite" % ct)
 
-
-    """ old version
-        if not isnan(elem.sectime) and datastream._is_number(elem.sectime): 
-            cst = datetime.strftime(num2date(elem.sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
-            dollarstring = ['%s' for amount in range(len(datakeys)+2)]
-            insertmanysql = "INSERT INTO %s(time, sectime, %s) VALUES (%s)" % (tablename, ', '.join(datakeys), ', '.join(dollarstring))
-            print insertmanysql
-            insertdatasql = "INSERT INTO %s(time, sectime, %s) VALUES (%s, %s, %s)" % (tablename, ', '.join(datakeys), '"'+ct+'"', '"'+cst+'"', ', '.join(datavals))
-        else:
-            insertdatasql = "INSERT INTO %s(time, %s) VALUES (%s, %s)" % (tablename, ', '.join(datakeys), '"'+ct+'"', ', '.join(datavals))
-        if mode == "replace":
-            try:
-                cursor.execute(insertdatasql.replace("INSERT","REPLACE"))
-            except:
-                try:
-                    cursor.execute(insertdatasql)
-                except:
-                    loggerdatabase.warning("stream2DB: Write MySQL: Replace failed")
-        else:
-            try:
-                cursor.execute(insertdatasql)
-            except:
-                loggerdatabase.debug("stream2DB: Record at %s already existing: use mode replace to overwrite" % ct)
-        datavals  = []
-    """
 
     #print "stream2db5: ", datetime.utcnow()
 

@@ -9,7 +9,7 @@ except:
     onewire = False  
 
 import sys, time, os, socket
-import struct, binascii, re
+import struct, binascii, re, csv
 from datetime import datetime, timedelta
 
 # Twisted
@@ -54,8 +54,20 @@ if onewire:
             # TODO: create outputdir if not existing
             self.outputdir = outputdir
             self.reconnectcount = 0
-            self.plist = ["A6B154010000"]
-            self.hlist = ["DACF54010000"]
+            #self.plist = ["A6B154010000"]
+            #self.hlist = ["DACF54010000"]
+
+        def saveowlist(self,filename, owlist):
+            with open(filename, 'wb') as f:
+                wr = csv.writer(f, quoting=csv.QUOTE_ALL)
+                for row in owlist:
+                    wr.writerow(row)
+
+        def loadowlist(self,filename):
+            with open(filename, 'rb') as f:
+                reader = csv.reader(f)
+                owlist = [row for row in reader]
+            return owlist
 
         def owConnected(self):
             global owsensorlist
@@ -82,10 +94,45 @@ if onewire:
 
 
         def connectionMade(self,root):
+            # A loading eventually existing sensor list
+            print "Connection made"
+            martasdir = [path for path, dirs, files in os.walk("/home") if path.endswith('MARTAS')][0]
+            owsensorfile = os.path.join(martasdir,'owlist.csv')
+            owlist = []
+            idlist = []
+            try:
+                owlist = self.loadowlist(owsensorfile)
+            except:
+                log.msg('One Wire: Error when getting sensor list')  
+                pass
+            self.plist = [elem[0] for elem in owlist if elem[2] == 'pressure']
+            self.hlist = [elem[0] for elem in owlist if elem[2] == 'humidity']
+            self.clist = [elem[0] for elem in owlist if elem[2] == 'current']
+            self.vlist = [elem[0] for elem in owlist if elem[2] == 'voltage']
+            if len(owlist) > 0:
+                idlist = [el[0] for el in owlist]
             log.msg('One Wire module initialized - found the following sensors:')
             for sensor in root:
-                # Use this list to initialize the sensor database including datalogger id and type
                 log.msg('Type: %s, ID: %s' % (sensor.type, sensor.id))
+                # Use this list to initialize the sensor database including datalogger id and type
+                try:
+                    # writing this list to the MARTAS directory
+                    # do not replace existing inputs, as there are additional columns to provide user information
+                    # user info: e.g. for the DS2438 - voltage or pressure
+                    # this list tried to be opened on init
+                    if not sensor.id in idlist:
+                        owrow = [str(sensor.id),str(sensor.type),'typus','location','info']
+                        log.msg('One Wire: added new sensor to owlist: %s' % sensor.id)
+                        owlist.append(owrow)
+                except:
+                    log.msg('One Wire: Error when asigning new sensor list')  
+                    pass
+            try:
+                self.saveowlist(owsensorfile,owlist)
+            except:
+                log.msg('One Wire: Error when writing sensor list')  
+                pass
+                     
 
         def oneWireInstruments(self,root):
             try:
