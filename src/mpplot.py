@@ -101,7 +101,7 @@ def ploteasy(stream):
 
 def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
+	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',
 	**kwargs):
     '''
     DEFINITION:
@@ -176,143 +176,38 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
     plot_dict = []
     count = 0
 
-    # Iterate through each variable, create dict for each:
-    for i in range(num_of_var):
-        t = np.asarray([row[0] for row in stream])
-        key = variables[i]
-        if not key in KEYLIST[1:16]:
-            loggerplot.error("plot: Column key (%s) not valid!" % key)
-            raise Exception("Column key (%s) not valid!" % key)
-        data_dict = {}
-        ind = KEYLIST.index(key)
-        y = np.asarray([row[ind] for row in stream])
+    # The follow four variables can be given in two ways:
+    #    bool: annotate = True --> all plots will be annotated
+    #    list: annotate = [False, True, False] --> only second plot will be annotated
+    # These corrections allow for simple variable definition during use.
+    if type(errorbars) == list:
+        errorbars = [errorbars]
+    else:
+        errorbars = errorbars
 
-	# Fix if NaNs are present:
-        if plottype == 'discontinuous':
-            y = maskNAN(y)
-        else: 
-            nans, test = nan_helper(y)
-            newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
-            t = newt
-            y = [el for idx, el in enumerate(y) if not nans[idx]]
+    if type(stormphases) == list:
+        stormphases = [stormphases]
+    else:
+        stormphases = stormphases
 
-        data_dict['key'] = key
-        data_dict['tdata'] = t
-        data_dict['ydata'] = y
-        data_dict['color'] = colorlist[i]
-        data_dict['symbol'] = symbollist[i]
+    if type(annotate) == list:
+        annotate = [annotate]
+    else:
+        annotate = annotate
 
-        # Each variable can have different padding values:
-        if padding:
-            if type(padding) == list:
-                ypadding = padding[i]
-            else:
-                ypadding = padding
-        else:
-            ypadding = 0
+    if type(padding) == list:
+        padding = [padding]
+    else:
+        padding = padding
 
-        # If there are specified limits, use these:
-        if key in specialdict:
-            specialparams = specialdict[key]
-            data_dict['ymin'] = specialparams[0] - ypadding
-            data_dict['ymax'] = specialparams[1] + ypadding
-        else:
-            if not (np.min(y) == np.max(y)):
-                data_dict['ymin'] = np.min(y) - ypadding
-                data_dict['ymax'] = np.max(y) + ypadding
-            else:
-                loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
-                data_dict['ymin'] = np.min(y) - 0.5
-                data_dict['ymax'] = np.max(y) + 0.5
-
-        # Define y-labels:
-        try:
-            ylabel = stream.header['col-'+key].upper()
-        except:
-            ylabel = ''
-        try:
-            yunit = stream.header['unit-col-'+key]
-        except:
-            yunit = ''
-        if not yunit == '': 
-            yunit = re.sub('[#$%&~_^\{}]', '', yunit)
-            label = ylabel+' $['+yunit+']$'
-        else:
-            label = ylabel
-        data_dict['ylabel'] = label
-
-        # Create array for errors:
-        if errorbars:
-            if type(errorbars) == list:
-                if errorbars[i]:
-                    ind = KEYLIST.index('d'+key)
-                    errors = np.asarray([row[ind] for row in stream])
-                    if len(errors) > 0: 
-                        data_dict['errors'] = errors
-                    else:
-                        loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
-            else:
-                ind = KEYLIST.index('d'+key)
-                errors = np.asarray([row[ind] for row in stream])
-                if len(errors) > 0: 
-                    data_dict['errors'] = errors
-                else:
-                    loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
-
-        # Annotate flagged data points:
-        if annotate:
-	    if type(annotate) == list:
-                if annotate[i]:
-                    flag = stream._get_column('flag')
-                    comments = stream._get_column('comment')
-                    flags = array([flag,comments])
-		    data_dict['annotate'] = True
-                    data_dict['flags'] = flags
-                else:
-                    data_dict['annotate'] = False
-            else:
-                flag = stream._get_column('flag')
-                comments = stream._get_column('comment')
-                flags = array([flag,comments])
-		data_dict['annotate'] = True
-                data_dict['flags'] = flags
-        else:
-            data_dict['annotate'] = False
-
-        # Plot a function:
-        if function:
-            data_dict['function'] = function
-
-        # Plot shaded storm phases:
-        if stormphases:
-            if not t_stormphases:
-                loggerplot.error("plot: No variable t_stormphases for plotting phases.")
-                raise Exception("Require variable t_stormphases when stormphases=True!")
-            if len(t_stormphases) not in [1,2,3,4]:
-                loggerplot.error("plot: Length of variable t_stormphases incorrect.")
-                raise Exception("Something is wrong with length of variable t_stormphases!")
-            if type(stormphases) == list:
-                if stormphases[i]:
-                    data_dict['stormphases'] = t_stormphases
-            else:
-                data_dict['stormphases'] = t_stormphases
-
-        # Include sensor IDs:
-        try:
-            sensor_id = stream.header['SensorID']
-            data_dict['sensorid'] = sensor_id
-        except:
-            data_dict['sensorid'] = ''
-
-        plot_dict.append(data_dict)
-
-    loggerplot.info("plot: Starting plotting function...")
-    _plot(plot_dict, **kwargs)
-    loggerplot.info("plot: Plotting completed.")
+    plotStreams([stream], [ variables ], specialdict=[specialdict],
+	errorbars=errorbars,padding=padding,annotate=annotate,stormphases=stormphases,
+	colorlist=colorlist,symbollist=symbollist,t_stormphases=t_stormphases,
+	includeid=includeid,function=function,plottype=plottype,**kwargs)
 
 
-def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
-	colorlist=colorlist,symbollist=symbollist,annotate=[],stormphases=[],
+def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
+	colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
 	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
 	**kwargs):
     '''
@@ -331,14 +226,18 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
     Args:
 	LISTED VARIABLES:
 	(NOTE: All listed variables must correspond in size to the variable list.)
-	- annotate:	(list(bool)) If True, will annotate plot with flags, e.g.:
+	- annotate:	(bool/list(bool)) If True, will annotate plot with flags, e.g.:
 			[ [True], [True], [False, False] ]
-	- errorbars:	(list(bool)) If True, will plot corresponding errorbars:
+			(Enter annotate = True for all plots to be annotated.)
+	- errorbars:	(bool/list(bool)) If True, will plot corresponding errorbars:
 			[ [False], [True], [False, False] ]
-        - padding: 	(list(list)) List of lists containing paddings for each
+			(Enter errorbars = True to plot error bars on all plots.)
+        - padding: 	(float/list(list)) List of lists containing paddings for each
 			respective variable, e.g:
 			[ [5], [5], [0.1, 0.2] ]
-	- stormphases:	(list(bool)) If True, will plot shaded and annotated storm phases.
+			(Enter padding = 5 for all plots to use 5 as padding.)
+	- stormphases:	(bool/list(bool)) If True, will plot shaded and annotated storm phases.
+			(Enter stormphases = True to plot storm on all plots.)
 			NOTE: Also requires variable t_stormphases.
 	- specialdict:	(list(dict)) Same as plot variable, e.g:
 			[ {'z': [100,150]}, {}, {'t1':[7,8]} ]
@@ -449,7 +348,10 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 
             # Define padding for each variable:
             if padding:
-                ypadding = padding[i][j]
+                if type(padding) == list:
+                    ypadding = padding[i][j]
+                else:
+                    ypadding = padding
             else:
                 ypadding = 0
 
@@ -465,8 +367,8 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                         data_dict['ymax'] = np.max(y) + ypadding
                     else:
                         loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
-                        data_dict['ymin'] = ymin - 0.5
-                        data_dict['ymax'] = ymax + 0.5
+                        data_dict['ymin'] = np.min(y) - 0.05
+                        data_dict['ymax'] = np.max(y) + 0.05
             else:
                 if not (np.min(y) == np.max(y)):
                     data_dict['ymin'] = np.min(y) - ypadding
@@ -496,24 +398,39 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
 
             # Create array for errorbars:
             if errorbars:
-                if errorbars[i][j]:
+                if type(errorbars) == list:
+                    if errorbars[i][j]:
+                        ind = KEYLIST.index('d'+key)
+                        errors = np.asarray([row[ind] for row in stream])
+                        if len(errors) > 0: 
+                            data_dict['errors'] = errors
+                        else:
+                            loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
+                else:
                     ind = KEYLIST.index('d'+key)
                     errors = np.asarray([row[ind] for row in stream])
                     if len(errors) > 0: 
                         data_dict['errors'] = errors
                     else:
-                        loggerplot.warning("plotStreams: No errors for key %s. Leaving empty." % key)
+                        loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
 
             # Annotate flagged data points:
             if annotate:
-                if annotate[i][j]:
+	        if type(annotate) == list:
+                    if annotate[i][j]:
+                        flag = stream._get_column('flag')
+                        comments = stream._get_column('comment')
+                        flags = array([flag,comments])
+	    	        data_dict['annotate'] = True
+                        data_dict['flags'] = flags
+                    else:
+                        data_dict['annotate'] = False
+                else:
                     flag = stream._get_column('flag')
                     comments = stream._get_column('comment')
                     flags = array([flag,comments])
-		    data_dict['annotate'] = True
+                    data_dict['annotate'] = True
                     data_dict['flags'] = flags
-                else:
-                    data_dict['annotate'] = False
             else:
                 data_dict['annotate'] = False
 
@@ -529,7 +446,10 @@ def plotStreams(streamlist,variables,padding=[],specialdict=[],errorbars=[],
                 if len(t_stormphases) not in [1,2,3,4]:
                     loggerplot.error("plotStreams: Length of variable t_stormphases incorrect.")
                     raise Exception("Something is wrong with length of variable t_stormphases!")
-                if stormphases[i][j]:
+                if type(stormphases) == list:
+                    if stormphases[i][j]:
+                        data_dict['stormphases'] = t_stormphases
+                else:
                     data_dict['stormphases'] = t_stormphases
 
             # Include sensor IDs:
@@ -1556,9 +1476,8 @@ if __name__ == '__main__':
 
         # Step 7b - Plot with phases (multiple)
         try:
-            stormphases = [ [True], [True, True] ]
             plotStreams(streamlist,variables,
-                        stormphases = stormphases,
+                        stormphases = True,
                         t_stormphases = t_stormphases,
 			plottitle = "Multiple plot showing all THREE storm phases, annotated")
             print datetime.utcnow(), "- Plotted annotated multiple plot of storm phases."
