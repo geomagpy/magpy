@@ -112,12 +112,26 @@ try:
         #print nasacdfdir
         os.putenv("CDF_LIB", nasacdfdir)
         print "trying CDF lib in %s" % nasacdfdir
-        import spacepy.pycdf as cdf
+        try:
+            import spacepy.pycdf as cdf
+        except KeyError as e:
+            # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
+            badimports.append(e)
+        except:
+            print "Unexpected error"
+            pass
         print "... success"
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
         print "trying CDF lib in /usr/local/cdf"
-        import spacepy.pycdf as cdf      
+        try:
+            import spacepy.pycdf as cdf
+        except KeyError as e:
+            # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
+            badimports.append(e)     
+        except:
+            print "Unexpected error"
+            pass
         print "... success"
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: Nasa cdf not available.\n"

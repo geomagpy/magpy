@@ -1,8 +1,10 @@
 import sys
 from twisted.python import log
 from twisted.internet import reactor 
-from autobahn.websocket import connectWS
-from autobahn.wamp import WampClientFactory, WampClientProtocol
+try: # version > 0.8.0
+    from autobahn.wamp1.protocol import WampClientFactory, WampClientProtocol
+except:
+    from autobahn.wamp import WampClientFactory, WampClientProtocol
 # For converting Unicode text
 import collections
 # Database

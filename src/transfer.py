@@ -363,10 +363,30 @@ def ftpremove (**kwargs):
 # ####################
 # 3. ftp: download files 
 # ####################
+
+def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier): 
+    """
+    Load all files from remotepath to localpath which ends with identifier
+    """
+    print "Starting ftpget ..."
+    ftp = ftplib.FTP(ftpaddress, ftpname,ftppasswd)
+    ftp.cwd(remotepath)
+    filenames = ftp.nlst()
+    print filenames
+
+    for filename in filenames:
+        if filename.endswith(identifier):
+            print filename
+            loggertransfer.info(' ftpget: Getting file %s' % filname)
+            localfilename = os.path.join(localpath,filename)
+            with open(localfilename, "wb") as myfile: 
+                ftp.retrbinary("RETR " + filename, myfile.write)
+                myfile.close()
+    ftp.close()
+
+"""
 def ftpget (**kwargs):
-    """
-    Downloading files from ftp server
-    """
+    #Downloading files from ftp server
     plog = PyMagLog()
 
     
@@ -401,4 +421,4 @@ def ftpget (**kwargs):
         plog.addwarn('FTP file download failed')
         pass
     return
-
+"""

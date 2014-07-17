@@ -23,61 +23,22 @@ CALLED BY:
 '''
 
 import sys, time, os, socket
-import struct, binascii, re
+import sys, time, os, socket
+import struct, binascii, re, csv
 from datetime import datetime, timedelta
 
+# Twisted
 from twisted.protocols.basic import LineReceiver
-from autobahn.wamp import exportRpc
-
 from twisted.internet import reactor
-
 from twisted.python import usage, log
 from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
-# TODO: Add these into all protocols?
-from autobahn import version as autovers
-print autovers
 try: # version > 0.8.0
-    from autobahn.wamp1.protocol import WampServerFactory, WampServerProtocol, $
+    from autobahn.wamp1.protocol import exportRpc
 except:
-    from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
-try: # autovers > 0.7.0:
-    from autobahn.twisted.websocket import listenWS
-except:
-    from autobahn.websocket import listenWS
-
-#from autobahn.websocket import listenWS
-#from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
-
-def h2d(x):
-    '''	
-    Hexadecimal to decimal (for format LEMIBIN2)
-    ... Because the binary for dates is in binary-decimal, not just binary.
-    '''
-
-    y = int(x/16)*10 + x%16
-    return y
-
-def _timeToArray(timestring):
-    '''
-    Converts time string of format 2013-12-12T23:12:23.122324
-    to an array similiat to a datetime object
-    '''
-
-    try:
-        splittedfull = timestring.split(' ')
-        splittedday = splittedfull[0].split('-')
-        splittedsec = splittedfull[1].split('.')
-        splittedtime = splittedsec[0].split(':')
-        datearray = splittedday + splittedtime
-        datearray.append(splittedsec[1])
-        datearray = map(int,datearray)
-        return datearray
-    except:
-        log.msg('Error while extracting time array')
-        return []
+    from autobahn.wamp import exportRpc
 
 
 ## Lemi protocol
@@ -118,6 +79,35 @@ class LemiProtocol(LineReceiver):
     def connectionLost(self):
         log.msg('LEMI connection lost. Perform steps to restart it!')
 
+    def h2d(self,x):
+        '''	
+        Hexadecimal to decimal (for format LEMIBIN2)
+        ... Because the binary for dates is in binary-decimal, not just binary.
+        '''
+
+        y = int(x/16)*10 + x%16
+        return y
+
+    def _timeToArray(self,timestring):
+        '''
+        Converts time string of format 2013-12-12T23:12:23.122324
+        to an array similiar to a datetime object
+        '''
+
+        try:
+            splittedfull = timestring.split(' ')
+            splittedday = splittedfull[0].split('-')
+            splittedsec = splittedfull[1].split('.')
+            splittedtime = splittedsec[0].split(':')
+            datearray = splittedday + splittedtime
+            datearray.append(splittedsec[1])
+            datearray = map(int,datearray)
+            return datearray
+        except:
+            log.msg('Error while extracting time array')
+            return []
+
+
     def processLemiData(self, data):
         """Convert raw ADC counts into SI units as per datasheets"""
         if len(data) != 153:
@@ -129,7 +119,7 @@ class LemiProtocol(LineReceiver):
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
 
-        datearray = _timeToArray(timestamp)
+        datearray = self._timeToArray(timestamp)
         date_bin = struct.pack('6hL',datearray[0]-2000,datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6])
 
         # define pathname for local file storage (default dir plus hostname plus sensor plus year) and create if not existing
@@ -166,7 +156,7 @@ class LemiProtocol(LineReceiver):
             z = (data_array[22])*1000.
             temp_sensor = data_array[11]/100.
             temp_el = data_array[12]/100.
-            gps_array = datetime(2000+h2d(data_array[5]),h2d(data_array[6]),h2d(data_array[7]),h2d(data_array[8]),h2d(data_array[9]),h2d(data_array[10]))-timedelta(microseconds=300000)
+            gps_array = datetime(2000+self.h2d(data_array[5]),self.h2d(data_array[6]),self.h2d(data_array[7]),self.h2d(data_array[8]),self.h2d(data_array[9]),self.h2d(data_array[10]))-timedelta(microseconds=300000)
             gps_time = datetime.strftime(gps_array, "%Y-%m-%d %H:%M:%S")
         except:
             log.err("LEMI - Protocol: Number conversion error.")

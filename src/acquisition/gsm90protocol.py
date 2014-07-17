@@ -1,19 +1,19 @@
 import sys, time, os, socket
-import struct, binascii, re
+import struct, binascii, re, csv
 from datetime import datetime, timedelta
 
+# Twisted
 from twisted.protocols.basic import LineReceiver
-from autobahn.wamp import exportRpc
-
 from twisted.internet import reactor
-
 from twisted.python import usage, log
 from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
-from autobahn.websocket import listenWS
-from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
+try: # version > 0.8.0
+    from autobahn.wamp1.protocol import exportRpc
+except:
+    from autobahn.wamp import exportRpc
 
 def timeToArray(timestring):
     # Converts time string of format 2013-12-12T23:12:23.122324

@@ -1156,6 +1156,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         raise
 
 
+    print "Writing data"
     # ----------------------------------------------------------------------------
     # --------------------- Checking header information --------------------------
     # ----------------------------------------------------------------------------

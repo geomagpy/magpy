@@ -37,9 +37,11 @@ from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
-from autobahn.websocket import listenWS
-from autobahn.wamp import exportRpc
-from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
+try: # version > 0.8.0
+    from autobahn.wamp1.protocol import exportRpc
+except:
+    from autobahn.wamp import exportRpc
+
 
 def startPOS1(port,commands):
     '''

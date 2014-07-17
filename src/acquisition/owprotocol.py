@@ -20,21 +20,6 @@ from twisted.internet.serialport import SerialPort
 from twisted.web.server import Site
 from twisted.web.static import File
 
-"""
-# Autobahn
-#1. check version
-from autobahn import version as autovers
-print autovers
-try: # version > 0.8.0
-    from autobahn.wamp1.protocol import WampServerFactory, WampServerProtocol, $
-except:
-    from autobahn.wamp import WampServerFactory, WampServerProtocol, exportRpc
-try: # autovers > 0.7.0:
-    from autobahn.twisted.websocket import listenWS
-except:
-    from autobahn.websocket import listenWS
-"""
-
 if onewire:
     class OwProtocol():
         """
@@ -267,10 +252,11 @@ if onewire:
 
                 # Provide data to websocket
                 try:
-                    evt1 = {'id': 0, 'value': outtime}
-                    evt6 = {'id': 8, 'value': timestamp}
-                    evt2 = {'id': 5, 'value': temp}
-                    evt5 = {'id': 10, 'value': self.hostname}
+                    # Check STANDARD_ID list for correct numbers
+                    evt1 = {'id': 3, 'value': outtime}
+                    evt6 = {'id': 1, 'value': timestamp}
+                    evt2 = {'id': 30, 'value': temp}
+                    evt5 = {'id': 0, 'value': self.hostname}
                     evt8 = {'id': 99, 'value': 'eol'}
                 except:
                     print "OW - readTemperature: Problem assigning values to dict"
@@ -344,17 +330,17 @@ if onewire:
                 self.dataToFile(sensor.id, filename, data_bin, header)
 
                 try:
-                    evt1 = {'id': 0, 'value': outtime}
-                    evt9 = {'id': 8, 'value': timestamp}
-                    evt2 = {'id': 5, 'value': temp}
+                    evt1 = {'id': 3, 'value': outtime}
+                    evt9 = {'id': 1, 'value': timestamp}
+                    evt2 = {'id': 30, 'value': temp}
                     if humidity < 100:
-                        evt3 = {'id': 7, 'value': humidity}
+                        evt3 = {'id': 33, 'value': humidity}
                     else:
-                        evt3 = {'id': 7, 'value': 0}
-                    evt4 = {'id': 11, 'value': self.alias(sensor.id)}
-                    evt5 = {'id': 12, 'value': vdd}
-                    evt6 = {'id': 13, 'value': vad}
-                    evt7 = {'id': 14, 'value': vis}
+                        evt3 = {'id': 33, 'value': 0}
+                    #evt4 = {'id': 9, 'value': self.alias(sensor.id)}
+                    evt5 = {'id': 60, 'value': vdd}
+                    evt6 = {'id': 61, 'value': vad}
+                    evt7 = {'id': 62, 'value': vis}
                     evt8 = {'id': 99, 'value': 'eol'}
                 except:
                     print "OW - readBattery: Problem assigning values to dict"
