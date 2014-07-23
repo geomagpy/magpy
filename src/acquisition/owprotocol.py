@@ -337,7 +337,6 @@ if onewire:
                         evt3 = {'id': 33, 'value': humidity}
                     else:
                         evt3 = {'id': 33, 'value': 0}
-                    #evt4 = {'id': 9, 'value': self.alias(sensor.id)}
                     evt5 = {'id': 60, 'value': vdd}
                     evt6 = {'id': 61, 'value': vad}
                     evt7 = {'id': 62, 'value': vis}
@@ -350,13 +349,12 @@ if onewire:
                     self.wsMcuFactory.dispatch(dispatch_url, evt9)
                     self.wsMcuFactory.dispatch(dispatch_url, evt2)
                     self.wsMcuFactory.dispatch(dispatch_url, evt3)
-                    self.wsMcuFactory.dispatch(dispatch_url, evt4)
                     self.wsMcuFactory.dispatch(dispatch_url, evt5)
                     self.wsMcuFactory.dispatch(dispatch_url, evt6)
                     self.wsMcuFactory.dispatch(dispatch_url, evt7)
                     self.wsMcuFactory.dispatch(dispatch_url, evt8)
                     pass
-                except ValueError:
+                except:
                     log.err('OW - readBattery: Unable to parse data at %s' % actualtime)
             except:
                 log.err('OW - readBattery: Lost battery sensor -- reconnecting')

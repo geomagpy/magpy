@@ -168,7 +168,7 @@ def dbsamplingrate(stream):
     headerdict = 
     """
     sr = stream.get_sampling_period()*24*3600
-    print "SR ", len(stream), sr
+    #print "SR ", len(stream), sr
     if np.round(sr,0) == 0:
         return np.round(sr,1)
     else:
@@ -454,7 +454,12 @@ def dbdict2fields(db,header_dict,**kwargs):
     Kwargs:
         - mode:         (string) can be insert (default) or replace
                           insert tries to insert dict values: if already existing, a warning is issued
-                          replace will replace any alraedy present db data by dict values
+                          replace will delete the row with primary key information and then add the dict values (including Nones)
+                          update will modify only given dict values
+        - onlynone      (bool) to be used with update... will only update data with 'None' entries in db
+        - all           (bool) if no datainfoid given, all=True will select all 
+                          datainfo entries matching a given sensorid and update all 
+                          tables in datainfo with(only available with mode='update')
     RETURNS:
         --
     EXAMPLE:
@@ -467,6 +472,11 @@ def dbdict2fields(db,header_dict,**kwargs):
     """
     mode = kwargs.get('mode')
     update = kwargs.get('update')
+    onlynone = kwargs.get('onlynone')
+    alldi = kwargs.get('alldi')
+
+    if update:   # not used any more beginning with version 0.1.259
+        mode = 'update'
 
     if not mode:
         mode = 'insert'
@@ -477,6 +487,32 @@ def dbdict2fields(db,header_dict,**kwargs):
     stationfieldlst,stationvaluelst = [],[]
     datainfofieldlst,datainfovaluelst = [],[]
     usestation, usesensor, usedatainfo = False,False,False
+    datainfolst = []
+
+    def executesql(sql):
+        """ Internal method for executing sql statements and getting proper error messages """
+        message = ''
+        try:
+            cursor.execute(sql)
+        except MySQLdb.IntegrityError, message:
+            return message
+        except MySQLdb.Error, message:
+            return message
+        except:
+            return 'unkown error'
+        return message
+
+    def updatetable(table, primarykey, primaryvalue, key, value):
+        if value <> header_dict[key]:
+            if value is not None and not onlynone: 
+                print "Will update value %s with %s" % (str(value),header_dict[key]) 
+                loggerdatabase.warning("dbdict2fields: ID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], str(value)))
+                updatesql = 'UPDATE '+table+' SET '+key+' = "'+header_dict[key]+'" WHERE '+primarykey+' = "'+primaryvalue+'"'
+                executesql(updatesql)
+            else:
+                print "value = None: Will update value %s with %s" % (str(value),header_dict[key]) 
+                updatesql = 'UPDATE '+table+' SET '+key+' = "'+header_dict[key]+'" WHERE '+primarykey+' = "'+primaryvalue+'"'
+                executesql(updatesql)
 
     if "StationID" in header_dict:
         usestation = True
@@ -490,9 +526,24 @@ def dbdict2fields(db,header_dict,**kwargs):
         loggerdatabase.warning("dbdict2fields: No SensorID in dict - skipping any other eventually given sensor information")
     if "DataID" in header_dict:
         usedatainfo = True
+        datainfolst = [header_dict['DataID']]
         loggerdatabase.debug("dbdict2fields: found DataID in dict")
     else:
-        loggerdatabase.warning("dbdict2fields: No DataID in dict - skipping any other eventually given datainfo information")
+        loggerdatabase.warning("dbdict2fields: No DataID in dict")
+
+    if alldi:
+        usedatainfo = True
+        if 'SensorID' in header_dict:
+            getdatainfosql = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+header_dict['SensorID']+'"'
+            msg = executesql(getdatainfosql)
+            if not msg == '':
+                loggerdatabase.warning("dbdict2fields: Obtaining DataIDs failed - %s" % msg)
+            else:
+                datainfolst = [elem[0] for elem in cursor.fetchall()]
+                loggerdatabase.info("dbdict2fields: No DataID in dict - option alldi selected so all DATAINFO inputs will be updated")
+        else:
+            loggerdatabase.warning("dbdict2fields: alldi option requires a SensorID in dict which is not provided - skipping")
+            usedatainfo = False
 
     # 2. Update content for the primary IDs
     for key in header_dict:
@@ -512,67 +563,77 @@ def dbdict2fields(db,header_dict,**kwargs):
                 datainfovaluelst.append(fieldvalue)
         else:
             loggerdatabase.warning("dbdict2fields: !!!!!!!! %s not existing !!!!!!!" % fieldname)
+            return
 
-    try:
-        insertsql = 'INSERT INTO STATIONS (%s) VALUE (%s)' %  (', '.join(stationfieldlst), '"'+'", "'.join(stationvaluelst)+'"')
-        if mode == 'replace':
-            insertsql = insertsql.replace("INSERT","REPLACE")
+    print len(stationfieldlst), len(sensorfieldlst), len(datainfofieldlst)
+    if mode == 'insert':   #####   Insert ########
         if len(stationfieldlst) > 0:
-            cursor.execute(insertsql)
-    except:
-        try:
-            for key in header_dict:
-                if key in STATIONSKEYLIST:
-                    searchsql = "SELECT %s FROM STATIONS WHERE StationID = '%s'" % (key,header_dict['StationID'])
-                    cursor.execute(searchsql)
-                    value = cursor.fetchone()[0]
-                    if value <> header_dict[key]:
-                        loggerdatabase.warning("dbdict2fields: StationID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
-                        updatesql = 'UPDATE STATIONS SET ' + key + ' = "' + header_dict[key] +'" WHERE StationID = "' + header_dict['StationID'] + '"'
-                        if update:
-                            cursor.execute(updatesql)
-        except:
-            loggerdatabase.warning("dbdict2fields: STATIONS table not existing?")
-    try:
-        insertsql = 'INSERT INTO SENSORS (%s) VALUE (%s)' %  (', '.join(sensorfieldlst), '"'+'", "'.join(sensorvaluelst)+'"')
-        if mode == 'replace':
-            insertsql = insertsql.replace("INSERT","REPLACE")
+            insertsql = 'INSERT INTO STATIONS (%s) VALUE (%s)' %  (', '.join(stationfieldlst), '"'+'", "'.join(stationvaluelst)+'"')
+            msg = executesql(insertsql)
+            if not msg == '': 
+                loggerdatabase.warning("dbdict2fields: insert for STATIONS failed - %s - try update mode" % msg)
         if len(sensorfieldlst) > 0:
-            cursor.execute(insertsql)
-    except:
-        try:
-            for key in header_dict:
-                if key in SENSORSKEYLIST:
-                    searchsql = "SELECT %s FROM SENSORS WHERE SensorID = '%s'" % (key,header_dict['SensorID'])
-                    cursor.execute(searchsql)
-                    value = cursor.fetchone()[0]
-                    if value <> header_dict[key]:
-                        loggerdatabase.warning("dbdict2fields: SensorID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
-                        updatesql = 'UPDATE SENSORS SET ' + key + ' = "' + header_dict[key] +'" WHERE SensorID = "' + header_dict['SensorID'] + '"'
-                        if update:
-                            cursor.execute(updatesql)
-        except:
-            loggerdatabase.warning("dbdict2fields: SENSORS table not existing?")
-    try:
-        insertsql = 'INSERT INTO DATAINFO (%s) VALUE (%s)' %  (', '.join(datainfofieldlst), '"'+'", "'.join(datainfovaluelst)+'"')
-        if mode == 'replace':
-            insertsql = insertsql.replace("INSERT","REPLACE")
+            insertsql = 'INSERT INTO SENSORS (%s) VALUE (%s)' %  (', '.join(sensorfieldlst), '"'+'", "'.join(sensorvaluelst)+'"')
+            msg = executesql(insertsql)
+            if not msg == '': 
+                loggerdatabase.warning("dbdict2fields: insert for SENSORS failed - %s - try update mode" % msg)
         if len(datainfofieldlst) > 0:
-            cursor.execute(insertsql)
-    except:
-        try:
-            for key in header_dict:
-                if key in DATAINFOKEYLIST:
-                    searchsql = "SELECT %s FROM DATAINFO WHERE DataID = '%s'" % (key,header_dict['DataID'])
-                    cursor.execute(searchsql)
+            for elem in datainfolst:
+                if 'DataID' in datainfofieldlst:
+                    ind = datainfofieldlst.index('DataID')
+                    datainfovaluelst[ind] = elem
+                else:
+                    datainfofieldlst.append('DataID')
+                    datainfovaluelst.append(elem)
+                insertsql = 'INSERT INTO DATAINFO (%s) VALUE (%s)' %  (', '.join(datainfofieldlst), '"'+'", "'.join(datainfovaluelst)+'"')
+                msg = executesql(insertsql)
+                if not msg == '': 
+                    loggerdatabase.warning("dbdict2fields: insert for DATAINFO of %s failed - %s - try update mode" % (elem,msg))
+    elif mode == 'replace':   #####   Replace ########
+        if len(stationfieldlst) > 0:
+            insertsql = 'REPLACE INTO STATIONS (%s) VALUE (%s)' %  (', '.join(stationfieldlst), '"'+'", "'.join(stationvaluelst)+'"')
+            msg = executesql(insertsql)
+            if not msg == '': 
+                loggerdatabase.warning("dbdict2fields: insert for STATIONS failed - %s - try update mode" % msg)
+        if len(sensorfieldlst) > 0:
+            insertsql = 'REPLACE INTO SENSORS (%s) VALUE (%s)' %  (', '.join(sensorfieldlst), '"'+'", "'.join(sensorvaluelst)+'"')
+            msg = executesql(insertsql)
+            if not msg == '': 
+                loggerdatabase.warning("dbdict2fields: insert for SENSORS failed - %s - try update mode" % msg)
+        if len(datainfofieldlst) > 0:
+            for elem in datainfolst:
+                if 'DataID' in datainfofieldlst:
+                    ind = datainfofieldlst.index('DataID')
+                    datainfovaluelst[ind] = elem
+                else:
+                    datainfofieldlst.append('DataID')
+                    datainfovaluelst.append(elem)
+                insertsql = 'REPLACE INTO DATAINFO (%s) VALUE (%s)' %  (', '.join(datainfofieldlst), '"'+'", "'.join(datainfovaluelst)+'"')
+                msg = executesql(insertsql)
+                if not msg == '': 
+                    loggerdatabase.warning("dbdict2fields: insert for DATAINFO of %s failed - %s - try update mode" % (elem,msg))
+    elif mode == 'update':   #####   Update ########
+        for key in header_dict:
+            print key
+            if key in STATIONSKEYLIST:
+                searchsql = "SELECT %s FROM STATIONS WHERE StationID = '%s'" % (key,header_dict['StationID'])
+                executesql(searchsql)
+                value = cursor.fetchone()[0]
+                updatetable('STATIONS','StationID',header_dict['StationID'],key,value)
+            if key in SENSORSKEYLIST:
+                searchsql = "SELECT %s FROM SENSORS WHERE SensorID = '%s'" % (key,header_dict['SensorID'])
+                executesql(searchsql)
+                value = cursor.fetchone()[0]
+                updatetable('SENSORS','SensorID',header_dict['SensorID'],key,value)
+            if key in DATAINFOKEYLIST:
+                for elem in datainfolst:
+                    searchsql = "SELECT %s FROM DATAINFO WHERE DataID = '%s'" % (key,elem)
+                    executesql(searchsql)
                     value = cursor.fetchone()[0]
-                    if value <> header_dict[key]:
-                        loggerdatabase.warning("dbdict2fields: DataID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], value))
-                        updatesql = 'UPDATE DATAINFO SET ' + key + ' = "' + header_dict[key] +'" WHERE DataID = "' + header_dict['DataID'] + '"'
-                        if update:
-                            cursor.execute(updatesql)
-        except:
-            loggerdatabase.warning("dbdict2fields: DATAINFO table not existing?")
+                    updatetable('DATAINFO','DataID',elem,key,value)
+    else:
+        loggerdatabase.warning("dbdict2fields: unrecognized mode, needs to be one of insert, replace or update - check help(dbdict2field)")
+
 
     db.commit()
     cursor.close ()

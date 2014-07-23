@@ -1559,6 +1559,7 @@ CALLED BY:
             (with the window size) in both ends so that transient parts are minimized
             in the begining and end part of the output signal.
             This function is approximately twice as fast as the previous version.
+            Difference: Gaps of the stream a filled by time steps with NaNs in the data columns
 
         PARAMETERS:
         Kwargs:
@@ -1570,11 +1571,12 @@ CALLED BY:
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:	(timedelta) window width of the filter
             - noresample:	(bool) if True the data set is resampled at filter_width positions
-            - resamplestart:	(bool) if True resampling will try to be performed at full time intervals depending on filter_width 
+            - resampleoffset:	(timedelta) if provided the offset will be added to resamples starttime
             - resamplemode:	(string) if 'fast' then fast resampling is used
             - gaussian_factor:	(float) factor to multiply filterwidth. 
                                 1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
             - testplot:		(bool) provides a plot of unfiltered and filtered data for each key if true 
+            - dontfillgaps:	(bool) if true, get_gaps will not be conducted - much faster but requires the absence of data gaps (including time step) 
 
         RETURNS:
             - self: 		(DataStream) containing the filtered signal within the selected columns
@@ -1585,6 +1587,9 @@ CALLED BY:
             >>> nice_data = bad_data.filter(keys=['x','y','z'],filter_type='gaussian',filter_width=timedelta(hours=1))
 
         APPLICATION:
+
+        TODO:
+            !!A proper and correct treatment of gaps within the dataset to be filtered is missing!! 
          
         """
 
@@ -1608,9 +1613,10 @@ CALLED BY:
         noresample = kwargs.get('noresample')
         resamplemode = kwargs.get('resamplemode')
         resamplestart = kwargs.get('resamplestart')
-        resamplestarttime = kwargs.get('resamplestarttime')
+        resampleoffset = kwargs.get('resampleoffset')
         gaussian_factor = kwargs.get('gaussian_factor')
         testplot = kwargs.get('testplot')
+        dontfillgaps = kwargs.get('dontfillgaps')
 
         if not keys:
             keys = self._get_key_headers()
@@ -1632,6 +1638,9 @@ CALLED BY:
         if not gaussian_factor: 
             gaussian_factor = 1.86506  # optimzed for a 45 sec window with less then 1 % outside the window
                                        # 1.86506: is the ideal numeric values (IAGA recommended for 45 sec fit)
+        if resamplestart:
+            print "##############  Warning ##############"
+            print "option RESAMPLESTART is not used any more. Switch to resampleoffset for modifying time steps"
 
         # ########################
         # Basic validity checks and window size definitions
@@ -1644,6 +1653,9 @@ CALLED BY:
         if not len(self) > 1:
             loggerstream.error("Filter: stream needs to contain data - returning.")
             return self
+
+        if not dontfillgaps:
+            self = self.get_gaps()
 
         window_period = filter_width.seconds
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
@@ -1728,11 +1740,10 @@ CALLED BY:
 
                 self._put_column(res,key)
 
-
         if resample:
             if debugmode:
                 print "Resampling: ", keys
-            self = self.resample(keys,period=window_period,fast=resamplefast,startperiod=resamplestart)
+            self = self.resample(keys,period=window_period,fast=resamplefast,offset=resampleoffset)
             self.header['DataSamplingRate'] = str(window_period) + ' sec'
 
         # ########################
@@ -2089,10 +2100,10 @@ CALLED BY:
                 elem.flag=''.join(fllist)
                 elem.comment = comment
         if flag == 1 or flag == 3:
-            if enddate:	# TODO: Says "removed" but nothing is removed.
-                loggerstream.info("flag_stream: Removed data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
+            if enddate:	
+                loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
             else:
-                loggerstream.info("flag_stream: Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
+                loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat(),comment))
         return self
             
         
@@ -2174,52 +2185,80 @@ CALLED BY:
 
     def get_gaps(self, **kwargs):
         """
+    DEFINITION:
         Takes the dominant sample frequency and fills nan into non-existing time steps:
-        This function provides the basis for discontinuous plots and gap analysis
-        Supports to possible keywords:
-        accuracy: float - (time relative to a day) - default 1 sec
-        gapvariable: boolean  - writes 1 to var2 if time step missing, else 0 - default False        """
+        This function provides the basis for discontinuous plots and gap analysis and proper filtering.
+
+    PARAMETERS:
+    Variables:
+        ---
+    Kwargs:
+        - accuracy: 	(float) time relative to a day - default 1 sec
+        - gapvariable: 	(string) - refering to stream column - default='var5' - This column
+                         is overwritten with 0 (data) and 1 (no data).
+        - key:		(string) - refering to a data column e.g. key='x'. If given then all NaN values with existing time steps are also marked by '1' in the gapvariable line for this key
+
+    RETURNS:
+        - stream: 	(Datastream) 
+
+    EXAMPLE:
+        >>> stream_with_gaps_filled = stream_with_aps.get_gaps(['f'])
+
+    APPLICATION: 
+        used by nfilter() for correct filtering
+    CHANGES:
+        Last updated and tested with nfilter function by leon 2014-07-22
+        """
+
         accuracy = kwargs.get('accuracy')
         key = kwargs.get('key')
+        gapvariable = kwargs.get('gapvariable')
 
         if key in KEYLIST:
             gapvariable = True
             
+        if not gapvariable:
+            gapvariable = 'var5'
+
+        sp = self.get_sampling_period()
+        newsps = self.samplingrate()
+        newsp = newsps/3600.0/24.0
+
         if not accuracy:
             accuracy = 1.0/(3600.0*24.0) # one second relative to day
 
-        sp = self.get_sampling_period()
+        if newsps < 0.9 and not accuracy:
+            accuracy = (newsps-(newsps*0.1))/(3600.0*24.0) 
         
         loggerstream.info('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
 
-        header = self.header
         stream = DataStream()
-        newline = LineStruct()
+        stream.header = self.header
         prevtime = 0
         maxtime = self[-1].time
+
         for elem in self:
-            if abs((prevtime+sp) - elem.time) > accuracy and prevtime+sp < elem.time and not prevtime == 0:
-                currtime = prevtime+sp
-                print currtime, abs((prevtime+sp) - elem.time)*24*3600, (elem.time-prevtime)*24*3600, sp*24*3600
-                while currtime < elem.time:
-                    if gapvariable:
-                        newline.var3 = 1.0
-                    newline.time = currtime
-                    #print newline
+            #if abs((prevtime+sp) - elem.time) > accuracy and prevtime+sp < elem.time and not prevtime == 0:
+            if abs((prevtime+sp) - elem.time) > accuracy and not prevtime == 0:
+                currtime = num2date(prevtime)+timedelta(seconds=newsps)
+                #print currtime, abs((prevtime+sp) - elem.time)*24*3600, (elem.time-prevtime)*24*3600, sp*24*3600
+                while currtime <= num2date(elem.time):
+                    newline = LineStruct()
+                    exec('newline.'+gapvariable+' = 1.0')
+                    newline.time = date2num(currtime)
                     stream.add(newline)
-                    currtime += sp
+                    currtime += timedelta(seconds=newsps)
             else:
-                elem.var3 = 0.0
+                exec('elem.'+gapvariable+' = 0.0')
                 if key in KEYLIST:
                     if isnan(eval('elem.'+key)):
-                        elem.var3 = 1.0
-                #print elem.time, elem.var2
+                        exec('elem.'+gapvariable+' = 1.0')
                 stream.add(elem)
             prevtime = elem.time
 
         loggerstream.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
                 
-        return DataStream(stream,header)
+        return stream
 
 
     def get_sampling_period(self):
@@ -2261,6 +2300,23 @@ CALLED BY:
 
         return domtd[1]
 
+    def samplingrate(self):
+        """
+        DEFINITION:
+            returns a rounded value of the sampling rate
+            and updates the header information
+        """
+        # XXX include that in the stream reading process....
+
+        sr = self.get_sampling_period()*24*3600
+        if np.round(sr,0) == 0:
+            val = np.round(sr,1)
+        else:
+            val = np.round(sr,0)
+
+        self.header['DataSamplingRate'] = str(val) + ' sec'
+
+        return val
 
     def integrate(self, **kwargs):
         """
@@ -3550,7 +3606,8 @@ CALLED BY:
     Kwargs:
         - period: 	(float) sampling period in seconds, e.g. 5s (0.2 Hz).
         - fast:		(bool) use fast approximation
-        - startperiod   (integer) starttime in sec (e.g. 60 each minute, 900 each quarter hour
+        - startperiod:  (integer) starttime in sec (e.g. 60 each minute, 900 each quarter hour
+        - offset:       (integer) starttime in sec (e.g. 60 each minute, 900 each quarter hour
 
     RETURNS:
         - stream: 	(DataStream object) Stream containing resampled data.
@@ -3563,12 +3620,12 @@ CALLED BY:
 
         period = kwargs.get('period')
         fast = kwargs.get('fast')
-        startperiod = kwargs.get('startperiod')
+        offset = kwargs.get('offset')
 
         if not period:
             period = 60.
 
-	sp = self.get_sampling_period()*24.*60.*60.
+	sp = self.samplingrate()
 
 	loggerstream.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
 
@@ -3576,9 +3633,22 @@ CALLED BY:
 
         # Determine the minimum time
 	t_min = num2date(self._get_min('time'))
+        t_start = t_min
 
-        if startperiod:
+        if offset:
             t_min = ceil_dt(t_min,period)
+            if t_min - offset > t_start:
+                t_min = t_min -offset
+            else: 
+                t_min = t_min +offset
+            startperiod, line = self.findtime(t_min)
+        else:
+            t_min = ceil_dt(t_min,period)
+            startperiod, line = self.findtime(t_min)
+            #t_min = ceil_dt(t_min,0)
+            #startperiod, line = self.findtime(t_min)
+            #startperiod = 0
+            #line = self[0]
 
         if fast:
             try:
@@ -3590,21 +3660,26 @@ CALLED BY:
                     loggerstream.warning("resample: Resampling period must be larger than original sampling period.")
                     return self
 
-                if not startperiod:
-                    startperiod = 0
-                else:
-                    startperiod, line = self.findtime(t_min)                    
+                #if not startperiod:
+                #    startperiod = 0
+                #    line = []
+                #else:
+                #    startperiod, line = self.findtime(t_min)
+                #    print "Test:", startperiod, line
 
+                #loggerstream.info("resample: Fast resampling - startperiod and line", startperiod, line)
                 if not line == []:
                     xx = np.round(period/sampling_period)
                     newstream = DataStream()
+                    newstream.header = self.header
                     for line in self[startperiod::xx]:
                         newstream.add(line)
+                    newstream.header['DataSamplingRate'] = str(period) + ' sec'
                     return newstream
                 loggerstream.warning("resample: Fast resampling failed - switching to slow mode")
             except:
+                loggerstream.warning("resample: Fast resampling failed - switching to slow mode")
                 pass
-
 
         # Create a list containing time steps
 	t_max = num2date(self._get_max('time'))
@@ -3636,25 +3711,27 @@ CALLED BY:
         for key in keys:
             if key not in KEYLIST[1:16]:
                 loggerstream.warning("resample: Key %s not supported!" % key)
+
             try:
                 int_data = self.interpol([key],kind='linear')#'cubic')
+
+                int_func = int_data[0]['f'+key]
+                int_min = int_data[1]
+                int_max = int_data[2]
+
+	        key_list = []
+                for item in t_list:
+                    functime = (item - int_min)/(int_max - int_min)
+                    tempval = int_func(functime)
+                    key_list.append(float(tempval))
+
+                res_stream._put_column(key_list,key)
             except:
-                loggerstream.error("resample: Error interpolating stream. Stream too large?")
-
-            int_func = int_data[0]['f'+key]
-            int_min = int_data[1]
-            int_max = int_data[2]
-
-	    key_list = []
-            for item in t_list:
-                functime = (item - int_min)/(int_max - int_min)
-                tempval = int_func(functime)
-                key_list.append(float(tempval))
-
-            res_stream._put_column(key_list,key)
+                loggerstream.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
         loggerstream.info("resample: Data resampling complete.")
 	#return DataStream(res_stream,self.headers)
+        res_stream.header['DataSamplingRate'] = str(period) + ' sec'
 	return res_stream
 
 
