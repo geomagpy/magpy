@@ -1191,6 +1191,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     datakeys, dataheads = [],[]
     datavals = []
 
+    tmpstream = DataStream() # currently only used for _is_number access as datastream is converted to a list later on
+
     if usekeys:
         keylst = usekeys
         if not 'flag' in keylst:
@@ -1466,7 +1468,15 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
     loggerdatabase.info("stream2DB: Creating/updating data table " + tablename)
 
-    if not isnan(datastream[0].sectime) and datastream._is_number(datastream[0].sectime):
+    # Checking validity of secondary time column (if given)
+    try:
+        sectimevalidity = True
+        test=datetime.strftime(num2date(datastream[0].sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+    except ValueError:
+        loggerdatabase.warning("stream2DB: Found secondary time column but cannot interpret it! ")
+        sectimevalidity = False
+
+    if not isnan(datastream[0].sectime) and datastream._is_number(datastream[0].sectime) and sectimevalidity:
         createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (time CHAR(40) NOT NULL PRIMARY KEY, sectime CHAR(40),  %s)" % (tablename,', '.join(dataheads))
         dollarstring = ['%s' for amount in range(len(datakeys)+2)]
         insertmanysql = "INSERT INTO %s(time, sectime, %s) VALUES (%s)" % (tablename, ', '.join(datakeys), ', '.join(dollarstring))
@@ -1492,7 +1502,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
         ct = datetime.strftime(num2date(elem.time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
         # Take the insertstring creation out of loop
-        if not isnan(elem.sectime) and datastream._is_number(elem.sectime): 
+        if not isnan(elem.sectime) and tmpstream._is_number(elem.sectime) and sectimevalidity: 
             cst = datetime.strftime(num2date(elem.sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
             lst = [ct, cst]
         else:

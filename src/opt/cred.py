@@ -58,7 +58,7 @@ def loadobj(filename):
         return pickle.load(f)
 
 
-def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,host=None):
+def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remotedir=None,port=None,host=None):
     """
     Method for creating credentials
     """
@@ -74,6 +74,8 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,host=No
         host = ''
     if not smtp:
         smtp = ''
+    if not port:
+        port = ''
 
     # path to home directory
     home = expanduser("~")
@@ -121,7 +123,7 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,host=No
             print 'Credentials: address missing'
             return
         pwd = base64.b64encode(passwd)
-        dictionary = {'user': user, 'passwd': pwd, 'address':address}
+        dictionary = {'user': user, 'passwd': pwd, 'address':address, 'port':port }
         
     dictslist.append([name,dictionary])
     
