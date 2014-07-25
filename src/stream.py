@@ -1699,6 +1699,8 @@ CALLED BY:
             if not key in KEYLIST:
                 loggerstream.error("Column key %s not valid." % key)
             v = self._get_column(key)
+            # Make sur that we are dealing with numbers
+            v = np.array(map(float, v))
             if v.ndim != 1:
                 loggerstream.error("Filter: Only accepts 1 dimensional arrays.")
             if window_len<3:
