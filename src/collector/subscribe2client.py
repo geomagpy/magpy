@@ -177,7 +177,7 @@ class PubSubClient(WampClientProtocol):
                     # if not present then get a file and upload it
                     #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
-                    destfile = os.path.join(destpath,'MoonsFiles', row[0]+'_'+day+'.bin') 
+                    destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin') 
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
                     try:
                         log.msg("collectors owclient: Downloading data: %s" % datafile)
@@ -238,7 +238,7 @@ class PubSubClient(WampClientProtocol):
                 # if not present then get a file and upload it
                 log.msg("collectors client: No sensors registered so far - Getting data file from moon and uploading it using stream2db")
                 day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
-                destfile = os.path.join(destpath,'MoonsFiles', sensorid+'_'+day+'.bin') 
+                destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.bin') 
                 datafile = os.path.join('/srv/ws/', clientname, sensorid, sensorid+'_'+day+'.bin')
                 try:
                     log.msg("collectors client: Downloading data: %s" % datafile)
@@ -377,7 +377,7 @@ class PubSubClient(WampClientProtocol):
                         try:
                             header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, str(keylst), str(namelst), str(unitlst), str(multilst), packcode, struct.calcsize(packcode))
                             data_bin = struct.pack(packcode,*datearray)
-                            dataToFile(os.path.join(destpath,'MoonsFiles'), sensorid, day, data_bin, header)
+                            dataToFile(os.path.join(destpath,'MartasFiles'), sensorid, day, data_bin, header)
                         except:
                             #log.msg("error")
                             pass

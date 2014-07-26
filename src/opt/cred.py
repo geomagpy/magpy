@@ -78,7 +78,9 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
         port = ''
 
     # path to home directory
-    home = expanduser("~")
+    sysuser = os.getenv("USER")
+    home = expanduser('~'+sysuser)
+    # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
 
     try:
@@ -139,14 +141,16 @@ def lc(dictionary,value):
     """
     
     # path to home directory
-    home = expanduser("~")
+    sysuser = os.getenv("USER")
+    home = expanduser('~'+sysuser)
+    # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
 
     try:
         dictslist = loadobj(credentials)
     except:
         print "Credentials: Could not load file"
-        pass
+        return
 
     for d in dictslist:
         if d[0] == dictionary:
@@ -163,7 +167,9 @@ def sc():
     """
     
     # path to home directory
-    home = expanduser("~")
+    sysuser = os.getenv("USER")
+    home = expanduser('~'+sysuser)
+    # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
     print "Credentials: Overview of existing credentials:"
     try:
@@ -182,7 +188,9 @@ def dc(name):
     """
 
     # path to home directory
-    home = expanduser("~")
+    sysuser = os.getenv("USER")
+    home = expanduser('~'+sysuser)
+    # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
     try:
         dictslist = loadobj(credentials)
