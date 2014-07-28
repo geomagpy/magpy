@@ -2298,7 +2298,7 @@ CALLED BY:
         domtd = timedifflist[-1][1]
         if not domtd == 0:
             return domtd
-        else
+        else:
             try:
                 return timedifflist[-2][1]
             except:
