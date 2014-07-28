@@ -2270,14 +2270,12 @@ CALLED BY:
         for time savings, this function only tests the first 1000 elements
         """
         timedifflist = [[0,0]]
-        domtd = [0,0]
+        timediff = 0
         timecol= self._get_column('time')
         if len(timecol) <= 1000:
             testrange = len(timecol)
         else:
             testrange = 1000
-
-        #print len(timecol)
 
         for idx, val in enumerate(timecol[:testrange]):
             if idx > 1 and not isnan(val):
@@ -2292,10 +2290,14 @@ CALLED BY:
             timeprev = val
 
         #print self
-        
-        timedifflist = timedifflist.sort(key=lambda x: int(x[0]))
-        # get the most often timediff
-        domtd = timedifflist[-1][1]
+        if not len(timedifflist) == 0:
+            timedifflist.sort(key=lambda x: int(x[0]))
+            # get the most often found timediff
+            domtd = timedifflist[-1][1]
+        else:
+            loggerstream.error("get_sampling_period: unkown problem - returning 0")
+            domtd = 0
+       
         if not domtd == 0:
             return domtd
         else:
