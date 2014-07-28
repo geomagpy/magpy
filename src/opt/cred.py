@@ -57,6 +57,28 @@ def loadobj(filename):
     with open(filename, 'r') as f:
         return pickle.load(f)
 
+def getuser():
+    sysuser = os.getenv("USER")
+    # if sysuser could not be identified try Logname
+    if sysuser == None:
+        print "Getuser: Running from crontab -- trying Logname to identify user"
+        sysuser = os.getenv("LOGNAME").replace("LOGNAME=", "")
+        if not sysuser == None:
+            print "Getuser: ... succes - using", sysuser
+    # if sysuser still could not be identified assume that uid 1000 is the defaultuser (on linux)
+    if sysuser == 'None':
+        print "Getuser: Cannot identify user by standard procedures - switching to default uid 1000"
+        sysuser = pwd.getpwuid(1000)[0]
+        print "Getuser: now using", sysuser
+    return sysuser
+    # path to home directory
+    #if os.isatty(sys.stdin.fileno()):
+    #    sysuser = os.getenv("USER")
+    #    pass
+    #else:
+    #    sysuser = os.getenv("LOGNAME").replace("LOGNAME=", "")
+    #    pass
+
 
 def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remotedir=None,port=None,host=None):
     """
@@ -77,8 +99,7 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
     if not port:
         port = ''
 
-    # path to home directory
-    sysuser = os.getenv("USER")
+    sysuser = getuser()
     home = expanduser('~'+sysuser)
     # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
@@ -140,11 +161,11 @@ def lc(dictionary,value):
     Load credentials
     """
     
-    # path to home directory
-    sysuser = os.getenv("USER")
+    sysuser = getuser()
     home = expanduser('~'+sysuser)
     # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
+    print "Accessing credential file:", credentials
 
     try:
         dictslist = loadobj(credentials)
@@ -166,8 +187,7 @@ def sc():
     Show credentials
     """
     
-    # path to home directory
-    sysuser = os.getenv("USER")
+    sysuser = getuser()
     home = expanduser('~'+sysuser)
     # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')
@@ -186,9 +206,7 @@ def dc(name):
     """
     Drop credentials for 'name'
     """
-
-    # path to home directory
-    sysuser = os.getenv("USER")
+    sysuser = getuser()
     home = expanduser('~'+sysuser)
     # previously used expanduser('~') which does not work for root 
     credentials = os.path.join(home,'.magpycred')

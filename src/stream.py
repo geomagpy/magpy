@@ -2281,7 +2281,7 @@ CALLED BY:
 
         for idx, val in enumerate(timecol[:testrange]):
             if idx > 1 and not isnan(val):
-                timediff = val - timeprev
+                timediff = np.round((val-timeprev),7)
                 found = 0
                 for tel in timedifflist:
                     if tel[1] == timediff:
@@ -2292,15 +2292,18 @@ CALLED BY:
             timeprev = val
 
         #print self
-
+        
+        timedifflist = timedifflist.sort(key=lambda x: int(x[0]))
         # get the most often timediff
-        dominate = 0
-        for elem in timedifflist:
-            if elem[0] > dominate:
-                dominate = elem[0]
-                domtd = elem
-
-        return domtd[1]
+        domtd = timedifflist[-1][1]
+        if not domtd == 0:
+            return domtd
+        else
+            try:
+                return timedifflist[-2][1]
+            except:
+                loggerstream.error("get_sampling_period: could not identify dominant sampling rate")
+                return 0
 
     def samplingrate(self):
         """
@@ -2311,6 +2314,7 @@ CALLED BY:
         # XXX include that in the stream reading process....
 
         sr = self.get_sampling_period()*24*3600
+        print sr
         if np.round(sr,0) == 0:
             val = np.round(sr,1)
         else:
