@@ -15,8 +15,10 @@ import MySQLdb
 # ----------------------------------------------------------------------------
 
 DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits','DataFormat',
+			'DataMinTime','DataMaxTime',
 			'DataSamplingFilter','DataDigitalSampling','DataComponents','DataSamplingRate',
-			'DataType','DataDeltaX','DataDeltaY','DataDeltaZ','DataDeltaF',
+			'DataType','DataDeltaX','DataDeltaY','DataDeltaZ','DataDeltaF','DataDeltaT1',
+			'DataDeltaT2','DataDeltaVar1','DataDeltaVar2','DataDeltaVar3','DataDeltaVar4',
 			'DataDeltaReferencePier','DataDeltaReferenceEpoch','DataScaleX',
 			'DataScaleY','DataScaleZ','DataScaleUsed','DataCompensationX',
 			'DataCompensationY','DataCompensationZ','DataSensorOrientation',
@@ -25,6 +27,20 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
 			'DataElevation','DataElevationRef','DataFlagModification','DataAbsFunc',
 			'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate',
 			'DataRating','DataComments']
+
+DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(20)',
+                        'CHAR(50)','CHAR(50)',
+                        'CHAR(100)','CHAR(100)','CHAR(10)','CHAR(100)',
+                        'CHAR(100)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)', 'DECIMAL(20,9)',
+                        'DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)',
+                        'CHAR(20)','CHAR(50)','DECIMAL(20,9)',
+                        'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(2)','DECIMAL(20,9)',
+                        'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(10)',
+                        'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(5)','CHAR(20)',
+                        'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(20)',
+                        'DECIMAL(20,9)','CHAR(10)','CHAR(50)','CHAR(20)',
+                        'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
+                        'CHAR(10)','TEXT']
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
 			'SensorDataLoggerSerNum','SensorDataLoggerRevision','SensorDataLoggerRevisionComment',
@@ -313,7 +329,16 @@ def dbinit(db):
 
     # DATAINFO TABLE
     # Create datainfo table
-    datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
+    if not len(DATAINFOKEYLIST) == len(DATAVALUEKEYLIST):
+        loggerdatabase.error("CHECK your DATA KEYLISTS")
+        return
+    FULLDATAKEYLIST = []
+    for i, elem in enumerate(DATAINFOKEYLIST):
+        newelem = elem + ' ' + DATAVALUEKEYLIST[i]
+        FULLDATAKEYLIST.append(newelem)
+    datainfostr = ', '.join(FULLDATAKEYLIST)
+
+    #datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
     createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
 
     # FLAGS TABLE
@@ -388,7 +413,7 @@ def dbdelete(db,datainfoid,**kwargs):
     timerange = kwargs.get("timerange")
 
     if not samplingrateratio:
-        samplingrateratio = 45.0
+        samplingrateratio = 12.0
         
     cursor = db.cursor()
     timeunit = 'DAY'
@@ -676,21 +701,23 @@ def dbfields2dict(db,datainfoid):
     for key in DATAINFOKEYLIST:
         if not key == 'StationID': # Remove that line when included into datainfo
             getdata = 'SELECT '+ key +' FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
-            cursor.execute(getdata)
-            row = cursor.fetchone()
-            loggerdatabase.debug("dbfields2dict: got key from DATAINFO - %s" % getdata)
-            if isinstance(row[0], basestring):
-                metadatadict[key] = row[0]
-                if key == 'ColumnContents':
-                    colsstr = row[0]
-                if key == 'ColumnUnits':
-                    colselstr = row[0]
-            else:
-                if row[0] == None:
-                    #metadatadict[key] = row[0]
-                    pass
+            try:
+                cursor.execute(getdata)
+                row = cursor.fetchone()
+                loggerdatabase.debug("dbfields2dict: got key from DATAINFO - %s" % getdata)
+                if isinstance(row[0], basestring):
+                    metadatadict[key] = row[0]
+                    if key == 'ColumnContents':
+                        colsstr = row[0]
+                    if key == 'ColumnUnits':
+                        colselstr = row[0]
                 else:
-                    metadatadict[key] = float(row[0])
+                    if not row[0] == None:
+                        metadatadict[key] = float(row[0])
+            except MySQLdb.Error, e:
+                loggerdatabase.error("dbfields2dict: mysqlerror while adding key %s, %s" % (key,e))
+            except:
+                loggerdatabase.error("dbfields2dict: unkown error while adding key %s" % key)
 
     try:
         cols = colsstr.split('_')
@@ -1008,13 +1035,29 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     datainfohead,datainfovalue=[],[]
     if datakeydict:
         for key in datakeydict:
-            if key in DATAINFOKEYLIST:
-                datainfohead.append(key)
-                datainfovalue.append(str(datakeydict[key]))
-                if key == 'DataID' or key.startswith('Column'):
-                    pass
-                else:
-                    searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
+            if key in DATAINFOKEYLIST and not key == 'DataMaxTime' and not key == 'DataMinTime': 
+                # MinTime and Maxtime are changing and therefore are excluded from check
+                if not str(datakeydict[key]) == '':
+                    datainfohead.append(key)
+                    ind = DATAINFOKEYLIST.index(key)
+                    if DATAVALUEKEYLIST[ind].startswith('DEC') or DATAVALUEKEYLIST[ind].startswith('FLO'):
+                        try:
+                            datainfovalue.append(float(datakeydict[key]))
+                        except:
+                            loggerdatabase.warning("dbdatainfo: Trying to read FLOAT value failed")
+                            datainfovalue.append(str(datakeydict[key]))
+                    elif DATAVALUEKEYLIST[ind].startswith('DEC') or DATAVALUEKEYLIST[ind].startswith('FLO'):
+                        try:
+                            datainfovalue.append(int(datakeydict[key]))
+                        except:
+                            loggerdatabase.warning("dbdatainfo: Trying to read INT value failed")
+                            datainfovalue.append(str(datakeydict[key]))
+                    else:
+                        datainfovalue.append(str(datakeydict[key]))
+                    if key == 'DataID' or key.startswith('Column'):
+                        pass
+                    else:
+                        searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
 
     datainfonum = '0001'
     numlst,intnumlst = [],[]
@@ -1050,9 +1093,29 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: Number of existing DATAINFO lines: %s" % str(rows))
     except:
         loggerdatabase.warning("dbdatainfo: Could not access table DATAINFO in database")
-        datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
+        loggerdatabase.warning("dbdatainfo: Creating it now")
+        if not len(DATAINFOKEYLIST) == len(DATAVALUEKEYLIST):
+            loggerdatabase.error("CHECK your DATA KEYLISTS")
+            return
+        FULLDATAKEYLIST = []
+        for i, elem in enumerate(DATAINFOKEYLIST):
+            newelem = elem + ' ' + DATAVALUEKEYLIST[i]
+            FULLDATAKEYLIST.append(newelem)
+        datainfostr = ', '.join(FULLDATAKEYLIST)
+
         createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
         cursor.execute(createdatainfotablesql)
+
+    def joindatainfovalues(head,lst):
+        # Submethod for getting sql string from values
+        dst = []
+        for i, elem in enumerate(head):
+            ind = DATAINFOKEYLIST.index(elem)
+            if DATAVALUEKEYLIST[ind].startswith('DEC') or DATAVALUEKEYLIST[ind].startswith('FLO') or DATAVALUEKEYLIST[ind].startswith('INT'):
+                dst.append(str(lst[i]))
+            else:
+                dst.append('"'+str(lst[i])+'"')
+        return ','.join(dst)
 
     # check whether input in DATAINFO with sensorid is existing already
     if len(rows) > 0:
@@ -1073,8 +1136,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: Searchlist: %s" % intensivesearch)
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
-        print "Found matching table: ", intensiverows
-        print "using searchlist ", intensivesearch
+        #print intensivesearch, intensiverows
+        loggerdatabase.debug("dbdatainfo: Found matching table: %s" % str(intensiverows))
+        loggerdatabase.debug("dbdatainfo: using searchlist %s"% intensivesearch)
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
             for i in range(len(intensiverows)):
@@ -1095,7 +1159,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             else:
                 datainfohead.append('DataID')
                 datainfovalue.append(sensorid + '_' + datainfonum)
-            datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), '"'+'", "'.join(datainfovalue)+'"')
+            datainfostring = joindatainfovalues(datainfohead, datainfovalue)
+            datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
             loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
             if updatedb:
                 cursor.execute(datainfosql)
@@ -1103,13 +1168,26 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     else:
         # return 0001
         datainfoid = sensorid + '_' + datainfonum
-        datainfohead.append('DataID')
-        datainfovalue.append(datainfoid)
+        if not 'DataID' in datainfohead:
+            datainfohead.append('DataID')
+            datainfovalue.append(datainfoid)
+        else:
+            ind = datainfohead.index('DataID')
+            datainfovalue[ind] = datainfoid
         # and create datainfo input
         loggerdatabase.debug("dbdatainfo: %s, %s" % (datainfohead, datainfovalue))
-        datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), '"'+'", "'.join(datainfovalue)+'"')
+        datainfostring = joindatainfovalues(datainfohead, datainfovalue)
+        datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
+        #print datainfosql
         if updatedb:
-            cursor.execute(datainfosql)
+            try:
+                print "Updating DATAINFO table"
+                cursor.execute(datainfosql)
+            except MySQLdb.Error, e:
+                print "Failed:", e
+            except:
+                print "Failed for unknown reason"
+
 
     db.commit()
     cursor.close ()
@@ -1414,7 +1492,14 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
             # DATAINFO TABLE
             # Create datainfo table
-            datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
+            if not len(DATAINFOKEYLIST) == len(DATAVALUEKEYLIST):
+                loggerdatabase.error("CHECK your DATA KEYLISTS")
+                return
+            FULLDATAKEYLIST = []
+            for i, elem in enumerate(DATAINFOKEYLIST):
+                newelem = elem + ' ' + DATAVALUEKEYLIST[i]
+                FULLDATAKEYLIST.append(newelem)
+            datainfostr = ', '.join(FULLDATAKEYLIST)
             createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
 
             if mode == "delete":
@@ -1450,7 +1535,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             # DATAINFO TABLE
             # check whether contents exists
 
-            #print "Test 2 - waht about sensor id now?? (headdict should contain revision!!):", sensorid, headdict 
+            #print "Test 2 - what about sensor id now?? (headdict should contain revision!!):", sensorid, headdict 
 
             tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
 
@@ -1666,12 +1751,12 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
                 if keylst[i]=='time':
                     exec('row.'+keylst[i]+' = date2num(stream._testtime(elem))')
                 else:
-                    if elem == None:
+                    if elem == None or elem == 'null':
                         elem = float(NaN)
-                        #print "found"
-                        #if keylst[i]=='x':
-                        #    elem = float(NaN)
-                    exec('row.'+keylst[i]+' = elem')
+                    if keylst[i] in ['x','y','z','f','dx','dy','dz','df','t1','t1','var1','var2','var3','var4','var5']:
+                        exec('row.'+keylst[i]+' = float(elem)')
+                    else:
+                        exec('row.'+keylst[i]+' = elem')
             stream.add(row)
 
     if tableext:

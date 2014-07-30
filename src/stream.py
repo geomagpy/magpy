@@ -1571,6 +1571,7 @@ CALLED BY:
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:	(timedelta) window width of the filter
             - noresample:	(bool) if True the data set is resampled at filter_width positions
+            - autofill:		(list) of keys: provide a keylist for which nan values are linearly interpolated before filtering - use with care, might be useful if you have low resolution parameters asociated with main values like (humidity etc)
             - resampleoffset:	(timedelta) if provided the offset will be added to resamples starttime
             - resamplemode:	(string) if 'fast' then fast resampling is used
             - gaussian_factor:	(float) factor to multiply filterwidth. 
@@ -1616,6 +1617,7 @@ CALLED BY:
         resampleoffset = kwargs.get('resampleoffset')
         gaussian_factor = kwargs.get('gaussian_factor')
         testplot = kwargs.get('testplot')
+        autofill = kwargs.get('autofill')
         dontfillgaps = kwargs.get('dontfillgaps')
 
         if not keys:
@@ -1626,6 +1628,11 @@ CALLED BY:
             resample = True
         else:
             resample = False
+        if not autofill:
+            autofill = []
+        else:
+            if not isinstance(autofill, (list, tuple)):
+                return
         if not resamplemode:
             resamplefast = True
         else:
@@ -1696,10 +1703,18 @@ CALLED BY:
         t = self._get_column('time')
 
         for key in keys:
+            #print "Start filtering for", key
             if not key in KEYLIST:
                 loggerstream.error("Column key %s not valid." % key)
             v = self._get_column(key)
-            # Make sur that we are dealing with numbers
+
+            if key in autofill:
+                loggerstream.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
+                loggerstream.warning("Filter: I guess you know what you are doing...")
+                nans, x= nan_helper(v)
+                v[nans]= interp(x(nans), x(~nans), v[~nans])
+            
+            # Make sure that we are dealing with numbers
             v = np.array(map(float, v))
             if v.ndim != 1:
                 loggerstream.error("Filter: Only accepts 1 dimensional arrays.")
@@ -2316,7 +2331,7 @@ CALLED BY:
         # XXX include that in the stream reading process....
 
         sr = self.get_sampling_period()*24*3600
-        print sr
+
         if np.round(sr,0) == 0:
             val = np.round(sr,1)
         else:
@@ -3717,6 +3732,7 @@ CALLED BY:
             res_stream.add(row)
 
         for key in keys:
+            print "Resampling:", key
             if key not in KEYLIST[1:16]:
                 loggerstream.warning("resample: Key %s not supported!" % key)
 
