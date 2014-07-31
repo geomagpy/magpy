@@ -184,11 +184,11 @@ class LemiProtocol(LineReceiver):
          
     def dataReceived(self, data):
         #print "Lemi data here!", self.buffer
-            dispatch_url =  "http://example.com/"+self.hostname+"/lemi#"+self.sensor+"-value"
-            flag = 0
-            WSflag = 0
+        dispatch_url =  "http://example.com/"+self.hostname+"/lemi#"+self.sensor+"-value"
+        flag = 0
+        WSflag = 0
 
-        #try:
+        try:
             if (self.buffer).startswith(self.soltag) and len(self.buffer) == 153:
                 currdata = self.buffer
                 self.buffer = ''
@@ -252,11 +252,10 @@ class LemiProtocol(LineReceiver):
             if flag == 0:
                 self.buffer = self.buffer + data
 
-        #except:
-         #   log.err('LEMI - Protocol: Error while parsing data.')
+        except:
+            log.err('LEMI - Protocol: Error while parsing data.')
 
         ## publish event to all clients subscribed to topic
-            '''
         if WSflag == 2:
             try:
                 self.wsMcuFactory.dispatch(dispatch_url, evt1)
@@ -270,5 +269,4 @@ class LemiProtocol(LineReceiver):
                 self.wsMcuFactory.dispatch(dispatch_url, evt99)
             except:
                 log.err('LEMI - Protocol: wsMcuFactory error while dispatching data.') 
-            '''
 

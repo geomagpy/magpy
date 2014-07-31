@@ -266,11 +266,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     if getfile:
 
-        print "Here goes the read!"
-
         if linelength == 169:
             header = fh.readline()
-            print header
 
         loggerlib.info('readLEMIBIN: Reading %s...' % (filename))
         headers['col-x'] = 'x'
@@ -305,7 +302,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
-            headers['SensorID'] = line[0:4]
+            headers['SensorID'] = sensorid
 
             if gpstime:
                 time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
