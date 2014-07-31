@@ -127,12 +127,17 @@ class LemiProtocol(LineReceiver):
         if not os.path.exists(path):
             os.makedirs(path)
 
+        packcode = "<4cb6B8hb30f3BcBcc5hL"
+        header = "LemiBin %s %s %s %s %s %s %d" % (sensorid, '[x,y,z,t1,t2]', '[X,Y,Z,T_sensor,T_elec]', '[nT,nT,nT,deg_C,deg_C]', '[0.001,0.001,0.001,100,100]\n', packcode, struct.calcsize(packcode))
+
         # save binary raw data to file
+        lemipath = os.path.join(path,self.sensor+'_'+date+".bin")
+        if not os.path.exists(lemipath):
+            with open(lemipath, "ab") as myfile:
+                myfile.write(header)
         try:
-            with open(os.path.join(path,self.sensor+'_'+date+".bin"), "ab") as myfile:
+            with open(lemipath, "ab") as myfile:
                 myfile.write(data+date_bin)
-            #with open(os.path.join(path,self.sensor+'_'+date+".txt"), "a") as myfile:
-                #myfile.write(actualtime+'\n')
             pass
         except:
             log.err('LEMI - Protocol: Could not write data to file.')
