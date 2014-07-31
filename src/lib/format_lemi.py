@@ -266,6 +266,12 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     if getfile:
 
+        print "Here goes the read!"
+
+        if linelength == 169:
+            header = fh.readline()
+            print header
+
         loggerlib.info('readLEMIBIN: Reading %s...' % (filename))
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
