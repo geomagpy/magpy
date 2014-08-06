@@ -77,6 +77,10 @@ class CsProtocol(LineReceiver):
         """Convert raw ADC counts into SI units as per datasheets"""
 
         currenttime = datetime.utcnow()
+        # Correction for ms time to work with databank:
+        currenttime_ms = currenttime.microsecond/1000000.
+        ms_rounded = round(float(currenttime_ms),3)
+        currenttime = currenttime.replace(microsecond=int(ms_rounded*1000000.))
         filename = datetime.strftime(currenttime, "%Y-%m-%d")
         actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
 	lastActualtime = currenttime

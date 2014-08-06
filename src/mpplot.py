@@ -453,11 +453,12 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     data_dict['stormphases'] = t_stormphases
 
             # Include sensor IDs:
-            try:
-                sensor_id = stream.header['SensorID']
-                data_dict['sensorid'] = sensor_id
-            except:
-                data_dict['sensorid'] = ''
+            if includeid:
+                try:
+                    sensor_id = stream.header['SensorID']
+                    data_dict['sensorid'] = sensor_id
+                except:
+                    loggerplot.warning("plotStreams: No sensor ID to put into plot!")
 
             plot_dict.append(data_dict)
             count += 1
@@ -1086,9 +1087,8 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
 
 def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
-	labelcolor='0.2',confinex=False,outfile=None,includeid=False,
-	stormanno_s=True,stormanno_m=True,stormanno_r=True,
-	fmt=None):
+	labelcolor='0.2',confinex=False,outfile=None,stormanno_s=True,
+	stormanno_m=True,stormanno_r=True,fmt=None):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
@@ -1252,13 +1252,10 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
 	#------------------------------------------------------------
 
         # ADD SENSOR IDS TO DATA PLOTS:
-	if includeid:
+	if 'sensorid' in data[i]:
             sensorid = data[i]['sensorid']
-            if sensorid == '':
-                loggerplot.warning("plot: SensorID for stream #%s does not exist. Cannot plot." % str(i+1))
-            else:
-                ydistance = [10,13,15,15,15,15,15,15]
-                ax.annotate(sensorid, xy=(10, ydistance[n_subplots-1]),
+            ydistance = [10,13,15,15,15,15,15,15]
+            ax.annotate(sensorid, xy=(10, ydistance[n_subplots-1]),
             	    xycoords='axes points',
             	    horizontalalignment='left', verticalalignment='top')
 
