@@ -288,7 +288,7 @@ class Pos1Protocol(LineReceiver):
                 datearray.extend(gpsarray)
                 data_bin = struct.pack(packcode,datearray[0],datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6],datearray[7],datearray[8],datearray[9],datearray[10],datearray[11],datearray[12],datearray[13],datearray[14],datearray[15],datearray[16])
                 # File Operations
-                dataToFile(self.outputdir,self.sensor, date, data_bin, header)
+                _dataToFile(self.outputdir,self.sensor, date, data_bin, header)
             except:
                 log.msg('POS1 - Protocol: Error while packing binary data')
                 pass
