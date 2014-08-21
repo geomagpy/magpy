@@ -1031,29 +1031,38 @@ CALLED BY:
 
     def aic_calc(self, key, **kwargs):
         """
+    DEFINITION:
         Picking storm onsets using the Akaike Information Criterion (AIC) picker
         - extract one dimensional array from DataStream (e.g. H) -> signal
         - take the first k values of the signal and calculates variance and log
         - plus the rest of the signal (variance and log)
 
-        Required:
-        :type key: string
-        :param key: needs to be an element of KEYLIST
+    PARAMETERS:
+    Variables:
+        - key: 		(str) Key to check. Needs to be an element of KEYLIST.
+    Kwargs:
+        - timerange: 	(timedelta object) defines the length of the time window 
+			examined by the aic iteration. (default: timedelta(hours=1).)
+        - aic2key: 	(str) defines the key of the column where to save the aic values 
+			(default = var2).
+        - aicmin2key: 	(str) defines the key of the column where to save the aic minimum val
+                        (default: key = var1.)
+        - aicminstack: 	(bool) if true, aicmin values are added to previously present column values.
 
-        Optional keywords:
-        :type timerange: timedelta object
-        :param timerange: defines the length of the time window examined by the aic iteration
-                        default: timedelta(hours=1)
-        :type aic2key: string 
-        :param aic2key: defines the key of the column where to save the aic values (default = var2)
-        :type aicmin2key: string
-        :param aicmin2key: defines the key of the column where to save the aic minimum val
-                        default: key = var1
-        :type aicminstack: bool
-        :param aicminstack: if true, aicmin values are added to previously present column values
-                        
-        Example:
-        
+    RETURNS:
+        - self: 	(DataStream object) Stream with results in default var1 + var2 keys.
+
+    EXAMPLE:
+        >>> stream = stream.aic_calc('x',timerange=timedelta(hours=0.5))
+
+    APPLICATION:
+        from magpy.stream import *
+        stream = read(datapath)
+        stream = stream.aic_calc('x',timerange=timedelta(hours=0.5))
+        stream = stream.differentiate(keys=['var2'],put2keys=['var3'])
+	stream_filt = stream.extract('var1',200,'>')
+        stream_new = stream_file.eventlogger('var3',[30,40,60],'>',addcomment=True)      
+        stream = mergeStreams(stream,stream_new,key='comment')  
         """ 
         timerange = kwargs.get('timerange')
         aic2key = kwargs.get('aic2key')
@@ -1113,7 +1122,6 @@ CALLED BY:
                         except:
                             msg = "number of counts does not fit usually because of nans"
             iprev = iend
-
 
         self.header['col-var2'] = 'aic'
 
@@ -4272,10 +4280,12 @@ CALLED BY:
 
     APPLICATION:
         """
-        # include test - does not work yet
-        #if date2num(self._testtime(starttime)) > date2num(self._testtime(endtime)):
-        #    raise ValueError, "Starttime is larger then Endtime"
-        # remove data prior to starttime input
+
+        if starttime and endtime:
+            if self._testtime(starttime) > self._testtime(endtime):
+                loggerstream.error('Trim: Starttime (%s) is larger than endtime (%s).' % (starttime,endtime))
+                raise ValueError, "Starttime is larger than endtime."
+
         loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
 
 #--------------------------------------------------

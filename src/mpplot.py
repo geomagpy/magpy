@@ -1179,9 +1179,10 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
         if data[i]['annotate'] == True:
             flags = data[i]['flags']
             emptycomment = "-"
+            poslst = [ix for ix,el in enumerate(FLAGKEYLIST) if el == key]
+            indexflag = int(poslst[0])
             for idx, elem in enumerate(flags[1]):
-                indexflag = int(flags[0][idx][4])
-                if not elem == emptycomment:# and indexflag in ['0','1','3']:
+                if not elem == emptycomment and flags[0][idx][indexflag] in ['0','3']:
                     ax.annotate(r'%s' % (elem),
                                 xy=(t[idx], y[idx]),
                                 xycoords='data', xytext=(20, 20),

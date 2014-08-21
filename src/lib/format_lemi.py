@@ -224,9 +224,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     temp = open(filename, 'rb').read(169)
 
     if "LemiBin" in temp:
-        # new format
+        # current format
         sensorid = temp.split()[1]
-        header = True
+        dataheader = True
 	loggerlib.info("readLEMIBIN: Format is the current lemi format.")
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
@@ -235,13 +235,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         # old format
         data = struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
         if data[55] == 'L':
-            header = False
+            dataheader = False
 	    loggerlib.info("readLEMIBIN: Format is the out-dated lemi format.")
             packcode = '<4cb6B8hb30f3BcB'
             linelength = 153
             stime = False
         elif data[0] == 'L' and data[55] != 'L':
-            header = False
+            dataheader = False
 	    loggerlib.info("readLEMIBIN: Format is the current lemi format (without header).")
             packcode = '<4cb6B8hb30f3BcB6hL'
             linelength = 169
@@ -251,13 +251,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rb')
 
-    stream = DataStream()
+    stream = DataStream([],{})
 
-    # Check whether header information is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
     data = []
     key = None
 
@@ -274,22 +269,23 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     if getfile:
 
-        if header == True:
-            header = fh.readline()
+        if dataheader == True:
+            junkheader = fh.readline()
+            header['SensorID'] = sensorid
 
         loggerlib.info('readLEMIBIN: Reading %s...' % (filename))
-        headers['col-x'] = 'x'
-        headers['unit-col-x'] = 'nT'
-        headers['col-y'] = 'y'
-        headers['unit-col-y'] = 'nT'
-        headers['col-z'] = 'z'
-        headers['unit-col-z'] = 'nT'
-        headers['col-t1'] = 'Ts'
-        headers['unit-col-t1'] = 'deg'
-        headers['col-t2'] = 'Te'
-        headers['unit-col-t2'] = 'deg'
-        headers['col-var1'] = 'Voltage'
-        headers['unit-col-var1'] = 'V'
+        stream.header['col-x'] = 'x'
+        stream.header['unit-col-x'] = 'nT'
+        stream.header['col-y'] = 'y'
+        stream.header['unit-col-y'] = 'nT'
+        stream.header['col-z'] = 'z'
+        stream.header['unit-col-z'] = 'nT'
+        stream.header['col-t1'] = 'Ts'
+        stream.header['unit-col-t1'] = 'deg'
+        stream.header['col-t2'] = 'Te'
+        stream.header['unit-col-t2'] = 'deg'
+        stream.header['col-var1'] = 'Voltage'
+        stream.header['unit-col-var1'] = 'V'
 
         timediff = []
 
@@ -307,11 +303,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             bfy = data[17]/400.
             bfz = data[18]/400.
 
-            headers['DataCompensationX'] = bfx
-            headers['DataCompensationY'] = bfy
-            headers['DataCompensationZ'] = bfz
-            if header == True:
-                headers['SensorID'] = sensorid
+            stream.header['DataCompensationX'] = bfx
+            stream.header['DataCompensationY'] = bfy
+            stream.header['DataCompensationZ'] = bfz
 
             if gpstime:
                 time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
@@ -361,7 +355,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         loggerlib.info("readLEMIBIN2: Time difference between GPS and PC (GPS-PC): %f , %f" % (np.mean(timediff), np.std(timediff)))
         print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
    
-    return DataStream(stream, headers)    
+    return stream   
 
 
 def readLEMIBIN1(filename, headonly=False, **kwargs):
