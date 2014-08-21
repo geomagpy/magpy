@@ -1,5 +1,5 @@
 '''
-Path:			magpy.plot
+Path:			magpy.mpplot
 Part of package:	stream (plot)
 Type:			Library of matplotlib plotting functions
 
@@ -9,12 +9,16 @@ PURPOSE:
         All plots are done with python's matplotlib package.
 
 CONTAINS:
+    (MAIN...)
 	plot:		(Func) Will plot variables from a single stream.
 	plotStreams:	(Func) Plots multiple variables from multiple streams.
+    (EXTENDED...)
+        plotEMD:	(Func) Plots Empirical Mode Decomposition from opt.emd
         plotPS: 	(Func) Plots the power spectrum of a given key.
         plotSpectrogram:(Func) Plots spectrogram of a given key.
 	plotStereoplot:	(Func) Plots stereoplot of inc and dec values.
 	obspySpectrogram:(Func) Spectrogram plotting function taken from ObsPy.
+    (HELPER/INTERNAL FUNCTIONS...)
 	_plot:		(Func) ... internal function to funnel plot information
 			into a matplotlib plot object.
 	_confinex:	(Func) ... utility function of _plot.
@@ -24,6 +28,7 @@ CONTAINS:
 
 DEPENDENCIES:
         magpy.stream
+        magpy.opt.emd
 	matplotlib
 
 CALLED BY:
@@ -97,6 +102,13 @@ def ploteasy(stream):
     plot_new(stream, keys,
 		confinex = True,
                 plottitle = plottitle)
+
+#####################################################################
+#								    #
+#	MAIN PLOTTING FUNCTIONS				    	    #
+#	(for plotting geomagnetic data)				    #
+#								    #
+#####################################################################
 
 def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
@@ -465,6 +477,112 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     loggerplot.info("plotStreams: Starting plotting function...")
     _plot(plot_dict, **kwargs)
     loggerplot.info("plotStreams: Plotting completed.")
+
+
+#####################################################################
+#								    #
+#	EXTENDED PLOTTING FUNCTIONS				    #
+#	(for more advanced functions)				    #
+#								    #
+#####################################################################
+
+
+def plotEMD(stream,key,verbose=False,plottitle=None,
+	outfile=None,sratio=0.25):
+    '''
+    DEFINITION:
+	NOTE: EXPERIMENTAL FUNCTION ONLY.
+        Function for plotting Empirical Mode Decomposition of
+	DataStream. Currently only optional function.
+	(Adapted from RL code in MagPyAnalysis/NoiseFloor_Spectral/magemd.py.)
+
+    PARAMETERS:
+    Variables:
+        - stream: 	(DataStream object) Description.
+        - key: 		(str) Key in stream to apply EMD to.
+    Kwargs:
+	- outfile:	(str) Save plot to file. If no file defined, plot
+			will simply be shown.
+	- plottitle:	(str) Title to place at top of plot.
+	- sratio:	(float) Decomposition percentage. Determines how curve
+			is split. Default = 0.25.
+        - verbose: 	(bool) Print results. Default False.
+
+    RETURNS:
+        - plot: 	(matplotlib plot) Plot depicting the modes.
+
+    EXAMPLE:
+        >>> plotEMDAnalysis(stream,'x')
+
+    APPLICATION:
+    '''
+
+    # TODO:
+    # - make axes easier to read
+    # - add a amplitude statistic (histogram)
+    # - add a haeufigkeit plot perpendicular to the diagrams 
+    import opt.emd as emd # XXX: add this into main program when method is finalised
+
+    loggerplot.info("plotEMD: Starting EMD calculation.")
+
+    col = stream._get_column(key)
+    timecol = stream._get_column('time')
+    if verbose:
+        print "Amount of values and standard deviation:", len(col), col.std()
+    res = emd.emd(col,max_modes=20)
+    if verbose:
+        print "Found the follwing amount of decomposed modes:", len(res)
+    separate = int(np.round(len(res)*sratio,0))
+    if verbose:
+        print "Separating the last N curves as smooth. N =",separate
+    stdarray = []
+    newcurve = [0]*len(res[0])
+    noisecurve = [0]*len(res[0])
+    smoothcurve = [0]*len(res[0])
+    f, axarr = plt.subplots(len(res), sharex=True)
+
+    for i, elem in enumerate(res):
+        axarr[i].plot(elem)
+        newcurve = [x + y for x, y in zip(newcurve, elem)]
+        stdarray.append([i,elem.std()])
+        ds = stream
+        ds._put_column(elem,'x')
+        ds._put_column(timecol,'time')
+
+        if i >= len(res)-separate:
+            if verbose:
+                print "Smooth:", i
+            smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
+        if i < len(res)-separate:
+            if verbose:
+                print "Noise:", i
+            noisecurve = [x + y for x, y in zip(noisecurve, elem)]
+
+    plt.show()
+
+    plt.plot(smoothcurve)
+    plt.plot(newcurve)
+    plt.title("Variation of H component")
+    plt.xlabel("Time [seconds of day]")
+    plt.ylabel("F [nT]")
+    plt.legend()
+    plt.show()
+
+    plt.plot(noisecurve)
+    plt.title("Variation of H component - high frequency content")
+    plt.xlabel("Time [seconds of day]")
+    plt.ylabel("F [nT]")
+    plt.show()
+
+    plt.close()
+    stdarray = np.asarray(stdarray)
+    ind = stdarray[:,0]
+    val = stdarray[:,1]
+    plt.bar(ind,val)
+    plt.title("Standard deviation of EMD modes")
+    plt.xlabel("EMD mode")
+    plt.ylabel("Standard deviation [nT]")
+    plt.show()
 
 
 def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
@@ -1082,6 +1200,14 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
         return fig
     else: 
         plt.show()
+
+
+#####################################################################
+#								    #
+#	INTERNAL/HELPER FUNCTIONS				    #
+#	(Best not play with these.)				    #
+#								    #
+#####################################################################
 
 
 def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
