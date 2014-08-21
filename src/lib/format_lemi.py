@@ -226,6 +226,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     if "LemiBin" in temp:
         # new format
         sensorid = temp.split()[1]
+        header = True
 	loggerlib.info("readLEMIBIN: Format is the current lemi format.")
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
@@ -234,12 +235,19 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         # old format
         data = struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
         if data[55] == 'L':
+            header = False
 	    loggerlib.info("readLEMIBIN: Format is the out-dated lemi format.")
             packcode = '<4cb6B8hb30f3BcB'
             linelength = 153
             stime = False
+        elif data[0] == 'L' and data[55] != 'L':
+            header = False
+	    loggerlib.info("readLEMIBIN: Format is the current lemi format (without header).")
+            packcode = '<4cb6B8hb30f3BcB6hL'
+            linelength = 169
+            stime = True
         else:
-            loggerlib.error("Lemibin read: Something, somewhere, went very wrong.")
+            loggerlib.error("readLEMIBIN: Something, somewhere, went very wrong.")
 
     fh = open(filename, 'rb')
 
@@ -266,7 +274,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     if getfile:
 
-        if linelength == 169:
+        if header == True:
             header = fh.readline()
 
         loggerlib.info('readLEMIBIN: Reading %s...' % (filename))
@@ -302,7 +310,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
-            headers['SensorID'] = sensorid
+            if header == True:
+                headers['SensorID'] = sensorid
 
             if gpstime:
                 time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 

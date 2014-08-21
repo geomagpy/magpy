@@ -95,7 +95,6 @@ def ploteasy(stream):
     plottitle = "%s (%s)" % (sensorid,datadate)
     print "Plotting keys:", keys
     plot_new(stream, keys,
-		fullday = True,
 		confinex = True,
                 plottitle = plottitle)
 
@@ -1254,7 +1253,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
         # ADD SENSOR IDS TO DATA PLOTS:
 	if 'sensorid' in data[i]:
             sensorid = data[i]['sensorid']
-            ydistance = [10,13,15,15,15,15,15,15]
+            ydistance = [13,13,15,15,15,15,15,15]
             ax.annotate(sensorid, xy=(10, ydistance[n_subplots-1]),
             	    xycoords='axes points',
             	    horizontalalignment='left', verticalalignment='top')

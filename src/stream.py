@@ -5454,6 +5454,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     loggerstream.info('subtractStreams: Start subtracting streams.')
 
+    stream_a.header['SensorID'] = stream_a.header['SensorID']+'-'+stream_b.header['SensorID']
     headera = stream_a.header
     headerb = stream_b.header
 
