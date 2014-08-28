@@ -367,10 +367,13 @@ def ftpremove (**kwargs):
 # 3. ftp: download files 
 # ####################
 
-def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier): 
+def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=None): 
     """
     Load all files from remotepath to localpath which ends with identifier
+    TODO: add port number
     """
+    if not port:
+        port = 21
     print "Starting ftpget ..."
     ftp = ftplib.FTP(ftpaddress, ftpname,ftppasswd)
     ftp.cwd(remotepath)

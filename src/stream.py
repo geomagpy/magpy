@@ -70,6 +70,7 @@ try:
     from datetime import datetime, timedelta
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError with matplotlib package. Please install to proceed.\n"
+    logpygen += " ... if installed please check the permissions on .matplotlib in your homedirectory.\n"
     badimports.append(e)
 
 # Numpy & SciPy
@@ -95,7 +96,8 @@ try:
     print "Loading Netcdf4 support ..."
     from netCDF4 import Dataset
 except ImportError as e:
-    logpygen += "CRITICAL MagPy initiation ImportError: NetCDF not available.\n"
+    logpygen += "MagPy initiation ImportError: NetCDF not available.\n"
+    logpygen += "... if you want to use NetCDF format support please install a current version.\n"
     badimports.append(e)
 
 # NASACDF - SpacePy
@@ -134,7 +136,8 @@ try:
             pass
         print "... success"
 except ImportError as e:
-    logpygen += "CRITICAL MagPy initiation ImportError: Nasa cdf not available.\n"
+    logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
+    logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
     badimports.append(e)
 
 # Utilities
@@ -537,14 +540,15 @@ CALLED BY:
                 unit = self.header['unit-col-'+key]
             except:
                 unit = None
-        if limit and len(keylist) > limit:
-            keylist = keylist[:limit]
 
         if not len(keylist) > 0:  # e.g. header col-? does not contain any info
             for key in FLAGKEYLIST[1:]: # use the long way
                 col = self._get_column(key)
                 if len(col) > 1:
                     keylist.append(key)
+
+        if limit and len(keylist) > limit:
+            keylist = keylist[:limit]
 
         return keylist
 
@@ -2441,6 +2445,7 @@ CALLED BY:
                 exec('f'+key+' = interpolate.interp1d(nt, val, kind)')
                 exec('functionkeylist["f'+key+'"] = f'+key)
             else:
+                loggerstream.warning("interpol: interpolation of zero length data set - wont work.")
                 pass
 
         loggerstream.info("interpol: Interpolation complete.")
@@ -2864,7 +2869,7 @@ CALLED BY:
         return self
                             
 
-    def plot(self, keys, debugmode=None, **kwargs):
+    def plot(self, keys=None, debugmode=None, **kwargs):
         """
     DEFINITION:
         Code for simple application.
@@ -2957,6 +2962,9 @@ CALLED BY:
         symbollist = kwargs.get('symbollist')
         figure = kwargs.get('figure')
 
+        if not keys:
+            keys = self._get_key_headers(limit=9)
+            print "Plotting keys:", keys
         if not function:
             function = None
         if not plottitle:
@@ -2985,6 +2993,9 @@ CALLED BY:
             grid =True
 
         myyfmt = ScalarFormatter(useOffset=False)
+
+        # TODO first check whether all keys contain data - Otherwise the subplot amount is wrong
+        # or alternatively plot empty datasets as well
         n_subplots = len(keys)
 
         if n_subplots < 1:
@@ -3007,7 +3018,7 @@ CALLED BY:
                 loggerstream.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
-            yplt = np.asarray([row[ind] for row in self])
+            yplt = np.asarray([float(row[ind]) for row in self])
             #yplt = self._get_column(key)
 
             # Switch between continuous and discontinuous plots
@@ -3456,11 +3467,22 @@ CALLED BY:
 
     def remove_flagged(self, **kwargs):
         """
+    DEFINITION:
         remove flagged data from stream:
-        kwargs support the following keywords:
-            - flaglist  (list) default=[1,3]
-            - keys (string list e.g. 'f') default=FLAGKEYLIST
-        flag = '000' or '010' etc
+        Flagged values are replaced by NAN values. Therefore the stream's length is not changed.
+        Flags are defined by integers (0 normal, 1 automatically marked, 2 to be kept, 
+        3 to be removed, 4 special)
+    PARAMETERS:
+        Kwargs:
+	    - keys:		(list) keys (string list e.g. 'f') default=FLAGKEYLIST
+            - flaglist:         (list) default=[1,3] defines integer codes to be removed
+    RETURNS:
+        - stream: 	        (DataStream Object) Stream with flagged data replaced by NAN.
+
+    EXAMPLE:
+        >>> newstream = stream.remove_flagged()
+
+    APPLICATION:
         """
         
         # Defaults:
@@ -3580,8 +3602,10 @@ CALLED BY:
                 at += incrt
 
                 lstpart = self[idxst:idxat]
-                selcol = [eval('row.'+key) for row in lstpart]
-                
+                # changed at 28.08.2014
+                #selcol = [eval('row.'+key) for row in lstpart]
+                selcol = [eval('row.'+key) for row in lstpart if not isnan(eval('row.'+key))]
+
                 try:
                     q1 = stats.scoreatpercentile(selcol,25)
                     q3 = stats.scoreatpercentile(selcol,75)
@@ -3613,7 +3637,7 @@ CALLED BY:
                             row.flag=''.join(fllist)
                             row.comment = "%s removed by automatic outlier removal" % key
                             if not isnan(eval('elem.'+key)):
-                                loggerstream.info("remove_outlier: removed %s (= %f)" % (key, eval('elem.'+key)))
+                                loggerstream.info("remove_outlier: at %s - removed %s (= %f)" % (str(num2date(elem.time)),key, eval('elem.'+key)))
                     else:
                         fllist = list(row.flag)
                         if not int(fllist[flagpos]) > 1:
@@ -3720,17 +3744,10 @@ CALLED BY:
            t_list.append(date2num(time))
            time = time + timedelta(seconds=period)
 
-        # check original file whether enough data is present for each new step
-        
-        #tn_list = []
-        #realtime = self._get_column('time')
-        #for t in t_list:
-        #    texist, tit = find_nearest(realtime,t)
-        #    if not abs(texist-t) >= period*24*3600:
-        #        tn_list.append(t)
+        # Compare length of new time list with old timelist
+        # multiplicator is used to check whether nan value is at the corresponding position of the orgdata file - used for not yet completely but sufficiently correct missing value treatment
+        multiplicator = float(len(self))/float(len(t_list))
 
-        #print "Resampling: ", len(t_list), len(tn_list)
-        # Was equal despite missing values ???
 
 	res_stream = DataStream()
 	res_stream.header = self.header
@@ -3752,9 +3769,14 @@ CALLED BY:
                 int_max = int_data[2]
 
 	        key_list = []
-                for item in t_list:
+                for ind, item in enumerate(t_list):
+                    #print item, ind
                     functime = (item - int_min)/(int_max - int_min)
-                    tempval = int_func(functime)
+                    orgval = eval('self[int(ind*multiplicator)].'+key)
+                    tempval = float(nan)
+                    if not isnan(orgval):
+                        #print "no nan"
+                        tempval = int_func(functime)
                     key_list.append(float(tempval))
 
                 res_stream._put_column(key_list,key)
@@ -5461,7 +5483,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     getmeans = kwargs.get('getmeans')
     if not keys:
         keys = KEYLIST[1:16]
-
+         
     loggerstream.info('subtractStreams: Start subtracting streams.')
 
     stream_a.header['SensorID'] = stream_a.header['SensorID']+'-'+stream_b.header['SensorID']
@@ -5533,6 +5555,17 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
         for elem in sa:
             tb, itmp = find_nearest(timeb,elem.time)
+
+            # get index of tb
+            tib = list(timeb)
+            index = tib.index(tb)
+
+            #def find_nearest(array, value):
+            #    idx = (np.abs(array-value)).argmin()
+            #    return array[idx], idx
+
+            #print tb-elem.time
+
             # --------------------------------------------------------------------
             # test whether data points are present within a sampling rate distance 
             # and whether the timestep is within the interpolation range
@@ -5541,9 +5574,20 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 newline = LineStruct()
                 for key in keys:
                     newline.time = elem.time
-                    newval = eval('elem.'+key) - float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
+                    valstreama = eval('elem.'+key)
+                    valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
+                    realvalb = eval('stream_b[index].'+key)
+                    #if isnan(realvalb):
+                    #    print "Found"
+                    if isnan(valstreama) or isnan(realvalb):
+                        newval = 'NAN'
+                    else:
+                        newval = valstreama - valstreamb
                     exec('newline.'+key+' = float(newval)')
                 subtractedstream.add(newline)
+
+        # Finally get gaps from stream_b and remove these gaps from the subtracted stream for all keys
+        # TODO
 
         # XXX Take care: New header info replaces header information of stream a and b
         for key in keys:

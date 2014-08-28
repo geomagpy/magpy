@@ -8,7 +8,23 @@ from stream import *
 from absolutes import *
 from transfer import *
 
-import MySQLdb
+print "Loading python's SQL support"
+try:
+    # Loading MySQL functionality
+    import MySQLdb
+    print "... success"
+except ImportError:
+    print "Failed to import SQL package 'MySQLdb' - trying alternative pymysql e.g. for MAC users"
+    try:
+        # Loading alternative MySQL functionality
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        print "... success"
+    except:
+        print "Failed to import alternative SQL package 'pymysql'"
+except:
+    print "SQL package import failed"
+    pass
 
 # ----------------------------------------------------------------------------
 # Part 2: Default list definitions - defining fields of database standard tables
@@ -1727,8 +1743,12 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
                     if keylst[i]=='time':
                         exec('row.'+keylst[i]+' = date2num(stream._testtime(elem))')
                     else:
-                        exec('row.'+keylst[i]+' = elem')
-                    #print elem
+                        if elem == None or elem == 'null':
+                            elem = float(NaN)
+                        if keylst[i] in ['x','y','z','f','dx','dy','dz','df','t1','t1','var1','var2','var3','var4','var5']:
+                            exec('row.'+keylst[i]+' = float(elem)')
+                        else:
+                            exec('row.'+keylst[i]+' = elem')
                 stream.add(row)
     else:
         if len(whereclause) > 0:

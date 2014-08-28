@@ -19,5 +19,4 @@ from database import *
 
 import lib
 import opt
-import gui
 import collector

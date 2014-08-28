@@ -1026,7 +1026,14 @@ class AbsoluteData(object):
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
-
+        # Temporary cleanup for extraordinary high values (failed calculations) - replace by 999999.99
+        for key in FLAGKEYLIST:
+             if not 'time' in key:
+                 testval = eval('outline.'+key)
+                 #print testval
+                 if testval > 10000000:
+                     exec('outline.'+key+' = 999999.99')
+        
         #test whether outline is a linestruct object - if not use an empty object
         try:
             test = outline.x
@@ -1748,6 +1755,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             print "Found single file"
             filelist.append(absdata)
         else:
+            if os.path.exists(absdata):
+                pass
+            else:
+               print "absolute Analysis: Error - path to absdata not existing: %s" % absdata
+               sys.exit()
             for file in os.listdir(absdata):
                 if file.endswith(diid):
                     filelist.append(os.path.join(absdata,file))
@@ -1874,18 +1886,26 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             dataok = True
             if expD:
                 if not expD-expT < result.y < expD+expT:
-                    test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
-                    xl = [ el for el in difiles if test in el]
-                    failinglist.append(xl[0])
-                    print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
-                    dataok = False
+                    try:
+                        test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
+                        xl = [ el for el in difiles if test in el]
+                        failinglist.append(xl[0])
+                        print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
+                        dataok = False
+                    except:
+                        print "absoluteAnalysis: Value error while determining time - failed analysis"
+                        dataok = False
             if expI and dataok:
                 if not expI-expT < result.x < expI+expT:
-                    test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
-                    xl = [ el for el in difiles if test in el]
-                    failinglist.append(xl[0])
-                    print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
-                    dataok = False
+                    try:
+                        test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
+                        xl = [ el for el in difiles if test in el]
+                        failinglist.append(xl[0])
+                        print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
+                        dataok = False
+                    except:
+                        print "absoluteAnalysis: Value error while determining time - failed analysis"
+                        dataok = False
             if dataok:
                 resultstream.add(result)
 
@@ -1992,9 +2012,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     return resultstream
 
 
-
-
-
 def getAbsFilesFTP(**kwargs):
     """
     Obtain files from the selected directory
@@ -2098,34 +2115,10 @@ def removeAbsFilesFTP(**kwargs):
 # ------------------
 # ##################
 
-localpath = os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder')
-ftppath = '/cobenzlabs'
-filestr = 'test'
-#myproxy = '94.136.40.103'
-#port = 21
-login = 'data@conrad-observatory.at'
-myproxy = '138.22.156.44'
-#port = 8021
-login = 'data@conrad-observatory.at@94.136.40.103'
-
 
 if __name__ == '__main__':
     print "Starting a test of the Absolutes program:"
     #msg = PyMagLog()
-    # getAbsFTP()
-    #st = analyzeAbsFiles(path_or_url=testpath, variopath=variopath, scalarpath=variopath)
-    #st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=variopath, scalarpath=scalarpath)
-    #st = analyzeAbsFiles(path_or_url=os.path.normpath(r'e:\leon\Programme\Python\PyMag\ExperimentalFolder'), alpha=3.25, beta=0.0, variopath=os.path.normpath('..\\dat\\lemi025\\*'), scalarpath=os.path.normpath('..\\dat\\didd\\*'), archivepath=os.path.normpath('..\\dat\\absolutes\\analyzed'))
-    #st.write(analysispath,coverage='all',mode='replace',filenamebegins='absolutes_didd')
+    ### TODO: To be implemented
 
-    #loglst = msg.combineWarnLog(msg.warnings,msg.logger)
-    #print loglst
-
-    #newst = read(path_or_url=summarypath)
-    #newst.plot(['x','y','z'])
-    #print newst.header
-
-    ### ToDo
-    # test for input variations (e.g. no f, scalevals, lemi vs didd etc)
-    # eventually develop plot routine for absstruct....
 

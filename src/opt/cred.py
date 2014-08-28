@@ -62,7 +62,10 @@ def getuser():
     # if sysuser could not be identified try Logname
     if sysuser == None:
         print "Getuser: Running from crontab -- trying Logname to identify user"
-        sysuser = os.getenv("LOGNAME").replace("LOGNAME=", "")
+        try:
+            sysuser = os.getenv("LOGNAME").replace("LOGNAME=", "")
+        except:
+            sysuser = None
         if not sysuser == None:
             print "Getuser: ... succes - using", sysuser
     # if sysuser still could not be identified assume that uid 1000 is the defaultuser (on linux)
