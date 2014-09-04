@@ -724,11 +724,11 @@ class AbsoluteData(object):
             loggerabs.debug("_calcinc: Using F from provided scalar path") 
         else:
             #meanf = 0.
+            loggerabs.warning("_calcinc: No F measurements found - using annual means ...") 
             meanf = (annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
             #return emptyline, 20000.0, 0.0
 
         
-
         if len(variox) == 0:
             if iterator == 0:
                 loggerabs.warning("_calcinc: %s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))

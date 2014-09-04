@@ -114,6 +114,9 @@ def isFormat(filename, format_type):
     elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
         if (isGRAVSG(filename)):
             return True
+    elif (format_type == "IWT"): # Data from the Conrad Observatory tiltmeter system
+        if (isIWT(filename)):
+            return True
     elif (format_type == "CR800"): # Data from the CR800 datalogger
         if (isCR800(filename)):
             return True
@@ -228,6 +231,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "GRAVSG"):
         return readGRAVSG(filename, headonly, **kwargs)
+    elif (format_type == "IWT"):
+        return readIWT(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
         return readCR800(filename, headonly, **kwargs)
     elif (format_type == "RADON"):

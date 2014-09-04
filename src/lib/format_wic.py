@@ -38,6 +38,23 @@ def isRMRCS(filename):
         return False
     return True
 
+def isIWT(filename):
+    """
+    Checks whether a file is ASCII Tiltmeter format.
+    """
+
+    try:
+        temp = open(filename, 'rt').readline()
+    except:
+        return False
+    comp = temp.split()
+    if not len(comp) == 4:
+        return False
+    try: 
+        test = datetime.strptime(comp[0],"%Y%m%dT%H%M%S.%f")
+    except:
+        return False
+    return True
 
 def isGRAVSG(filename):
     """
@@ -231,6 +248,79 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     headers['SensorDescription'] = 'Model HMHT-LG01: This Humidity and Temperature USB data logger measures and stores relative humidity temperature readings over 0 to 100 per RH and -35 to +80 deg C measurement ranges. Humidity: Repeatability (short term) 0.1 per RH, Accuracy (overall error) 3.0* 6.0 per RH, Internal resolution 0.5 per RH, Long term stability 0.5 per RH/Yr; Temperature: Repeatability 0.1 deg C, Accuracy (overall error) 0.5 and 2  deg C, Internal resolution 0.5 deg C'
     headers['SensorName'] = 'HMHT-LG01'
     headers['SensorType'] = 'Temperature/Humidity'
+
+    return DataStream(stream, headers)    
+
+def readIWT(filename, headonly=False, **kwargs):
+    """
+    Reading Tiltmete data files.
+
+    Format looks like:
+20140831T000000.041770      -28.376309       0.003279        2.224
+20140831T000000.175237      -28.373077       0.003500        2.232
+20140831T000000.308580      -28.377111       0.003470        2.230
+20140831T000000.441923      -28.381986       0.003322        2.222
+20140831T000000.575266      -28.373106       0.003399        2.231
+20140831T000000.708608      -28.376691       0.003464        2.229
+
+    """
+
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
+    stream = DataStream()
+    
+    # Check whether header infromation is already present
+    if stream.header == None:
+        headers = {}
+    else:
+        headers = stream.header
+
+    theday = extractDateFromString(filename)
+
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        print "Did not recognize the date format"
+        # Date format not recognized. Need to read all files
+        getfile = True 
+
+    fh = open(filename, 'rt')
+
+    if getfile: 
+        for line in fh:
+            if line.isspace():
+                # blank line
+                continue
+            elif line.startswith(' '):
+                continue
+            else:
+                colsstr = line.split()
+                row = LineStruct()
+                try:
+                    row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
+                except:
+                    row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
+                row.x = float(colsstr[1])
+                row.y = float(colsstr[2])
+                row.z = float(colsstr[3])
+                stream.add(row)
+
+        headers['unit-col-x'] = 'lambda' 
+        headers['col-x'] = 'phase' 
+        headers['unit-col-y'] = 'lambda' 
+        headers['col-y'] = 'val2' 
+        headers['unit-col-z'] = 'arb' 
+        headers['col-z'] = 'val3' 
+        headers['SensorDescription'] = 'iWT: Tiltmeter system'
+        headers['SensorName'] = 'Tiltmeter'
+        headers['SensorType'] = 'Tiltmeter'
 
     return DataStream(stream, headers)    
 

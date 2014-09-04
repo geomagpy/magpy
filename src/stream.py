@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
 MagPy-General: Standard pymag package containing the following classes:
-Written by Roman Leonhardt 2011/2012
-Version 1.0 (from the 23.02.2012)
+Written by Roman Leonhardt, Rachel Bailey 2011/2012/2013/2014
+Version 0.1 (from the 23.02.2012)
 """
 
 # ----------------------------------------------------------------------------
@@ -254,7 +254,8 @@ PYMAG_SUPPORTED_FORMATS = [
 		'PMAG2',	# Current ELSEC from WIK
 		'GDASA1',	# ?
 		'GDASB1',	# ?
-		'RMRCS', 	# ?
+		'RMRCS', 	# RCS data output from Richards perl scripts
+		'IWT', 		# Tiltmeter data files at cobs
 		'CR800',	# Data from the CR800 datalogger
 		'RADON',	# ?
 		'USBLOG',	# ?
@@ -1989,15 +1990,33 @@ CALLED BY:
         
     def fit(self, keys, **kwargs):
         """
-        fitting data:
-        NaN values are interpolated
-        kwargs support the following keywords:
-            - fitfunc   (string: 'poly', 'harmonic', 'spline') default='spline'
-            - timerange (timedelta obsject) default=timedelta(hours=1)
-            - fitdegree (float)  default=5
-            - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
-            - flag 
+    DEFINITION:
+        Code for fitting data. Please note: if nans are present in any of the selected keys
+        the whole line is dropped before fitting.
+	Returns stream with filtered data with sampling period of
+	filter_width.
+
+    PARAMETERS:
+    Variables:
+        - keys: 	(list) Provide a list of keys to be fitted (e.g. ['x','y','z'].
+    Kwargs:
+        - fitfunc: 	(str) Options: 'poly', 'harmonic', 'spline', default='spline'
+        - timerange:    (timedelta object) Default = timedelta(hours=1)
+        - fitdegree: 	(float) Default=5
+        - knotstep: 	(float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
+        - flag: 	(bool).
+
+    RETURNS:
+        - function object: 	(list) func = [functionkeylist, sv, ev]
+
+
+    EXAMPLE:
+        >>> func = stream.fit(filter_width=timedelta(minutes=3))
+
+    APPLICATION:
+
         """
+
         # Defaults:
         fitfunc = kwargs.get('fitfunc')
         fitdegree = kwargs.get('fitdegree')
@@ -2334,18 +2353,21 @@ CALLED BY:
                 loggerstream.error("get_sampling_period: could not identify dominant sampling rate")
                 return 0
 
-    def samplingrate(self):
+    def samplingrate(self, **kwargs):
         """
         DEFINITION:
             returns a rounded value of the sampling rate
             and updates the header information
         """
         # XXX include that in the stream reading process....
+        digits = kwargs.get('digits')
+        if not digits:
+            digits = 1
 
         sr = self.get_sampling_period()*24*3600
 
         if np.round(sr,0) == 0:
-            val = np.round(sr,1)
+            val = np.round(sr,digits)
         else:
             val = np.round(sr,0)
 
