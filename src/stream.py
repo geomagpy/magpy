@@ -294,6 +294,9 @@ class DataStream(object):
     keys are column identifier:
     key in keys: see KEYLIST
 
+    A note on headers:
+    ALWAYS INITIATE STREAM WITH >>> stream = DataStream([],{}).
+
     Application methods:
     - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
     - stream.baseline() -- calculates baseline correction for input stream (datastream)
@@ -5525,6 +5528,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         keys = KEYLIST[1:16]
          
     loggerstream.info('subtractStreams: Start subtracting streams.')
+    print "SUBTR:", stream_a.header['SensorID'], stream_b.header['SensorID']
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -5578,12 +5582,10 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # need to check all subsequent functions !!!
     if newway == True:
         
-        subtractedstream = DataStream()
+        subtractedstream = DataStream([],{})
         sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None),newway=True)
         sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None),newway=True)
         samplingrate_b = sb.get_sampling_period()
-
-        subtractedstream.header = headera#sa.header
 
         loggerstream.info('subtractStreams (newway): Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
