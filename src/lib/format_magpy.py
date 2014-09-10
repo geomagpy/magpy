@@ -190,7 +190,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         #    cdf_file.close()
         #    return DataStream(stream, stream.header)    
 
-        logging.info(' Read: %s Format: %s ' % (filename, cdfformat))
+        loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
             # first get time or epoch column

@@ -336,11 +336,15 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         for j in range(len(variables[i])):
             data_dict = {}
             key = variables[i][j]
+            loggerplot.info("plotStreams: Determining plot properties for key %s." % key)
             if not key in KEYLIST[1:16]:
                 loggerplot.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
             y = np.asarray([row[ind] for row in stream])
+
+            if len(y) == 0:
+                loggerplot.error("plotStreams: Cannot plot stream of zero length!")
 
 	    # Fix if NaNs are present:
             if plottype == 'discontinuous':
@@ -717,7 +721,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
     elif returndata: 
         return freqm, asdm
     elif show: 
-        plt.show() 
+        plt.draw()	# show() should only ever be called once. Use draw() in between!
     else: 
         return fig 
 

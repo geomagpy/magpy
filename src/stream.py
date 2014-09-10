@@ -739,6 +739,9 @@ CALLED BY:
                 if count%divisor == 0.:
                     lst.append(elem)
                 count += 1.
+        else:
+            loggerstream.warning("_reduce_stream: Stream size (%s) is already below pointlimit (%s)." % (size,pointlimit))
+            return self
 
         loggerstream.info("_reduce_stream: Stream size reduced from %s to %s points." % (size,len(lst)))
 
@@ -1296,7 +1299,7 @@ CALLED BY:
             >>> fstream = stream.calc_f(offset=[20000,0,43000])
         """
 
-        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
+        # Take care: if there is only 0.1 nT accuracy then there will be a similar noise in the deltaF signal
 
         offset = kwargs.get('offset')
         if not offset:
@@ -1393,12 +1396,26 @@ CALLED BY:
 
     def differentiate(self, **kwargs):
         """
+    DEFINITION:
         Method to differentiate all columns with respect to time.
         -- Using successive gradients
 
-        optional:
+    PARAMETERS:
+    Variables:
         keys: (list - default ['x','y','z','f'] provide limited key-list
         put2key
+        - keys: 	(list) Provide limited key-list. default = ['x','y','z','f'] 
+        - put2key: 	(type) Provide keys to put differentiated keys to.
+			Default = ['dx','dy','dz','df'] 
+    Kwargs:
+
+    RETURNS:
+        - stream: 	(DataStream) Differentiated data stream, x values in dx, etc..
+
+    EXAMPLE:
+        >>> stream = stream.differentiate(keys=['f'],put2keys=['df'])
+
+    APPLICATION:
         """
         
         loggerstream.info('differentiate: Calculating derivative started.')
@@ -1419,6 +1436,7 @@ CALLED BY:
             val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
             self._put_column(dval, put2keys[i])
+            self.header['col-'+put2keys[i]] = r"${\partial %s}/{\partial t}$" % (key)
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
@@ -4330,7 +4348,7 @@ CALLED BY:
                 loggerstream.error('Trim: Starttime (%s) is larger than endtime (%s).' % (starttime,endtime))
                 raise ValueError, "Starttime is larger than endtime."
 
-        loggerstream.debug('Trim: Started from %s to %s' % (starttime,endtime))
+        loggerstream.info('Trim: Started from %s to %s' % (starttime,endtime))
 
 #--------------------------------------------------
 
@@ -5508,7 +5526,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
          
     loggerstream.info('subtractStreams: Start subtracting streams.')
 
-    stream_a.header['SensorID'] = stream_a.header['SensorID']+'-'+stream_b.header['SensorID']
     headera = stream_a.header
     headerb = stream_b.header
 
@@ -5566,7 +5583,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None),newway=True)
         samplingrate_b = sb.get_sampling_period()
 
-        subtractedstream.header = sa.header
+        subtractedstream.header = headera#sa.header
 
         loggerstream.info('subtractStreams (newway): Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
 
@@ -5597,14 +5614,17 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 for key in keys:
                     newline.time = elem.time
                     valstreama = eval('elem.'+key)
-                    valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
-                    realvalb = eval('stream_b[index].'+key)
-                    #if isnan(realvalb):
-                    #    print "Found"
-                    if isnan(valstreama) or isnan(realvalb):
+                    try:
+                        valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
+                        realvalb = eval('stream_b[index].'+key)
+                        #if isnan(realvalb):
+                        #    print "Found"
+                        if isnan(valstreama) or isnan(realvalb):
+                            newval = 'NAN'
+                        else:
+                            newval = valstreama - valstreamb
+                    except:
                         newval = 'NAN'
-                    else:
-                        newval = valstreama - valstreamb
                     exec('newline.'+key+' = float(newval)')
                 subtractedstream.add(newline)
 
@@ -5621,10 +5641,10 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 subtractedstream.header['unit-col-'+key] = sa.header['unit-col-'+key] 
             except:
                 pass
-            try:
-                subtractedstream.header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
-            except:
-                pass
+        try:
+            subtractedstream.header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
+        except:
+            pass
 
         return subtractedstream      
 
@@ -5682,7 +5702,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 fkey = 'f'+key
                 if fkey in function[0]:
                     exec('elem.'+key+' = float(NaN)')
-                
+
+    headera['SensorID'] = headera['SensorID']+'-'+headerb['SensorID']
     loggerstream.info('subtractStreams: Stream-subtraction finished.')
 
     return DataStream(stream_a, headera)      

@@ -48,7 +48,7 @@ def isLEMIHF(filename):
     else:
         return False
 
-    loggerlib.info("format_lemi: Found Lemi 10Hz ascii file %s." % filename)
+    #loggerlib.info("format_lemi: Found Lemi 10Hz ascii file %s." % filename)
     return True
 
 
@@ -69,7 +69,7 @@ def isLEMIBIN1(filename):
     except:
         return False
 
-    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
+    #loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
     return True
 
 
@@ -93,7 +93,7 @@ def isLEMIBIN(filename):
     except:
         return False
 
-    loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
+    #loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
     return True
 
 
@@ -268,6 +268,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         getfile = True 
 
     if getfile:
+        loggerlib.info("read: %s Format: Binary LEMI format." % filename)
 
         if dataheader == True:
             junkheader = fh.readline()
