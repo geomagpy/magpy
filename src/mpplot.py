@@ -89,6 +89,8 @@ except ImportError as e:
 
 colorlist =  ['b','g','m','c','y','k','b','g','m','c','y','k']
 symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-']
+gridcolor = '#316931'
+labelcolor = '0.2'
 
 def ploteasy(stream):
     keys = stream._get_key_headers()
@@ -481,6 +483,114 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     loggerplot.info("plotStreams: Starting plotting function...")
     _plot(plot_dict, **kwargs)
     loggerplot.info("plotStreams: Plotting completed.")
+
+
+def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
+	normtime=None, bgcolor='white', colorlist=colorlist, noshow=False, 
+	outfile=None, plottitle=None, grid=True, gridcolor=gridcolor,
+	labels=None, labelcolor=labelcolor):
+    '''
+    DEFINITION:
+        Will plot normalised streams. Streams will be normalized to a general
+	median or to the stream values at a specific point in time.
+	Useful for directly comparing streams in different locations.
+
+    PARAMETERS:
+    Variables:
+        - streamlist: 	(list) A list containing the streams to be plotted. 
+			e.g.:
+			[ stream1, stream2, etc...]
+			[ lemi1, lemi2, lemi3 ]
+	- key:		(str) Variable to be compared
+			'f'
+    Args:
+	- bgcolor:	(color='white') Background colour of plot.
+	- colorlist:	(list(colors)) List of colours to plot with.
+			Default = ['b','g','m','c','y','k','b','g','m','c','y','k']
+	- grid:		(bool=True) If True, will plot grid.
+	- gridcolor:	(color='#316931') Colour of grid.
+	#- labelcolor:	(color='0.2') Colour of labels.
+	- labels:	(list) Insert labels and legend for each stream, e.g.:
+			['WIC', 'WIK', 'OOP']
+	- outfile:	(str) Path of file to plot figure to.
+	- normalize:	(bool) If True, variable will be normalized to 0.
+	- normalizet:	(bool) If True, time variable will be normalized to 0.
+	- normtime:	(datetime object/str) If streams are to be normalized, normtime
+			is the time to use as a reference.
+	- noshow:	(bool) Will return figure object at end if True, otherwise only plots
+	- plottitle:	(str) Title to put at top of plot.
+	#- plottype:	(NumPy str='discontinuous') Can also be 'continuous'.
+	#- savedpi:	(float=80) Determines dpi of outfile.
+
+    RETURNS:
+        - plot: 	(Pyplot plot) Returns plot as plt.show or saved file
+			if outfile is specified.
+    '''
+
+    fig = plt.figure()
+
+    if normtime:
+        normtime = test_time(normtime)
+    if labels:
+        if len(labels) != len(streamlist):
+            loggerplot.warning("plotNormStreams: Number of labels does not match number of streams!")
+
+    for i, stream in enumerate(streamlist):
+        y = stream._get_column(key)
+        t = stream._get_column('time')
+        xlabel = "Time (UTC)"
+        color = colorlist[i]
+        try:
+            yunit = stream.header['unit-col-'+key]
+        except:
+            yunit = ''
+        ylabel = stream.header['col-'+key].upper()+' $['+re.sub('[#$%&~_^\{}]', '', yunit)+']$'
+
+        # NORMALIZE VARIABLE:
+        if normalize:
+            if normtime:
+                val, idx = find_nearest(t,date2num(normtime))
+                y = y - np.median(y[idx-5:idx+5])
+            else:
+                y = y - np.median(y)
+            ylabel = "normalized "+ylabel
+
+        # NORMALIZE TIME:
+        if normalizet:
+            if normtime:
+                zerotime = normtime
+            else:
+                zerotime = t[0]
+            t = t - zerotime
+            xlabel = "normalized "+xlabel
+
+        # PLOT DATA:
+        if labels:
+            plt.plot(t,y,color+'-',label=labels[i])
+        else:
+            plt.plot(t,y,color+'-')
+
+    # ADD GRID:
+    if grid:
+        plt.grid(True,color=gridcolor,linewidth=0.5)
+
+    # SET LABELS:
+    plt.xlabel(xlabel, color=labelcolor)
+    plt.ylabel(ylabel, color=labelcolor)
+    plt.title(plottitle)
+
+    # INSERT LEGEND:
+    if labels:
+        legend = plt.legend(loc='upper left', shadow=True)
+
+    # FINALISE PLOT:
+    if noshow == True:
+        return fig
+    else:
+        if outfile:
+            plt.savefig(outfile)
+        else:
+            plt.show()
 
 
 #####################################################################
@@ -1214,9 +1324,9 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
 #####################################################################
 
 
-def _plot(data,savedpi=80,grid=True,gridcolor='#316931',
+def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
-	labelcolor='0.2',confinex=False,outfile=None,stormanno_s=True,
+	labelcolor=labelcolor,confinex=False,outfile=None,stormanno_s=True,
 	stormanno_m=True,stormanno_r=True,fmt=None):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
@@ -1576,13 +1686,22 @@ if __name__ == '__main__':
             print datetime.utcnow(), "- Plotted multiple streams."
         except Exception as excep:
             errors['plotStreams-vanilla'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with plotting mutiple streams. Aborting test."
+            print datetime.utcnow(), "--- ERROR with plotting multiple streams. Aborting test."
             break
 
-        # Step 6 - Flagged plot
+        # Step 6 - Normalised stream comparison
+        try:
+            plotNormStreams([teststream], key[0],
+			plottitle = "Normalized stream: Stream key should be normalized to zero.")
+            print datetime.utcnow(), "- Plotted normalized streams."
+        except Exception as excep:
+            errors['plotNormStreams'] = str(excep)
+            print datetime.utcnow(), "--- ERROR plotting normalized streams."
+
+        # Step 7 - Flagged plot
         # ...
 
-        # Step 7a - Plot with phases (single)
+        # Step 8a - Plot with phases (single)
         t_start, t_end = teststream._find_t_limits()
         timespan = t_end - t_start
         t_stormphases = {}
@@ -1601,7 +1720,7 @@ if __name__ == '__main__':
             errors['plot-stormphases'] = str(excep)
             print datetime.utcnow(), "--- ERROR with storm phases plot."
 
-        # Step 7b - Plot with phases (multiple)
+        # Step 8b - Plot with phases (multiple)
         try:
             plotStreams(streamlist,variables,
                         stormphases = True,
@@ -1612,7 +1731,7 @@ if __name__ == '__main__':
             errors['plotStreams-stormphases'] = str(excep)
             print datetime.utcnow(), "--- ERROR with storm phases multiple plot."
         
-        # Step 8 - Plot power spectrum
+        # Step 9 - Plot power spectrum
         try:
             freqm, asdm = plotPS(teststream,key[0],
 			returndata=True,
@@ -1623,7 +1742,7 @@ if __name__ == '__main__':
             errors['plotPS'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting power spectrum."
         
-        # Step 9 - Plot normal spectrogram
+        # Step 10 - Plot normal spectrogram
         try:
             plotSpectrogram(teststream,key2,
 			plottitle = "Spectrogram of two keys")
@@ -1632,7 +1751,7 @@ if __name__ == '__main__':
             errors['plotSpectrogram'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting spectrogram."
         
-        # Step 10 - Plot function
+        # Step 11 - Plot function
         try:
             function = teststream.interpol(key,kind='quadratic')
             plot_new(teststream,key,function=function,
@@ -1641,7 +1760,7 @@ if __name__ == '__main__':
             errors['plot(function)'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting function."
         
-        # Step 11 - Plot normal stereoplot
+        # Step 12 - Plot normal stereoplot
 	# (This should stay as last step due to coordinate conversion.)
         try:
             teststream._convertstream('xyz2idf')

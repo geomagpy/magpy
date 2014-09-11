@@ -5528,7 +5528,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         keys = KEYLIST[1:16]
          
     loggerstream.info('subtractStreams: Start subtracting streams.')
-    print "SUBTR:", stream_a.header['SensorID'], stream_b.header['SensorID']
 
     headera = stream_a.header
     headerb = stream_b.header
@@ -5987,6 +5986,45 @@ def nearestPow2(x):
         return a 
     else: 
         return b 
+
+
+def test_time(time):
+    """
+        Check the date/time input and returns a datetime object if valid:
+
+        ! Use UTC times !
+
+        - accepted are the following inputs:
+        1) absolute time: as provided by date2num
+        2) strings: 2011-11-22 or 2011-11-22T11:11:00
+        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+        	
+    """
+    if isinstance(time, float) or isinstance(time, int):
+        try:
+            timeobj = num2date(time).replace(tzinfo=None)
+        except:
+            raise TypeError
+    elif isinstance(time, str):
+        try:
+            timeobj = datetime.strptime(time,"%Y-%m-%d")
+        except:
+            try:
+                timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
+            except:
+                try:
+                    timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
+                except:
+                    try:
+                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
+                    except:
+                        raise TypeError
+    elif not isinstance(time, datetime):
+        raise TypeError
+    else:
+        timeobj = time
+
+    return timeobj
 
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

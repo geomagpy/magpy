@@ -24,7 +24,7 @@ def isPYCDF(filename):
     except:
         return False
 
-    loggerlib.debug("format_magpy: Found PYCDF file %s" % filename)
+    #loggerlib.debug("format_magpy: Found PYCDF file %s" % filename)
     return True
 
 
@@ -39,7 +39,7 @@ def isPYSTR(filename):
     if not temp.startswith(' # MagPy - ASCII'):
         return False
 
-    loggerlib.debug("format_magpy: Found PYSTR file %s" % filename)
+    #loggerlib.debug("format_magpy: Found PYSTR file %s" % filename)
     return True
 
 
@@ -54,7 +54,7 @@ def isPYBIN(filename):
     if not temp.startswith('# MagPyBin'):
         return False
 
-    loggerlib.debug("format_magpy: Found PYBIN file %s" % filename)
+    #loggerlib.debug("format_magpy: Found PYBIN file %s" % filename)
     return True
 
 
@@ -175,6 +175,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
     # DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
     if getfile:
+        loggerlib.info("read: %s Format: PYCDF" % filename)
         try:
             cdfformat = cdf_file.attrs['DataFormat']
         except:
@@ -309,8 +310,6 @@ def readPYBIN(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    loggerlib.info('readPYBIN: Reading Magpy binary data - %s' % filename)
-
     stream = DataStream([],{})
 
     theday = extractDateFromString(filename)
@@ -326,6 +325,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         getfile = True 
 
     if getfile:
+        loggerlib.info("read: %s Format: PYCDF" % filename)
         fh = open(filename, 'rb')
         # read header line and extract packing format
         header = fh.readline()
