@@ -222,7 +222,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
 def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
 	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-	**kwargs):
+	noshow=False,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -271,6 +271,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	- includeid:	(bool) If True, sensor IDs will be extracted from header data and
 			plotted alongside corresponding data. Default=False
 	- labelcolor:	(color='0.2') Colour of labels.
+	- noshow:	(bool) If True, figure object will be returned. Default=False
 	- outfile:	(str) Path of file to plot figure to.
 	- plottitle:	(str) Title to put at top of plot.
 	- plottype:	(NumPy str='discontinuous') Can also be 'continuous'.
@@ -307,10 +308,17 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         errorbars =	[ [False,False,False],	[False],		[False],	[True]		]
         padding = 	[ [1,1,1], 		[1],			[1] ,		[1]		]
         annotate = 	[ [False,False,False],	[True],			[True] ,	[True]		]
+
+	# TO PLOT FOUR DIFFERENT STREAMS WITH 7 VARIABLES TO A FILE:
         plotStreams(streamlist, variables, padding=padding,specialdict=specialdict,
 		annotate=annotate,includeid=True,errorbars=errorbars,
 		outfile='plots/all_magn_cut1.png',
 		plottitle="WIC: All Magnetometers (%s)" % date)
+
+	# TO PLOT DATA AND RETURN A FIGURE FOR FURTHER:
+        plot = plotStreams(streamlist, variables, noshow=True)
+        plot.title("New title.")
+        plot.savefig("newfig.png")
     '''
 
     num_of_var = 0
@@ -481,14 +489,19 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             count += 1
 
     loggerplot.info("plotStreams: Starting plotting function...")
-    _plot(plot_dict, **kwargs)
-    loggerplot.info("plotStreams: Plotting completed.")
+    if not noshow:
+        _plot(plot_dict, **kwargs)
+        loggerplot.info("plotStreams: Plotting completed.")
+    else:
+        fig = _plot(plot_dict, noshow=True, **kwargs)
+        loggerplot.info("plotStreams: Plotting completed.")
+        return fig
 
 
 def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 	normtime=None, bgcolor='white', colorlist=colorlist, noshow=False, 
 	outfile=None, plottitle=None, grid=True, gridcolor=gridcolor,
-	labels=None, labelcolor=labelcolor):
+	labels=None, legendposition='upper right',labelcolor=labelcolor):
     '''
     DEFINITION:
         Will plot normalised streams. Streams will be normalized to a general
@@ -512,9 +525,10 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 	#- labelcolor:	(color='0.2') Colour of labels.
 	- labels:	(list) Insert labels and legend for each stream, e.g.:
 			['WIC', 'WIK', 'OOP']
+	- legendposition: (str) Position of legend. Default = "upper right"
 	- outfile:	(str) Path of file to plot figure to.
-	- normalize:	(bool) If True, variable will be normalized to 0.
-	- normalizet:	(bool) If True, time variable will be normalized to 0.
+	- normalize:	(bool) If True, variable will be normalized to 0. Default = True.
+	- normalizet:	(bool) If True, time variable will be normalized to 0. Default = False
 	- normtime:	(datetime object/str) If streams are to be normalized, normtime
 			is the time to use as a reference.
 	- noshow:	(bool) Will return figure object at end if True, otherwise only plots
@@ -525,12 +539,14 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
     RETURNS:
         - plot: 	(Pyplot plot) Returns plot as plt.show or saved file
 			if outfile is specified.
+
+    EXAMPLE:
+	>>>
     '''
 
     fig = plt.figure()
+    ax = fig.add_subplot(111)
 
-    if normtime:
-        normtime = test_time(normtime)
     if labels:
         if len(labels) != len(streamlist):
             loggerplot.warning("plotNormStreams: Number of labels does not match number of streams!")
@@ -549,10 +565,17 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
         # NORMALIZE VARIABLE:
         if normalize:
             if normtime:
-                val, idx = find_nearest(t,date2num(normtime))
-                y = y - np.median(y[idx-5:idx+5])
+                if type(normtime) == list:
+                    normtime_start, normtime_end = test_time(normtime[0]), test_time(normtime[1])
+                    normarea = stream.trim(normtime_start,normtime_end,newway=True)
+                    normvalue = normarea.mean(key,meanfunction='median')
+                else:
+                    normtime = test_time(normtime)
+                    val, idx = find_nearest(t,date2num(normtime))
+                    normvalue = y[idx]
             else:
-                y = y - np.median(y)
+                normvalue = np.median(y)
+            y = y - normvalue
             ylabel = "normalized "+ylabel
 
         # NORMALIZE TIME:
@@ -566,22 +589,24 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 
         # PLOT DATA:
         if labels:
-            plt.plot(t,y,color+'-',label=labels[i])
+            ax.plot(t,y,color+'-',label=labels[i])
         else:
-            plt.plot(t,y,color+'-')
+            ax.plot(t,y,color+'-')
 
     # ADD GRID:
     if grid:
-        plt.grid(True,color=gridcolor,linewidth=0.5)
+        ax.grid(True,color=gridcolor,linewidth=0.5)
 
     # SET LABELS:
-    plt.xlabel(xlabel, color=labelcolor)
-    plt.ylabel(ylabel, color=labelcolor)
-    plt.title(plottitle)
+    ax.set_xlabel(xlabel, color=labelcolor)
+    ax.set_ylabel(ylabel, color=labelcolor)
+    ax.set_title(plottitle)
 
     # INSERT LEGEND:
     if labels:
-        legend = plt.legend(loc='upper left', shadow=True)
+        legend = ax.legend(loc=legendposition, shadow=True)
+        for label in legend.get_texts():
+            label.set_fontsize('small')
 
     # FINALISE PLOT:
     if noshow == True:
@@ -1324,7 +1349,7 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
 #####################################################################
 
 
-def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,
+def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
 	labelcolor=labelcolor,confinex=False,outfile=None,stormanno_s=True,
 	stormanno_m=True,stormanno_r=True,fmt=None):
@@ -1548,6 +1573,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,
             fig.savefig(outfile, format=fmt, dpi=savedpi) 
         else: 
             fig.savefig(outfile, dpi=savedpi) 
+    elif noshow:
+        return fig
     else: 
         plt.show()
 
@@ -1601,6 +1628,13 @@ def _confinex(ax, tmax, tmin, timeunit):
         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
         timeunit = '[Year]'
 
+#####################################################################
+#								    #
+#	TESTING							    #
+#	Run this after making changes:				    #
+#	$ python mpplot.py					    #
+#								    #
+#####################################################################
 
 if __name__ == '__main__':
 
