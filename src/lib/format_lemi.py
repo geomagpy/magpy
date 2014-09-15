@@ -272,7 +272,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
         if dataheader == True:
             junkheader = fh.readline()
-            header['SensorID'] = sensorid
+            stream.header['SensorID'] = sensorid
 
         loggerlib.info('readLEMIBIN: Reading %s...' % (filename))
         stream.header['col-x'] = 'x'
