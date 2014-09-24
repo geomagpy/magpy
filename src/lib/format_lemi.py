@@ -227,7 +227,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         # current format
         sensorid = temp.split()[1]
         dataheader = True
-	loggerlib.info("readLEMIBIN: Format is the current lemi format.")
+	lemiformat = "current"
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
         stime = True
@@ -236,13 +236,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         data = struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
         if data[55] == 'L':
             dataheader = False
-	    loggerlib.info("readLEMIBIN: Format is the out-dated lemi format.")
+	    lemiformat = "out-dated"
             packcode = '<4cb6B8hb30f3BcB'
             linelength = 153
             stime = False
         elif data[0] == 'L' and data[55] != 'L':
             dataheader = False
-	    loggerlib.info("readLEMIBIN: Format is the current lemi format (without header).")
+	    lemiformat = "current (without header)"
             packcode = '<4cb6B8hb30f3BcB6hL'
             linelength = 169
             stime = True
@@ -268,7 +268,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         getfile = True 
 
     if getfile:
-        loggerlib.info("read: %s Format: Binary LEMI format." % filename)
+        loggerlib.info("read: %s Format: Binary LEMI format (%s)." % (filename,lemiformat))
 
         if dataheader == True:
             junkheader = fh.readline()
@@ -313,7 +313,18 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                 sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
                 timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
             else:
-                time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+                try:
+                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+                except:
+                    loggerlib.error("readLEMIBIN: Error reading line. Aborting read. (See docs.)")
+#--------------------TODO--------------------------------------------
+# This is usually an error that comes about during an interruption of data writing
+# that leads to only a partial line being written. Normal data usually follows if the
+# data logger starts up again within the same day.
+# ---> It can be remedied using an iterative search for the next appearing "L025" tag
+# in the binary data. See magpy/acquisition/lemiprotocol.py for an example of this
+# iterative search.
+#--------------------------------------------------------------------
 
             if tenHz:
                 for i in range(10):

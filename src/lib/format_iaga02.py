@@ -63,7 +63,7 @@ def readIAGA(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        logging.warning("Could not identify typical IAGA date in %s. Reading all ..." % daystring)
+        logging.warning("Could not identify typical IAGA date for %s. Reading all ..." % day)
         getfile = True
 
     if getfile:

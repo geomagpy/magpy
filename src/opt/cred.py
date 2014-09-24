@@ -199,7 +199,7 @@ def sc():
         dictslist = loadobj(credentials)
     except:
         print "Credentials: Could not load file"
-        pass
+        return
 
     for d in dictslist:
         print d

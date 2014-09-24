@@ -323,6 +323,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     except:
         # Date format not recognized. Need to read all files
         getfile = True 
+    logbaddata = False
 
     if getfile:
         loggerlib.info("read: %s Format: PYCDF" % filename)
@@ -410,12 +411,20 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     data= struct.unpack(packstr, line)
                 except:
                     print "readPYBIN: struct error", filename, packstr, struct.calcsize(packstr)
-                time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-                row = LineStruct()
-                row.time = date2num(stream._testtime(time))
-                for idx, elem in enumerate(elemlist):
-                    exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
-                stream.add(row)
+                try:
+                    time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
+                    row = LineStruct()
+                    row.time = date2num(stream._testtime(time))
+                    for idx, elem in enumerate(elemlist):
+                        exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
+                    stream.add(row)
+                    if logbaddata == True:
+                        loggerlib.error("readPYBIN: Good data resumes with: %s" % str(data))
+                        logbaddata = False
+                except:
+                    loggerlib.error("readPYBIN: Error in line while reading data file. Last line at: %s" % str(lastdata))
+                    logbaddata = True
+                lastdata = data
                 line = fh.read(length)
         else:
             print "To be done ..."

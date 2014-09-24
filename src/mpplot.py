@@ -112,7 +112,7 @@ def ploteasy(stream):
 #								    #
 #####################################################################
 
-def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
+def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,noshow=False,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
 	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',
 	**kwargs):
@@ -213,7 +213,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,
     else:
         padding = padding
 
-    plotStreams([stream], [ variables ], specialdict=[specialdict],
+    plotStreams([stream], [ variables ], specialdict=[specialdict],noshow=noshow,
 	errorbars=errorbars,padding=padding,annotate=annotate,stormphases=stormphases,
 	colorlist=colorlist,symbollist=symbollist,t_stormphases=t_stormphases,
 	includeid=includeid,function=function,plottype=plottype,**kwargs)
@@ -501,7 +501,8 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 	normtime=None, bgcolor='white', colorlist=colorlist, noshow=False, 
 	outfile=None, plottitle=None, grid=True, gridcolor=gridcolor,
-	labels=None, legendposition='upper right',labelcolor=labelcolor):
+	labels=None, legendposition='upper right',labelcolor=labelcolor,
+	returndata=False):
     '''
     DEFINITION:
         Will plot normalised streams. Streams will be normalized to a general
@@ -534,6 +535,7 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 	- noshow:	(bool) Will return figure object at end if True, otherwise only plots
 	- plottitle:	(str) Title to put at top of plot.
 	#- plottype:	(NumPy str='discontinuous') Can also be 'continuous'.
+	- returndata:	(bool) If True, will return normalised data arrays. Default = False.
 	#- savedpi:	(float=80) Determines dpi of outfile.
 
     RETURNS:
@@ -545,7 +547,9 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
     '''
 
     fig = plt.figure()
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(1,1,1)
+
+    arraylist = []
 
     if labels:
         if len(labels) != len(streamlist):
@@ -587,6 +591,9 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
             t = t - zerotime
             xlabel = "normalized "+xlabel
 
+        if returndata:
+            arraylist.append([t,y])
+
         # PLOT DATA:
         if labels:
             ax.plot(t,y,color+'-',label=labels[i])
@@ -601,6 +608,7 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
     ax.set_xlabel(xlabel, color=labelcolor)
     ax.set_ylabel(ylabel, color=labelcolor)
     ax.set_title(plottitle)
+    ax.set_xlim([t_array[0],t_array[-1]])
 
     # INSERT LEGEND:
     if labels:
@@ -609,7 +617,11 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
             label.set_fontsize('small')
 
     # FINALISE PLOT:
-    if noshow == True:
+    if noshow == True and returndata == True:
+        return [fig, arraylist]
+    elif noshow == False and returndata == True:
+        return arraylist
+    elif noshow == True and returndata == False:
         return fig
     else:
         if outfile:
