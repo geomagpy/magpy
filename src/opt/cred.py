@@ -203,7 +203,7 @@ def sc():
 
     for d in dictslist:
         print d
-    return
+    return dictslist
             
 def dc(name):
     """

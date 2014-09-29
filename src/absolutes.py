@@ -1793,6 +1793,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # read varios, scalar and all absfiles of one day
     # analyze data for each day and append results to a resultstream    
     # XXX possible issues: an absolute measurement which is performed in two day (e.g. across midnight)
+    # TODO Add possibilty to get vario and scalar data from database
     resultstream = DataStream()
     for date in sorted(datetimelist):
         variofound = True

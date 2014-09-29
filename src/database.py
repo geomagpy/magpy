@@ -2010,13 +2010,32 @@ def db2diline(db,**kwargs):
     return resultlist
 
 
-def getBaselineProperties(db,datastream,distream=None):
+def getBaselineProperties(db,datastream,pier=None,distream=None):
     """
-    method to extract baseline properties from a DB for a given time
-    reads starttime, endtime, and baseline properties (like function, degree, knots etc) from DB
-    if no information is provided then the baseline method has to be used
-    The method creates database inputs for each analyzed segment using the 'replace' mode
-    ideally 
+    DEFINITION:
+        method to extract baseline properties from a DB for a given time
+        reads starttime, endtime, and baseline properties (like function, degree, knots etc) from DB
+        if no information is provided then the baseline method has to be used
+        The method creates database inputs for each analyzed segment using the 'replace' mode
+        ideally 
+    REQUIREMENTS:
+        requires a BASELINE table
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - datastream:   (magpy stream) data stream on which baseline correction is performed 
+    Optional:
+        - pier:     (string) name of the pier: essential to select correct BLV data from DB. 
+        - distream:     (magpy stream) containing BLV data. If provided any existing 
+                                 DB table is updated, if not yet existing it is created 
+
+    EXAMPLE:
+        >>> diline2db(db,...)
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
     """
     stream = DataStream()
     basecorr = DataStream()
@@ -2059,7 +2078,9 @@ def getBaselineProperties(db,datastream,distream=None):
     # get the appropriate basedatatable database input
     #absstream = ...
     # Test whether table "SENSORID_Basedata" exists
-    testsql = 'SHOW TABLES LIKE "%s_BASEDATA"' % sensid
+    testsql = 'SHOW TABLES LIKE "BLV_%s_%s"' % (sensid,pier)
+    print testsql
+    # XXX IMPORTANT: Pier is also essential
     cursor.execute(testsql)
     rows = cursor.fetchall()
     if len(rows) < 1:
@@ -2067,14 +2088,14 @@ def getBaselineProperties(db,datastream,distream=None):
         if not distream:
             print "No DI data provided - aborting"
             return
-        stream2db(db,distream,mode='replace',tablename=sensid+'_BASEDATA')
+        stream2db(db,distream,mode='replace',tablename='BLV_'+sensid+'_'+pier)
     else:
         if distream:
             print "Resetting basedata table from file"
-            stream2db(db,distream,mode='replace',tablename=sensid+'_BASEDATA')
+            stream2db(db,distream,mode='replace',tablename='BLV_'+sensid+'_'+pier)
             distream = distream.remove_flagged()            
         else:
-            table = sensid+'_BASEDATA' 
+            table = 'BLV_'+sensid+'_'+pier 
             distream = db2stream(db,tableext=table)
             distream = distream.remove_flagged()
             
@@ -2107,16 +2128,18 @@ def getBaselineProperties(db,datastream,distream=None):
     print rows
     for line in rows:
         # Get stream between min and maxtime and do the baseline fit
-        start = date2num(line[0])
-        stop = date2num(line[1])
+        li0 = datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S")
+        li1 = datetime.strptime(line[1],"%Y-%m-%d %H:%M:%S")
+        start = date2num(li0)
+        stop = date2num(li1)
         datalist = [row for row in datastream if start <= row.time <= stop]
         #To do: if MinTime << starttime then distart = start - 30 Tage
-        if line[0] < starttime-timedelta(days=30):
+        if li0 < starttime-timedelta(days=30):
             distart = date2num(starttime-timedelta(days=30))
         else:
             distart = start
         #To do: if MaxTime >> endtime then distop = stop + 30 Tage 
-        if line[0] > endtime+timedelta(days=30):
+        if li0 > endtime+timedelta(days=30):
             distop = date2num(endtime+timedelta(days=30))
         else:
             distop = stop
@@ -2135,6 +2158,9 @@ def getBaselineProperties(db,datastream,distream=None):
             fitknots=0.05
 
         # return baseline function as well
+        fitfunc = 'poly'
+        fitdegree = 4
+        print fitfunc,fitdegree,fitknots
         basecorr,func = part.baseline(abspart,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=fitknots,plotbaseline=True,returnfunction=True)
         flist.append(func)
         dat = [row for row in basecorr]
@@ -2149,7 +2175,7 @@ def getBaselineProperties(db,datastream,distream=None):
         part.header['DataType'] = 'preliminary'
         streamdat.extend(dat)
         print "Stream: ", len(streamdat), len(basecorr)
-        stream2db(db,DataStream(dat,part.header),mode='replace')
+        #stream2db(db,DataStream(dat,part.header),mode='replace')
 
     print flist
     for elem in flist:

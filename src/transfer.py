@@ -367,27 +367,35 @@ def ftpremove (**kwargs):
 # 3. ftp: download files 
 # ####################
 
-def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=None): 
+def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=None,**kwargs): 
     """
     Load all files from remotepath to localpath which ends with identifier
-    TODO: add port number
     """
+    delete = kwargs.get('delete')
+
     if not port:
         port = 21
+    if not delete:
+        delete = False
+    else:
+        delete = True
+
     print "Starting ftpget ..."
     ftp = ftplib.FTP(ftpaddress, ftpname,ftppasswd)
     ftp.cwd(remotepath)
     filenames = ftp.nlst()
-    print filenames
+    print "Found the following files", filenames
 
     for filename in filenames:
         if filename.endswith(identifier):
             print filename
-            loggertransfer.info(' ftpget: Getting file %s' % filname)
+            loggertransfer.info(' ftpget: Getting file %s' % filename)
             localfilename = os.path.join(localpath,filename)
             with open(localfilename, "wb") as myfile: 
                 ftp.retrbinary("RETR " + filename, myfile.write)
                 myfile.close()
+                if delete:
+                    ftp.delete(filename)
     ftp.close()
 
 """
