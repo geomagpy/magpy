@@ -49,12 +49,8 @@ def readPOS1(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rb')
     # read file and split text into channels
-    stream = DataStream()
-    # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    stream = DataStream([],{})
+
     data = []
     key = None
 
@@ -77,6 +73,12 @@ def readPOS1(filename, headonly=False, **kwargs):
         line = fh.readline()
 
         loggerlib.info('readPOS1BIN: Reading %s' % (filename))
+        stream.header['col-f'] = 'F'
+        stream.header['unit-col-f'] = 'nT'
+        stream.header['col-df'] = 'dF'
+        stream.header['unit-col-df'] = 'nT'
+        stream.header['col-var1'] = 'ErrorCode'
+        stream.header['unit-col-var1'] = ''
  
 	line = fh.read(45)
 	while line != "":
@@ -94,12 +96,9 @@ def readPOS1(filename, headonly=False, **kwargs):
 
     	    line = fh.read(45)
 
-        #print "Finished file reading of %s" % filename
-
     fh.close()
 
-
-    return DataStream(stream, headers)    
+    return stream   
 
 def readPOS1TXT(filename, headonly=False, **kwargs):
     # Reading POS-1 text format data.

@@ -64,12 +64,12 @@ def readGDASA1(filename, headonly=False, **kwargs):
     data = []
     getfile = True
     key = None
-    stream = DataStream()
+    stream = DataStream([],{})
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    #if stream.header is None:
+    #    headers = {}
+    #else:
+    #    headers = stream.header
     # get day from filename (platform independent)
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -103,19 +103,19 @@ def readGDASA1(filename, headonly=False, **kwargs):
                 colsstr = line.lower().split()
                 for it, elem in enumerate(colsstr):
                     if elem == 'time':
-                        headers['epoch'] = elem
+                        stream.header['epoch'] = elem
                     else: # check for headers and replace hd with xy
                         if elem == 'h':
-                            headers['InstrumentOrientation'] = 'hdz'
+                            stream.header['InstrumentOrientation'] = 'hdz'
                             elem = 'x'
                         if elem == 'd':
                             elem = 'y'
                         colname = 'col-%s' % elem
-                        headers[colname] = elem
+                        stream.header[colname] = elem
                         if not elem == 't':
-                            headers['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
+                            stream.header['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
                         else:
-                            headers['unit-' + colname] = 'C'                        
+                            stream.header['unit-' + colname] = 'C'                        
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -141,11 +141,11 @@ def readGDASA1(filename, headonly=False, **kwargs):
                 stream.add(row)         
 
         fh.close()
-    else:
-        headers = stream.header
-        stream =[]
+    #else:
+    #    headers = stream.header
+    #    stream =[]
 
-    return DataStream(stream, headers)    
+    return stream   
 
 
 def readGDASB1(filename, headonly=False, **kwargs):

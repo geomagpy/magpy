@@ -556,10 +556,15 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
             loggerplot.warning("plotNormStreams: Number of labels does not match number of streams!")
 
     for i, stream in enumerate(streamlist):
+        loggerplot.info("plotNormStreams: Adding stream %s of %s..." % ((i+1),len(streamlist)))
         y = stream._get_column(key)
         t = stream._get_column('time')
         xlabel = "Time (UTC)"
         color = colorlist[i]
+
+        if len(y) == 0:
+            loggerplot.error("plotNormStreams: stream with empty array!")
+            return
         try:
             yunit = stream.header['unit-col-'+key]
         except:
@@ -608,7 +613,7 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
     ax.set_xlabel(xlabel, color=labelcolor)
     ax.set_ylabel(ylabel, color=labelcolor)
     ax.set_title(plottitle)
-    ax.set_xlim([t_array[0],t_array[-1]])
+    ax.set_xlim([t[0],t[-1]])
 
     # INSERT LEGEND:
     if labels:
