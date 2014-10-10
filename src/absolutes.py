@@ -1883,7 +1883,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 stream = stream._insert_function_values(vafunc)
             if scalarfound:
                 stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
-            result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False)
+            try:
+                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False)
+            except:
+                result = LineStruct()
             dataok = True
             if expD:
                 if not expD-expT < result.y < expD+expT:

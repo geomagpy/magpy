@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 
-from stream import *
-from absolutes import *
-from transfer import *
-from database import *
+try:
+    from magpy.stream import *
+    from magpy.absolutes import *
+    from magpy.transfer import *
+    from magpy.database import *
+except:
+    from stream import *
+    from absolutes import *
+    from transfer import *
+    from database import *
 
 import wx
 
@@ -33,26 +39,25 @@ class AnalysisPage(wx.Panel):
         self.head4Label = wx.StaticText(self, label="Further functions:")
         # 1. Section
         self.samplingrateLabel = wx.StaticText(self, label="Samp. period (sec):")
-        self.samplingrateTextCtrl = wx.TextCtrl(self, value="--")
+        self.samplingrateTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
         self.amountLabel = wx.StaticText(self, label="N of data point:")
-        self.amountTextCtrl = wx.TextCtrl(self, value="--")
+        self.amountTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
         self.typeLabel = wx.StaticText(self, label="Datatype:")
-        self.typeTextCtrl = wx.TextCtrl(self, value="--")
+        self.typeTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
         self.keysLabel = wx.StaticText(self, label="Used keys:")
-        self.keysTextCtrl = wx.TextCtrl(self, value="--")
-        self.selectkeysButton = wx.Button(self,-1,"Select keys")
+        self.keysTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
         self.samplingrateTextCtrl.Disable()
         self.amountTextCtrl.Disable()
         self.typeTextCtrl.Disable()
         self.keysTextCtrl.Disable()
 
         # 2. Section
-        self.outlierButton = wx.Button(self,-1,"Remove outlier")
-        self.outlieroptionsButton = wx.Button(self,-1,"Options")
-        self.derivativeButton = wx.Button(self,-1,"Derivative")
-        self.componentsRadioBox = wx.RadioBox(self,
-            label="Select components",
-            choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
+        self.outlierButton = wx.Button(self,-1,"Remove outlier",size=(120,30))
+        self.outlieroptionsButton = wx.Button(self,-1,"Options",size=(120,30))
+        self.derivativeButton = wx.Button(self,-1,"Derivative",size=(120,30))
+        self.fitButton = wx.Button(self,-1,"Fit",size=(120,30))
+        self.offsetButton = wx.Button(self,-1,"Offsets",size=(120,30))
+        self.activityButton = wx.Button(self,-1,"Activity",size=(120,30))
         # 3. Section
         self.selectfilterLabel = wx.StaticText(self, label="Select type:")
         self.selectfilterComboBox = wx.ComboBox(self, choices=self.filterlist,
@@ -60,7 +65,7 @@ class AnalysisPage(wx.Panel):
         self.selectlengthLabel = wx.StaticText(self, label="Select length:")
         self.selectlengthComboBox = wx.ComboBox(self, choices=self.filterlength,
             style=wx.CB_DROPDOWN, value=self.filterlength[0])
-        self.filterButton = wx.Button(self,-1,"Filter!")
+        self.filterButton = wx.Button(self,-1,"Filter!",size=(120,30))
 
  
     def doLayout(self):
@@ -88,7 +93,7 @@ class AnalysisPage(wx.Panel):
                  (self.keysLabel, noOptions),
                  (self.keysTextCtrl, expandOption),
                   emptySpace,
-                 (self.selectkeysButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
                  # section 2
                  (self.head2Label, noOptions),
                   emptySpace,
@@ -96,7 +101,11 @@ class AnalysisPage(wx.Panel):
                  (self.outlieroptionsButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.derivativeButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
-                 (self.componentsRadioBox, noOptions),
+                 (self.fitButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.offsetButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  # section 3
                  (self.head3Label, noOptions),

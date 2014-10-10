@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 
-from stream import *
-from absolutes import *
-from transfer import *
-from database import *
+try:
+    from magpy.stream import *
+    from magpy.absolutes import *
+    from magpy.transfer import *
+    from magpy.database import *
+except:
+    from stream import *
+    from absolutes import *
+    from transfer import *
+    from database import *
 
 import wx
 

@@ -10,7 +10,7 @@ Various Format descriptions for MagPy.
 """
 
 # import order matters - NamedTemporaryFile must be one of the first!
-__all__ = ['lib','opt','stream','absolutes','transfer','database','gui','collector'
+__all__ = ['lib','opt','stream','absolutes','transfer','database','collector'
 ]
 from stream import *
 from absolutes import *
@@ -20,3 +20,4 @@ from database import *
 import lib
 import opt
 import collector
+

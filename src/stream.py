@@ -476,6 +476,12 @@ CALLED BY:
         self.container.extend(datlst)
         self.header = header
 
+    # TODO check this function
+    #def union(self,stream):
+    #    seen = set()
+    #    seen_add = seen.add
+    #    return [ x for x in stream if not (x.time in seen or seen_add(x.time))]
+
     def findtime(self,time):
         """
         DEFINITION:
@@ -2950,6 +2956,7 @@ CALLED BY:
 			2 = start of recovery phase,
 			3 = end of recovery phase]
 	- plotphases:	(list) List of keys of plots to shade.
+	- resolution:	(int) maximum number of points to be displayed.
 	- specialdict:	(dictionary) contains special information for specific plots.
 			key corresponds to the column
 			input is a list with the following parameters
@@ -2986,24 +2993,25 @@ CALLED BY:
         confinex = kwargs.get('confinex')
         endvalue = kwargs.get('endvalue')
         errorbar = kwargs.get('errorbar')
+        figure = kwargs.get('figure')
         fmt = kwargs.get('fmt')
         function = kwargs.get('function')
         fullday = kwargs.get('fullday')
         grid = kwargs.get('grid')
         gridcolor = kwargs.get('gridcolor')
         labelcolor = kwargs.get('labelcolor')
-        padding = kwargs.get('padding')
-        plottitle = kwargs.get('plottitle')
-        plottype = kwargs.get('plottype')
         noshow = kwargs.get('noshow')
         outfile = kwargs.get('outfile')
+        padding = kwargs.get('padding')
+        plotphases = kwargs.get('plotphases')
+        plottitle = kwargs.get('plottitle')
+        plottype = kwargs.get('plottype')
+        resolution = kwargs.get('resolution')
         savedpi = kwargs.get('savedpi')
         stormphases = kwargs.get('stormphases')
-        plotphases = kwargs.get('plotphases')
         specialdict = kwargs.get('specialdict')
         symbol_func = kwargs.get('symbol_func')
         symbollist = kwargs.get('symbollist')
-        figure = kwargs.get('figure')
 
         if not keys:
             keys = self._get_key_headers(limit=9)
@@ -3053,15 +3061,26 @@ CALLED BY:
 
         #fig = matplotlib.figure.Figure()
 
-        loggerstream.info("plot: Start plotting.")
+        plotstream = self
+        if resolution:
+            loggerstream.info("plot: Reducing resultion ...")
+            loggerstream.info("plot: Original resolution: %i" % len(plotstream))
+            if len(plotstream) > resolution:
+                stepwidth = int(len(plotstream)/resolution)
+            plotstream = DataStream(plotstream[::stepwidth],plotstream.header)
+            loggerstream.info("plot: New resolution: %i" % len(plotstream))
+         
 
-        t = np.asarray([row[0] for row in self])
+        loggerstream.info("plot: Start plotting. %i" % len(plotstream))
+
+
+        t = np.asarray([row[0] for row in plotstream])
         for key in keys:
             if not key in KEYLIST[1:16]:
                 loggerstream.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
-            yplt = np.asarray([float(row[ind]) for row in self])
+            yplt = np.asarray([float(row[ind]) for row in plotstream])
             #yplt = self._get_column(key)
 
             # Switch between continuous and discontinuous plots
@@ -3180,7 +3199,7 @@ CALLED BY:
 
 		# -- Plot error bars:
                 if errorbar:
-                    yerr = self._get_column('d'+key)
+                    yerr = plotstream._get_column('d'+key)
                     if len(yerr) > 0: 
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
@@ -3192,8 +3211,8 @@ CALLED BY:
 
                 # -- Add annotations for flagged data:
                 if annotate:
-                    flag = self._get_column('flag')
-                    comm = self._get_column('comment')
+                    flag = plotstream._get_column('flag')
+                    comm = plotstream._get_column('comment')
                     elemprev = "-"
                     try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
                         poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
@@ -3318,12 +3337,12 @@ CALLED BY:
 
                 # -- Take Y-axis labels from header information
                 try:
-                    ylabel = self.header['col-'+key].upper()
+                    ylabel = plotstream.header['col-'+key].upper()
                 except:
                     ylabel = ''
                     pass
                 try:
-                    yunit = self.header['unit-col-'+key]
+                    yunit = plotstream.header['unit-col-'+key]
                 except:
                     yunit = ''
                     pass
@@ -4535,7 +4554,7 @@ CALLED BY:
             coverage = timedelta(days=1)
         if not filenamebegins:
             filenamebegins = ''
-        if not filenameends:
+        if not filenameends and not filenameends == '':
             # Extension for cdf files is automatically attached
             if format_type == 'PYCDF':
                 filenameends = ''

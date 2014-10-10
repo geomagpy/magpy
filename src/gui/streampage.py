@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 
-from stream import *
-from absolutes import *
-from transfer import *
-from database import *
+try:
+    from stream import *
+    from absolutes import *
+    from transfer import *
+    from database import *
+except:
+    from magpy.stream import *
+    from magpy.absolutes import *
+    from magpy.transfer import *
+    from magpy.database import *
 
 import wx
 
@@ -27,6 +33,8 @@ class StreamPage(wx.Panel):
     def createControls(self):
         self.lineLabel1 = wx.StaticText(self, label="__________________")
         self.lineLabel2 = wx.StaticText(self, label="__________________")
+        self.lineLabel3 = wx.StaticText(self, label="__________________")
+        self.lineLabel4 = wx.StaticText(self, label="__________________")
         self.pathLabel = wx.StaticText(self, label="Path:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
         self.fileLabel = wx.StaticText(self, label="File:")
@@ -44,69 +52,21 @@ class StreamPage(wx.Panel):
                                                style=0,useFixedWidthFont=True,
                                                value=datetime.now().strftime('%X'), pos = (250,70))
 
-        self.openStreamButton = wx.Button(self,-1,"Open stream")
-        # Better add buttons which open dialogs for selecting components and filter columns (e.g. observer = 'berger')
-        #for elem in KEYLIST:
-        #    exec('self.'+elem+'CheckBox = wx.CheckBox(self,label="'+elem+'")')
+        self.openStreamButton = wx.Button(self,-1,"Open stream",size=(120,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
+        self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(120,30))
+        self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(120,30))
+        self.restoreButton = wx.Button(self,-1,"Restore data",size=(120,30))
+        self.changePlotButton = wx.Button(self,-1,"General Options",size=(120,30))
+        self.compRadioBox = wx.RadioBox(self,
+            label="Select components",
+            choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
+        self.annotateCheckBox = wx.CheckBox(self,label="annotate")
+        self.confinexCheckBox = wx.CheckBox(self,
+            label="confine time")        
+        self.DrawButton = wx.Button(self,-1,"ReDraw",size=(120,30))
+        self.compRadioBox.Disable()
 
-        # Add the following selectors
-        # chooseCompButton -> select the shown components
-        self.selectCompButton = wx.Button(self,-1,"Select Columns")
-        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
-        self.extractValuesButton = wx.Button(self,-1,"Extract Values")
-        # specify plot options ('o','-' etc
-        # coordinate transform (if xyz given and magnetic)
-        # show/edit meta info
-        
-        self.DrawButton = wx.Button(self,-1,"ReDraw")
-
-        """
-        self.SaveScalarButton = wx.Button(self,-1,"Save data")
-        self.primaryLabel = wx.StaticText(self, label="Primary instrument:")
-        self.resolutionLabel = wx.StaticText(self, label="Select resolution:")
-        self.scalarComboBox = wx.ComboBox(self, choices=self.scalars,
-            style=wx.CB_DROPDOWN, value=self.scalars[0])
-        self.resolutionComboBox = wx.ComboBox(self, choices=self.resolution,
-            style=wx.CB_DROPDOWN, value=self.resolution[0])
-        self.datatypeLabel = wx.StaticText(self, label="Select datatype:")
-        self.datatypeComboBox = wx.ComboBox(self, choices=self.datatype,
-            style=wx.CB_DROPDOWN, value=self.datatype[1])
-        self.addoptLabel = wx.StaticText(self, label="Select additional graphs:")
-        self.removeOutliersCheckBox = wx.CheckBox(self,
-            label="Remove Outliers")
-        self.recoveryCheckBox = wx.CheckBox(self,
-            label="Show data coverage")
-        self.tCheckBox = wx.CheckBox(self,
-            label="Plot T")
-        self.showFlaggedCheckBox = wx.CheckBox(self,
-            label="show flagged")
-        self.secondaryLabel = wx.StaticText(self, label="Secondary instrument:")
-        self.secscalarComboBox = wx.ComboBox(self, choices=self.scalars,
-            style=wx.CB_DROPDOWN, value=self.scalars[3])
-        self.secremoveOutliersCheckBox = wx.CheckBox(self,
-            label="Remove Outliers")
-        self.secremoveOutliersCheckBox.Disable()
-        self.analysisLabel = wx.StaticText(self, label="Data analysis:")
-        self.deltaFCheckBox = wx.CheckBox(self,
-            label="show dF")
-        self.deltaFCheckBox.Disable()
-        self.deltaFIniLabel = wx.StaticText(self, label="Delta F (Def)")
-        self.deltaFIniTextCtrl = wx.TextCtrl(self, value="2.81") # get this value from obsini
-        self.deltaFIniTextCtrl.Disable()
-        self.deltaFCurLabel = wx.StaticText(self, label="Delta F (Cur)")
-        self.deltaFCurTextCtrl = wx.TextCtrl(self, value="NaN")
-        self.deltaFCurTextCtrl.Disable()
-        self.curdateTextCtrl = wx.TextCtrl(self, value="--")
-        self.curdateTextCtrl.Disable()
-        self.prevdateTextCtrl = wx.TextCtrl(self, value="--")
-        self.prevdateTextCtrl.Disable()
-        self.GetGraphMarksButton = wx.Button(self,-1,"Get marks")
-        self.flagSingleButton = wx.Button(self,-1,"Flag date")
-        self.flagRangeButton = wx.Button(self,-1,"Flag range")
-        self.curselecteddateLabel = wx.StaticText(self, label="Current sel.")
-        self.prevselecteddateLabel = wx.StaticText(self, label="Previous sel.")
-        """
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -133,18 +93,30 @@ class StreamPage(wx.Panel):
                  'self.endDatePicker, expandOption',
                  'self.endTimePicker, expandOption',
                  'self.openStreamButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
+                 'self.DrawButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.lineLabel1, noOptions',
                  'self.lineLabel2, noOptions',
                  'self.plotOptionsLabel, noOptions',
                  '(0,0), noOptions',
-                 'self.selectCompButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
+                 'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.changePlotButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
-                 'self.plotOptionsLabel, noOptions',
+                 'self.compRadioBox, noOptions',
+                 '(0,0), noOptions',
+                 'self.annotateCheckBox, noOptions',
+                 '(0,0), noOptions',
+                 'self.confinexCheckBox, noOptions',
+                 '(0,0), noOptions',
+                 'self.lineLabel3, noOptions',
+                 'self.lineLabel4, noOptions',
+                 'self.restoreButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions']
 
+
+        # modify look: ReDraw connected to radio and check boxes with dates
+        # buttons automatically redraw the graph
+        
         #checklist = ['self.'+elem+'CheckBox, noOptions' for elem in KEYLIST]
         #elemlist.extend(checklist)
         elemlist.append('self.DrawButton, dict(flag=wx.ALIGN_CENTER)')

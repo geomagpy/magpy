@@ -8,30 +8,95 @@ from matplotlib.figure import Figure
 
 from wx.lib.pubsub import Publisher
 
-from stream import *
-from absolutes import *
-from transfer import *
-from database import *
+try:
+    from stream import *
+    from absolutes import *
+    from transfer import *
+    from database import *
+    from gui.streampage import *
+    from gui.dialogclasses import *
+    from gui.absolutespage import *
+    from gui.developpage import *
+    from gui.analysispage import *
+except:
+    from magpy.stream import *
+    from magpy.absolutes import *
+    from magpy.transfer import *
+    from magpy.database import *
+    from magpy.gui.streampage import *
+    from magpy.gui.dialogclasses import *
+    from magpy.gui.absolutespage import *
+    from magpy.gui.developpage import *
+    from magpy.gui.analysispage import *
 
-from gui.streampage import *
-from gui.dialogclasses import *
-from gui.absolutespage import *
-from gui.developpage import *
-from gui.analysispage import *
+import glob, os, pickle, base64
 
-import glob
-"""
-When package is installed use:
-from magpy.stream import *
-from magpy.absolutes import *
-from magpy.transfer import *
-from magpy.database import *
+def saveobj(obj, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(obj,f,pickle.HIGHEST_PROTOCOL)
 
-from magpy.gui.streampage import *
-from magpy.gui.dialogclasses import *
-from magpy.gui.absolutespage import *
-from magpy.gui.developpage import *
-"""
+def loadobj(filename):
+    with open(filename, 'r') as f:
+        return pickle.load(f)
+
+def saveini(db=None, user=None, passwd=None, host=None, filename=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None):
+    """
+    Method for creating credentials
+    """
+
+    if not db:
+        db = None
+    if not user:
+        user = 'max'
+    if not passwd:
+        passwd = 'secret'
+    if not host:
+        host = 'localhost'
+    if not filename:
+        filename = 'noname.txt'
+    if not dirname:
+        dirname = '/srv'
+    if not resolution:
+        resolution = 10000
+    if not compselect:
+        compselect = 'xyz'
+    if not abscompselect:
+        abscompselect = 'xyz'
+    if not basecompselect:
+        basecompselect = 'bspline'
+
+    home = os.path.expanduser('~')
+    initpath = os.path.join(home,'.magpyguiini')
+
+    pwd = base64.b64encode(passwd)
+
+    dictionary = {'db': db, 'user':user, 'passwd':pwd, 'host':host, \
+                  'filename': filename, 'dirname':dirname, \
+                  'compselect':compselect, 'abscompselect':abscompselect, \
+                  'basecompselect':basecompselect, 'resolution':resolution  }
+    
+    saveobj(dictionary, initpath)
+    print "Initialization: Added data "
+
+
+def loadini():
+    """
+    Load initialisation data
+
+    """
+    home = os.path.expanduser('~')
+    initpath = os.path.join(home,'.magpyguiini')
+    print "Trying to access initialization file:", initpath
+
+    try:
+        initdata = loadobj(initpath)
+    except:
+        print "Init file not found: Could not load data"
+        return False
+    
+    print "Initialization data loaded"
+    return initdata
+
    
 class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):
@@ -64,7 +129,13 @@ class PlotPanel(wx.Panel):
             self.axes.clear()
         except:
             pass
-        self.axes = stream.plot(keys,figure=self.figure)
+        self.axes = stream.plot(keys,figure=self.figure,**kwargs)
+        t = [elem.time for elem in stream]
+        flag = [elem.flag for elem in stream]
+        k = [eval("elem."+keys[0]) for elem in stream]
+        #self.axes.af2 = self.AnnoteFinder(t,yplt,flag,self.axes)
+        self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
+        self.figure.canvas.mpl_connect('button_press_event', self.axes.af2)
         self.canvas.draw()
 
     def initialPlot(self):
@@ -76,6 +147,8 @@ class PlotPanel(wx.Panel):
             self.axes = self.figure.add_subplot(111)
             plt.axis("off") # turn off axis
             startupimage = 'magpy.png'
+            # TODO add alternative positions
+            # use a walk to locate the image in /usr for linux and installation path on win
             img = imread(startupimage)
             self.axes.imshow(img)
             self.canvas.draw()
@@ -167,158 +240,6 @@ class PlotPanel(wx.Panel):
             for x,y,a in annotesToDraw:
                 self.drawAnnote(self.axis, x, y, a)
 
-
-    def mainPlot(self,magdatastruct1,magdatastruct2,array3,xlimit,pltlist,symbol,errorbar,title):
-        # add here the plt order
-        # e.g.variable pltorder = [1,2,3,4,9] corresponds to x,y,z,f,t1 with len(pltorder) giving the amount
-        # symbol corresponds to ['-','o'] etc defining symbols of magstruct 1 and 2
-        # array3 consists of time, val1, val2: for an optional auxiliary plot of data which is not part of the magdatastructs e.g. data density
-        self.axes.clear()
-        self.figure.clear()
-        msg = ''
-
-        acceptedflags = [0,2,20,22]
-
-        titleline = title
-        myyfmt = ScalarFormatter(useOffset=False)
-            
-        t,x,y,z,f,temp1 = [],[],[],[],[],[]
-        dx,dy,dz,df,flag,com = [],[],[],[],[],[]
-        ctyp = "xyzf"
-        try:
-            nr_lines = len(magdatastruct1)
-            for i in range (nr_lines):
-                #if findflag(magdatastruct1[i].flag,acceptedflags):
-                    t.append(magdatastruct1[i].time)
-                    x.append(magdatastruct1[i].x)
-                    y.append(magdatastruct1[i].y)
-                    z.append(magdatastruct1[i].z)
-                    f.append(magdatastruct1[i].f)
-                    flag.append(magdatastruct1[i].flag)
-                    com.append(magdatastruct1[i].comment)
-                    temp1.append(magdatastruct1[i].t1)
-                    dx.append(magdatastruct1[i].dx)
-                    dy.append(magdatastruct1[i].dy)
-                    dz.append(magdatastruct1[i].dz)
-                    df.append(magdatastruct1[i].df)
-                    ctyp = magdatastruct1[i].typ
-        except:
-            msg += 'Primary data file not defined'
-            pass
-
-        varlist = [t,x,y,z,f,dx,dy,dz,df,temp1]
-        colorlist = ["b","g","m","c","y","k"]
-
-        t2,x2,dx2,y2,dy2,z2,dz2,f2,df2,temp2 = [],[],[],[],[],[],[],[],[],[]
-        try:
-            nr_lines = len(magdatastruct2)
-            ctyp2 = "xyzf"
-            for i in range (nr_lines):
-                #if findflag(magdatastruct2[i].flag,acceptedflags):
-                    t2.append(magdatastruct2[i].time)
-                    x2.append(magdatastruct2[i].x)
-                    dx2.append(magdatastruct2[i].dx)
-                    y2.append(magdatastruct2[i].y)
-                    dy2.append(magdatastruct2[i].dy)
-                    z2.append(magdatastruct2[i].z)
-                    dz2.append(magdatastruct2[i].dz)
-                    f2.append(magdatastruct2[i].f)
-                    df2.append(magdatastruct2[i].df)
-                    temp2.append(magdatastruct2[i].t1)
-                    ctyp2 = magdatastruct2[i].typ
-        except:
-            msg += 'Secondary data file not defined'
-            pass
-
-        # get max time:
-        #maxti = max([magdatastruct1[-1].time,magdatastruct2[-1].time])
-        #minti = min([magdatastruct1[0].time,magdatastruct2[0].time])
-        
-        var2list = [t2,x2,y2,z2,f2,dx2,dy2,dz2,df2,temp2]
-
-        nsub = len(pltlist)
-        plt1 = "%d%d%d" %(nsub,1,1)
-
-        if array3 != []:
-            nsub += 1
-            pltlist.append(999)
-
-        for idx, ax in enumerate(pltlist):
-            n = "%d%d%d" %(nsub,1,idx+1)
-            if ax != 999:
-                yplt = varlist[ax]
-                yplt2 = var2list[ax]
-            # check whether yplt is empty:Do something useful here (e.g. fill with 0 to length t
-            ypltdat = True
-            for elem in yplt:
-                if is_number(elem) and np.isfinite(elem):
-                    ypltdat = False
-                    break
-            if len(yplt) == 0 or ypltdat:
-                yplt = [-999]*len(t)
-            #    print " Zero length causes problems!"
-            #    pass
-            # Create xaxis an its label
-            if idx == 0:
-                self.ax = self.figure.add_subplot(n)
-                if xlimit == "day":
-                    self.ax.set_xlim(date2num(datetime.strptime(day + "-00-00","%Y-%m-%d-%H-%M")),date2num(datetime.strptime(day + "-23-59","%Y-%m-%d-%H-%M")))
-                #else:
-                #    self.ax.set_xlim(minti,maxti)
-                self.a = self.ax
-            else:
-                self.ax = self.figure.add_subplot(n, sharex=self.a)
-            if idx < len(pltlist)-1:
-                setp(self.ax.get_xticklabels(), visible=False)
-            else:
-                self.ax.set_xlabel("Time (UTC)")
-            if ax == 999:
-                self.ax.plot_date(array3[:,0],array3[:,1],'g-')
-                self.ax.fill_between(array3[:,0],0,array3[:,1],facecolor='green',where=np.isfinite(array3[:,1]))
-                self.ax.fill_between(array3[:,0],array3[:,1],1,facecolor='red',where=np.isfinite(array3[:,1]))
-            else:                
-                # switch color
-                self.ax.plot_date(t,yplt,colorlist[idx]+symbol[0])
-                if errorbar == 1:
-                    self.ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[idx]+'o')
-                self.ax.plot_date(t2,yplt2,"r"+symbol[1],markersize=4)
-            # is even function for left/right
-            if bool(idx & 1):
-                self.ax.yaxis.tick_right()
-                self.ax.yaxis.set_label_position("right")
-            # choose label for y-axis
-            if ax == 1 or ax == 2 or ax == 3:
-                label = ctyp[idx]
-            elif ax == 4 or ax == 8:
-                label = "f"
-            elif ax == 9:
-                label = "t"
-            else:
-                label = "unkown"
-            #if ax == 1:
-            #    label = ctyp[idx]
-            #except:
-            #    label = "t"
-            if label == "d" or label == "i":
-                unit = "(deg)"
-            elif label == "t":
-                unit = "(deg C)"
-            else:
-                unit = "(nT)"
-            self.ax.set_ylabel(label.capitalize()+unit)
-            self.ax.get_yaxis().set_major_formatter(myyfmt)
-            self.ax.af2 = self.AnnoteFinder(t,yplt,flag,self.ax)
-            self.figure.canvas.mpl_connect('button_press_event', self.ax.af2)
-           
-        self.figure.subplots_adjust(hspace=0)
-
-        if (max(t)-min(t) < 2):
-            self.a.xaxis.set_major_formatter( matplotlib.dates.DateFormatter('%H:%M'))
-        elif (max(t)-min(t) < 90):
-            self.a.xaxis.set_major_formatter( matplotlib.dates.DateFormatter('%b%d'))
-        else:
-            self.a.xaxis.set_major_formatter( matplotlib.dates.DateFormatter('%y-%m'))
-            
         
 class MenuPanel(wx.Panel):
     #def __init__(self, parent):
@@ -327,7 +248,6 @@ class MenuPanel(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         # Create pages on MenuPanel
 	nb = wx.Notebook(self,-1)
-	self.gra_page = GraphPage(nb)
 	self.str_page = StreamPage(nb)
 	self.ana_page = AnalysisPage(nb)
 	self.abs_page = AbsolutePage(nb)
@@ -336,7 +256,6 @@ class MenuPanel(wx.Panel):
 	self.rep_page = ReportPage(nb)
 	self.com_page = PortCommunicationPage(nb)
 	nb.AddPage(self.str_page, "Stream")
-	nb.AddPage(self.gra_page, "Variometer")
 	nb.AddPage(self.ana_page, "Analysis")
 	nb.AddPage(self.abs_page, "Absolutes")
 	nb.AddPage(self.bas_page, "Baseline")
@@ -347,6 +266,7 @@ class MenuPanel(wx.Panel):
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
+
                 
 class MainFrame(wx.Frame):   
     def __init__(self, *args, **kwds):
@@ -362,16 +282,21 @@ class MainFrame(wx.Frame):
 	self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
         #self.changeStatusbar("Ready")
 
-        # Some variable initializations
-        self.db = None
-        self.filename = 'noname.txt'
-        self.dirname = '.'
+        self.stream = DataStream() # used for storing original data
+        self.plotstream = DataStream() # used for manipulated data
+        self.shownkeylist = []
+        self.keylist = []
+        self.compselect = 'None'
 
-        self.stream = DataStream()
-
-        self.compselect = "xyz"
-        self.abscompselect = "xyz"
-        self.bascompselect = "bspline"
+        # Try to load ini-file
+        # located within home directory
+        inipara = loadini()
+        if not inipara:
+            saveini() # initialize defaultvalues
+            inipara = loadini()
+ 
+        # Variable initializations
+        self.initParameter(inipara)
 
         # Menu Bar
         self.MainMenu = wx.MenuBar()
@@ -394,20 +319,20 @@ class MainFrame(wx.Frame):
         self.FileMenu.AppendItem(self.FileQuitItem)
         self.MainMenu.Append(self.FileMenu, "&File")
         self.DatabaseMenu = wx.Menu()
-        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+C", "Connect Database", wx.ITEM_NORMAL)
+        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+M", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
+        self.OptionsMenu = wx.Menu()
+        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Initialisation/Calculation parameter\tCtrl+I", "Modify initialisation/calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
+        self.OptionsMenu.AppendItem(self.OptionsInitItem)
+        self.OptionsMenu.AppendSeparator()
+        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 402, "&Observatory specifications\tCtrl+O", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
+        self.OptionsMenu.AppendItem(self.OptionsObsItem)
+        self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
         self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
         self.HelpMenu.AppendItem(self.HelpAboutItem)
         self.MainMenu.Append(self.HelpMenu, "&Help")
-        self.OptionsMenu = wx.Menu()
-        self.OptionsCalcItem = wx.MenuItem(self.OptionsMenu, 401, "&Calculation parameter", "Modify calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
-        self.OptionsMenu.AppendItem(self.OptionsCalcItem)
-        self.OptionsMenu.AppendSeparator()
-        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 402, "&Observatory specifications", "Modify observatory specific initialization data (e.g. paths, pears, offsets)", wx.ITEM_NORMAL)
-        self.OptionsMenu.AppendItem(self.OptionsObsItem)
-        self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.SetMenuBar(self.MainMenu)
         # Menu Bar end
 
@@ -422,7 +347,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
-        self.Bind(wx.EVT_MENU, self.OnOptionsCalc, self.OptionsCalcItem)
+        self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
         # BindingControls on the notebooks
@@ -432,23 +357,14 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onStabilityTestButton, self.menu_p.bas_page.stabilityTestButton)
         self.Bind(wx.EVT_RADIOBOX, self.onBasCompchanged, self.menu_p.bas_page.funcRadioBox)
         #       Stream Page
+        # ------------------------
         self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
-        #self.Bind(wx.EVT_BUTTON, self.onScalarDrawButton, self.menu_p.str_page.DrawButton)
-        #self.Bind(wx.EVT_COMBOBOX, self.onSecscalarComboBox, self.menu_p.str_page.secscalarComboBox)
-        #self.Bind(wx.EVT_BUTTON, self.onGetGraphMarksButton, self.menu_p.str_page.GetGraphMarksButton)
-        #self.Bind(wx.EVT_BUTTON, self.onFlagSingleButton, self.menu_p.str_page.flagSingleButton)
-        #self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.str_page.flagRangeButton)
-        #self.Bind(wx.EVT_BUTTON, self.onSaveScalarButton, self.menu_p.str_page.SaveScalarButton)
-        #       Vario Page
-        #self.Bind(wx.EVT_BUTTON, self.onGetGraphMarksButton, self.menu_p.gra_page.GetGraphMarksButton)
-        #self.Bind(wx.EVT_BUTTON, self.onFlagSingleButton, self.menu_p.gra_page.flagSingleButton)
-        #self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.gra_page.flagRangeButton)
-        self.Bind(wx.EVT_BUTTON, self.onSaveVarioButton, self.menu_p.gra_page.SaveVarioButton)
-        self.Bind(wx.EVT_BUTTON, self.onGraDrawButton, self.menu_p.gra_page.DrawButton)
-        self.Bind(wx.EVT_RADIOBOX, self.onGraCompchanged, self.menu_p.gra_page.drawRadioBox)
-        #       Absolute PAge
-        #self.Bind(wx.EVT_BUTTON, self.onFlagSingleButton, self.menu_p.abs_page.flagSingleButton)
-        #self.Bind(wx.EVT_BUTTON, self.onGetGraphMarksButton, self.menu_p.abs_page.GetGraphMarksButton)
+        self.Bind(wx.EVT_BUTTON, self.onReDrawButton, self.menu_p.str_page.DrawButton)
+        self.Bind(wx.EVT_BUTTON, self.onSelectKeys, self.menu_p.str_page.selectKeysButton)
+        self.Bind(wx.EVT_BUTTON, self.onExtractData, self.menu_p.str_page.extractValuesButton)
+        self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
+        self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
+        self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
         self.Bind(wx.EVT_BUTTON, self.onSaveFlaggedAbsButton, self.menu_p.abs_page.SaveFlaggedAbsButton)
         self.Bind(wx.EVT_BUTTON, self.onDrawAllAbsButton, self.menu_p.abs_page.DrawAllAbsButton)
         self.Bind(wx.EVT_BUTTON, self.onOpenAbsButton, self.menu_p.abs_page.OpenAbsButton)
@@ -456,7 +372,13 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onCalcAbsButton, self.menu_p.abs_page.CalcAbsButton)
         self.Bind(wx.EVT_RADIOBOX, self.onAbsCompchanged, self.menu_p.abs_page.drawRadioBox)
         #        Analysis Page
+        # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
+        self.Bind(wx.EVT_BUTTON, self.onRemoveOutlierButton, self.menu_p.ana_page.outlierButton)
+        self.Bind(wx.EVT_BUTTON, self.onDerivativeButton, self.menu_p.ana_page.derivativeButton)
+        self.Bind(wx.EVT_BUTTON, self.onFitButton, self.menu_p.ana_page.fitButton)
+        self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
+        self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         #        Auxiliary Page
         self.Bind(wx.EVT_BUTTON, self.onOpenAuxButton, self.menu_p.gen_page.OpenAuxButton)
         
@@ -478,6 +400,20 @@ class MainFrame(wx.Frame):
         self.menu_p.SetMinSize((100, 100))
         self.plot_p.SetMinSize((100, 100))
 
+
+    def initParameter(self, dictionary):
+        # Variable initializations
+        self.db = dictionary['db']
+        self.user = dictionary['user']
+        pwd = dictionary['passwd']
+        self.passwd = base64.b64decode(pwd)
+        self.host = dictionary['host']
+        self.filename = dictionary['filename']
+        self.dirname = dictionary['dirname']
+        self.resolution = dictionary['resolution']
+        self.compselect = dictionary['compselect']
+        self.abscompselect = dictionary['abscompselect']
+        self.bascompselect = dictionary['basecompselect']
 
     # ################
     # Helper methods:
@@ -511,8 +447,31 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Plotting...")
         keylist = []
         keylist = stream._get_key_headers(limit=9)
-        print "Found keys: ", keylist
-        self.plot_p.guiPlot(stream,keylist)
+        self.shownkeylist = keylist
+
+        # check comp
+        try: 
+            self.compselect = stream[0].typ[:3]
+            self.menu_p.str_page.compRadioBox.Enable()
+            self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
+        except:
+            if 'x' in keylist and 'y' in keylist and 'z' in keylist:
+                self.compselect = 'xyz'
+                self.menu_p.str_page.compRadioBox.Enable()
+
+        print "Found keys: ", keylist, self.resolution
+        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution)
+        if len(stream) > 0 and len(keylist) > 0:
+            self.ExportData.Enable(True)
+        self.changeStatusbar("Ready")
+
+    def OnPlot(self, stream, keylist, **kwargs):
+        """
+        DEFINITION:
+            read stream and display
+        """
+        self.changeStatusbar("Plotting...")
+        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution)
         if len(stream) > 0 and len(keylist) > 0:
             self.ExportData.Enable(True)
         self.changeStatusbar("Ready")
@@ -521,13 +480,46 @@ class MainFrame(wx.Frame):
     # ################
     # Top menu methods:
 
-
+    
     def OnHelpAbout(self, event):
-        dlg = wx.MessageDialog(self, "This program is developed for\n"
-                        "geomagnetic analysis. Written by RL 2011/2012\n",
-                        "About MagPy", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+        
+        description = """MagPy is developed for geomagnetic analysis.
+Features include a support of many data formats, visualization, 
+advanced anaylsis routines, url/database accessability, DI analysis, 
+non-geomagnetic data support and more.
+"""
+
+        licence = """MagPy is free software; you can redistribute 
+it and/or modify it under the terms of the GNU General Public License as 
+published by the Free Software Foundation; either version 2 of the License, 
+or any later version.
+
+MagPy is distributed in the hope that it will be useful, 
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+See the GNU General Public License for more details. You should have 
+received a copy of the GNU General Public License along with MagPy; 
+if not, write to the Free Software Foundation, Inc., 59 Temple Place, 
+Suite 330, Boston, MA  02111-1307  USA"""
+
+
+        info = wx.AboutDialogInfo()
+
+        info.SetIcon(wx.Icon('magpy128.xpm', wx.BITMAP_TYPE_XPM))
+        info.SetName('MagPy')
+        info.SetVersion('0.1.285')
+        info.SetDescription(description)
+        info.SetCopyright('(C) 2011 - 2016 Roman Leonhardt')
+        info.SetWebSite('http://www.conrad-observatory.at')
+        info.SetLicence(licence)
+        info.AddDeveloper('Roman Leonhardt, Rachel Bailey')
+        info.AddDocWriter('Leonhardt,Bailey')
+        info.AddArtist('Leonhardt')
+        info.AddTranslator('Bailey')
+
+        wx.AboutBox(info)
+
+
 
     def OnExit(self, event):
         self.Close()  # Close the main window.
@@ -572,10 +564,11 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
        
     def OnOpenDir(self, event):
-        dialog = wx.DirDialog(None, "Choose a directory:",'/srv',style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        dialog = wx.DirDialog(None, "Choose a directory:",self.dirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             self.ReactivateStreamPage()
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
+            self.dirname = dialog.GetPath() # modify self.dirname
             files = sorted(filelist, key=os.path.getctime)
             oldest = extractDateFromString(files[0])
             old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
@@ -593,10 +586,12 @@ class MainFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             stream = DataStream()
             stream.header = {}
-            print stream.header
+            #print stream.header
             self.ReactivateStreamPage()
-            self.filename = dlg.GetFilename()
-            self.dirname = dlg.GetDirectory()
+            path = os.path.split(dlg.GetPath())
+            self.filename = path[1]
+            self.dirname = path[0]
+            #print "Test", dlg.GetPath(), path
             self.changeStatusbar("Loading data ...")
             stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
             #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
@@ -614,10 +609,10 @@ class MainFrame(wx.Frame):
                 self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
                 self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
                 """
-                self.menu_p.str_page.startDatePicker.Disable()
-                self.menu_p.str_page.endDatePicker.Disable()
-                self.menu_p.str_page.startTimePicker.Disable()
-                self.menu_p.str_page.endTimePicker.Disable()
+                #self.menu_p.str_page.startDatePicker.Disable()
+                #self.menu_p.str_page.endDatePicker.Disable()
+                #self.menu_p.str_page.startTimePicker.Disable()
+                #self.menu_p.str_page.endTimePicker.Disable()
                 self.menu_p.str_page.openStreamButton.Disable()
         self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
         dlg.Destroy()
@@ -639,10 +634,10 @@ class MainFrame(wx.Frame):
                 self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                 stream = read(path_or_url=url)
                 self.SetPageValues(stream)
-                self.menu_p.str_page.startDatePicker.Disable()
-                self.menu_p.str_page.endDatePicker.Disable()
-                self.menu_p.str_page.startTimePicker.Disable()
-                self.menu_p.str_page.endTimePicker.Disable()
+                #self.menu_p.str_page.startDatePicker.Disable()
+                #self.menu_p.str_page.endDatePicker.Disable()
+                #self.menu_p.str_page.startTimePicker.Disable()
+                #self.menu_p.str_page.endTimePicker.Disable()
                 self.menu_p.str_page.openStreamButton.Disable()
                 self.OnInitialPlot(stream)
                 self.changeStatusbar("Ready")
@@ -753,6 +748,13 @@ class MainFrame(wx.Frame):
         /etc/init.d/mysql restart
         """
         dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
+        dlg.hostTextCtrl.SetValue(self.host)
+        dlg.userTextCtrl.SetValue(self.user)
+        dlg.passwdTextCtrl.SetValue(self.passwd)
+        if not self.db == None:
+            dlg.dbTextCtrl.SetValue(self.db)
+        else:
+            dlg.dbTextCtrl.SetValue('None')            
         if dlg.ShowModal() == wx.ID_OK:
             host = dlg.hostTextCtrl.GetValue()
             user = dlg.userTextCtrl.GetValue()
@@ -779,12 +781,39 @@ class MainFrame(wx.Frame):
             self.OnSave(event)
  
 
-    def OnOptionsCalc(self, event):
-        dlg = wx.MessageDialog(self, "Coming soon:\n"
-                        "Modify calculation options\n",
-                        "MagPy by RL", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+    def OnOptionsInit(self, event):
+        dlg = OptionsInitDialog(None, title='Options: Parameter specifications')
+        dlg.hostTextCtrl.SetValue(self.host)
+        dlg.userTextCtrl.SetValue(self.user)
+        dlg.passwdTextCtrl.SetValue(self.passwd)
+        if not self.db == None:
+            dlg.dbTextCtrl.SetValue(self.db)
+        else:
+            dlg.dbTextCtrl.SetValue('None')
+        dlg.resolutionTextCtrl.SetValue(str(self.resolution))
+        dlg.filenameTextCtrl.SetValue(self.filename)
+        dlg.dirnameTextCtrl.SetValue(self.dirname)
+        #dlg.hostTextCtrl.SetValue(self.compselect)
+        #dlg.hostTextCtrl.SetValue(self.host)
+        if dlg.ShowModal() == wx.ID_OK:
+            host = dlg.hostTextCtrl.GetValue()
+            user = dlg.userTextCtrl.GetValue()
+            passwd = dlg.passwdTextCtrl.GetValue()
+            db = dlg.dbTextCtrl.GetValue()
+            if db == 'None':
+                db = None
+            filename=dlg.filenameTextCtrl.GetValue()
+            dirname=dlg.dirnameTextCtrl.GetValue()
+            resolution=dlg.resolutionTextCtrl.GetValue()
+            compselect= 'xyz' # compselect
+            abscompselect= 'xyz' #abscompselect
+            basecompselect= 'poly' #basecompselect
+            saveini(host=host, user=user, passwd=passwd, db=db, filename=filename, dirname=dirname, compselect=compselect, abscompselect=abscompselect, basecompselect=basecompselect)
+            inipara = loadini()
+            self.initParameter(inipara)
+
+        dlg.Destroy()        
+
 
     def OnOptionsObs(self, event):
         dlg = OptionsObsDialog(None, title='Options: Observatory specifications')
@@ -816,14 +845,9 @@ class MainFrame(wx.Frame):
     # pages: stream (plot, coordinate), analysis (smooth, filter, fit, baseline etc),
     #          specials(spectrum, power), absolutes (), report (log), monitor (access web socket)
 
-        
-    def abs_test(self, event):
-        xx = [10,9,8,7,6,5]
-        yy = [7,3,8,3,4,2]
-        FigurePlot(plot_p,xx,yy)
 
     # ################
-    # analysis page methods:
+    # Analysis functions
 
     def onFilterButton(self, event):
         """
@@ -833,372 +857,99 @@ class MainFrame(wx.Frame):
         keystr = self.menu_p.ana_page.keysTextCtrl.GetValue().encode('ascii','ignore')
         keys = keystr.split(',')
 
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+
         filtertype = self.menu_p.ana_page.selectfilterComboBox.GetValue()
         filterlength = self.menu_p.ana_page.selectlengthComboBox.GetValue()
 
-        self.stream = self.stream.nfilter(keys=keys,filter_type=filtertype,resample=True)
+        self.plotstream = self.plotstream.nfilter(keys=keys,filter_type=filtertype,resample=True)
 
-        self.SetPageValues(self.stream)
-        self.OnInitialPlot(self.stream)
+        self.SetPageValues(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
-    
-    def onDrawBaseButton(self, event):
-        instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
-        stday = self.menu_p.bas_page.startDatePicker.GetValue()
-        day = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),"%Y-%m-%d")
-        duration = int(self.menu_p.bas_page.durationTextCtrl.GetValue())
-        degree = float(self.menu_p.bas_page.degreeTextCtrl.GetValue())
-        func = "bspline"
-        useweight = self.menu_p.bas_page.baseweightCheckBox.GetValue()
-        #if not os.path.isfile(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj')):
-        #    self.menu_p.rep_page.logMsg(' --- Baseline files recaluclated')
-        #    GetBaseline(instr, day, duration, func, degree, useweight)
-        #meandiffabs = read_magstruct(os.path.join(baselinepath,instr,"baseline_"+day+"_"+str(duration)+".txt"))
-        #diffabs = read_magstruct(os.path.join(baselinepath,instr,"diff2di_"+day+"_"+str(duration)+".txt"))
 
-        #self.plot_p.mainPlot(meandiffabs,diffabs,[],"auto",[1,2,3],['o','o'],1,"Baseline")
-        #self.plot_p.canvas.draw()
-
-    def onDrawBaseFuncButton(self, event):
-        instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
-        stday = self.menu_p.bas_page.startDatePicker.GetValue()
-        day = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),"%Y-%m-%d")
-        duration = int(self.menu_p.bas_page.durationTextCtrl.GetValue())
-        degree = float(self.menu_p.bas_page.degreeTextCtrl.GetValue())
-        #func = self.bascompselect
-        #print func
-        #func = "bspline"
-        useweight = self.menu_p.bas_page.baseweightCheckBox.GetValue()
-        recalcselect = self.menu_p.bas_page.baserecalcCheckBox.GetValue()
-        self.menu_p.rep_page.logMsg('Base func for %s for range %s minus %d days using %s with degree %s, recalc %d' % (instr,day,duration,func,degree,recalcselect))
-        #if not (os.path.isfile(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj')) and recalcselect == False):
-        #    self.menu_p.rep_page.logMsg(' --- Baseline files recaluclated')
-        #    GetBaseline(instr, day, duration, func, degree, useweight)
-        #meandiffabs = read_magstruct(os.path.join(baselinepath,instr,"baseline_"+day+"_"+str(duration)+".txt"))
-        #modelfile = os.path.normpath(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj'))
-        #outof = Model2Struct(modelfile,5000)
-
-        #self.plot_p.mainPlot(meandiffabs,outof,[],"auto",[1,2,3],['o','-'],0,"Baseline function")
-        #self.plot_p.canvas.draw()
-
-    def onStabilityTestButton(self, event):
-        self.menu_p.rep_page.logMsg(' --- Starting baseline stability analysis')
-        stday = self.menu_p.bas_page.startDatePicker.GetValue()
-        day = datetime.fromtimestamp(stday.GetTicks()) 
-
-    def onBasCompchanged(self, event):
-        self.bascompselect = self.menu_p.bas_page.func[event.GetInt()]
-
-    def onGraCompchanged(self, event):
-        self.compselect = self.menu_p.gra_page.comp[event.GetInt()]
-
-    def onGraDrawButton(self, event):
-        datastruct = []
-        fstruct = []
-        tmpfstruct = []
-        msg = ''
-        pltlist = [1,2,3]
-        fval = 0 # 0: no reviewed files->only vario, 1: reviewed files
-
-        # get from options
-        duration = 380
-        bspldeg = 2
-        func = "bspline"
-        funcweight = 1
-        
-        stday = self.menu_p.gra_page.startDatePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks()) 
-        enday = self.menu_p.gra_page.endDatePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks()) 
-        instr = self.menu_p.gra_page.varioComboBox.GetValue()
-        finstr = self.menu_p.gra_page.scalarComboBox.GetValue()
-
-        # 1.) Select the datafiles for the instrument
-        self.menu_p.rep_page.logMsg('Starting Variometer analysis:')
-        # a) produce day list
-        day = sd
-        daylst = []
-        while ed >= day:
-            daylst.append(datetime.strftime(day,"%Y-%m-%d"))
-            day += timedelta(days=1)
-        # b) check whether raw or mod
-        datatype = self.menu_p.gra_page.datatypeComboBox.GetValue()
-        loadres = self.menu_p.gra_page.resolutionComboBox.GetValue()
-        #if loadres == "hour":
-        #    strres = "hou"
-        #elif loadres == "minute":
-        #    strres = "min"
-        #elif loadres == "second":
-        #    strres = "sec"
-        #else:
-        #    strres = "raw"
-        # c) if reviewed use day lst and check formats (cdf) - use raw if not available
+    def onRemoveOutlierButton(self, event):
         """
-        for day in daylst:
-            if datatype == 'reviewed':
-                # ToDo: cdf-file read problem                
-                # - check for the presence of cdf and txt files
-                if os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + strres + '.cdf'))):
-                    loadname = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + strres + '.cdf'))
-                    struct = read_magstruct_cdf(loadname)
-                    self.menu_p.rep_page.logMsg(' --- cdf for %s' % day)
-                elif os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + strres + '.txt'))):
-                    loadname = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + strres + '.txt'))
-                    struct = read_magstruct(loadname)
-                    self.menu_p.rep_page.logMsg(' --- txt for %s' % day)
-                else:
-                    struct = readmagdata(day+"-00:00:00",day+"-23:59:59",instr)
-                    self.menu_p.rep_page.logMsg(' --- using raw data for %s' % day)
-                datastruct.extend(struct)
-            else:
-                struct = readmagdata(day+"-00:00:00",day+"-23:59:59",instr)
-                datastruct.extend(struct)
-            # Get f data:
-            if (finstr != 'selected vario'):
-                fval = 1
-                if os.path.exists(os.path.normpath(os.path.join(preliminarypath,finstr,'sc_'+day + '_'+ finstr+'_' + strres + '.cdf'))):
-                    fname = os.path.normpath(os.path.join(preliminarypath,finstr,'sc_'+day + '_'+ finstr+'_' + strres + '.cdf'))
-                    tmpfstruct = read_magstruct_cdf(fname)
-                elif os.path.exists(os.path.normpath(os.path.join(preliminarypath,finstr,'sc_'+day + '_'+ finstr+'_' + strres + '.txt'))):
-                    fname = os.path.normpath(os.path.join(preliminarypath,finstr,'sc_'+day + '_'+ finstr+'_' + strres + '.txt'))
-                    tmpfstruct = read_magstruct(fname)
-                fstruct.extend(tmpfstruct)
-            else:
-                #tmpfstruct = readmagdata(day+"-00:00:00",day+"-23:59:59",instr)
-                fstruct.extend(struct)
-
-        # 2.) Check resolution and give a warning if resolution is too low (provide choice accordingly
-        res = [-999,-999]
-        xa,xb = CheckTimeResolution(datastruct)
-        res[0] = xb[1]
-        self.datacont.struct1res = xb[1]
-
-        primstruct = datastruct
-                                
-        # 3.) Filter the data
-        #     a) check resolution and provide choice accordingly
-        
-        #     b) do the filtering
-        filteropt = [1.86506,0]
-        msg = ''
-        filterdata = []
-        
-        if self.menu_p.gra_page.resolutionComboBox.GetValue() == "intrinsic":
-            self.menu_p.rep_page.logMsg(' --- Using intrinsiy resolution:')
-            self.menu_p.rep_page.logMsg(' --- Primary data resolution: %f sec' % (res[0]*24*3600))
-            filterdata = primstruct
-        else:
-            if self.menu_p.gra_page.resolutionComboBox.GetValue() == "hour":
-                increment = timedelta(hours=1)
-                offset = timedelta(hours=0.5)
-                filtertype = "linear"
-                incr = ahour
-            elif self.menu_p.gra_page.resolutionComboBox.GetValue() == "minute":
-                increment = timedelta(minutes=1)
-                offset = 0
-                filtertype = "gauss"
-                incr = aminute
-            elif self.menu_p.gra_page.resolutionComboBox.GetValue() == "second":
-                increment = timedelta(seconds=1)
-                offset = 0
-                filtertype = "gauss"
-                incr = asecond
-            # Prim data
-            if (res[0] < incr*0.9):
-                filterdata, msg = filtermag(increment,offset,datastruct,filtertype,[],filteropt)
-                self.menu_p.rep_page.logMsg(' --- Filtering primary data\n %s' % msg)
-            else:
-                self.menu_p.rep_page.logMsg(' --- Primary data resolution equal or larger then requested: Skipping filtering')
-                filterdata = primstruct
-
-        primstruct = filterdata
-        # Filtered data to short for hour data  - didd !! 
-
-        # 4.) Baselinecorrection
-        corrdata = []
-        bc = self.menu_p.gra_page.baselinecorrCheckBox.GetValue()
-        if bc == True:
-            # a) get the approporate baseline file  - if not exisiting create it
-            endyear = datetime.strftime(ed,"%Y")
-            if (datetime.strftime(sd,"%Y")) == (datetime.strftime(ed,"%Y")):
-                if endyear == datetime.strftime(datetime.utcnow(),"%Y"):
-                    # case -- 1a: sd to ed range within current year
-                    day = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-                else:
-                    # case -- 1b: sd to ed range within one year
-                    day = datetime.strftime(datetime.strptime(str(int(endyear)+1),"%Y"),"%Y-%m-%d")
-            else:
-                td = ed-sd
-                # case -- 2a: sd to ed range not within one year
-                if int(td.days) > duration:
-                    # case -- 2b: sd to ed range not within one year and differ by more then 380 days
-                    self.menu_p.rep_page.logMsg(' --- Standard duration of baseline exceeded - using %s days now' % td.days)
-                    duration = td.days
-                day = datetime.strftime(ed,"%Y-%m-%d")
-            if not os.path.isfile(os.path.normpath(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj'))):
-                self.menu_p.rep_page.logMsg(' --- Creating baseline file')
-                GetBaseline(instr, day, duration, func, bspldeg, funcweight)
-            self.menu_p.rep_page.logMsg(' --- used Baseline: %s' % (day+"_"+str(duration)+"_"+'func.obj'))
-            # use a day list with selected day for last input parameter
-            dayl = sd
-            daylst = []
-            while ed >= dayl:
-                daylst.append(datetime.strftime(dayl,"%Y-%m-%d"))
-                dayl += timedelta(days=1)
-            for dayl in daylst:
-                cdata = BaselineCorr(instr,os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj'),dayl)
-                corrdata.extend(cdata)
-        else:
-            corrdata = primstruct
-
-        primstruct = corrdata
-
-        # 5.) F (if T is available)
-        if fstruct == []:
-            self.menu_p.rep_page.logMsg(' --- Use Scalar analysis first')
-            dlg = wx.MessageDialog(self, "For using F you need to conduct the scalar analysis first:\n produce -reviewed- scalar data",
-                        "PyMag by RL", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            self.menu_p.gra_page.fCheckBox.Disable()
-            self.menu_p.gra_page.dfCheckBox.Disable()
-            newdatastruct = primstruct
-            mf = float("nan")
-        elif fval == 0:
-            # only variovalues available
-            self.menu_p.rep_page.logMsg(' --- Can only use vario x,y,z')
-            self.menu_p.gra_page.fCheckBox.Enable()
-            self.menu_p.gra_page.dfCheckBox.Disable()
-            newdatastruct,mf,fmsg = combineVarioandF(primstruct,fstruct,fval,[0,2,20,22])
-        else:
-            newdatastruct,mf,fmsg = combineVarioandF(primstruct,fstruct,fval,[0,2,20,22])
-            self.menu_p.gra_page.fCheckBox.Enable()
-            self.menu_p.gra_page.dfCheckBox.Enable()
-            self.menu_p.rep_page.logMsg(' --- Combination of Vario and F data:\n %s' % fmsg)
-
-        
-        valobsini = 10
-        if self.menu_p.gra_page.baselinecorrCheckBox.GetValue():
-            var = 'DI'
-        else:
-            var = self.menu_p.gra_page.varioComboBox.GetValue()
-        self.menu_p.gra_page.dfIniTextCtrl.SetValue('dF(%s - %s): %.2f nT' % (var,finstr,valobsini))
-        self.menu_p.gra_page.dfCurTextCtrl.SetValue('dF(cur): %.2f nT' % mf)
-        primstruct = newdatastruct
-
-        #for i in range(10,1000):
-        #    print primstruct[i].f,primstruct[i].flag
-            
-        drawf = self.menu_p.gra_page.fCheckBox.GetValue()
-        if drawf == True:
-            pltlist.append(4)
-        drawdf = self.menu_p.gra_page.dfCheckBox.GetValue()
-        if drawdf == True:
-            pltlist.append(8)
-
-        # 6.) Draw temperature function (if T is available)
-        # check whether temp data is available
-        drawt = self.menu_p.gra_page.tCheckBox.GetValue()
-        if drawt == True:
-            pltlist.append(9)
-
-        # 7.) Showing flagged data
-        secdata = []
-        seconddata = []
-        flagging = self.menu_p.gra_page.showFlaggedCheckBox.GetValue()
-        if flagging:
-            try:
-                acceptedflags = [0,1,2,3,10,11,12,13,20,21,22,23,30,31,32,33]
-                secdata, msg = filterFlag(primstruct,acceptedflags)
-                self.menu_p.rep_page.logMsg(' --- flagged data added \n %s' % msg)
-            except:
-                self.menu_p.rep_page.logMsg(' --- Unflagging failed')
-                pass
-     
-        # 8.) Changing coordinatesystem
-        self.menu_p.rep_page.logMsg('Vario: Selected %s' % self.compselect)
-        if (self.compselect == "xyz"):
-            showdata = primstruct
-            if secdata != []:
-                seconddata = secdata
-        elif (self.compselect == "hdz"):
-            showdata = convertdatastruct(primstruct,"xyz2hdz")
-            if secdata != []:
-                seconddata = convertdatastruct(secdata,"xyz2hdz")
-        elif (self.compselect == "idf"):
-            showdata = convertdatastruct(primstruct,"xyz2idf")
-            if secdata != []:
-                seconddata = convertdatastruct(secdata,"xyz2idf")
-        else:
-            showdata = primstruct
-            if secdata != []:
-                seconddata = secdata
-
-        self.datacont.magdatastruct1 = primstruct
-
-        displaydata, filtmsg = filterFlag(showdata,[0,2,10,12,20,22,30,32])
-
-        self.plot_p.mainPlot(displaydata,seconddata,[],"auto",pltlist,['-','-'],0,"Variogram")
-        self.plot_p.canvas.draw()
+        Method for Outlier
         """
+        self.changeStatusbar("Removing outliers ...")
+        sr = self.menu_p.ana_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
+        keys = self.shownkeylist
 
-    def onSaveVarioButton(self, event):
-        self.menu_p.rep_page.logMsg('Save button pressed')
-        if len(self.datacont.magdatastruct1) > 0:
-            # 1.) open format choice dialog
-            choicelst = [ 'txt', 'cdf',  'netcdf' ]
-            # iaga and wdc do not make sense for scalar values
-            # ------ Create the dialog
-            dlg = wx.SingleChoiceDialog( None, message='Save data as', caption='Choose dataformat', choices=choicelst)
-            # ------ Show the dialog
-            if dlg.ShowModal() == wx.ID_OK:
-                response = dlg.GetStringSelection()
+        timerange = timedelta(seconds=float(sr)*120)
 
-                # 2.) message box informing about predefined path
-                # a) generate predefined path and name: (scalar, instr, mod, resolution
-                firstday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[0].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
-                lastday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[-1].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
-                tmp,res = CheckTimeResolution(self.datacont.magdatastruct1)
-                loadres = self.menu_p.gra_page.resolutionComboBox.GetValue()
-                if loadres == 'intrinsic':
-                    resstr = 'raw'
-                else:
-                    resstr = GetResolutionString(res[1])
-                instr = self.menu_p.str_page.scalarComboBox.GetValue()
-                # b) create day list
-                day = firstday
-                daylst = []
-                while lastday >= day:
-                    daylst.append(datetime.strftime(day,"%Y-%m-%d"))
-                    day += timedelta(days=1)
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
 
-                # 3.) save data
-                if not os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr))):
-                    os.makedirs(os.path.normpath(os.path.join(preliminarypath,instr)))
+        self.plotstream = self.plotstream.remove_outlier(keys=keys, timerange=timerange)
+        self.plotstream = self.plotstream.remove_flagged()
 
-                curnum = 0
-                for day in daylst:
-                    savestruct = []
-                    idx = curnum
-                    for idx, elem in enumerate(self.datacont.magdatastruct1):
-                        if datetime.strftime(num2date(elem.time), "%Y-%m-%d") == day:
-                            savestruct.append(self.datacont.magdatastruct1[idx])
-                            curnum = idx
+        self.SetPageValues(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
-                    if response == "txt":
-                        savename = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + resstr + '.txt'))
-                        write_magstruct(savename,savestruct)
-                        self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
-                    if response == "cdf":
-                        savename = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + resstr + '.cdf'))
-                        write_magstruct_cdf(savename,savestruct)
-                        self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
-       
-                # 4.) Open a message Box to inform about save
+    def onDerivativeButton(self, event):
+        """
+        Method for derivative
+        """
+        self.changeStatusbar("Calculating derivative ...")
+        keys = self.shownkeylist
 
-            # ------ Destroy the dialog
-            dlg.Destroy()
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
 
+        self.plotstream = self.plotstream.differentiate(keys=keys)
+
+        self.SetPageValues(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onFitButton(self, event):
+        """
+        Method for fitting
+        """
+        self.changeStatusbar("Fitting ...")
+        keys = self.shownkeylist
+
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+
+        self.plotstream = self.plotstream.fit(keys=keys)
+
+        #self.SetPageValues(self.plotstream)
+        #self.OnPlot(self.plotstream,self.shownkeylist)
+
+
+    def onOffsetButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Adding offsets ...")
+
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+
+        # open a dialog with keys and textedits
+        # return a dict
+        #self.plotstream = self.plotstream.offset(offsetdict)
+
+        #self.SetPageValues(self.plotstream)
+        #self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onActivityButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Getting activity ...")
+
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+
+        # open a dialog with optins and methods (fmi,cobsindex, stormtracer, etc)
+        # return a method and its parameters
+        #self.plotstream = self.plotstream.offset(offsetdict)
+
+        #self.SetPageValues(self.plotstream)
+        #self.OnPlot(self.plotstream,self.shownkeylist)
 
     # ################
     # Stream functions
@@ -1268,8 +1019,270 @@ class MainFrame(wx.Frame):
         self.OnInitialPlot(stream)
 
 
+    def onReDrawButton(self, event):
+        stday = self.menu_p.str_page.startDatePicker.GetValue()
+        sttime = self.menu_p.str_page.startTimePicker.GetValue()
+        sd = datetime.fromtimestamp(stday.GetTicks()) 
+        enday = self.menu_p.str_page.endDatePicker.GetValue()
+        entime = self.menu_p.str_page.endTimePicker.GetValue()
+        ed = datetime.fromtimestamp(enday.GetTicks()) 
+        
+        if len(self.stream) == 0:
+            dlg = wx.MessageDialog(self, "Please select a path first!\n"
+                        "go to File -> Select Dir\n",
+                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+            
+        st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
+        start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
+        et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
+        end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
+
+        try:
+            self.changeStatusbar("Loading data ...")
+            stream = self.plotstream.trim(starttime=start, endtime=end)
+            mintime = stream._get_min('time')
+            maxtime = stream._get_max('time')
+            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+            #self.menu_p.str_page.startDatePicker.Disable()
+            #self.menu_p.str_page.endDatePicker.Disable()
+            #self.menu_p.str_page.startTimePicker.Disable()
+            #self.menu_p.str_page.endTimePicker.Disable()
+            self.menu_p.str_page.openStreamButton.Disable()
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim data!\n"
+                        "check your files and/or selected time range\n",
+                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        print "Stream loaded of length ", len(stream) 
+        self.plotstream = stream
+        self.SetPageValues(stream)
+        #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+        self.OnInitialPlot(stream)
+
+
+    def onSelectKeys(self,event):
+        """
+        open dialog to select shown keys (check boxes)
+        """
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+        keylist = self.plotstream._get_key_headers()
+        self.keylist = keylist
+        shownkeylist = self.shownkeylist
+        if len(self.plotstream) > 0:        
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist)
+            for elem in shownkeylist:
+                exec('dlg.'+elem+'CheckBox.SetValue(True)')
+            if dlg.ShowModal() == wx.ID_OK:
+                shownkeylist = []
+                for elem in keylist:
+                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                    if boolval:
+                        shownkeylist.append(elem)
+                if len(shownkeylist) == 0:
+                    shownkeylist = self.shownkeylist
+                else:
+                    self.shownkeylist = shownkeylist
+                self.SetPageValues(self.plotstream)
+                self.OnPlot(self.plotstream,shownkeylist)
+            dlg.Destroy()
+
+
+    def onExtractData(self,event):
+        """
+        open dialog to choose extract parameter (paramater compare value)
+        up to three possibilities
+        """
+
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+        keylist = self.shownkeylist
+        if len(self.plotstream) > 0:        
+            dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=keylist)
+            if dlg.ShowModal() == wx.ID_OK:
+                key1 = dlg.key1ComboBox.GetValue()
+                comp1 = dlg.compare1ComboBox.GetValue()
+                val1 = dlg.value1TextCtrl.GetValue()
+                logic2 = dlg.logic2ComboBox.GetValue()
+                logic3 = dlg.logic3ComboBox.GetValue()
+                print key1, comp1, val1, logic2
+                extractedstream = self.plotstream.extract(key1,val1,comp1)
+                val2 = dlg.value2TextCtrl.GetValue()
+                if not val2 == '':
+                    key2 = dlg.key2ComboBox.GetValue()
+                    comp2 = dlg.compare2ComboBox.GetValue()
+                    if logic2 == 'and':
+                        extractedstream = extractedstream.extract(key2,val2,comp2)
+                    else:
+                        extractedstream2 = self.plotstream.extract(key2,val2,comp2)
+                        # TODO extractedstream = join(extractedstream,extractedstream2)
+                    val3 = dlg.value3TextCtrl.GetValue()
+                    if not val3 == '':
+                        key3 = dlg.key3ComboBox.GetValue()
+                        comp3 = dlg.compare3ComboBox.GetValue()
+                        if logic3 == 'and':
+                            extractedstream = extractedstream.extract(key3,val3,comp3)
+                        else:
+                            extractedstream3 = self.plotstream.extract(key3,val3,comp3)
+                            # TODO extractedstream = join(extractedstream,extractedstream3)                    
+                self.plotstream = extractedstream
+                self.SetPageValues(self.plotstream)
+                self.OnPlot(extractedstream,self.shownkeylist)
+        else:
+            print "Extract: No data available so far"
+        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
+
+    def onChangePlotOptions(self,event):
+        """
+        open dialog to modify plot options (general (e.g. bgcolor) and  key
+        specific (key: symbol color errorbar etc)
+        """        
+        # specify plot options ('o','-' etc
+        # show/edit meta info
+        pass
+
+    def onRestoreData(self,event):
+        """
+        Restore originally loaded data
+        """
+        if not len(self.stream) == 0:
+            self.plotstream = self.stream
+            self.OnInitialPlot(self.stream)
+
+    def onChangeComp(self, event):
+        orgcomp = self.compselect
+        self.compselect = self.menu_p.str_page.comp[event.GetInt()]
+        coordinate = orgcomp+'2'+self.compselect
+        self.changeStatusbar("Transforming ...")
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+        self.plotstream = self.plotstream._convertstream(coordinate)
+        self.SetPageValues(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        
+
     # ####################
     # Absolute functions
+
+    
+    def onDrawBaseButton(self, event):
+        instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
+        stday = self.menu_p.bas_page.startDatePicker.GetValue()
+        day = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),"%Y-%m-%d")
+        duration = int(self.menu_p.bas_page.durationTextCtrl.GetValue())
+        degree = float(self.menu_p.bas_page.degreeTextCtrl.GetValue())
+        func = "bspline"
+        useweight = self.menu_p.bas_page.baseweightCheckBox.GetValue()
+        #if not os.path.isfile(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj')):
+        #    self.menu_p.rep_page.logMsg(' --- Baseline files recaluclated')
+        #    GetBaseline(instr, day, duration, func, degree, useweight)
+        #meandiffabs = read_magstruct(os.path.join(baselinepath,instr,"baseline_"+day+"_"+str(duration)+".txt"))
+        #diffabs = read_magstruct(os.path.join(baselinepath,instr,"diff2di_"+day+"_"+str(duration)+".txt"))
+
+        #self.plot_p.mainPlot(meandiffabs,diffabs,[],"auto",[1,2,3],['o','o'],1,"Baseline")
+        #self.plot_p.canvas.draw()
+
+    def onDrawBaseFuncButton(self, event):
+        instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
+        stday = self.menu_p.bas_page.startDatePicker.GetValue()
+        day = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),"%Y-%m-%d")
+        duration = int(self.menu_p.bas_page.durationTextCtrl.GetValue())
+        degree = float(self.menu_p.bas_page.degreeTextCtrl.GetValue())
+        #func = self.bascompselect
+        #print func
+        #func = "bspline"
+        useweight = self.menu_p.bas_page.baseweightCheckBox.GetValue()
+        recalcselect = self.menu_p.bas_page.baserecalcCheckBox.GetValue()
+        self.menu_p.rep_page.logMsg('Base func for %s for range %s minus %d days using %s with degree %s, recalc %d' % (instr,day,duration,func,degree,recalcselect))
+        #if not (os.path.isfile(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj')) and recalcselect == False):
+        #    self.menu_p.rep_page.logMsg(' --- Baseline files recaluclated')
+        #    GetBaseline(instr, day, duration, func, degree, useweight)
+        #meandiffabs = read_magstruct(os.path.join(baselinepath,instr,"baseline_"+day+"_"+str(duration)+".txt"))
+        #modelfile = os.path.normpath(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj'))
+        #outof = Model2Struct(modelfile,5000)
+
+        #self.plot_p.mainPlot(meandiffabs,outof,[],"auto",[1,2,3],['o','-'],0,"Baseline function")
+        #self.plot_p.canvas.draw()
+
+    def onStabilityTestButton(self, event):
+        self.menu_p.rep_page.logMsg(' --- Starting baseline stability analysis')
+        stday = self.menu_p.bas_page.startDatePicker.GetValue()
+        day = datetime.fromtimestamp(stday.GetTicks()) 
+
+    def onBasCompchanged(self, event):
+        self.bascompselect = self.menu_p.bas_page.func[event.GetInt()]
+
+
+    def onSaveVarioButton(self, event):
+
+        self.menu_p.rep_page.logMsg('Save button pressed')
+        if len(self.datacont.magdatastruct1) > 0:
+            # 1.) open format choice dialog
+            choicelst = [ 'txt', 'cdf',  'netcdf' ]
+            # iaga and wdc do not make sense for scalar values
+            # ------ Create the dialog
+            dlg = wx.SingleChoiceDialog( None, message='Save data as', caption='Choose dataformat', choices=choicelst)
+            # ------ Show the dialog
+            if dlg.ShowModal() == wx.ID_OK:
+                response = dlg.GetStringSelection()
+
+                # 2.) message box informing about predefined path
+                # a) generate predefined path and name: (scalar, instr, mod, resolution
+                firstday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[0].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
+                lastday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[-1].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
+                tmp,res = CheckTimeResolution(self.datacont.magdatastruct1)
+                loadres = self.menu_p.gra_page.resolutionComboBox.GetValue()
+                if loadres == 'intrinsic':
+                    resstr = 'raw'
+                else:
+                    resstr = GetResolutionString(res[1])
+                instr = self.menu_p.str_page.scalarComboBox.GetValue()
+                # b) create day list
+                day = firstday
+                daylst = []
+                while lastday >= day:
+                    daylst.append(datetime.strftime(day,"%Y-%m-%d"))
+                    day += timedelta(days=1)
+
+                # 3.) save data
+                if not os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr))):
+                    os.makedirs(os.path.normpath(os.path.join(preliminarypath,instr)))
+
+                curnum = 0
+                for day in daylst:
+                    savestruct = []
+                    idx = curnum
+                    for idx, elem in enumerate(self.datacont.magdatastruct1):
+                        if datetime.strftime(num2date(elem.time), "%Y-%m-%d") == day:
+                            savestruct.append(self.datacont.magdatastruct1[idx])
+                            curnum = idx
+
+                    if response == "txt":
+                        savename = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + resstr + '.txt'))
+                        write_magstruct(savename,savestruct)
+                        self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
+                    if response == "cdf":
+                        savename = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + resstr + '.cdf'))
+                        write_magstruct_cdf(savename,savestruct)
+                        self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
+       
+                # 4.) Open a message Box to inform about save
+
+            # ------ Destroy the dialog
+            dlg.Destroy()
+
     
     def onAbsCompchanged(self, event):
         self.abscompselect = self.menu_p.abs_page.comp[event.GetInt()]

@@ -381,22 +381,26 @@ def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=Non
         delete = True
 
     print "Starting ftpget ..."
-    ftp = ftplib.FTP(ftpaddress, ftpname,ftppasswd)
-    ftp.cwd(remotepath)
-    filenames = ftp.nlst()
-    print "Found the following files", filenames
+    try:
+        ftp = ftplib.FTP(ftpaddress, ftpname,ftppasswd)
+        ftp.cwd(remotepath)
+        filenames = ftp.nlst()
+        #print "Found the following files", filenames
 
-    for filename in filenames:
-        if filename.endswith(identifier):
-            print filename
-            loggertransfer.info(' ftpget: Getting file %s' % filename)
-            localfilename = os.path.join(localpath,filename)
-            with open(localfilename, "wb") as myfile: 
-                ftp.retrbinary("RETR " + filename, myfile.write)
-                myfile.close()
-                if delete:
-                    ftp.delete(filename)
-    ftp.close()
+        for filename in filenames:
+            if filename.endswith(identifier):
+                print filename
+                loggertransfer.info(' ftpget: Getting file %s' % filename)
+                localfilename = os.path.join(localpath,filename)
+                with open(localfilename, "wb") as myfile: 
+                    ftp.retrbinary("RETR " + filename, myfile.write)
+                    myfile.close()
+                    if delete:
+                        ftp.delete(filename)
+        ftp.close()
+    except:
+        print "FTP Connection error - skipping ftpget" 
+        pass
 
 """
 def ftpget (**kwargs):
