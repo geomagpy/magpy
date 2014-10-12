@@ -1747,22 +1747,42 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         
     if readfile:
         # Get list of files
-        if "://" in absdata:
-            print "Found URL code - requires name of data set with date" 
-            filelist.append(absdata)
-            movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
-        elif os.path.isfile(absdata):
-            print "Found single file"
-            filelist.append(absdata)
-        else:
-            if os.path.exists(absdata):
-                pass
+        if isinstance(absdata, basestring):
+            print "Found string"
+            #filelist.append(absdata)
+            if "://" in absdata:
+                print "Found URL code - requires name of data set with date" 
+                filelist.append(absdata)
+                movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
+            elif os.path.isfile(absdata):
+                print "Found single file"
+                filelist.append(absdata)
             else:
-               print "absolute Analysis: Error - path to absdata not existing: %s" % absdata
-               sys.exit()
-            for file in os.listdir(absdata):
-                if file.endswith(diid):
-                    filelist.append(os.path.join(absdata,file))
+                if os.path.exists(absdata):
+                    pass
+                else:
+                    print "absolute Analysis: Error - path to absdata not existing: %s" % absdata
+                    sys.exit()
+                for file in os.listdir(absdata):
+                    if file.endswith(diid):
+                        filelist.append(os.path.join(absdata,file))
+        else:
+            try:
+                print "Found List"
+                listlen = len(absdata)
+                for elem in absdata:
+                    if "://" in absdata:
+                        print "Found URL code - requires name of data set with date" 
+                        filelist.append(elem)
+                        movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
+                    elif os.path.isfile(elem):
+                        print "Found single file"
+                        filelist.append(elem)
+            except:
+                print "Could not interpret absdata"
+                return
+
+             
 
         for elem in filelist:
             head, tail = os.path.split(elem)

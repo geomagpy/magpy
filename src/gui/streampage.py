@@ -58,6 +58,7 @@ class StreamPage(wx.Panel):
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(120,30))
         self.restoreButton = wx.Button(self,-1,"Restore data",size=(120,30))
         self.changePlotButton = wx.Button(self,-1,"General Options",size=(120,30))
+        self.errorBarsButton = wx.Button(self,-1,"Error bars",size=(120,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
@@ -101,7 +102,7 @@ class StreamPage(wx.Panel):
                  'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.changePlotButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
+                 'self.errorBarsButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.compRadioBox, noOptions',
                  '(0,0), noOptions',
                  'self.annotateCheckBox, noOptions',

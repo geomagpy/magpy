@@ -251,15 +251,11 @@ class MenuPanel(wx.Panel):
 	self.str_page = StreamPage(nb)
 	self.ana_page = AnalysisPage(nb)
 	self.abs_page = AbsolutePage(nb)
-	self.gen_page = GeneralPage(nb)
-	self.bas_page = BaselinePage(nb)
 	self.rep_page = ReportPage(nb)
 	self.com_page = PortCommunicationPage(nb)
 	nb.AddPage(self.str_page, "Stream")
 	nb.AddPage(self.ana_page, "Analysis")
-	nb.AddPage(self.abs_page, "Absolutes")
-	nb.AddPage(self.bas_page, "Baseline")
-	nb.AddPage(self.gen_page, "Auxiliary")
+	nb.AddPage(self.abs_page, "DI")
 	nb.AddPage(self.rep_page, "Report")
 	nb.AddPage(self.com_page, "Monitor")
 
@@ -287,6 +283,10 @@ class MainFrame(wx.Frame):
         self.shownkeylist = []
         self.keylist = []
         self.compselect = 'None'
+        self.dipathlist = []
+        self.divariopath = ''
+        self.discalarpath = ''
+
 
         # Try to load ini-file
         # located within home directory
@@ -299,7 +299,9 @@ class MainFrame(wx.Frame):
         self.initParameter(inipara)
 
         # Menu Bar
+        # --------------
         self.MainMenu = wx.MenuBar()
+        # ## File Menu
         self.FileMenu = wx.Menu()
         self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+O", "Open file", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileOpen)
@@ -318,10 +320,21 @@ class MainFrame(wx.Frame):
         self.FileQuitItem = wx.MenuItem(self.FileMenu, wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit the program", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileQuitItem)
         self.MainMenu.Append(self.FileMenu, "&File")
+        # ## Database Menu
         self.DatabaseMenu = wx.Menu()
         self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+M", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
+        # ## DI Menu
+        self.DIMenu = wx.Menu()
+        self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
+        self.DIMenu.AppendItem(self.DIPath2DI)
+        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
+        self.DIMenu.AppendItem(self.DIPath2Vario)
+        self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scalar data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
+        self.DIMenu.AppendItem(self.DIPath2Scalar)
+        self.MainMenu.Append(self.DIMenu, "D&I")
+        # ## Options Menu
         self.OptionsMenu = wx.Menu()
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Initialisation/Calculation parameter\tCtrl+I", "Modify initialisation/calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
         self.OptionsMenu.AppendItem(self.OptionsInitItem)
@@ -347,15 +360,13 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
+        self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
+        self.Bind(wx.EVT_MENU, self.onDefineVario, self.DIPath2Vario)
+        self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
         self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
         # BindingControls on the notebooks
-        #       Base Page
-        self.Bind(wx.EVT_BUTTON, self.onDrawBaseButton, self.menu_p.bas_page.DrawBaseButton)
-        self.Bind(wx.EVT_BUTTON, self.onDrawBaseFuncButton, self.menu_p.bas_page.DrawBaseFuncButton)
-        self.Bind(wx.EVT_BUTTON, self.onStabilityTestButton, self.menu_p.bas_page.stabilityTestButton)
-        self.Bind(wx.EVT_RADIOBOX, self.onBasCompchanged, self.menu_p.bas_page.funcRadioBox)
         #       Stream Page
         # ------------------------
         self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
@@ -365,12 +376,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
-        self.Bind(wx.EVT_BUTTON, self.onSaveFlaggedAbsButton, self.menu_p.abs_page.SaveFlaggedAbsButton)
-        self.Bind(wx.EVT_BUTTON, self.onDrawAllAbsButton, self.menu_p.abs_page.DrawAllAbsButton)
-        self.Bind(wx.EVT_BUTTON, self.onOpenAbsButton, self.menu_p.abs_page.OpenAbsButton)
-        self.Bind(wx.EVT_BUTTON, self.onNewAbsButton, self.menu_p.abs_page.NewAbsButton)
-        self.Bind(wx.EVT_BUTTON, self.onCalcAbsButton, self.menu_p.abs_page.CalcAbsButton)
-        self.Bind(wx.EVT_RADIOBOX, self.onAbsCompchanged, self.menu_p.abs_page.drawRadioBox)
         #        Analysis Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
@@ -379,12 +384,20 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onFitButton, self.menu_p.ana_page.fitButton)
         self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
-        #        Auxiliary Page
-        self.Bind(wx.EVT_BUTTON, self.onOpenAuxButton, self.menu_p.gen_page.OpenAuxButton)
+        #        DI Page
+        # --------------------------
+        self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
+        self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
+        self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
+        self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
         
         #self.Bind(wx.EVT_CUSTOM_NAME, self.addMsg)
         # Put something on Report page
         self.menu_p.rep_page.logMsg('Begin logging...')
+
+        # Disable yet unavailbale buttons
+        # --------------------------
+        self.menu_p.abs_page.AnalyzeButton.Disable()
  
         self.sp.SplitVertically(self.plot_p,self.menu_p,700)
 
@@ -471,7 +484,7 @@ class MainFrame(wx.Frame):
             read stream and display
         """
         self.changeStatusbar("Plotting...")
-        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution)
+        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution,**kwargs)
         if len(stream) > 0 and len(keylist) > 0:
             self.ExportData.Enable(True)
         self.changeStatusbar("Ready")
@@ -582,19 +595,23 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def OnOpenFile(self, event):
         self.dirname = ''
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.OPEN)
+        stream = DataStream()
+        stream.header = {}
+        filelist = []
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
-            stream = DataStream()
-            stream.header = {}
-            #print stream.header
             self.ReactivateStreamPage()
-            path = os.path.split(dlg.GetPath())
-            self.filename = path[1]
-            self.dirname = path[0]
-            #print "Test", dlg.GetPath(), path
             self.changeStatusbar("Loading data ...")
-            stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
+            pathlist = dlg.GetPaths()
+            for path in pathlist:
+                elem = os.path.split(path)
+                self.dirname = elem[0]
+                filelist.append(elem[1])
+                tmp = read(path,tenHz=True,gpstime=True)
+                stream.extend(tmp.container,tmp.header)
+            #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
             #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+            self.filename = ' ,'.join(filelist) 
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
             self.menu_p.str_page.fileTextCtrl.Disable()
@@ -614,13 +631,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.menu_p.str_page.startTimePicker.Disable()
                 #self.menu_p.str_page.endTimePicker.Disable()
                 self.menu_p.str_page.openStreamButton.Disable()
+        
         self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
         dlg.Destroy()
 
         # plot data
         self.stream = stream
-        self.OnInitialPlot(stream)
-        self.changeStatusbar("Ready")
+        if len(stream) > 0:
+            self.OnInitialPlot(stream)
+            self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("No data selected")
 
 
     def OnOpenURL(self, event):
@@ -900,6 +921,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.plotstream = self.plotstream.differentiate(keys=keys)
 
+        #self.shownkeylist = self.plotstream._get_key_headers()        
+
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
@@ -909,14 +932,33 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         self.changeStatusbar("Fitting ...")
         keys = self.shownkeylist
-
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
+        fitknots = str(0.5)
+        fitdegree = str(4)
+        fitfunc='spline'
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', fitfunc=fitfunc, fitknots=fitknots, fitdegree=fitdegree)
+        if dlg.ShowModal() == wx.ID_OK:
+            fitfunc = dlg.funcComboBox.GetValue()
+            knots = dlg.knotsTextCtrl.GetValue()
+            degree = dlg.degreeTextCtrl.GetValue()
+            print fitfunc, knots, degree
+            if not 0<float(knots)<1:
+                knots = 0.5
+            if not degree>0:
+                degree = 1
+            else:
+                degree = int(degree)
+            if len(self.plotstream) > 0:
+                func = self.plotstream.fit(keys=keys)
+                self.SetPageValues(self.plotstream)
+                self.OnPlot(self.plotstream,keys,function=func)
+            else:
+                # Msgbox to load data first
+                pass
 
-        self.plotstream = self.plotstream.fit(keys=keys)
-
-        #self.SetPageValues(self.plotstream)
-        #self.OnPlot(self.plotstream,self.shownkeylist)
+        dlg.Destroy()        
+        self.changeStatusbar("Ready")
 
 
     def onOffsetButton(self, event):
@@ -927,13 +969,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
+        keys = self.shownkeylist
+        offsetdict = {}
 
-        # open a dialog with keys and textedits
-        # return a dict
-        #self.plotstream = self.plotstream.offset(offsetdict)
+        dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys)
+        if dlg.ShowModal() == wx.ID_OK:
+            for key in keys:
+                offset = eval('dlg.'+key+'TextCtrl.GetValue()')
+                offsetdict[key] = float(offset)
 
-        #self.SetPageValues(self.plotstream)
-        #self.OnPlot(self.plotstream,self.shownkeylist)
+            if not len(self.plotstream) == 0 and not len(offsetdict) == 0:
+                self.plotstream = self.plotstream.offset(offsetdict)
+                self.SetPageValues(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()        
+        self.changeStatusbar("Ready")
 
     def onActivityButton(self, event):
         """
@@ -1176,54 +1227,69 @@ Suite 330, Boston, MA  02111-1307  USA"""
     # ####################
     # Absolute functions
 
-    
-    def onDrawBaseButton(self, event):
-        instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
-        stday = self.menu_p.bas_page.startDatePicker.GetValue()
-        day = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),"%Y-%m-%d")
-        duration = int(self.menu_p.bas_page.durationTextCtrl.GetValue())
-        degree = float(self.menu_p.bas_page.degreeTextCtrl.GetValue())
-        func = "bspline"
-        useweight = self.menu_p.bas_page.baseweightCheckBox.GetValue()
-        #if not os.path.isfile(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj')):
-        #    self.menu_p.rep_page.logMsg(' --- Baseline files recaluclated')
-        #    GetBaseline(instr, day, duration, func, degree, useweight)
-        #meandiffabs = read_magstruct(os.path.join(baselinepath,instr,"baseline_"+day+"_"+str(duration)+".txt"))
-        #diffabs = read_magstruct(os.path.join(baselinepath,instr,"diff2di_"+day+"_"+str(duration)+".txt"))
 
-        #self.plot_p.mainPlot(meandiffabs,diffabs,[],"auto",[1,2,3],['o','o'],1,"Baseline")
-        #self.plot_p.canvas.draw()
+    def onLoadDI(self,event):
+        """
+        open dialog to load DI data
+        """
+        if len(self.stream) > 0:
+            pass
+            # send a message box that this data will be erased
 
-    def onDrawBaseFuncButton(self, event):
-        instr = self.menu_p.bas_page.basevarioComboBox.GetValue()
-        stday = self.menu_p.bas_page.startDatePicker.GetValue()
-        day = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),"%Y-%m-%d")
-        duration = int(self.menu_p.bas_page.durationTextCtrl.GetValue())
-        degree = float(self.menu_p.bas_page.degreeTextCtrl.GetValue())
-        #func = self.bascompselect
-        #print func
-        #func = "bspline"
-        useweight = self.menu_p.bas_page.baseweightCheckBox.GetValue()
-        recalcselect = self.menu_p.bas_page.baserecalcCheckBox.GetValue()
-        self.menu_p.rep_page.logMsg('Base func for %s for range %s minus %d days using %s with degree %s, recalc %d' % (instr,day,duration,func,degree,recalcselect))
-        #if not (os.path.isfile(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj')) and recalcselect == False):
-        #    self.menu_p.rep_page.logMsg(' --- Baseline files recaluclated')
-        #    GetBaseline(instr, day, duration, func, degree, useweight)
-        #meandiffabs = read_magstruct(os.path.join(baselinepath,instr,"baseline_"+day+"_"+str(duration)+".txt"))
-        #modelfile = os.path.normpath(os.path.join(baselinepath,instr,day+"_"+str(duration)+"_"+'func.obj'))
-        #outof = Model2Struct(modelfile,5000)
+        dlg = LoadDIDialog(None, title='Get DI data')
+        if dlg.ShowModal() == wx.ID_OK:
+            print "Got data", dlg.pathlist
+            self.menu_p.abs_page.diTextCtrl.SetValue(', '.join(dlg.pathlist))
+            self.dipathlist = dlg.pathlist          
 
-        #self.plot_p.mainPlot(meandiffabs,outof,[],"auto",[1,2,3],['o','-'],0,"Baseline function")
-        #self.plot_p.canvas.draw()
+        if len(self.dipathlist) > 0:
+            self.menu_p.abs_page.AnalyzeButton.Enable()
+
+        dlg.Destroy()
+
+
+    def onDefineVario(self,event):
+        """
+        open dialog to load DI data
+        """
+        if len(self.stream) > 0:
+            pass
+            # send a message box that this data will be erased
+
+        dlg = DefineVarioDialog(None, title='Get Variometer path')
+        if dlg.ShowModal() == wx.ID_OK:
+            self.menu_p.abs_page.varioTextCtrl.SetValue(dlg.path)            
+            self.divariopath = dlg.path
+        dlg.Destroy()
+
+
+    def onDefineScalar(self,event):
+        """
+        open dialog to load DI data
+        """
+        if len(self.stream) > 0:
+            pass
+            # send a message box that this data will be erased
+        dlg = DefineScalarDialog(None, title='Get path for scalar data')
+        if dlg.ShowModal() == wx.ID_OK:
+            self.menu_p.abs_page.scalarTextCtrl.SetValue(dlg.path)            
+            self.discalarpath = dlg.path
+        dlg.Destroy()
+
+
+    def onDIAnalyze(self,event):
+        """
+        open dialog to load DI data
+        """
+        if len(self.dipathlist) > 0:
+            #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=expD,expI=expI, diid=diid,stationid=stationid,abstype=abstype,azimuth=azimuth,pier=pier, alpha=alpha,deltaF=deltaF, starttime=begin,endtime=end, db=db,dbadd=dbadd)
+            print 'xxx' 
+
 
     def onStabilityTestButton(self, event):
         self.menu_p.rep_page.logMsg(' --- Starting baseline stability analysis')
         stday = self.menu_p.bas_page.startDatePicker.GetValue()
         day = datetime.fromtimestamp(stday.GetTicks()) 
-
-    def onBasCompchanged(self, event):
-        self.bascompselect = self.menu_p.bas_page.func[event.GetInt()]
-
 
     def onSaveVarioButton(self, event):
 
@@ -1287,42 +1353,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onAbsCompchanged(self, event):
         self.abscompselect = self.menu_p.abs_page.comp[event.GetInt()]
 
-    def onDrawAllAbsButton(self, event):
-        # 1.) Load data
-        """
-        meanabs = read_magstruct(os.path.normpath(os.path.join(abssummarypath,'absolutes.out')))
-        self.menu_p.rep_page.logMsg('Absolute Anaylsis: Selected %s' % self.abscompselect)
-         2.) Select components
-        if (self.abscompselect == "xyz"):
-            showdata = meanabs
-        elif (self.abscompselect == "hdz"):
-            showdata = convertdatastruct(meanabs,"xyz2hdz")
-        elif (self.abscompselect == "idf"):
-            showdata = convertdatastruct(meanabs,"xyz2idf")
-        else:
-            showdata = meanabs
-        # 3.) Select flagging
-        secdata = []
-        flagging = self.menu_p.abs_page.showFlaggedCheckBox.GetValue()
-        if flagging:
-            try:
-                acceptedflags = [1,3]
-                secdata, msg = filterFlag(showdata,acceptedflags)
-                print len(secdata)
-                self.menu_p.rep_page.logMsg(' --- flagged data added \n %s' % msg)
-            except:
-                self.menu_p.rep_page.logMsg(' --- Unflagging failed')
-                pass
-
-        # 4.) Add data to container
-        # use xyz data here
-        #self.datacont.magdatastruct1 = meanabs
-
-        #display1data, filtmsg = filterFlag(showdata,[0,2])
-
-        #self.plot_p.mainPlot(display1data,secdata,[],"auto",[1,2,3],['o','o'],0,"Absolutes")
-        """
-        self.plot_p.canvas.draw()
 
     def onSaveFlaggedAbsButton(self, event):
         self.menu_p.rep_page.logMsg(' --- Saving data - soon')

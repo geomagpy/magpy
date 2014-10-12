@@ -297,6 +297,104 @@ class DatabaseContentDialog(wx.Dialog):
         self.Destroy()
 
 
+class OptionsInitDialog(wx.Dialog):
+    """
+    Dialog for Database Menu - Connect MySQL
+    """
+    
+    def __init__(self, parent, title):
+        super(OptionsInitDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        # single anaylsis
+        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        self.hostLabel = wx.StaticText(self, label="Host")
+        self.hostTextCtrl = wx.TextCtrl(self,value="localhost")
+        self.userLabel = wx.StaticText(self, label="User")
+        self.userTextCtrl = wx.TextCtrl(self, value="Max")
+        self.passwdLabel = wx.StaticText(self, label="Password")
+        self.passwdTextCtrl = wx.TextCtrl(self, value="Secret")
+        self.dbLabel = wx.StaticText(self, label="Database")
+        self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")        
+        self.dirnameLabel = wx.StaticText(self, label="Default directory")
+        self.dirnameTextCtrl = wx.TextCtrl(self, value=".")
+        self.filenameLabel = wx.StaticText(self, label="Default filename")
+        self.filenameTextCtrl = wx.TextCtrl(self, value="noname.txt")
+        self.resolutionLabel = wx.StaticText(self, label="PlotResolution")
+        self.resolutionTextCtrl = wx.TextCtrl(self, value="10000")
+        self.compselectLabel = wx.StaticText(self, label="Components")
+        self.compselectTextCtrl = wx.TextCtrl(self, value="xyz")
+        self.abscompselectLabel = wx.StaticText(self, label="DI Components")
+        self.abscompselectTextCtrl = wx.TextCtrl(self, value="xyz")        
+        self.closeButton = wx.Button(self, label='Cancel')
+        self.saveButton = wx.Button(self, wx.ID_OK, label='Save')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=4, cols=4, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.hostLabel, noOptions),
+                 (self.userLabel, noOptions),
+                 (self.passwdLabel, noOptions),
+                 (self.dbLabel, noOptions),
+                 (self.hostTextCtrl, expandOption),
+                 (self.userTextCtrl, expandOption),
+                 (self.passwdTextCtrl, expandOption),
+                 (self.dbTextCtrl, expandOption),
+                 (self.dirnameLabel, noOptions),
+                 (self.filenameLabel, noOptions),
+                 (self.resolutionLabel, noOptions),
+                 (self.compselectLabel, noOptions),
+                 (self.dirnameTextCtrl, expandOption),
+                 (self.filenameTextCtrl, expandOption),
+                 (self.resolutionTextCtrl, expandOption),
+                 (self.compselectTextCtrl, expandOption),
+                 (self.abscompselectLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.abscompselectTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                  emptySpace,
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+
+# ###################################################
+#    Stream page
+# ###################################################
+
 class StreamExtractValuesDialog(wx.Dialog):
     """
     Dialog for Stream panel 
@@ -452,49 +550,46 @@ class StreamSelectKeysDialog(wx.Dialog):
     def OnClose(self, e):        
         self.Destroy()
 
-class OptionsInitDialog(wx.Dialog):
+
+# ###################################################
+#    Analysis page
+# ###################################################
+
+class AnalysisFitDialog(wx.Dialog):
     """
-    Dialog for Database Menu - Connect MySQL
+    Dialog for Stream panel 
+    Select shown keys
     """
     
-    def __init__(self, parent, title):
-        super(OptionsInitDialog, self).__init__(parent=parent, 
+    def __init__(self, parent, title, fitfunc, fitknots, fitdegree):
+        super(AnalysisFitDialog, self).__init__(parent=parent, 
             title=title, size=(400, 600))
+        self.fitfunc = fitfunc
+        self.funclist = ['spline','polynomial']
+        self.fitknots = fitknots
+        self.fitdegree = fitdegree
         self.createControls()
         self.doLayout()
         self.bindControls()
         
     # Widgets
     def createControls(self):
-        # single anaylsis
-        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        self.hostLabel = wx.StaticText(self, label="Host")
-        self.hostTextCtrl = wx.TextCtrl(self,value="localhost")
-        self.userLabel = wx.StaticText(self, label="User")
-        self.userTextCtrl = wx.TextCtrl(self, value="Max")
-        self.passwdLabel = wx.StaticText(self, label="Password")
-        self.passwdTextCtrl = wx.TextCtrl(self, value="Secret")
-        self.dbLabel = wx.StaticText(self, label="Database")
-        self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")        
-        self.dirnameLabel = wx.StaticText(self, label="Default directory")
-        self.dirnameTextCtrl = wx.TextCtrl(self, value=".")
-        self.filenameLabel = wx.StaticText(self, label="Default filename")
-        self.filenameTextCtrl = wx.TextCtrl(self, value="noname.txt")
-        self.resolutionLabel = wx.StaticText(self, label="PlotResolution")
-        self.resolutionTextCtrl = wx.TextCtrl(self, value="10000")
-        self.compselectLabel = wx.StaticText(self, label="Components")
-        self.compselectTextCtrl = wx.TextCtrl(self, value="xyz")
-        self.abscompselectLabel = wx.StaticText(self, label="DI Components")
-        self.abscompselectTextCtrl = wx.TextCtrl(self, value="xyz")        
+        self.funcLabel = wx.StaticText(self, label="Fit function:")
+        self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
+            style=wx.CB_DROPDOWN, value=self.fitfunc)
+        self.knotsLabel = wx.StaticText(self, label="Knots [e.g. 0.5  (0..1)] (spline only):")
+        self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots)
+        self.degreeLabel = wx.StaticText(self, label="Degree [e.g. 1, 2, 345, etc.] (polynomial only):")
+        self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree)
+        self.okButton = wx.Button(self, wx.ID_OK, label='Fit')
         self.closeButton = wx.Button(self, label='Cancel')
-        self.saveButton = wx.Button(self, wx.ID_OK, label='Save')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=4, cols=4, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -502,35 +597,16 @@ class OptionsInitDialog(wx.Dialog):
         emptySpace = ((0, 0), noOptions)
 
         # Add the controls to the sizers:
-        for control, options in \
-                [(self.hostLabel, noOptions),
-                 (self.userLabel, noOptions),
-                 (self.passwdLabel, noOptions),
-                 (self.dbLabel, noOptions),
-                 (self.hostTextCtrl, expandOption),
-                 (self.userTextCtrl, expandOption),
-                 (self.passwdTextCtrl, expandOption),
-                 (self.dbTextCtrl, expandOption),
-                 (self.dirnameLabel, noOptions),
-                 (self.filenameLabel, noOptions),
-                 (self.resolutionLabel, noOptions),
-                 (self.compselectLabel, noOptions),
-                 (self.dirnameTextCtrl, expandOption),
-                 (self.filenameTextCtrl, expandOption),
-                 (self.resolutionTextCtrl, expandOption),
-                 (self.compselectTextCtrl, expandOption),
-                 (self.abscompselectLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.abscompselectTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+        contlst=[(self.funcLabel, noOptions)]
+        contlst.append((self.funcComboBox, expandOption))
+        contlst.append((self.knotsLabel, noOptions))
+        contlst.append((self.knotsTextCtrl, expandOption))
+        contlst.append((self.degreeLabel, noOptions))
+        contlst.append((self.degreeTextCtrl, expandOption))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        print contlst
+        for control, options in contlst:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -544,5 +620,280 @@ class OptionsInitDialog(wx.Dialog):
         
     def OnClose(self, e):        
         self.Destroy()
+
+
+class AnalysisOffsetDialog(wx.Dialog):
+    """
+    Dialog for Stream panel 
+    Select shown keys
+    """
+    
+    def __init__(self, parent, title, keylst):
+        super(AnalysisOffsetDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.keylst = keylst
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):        
+        for elem in self.keylst:
+            exec('self.'+elem+'Label = wx.StaticText(self,label="'+elem+'")')
+            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="")')
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=len(self.keylst), cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        for elem in self.keylst:
+            contlst.append(eval('(self.'+elem+'Label, noOptions)'))
+            contlst.append(eval('(self.'+elem+'TextCtrl, expandOption)'))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        #print "Hello:", contlst
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+
+# ###################################################
+#    DI page
+# ###################################################
+
+
+class LoadDIDialog(wx.Dialog):
+    """
+    Dialog for Stream panel 
+    Select shown keys
+    """
+    
+    def __init__(self, parent, title):
+        super(LoadDIDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.pathlist = []
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        self.sourceLabel = wx.StaticText(self, label="Choose DI source:")
+        self.loadfileLabel = wx.StaticText(self, label="1) Access local files:")
+        self.loadFileButton = wx.Button(self,-1,"Load File(s)",size=(120,30))
+        self.getdbLabel = wx.StaticText(self, label="2) Access database:")
+        self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Take')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst=[(self.sourceLabel, noOptions)]
+        contlst.append((self.loadfileLabel, noOptions))
+        contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.getdbLabel, noOptions))
+        contlst.append((self.remoteLabel, noOptions))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadDIFiles)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+    def OnLoadDIFiles(self,e):
+        self.dirname = ''
+        stream = DataStream()
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.pathlist = dlg.GetPaths()
+        dlg.Destroy()
+
+
+class DefineVarioDialog(wx.Dialog):
+    """
+    Dialog for Stream panel 
+    Select shown keys
+    """
+    
+    def __init__(self, parent, title):
+        super(DefineVarioDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.path = ''
+        self.variopath = ''
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        self.sourceLabel = wx.StaticText(self, label="Choose Variometer source:")
+        self.loadfileLabel = wx.StaticText(self, label="1) Access local files:")
+        self.loadFileButton = wx.Button(self,-1,"Get Path",size=(120,30))
+        self.getdbLabel = wx.StaticText(self, label="2) Access database:")
+        self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Use')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst=[(self.sourceLabel, noOptions)]
+        contlst.append((self.loadfileLabel, noOptions))
+        contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.getdbLabel, noOptions))
+        contlst.append((self.remoteLabel, noOptions))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineVario)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+    def OnDefineVario(self,e):
+        dialog = wx.DirDialog(None, "Choose a directory with variometer data:",self.variopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.path = dialog.GetPath()
+            self.variopath = self.path
+        dialog.Destroy()
+
+
+class DefineScalarDialog(wx.Dialog):
+    """
+    Dialog for Stream panel 
+    Select shown keys
+    """
+    
+    def __init__(self, parent, title):
+        super(DefineScalarDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.path = ''
+        self.scalarpath = ''
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        self.sourceLabel = wx.StaticText(self, label="Choose Variometer source:")
+        self.loadfileLabel = wx.StaticText(self, label="1) Access local files:")
+        self.loadFileButton = wx.Button(self,-1,"Get Path",size=(120,30))
+        self.getdbLabel = wx.StaticText(self, label="2) Access database:")
+        self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Use')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst=[(self.sourceLabel, noOptions)]
+        contlst.append((self.loadfileLabel, noOptions))
+        contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.getdbLabel, noOptions))
+        contlst.append((self.remoteLabel, noOptions))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineScalar)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+
+    def OnDefineScalar(self,e):
+        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",self.scalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.path = dialog.GetPath()
+            self.scalarpath = self.path
+        dialog.Destroy()
 
 
