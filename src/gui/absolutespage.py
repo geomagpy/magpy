@@ -33,17 +33,17 @@ class AbsolutePage(wx.Panel):
     # Widgets
     def createControls(self):
         self.diLabel = wx.StaticText(self, label="DI files:")
-        self.loadDIButton = wx.Button(self,-1,"Load DI data",size=(120,30))
+        self.loadDIButton = wx.Button(self,-1,"Load DI data",size=(130,30))
         self.diTextCtrl = wx.TextCtrl(self, value="--")
         self.varioLabel = wx.StaticText(self, label="Variometer:")
-        self.defineVarioButton = wx.Button(self,-1,"Select path",size=(120,30))
+        self.defineVarioButton = wx.Button(self,-1,"Select path",size=(130,30))
         self.varioTextCtrl = wx.TextCtrl(self, value="--")
         self.scalarLabel = wx.StaticText(self, label="Scalar:")
-        self.defineScalarButton = wx.Button(self,-1,"Select path",size=(120,30))
+        self.defineScalarButton = wx.Button(self,-1,"Select path",size=(130,30))
         self.scalarTextCtrl = wx.TextCtrl(self, value="--")
-        self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(120,30))
+        self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(130,30))
         self.advancedLabel = wx.StaticText(self, label="Advanced:")
-        self.advancedButton = wx.Button(self,-1,"Set parameter",size=(120,30))
+        self.advancedButton = wx.Button(self,-1,"Set parameter",size=(130,30))
         self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(300,250),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
 

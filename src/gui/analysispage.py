@@ -38,26 +38,26 @@ class AnalysisPage(wx.Panel):
         self.head3Label = wx.StaticText(self, label="Filtering:")
         # 1. Section
         self.samplingrateLabel = wx.StaticText(self, label="Samp. period (sec):")
-        self.samplingrateTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
+        self.samplingrateTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
         self.amountLabel = wx.StaticText(self, label="N of data point:")
-        self.amountTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
+        self.amountTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
         self.typeLabel = wx.StaticText(self, label="Datatype:")
-        self.typeTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
+        self.typeTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
         self.keysLabel = wx.StaticText(self, label="Used keys:")
-        self.keysTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
+        self.keysTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
         self.samplingrateTextCtrl.Disable()
         self.amountTextCtrl.Disable()
         self.typeTextCtrl.Disable()
         self.keysTextCtrl.Disable()
 
         # 2. Section
-        self.outlierButton = wx.Button(self,-1,"Remove outlier",size=(120,30))
-        self.outlieroptionsButton = wx.Button(self,-1,"Options",size=(120,30))
-        self.derivativeButton = wx.Button(self,-1,"Derivative",size=(120,30))
-        self.fitButton = wx.Button(self,-1,"Fit",size=(120,30))
-        self.offsetButton = wx.Button(self,-1,"Offsets",size=(120,30))
-        self.rotationButton = wx.Button(self,-1,"Rotation",size=(120,30))
-        self.activityButton = wx.Button(self,-1,"Activity",size=(120,30))
+        self.outlierButton = wx.Button(self,-1,"Remove outlier",size=(130,30))
+        self.outlieroptionsButton = wx.Button(self,-1,"Analysis Options",size=(130,30))
+        self.derivativeButton = wx.Button(self,-1,"Derivative",size=(130,30))
+        self.fitButton = wx.Button(self,-1,"Fit",size=(130,30))
+        self.offsetButton = wx.Button(self,-1,"Offsets",size=(130,30))
+        self.rotationButton = wx.Button(self,-1,"Rotation",size=(130,30))
+        self.activityButton = wx.Button(self,-1,"Activity",size=(130,30))
         # 3. Section
         self.selectfilterLabel = wx.StaticText(self, label="Select type:")
         self.selectfilterComboBox = wx.ComboBox(self, choices=self.filterlist,
@@ -65,7 +65,7 @@ class AnalysisPage(wx.Panel):
         self.selectlengthLabel = wx.StaticText(self, label="Select length:")
         self.selectlengthComboBox = wx.ComboBox(self, choices=self.filterlength,
             style=wx.CB_DROPDOWN, value=self.filterlength[0])
-        self.filterButton = wx.Button(self,-1,"Filter!",size=(120,30))
+        self.filterButton = wx.Button(self,-1,"Filter!",size=(130,30))
 
  
     def doLayout(self):

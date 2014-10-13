@@ -480,8 +480,8 @@ class PortCommunicationPage(wx.Panel):
         
     # Widgets
     def createControls(self):
-        self.selectPortButton = wx.Button(self,-1,"Select Port")
-        self.portnameTextCtrl = wx.TextCtrl(self, value="--")
+        self.selectPortButton = wx.Button(self,-1,"Select MARTAS")
+        self.portnameTextCtrl = wx.TextCtrl(self, value="coming soon")
         self.portnameTextCtrl.Disable()
         self.sliderLabel = wx.StaticText(self, label="Update frequency:")
         self.frequSlider = wx.Slider(self, -1, 10, 1, 20, (-1, -1), (100, -1), 

@@ -35,9 +35,9 @@ class StreamPage(wx.Panel):
         self.lineLabel2 = wx.StaticText(self, label="__________________")
         self.lineLabel3 = wx.StaticText(self, label="__________________")
         self.lineLabel4 = wx.StaticText(self, label="__________________")
-        self.pathLabel = wx.StaticText(self, label="Path:")
+        self.pathLabel = wx.StaticText(self, label="Path/Source:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
-        self.fileLabel = wx.StaticText(self, label="File:")
+        self.fileLabel = wx.StaticText(self, label="File/Table:")
         self.fileTextCtrl = wx.TextCtrl(self, value="*")
         self.startdateLabel = wx.StaticText(self, label="Start date:")
         self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-11-22","%Y-%m-%d").timetuple())))
@@ -52,20 +52,20 @@ class StreamPage(wx.Panel):
                                                style=0,useFixedWidthFont=True,
                                                value=datetime.now().strftime('%X'), pos = (250,70))
 
-        self.openStreamButton = wx.Button(self,-1,"Open stream",size=(120,30))
+        self.openStreamButton = wx.Button(self,-1,"Open stream",size=(130,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
-        self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(120,30))
-        self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(120,30))
-        self.restoreButton = wx.Button(self,-1,"Restore data",size=(120,30))
-        self.changePlotButton = wx.Button(self,-1,"General Options",size=(120,30))
-        self.errorBarsButton = wx.Button(self,-1,"Error bars",size=(120,30))
+        self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(130,30))
+        self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(130,30))
+        self.restoreButton = wx.Button(self,-1,"Restore data",size=(130,30))
+        self.changePlotButton = wx.Button(self,-1,"General Options",size=(130,30))
+        self.errorBarsButton = wx.Button(self,-1,"Error bars",size=(130,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
         self.annotateCheckBox = wx.CheckBox(self,label="annotate")
         self.confinexCheckBox = wx.CheckBox(self,
             label="confine time")        
-        self.DrawButton = wx.Button(self,-1,"ReDraw",size=(120,30))
+        self.DrawButton = wx.Button(self,-1,"ReDraw",size=(130,30))
         self.compRadioBox.Disable()
 
 

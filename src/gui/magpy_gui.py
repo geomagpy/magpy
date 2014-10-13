@@ -450,10 +450,10 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.activityButton.Disable() # enabled at initial plot
         self.menu_p.ana_page.offsetButton.Disable()
         self.menu_p.ana_page.fitButton.Disable()
-        self.menu_p.ana_page.activityButton.Disable()
         self.menu_p.ana_page.filterButton.Disable()
         self.menu_p.ana_page.outlierButton.Disable()
         self.menu_p.ana_page.derivativeButton.Disable()
+        self.menu_p.ana_page.rotationButton.Disable()
  
         self.sp.SplitVertically(self.plot_p,self.menu_p,700)
 
@@ -472,7 +472,7 @@ class MainFrame(wx.Frame):
 
     def initParameter(self, dictionary):
         # Variable initializations
-        self.dbname = dictionary['db']
+        self.dbname = dictionary['dbname']
         self.user = dictionary['user']
         pwd = dictionary['passwd']
         self.passwd = base64.b64decode(pwd)
@@ -557,6 +557,7 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.filterButton.Enable()
             self.menu_p.ana_page.outlierButton.Enable()
             self.menu_p.ana_page.derivativeButton.Enable()
+            self.menu_p.ana_page.rotationButton.Enable()
 
         self.changeStatusbar("Ready")
 
@@ -737,19 +738,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
                 self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                 stream = read(path_or_url=url)
-                self.SetPageValues(stream)
-                #self.menu_p.str_page.startDatePicker.Disable()
-                #self.menu_p.str_page.endDatePicker.Disable()
-                #self.menu_p.str_page.startTimePicker.Disable()
-                #self.menu_p.str_page.endTimePicker.Disable()
-                self.menu_p.str_page.openStreamButton.Disable()
-                self.OnInitialPlot(stream)
-                self.changeStatusbar("Ready")
+                if len(stream) > 0:
+                    self.SetPageValues(stream)
+                    self.menu_p.str_page.openStreamButton.Disable()
+                    self.OnInitialPlot(stream)
             else:
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
-        self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
-        self.stream = stream
-        self.plotstream = stream
+        if len(stream) > 0:
+            self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
+            self.stream = stream
+            self.plotstream = stream
+        self.changeStatusbar("Ready")
         dlg.Destroy()        
 
 
@@ -838,7 +837,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.Destroy()        
 
     def _db_connect(self, host, user, passwd, dbname):
-        self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=dbname)
+        try:
+            self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=dbname)
+        except:
+            self.db = False
         if self.db:
             self.DBOpen.Enable(True)
             self.menu_p.rep_page.logMsg('- MySQL Database selected.')
@@ -923,15 +925,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
             user = dlg.userTextCtrl.GetValue()
             passwd = dlg.passwdTextCtrl.GetValue()
             db = dlg.dbTextCtrl.GetValue()
-            if db == 'None':
-                db = None
+            if db == '':
+                db = 'None'
             filename=dlg.filenameTextCtrl.GetValue()
             dirname=dlg.dirnameTextCtrl.GetValue()
             resolution=dlg.resolutionTextCtrl.GetValue()
             compselect= 'xyz' # compselect
             abscompselect= 'xyz' #abscompselect
             basecompselect= 'poly' #basecompselect
-            saveini(host=host, user=user, passwd=passwd, db=db, filename=filename, dirname=dirname, compselect=compselect, abscompselect=abscompselect, basecompselect=basecompselect)
+            saveini(host=host, user=user, passwd=passwd, dbname=db, filename=filename, dirname=dirname, compselect=compselect, abscompselect=abscompselect, basecompselect=basecompselect)
             inipara = loadini()
             self.initParameter(inipara)
 
