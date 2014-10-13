@@ -1445,7 +1445,7 @@ CALLED BY:
             val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
             self._put_column(dval, put2keys[i])
-            self.header['col-'+put2keys[i]] = r"${\partial %s}/{\partial t}$" % (key)
+            self.header['col-'+put2keys[i]] = r"d%s vs dt" % (key)
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
@@ -3062,16 +3062,15 @@ CALLED BY:
         #fig = matplotlib.figure.Figure()
 
         plotstream = self
-        if resolution:
+        if resolution and len(plotstream) > resolution:
             loggerstream.info("plot: Reducing resultion ...")
             loggerstream.info("plot: Original resolution: %i" % len(plotstream))
-            if len(plotstream) > resolution:
-                stepwidth = int(len(plotstream)/resolution)
+            stepwidth = int(len(plotstream)/resolution)
             plotstream = DataStream(plotstream[::stepwidth],plotstream.header)
             loggerstream.info("plot: New resolution: %i" % len(plotstream))
          
 
-        loggerstream.info("plot: Start plotting. %i" % len(plotstream))
+        loggerstream.info("plot: Start plotting of stream with length %i" % len(plotstream))
 
 
         t = np.asarray([row[0] for row in plotstream])

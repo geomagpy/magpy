@@ -1748,14 +1748,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if readfile:
         # Get list of files
         if isinstance(absdata, basestring):
-            print "Found string"
+            #print "Found string"
             #filelist.append(absdata)
             if "://" in absdata:
                 print "Found URL code - requires name of data set with date" 
                 filelist.append(absdata)
                 movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
             elif os.path.isfile(absdata):
-                print "Found single file"
+                #print "Found single file"
                 filelist.append(absdata)
             else:
                 if os.path.exists(absdata):
@@ -1768,7 +1768,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         filelist.append(os.path.join(absdata,file))
         else:
             try:
-                print "Found List"
+                #print "Found List"
                 listlen = len(absdata)
                 for elem in absdata:
                     if "://" in absdata:
@@ -1776,7 +1776,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         filelist.append(elem)
                         movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
                     elif os.path.isfile(elem):
-                        print "Found single file"
+                        #print "Found single file"
                         filelist.append(elem)
             except:
                 print "Could not interpret absdata"
@@ -1823,8 +1823,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print "Starting analysis for ", date
         print "------------------------------------------------------"
         # a) Read variodata
-        variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-        print "Length of Variodata:", len(variostr)
+        try:
+            variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
+            print "Length of Variodata:", len(variostr)
+        except:
+            print "absoluteAnalysis: reading variometer data failed"
+            variostr = DataStream()
         if len(variostr) > 3: # can contain ([], 'File not specified')
             variostr =variostr.rotation(alpha=alpha, beta=beta)
             vafunc = variostr.interpol(['x','y','z'])
@@ -1834,8 +1838,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             
         # b) Load Scalardata
         print "-----------------"
-        scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
-        print "Length of Scalardata:", len(scalarstr)
+        try:
+            scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
+            print "Length of Scalardata:", len(scalarstr)
+        except:
+            print "absoluteAnalysis: reading scalar data failed"
+            scalarstr = DataStream()
         if len(scalarstr) > 3: # Because scalarstr can contain ([], 'File not specified')
             scfunc = scalarstr.interpol(['f'])
         else:

@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
 try:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-except:
     from stream import *
     from absolutes import *
     from transfer import *
     from database import *
+except:
+    from magpy.stream import *
+    from magpy.absolutes import *
+    from magpy.transfer import *
+    from magpy.database import *
 
 import wx
 
@@ -32,7 +32,8 @@ class ScreenSelections(object):
         self.selvallist = []
 
     def updateList(self):
-        print self.seldatelist[len(self.seldatelist)-1]
+        #print self.seldatelist[len(self.seldatelist)-1]
+        pass
         #panel = wx.Panel(self,-1)
         #self.sp = MenuPanel(panel)
         #self.menu_p.rep_page.logMsg
@@ -468,7 +469,7 @@ class ReportPage(wx.Panel):
     def logMsg(self, message):
         ''' Private method to append a string to the logger text
             control. '''
-        print message
+        #print message
         self.logger.AppendText('%s\n'%message)
 
 class PortCommunicationPage(wx.Panel):

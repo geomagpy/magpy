@@ -39,13 +39,13 @@ def loadobj(filename):
     with open(filename, 'r') as f:
         return pickle.load(f)
 
-def saveini(db=None, user=None, passwd=None, host=None, filename=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None):
+def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None, diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None, dialpha = None, dideltaF = None, didbadd = None):
     """
     Method for creating credentials
     """
 
-    if not db:
-        db = None
+    if not dbname:
+        dbname = 'None'
     if not user:
         user = 'max'
     if not passwd:
@@ -60,23 +60,53 @@ def saveini(db=None, user=None, passwd=None, host=None, filename=None, dirname=N
         resolution = 10000
     if not compselect:
         compselect = 'xyz'
+
     if not abscompselect:
         abscompselect = 'xyz'
     if not basecompselect:
         basecompselect = 'bspline'
+
+    if not dipathlist:
+        dipathlist = ''
+    if not divariopath:
+        divariopath = ''
+    if not discalarpath:
+        discalarpath = ''
+    if not diexpD:
+        diexpD = 3.0
+    if not diexpI:
+        diexpI = 64.0
+    if not stationid:
+        stationid = 'wic'
+    if not diid:
+        diid = ''
+    if not ditype:
+        ditype = '' #abstype = ''
+    if not diazimuth:
+        diazimuth = ''
+    if not dipier:
+        dipier = 'A2'
+    if not dialpha:
+        dialpha = ''
+    if not dideltaF:
+        dideltaF = '2.1'
+    if not didbadd:
+        didbadd = False
+    # starttime,endtime
+    #if not db=db # test whether db is connected 
 
     home = os.path.expanduser('~')
     initpath = os.path.join(home,'.magpyguiini')
 
     pwd = base64.b64encode(passwd)
 
-    dictionary = {'db': db, 'user':user, 'passwd':pwd, 'host':host, \
+    dictionary = {'dbname': dbname, 'user':user, 'passwd':pwd, 'host':host, \
                   'filename': filename, 'dirname':dirname, \
                   'compselect':compselect, 'abscompselect':abscompselect, \
-                  'basecompselect':basecompselect, 'resolution':resolution  }
+                  'basecompselect':basecompselect, 'resolution':resolution, 'dipathlist':dipathlist, 'divariopath':divariopath, 'discalarpath':discalarpath, 'diexpD':diexpD, 'diexpI':diexpI, 'stationid':stationid, 'diid':diid, 'ditype':ditype, 'diazimuth':diazimuth, 'dipier':dipier, 'dialpha':dialpha, 'dideltaF':dideltaF, 'didbadd':didbadd }
     
     saveobj(dictionary, initpath)
-    print "Initialization: Added data "
+    #print "Initialization: Added data "
 
 
 def loadini():
@@ -86,17 +116,26 @@ def loadini():
     """
     home = os.path.expanduser('~')
     initpath = os.path.join(home,'.magpyguiini')
-    print "Trying to access initialization file:", initpath
+    #print "Trying to access initialization file:", initpath
 
     try:
         initdata = loadobj(initpath)
     except:
-        print "Init file not found: Could not load data"
+        #print "Init file not found: Could not load data"
         return False
     
-    print "Initialization data loaded"
+    #print "Initialization data loaded"
     return initdata
 
+
+class RedirectText(object):
+    # Taken from: http://www.blog.pythonlibrary.org/2009/01/01/wxpython-redirecting-stdout-stderr/
+    # Used to redirect di results to the multiline textctrl on the DI page
+    def __init__(self,aWxTextCtrl):
+        self.out=aWxTextCtrl
+ 
+    def write(self,string):
+        self.out.WriteText(string)
    
 class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):
@@ -148,7 +187,8 @@ class PlotPanel(wx.Panel):
             plt.axis("off") # turn off axis
             startupimage = 'magpy.png'
             # TODO add alternative positions
-            # use a walk to locate the image in /usr for linux and installation path on win
+            # either use a walk to locate the image in /usr for linux and installation path on win
+            # or put installation path in ini
             img = imread(startupimage)
             self.axes.imshow(img)
             self.canvas.draw()
@@ -384,6 +424,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onFitButton, self.menu_p.ana_page.fitButton)
         self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
+        self.Bind(wx.EVT_BUTTON, self.onRotationButton, self.menu_p.ana_page.rotationButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -394,10 +435,25 @@ class MainFrame(wx.Frame):
         #self.Bind(wx.EVT_CUSTOM_NAME, self.addMsg)
         # Put something on Report page
         self.menu_p.rep_page.logMsg('Begin logging...')
+        # Eventually kill this redirection because it might cause problems from other classes
+        redir=RedirectText(self.menu_p.rep_page.logMsg) # Start redirecting stdout to log window
+        sys.stdout=redir
+
+        # Connect to database
+        self._db_connect(self.host, self.user, self.passwd, self.dbname)
+
 
         # Disable yet unavailbale buttons
         # --------------------------
         self.menu_p.abs_page.AnalyzeButton.Disable()
+
+        self.menu_p.ana_page.activityButton.Disable() # enabled at initial plot
+        self.menu_p.ana_page.offsetButton.Disable()
+        self.menu_p.ana_page.fitButton.Disable()
+        self.menu_p.ana_page.activityButton.Disable()
+        self.menu_p.ana_page.filterButton.Disable()
+        self.menu_p.ana_page.outlierButton.Disable()
+        self.menu_p.ana_page.derivativeButton.Disable()
  
         self.sp.SplitVertically(self.plot_p,self.menu_p,700)
 
@@ -416,7 +472,7 @@ class MainFrame(wx.Frame):
 
     def initParameter(self, dictionary):
         # Variable initializations
-        self.db = dictionary['db']
+        self.dbname = dictionary['db']
         self.user = dictionary['user']
         pwd = dictionary['passwd']
         self.passwd = base64.b64decode(pwd)
@@ -425,8 +481,23 @@ class MainFrame(wx.Frame):
         self.dirname = dictionary['dirname']
         self.resolution = dictionary['resolution']
         self.compselect = dictionary['compselect']
+
         self.abscompselect = dictionary['abscompselect']
         self.bascompselect = dictionary['basecompselect']
+
+        self.dipathlist = dictionary['dipathlist']
+        self.divariopath = dictionary['divariopath']
+        self.discalarpath = dictionary['discalarpath']
+        self.diexpD = dictionary['diexpD']
+        self.diexpI = dictionary['diexpI']
+        self.stationid = dictionary['stationid']
+        self.diid = dictionary['diid']
+        self.ditype = dictionary['ditype'] #abstype
+        self.diazimuth = dictionary['diazimuth']
+        self.dipier = dictionary['dipier']
+        self.dialpha = dictionary['dialpha']
+        self.dideltaF = dictionary['dideltaF']
+        self.didbadd = dictionary['didbadd']
 
     # ################
     # Helper methods:
@@ -472,10 +543,21 @@ class MainFrame(wx.Frame):
                 self.compselect = 'xyz'
                 self.menu_p.str_page.compRadioBox.Enable()
 
-        print "Found keys: ", keylist, self.resolution
+        self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(keylist)))
+        if len(stream) > self.resolution:
+            self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
+
         self.plot_p.guiPlot(stream,keylist,resolution=self.resolution)
         if len(stream) > 0 and len(keylist) > 0:
             self.ExportData.Enable(True)
+            self.menu_p.ana_page.activityButton.Enable() # enabled at initial plot
+            self.menu_p.ana_page.offsetButton.Enable()
+            self.menu_p.ana_page.fitButton.Enable()
+            self.menu_p.ana_page.activityButton.Enable()
+            self.menu_p.ana_page.filterButton.Enable()
+            self.menu_p.ana_page.outlierButton.Enable()
+            self.menu_p.ana_page.derivativeButton.Enable()
+
         self.changeStatusbar("Ready")
 
     def OnPlot(self, stream, keylist, **kwargs):
@@ -637,6 +719,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         # plot data
         self.stream = stream
+        self.plotstream = stream
         if len(stream) > 0:
             self.OnInitialPlot(stream)
             self.changeStatusbar("Ready")
@@ -666,6 +749,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
         self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
         self.stream = stream
+        self.plotstream = stream
         dlg.Destroy()        
 
 
@@ -703,6 +787,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.str_page.endTimePicker.SetValue(maxtime.strftime('%X'))
                 self.menu_p.str_page.pathTextCtrl.SetValue('MySQL Database')
                 self.menu_p.str_page.fileTextCtrl.SetValue(datainfoid)
+                self.menu_p.str_page.startDatePicker.Enable()
+                self.menu_p.str_page.endDatePicker.Enable()
+                self.menu_p.str_page.startTimePicker.Enable()
+                self.menu_p.str_page.endTimePicker.Enable()
+                self.menu_p.str_page.openStreamButton.Enable()
             dlg.Destroy()
         else:
             dlg = wx.MessageDialog(self, "Could not access database!\n"
@@ -734,10 +823,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif coverage == 'year':
                 coverage = timedelta(year=1)
             mode = dlg.modeComboBox.GetValue()
-            print "Stream: ", len(self.stream)
-            print "Main : ", dateformat, fileformat, coverage, mode
+            #print "Stream: ", len(self.stream)
+            #print "Main : ", dateformat, fileformat, coverage, mode
             try:
-                self.stream.write(path,
+                self.plotstream.write(path,
 	   	    		filenamebegins=filenamebegins,
 	  	  		filenameends=filenameends,
 	    			dateformat=dateformat,
@@ -745,9 +834,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
 	    			coverage=coverage,
 	    			format_type=fileformat)
             except:
-                print "Writing failed - Permission?"
+                self.menu_p.rep_page.logMsg("Writing failed - Permission?")
         dlg.Destroy()        
 
+    def _db_connect(self, host, user, passwd, dbname):
+        self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=dbname)
+        if self.db:
+            self.DBOpen.Enable(True)
+            self.menu_p.rep_page.logMsg('- MySQL Database selected.')
+            self.changeStatusbar("Database %s successfully connected" % (dbname))
+        else:
+            self.menu_p.rep_page.logMsg('- MySQL Database access failed.')
+            self.changeStatusbar("Database connection failed")
 
     def OnDBConnect(self, event):
         """
@@ -772,19 +870,26 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.hostTextCtrl.SetValue(self.host)
         dlg.userTextCtrl.SetValue(self.user)
         dlg.passwdTextCtrl.SetValue(self.passwd)
-        if not self.db == None:
-            dlg.dbTextCtrl.SetValue(self.db)
+        if self.db == None or self.db == 'None' or not self.db:
+            dlg.dbTextCtrl.SetValue('None')
         else:
-            dlg.dbTextCtrl.SetValue('None')            
+            dlg.dbTextCtrl.SetValue(self.dbname)            
         if dlg.ShowModal() == wx.ID_OK:
             host = dlg.hostTextCtrl.GetValue()
             user = dlg.userTextCtrl.GetValue()
             passwd = dlg.passwdTextCtrl.GetValue()
             mydb = dlg.dbTextCtrl.GetValue()
+            self._db_connect(host, user, passwd, mydb)
+            """
             self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
             if self.db:
                 self.DBOpen.Enable(True)
                 self.menu_p.rep_page.logMsg('- MySQL Database selected.')
+                self.changeStatusbar("Database %s successfully connected" % (self.db))
+            else:
+                self.menu_p.rep_page.logMsg('- MySQL Database access failed.')
+                self.changeStatusbar("Database connection failed")
+            """
         dlg.Destroy()        
 
     def OnFileQuit(self, event):
@@ -807,10 +912,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.hostTextCtrl.SetValue(self.host)
         dlg.userTextCtrl.SetValue(self.user)
         dlg.passwdTextCtrl.SetValue(self.passwd)
-        if not self.db == None:
-            dlg.dbTextCtrl.SetValue(self.db)
-        else:
-            dlg.dbTextCtrl.SetValue('None')
+        dlg.dbTextCtrl.SetValue(self.dbname)
         dlg.resolutionTextCtrl.SetValue(str(self.resolution))
         dlg.filenameTextCtrl.SetValue(self.filename)
         dlg.dirnameTextCtrl.SetValue(self.dirname)
@@ -886,6 +988,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.plotstream = self.plotstream.nfilter(keys=keys,filter_type=filtertype,resample=True)
 
+        self.menu_p.rep_page.logMsg('- filtering applied')
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
@@ -906,6 +1009,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plotstream = self.plotstream.remove_outlier(keys=keys, timerange=timerange)
         self.plotstream = self.plotstream.remove_flagged()
 
+        self.menu_p.rep_page.logMsg('- removed outliers: check logfile for details')
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
@@ -919,10 +1023,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
 
-        self.plotstream = self.plotstream.differentiate(keys=keys)
+        self.menu_p.rep_page.logMsg("- calculating derivative")
+        self.plotstream = self.plotstream.differentiate(keys=keys,put2keys=keys)
 
-        #self.shownkeylist = self.plotstream._get_key_headers()        
-
+        self.menu_p.rep_page.logMsg('- derivative calculated')
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
@@ -942,7 +1046,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             fitfunc = dlg.funcComboBox.GetValue()
             knots = dlg.knotsTextCtrl.GetValue()
             degree = dlg.degreeTextCtrl.GetValue()
-            print fitfunc, knots, degree
+            self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (fitfunc, knots, degree))
             if not 0<float(knots)<1:
                 knots = 0.5
             if not degree>0:
@@ -957,7 +1061,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 # Msgbox to load data first
                 pass
 
-        dlg.Destroy()        
+        dlg.Destroy()
+        self.menu_p.rep_page.logMsg('- data fitted')
         self.changeStatusbar("Ready")
 
 
@@ -976,7 +1081,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dlg.ShowModal() == wx.ID_OK:
             for key in keys:
                 offset = eval('dlg.'+key+'TextCtrl.GetValue()')
-                offsetdict[key] = float(offset)
+                if not offset == '':
+                    offsetdict[key] = float(offset)
 
             if not len(self.plotstream) == 0 and not len(offsetdict) == 0:
                 self.plotstream = self.plotstream.offset(offsetdict)
@@ -1001,6 +1107,39 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         #self.SetPageValues(self.plotstream)
         #self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onRotationButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Rotating data ...")
+
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+
+        if len(self.plotstream) > 0:
+            # XXX Eventually SetValues from init
+            dlg = AnalysisRotationDialog(None, title='Analysis: rotate data')
+            if dlg.ShowModal() == wx.ID_OK:
+                alphat = dlg.alphaTextCtrl.GetValue()
+                betat = dlg.betaTextCtrl.GetValue()
+                try:
+                    alpha = float(alphat)
+                except:
+                    alpha = 0.0
+                try:      
+                    beta = float(betat)
+                except:
+                    beta = 0.0
+
+                self.plotstream = self.plotstream.rotation(alpha=alpha, beta=beta)
+                self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
+
+                self.SetPageValues(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()        
+        self.changeStatusbar("Ready")
 
     # ################
     # Stream functions
@@ -1051,10 +1190,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
             self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
             self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-            self.menu_p.str_page.startDatePicker.Disable()
-            self.menu_p.str_page.endDatePicker.Disable()
-            self.menu_p.str_page.startTimePicker.Disable()
-            self.menu_p.str_page.endTimePicker.Disable()
+            #self.menu_p.str_page.startDatePicker.Disable()
+            #self.menu_p.str_page.endDatePicker.Disable()
+            #self.menu_p.str_page.startTimePicker.Disable()
+            #self.menu_p.str_page.endTimePicker.Disable()
             self.menu_p.str_page.openStreamButton.Disable()
         except:
             dlg = wx.MessageDialog(self, "Could not read file(s)!\n"
@@ -1064,7 +1203,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.Destroy()
             return
 
-        print "Stream loaded of length ", len(stream) 
+        self.menu_p.rep_page.logMsg('- Stream loaded of length %i' % len(stream))
         self.stream = stream
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
@@ -1168,7 +1307,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 val1 = dlg.value1TextCtrl.GetValue()
                 logic2 = dlg.logic2ComboBox.GetValue()
                 logic3 = dlg.logic3ComboBox.GetValue()
-                print key1, comp1, val1, logic2
                 extractedstream = self.plotstream.extract(key1,val1,comp1)
                 val2 = dlg.value2TextCtrl.GetValue()
                 if not val2 == '':
@@ -1192,7 +1330,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.SetPageValues(self.plotstream)
                 self.OnPlot(extractedstream,self.shownkeylist)
         else:
-            print "Extract: No data available so far"
+            self.menu_p.rep_page.logMsg("Extract: No data available so far")
         # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
 
     def onChangePlotOptions(self,event):
@@ -1238,7 +1376,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         dlg = LoadDIDialog(None, title='Get DI data')
         if dlg.ShowModal() == wx.ID_OK:
-            print "Got data", dlg.pathlist
+            self.menu_p.rep_page.logMsg("- loaded DI data")
             self.menu_p.abs_page.diTextCtrl.SetValue(', '.join(dlg.pathlist))
             self.dipathlist = dlg.pathlist          
 
@@ -1259,7 +1397,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg = DefineVarioDialog(None, title='Get Variometer path')
         if dlg.ShowModal() == wx.ID_OK:
             self.menu_p.abs_page.varioTextCtrl.SetValue(dlg.path)            
-            self.divariopath = dlg.path
+            self.divariopath = os.path.join(dlg.path,'*')
         dlg.Destroy()
 
 
@@ -1273,7 +1411,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg = DefineScalarDialog(None, title='Get path for scalar data')
         if dlg.ShowModal() == wx.ID_OK:
             self.menu_p.abs_page.scalarTextCtrl.SetValue(dlg.path)            
-            self.discalarpath = dlg.path
+            self.discalarpath = os.path.join(dlg.path,'*')
         dlg.Destroy()
 
 
@@ -1282,116 +1420,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         open dialog to load DI data
         """
         if len(self.dipathlist) > 0:
-            #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=expD,expI=expI, diid=diid,stationid=stationid,abstype=abstype,azimuth=azimuth,pier=pier, alpha=alpha,deltaF=deltaF, starttime=begin,endtime=end, db=db,dbadd=dbadd)
-            print 'xxx' 
+            self.changeStatusbar("Processing DI data ...")
+            #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,diid=self.diid,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,pier=self.dipier,alpha=self.dialpha,deltaF=self.dideltaF, dbadd=self.didbadd)
+            redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
+            sys.stdout=redir
+            print "Paths:", self.divariopath,self.discalarpath
+            absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid)
+            # only if more than one point is selected
+            self.changeStatusbar("Ready")
+            if len(absstream) > 1:
+                self.stream = absstream
+                self.OnInitialPlot(self.stream)
 
+            redir=RedirectText(self.menu_p.rep_page.logMsg)
+            sys.stdout=redir
+            
 
-    def onStabilityTestButton(self, event):
-        self.menu_p.rep_page.logMsg(' --- Starting baseline stability analysis')
-        stday = self.menu_p.bas_page.startDatePicker.GetValue()
-        day = datetime.fromtimestamp(stday.GetTicks()) 
-
-    def onSaveVarioButton(self, event):
-
-        self.menu_p.rep_page.logMsg('Save button pressed')
-        if len(self.datacont.magdatastruct1) > 0:
-            # 1.) open format choice dialog
-            choicelst = [ 'txt', 'cdf',  'netcdf' ]
-            # iaga and wdc do not make sense for scalar values
-            # ------ Create the dialog
-            dlg = wx.SingleChoiceDialog( None, message='Save data as', caption='Choose dataformat', choices=choicelst)
-            # ------ Show the dialog
-            if dlg.ShowModal() == wx.ID_OK:
-                response = dlg.GetStringSelection()
-
-                # 2.) message box informing about predefined path
-                # a) generate predefined path and name: (scalar, instr, mod, resolution
-                firstday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[0].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
-                lastday = datetime.strptime(datetime.strftime(num2date(self.datacont.magdatastruct1[-1].time).replace(tzinfo=None),"%Y-%m-%d"),"%Y-%m-%d")
-                tmp,res = CheckTimeResolution(self.datacont.magdatastruct1)
-                loadres = self.menu_p.gra_page.resolutionComboBox.GetValue()
-                if loadres == 'intrinsic':
-                    resstr = 'raw'
-                else:
-                    resstr = GetResolutionString(res[1])
-                instr = self.menu_p.str_page.scalarComboBox.GetValue()
-                # b) create day list
-                day = firstday
-                daylst = []
-                while lastday >= day:
-                    daylst.append(datetime.strftime(day,"%Y-%m-%d"))
-                    day += timedelta(days=1)
-
-                # 3.) save data
-                if not os.path.exists(os.path.normpath(os.path.join(preliminarypath,instr))):
-                    os.makedirs(os.path.normpath(os.path.join(preliminarypath,instr)))
-
-                curnum = 0
-                for day in daylst:
-                    savestruct = []
-                    idx = curnum
-                    for idx, elem in enumerate(self.datacont.magdatastruct1):
-                        if datetime.strftime(num2date(elem.time), "%Y-%m-%d") == day:
-                            savestruct.append(self.datacont.magdatastruct1[idx])
-                            curnum = idx
-
-                    if response == "txt":
-                        savename = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + resstr + '.txt'))
-                        write_magstruct(savename,savestruct)
-                        self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
-                    if response == "cdf":
-                        savename = os.path.normpath(os.path.join(preliminarypath,instr,'va_'+day + '_'+ instr+'_' + resstr + '.cdf'))
-                        write_magstruct_cdf(savename,savestruct)
-                        self.menu_p.rep_page.logMsg('Saved %s data for %s' % (response,day))
-       
-                # 4.) Open a message Box to inform about save
-
-            # ------ Destroy the dialog
-            dlg.Destroy()
-
-    
-    def onAbsCompchanged(self, event):
-        self.abscompselect = self.menu_p.abs_page.comp[event.GetInt()]
-
-
-    def onSaveFlaggedAbsButton(self, event):
-        self.menu_p.rep_page.logMsg(' --- Saving data - soon')
-        savestruct=[]
-        #for elem in self.datacont.magdatastruct1:
-        #    savestruct.append(elem)
-        #savename = os.path.normpath(os.path.join(abssummarypath,'absolutes.out'))
-        #write_magstruct(savename,savestruct)
-        self.menu_p.rep_page.logMsg('Saved Absolute file')
-
-    def onCalcAbsButton(self, event):
-        chgdep = LoadAbsDialog(None, title='Load Absolutes')
-        chgdep.ShowModal()
-        chgdep.Destroy()        
-
-        #abslist = read_general(os.path.join(abssummarypath,'absolutes.out'),0)
-        #meanabs = extract_absolutes(abslist)
-        #self.plot_p.mainPlot(meanabs,[],[],"auto",[1,2,3],['o','o'],0,"Absolutes")
-        self.plot_p.canvas.draw()
-
-    def onNewAbsButton(self, event):
-        abslist = read_general(os.path.join(abssummarypath,'absolutes.out'),0)
-        meanabs = extract_absolutes(abslist)
-        self.plot_p.mainPlot(meanabs,[],[],"auto",[1,2,3],['o','o'],0,"Absolutes")
-        self.plot_p.canvas.draw()
-
-    def onOpenAbsButton(self, event):
-        abslist = read_general(os.path.join(abssummarypath,'absolutes.out'),0)
-        meanabs = extract_absolutes(abslist)
-        self.plot_p.mainPlot(meanabs,[],[],"auto",[1,2,3],['o','o'],0,"Absolutes")
-        self.plot_p.canvas.draw()
-
-    def addMsg(self, msg):
-        print 'Got here'
-        #mf = MainFrame(None,"PyMag")
-        #mf.changeStatusbar('test')
-        #self.menu_p.str_page.deltaFTextCtrl.SetValue('test')
-        #self.menu_p.rep_page.logMsg('msg')
-        #self.menu_p.str_page.deltaFTextCtrl.SendTextUpdatedEvent()
 
 '''
 # To run:        

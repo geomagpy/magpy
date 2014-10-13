@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
 try:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-except:
     from stream import *
     from absolutes import *
     from transfer import *
     from database import *
+except:
+    from magpy.stream import *
+    from magpy.absolutes import *
+    from magpy.transfer import *
+    from magpy.database import *
 
 import wx
 
@@ -36,7 +36,6 @@ class AnalysisPage(wx.Panel):
         self.head1Label = wx.StaticText(self, label="Information:")
         self.head2Label = wx.StaticText(self, label="Basic methods:")
         self.head3Label = wx.StaticText(self, label="Filtering:")
-        self.head4Label = wx.StaticText(self, label="Further functions:")
         # 1. Section
         self.samplingrateLabel = wx.StaticText(self, label="Samp. period (sec):")
         self.samplingrateTextCtrl = wx.TextCtrl(self, value="--",size=(120,30))
@@ -57,6 +56,7 @@ class AnalysisPage(wx.Panel):
         self.derivativeButton = wx.Button(self,-1,"Derivative",size=(120,30))
         self.fitButton = wx.Button(self,-1,"Fit",size=(120,30))
         self.offsetButton = wx.Button(self,-1,"Offsets",size=(120,30))
+        self.rotationButton = wx.Button(self,-1,"Rotation",size=(120,30))
         self.activityButton = wx.Button(self,-1,"Activity",size=(120,30))
         # 3. Section
         self.selectfilterLabel = wx.StaticText(self, label="Select type:")
@@ -104,7 +104,7 @@ class AnalysisPage(wx.Panel):
                  (self.fitButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  (self.offsetButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+                 (self.rotationButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  # section 3
@@ -116,7 +116,7 @@ class AnalysisPage(wx.Panel):
                  (self.selectlengthComboBox, expandOption),
                   emptySpace,
                  (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.head4Label, noOptions),
+                  emptySpace,
                   emptySpace,
                  # end 
                   emptySpace,

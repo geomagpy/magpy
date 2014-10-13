@@ -192,7 +192,7 @@ class DatabaseConnectDialog(wx.Dialog):
         self.userLabel = wx.StaticText(self, label="User")
         self.userTextCtrl = wx.TextCtrl(self, value="Max")
         self.passwdLabel = wx.StaticText(self, label="Password")
-        self.passwdTextCtrl = wx.TextCtrl(self, value="Secret")
+        self.passwdTextCtrl = wx.TextCtrl(self, value="Secret",style=wx.TE_PASSWORD)
         self.dbLabel = wx.StaticText(self, label="Database")
         self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")        
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
@@ -318,7 +318,7 @@ class OptionsInitDialog(wx.Dialog):
         self.userLabel = wx.StaticText(self, label="User")
         self.userTextCtrl = wx.TextCtrl(self, value="Max")
         self.passwdLabel = wx.StaticText(self, label="Password")
-        self.passwdTextCtrl = wx.TextCtrl(self, value="Secret")
+        self.passwdTextCtrl = wx.TextCtrl(self, value="Secret",style=wx.TE_PASSWORD)
         self.dbLabel = wx.StaticText(self, label="Database")
         self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")        
         self.dirnameLabel = wx.StaticText(self, label="Default directory")
@@ -331,6 +331,34 @@ class OptionsInitDialog(wx.Dialog):
         self.compselectTextCtrl = wx.TextCtrl(self, value="xyz")
         self.abscompselectLabel = wx.StaticText(self, label="DI Components")
         self.abscompselectTextCtrl = wx.TextCtrl(self, value="xyz")        
+
+        self.dipathlistLabel = wx.StaticText(self, label="Default DI path")
+        self.divariopathLabel = wx.StaticText(self, label="DI variometer")
+        self.discalarpathLabel = wx.StaticText(self, label="DI scalar")
+        self.diexpDLabel = wx.StaticText(self, label="expected Dec")
+        self.diexpILabel = wx.StaticText(self, label="expected Inc")
+        self.stationidLabel = wx.StaticText(self, label="Station ID")
+        self.diidLabel = wx.StaticText(self, label="DI ID")
+        self.ditypeLabel = wx.StaticText(self, label="DI Type") #abstype
+        self.diazimuthLabel = wx.StaticText(self, label="Azimuth")
+        self.dipierLabel = wx.StaticText(self, label="Pier")
+        self.dialphaLabel = wx.StaticText(self, label="Alpha")
+        self.dideltaFLabel = wx.StaticText(self, label="Delta F")
+        self.didbaddLabel = wx.StaticText(self, label="Add to DB")
+        self.dipathlistTextCtrl = wx.TextCtrl(self, value="/srv/archive/")
+        self.divariopathTextCtrl = wx.TextCtrl(self, value="/srv/archive/")
+        self.discalarpathTextCtrl = wx.TextCtrl(self, value="/srv/archive/")
+        self.diexpDTextCtrl = wx.TextCtrl(self, value="3.0")
+        self.diexpITextCtrl = wx.TextCtrl(self, value="64.0")
+        self.stationidTextCtrl = wx.TextCtrl(self, value="wic")
+        self.diidTextCtrl = wx.TextCtrl(self, value="")
+        self.ditypeTextCtrl = wx.TextCtrl(self, value="Normal") #abstype
+        self.diazimuthTextCtrl = wx.TextCtrl(self, value="")
+        self.dipierTextCtrl = wx.TextCtrl(self, value="A2")
+        self.dialphaTextCtrl = wx.TextCtrl(self, value="")
+        self.dideltaFTextCtrl = wx.TextCtrl(self, value="")
+        self.didbaddTextCtrl = wx.TextCtrl(self, value="False")
+  
         self.closeButton = wx.Button(self, label='Cancel')
         self.saveButton = wx.Button(self, wx.ID_OK, label='Save')
 
@@ -369,6 +397,38 @@ class OptionsInitDialog(wx.Dialog):
                   emptySpace,
                   emptySpace,
                  (self.abscompselectTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.dipathlistLabel, noOptions),
+                 (self.divariopathLabel, noOptions),
+                 (self.discalarpathLabel, noOptions),
+                 (self.ditypeLabel, noOptions),
+                 (self.dipathlistTextCtrl, expandOption),
+                 (self.divariopathTextCtrl, expandOption),
+                 (self.discalarpathTextCtrl, expandOption),
+                 (self.ditypeTextCtrl, expandOption),
+                 (self.stationidLabel, noOptions),
+                 (self.diidLabel, noOptions),
+                 (self.diexpDLabel, noOptions),
+                 (self.diexpILabel, noOptions),
+                 (self.stationidTextCtrl, expandOption),
+                 (self.diidTextCtrl, expandOption),
+                 (self.diexpDTextCtrl, expandOption),
+                 (self.diexpITextCtrl, expandOption),
+                 (self.diazimuthLabel, noOptions),
+                 (self.dipierLabel, noOptions),
+                 (self.dialphaLabel, noOptions),
+                 (self.dideltaFLabel, noOptions),
+                 (self.diazimuthTextCtrl, expandOption),
+                 (self.dipierTextCtrl, expandOption),
+                 (self.dialphaTextCtrl, expandOption),
+                 (self.dideltaFTextCtrl, expandOption),
+                 (self.didbaddLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.didbaddTextCtrl, expandOption),
                   emptySpace,
                   emptySpace,
                   emptySpace,
@@ -534,7 +594,6 @@ class StreamSelectKeysDialog(wx.Dialog):
         contlst = [eval('(self.'+elem+'CheckBox, expandOption)') for elem in self.keylst]
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
-        print contlst
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -605,7 +664,6 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.degreeTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
-        print contlst
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -681,6 +739,64 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.Destroy()
 
 
+class AnalysisRotationDialog(wx.Dialog):
+    """
+    Dialog for Stream panel 
+    Select shown keys
+    """   
+    def __init__(self, parent, title):
+        super(AnalysisRotationDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):        
+        self.alphaLabel = wx.StaticText(self,label="Alpha")
+        self.alphaTextCtrl = wx.TextCtrl(self,value="")
+        self.betaLabel = wx.StaticText(self,label="Beta")
+        self.betaTextCtrl = wx.TextCtrl(self,value="")
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        contlst.append((self.alphaLabel, noOptions))
+        contlst.append((self.alphaTextCtrl, expandOption))
+        contlst.append((self.betaLabel, noOptions))
+        contlst.append((self.betaTextCtrl, expandOption))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+
+
 # ###################################################
 #    DI page
 # ###################################################
@@ -704,9 +820,11 @@ class LoadDIDialog(wx.Dialog):
     def createControls(self):
         self.sourceLabel = wx.StaticText(self, label="Choose DI source:")
         self.loadfileLabel = wx.StaticText(self, label="1) Access local files:")
-        self.loadFileButton = wx.Button(self,-1,"Load File(s)",size=(120,30))
+        self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(120,30))
         self.getdbLabel = wx.StaticText(self, label="2) Access database:")
         self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
+        self.selectedLabel = wx.StaticText(self, label="Selected:")
+        self.selectedTextCtrl = wx.TextCtrl(self, value="--")
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Take')
         self.closeButton = wx.Button(self, label='Cancel')
@@ -729,6 +847,9 @@ class LoadDIDialog(wx.Dialog):
         contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.getdbLabel, noOptions))
         contlst.append((self.remoteLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.selectedLabel, noOptions))
+        contlst.append((self.selectedTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         for control, options in contlst:
