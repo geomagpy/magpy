@@ -658,6 +658,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.ana_page.amountTextCtrl.SetValue(str(n))
         self.menu_p.ana_page.samplingrateTextCtrl.SetValue(str(sr))
         self.menu_p.ana_page.keysTextCtrl.SetValue(keystr)
+        print wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple()))
         self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
         self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
         self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
@@ -1231,8 +1232,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         entime = self.menu_p.str_page.endTimePicker.GetValue()
         ed = datetime.fromtimestamp(enday.GetTicks()) 
 
-        #print sttime, sd, ed
-        
+        if 'AM' or 'PM' in sttime:
+            stt = datetime.strptime(sttime,'%I:%M:%S %p')
+            ett = datetime.strptime(entime,'%I:%M:%S %p')
+        else:
+            stt = datetime.strptime(sttime,'%H:%M:%S')
+            ett = datetime.strptime(entime,'%H:%M:%S')
+
+        start = datetime.combine(datetime.date(sd), datetime.time(stt))
+        end = datetime.combine(datetime.date(ed), datetime.time(ett))
+
         if len(self.stream) == 0:
             dlg = wx.MessageDialog(self, "Please select a path first!\n"
                         "go to File -> Select Dir\n",
@@ -1244,10 +1253,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
             
-        st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
-        start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
-        et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
-        end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
+        #st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
+        #start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
+        #et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
+        #end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
 
         try:
             self.changeStatusbar("Loading data ...")
