@@ -17,7 +17,6 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-from wx.lib.pubsub import Publisher
 
 
 class AnalysisPage(wx.Panel):
@@ -73,7 +72,7 @@ class AnalysisPage(wx.Panel):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=20, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)

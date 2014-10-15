@@ -3171,6 +3171,11 @@ CALLED BY:
                     ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
                 
                 # -- Adjust scales with padding:
+                defaultpad = (np.max(yplt)-np.min(yplt))*0.05
+                if defaultpad == 0.0:
+                    defaultpad = 0.1
+                if not padding or not padding == defaultpad:
+                    padding = defaultpad
                 ymin = np.min(yplt)-padding
                 ymax = np.max(yplt)+padding
 
@@ -5880,9 +5885,14 @@ def extractDateFromString(datestring):
             if len(numberstr) > 4:
                 tmpdaystring = numberstr
         
+        print tmpdaystring
         if len(tmpdaystring) > 8:
-            tmpdaystring = tmpdaystring[:8]
-
+            try: # first try whether an easy pattern can be found e.g. test12014-11-22
+                match = re.search(r'\d{4}-\d{2}-\d{2}', daystring)
+                date = datetime.strptime(match.group(), '%Y-%m-%d').date()
+            except:  # if not use the first 8 digits
+                tmpdaystring = tmpdaystring[:8]
+                pass
         if len(tmpdaystring) == 8:
             try:
                 dateform = '%Y%m%d'

@@ -6,7 +6,11 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-from wx.lib.pubsub import Publisher
+try: # Necessary for wx2.8.11.0
+    from wx.lib.pubsub import setupkwargs
+except:
+    pass
+from wx.lib.pubsub import pub
 
 try:
     from stream import *
@@ -36,7 +40,7 @@ def saveobj(obj, filename):
         pickle.dump(obj,f,pickle.HIGHEST_PROTOCOL)
 
 def loadobj(filename):
-    with open(filename, 'r') as f:
+    with open(filename, 'rb') as f:
         return pickle.load(f)
 
 def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None, diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None, dialpha = None, dideltaF = None, didbadd = None):
@@ -312,7 +316,7 @@ class MainFrame(wx.Frame):
         self.sp = wx.SplitterWindow(self, -1, style=wx.SP_3D|wx.SP_BORDER)
         self.plot_p = PlotPanel(self.sp,-1)
         self.menu_p = MenuPanel(self.sp,-1)
-        Publisher().subscribe(self.changeStatusbar, 'changeStatusbar')
+        pub.subscribe(self.changeStatusbar, 'changeStatusbar')
 
         # The Status Bar
 	self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
@@ -436,8 +440,8 @@ class MainFrame(wx.Frame):
         # Put something on Report page
         self.menu_p.rep_page.logMsg('Begin logging...')
         # Eventually kill this redirection because it might cause problems from other classes
-        redir=RedirectText(self.menu_p.rep_page.logMsg) # Start redirecting stdout to log window
-        sys.stdout=redir
+        #redir=RedirectText(self.menu_p.rep_page.logMsg) # Start redirecting stdout to log window
+        #sys.stdout=redir
 
         # Connect to database
         self._db_connect(self.host, self.user, self.passwd, self.dbname)
@@ -665,15 +669,20 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.ReactivateStreamPage()
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
             self.dirname = dialog.GetPath() # modify self.dirname
-            files = sorted(filelist, key=os.path.getctime)
+            files = sorted(filelist, key=os.path.getmtime)
             oldest = extractDateFromString(files[0])
+            #print files[0], files[-1]
             old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
             newest = extractDateFromString(files[-1])
             new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
+            #print oldest, newest
             self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
+            self.menu_p.str_page.fileTextCtrl.SetValue("*")
             self.menu_p.str_page.startDatePicker.SetValue(old)
+            self.menu_p.str_page.startTimePicker.SetValue("00:00:00")
             self.menu_p.str_page.endDatePicker.SetValue(new)
-        self.menu_p.rep_page.logMsg('- Directory defined')
+            self.menu_p.str_page.endTimePicker.SetValue("23:59:59")
+            #self.changeStatusbar("Loading data ...")
         dialog.Destroy()
 
     def OnOpenFile(self, event):
@@ -1155,6 +1164,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         ed = datetime.fromtimestamp(enday.GetTicks()) 
         path = self.menu_p.str_page.pathTextCtrl.GetValue()
         files = self.menu_p.str_page.fileTextCtrl.GetValue()
+
+        print stday, sttime, sd
         
         if path == "":
             dlg = wx.MessageDialog(self, "Please select a path first!\n"
@@ -1174,6 +1185,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
         end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
 
+        
         try:
             self.changeStatusbar("Loading data ...")
             if path.endswith('/'):
@@ -1218,6 +1230,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = self.menu_p.str_page.endTimePicker.GetValue()
         ed = datetime.fromtimestamp(enday.GetTicks()) 
+
+        #print sttime, sd, ed
         
         if len(self.stream) == 0:
             dlg = wx.MessageDialog(self, "Please select a path first!\n"

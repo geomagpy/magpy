@@ -17,7 +17,6 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-from wx.lib.pubsub import Publisher
 import wx.lib.masked as masked
 
 # Subclasses for Menu pages and their controls     
@@ -41,16 +40,13 @@ class StreamPage(wx.Panel):
         self.fileTextCtrl = wx.TextCtrl(self, value="*")
         self.startdateLabel = wx.StaticText(self, label="Start date:")
         self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-11-22","%Y-%m-%d").timetuple())))
-        self.startTimePicker = masked.timectrl.TimeCtrl(self,
-                                               fmt24hr=True, id=-1, name='startTimePicker',
-                                               style=0,useFixedWidthFont=True,
-                                               pos = (250,70))
+        # the following line produces error in my win xp installation
+        self.startTimePicker = wx.TextCtrl(self, value="00:00:00")
+        #self.startTimePicker = masked.TimeCtrl(self, fmt24hr=True, id=-1, name='startTimePicker', style=0,useFixedWidthFont=True, pos = (250,70))
         self.enddateLabel = wx.StaticText(self, label="End date:")
         self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.now().timetuple())))
-        self.endTimePicker = masked.timectrl.TimeCtrl(self,
-                                               fmt24hr=True, id=-1, name='endTimePicker',
-                                               style=0,useFixedWidthFont=True,
-                                               value=datetime.now().strftime('%X'), pos = (250,70))
+        self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
+        #self.endTimePicker = masked.timectrl.TimeCtrl(self,fmt24hr=True, id=-1, name='endTimePicker',style=0,useFixedWidthFont=True,value=datetime.now().strftime('%X'), pos = (250,70))
 
         self.openStreamButton = wx.Button(self,-1,"Open stream",size=(130,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
@@ -120,7 +116,7 @@ class StreamPage(wx.Panel):
         
         #checklist = ['self.'+elem+'CheckBox, noOptions' for elem in KEYLIST]
         #elemlist.extend(checklist)
-        elemlist.append('self.DrawButton, dict(flag=wx.ALIGN_CENTER)')
+        #elemlist.append('self.DrawButton, dict(flag=wx.ALIGN_CENTER)')
 
         # Add the controls to the sizers:
         for elem in elemlist:

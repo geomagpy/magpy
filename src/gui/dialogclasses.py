@@ -17,9 +17,6 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-from wx.lib.pubsub import Publisher
-import wx.lib.masked as masked
-
 # Subclasses for Dialogs called by magpy gui     
 
 class OpenWebAddressDialog(wx.Dialog):

@@ -87,7 +87,7 @@ class PubSubClient(WampClientProtocol):
         self.sensorid = 'MySensor' # Necessary for file output
         self.typ = 'f' # or xyzf or etc
         # Open database connection
-        self.db = MySQLdb.connect("localhost","cobs","8ung2rad","wic" )
+        self.db = MySQLdb.connect("localhost","cobs","passwd","wic" )
         # prepare a cursor object using cursor() method
         self.cursor = self.db.cursor()
         # Initiate subscriptions
