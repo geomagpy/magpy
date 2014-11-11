@@ -111,11 +111,17 @@ def isFormat(filename, format_type):
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
             return True
+    elif (format_type == "METEO"): # Conrad Observatory RCS System - METEO files
+        if (isMETEO(filename)):
+            return True
     elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
         if (isGRAVSG(filename)):
             return True
     elif (format_type == "IWT"): # Data from the Conrad Observatory tiltmeter system
         if (isIWT(filename)):
+            return True
+    elif (format_type == "LIPPGRAV"): # Data from the Lippmann tiltmeter system
+        if (isLIPPGRAV(filename)):
             return True
     elif (format_type == "CR800"): # Data from the CR800 datalogger
         if (isCR800(filename)):
@@ -205,6 +211,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGDASB1(filename, headonly, **kwargs)
     elif (format_type == "RMRCS"):
         return readRMRCS(filename, headonly, **kwargs)
+    elif (format_type == "METEO"):
+        return readMETEO(filename, headonly, **kwargs)
     elif (format_type == "PYSTR"):
         return readPYSTR(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):
@@ -233,6 +241,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGRAVSG(filename, headonly, **kwargs)
     elif (format_type == "IWT"):
         return readIWT(filename, headonly, **kwargs)
+    elif (format_type == "LIPPGRAV"):
+        return readLIPPGRAV(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
         return readCR800(filename, headonly, **kwargs)
     elif (format_type == "RADON"):

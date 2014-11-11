@@ -255,7 +255,9 @@ PYMAG_SUPPORTED_FORMATS = [
 		'GDASA1',	# ?
 		'GDASB1',	# ?
 		'RMRCS', 	# RCS data output from Richards perl scripts
+		'METEO', 	# RCS data output in METEO files 
 		'IWT', 		# Tiltmeter data files at cobs
+		'LIPPGRAV', 	# Lippmann Tiltmeter data files at cobs
 		'CR800',	# Data from the CR800 datalogger
 		'RADON',	# ?
 		'USBLOG',	# ?
@@ -297,7 +299,87 @@ class DataStream(object):
     A note on headers:
     ALWAYS INITIATE STREAM WITH >>> stream = DataStream([],{}).
 
+    All available methods:
+    ----------------------------
+
+    - stream.ext(self, columnstructure): # new version of extend function for column operations
+    - stream.add(self, datlst):
+    - stream.clear_header(self):
+    - stream.extend(self,datlst,header):
+    - stream.union(self,column):
+    - stream.findtime(self,time):
+    - stream._find_t_limits(self):
+    - stream._print_key_headers(self):
+    - stream._get_key_headers(self,**kwargs):
+    - stream.sorting(self):
+    - stream._get_line(self, key, value):
+    - stream._remove_lines(self, key, value):
+    - stream._remove_columns(self, keys):
+    - stream._get_column(self, key):
+    - stream._put_column(self, column, key, **kwargs):
+    - stream._move_column(self, key, put2key):
+    - stream._clear_column(self, key):
+    - stream._reduce_stream(self, pointlimit=100000):
+    - stream._aic(self, signal, k, debugmode=None):
+    - stream._get_k(self, **kwargs):
+    - stream._get_k_float(self, value, **kwargs):
+    - stream._get_max(self, key, returntime=False):
+    - stream._get_min(self, key, returntime=False):
+    - stream._gf(self, t, tau):
+    - stream._hf(self, p, x):
+    - stream._residual_func(self, func, y):
+    - stream._tau(self, period):
+    - stream._convertstream(self, coordinate, **kwargs):
+    - stream._det_trange(self, period):
+    - stream._is_number(self, s):
+    - stream._normalize(self, column):
+    - stream._testtime(self, time):
+    - stream._drop_nans(self, key):
+    - stream.aic_calc(self, key, **kwargs):
+    - stream.baseline(self, absolutestream, **kwargs):
+    - stream.bindetector(self,key,text=None,**kwargs):
+    - stream.calc_f(self, **kwargs):
+    - stream.date_offset(self, offset):
+    - stream.delta_f(self, **kwargs):
+    - stream.differentiate(self, **kwargs):
+    - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
+    - stream.extract(self, key, value, compare=None, debugmode=None):
+    - stream.extrapolate(self, start, end):
+    - stream.nfilter(self,debugmode=None,**kwargs):
+    - stream.filter(self, **kwargs):
+    - stream.fit(self, keys, **kwargs):
+    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None):
+    - stream.func_add(self,function,**kwargs):
+    - stream.func_subtract(self,function,**kwargs):
+    - stream.get_gaps(self, **kwargs):
+    - stream.get_sampling_period(self):
+    - stream.samplingrate(self, **kwargs):
+    - stream.integrate(self, **kwargs):
+    - stream.interpol(self, keys, **kwargs):
+    - stream.k_fmi(self, **kwargs):
+    - stream.mean(self, key, **kwargs):
+    - stream.multiply(self, factors):
+    - stream.obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False, 
+    - stream.offset(self, offsets):
+    - stream.plot(self, keys=None, debugmode=None, **kwargs):
+    - stream.powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs):
+    - stream.remove_flagged(self, **kwargs):
+    - stream.remove_outlier(self, **kwargs):
+    - stream.resample(self, keys, **kwargs):
+    - stream.rotation(self,**kwargs):
+    - stream.scale_correction(self, keys, scales, **kwargs):
+    - stream.smooth(self, keys, **kwargs):
+    - stream.spectrogram(self, keys, per_lap=0.9, wlen=None, log=False, 
+    - stream.steadyrise(self, key, timewindow, **kwargs):
+    - stream.stereoplot(self, **kwargs):
+    - stream.trim(self, starttime=None, endtime=None, newway=False):
+    - stream.variometercorrection(self, variopath, thedate, **kwargs):
+    - stream.write(self, filepath, **kwargs):
+
+
     Application methods:
+    ----------------------------
+
     - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
     - stream.baseline() -- calculates baseline correction for input stream (datastream)
     - stream.date_offset() -- Corrects the time column of the selected stream by the offst
@@ -476,11 +558,11 @@ CALLED BY:
         self.container.extend(datlst)
         self.header = header
 
-    # TODO check this function
-    #def union(self,stream):
-    #    seen = set()
-    #    seen_add = seen.add
-    #    return [ x for x in stream if not (x.time in seen or seen_add(x.time))]
+    # TODO add a similar function for streams
+    def union(self,column):
+        seen = set()
+        seen_add = seen.add
+        return [ x for x in column if not (x in seen or seen_add(x))]
 
     def findtime(self,time):
         """
@@ -586,6 +668,39 @@ CALLED BY:
 
         return lines[0]
 
+    def _take_columns(self, keys):
+        """
+        DEFINITION:
+            removes columns of the given keys
+        """
+
+        resultstream = DataStream()
+      
+        for elem in self:
+            line = LineStruct()
+            line.time = elem.time
+            resultstream.add(line)
+        resultstream.header = {}
+
+        for key in keys:
+            if not key in KEYLIST:
+                pass
+            elif not key == 'time':
+                col = self._get_column(key)
+                #print key, len(col)
+                try:
+                    resultstream.header['col-'+key] = self.header['col-'+key]
+                except:
+                    pass
+                try:
+                    resultstream.header['unit-col-'+key] = self.header['unit-col-'+key]
+                except:
+                    pass
+                resultstream = resultstream._put_column(col,key)
+
+        return resultstream
+
+
 
     def _remove_lines(self, key, value):
         """
@@ -635,12 +750,26 @@ CALLED BY:
 
     def _put_column(self, column, key, **kwargs):
         """
+    DEFINITION:
         adds a column to a Stream
+    PARAMETERS:
+        column:        (array) single list with data with equal length as stream
+        key:           (key) key to which the data is written
+    Kwargs:
+        columnname:    (string) define a name
+        columnunit:    (string) define a unit
+    RETURNS:
+        - DataStream object
+
+    EXAMPLE:
+        >>>  stream = stream._put_column(res, 't2', columnname='Rain',columnunit='mm in 1h')
         """
         #init = kwargs.get('init')
         #if init>0:
         #    for i in range init:
         #    self.add(float('NaN'))
+        columnname = kwargs.get('columnname')
+        columnunit = kwargs.get('columnunit')
 
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
@@ -648,6 +777,24 @@ CALLED BY:
             raise ValueError, "Column length does not fit Datastream"
         for idx, elem in enumerate(self):
             exec('elem.'+key+' = column[idx]')
+
+        if not columnname:
+            try: # TODO correct that
+                if eval('self.header["col-%s"]' % key) == '': 
+                    exec('self.header["col-%s"] = "%s"' % (key, key))
+            except:
+                pass
+        else:
+            exec('self.header["col-%s"] = "%s"' % (key, columnname))
+
+        if not columnunit:
+            try: # TODO correct that
+                if eval('self.header["unit-col-%s"]' % key) == '': 
+                    exec('self.header["unit-col-%s"] = "arb"' % (key))
+            except:
+                pass
+        else:
+            exec('self.header["unit-col-%s"] = "%s"' % (key, columnunit))
             
         return self
 
@@ -1008,7 +1155,7 @@ CALLED BY:
                 timeobj = num2date(time).replace(tzinfo=None)
             except:
                 raise TypeError
-        elif isinstance(time, str):
+        elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
             try:
                 timeobj = datetime.strptime(time,"%Y-%m-%d")
             except:
@@ -1293,6 +1440,66 @@ CALLED BY:
             return self
 
 
+    def bindetector(self,key,text=None,**kwargs):
+        """
+        DEFINITION:
+            Function to detect changes between 0 and 1
+        PARAMETERS:
+            text:          (string) text to be added to comments/stdout,
+                                    will be extended by on/off
+            key:           (key) key to investigate
+        Kwargs:
+            add:           (BOOL) if true add to comments
+            markallon:     (BOOL) add comment to all ons
+            markalloff:    (BOOL) add comment to all offs
+            onvalue:       (float) critical value to determin on stage (default = 0.99)
+        RETURNS:
+            - DataStream object
+
+        EXAMPLE:
+            >>>  stream = stream._put_column(res, 't2', columnname='Rain',columnunit='mm in 1h')
+        """
+        add = kwargs.get('add')
+        markallon = kwargs.get('markallon')
+        markalloff = kwargs.get('markalloff')
+        onvalue = kwargs.get('onvalue')
+                     
+        if not text:
+            text = ''
+        if not onvalue:
+            onvalue = 0.99
+            
+        startstate = eval('self[0].'+key)
+        for elem in self:
+            state = eval('elem.'+key)
+            if state > onvalue:
+                state = 1
+            if markallon:
+                if state == 1:
+                    tex = text+' on'
+                    if add:
+                        elem.comment =  tex
+            elif markalloff:
+                if state == 0:
+                    tex = text+' off'
+                    if add:
+                        elem.comment =  tex                
+            elif not state == startstate and (state == 1 or state == 0):
+                time = datetime.strftime(num2date(elem.time), "%Y-%m-%d %H:%M:%S")
+                if state == 0:
+                    tex = text+' off'
+                    if add:
+                        elem.comment =  tex
+                        print time + ': ' + tex
+                else:
+                    tex = text+' on'
+                    if add:
+                        elem.comment =  tex
+                        print time + ': ' + tex
+                startstate = state
+
+        return self
+
     def calc_f(self, **kwargs):
         """
         DEFINITION:
@@ -1528,6 +1735,9 @@ CALLED BY:
         Variables:
             - key: 	(str) streams key e.g. 'x'.
             - value: 	(str/float/int) any selected input which should be tested for
+                        special note: if value is in brackets, then the term is evaluated
+                        e.g. value="('int(elem.time)')" selects all points at 0:00
+                        Important: this only works for compare = '=='
          Kwargs:
             - compare:  (str) criteria, one out of ">=", "<=",">", "<", "==", "!=", default is '=='
             - debugmode:(bool) if true several additional outputs will be created
@@ -1545,6 +1755,15 @@ CALLED BY:
         if not compare in [">=", "<=",">", "<", "==", "!="]:
             loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==" or "!=" ')
             return self
+
+        if value.startswith('(') and value.endswith(')') and compare == '==':
+            loggerstream.info("extract: Selected special functional type -equality defined by difference less then 10 exp-6")
+            val = value[1:-1]
+            liste = []
+            for elem in self:
+                if abs(eval('elem.'+key) - eval(val)) < 0.000001:
+                    liste.append(elem)
+            return DataStream(liste,self.header)    
 
         if not self._is_number(value):
             too = '"' + str(value) + '"'
@@ -1701,15 +1920,20 @@ CALLED BY:
             loggerstream.error("Filter: stream needs to contain data - returning.")
             return self
 
+        if debugmode:
+            print "Starting length:", len(self)
+
         if not dontfillgaps:
             self = self.get_gaps()
+            if debugmode:
+                print "length after getting gaps:", len(self)
 
         window_period = filter_width.seconds
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
 
         if debugmode:
-            print si, sampling_period
+            print "Timedelta and sampling period:", si, sampling_period
 
         # window_len defines the window size in data points assuming the major sampling period to be valid for the dataset
         if filter_type == 'gaussian':
@@ -1741,6 +1965,9 @@ CALLED BY:
         # ########################
 
         t = self._get_column('time')
+
+        if debugmode:
+            print "Length time column:", len(t)
 
         for key in keys:
             #print "Start filtering for", key
@@ -2275,7 +2502,7 @@ CALLED BY:
 
     RETURNS:
         - stream: 	(Datastream) 
-
+       
     EXAMPLE:
         >>> stream_with_gaps_filled = stream_with_aps.get_gaps(['f'])
 
@@ -2288,6 +2515,7 @@ CALLED BY:
         accuracy = kwargs.get('accuracy')
         key = kwargs.get('key')
         gapvariable = kwargs.get('gapvariable')
+        debugmode = kwargs.get('debugmode')
 
         if key in KEYLIST:
             gapvariable = True
@@ -2312,9 +2540,17 @@ CALLED BY:
         prevtime = 0
         maxtime = self[-1].time
 
+        if debugmode:
+            print "Time range:", self[0].time, self[-1].time
+            print "Length, samp_per and accuracy:", len(self), sp, accuracy 
+
         for elem in self:
             #if abs((prevtime+sp) - elem.time) > accuracy and prevtime+sp < elem.time and not prevtime == 0:
+            #if debugmode:
+            #    print prevtime+sp, elem.time, ((prevtime+sp)-elem.time)*3600.*24.
             if abs((prevtime+sp) - elem.time) > accuracy and not prevtime == 0:
+                #if debugmode:
+                #    print "not fitting"
                 currtime = num2date(prevtime)+timedelta(seconds=newsps)
                 #print currtime, abs((prevtime+sp) - elem.time)*24*3600, (elem.time-prevtime)*24*3600, sp*24*3600
                 while currtime <= num2date(elem.time):
@@ -2332,7 +2568,8 @@ CALLED BY:
             prevtime = elem.time
 
         loggerstream.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
-                
+        if debugmode:
+            print "Ending:", stream[0].time, stream[-1].time
         return stream
 
 
@@ -2520,12 +2757,13 @@ CALLED BY:
         if not fitfunc:
             fitfunc = 'poly'
         if not fitdegree:
-            fitdegree = 5
+            fitdegree = 3
         if not m_fmi:
             m_fmi = 0
         if not put2key:
             put2key = 't2'
         
+        print "Fitting:", fitdegree
         stream = DataStream()
         # extract daily streams/24h slices from input
         iprev = 0
@@ -2535,9 +2773,10 @@ CALLED BY:
 
         # Start with the full input stream
         # eventually convert xyz to hdz first
-        for elem in self:
-            gettyp = elem.typ
-            break
+        gettyp = self[0].typ
+
+        print "Typ:", gettyp
+ 
         if gettyp == 'xyzf':
             fmistream = self._convertstream('xyz2hdz',keep_header=True)
         elif gettyp == 'idff':
@@ -2561,7 +2800,7 @@ CALLED BY:
             fmi1stream = fmistream.filter(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
         if samprate == 60:
             fmi1stream = fmistream.filter(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-         
+
         fmi2stream = fmistream.filter(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 
         loggerstream.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
@@ -2582,6 +2821,8 @@ CALLED BY:
             iprev = iend
 
         fmi3stream = stream.filter(filter_type='linear',filter_width=timedelta(minutes=180),filter_offset=timedelta(minutes=90))
+        print fmi3stream 
+        print fmi3stream[0].dx
         fmi4stream = fmi3stream._get_k(put2key=put2key)
 
         self.header['col-'+put2key] = 'k'
@@ -3615,10 +3856,12 @@ CALLED BY:
 			4 = Default as comprimise.
         - timerange: 	(timedelta Object) Time range. Default = timedelta(hours=1)
         - markall :	marks all data except forcing has already been applied
+        - stdout:        prints removed values to stdout
     RETURNS:
         - stream: 	(DataStream Object) Stream with flagged data.
 
     EXAMPLE:
+
         >>> stream.remove_outlier(keys=['x','y','z'], threshold=2)
 
     APPLICATION:
@@ -3628,6 +3871,7 @@ CALLED BY:
         threshold = kwargs.get('threshold')
         keys = kwargs.get('keys')
         markall = kwargs.get('markall')
+        stdout = kwargs.get('stdout')
         if not timerange:
             timerange = timedelta(hours=1)
         if not keys:
@@ -3703,7 +3947,10 @@ CALLED BY:
                             row.flag=''.join(fllist)
                             row.comment = "%s removed by automatic outlier removal" % key
                             if not isnan(eval('elem.'+key)):
-                                loggerstream.info("remove_outlier: at %s - removed %s (= %f)" % (str(num2date(elem.time)),key, eval('elem.'+key)))
+                                infoline = "remove_outlier: at %s - removed %s (= %f)" % (str(num2date(elem.time)),key, eval('elem.'+key))
+                                loggerstream.info(infoline)
+                                if stdout:
+                                    print infoline
                     else:
                         fllist = list(row.flag)
                         if not int(fllist[flagpos]) > 1:
@@ -4101,6 +4348,68 @@ CALLED BY:
                     mult=mult, cmap=cmap, zorder=zorder, title=title, show=show, 
                     sphinx=sphinx, clip=clip)
 
+    def steadyrise(self, key, timewindow, **kwargs):
+        """
+        DEFINITION:
+            Method determines the absolute increase within a data column
+            and a selected time window
+            neglecting any resets and decreasing trends
+            - used for analyzing some rain senors
+        PARAMETERS:
+            key:           (key) column on which the process is performed
+            timewindow:    (timedelta) define the window e.g. timedelta(minutes=15)
+        Kwargs:
+            sensitivitylevel:    (float) define a difference which two successive 
+                                         points need to exceed to be used 
+                                         (useful if you have some numeric noise)
+
+        RETURNS:
+            - column: 	(array) column with length of th stream 
+                                   containing timewindow blocks of stacked data.
+
+        EXAMPLE:
+            >>>  col = stream.steadyrise('t1', timedelta(minutes=60),sensitivitylevel=0.002)
+     
+
+        """
+        sensitivitylevel = kwargs.get('sensitivitylevel')
+
+        startt = num2date(self[0].time)
+        prevval = 9999999999999.0
+        stacked = 0.0
+        count = 0
+        rescol = []
+        testcol = []
+
+        for elem in self:
+            testcol.append(elem)
+            if num2date(elem.time) < startt+timewindow:
+                val = eval('elem.'+key)
+                if prevval < val:
+                    diff = val-prevval
+                    if not sensitivitylevel:
+                        stacked += val-prevval
+                    elif diff > sensitivitylevel:
+                        stacked += val-prevval
+                count += 1
+            else:
+                for i in range(count+1):
+                    rescol.append(stacked)
+                count = 0     
+                # now put that results back to a column
+                startt = startt+timewindow
+                val = eval('elem.'+key)
+                stacked = 0.0
+            prevval = val
+        # Finally fill the end
+        for i in range(count):
+            rescol.append(stacked)
+        
+        if not len(rescol) == len(self):
+            loggerstream.error('steadrise: An error leading to unequal lengths has been encountered')
+            return []
+
+        return rescol
 
     def stereoplot(self, **kwargs):
         """
@@ -4457,6 +4766,111 @@ CALLED BY:
 
         return DataStream(self.container,self.header)
 
+
+
+    def variometercorrection(self, variopath, thedate, **kwargs):
+        """
+        DEFINITION:
+            Function to perform a variometercorrection of an absresult stream
+            towrads the given datetime using the given variometer stream.
+            Returns a new absresult object with new datetime and corrected values
+        
+        PARAMETERS:
+         Variables:
+            - variodata: (DataStream) data to be used for reduction
+	    - endtime:	(datetime/str) End of period to trim to
+         Kwargs:
+            - funckeys: (list) keys of the variometerfile which are interpolated and used
+            - usetime: (bool) use only the time part of thedate to correct to 
+
+        RETURNS:
+            - stream: 	(DataStream object) Trimmed stream
+
+        EXAMPLE:
+            >>> data = data.trim(starttime, endtime)
+
+        APPLICATION:
+        """
+        funckeys = kwargs.get('funckeys')
+        offset = kwargs.get('offset')
+        usetime = kwargs.get('usetime')
+        if not funckeys:
+            funckeys = ['x','y','z','f']
+        if not offset:
+            offset = 0.0
+
+        dateform = "%Y-%m-%d"
+
+        # Return results within a new streamobject containing only 
+        # the average values and its uncertainties
+        resultstream = DataStream()
+
+        # 1 Convert absresult - idff to xyz
+        # test stream type (xyz, idf or hdz?)
+        # TODO add the end check whether streams are modified!!!!!!!!!!
+        print self[0].typ
+        if self[0].typ == 'idff':
+            absstream = self._convertstream('idf2xyz')
+
+        # 2 Convert datetime to number
+        # check whether thedate is a time (then use this time every day)
+        # or a full date
+        if usetime:
+            tmpdatelst = [datetime.date(num2date(elem.time)) for elem in absstream]
+            datelist = self.union(tmpdatelst)
+            datelist = [datetime.combine(elem, datetime.time(self._testtime(thedate))) for elem in datelist]
+            print datelist
+        else:
+            datelist = [self._testtime(thedate)]
+
+        # 3 Read and interplolate the variometer data
+        start = datetime.strptime(datetime.strftime(num2date(self[0].time),dateform),dateform)
+        end = datetime.strptime(datetime.strftime(num2date(self[-1].time),dateform),dateform)+timedelta(days=1)
+        print start, end
+        variostream = read(variopath,starttime=start, endtime=end)
+        print len(variostream)
+        function = variostream.interpol(funckeys)
+
+        """
+        for date in datelist:
+            newvallists=[]
+            for elem in absstream:
+                # if elem.time == date:
+                    # if value existis in function:
+                        # calnewvalues and append to lists
+            # calc means from lists
+            # append means to new stream
+
+
+            # 4 Test whether variostream covers the timerange between the abstream value(s) and the datetime
+            if function[1] <= elem.time <= function[2] and function[1] <= newdate <= function[2]:
+                valatorgtime = (elem.time-function[1])/(function[2]-function[1])
+                valatnewtime = (newdate-function[1])/(function[2]-function[1])
+                elem.time = newdate
+                for key in funckeys:
+                    if not key in KEYLIST[1:15]:
+                        raise ValueError, "Column key not valid"
+                    fkey = 'f'+key
+                    if fkey in function[0]:
+                        try:
+                            orgval = float(function[0][fkey](valatorgtime))
+                            newval = float(function[0][fkey](valatnewtime))
+                            diff = orgval - newval
+                        except:
+                            loggerstream.error("variometercorrection: error in assigning new values")
+                            return
+                        exec('elem.'+key+' = elem.'+key+' - diff')
+                    else:
+                        pass
+            else:
+                loggerstream.warning("variometercorrection: Variometer stream does not cover the projected time range") 
+                pass
+
+        # 5 Convert absresult - xyzf to idff 
+        absstream = absstream._convertstream('xyz2idf')
+
+        return absstream
+        """
 
     def write(self, filepath, **kwargs):
         """
@@ -5885,7 +6299,6 @@ def extractDateFromString(datestring):
             if len(numberstr) > 4:
                 tmpdaystring = numberstr
         
-        print tmpdaystring
         if len(tmpdaystring) > 8:
             try: # first try whether an easy pattern can be found e.g. test12014-11-22
                 match = re.search(r'\d{4}-\d{2}-\d{2}', daystring)

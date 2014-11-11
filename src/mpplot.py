@@ -133,6 +133,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,noshow=Fa
 	- confinex:	(bool=False) x-axis will be confined to smaller t-values if True.
 	- errorbars:	(bool/list=False) If True, will plot corresponding errorbars:
 			[ [False], [True], [False, False] ]
+        - fill:		(list = []) List of keys for which the plot uses fill_between
 	- fmt:		(str) Format of outfile.
 	- fullday:	(bool=False) Will plot fullday if True.
 	- function:	(func) [0] is a dictionary containing keys (e.g. fx), 
@@ -1369,7 +1370,7 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
 def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
 	labelcolor=labelcolor,confinex=False,outfile=None,stormanno_s=True,
-	stormanno_m=True,stormanno_r=True,fmt=None):
+	stormanno_m=True,stormanno_r=True,fmt=None,figure=False,fill=[]):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
@@ -1401,6 +1402,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
     confinex = False
     bgcolor = 'blue'
     etc. ... (all are listed in plot() and plotStreams() functions)
+    figure  -- for GUI
+    fill = ['x']
     '''
 
     # CREATE MATPLOTLIB FIGURE OBJECT:
@@ -1447,6 +1450,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         # --> Otherwise plot as normal:
         else:
             ax.plot_date(t,y,color+symbol)
+            if key in fill:
+                ax.fill_between(t,0,y,color=color)
 
         # DEFINE MIN AND MAX ON Y-AXIS:
         ymin = data[i]['ymin']
@@ -1581,6 +1586,9 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
 
     # SAVE OR SHOW:
+    # TODO the next two line are used for gui 
+    #if figure:
+    #    return ax
     if outfile:
         path = os.path.split(outfile)[0]
         if not path == '': 

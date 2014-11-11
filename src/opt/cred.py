@@ -69,7 +69,7 @@ def getuser():
         if not sysuser == None:
             print "Getuser: ... succes - using", sysuser
     # if sysuser still could not be identified assume that uid 1000 is the defaultuser (on linux)
-    if sysuser == 'None':
+    if sysuser == None or sysuser == 'None':
         print "Getuser: Cannot identify user by standard procedures - switching to default uid 1000"
         sysuser = pwd.getpwuid(1000)[0]
         print "Getuser: now using", sysuser

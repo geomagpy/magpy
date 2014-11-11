@@ -56,6 +56,51 @@ def isIWT(filename):
         return False
     return True
 
+def isMETEO(filename):
+    """
+    Checks whether a file is ASCII METEO format provided by the Cobs RCS system.
+    """
+
+    try:
+        fh = open(filename, 'rt')
+        temp = fh.readline()
+    except:
+        return False
+    comp = temp.split()
+    if not comp[0] == 'Date':
+        return False
+    if not comp[3].startswith('AP23'):
+        return False
+    try: 
+        temp = fh.readline()
+        comp = temp.split()
+        date = comp[0] + '-' + comp[1]
+        test = datetime.strptime(date,"%Y%m%d-%H%M%S")
+    except:
+        return False
+    return True
+
+
+def isLIPPGRAV(filename):
+    """
+    Checks whether a file is an ASCII Lippmann tiltmeter file.
+    """
+
+    try:
+        fh = open(filename, 'rt')
+        temp = fh.readline()
+    except:
+        return False
+    comp = temp.split()
+    if not len(comp) == 6:
+        return False
+    try: 
+        test = datetime.strptime(comp[0],"%Y%m%d%H%M%S")
+    except:
+        return False
+    return True
+
+
 def isGRAVSG(filename):
     """
     Checks whether a file is ASCII SG file format.
@@ -248,6 +293,183 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     headers['SensorDescription'] = 'Model HMHT-LG01: This Humidity and Temperature USB data logger measures and stores relative humidity temperature readings over 0 to 100 per RH and -35 to +80 deg C measurement ranges. Humidity: Repeatability (short term) 0.1 per RH, Accuracy (overall error) 3.0* 6.0 per RH, Internal resolution 0.5 per RH, Long term stability 0.5 per RH/Yr; Temperature: Repeatability 0.1 deg C, Accuracy (overall error) 0.5 and 2  deg C, Internal resolution 0.5 deg C'
     headers['SensorName'] = 'HMHT-LG01'
     headers['SensorType'] = 'Temperature/Humidity'
+
+    return DataStream(stream, headers)    
+
+
+def readMETEO(filename, headonly=False, **kwargs):
+    """
+    Reading RCS Meteo data files.
+
+    Format looks like:
+Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	HeFlowK	WV	WR	WT	LNM	Barometer
+20101007	000000	0	0.000E+0	12.507E+0	6.883E+0	99.916E+0	0	17.576E+0	5.896E+0	17.282E+0	5.974E+0	28.815E+0	28.565E+0	107.942E+0	600.000E-3	200.000E+0	8.200E+0	0.000E+0	900.850E+0
+20101007	000100	0	320.439E-6	12.517E+0	6.875E+0	99.924E+0	0	17.538E+0	5.974E+0	17.476E+0	5.993E+0	28.812E+0	28.555E+0	107.942E+0	200.000E-3	325.000E+0	8.400E+0	0.000E+0	900.840E+0
+
+
+    By default, Helium columns are neglected 
+    """
+
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    takehelium = kwargs.get('takehelium')
+    getfile = True
+
+    heliumcols = []
+
+    stream = DataStream()
+    
+    # Check whether header infromation is already present
+    if stream.header == None:
+        headers = {}
+    else:
+        headers = stream.header
+
+    theday = extractDateFromString(filename)
+
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        print "Did not recognize the date format"
+        # Date format not recognized. Need to read all files
+        getfile = True 
+
+    fh = open(filename, 'rt')
+
+    if getfile: 
+        for line in fh:
+            if line.isspace():
+                # blank line
+                continue
+            elif line.startswith(' '):
+                continue
+            elif line.startswith('Date'):
+                # Read the header information
+                #1) first get number of columns
+                cols = line.split()
+                if not takehelium:
+                    columns = [elem for elem in cols if not elem.startswith('He')]
+                else:
+                    columns = cols
+                for i, elem in enumerate(columns):
+                    if i > 1:
+                        key = KEYLIST[i-1]
+                        headers['col-'+key] = elem
+            else:
+                colsstr = line.split()
+                if not takehelium:
+                    colsstr = [elem for i, elem in enumerate(colsstr) if not cols[i].startswith('He')]
+                row = LineStruct()
+                try:
+                    date = colsstr[0]+'-'+colsstr[1]
+                    row.time = date2num(datetime.strptime(date,"%Y%m%d-%H%M%S"))
+                    for i in range(2,len(colsstr)):
+                        key = KEYLIST[i-1]
+                        if not key.startswith('str'):
+                            exec('row.'+key+' = float(colsstr[i])')
+                        else:
+                            exec('row.'+key+' = str(float(colsstr[i]))')
+                        row.typ = 'other'
+                    stream.add(row)
+                except:
+                    pass
+
+        headers['SensorDescription'] = 'RCS: filteres METEO data'
+        headers['SensorName'] = 'Various Meteo sensors'
+        headers['SensorType'] = 'Environment'
+        headers['col-t2'] = '430_UEV' # Necessary because of none UTF8 coding in header
+
+    return DataStream(stream, headers)    
+
+
+def readLIPPGRAV(filename, headonly=False, **kwargs):
+    """
+    Reading Lippmann tiltmeter data files.
+
+    Format looks like:
+20141015000000   -5.2565   -7.5508    8.68   74.64  909.52
+20141015000001   -5.2601   -7.5455    8.69   74.66  909.52
+20141015000002   -5.2606   -7.5504    8.69   74.66  909.51
+20141015000003   -5.2555   -7.5565    8.68   74.67  909.52
+20141015000004   -5.2490   -7.5477    8.68   74.66  909.51
+20141015000005   -5.2515   -7.5463    8.68   74.65  909.51
+20141015000005   -5.2624   -7.5549    8.69   74.69  909.50
+20141015000006   -5.2546   -7.5573    8.69   74.66  909.51
+20141015000007   -5.2607   -7.5518    8.69   74.66  909.51
+20141015000008   -5.2569   -7.5531    8.69   74.66  909.50
+20141015000009   -5.2567   -7.5570    8.69   74.65  909.49
+20141015000010   -5.2549   -7.5486    8.68   74.65  909.51
+
+    """
+
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
+    stream = DataStream()
+    
+    # Check whether header infromation is already present
+    if stream.header == None:
+        headers = {}
+    else:
+        headers = stream.header
+
+    theday = extractDateFromString(filename)
+
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        print "Did not recognize the date format"
+        # Date format not recognized. Need to read all files
+        getfile = True 
+
+    fh = open(filename, 'rt')
+
+    if getfile: 
+        for line in fh:
+            if line.isspace():
+                # blank line
+                continue
+            elif line.startswith(' '):
+                continue
+            else:
+                colsstr = line.split()
+                row = LineStruct()
+                try:
+                    date = colsstr[0]+'-'+colsstr[1]
+                    row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S"))
+                    row.x = float(colsstr[1])
+                    row.y = float(colsstr[2])
+                    row.t1 = float(colsstr[3])
+                    row.var1 = float(colsstr[4])
+                    row.var2 = float(colsstr[5])
+                    stream.add(row)
+                except:
+                    pass
+
+        headers['unit-col-x'] = 'lambda' 
+        headers['col-x'] = 'tilt' 
+        headers['unit-col-y'] = 'lambda' 
+        headers['col-y'] = 'tilt' 
+        headers['unit-col-t1'] = 'deg C' 
+        headers['col-t1'] = 'T' 
+        headers['unit-col-var1'] = 'percent' 
+        headers['col-var1'] = 'rh' 
+        headers['unit-col-var2'] = 'hPa' 
+        headers['col-var2'] = 'p' 
+        headers['SensorDescription'] = 'Lippmann: Tiltmeter system'
+        headers['SensorName'] = 'Lippmann Tiltmeter'
+        headers['SensorType'] = 'Tiltmeter'
 
     return DataStream(stream, headers)    
 

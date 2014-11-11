@@ -342,59 +342,6 @@ class AbsoluteData(object):
 
         return self
 
-    def variocorr(self, thedate, variostream, absstream, **kwargs):
-        """
-        This function should not be here .... is absresults a stream??
-        Function to perform variometercorrection of an absresult object
-        towrads the given datetime using the given variometer stream.
-        Returns a new absresult object with new datetime and corrected values
-        """
-        funckeys = kwargs.get('funckeys')
-        offset = kwargs.get('offset')
-        if not funckeys:
-            funckeys = ['x','y','z','f']
-        if not offset:
-            offset = 0.0
-
-        # 1 Convert absresult - idff to xyz
-        absstream = absstream._convertstream('idf2xyz')
-
-        # 2 Convert datetime to number
-        newdate = date2num(absstream._testtime(thedate))
-
-        # 3 Interplolate the variometer data
-        function = variostream.interpol(funckeys)
-
-        for elem in absstream:
-            # 4 Test whether variostream covers the timerange between the abstream value(s) and the datetime
-            if function[1] <= elem.time <= function[2] and function[1] <= newdate <= function[2]:
-                valatorgtime = (elem.time-function[1])/(function[2]-function[1])
-                valatnewtime = (newdate-function[1])/(function[2]-function[1])
-                elem.time = newdate
-                for key in funckeys:
-                    if not key in KEYLIST[1:15]:
-                        raise ValueError, "Column key not valid"
-                    fkey = 'f'+key
-                    if fkey in function[0]:
-                        try:
-                            orgval = float(function[0][fkey](valatorgtime))
-                            newval = float(function[0][fkey](valatnewtime))
-                            diff = orgval - newval
-                        except:
-                            loggerabs.error("variocorr: error in assigning new values")
-                            return
-                        exec('elem.'+key+' = elem.'+key+' - diff')
-                    else:
-                        pass
-            else:
-                loggerabs.warning("method variocorr: Variometer stream does not cover the projected time range") 
-                pass
-
-        # 5 Convert absresult - xyzf to idff 
-        absstream = absstream._convertstream('xyz2idf')
-
-        return absstream
-
     def _calcdec(self, **kwargs):
         """
         DEFINITION:

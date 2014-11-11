@@ -141,6 +141,22 @@ def readPYCDF(filename, headonly=False, **kwargs):
     
     cdf_file = cdf.CDF(filename)
 
+
+    theday = extractDateFromString(filename)
+    try:
+        if starttime:
+            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True 
+    logbaddata = False
+
+
+    """
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
     tmpdaystring = splitpath[1].split('.')[0]
@@ -170,6 +186,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
     except:
         # Date format not recognized. Need to read all files
         getfile = True 
+
+    print bounddate, endtime, datetime.strptime(datetime.strftime(stream._testtime(endtime),testdateform),testdateform)
+    """
 
     # Get format type:
     # DTU type is using different date format (MATLAB specific)
@@ -582,13 +601,15 @@ def writePYASCII(datastream, filename, **kwargs):
         for key in keylst:
             title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit-col-'+key,'') + ']'
             head.append(title)
-        head[0] = 'Time'
-        wtr.writerow( [' # ASCII'] )
+        head[0] = 'Time-days'
+        head[1] = 'Time'
+        wtr.writerow( [' # MagPy ASCII'] )
         wtr.writerow( head )
     for elem in datastream:
         row = []
         for key in keylst:
             if key.find('time') >= 0:
+                row.append(elem.time)
                 try:
                     row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
                 except:
