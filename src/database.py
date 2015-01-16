@@ -1625,6 +1625,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             insertsql = insertmanysql
             insertsql = insertsql.replace("INSERT","REPLACE")
             cursor.executemany(insertsql,values)
+        except MySQLdb.Error, e:
+            loggerdatabase.error("stream2db: mysqlerror while replacing data: %s" % (e))
         except:
             try:
                 cursor.executemany(insertmanysql,values)

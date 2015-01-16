@@ -6141,7 +6141,10 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 if fkey in function[0]:
                     exec('elem.'+key+' = float(NaN)')
 
-    headera['SensorID'] = headera['SensorID']+'-'+headerb['SensorID']
+    try:
+        headera['SensorID'] = headera['SensorID']+'-'+headerb['SensorID']
+    except:
+        pass
     loggerstream.info('subtractStreams: Stream-subtraction finished.')
 
     return DataStream(stream_a, headera)      

@@ -22,3 +22,4 @@ import lib
 import opt
 import collector
 
+from .version import __version__

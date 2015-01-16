@@ -382,8 +382,16 @@ def ftpget(ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=Non
 
     print "Starting ftpget ..."
     try:
-        ftp = ftplib.FTP(ftpaddress, ftpname,ftppasswd)
+        ftp = ftplib.FTP()
+        print "FTP connecting to ", ftpaddress, port
+        ftp.connect(ftpaddress, int(port))
+        print "... successful"
+        print "FTP login ", ftpname
+        ftp.login(ftpname,ftppasswd)
+        print "... successful"
+        print "FTP switching directory ..."
         ftp.cwd(remotepath)
+        print "... successful"
         filenames = ftp.nlst()
         #print "Found the following files", filenames
 

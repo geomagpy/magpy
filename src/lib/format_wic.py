@@ -240,6 +240,8 @@ def readRMRCS(filename, headonly=False, **kwargs):
 
     fh.close()
 
+    headers['SensorID'] = 'RCS_Mandl_0001'
+
     return DataStream(stream, headers)    
 
 
@@ -381,6 +383,7 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
 
         headers['SensorDescription'] = 'RCS: filteres METEO data'
         headers['SensorName'] = 'Various Meteo sensors'
+        headers['SensorID'] = 'RCS_Winkelbauer_0001'
         headers['SensorType'] = 'Environment'
         headers['col-t2'] = '430_UEV' # Necessary because of none UTF8 coding in header
 
@@ -470,6 +473,7 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
         headers['SensorDescription'] = 'Lippmann: Tiltmeter system'
         headers['SensorName'] = 'Lippmann Tiltmeter'
         headers['SensorType'] = 'Tiltmeter'
+        headers['SensorID'] = 'Lippmann_Tilt'
 
     return DataStream(stream, headers)    
 
