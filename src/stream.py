@@ -1793,7 +1793,7 @@ CALLED BY:
             compare = '=='
         if not compare in [">=", "<=",">", "<", "==", "!="]:
             loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==" or "!=" ')
-            return self
+            return self    
 
         if not self._is_number(value):
             if value.startswith('(') and value.endswith(')') and compare == '==':
@@ -1805,11 +1805,11 @@ CALLED BY:
                         liste.append(elem)
                 return DataStream(liste,self.header)    
 
-        if not self._is_number(value):
-            too = '"' + str(value) + '"'
-        else:
-            too = str(value)
-        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + too)]
+        #if not self._is_number(value):
+        #    too = '"' + str(value) + '"'
+        #else:
+        #    too = str(value)
+        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + value)]
 
         return DataStream(liste,self.header)    
 
@@ -2839,7 +2839,7 @@ CALLED BY:
             fmistream = self
             pass
         else:
-            loggerstream.error('Unkown typ (xyz?) in FMI function')
+            loggerstream.error('Unkown type (xyz?) in FMI function')
             return
 
         sr = fmistream.get_sampling_period()

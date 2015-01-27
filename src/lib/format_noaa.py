@@ -23,6 +23,7 @@ def isNOAAACE(filename):
         return False
     if not 'NOAA' in temp3:
         return False
+    loggerlib.info("format_noaa: Found ACE file %s" % filename)
     return True
 
 
@@ -37,14 +38,15 @@ def readNOAAACE(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rt')
     # read file and split text into channels
-    stream = DataStream()
+    #stream = DataStream()
+    stream = DataStream([],{})
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
-    data = []
-    key = None
+    #if stream.header is None:
+    #    headers = {}
+    #else:
+    #    headers = stream.header
+    #data = []
+    #key = None
 
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
@@ -80,6 +82,7 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         getfile = True
 
     if getfile:
+        loggerlib.info('readNOAAACE: Reading %s' % (filename))
         for line in fh:
             if line.isspace():
                 # blank line
@@ -169,5 +172,6 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                 stream.add(row)
     fh.close()
 
-    return DataStream(stream, headers)    
+    return stream
+    #return DataStream(stream, headers)    
 
