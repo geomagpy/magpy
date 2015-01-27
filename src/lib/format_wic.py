@@ -67,11 +67,12 @@ def isMETEO(filename):
     except:
         return False
     comp = temp.split()
-    if not comp[0] == 'Date':
-        return False
-    if not comp[3].startswith('AP23'):
-        return False
-    try: 
+    try:
+        if not comp[0] == 'Date':
+            return False
+        if not comp[3].startswith('AP23'):
+            return False
+
         temp = fh.readline()
         comp = temp.split()
         date = comp[0] + '-' + comp[1]

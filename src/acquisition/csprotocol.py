@@ -80,7 +80,10 @@ class CsProtocol(LineReceiver):
         # Correction for ms time to work with databank:
         currenttime_ms = currenttime.microsecond/1000000.
         ms_rounded = round(float(currenttime_ms),3)
-        currenttime = currenttime.replace(microsecond=int(ms_rounded*1000000.))
+        if not ms_rounded >= 1.0:
+            currenttime = currenttime.replace(microsecond=int(ms_rounded*1000000.))
+        else:
+            currenttime = currenttime.replace(microsecond=0) + timedelta(seconds=1.0)
         filename = datetime.strftime(currenttime, "%Y-%m-%d")
         actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
 	lastActualtime = currenttime

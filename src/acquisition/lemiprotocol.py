@@ -187,6 +187,7 @@ class LemiProtocol(LineReceiver):
         dispatch_url =  "http://example.com/"+self.hostname+"/lemi#"+self.sensor+"-value"
         flag = 0
         WSflag = 0
+        debug = False
 
         try:
             if (self.buffer).startswith(self.soltag) and len(self.buffer) == 153:
@@ -203,18 +204,21 @@ class LemiProtocol(LineReceiver):
             ###  - bad bits infiltrating the data. Bad string is deleted.
 
             if len(self.buffer) > 153:
-                log.msg('LEMI - Protocol: Warning: Bufferlength (%s) exceeds 153 characters, fixing...' % len(self.buffer))
+                if debug:
+                    log.msg('LEMI - Protocol: Warning: Bufferlength (%s) exceeds 153 characters, fixing...' % len(self.buffer))
                 lemisearch = (self.buffer).find(self.soltag)
-                print '1', lemisearch
+                #print '1', lemisearch
                 if (self.buffer).startswith(self.soltag):
                     datatest = len(self.buffer)%153
                     dataparts = int(len(self.buffer)/153)
                     if datatest == 0:
-                        log.msg('LEMI - Protocol: It appears multiple parts came in at once, # of parts:', dataparts)
+                        if debug:
+                            log.msg('LEMI - Protocol: It appears multiple parts came in at once, # of parts:', dataparts)
                         for i in range(dataparts):
                             split_data_string = self.buffer[0:153]
                             if (split_data_string).startswith(self.soltag):
-                                log.msg('LEMI - Protocol: Processing data part # %s in string...' % (str(i+1)))
+                                if debug:
+                                    log.msg('LEMI - Protocol: Processing data part # %s in string...' % (str(i+1)))
                                 evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(split_data_string)
                                 WSflag = 2
                                 self.buffer = self.buffer[153:len(self.buffer)]

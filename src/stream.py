@@ -536,6 +536,45 @@ CALLED BY:
         #except:
         #    print list(self.container).append(datlst)
 
+    def replace(self, datlst):
+        # Replace in stream 
+        # - replace value with existing data
+        assert isinstance(self.container, (list, tuple))
+        ti = list(self._get_column('time'))
+        try:
+           ind = ti.index(datlst.time)
+        except ValueError:
+           self = self.add(datlst)
+           return self
+        except:
+           return self
+        li = [elem for elem in self]
+        del li[ind]
+        li.append(datlst)
+        return DataStream(li,self.header)
+
+    def copy(self):
+        """
+        DESCRIPTION: 
+           method for copying content of a stream to a new stream 
+        APPLICATION:
+           for non-destructive methods
+        """
+        assert isinstance(self.container, (list, tuple))
+        co = DataStream()
+        co.header = self.header
+        for el in self:
+            li = LineStruct()
+            for key in KEYLIST:
+                if key == 'time':
+                    li.time = el.time
+                else:
+                    exec('li.'+key+' = el.'+key)
+            co.add(li)
+
+        return co
+            
+
     def __str__(self):
         return str(self.container)
 
@@ -1756,14 +1795,15 @@ CALLED BY:
             loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==" or "!=" ')
             return self
 
-        if value.startswith('(') and value.endswith(')') and compare == '==':
-            loggerstream.info("extract: Selected special functional type -equality defined by difference less then 10 exp-6")
-            val = value[1:-1]
-            liste = []
-            for elem in self:
-                if abs(eval('elem.'+key) - eval(val)) < 0.000001:
-                    liste.append(elem)
-            return DataStream(liste,self.header)    
+        if not self._is_number(value):
+            if value.startswith('(') and value.endswith(')') and compare == '==':
+                loggerstream.info("extract: Selected special functional type -equality defined by difference less then 10 exp-6")
+                val = value[1:-1]
+                liste = []
+                for elem in self:
+                    if abs(eval('elem.'+key) - eval(val)) < 0.000001:
+                        liste.append(elem)
+                return DataStream(liste,self.header)    
 
         if not self._is_number(value):
             too = '"' + str(value) + '"'
@@ -2453,13 +2493,25 @@ CALLED BY:
         keys = kwargs.get('keys')
         order = kwargs.get('order')
 
+        st = DataStream()
+        st = self.copy()
+
+        """
+        for el in self:
+            li = LineStruct()
+            li.time = el.time
+            li.x = el.x
+            li.y = el.y
+            li.z = el.z
+            st.add(li)
+        """
         if not order:
             order = 0
         
         if not keys:
             keys = ['x','y','z']
 
-        for elem in self:
+        for elem in st:
             # check whether time step is in function range
             if function[1] <= elem.time <= function[2]:
                 functime = (elem.time-function[1])/(function[2]-function[1])
@@ -2482,7 +2534,7 @@ CALLED BY:
             else:
                 pass
 
-        return self
+        return st
 
 
     def get_gaps(self, **kwargs):
@@ -2621,6 +2673,7 @@ CALLED BY:
         """
         DEFINITION:
             returns a rounded value of the sampling rate
+            in seconds
             and updates the header information
         """
         # XXX include that in the stream reading process....
