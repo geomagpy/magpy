@@ -1742,8 +1742,8 @@ CALLED BY:
 	# Storm detection using detail 3 (D3 = var3):
         from magpy.stream import *
         stream = read('LEMI_1s_Data_2014-02-15.cdf')	# 2014-02-15 is a good storm example
-        DWT_stream = stream.DWT_calc()
-        Da_min = 0.002 # nT^2 (minimum amplitude of D3 for storm detection)
+        DWT_stream = stream.DWT_calc(plot=True)
+        Da_min = 0.0005 # nT^2 (minimum amplitude of D3 for storm detection)
         Dp_min = 40 # seconds (minimum period of Da > Da_min for storm detection)
         detection = False
         for row in DWT_stream:
@@ -1797,11 +1797,12 @@ CALLED BY:
                 functions.append(function)
                 approx = False
 
-            # 2-3. Square the results and average over the window:
+            # 2. Square the results
             fin_fns = []
             for item in functions:
                 item_sq = [j**2 for j in item]
-                val = sum(item_sq)
+                # 3. Average over the window
+                val = sum(item_sq)/window
                 fin_fns.append(val)
 
             # TODO: This is hard-wired for level=3.
