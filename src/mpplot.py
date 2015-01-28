@@ -570,7 +570,8 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
             yunit = stream.header['unit-col-'+key]
         except:
             yunit = ''
-        ylabel = stream.header['col-'+key].upper()+' $['+re.sub('[#$%&~_^\{}]', '', yunit)+']$'
+        #ylabel = stream.header['col-'+key].upper()+' $['+re.sub('[#$%&~_^\{}]', '', yunit)+']$'
+        ylabel = stream.header['col-'+key].upper()+' $['+re.sub('[#$%&~_\{}]', '', yunit)+']$'
 
         # NORMALIZE VARIABLE:
         if normalize:

@@ -1696,6 +1696,145 @@ CALLED BY:
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
         return self
 
+
+    def DWT_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None,
+		window=5):
+        """
+    DEFINITION:
+        Discrete wavelet transform (DWT) method of analysing a magnetic signal
+	to pick out SSCs. This method was taken from Hafez (2013): "Systematic examination
+	of the geomagnetic storm sudden commencement using multi resolution analysis."
+	(NOTE: PyWavelets package must be installed for this method. It should be applied
+	to 1s data - otherwise the sample window should be changed.)
+
+	METHOD:
+	1. Use the 4th-order Daubechies wavelet filter to calculate the 1st to 3rd details
+	   (D1, D2, D3) of the geomagnetic signal. This is applied to a sliding window of
+	   five samples.
+	2. The 3rd detail (D3) samples are squared to evaluate the magnitude.
+	3. The sample window (5) is averaged to avoid ripple effects. (This means the
+	   returned stream will have ~1/5 the size of the original.)
+
+    PARAMETERS:
+    Variables:
+        - key: 		(str) Apply DWT to this key. Default 'x' due to SSCs dominating
+			the horizontal component.
+	- wavelet:	(str) Type of filter to use. Default 'db4' (4th-order Daubechies 
+			wavelet filter) according to Hafez (2013).
+	- level:	(int) Decomposition level. Will calculate details down to this level.
+			Default 3, also Hafez (2013).
+	- plot:		(bool) If True, will display a plot of A3, D1, D2 and D3.
+	- outfile:	(str) If given, will plot will be saved to 'outfile' path.
+	- window:	(int) Length of sample window. Default 5, i.e. 5s with second data.
+
+    RETURNS:
+        - DWT_stream: 	(DataStream object) A stream containing the following:
+			'x': A_n (approximation function)
+			'var1': D1 (first detail)
+			'var2': D2 (second detail)
+			'var3': D3 (third detail)
+			... will have to be changed if higher details are required.
+
+    EXAMPLE:
+        >>> DWT_stream = stream.DWT_calc(plot=True)
+
+    APPLICATION:
+	# Storm detection using detail 3 (D3 = var3):
+        from magpy.stream import *
+        stream = read('LEMI_1s_Data_2014-02-15.cdf')	# 2014-02-15 is a good storm example
+        DWT_stream = stream.DWT_calc()
+        Da_min = 0.002 # nT^2 (minimum amplitude of D3 for storm detection)
+        Dp_min = 40 # seconds (minimum period of Da > Da_min for storm detection)
+        detection = False
+        for row in DWT_stream:
+            if row.var3 >= Da_min and detection == False:
+                timepin = row.time
+                detection = True
+            elif row.var3 < Da_min and detection == True:
+                duration = (num2date(row.time) - num2date(timepin)).seconds
+                if duration >= Dp_min:
+                    print "Storm detected!"
+                    print duration, num2date(timepin)
+                detection = False 
+        """ 
+
+        # Import required package PyWavelets:
+	# http://www.pybytes.com/pywavelets/index.html
+        import pywt
+
+	# 1a. Grab array from stream
+        data = self._get_column(key)
+
+        DWT_stream = DataStream([],{})
+        i = 0
+        loggerstream.info("DWT_calc: Starting Discrete Wavelet Transform of key %s." % key)
+
+        # 1b. Loop for sliding window
+        while True:
+            if i >= len(data):
+                break
+
+            row = LineStruct()
+            row.time = self[i].time
+            data_cut = data[i:i+window]
+
+	    # 1c. Calculate wavelet transform coefficients
+            # Wavedec produces results in form: [cA_n, cD_n, cD_n-1, ..., cD2, cD1]
+	    # (cA_n is a list of coefficients for an approximation for the nth order.
+	    # All cD_n are coefficients for details n --> 1.)
+            coeffs = pywt.wavedec(data_cut, wavelet, level=level)
+
+            # 1d. Calculate approximation and detail functions from coefficients
+            take = len(data_cut)	# (Length of fn from coeffs = length of original data)
+            functions = []
+            approx = True
+            for item in coeffs:
+                if approx:
+                    part = 'a'	# Calculate approximation function
+                else:
+                    part = 'd'	# Calculate detail function
+                function = pywt.upcoef(part, item, wavelet, level=level, take=take)
+                functions.append(function)
+                approx = False
+
+            # 2-3. Square the results and average over the window:
+            fin_fns = []
+            for item in functions:
+                item_sq = [j**2 for j in item]
+                val = sum(item_sq)
+                fin_fns.append(val)
+
+            # TODO: This is hard-wired for level=3.
+            row.x, row.var1, row.var2, row.var3 = fin_fns
+            
+            DWT_stream.add(row)
+            i += window
+
+        loggerstream.info("DWT_calc: Finished DWT.")
+
+        DWT_stream.header['col-x'] = 'A3'
+        DWT_stream.header['unit-col-x'] = 'nT^2'
+        DWT_stream.header['col-var1'] = 'D1'
+        DWT_stream.header['unit-col-var1'] = 'nT^2'
+        DWT_stream.header['col-var2'] = 'D2'
+        DWT_stream.header['unit-col-var2'] = 'nT^2'
+        DWT_stream.header['col-var3'] = 'D3'
+        DWT_stream.header['unit-col-var3'] = 'nT^2'
+
+	# Plot stream:
+        if plot == True:
+            loggerstream.info('DWT_calc: Plotting data...')
+            if outfile:
+                DWT_stream.plot(['x','var1','var2','var3'],
+				plottitle="DWT Decomposition of %s" % key,
+				outfile=outfile)
+            else:
+                DWT_stream.plot(['x','var1','var2','var3'],
+				plottitle="DWT Decomposition of %s" % key)
+
+        return DWT_stream
+
+
     def eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
         """
         read stream and log data of which key meets the criteria
@@ -3645,7 +3784,8 @@ CALLED BY:
                     yunit = ''
                     pass
                 if not yunit == '': 
-                    yunit = re.sub('[#$%&~_^\{}]', '', yunit)
+                    #yunit = re.sub('[#$%&~_^\{}]', '', yunit)
+                    yunit = re.sub('[#$%&~_\{}]', '', yunit)	# Allow for powers (^)
                     label = ylabel+' $['+yunit+']$'
                 else:
                     label = ylabel
