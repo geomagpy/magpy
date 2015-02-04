@@ -14,6 +14,7 @@ CONTAINS:
 	plotStreams:	(Func) Plots multiple variables from multiple streams.
     (EXTENDED...)
         plotEMD:	(Func) Plots Empirical Mode Decomposition from opt.emd
+        plotNormStreams:(Func) Plot normalised streams
         plotPS: 	(Func) Plots the power spectrum of a given key.
         plotSpectrogram:(Func) Plots spectrogram of a given key.
 	plotStereoplot:	(Func) Plots stereoplot of inc and dec values.
@@ -499,6 +500,112 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         return fig
 
 
+#####################################################################
+#								    #
+#	EXTENDED PLOTTING FUNCTIONS				    #
+#	(for more advanced functions)				    #
+#								    #
+#####################################################################
+
+
+def plotEMD(stream,key,verbose=False,plottitle=None,
+	outfile=None,sratio=0.25):
+    '''
+    DEFINITION:
+	NOTE: EXPERIMENTAL FUNCTION ONLY.
+        Function for plotting Empirical Mode Decomposition of
+	DataStream. Currently only optional function.
+	(Adapted from RL code in MagPyAnalysis/NoiseFloor_Spectral/magemd.py.)
+
+    PARAMETERS:
+    Variables:
+        - stream: 	(DataStream object) Description.
+        - key: 		(str) Key in stream to apply EMD to.
+    Kwargs:
+	- outfile:	(str) Save plot to file. If no file defined, plot
+			will simply be shown.
+	- plottitle:	(str) Title to place at top of plot.
+	- sratio:	(float) Decomposition percentage. Determines how curve
+			is split. Default = 0.25.
+        - verbose: 	(bool) Print results. Default False.
+
+    RETURNS:
+        - plot: 	(matplotlib plot) Plot depicting the modes.
+
+    EXAMPLE:
+        >>> plotEMDAnalysis(stream,'x')
+
+    APPLICATION:
+    '''
+
+    # TODO:
+    # - make axes easier to read
+    # - add a amplitude statistic (histogram)
+    # - add a haeufigkeit plot perpendicular to the diagrams 
+    import opt.emd as emd # XXX: add this into main program when method is finalised
+
+    loggerplot.info("plotEMD: Starting EMD calculation.")
+
+    col = stream._get_column(key)
+    timecol = stream._get_column('time')
+    if verbose:
+        print "Amount of values and standard deviation:", len(col), col.std()
+    res = emd.emd(col,max_modes=20)
+    if verbose:
+        print "Found the follwing amount of decomposed modes:", len(res)
+    separate = int(np.round(len(res)*sratio,0))
+    if verbose:
+        print "Separating the last N curves as smooth. N =",separate
+    stdarray = []
+    newcurve = [0]*len(res[0])
+    noisecurve = [0]*len(res[0])
+    smoothcurve = [0]*len(res[0])
+    f, axarr = plt.subplots(len(res), sharex=True)
+
+    for i, elem in enumerate(res):
+        axarr[i].plot(elem)
+        newcurve = [x + y for x, y in zip(newcurve, elem)]
+        stdarray.append([i,elem.std()])
+        ds = stream
+        ds._put_column(elem,'x')
+        ds._put_column(timecol,'time')
+
+        if i >= len(res)-separate:
+            if verbose:
+                print "Smooth:", i
+            smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
+        if i < len(res)-separate:
+            if verbose:
+                print "Noise:", i
+            noisecurve = [x + y for x, y in zip(noisecurve, elem)]
+
+    plt.show()
+
+    plt.plot(smoothcurve)
+    plt.plot(newcurve)
+    plt.title("Variation of H component")
+    plt.xlabel("Time [seconds of day]")
+    plt.ylabel("F [nT]")
+    plt.legend()
+    plt.show()
+
+    plt.plot(noisecurve)
+    plt.title("Variation of H component - high frequency content")
+    plt.xlabel("Time [seconds of day]")
+    plt.ylabel("F [nT]")
+    plt.show()
+
+    plt.close()
+    stdarray = np.asarray(stdarray)
+    ind = stdarray[:,0]
+    val = stdarray[:,1]
+    plt.bar(ind,val)
+    plt.title("Standard deviation of EMD modes")
+    plt.xlabel("EMD mode")
+    plt.ylabel("Standard deviation [nT]")
+    plt.show()
+
+
 def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 	normtime=None, bgcolor='white', colorlist=colorlist, noshow=False, 
 	outfile=None, plottitle=None, grid=True, gridcolor=gridcolor,
@@ -637,112 +744,6 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
             plt.show()
 
 
-#####################################################################
-#								    #
-#	EXTENDED PLOTTING FUNCTIONS				    #
-#	(for more advanced functions)				    #
-#								    #
-#####################################################################
-
-
-def plotEMD(stream,key,verbose=False,plottitle=None,
-	outfile=None,sratio=0.25):
-    '''
-    DEFINITION:
-	NOTE: EXPERIMENTAL FUNCTION ONLY.
-        Function for plotting Empirical Mode Decomposition of
-	DataStream. Currently only optional function.
-	(Adapted from RL code in MagPyAnalysis/NoiseFloor_Spectral/magemd.py.)
-
-    PARAMETERS:
-    Variables:
-        - stream: 	(DataStream object) Description.
-        - key: 		(str) Key in stream to apply EMD to.
-    Kwargs:
-	- outfile:	(str) Save plot to file. If no file defined, plot
-			will simply be shown.
-	- plottitle:	(str) Title to place at top of plot.
-	- sratio:	(float) Decomposition percentage. Determines how curve
-			is split. Default = 0.25.
-        - verbose: 	(bool) Print results. Default False.
-
-    RETURNS:
-        - plot: 	(matplotlib plot) Plot depicting the modes.
-
-    EXAMPLE:
-        >>> plotEMDAnalysis(stream,'x')
-
-    APPLICATION:
-    '''
-
-    # TODO:
-    # - make axes easier to read
-    # - add a amplitude statistic (histogram)
-    # - add a haeufigkeit plot perpendicular to the diagrams 
-    import opt.emd as emd # XXX: add this into main program when method is finalised
-
-    loggerplot.info("plotEMD: Starting EMD calculation.")
-
-    col = stream._get_column(key)
-    timecol = stream._get_column('time')
-    if verbose:
-        print "Amount of values and standard deviation:", len(col), col.std()
-    res = emd.emd(col,max_modes=20)
-    if verbose:
-        print "Found the follwing amount of decomposed modes:", len(res)
-    separate = int(np.round(len(res)*sratio,0))
-    if verbose:
-        print "Separating the last N curves as smooth. N =",separate
-    stdarray = []
-    newcurve = [0]*len(res[0])
-    noisecurve = [0]*len(res[0])
-    smoothcurve = [0]*len(res[0])
-    f, axarr = plt.subplots(len(res), sharex=True)
-
-    for i, elem in enumerate(res):
-        axarr[i].plot(elem)
-        newcurve = [x + y for x, y in zip(newcurve, elem)]
-        stdarray.append([i,elem.std()])
-        ds = stream
-        ds._put_column(elem,'x')
-        ds._put_column(timecol,'time')
-
-        if i >= len(res)-separate:
-            if verbose:
-                print "Smooth:", i
-            smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
-        if i < len(res)-separate:
-            if verbose:
-                print "Noise:", i
-            noisecurve = [x + y for x, y in zip(noisecurve, elem)]
-
-    plt.show()
-
-    plt.plot(smoothcurve)
-    plt.plot(newcurve)
-    plt.title("Variation of H component")
-    plt.xlabel("Time [seconds of day]")
-    plt.ylabel("F [nT]")
-    plt.legend()
-    plt.show()
-
-    plt.plot(noisecurve)
-    plt.title("Variation of H component - high frequency content")
-    plt.xlabel("Time [seconds of day]")
-    plt.ylabel("F [nT]")
-    plt.show()
-
-    plt.close()
-    stdarray = np.asarray(stdarray)
-    ind = stdarray[:,0]
-    val = stdarray[:,1]
-    plt.bar(ind,val)
-    plt.title("Standard deviation of EMD modes")
-    plt.xlabel("EMD mode")
-    plt.ylabel("Standard deviation [nT]")
-    plt.show()
-
-
 def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 	returndata=False,freqlevel=None,marks={},fmt=None,
 	axes=None,plottitle=None,**kwargs):
@@ -878,6 +879,95 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
         plt.draw()	# show() should only ever be called once. Use draw() in between!
     else: 
         return fig 
+
+
+def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous'): 
+    """
+    DEFINITION:
+        Plot satellite and magnetic data on same plot for storm comparison.
+
+    PARAMETERS:
+    Variables:
+        - mag_stream:	(DataStream object) Stream of magnetic data
+	- sat_stream:	(DataStream object) Stream of satellite data
+        - keys:		(list) Keys to analyse [mag_key,sat_key], e.g. ['x','y']
+    Kwargs:
+	- outfile:	(str) Filepath to save plot to
+
+    RETURNS:
+        - plot: 	(matplotlib plot) A plot of the spectrogram.
+
+    EXAMPLE:
+        >>> plotSatMag(LEMI_data, ACE_data, ['x','y'])
+
+    APPLICATION:
+        >>>  
+    """
+
+    t_mag = np.asarray([row[0] for row in mag_stream])
+    t_sat = np.asarray([row[0] for row in sat_stream])
+    key_mag, key_sat = keys[0], keys[1]
+    if key_mag not in KEYLIST:
+        raise Exception("Column key (%s) not valid!" % key)
+    if key_sat not in KEYLIST:
+        raise Exception("Column key (%s) not valid!" % key)
+
+    ind_mag, ind_sat = KEYLIST.index(key_mag), KEYLIST.index(key_sat)
+    y_mag = np.asarray([row[ind_mag] for row in mag_stream])
+    y_sat = np.asarray([row[ind_sat] for row in sat_stream])
+    '''
+    # Fix if NaNs are present:
+    if plottype == 'discontinuous':
+        y_mag = maskNAN(y)
+    else: 
+        nans, test = nan_helper(y_mag)
+        y_mag = [el for idx, el in enumerate(y) if not nans[idx]]
+    if plottype == 'discontinuous':
+        y_sat = maskNAN(y_sat)
+    else: 
+        nans, test = nan_helper(y_sat)
+        y_sat = [el for idx, el in enumerate(y) if not nans[idx]]
+
+    # Define y-labels:
+    try:
+        ylabel_mag = mag_stream.header['col-'+key].upper()
+    except:
+        ylabel_mag = ''
+        pass
+    try:
+        ylabel_sat = stream.header['col-'+key].upper()
+    except:
+        ylabel_sat = ''
+        pass
+
+    try:
+        yunit = stream.header['unit-col-'+key]
+    except:
+        yunit = ''
+        pass
+    if not yunit == '': 
+        yunit = re.sub('[#$%&~_^\{}]', '', yunit)
+        label = ylabel+' $['+yunit+']$'
+    else:
+        label = ylabel
+    '''
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax1.set_ylabel('SAT')
+    ax1.plot(t_sat, y_sat, color='#C0C0C0')
+
+    ax2 = ax1.twinx()
+    ax2.plot(t_mag, y_mag, lw=1.5, color='b')
+    ax2.set_ylabel('MAG')
+    ax2.yaxis.set_label_position('left')
+    ax2.yaxis.set_ticks_position('left')
+    ax1.yaxis.set_label_position('right')
+    ax1.yaxis.tick_right()
+
+    if outfile:
+        plt.savefig(outfile)
+    else:
+        plt.show()
 
 
 def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False, 

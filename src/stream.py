@@ -1824,14 +1824,15 @@ CALLED BY:
 
 	# Plot stream:
         if plot == True:
+            date = datetime.strftime(num2date(self[0].time),'%Y-%m-%d')
             loggerstream.info('DWT_calc: Plotting data...')
             if outfile:
                 DWT_stream.plot(['x','var1','var2','var3'],
-				plottitle="DWT Decomposition of %s" % key,
+				plottitle="DWT Decomposition of %s (%s)" % (key,date),
 				outfile=outfile)
             else:
                 DWT_stream.plot(['x','var1','var2','var3'],
-				plottitle="DWT Decomposition of %s" % key)
+				plottitle="DWT Decomposition of %s (%s)" % (key,date))
 
         return DWT_stream
 
@@ -3048,6 +3049,10 @@ CALLED BY:
         >>> meanx = datastream.mean('x',meanfunction='median',percentage=90)
 
     APPLICATION:
+	stream = read(datapath)
+        mean = stream.mean('f')
+	median = stream.mean('f',meanfunction='median')
+	stddev = stream.mean('f',meanfunction='std')
         """
         percentage = kwargs.get('percentage')
         meanfunction = kwargs.get('meanfunction')
@@ -5691,6 +5696,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     elif "://" in path_or_url:
         # some URL
         # extract extension if any
+        loggerstream.info("read: Found URL to read at %s" % path_or_url)
         content = urllib2.urlopen(path_or_url).read()
         if debugmode:
             print urllib2.urlopen(path_or_url).info()
@@ -5715,7 +5721,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                         st.extend(stp.container,stp.header)
                     os.remove(fh.name)
         else:            
-            # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # check whether content is a single file or e.g. a ftp-directory
             # currently only single files are supported
             # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
