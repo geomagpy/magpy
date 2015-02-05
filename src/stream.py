@@ -1960,12 +1960,11 @@ CALLED BY:
                     if abs(eval('elem.'+key) - eval(val)) < 0.000001:
                         liste.append(elem)
                 return DataStream(liste,self.header)    
+            too = '"' + str(value) + '"'
+        else:
+            too = str(value)
 
-        #if not self._is_number(value):
-        #    too = '"' + str(value) + '"'
-        #else:
-        #    too = str(value)
-        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + value)]
+        liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + too)]
 
         return DataStream(liste,self.header)    
 
@@ -2443,8 +2442,6 @@ CALLED BY:
     DEFINITION:
         Code for fitting data. Please note: if nans are present in any of the selected keys
         the whole line is dropped before fitting.
-	Returns stream with filtered data with sampling period of
-	filter_width.
 
     PARAMETERS:
     Variables:
@@ -2461,7 +2458,7 @@ CALLED BY:
 
 
     EXAMPLE:
-        >>> func = stream.fit(filter_width=timedelta(minutes=3))
+        >>> func = stream.fit(['x'])
 
     APPLICATION:
 

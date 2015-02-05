@@ -885,7 +885,8 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
         return fig 
 
 
-def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous'): 
+def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
+	padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor): 
     """
     DEFINITION:
         Plot satellite and magnetic data on same plot for storm comparison.
@@ -931,42 +932,73 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous')
     else: 
         nans, test = nan_helper(y_sat)
         y_sat = [el for idx, el in enumerate(y) if not nans[idx]]
-
+    '''
     # Define y-labels:
     try:
-        ylabel_mag = mag_stream.header['col-'+key].upper()
+        ylabel_mag = mag_stream.header['col-'+key_mag].upper()
     except:
         ylabel_mag = ''
         pass
     try:
-        ylabel_sat = stream.header['col-'+key].upper()
+        ylabel_sat = sat_stream.header['col-'+key_sat].upper()
     except:
         ylabel_sat = ''
         pass
 
     try:
-        yunit = stream.header['unit-col-'+key]
+        yunit_mag = mag_stream.header['unit-col-'+key_mag]
     except:
-        yunit = ''
+        yunit_mag = ''
         pass
-    if not yunit == '': 
-        yunit = re.sub('[#$%&~_^\{}]', '', yunit)
-        label = ylabel+' $['+yunit+']$'
+    if not yunit_mag == '': 
+        yunit_mag = re.sub('[#$%&~_^\{}]', '', yunit_mag)
+        label_mag = ylabel_mag+' $['+yunit_mag+']$'
     else:
-        label = ylabel
-    '''
+        label_mag = ylabel_mag
+
+    try:
+        yunit_sat = sat_stream.header['unit-col-'+key_sat]
+    except:
+        yunit_sat = ''
+        pass
+    if not yunit_sat == '': 
+        yunit_sat = re.sub('[#$%&~_^\{}]', '', yunit_sat)
+        label_sat = ylabel_sat+' $['+yunit_sat+']$'
+    else:
+        label_sat = ylabel_sat
+    
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    ax1.set_ylabel('SAT')
+    ax1.set_ylabel(label_sat,color=labelcolor)
     ax1.plot(t_sat, y_sat, color='#C0C0C0')
+
+    timeunit = ''
+    if confinex:
+        tmin = np.min(t_sat)
+        tmax = np.max(t_sat)
+        # --> If dates to be confined, set value types:
+        _confinex(ax1, tmax, tmin, timeunit)
+    ax1.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
 
     ax2 = ax1.twinx()
     ax2.plot(t_mag, y_mag, lw=1.5, color='b')
-    ax2.set_ylabel('MAG')
+    ax2.set_ylabel(label_mag,color=labelcolor)
+    ax2.set_ylim(np.min(y_mag)-padding,np.max(y_mag)+padding)
     ax2.yaxis.set_label_position('left')
     ax2.yaxis.set_ticks_position('left')
+
     ax1.yaxis.set_label_position('right')
     ax1.yaxis.tick_right()
+
+    if plotfunc:
+        sat_stream._drop_nans('y')
+        func = sat_stream.fit(['y'],knotstep=0.02)
+
+        fkey = 'f'+key_sat
+        if fkey in func[0]:
+            ttmp = arange(0,1,0.0001)
+            ax1.plot_date(denormalize(ttmp,func[1],func[2]),func[0][fkey](ttmp),	
+		'-',color='gray')
 
     if outfile:
         plt.savefig(outfile)
