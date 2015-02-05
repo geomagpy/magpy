@@ -871,6 +871,44 @@ def dbalter(db):
     cursor.close ()
 
 
+def dbselect(db, element, table, condition=None, expert=None):
+    """
+    DESCRIPTION:
+        Function to select elements from a table.
+    PARAMETERS:
+        db (database)
+        element 	(string)  
+        table	 	(string) name of the table
+        condition 	(string) Where clause
+        expert		(String) replaces the complete "Where" 
+    RETURNS:
+        A list containing the matching elements 
+    EXAMPLE:
+        magsenslist = dbselect(db, 'SensorID', 'SENSORS', 'SensorGroup = "Magnetism"')
+        tempsenslist = dbselect(db, 'SensorID', 'SENSORS','SensorElements LIKE "%T%"')
+        lasttime = dbselect(db,'time','DATATABLE',expert="ORDER BY time DESC LIMIT 1")
+
+    """
+    returnlist = []
+    if expert:
+        sql = "SELECT "+element+" from "+table+" "+expert
+    elif not condition: 
+        sql = "SELECT "+element+" from "+table
+    else:
+        sql = "SELECT "+element+" from "+table+" WHERE "+condition
+    try:
+        cursor = db.cursor()    
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        for el in rows:
+            returnlist.append(el[0])
+    except:
+        pass
+
+    return returnlist
+
+
+
 def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
     """
     DEFINITION:
@@ -1724,6 +1762,7 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
         cursor.execute(getdatainfo)
         rows = cursor.fetchall()
         for table in rows:
+            revision = table[0].replace(sensorid,'').strip('_')
             loggerdatabase.debug("DB2stream: Extracting field values from table %s" % str(table[0]))
             if len(whereclause) > 0:
                 getdatasql = 'SELECT * FROM ' + table[0] + ' WHERE ' + whereclause
@@ -1739,19 +1778,23 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
             # sqlquery to extract data
             cursor.execute(getdatasql)
             rows = cursor.fetchall()
-            for line in rows:
-                row = LineStruct()
-                for i, elem in enumerate(line):
-                    if keylst[i]=='time':
-                        exec('row.'+keylst[i]+' = date2num(stream._testtime(elem))')
-                    else:
-                        if elem == None or elem == 'null':
-                            elem = float(NaN)
-                        if keylst[i] in ['x','y','z','f','dx','dy','dz','df','t1','t1','var1','var2','var3','var4','var5']:
-                            exec('row.'+keylst[i]+' = float(elem)')
+            if len(rows) > 0:
+                for line in rows:
+                    row = LineStruct()
+                    for i, elem in enumerate(line):
+                        if keylst[i]=='time':
+                            exec('row.'+keylst[i]+' = date2num(stream._testtime(elem))')
                         else:
-                            exec('row.'+keylst[i]+' = elem')
-                stream.add(row)
+                            if elem == None or elem == 'null':
+                                elem = float(NaN)
+                            if keylst[i] in ['x','y','z','f','dx','dy','dz','df','t1','t1','var1','var2','var3','var4','var5']:
+                                exec('row.'+keylst[i]+' = float(elem)')
+                            else:
+                                exec('row.'+keylst[i]+' = elem')
+                    stream.add(row)
+                #print "Loaded data from table", table[0]
+                stream.header = dbfields2dict(db,table[0])
+                break
     else:
         if len(whereclause) > 0:
             getdatasql = 'SELECT * FROM ' + tableext + ' WHERE ' + whereclause

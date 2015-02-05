@@ -367,6 +367,10 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 t = newt
                 y = [el for idx, el in enumerate(y) if not nans[idx]]
 
+            if len(y) == 0:
+                loggerplot.error("plotStreams: Cannot plot stream without data - Filling with 9999999!")
+                y = np.asarray([9999999 for row in stream])
+
             data_dict['key'] = key
             data_dict['tdata'] = t
             data_dict['ydata'] = y
@@ -1514,6 +1518,10 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         key = data[i]['key']
         t = data[i]['tdata']
         y = data[i]['ydata']
+        # Sort data before plotting - really necessary ? costs 0.1 seconds for 1 day second data 
+        #datar = sorted([[t[j],y[j]] for j, el in enumerate(t)])
+        #t = [datar[j][0] for j, el in enumerate(datar)]
+        #y = [datar[j][1] for j, el in enumerate(datar)]
         color = data[i]['color']
         symbol = data[i]['symbol']
 

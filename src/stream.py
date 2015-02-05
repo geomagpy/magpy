@@ -765,6 +765,21 @@ CALLED BY:
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
 
+        # Speeded up this technic:
+
+        ind = KEYLIST.index(key)
+        # Check for initialization value
+        #testval = self[0][ind]
+        # if testval == KEYINITDICT[key] or isnan(testval):
+        #    return np.asarray([])
+        try:
+            col = np.asarray([row[ind] for row in self])
+            return col
+        except:
+            return np.asarray([])
+
+        """
+        Previous code below (4 times slower) remove that after a test phase - 2015-02-05
         # Get only columns which contain different data from initialization
         count = 0
         col = []
@@ -785,7 +800,7 @@ CALLED BY:
             return np.asarray([])
 
         #return np.asarray([eval('elem.'+key) for elem in self])
-
+        """
 
     def _put_column(self, column, key, **kwargs):
         """
@@ -2170,7 +2185,7 @@ CALLED BY:
                 loggerstream.error("Filter: Window lenght defined by filter_width needs to cover at least three data points")
 
             if debugmode:
-                print key, v.size
+                print "Treating k:", key, v.size
 
             if v.size >= window_len:
                 s=np.r_[v[window_len-1:0:-1],v,v[-1:-window_len:-1]]
