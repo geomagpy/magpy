@@ -224,7 +224,7 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,noshow=Fa
 def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
 	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-	noshow=False,**kwargs):
+	noshow=False,labels=False,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -247,6 +247,8 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	- errorbars:	(bool/list(bool)) If True, will plot corresponding errorbars:
 			[ [False], [True], [False, False] ]
 			(Enter errorbars = True to plot error bars on all plots.)
+	- labels:	[ (str) ] List of labels for each stream and variable, e.g.:
+			[ ['FGE'], ['POS-1'], ['ENV-T1', 'ENV-T2'] ]
         - padding: 	(float/list(list)) List of lists containing paddings for each
 			respective variable, e.g:
 			[ [5], [5], [0.1, 0.2] ]
@@ -273,6 +275,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	- includeid:	(bool) If True, sensor IDs will be extracted from header data and
 			plotted alongside corresponding data. Default=False
 	- labelcolor:	(color='0.2') Colour of labels.
+	- legendposition: (str) Position of legend (when var labels is used), e.g. 'upper left'
 	- noshow:	(bool) If True, figure object will be returned. Default=False
 	- outfile:	(str) Path of file to plot figure to.
 	- plottitle:	(str) Title to put at top of plot.
@@ -483,6 +486,12 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 else:
                     data_dict['stormphases'] = t_stormphases
 
+            # Add labels:
+            if labels:
+                data_dict['datalabel'] = labels[i][j]
+            else:
+                data_dict['datalabel'] = ''
+
             # Include sensor IDs:
             if includeid:
                 try:
@@ -614,7 +623,7 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 	normtime=None, bgcolor='white', colorlist=colorlist, noshow=False, 
 	outfile=None, plottitle=None, grid=True, gridcolor=gridcolor,
 	labels=None, legendposition='upper right',labelcolor=labelcolor,
-	returndata=False):
+	returndata=False,confinex=False,savedpi=80):
     '''
     DEFINITION:
         Will plot normalised streams. Streams will be normalized to a general
@@ -712,6 +721,15 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
         if returndata:
             arraylist.append([t,y])
 
+	# CONFINE X
+        timeunit = ''
+        if confinex:
+            tmin = np.min(t)
+            tmax = np.max(t)
+            # --> If dates to be confined, set value types:
+            _confinex(ax, tmax, tmin, timeunit)
+        ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
+
         # PLOT DATA:
         if labels:
             ax.plot(t,y,color+'-',label=labels[i])
@@ -743,7 +761,7 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
         return fig
     else:
         if outfile:
-            plt.savefig(outfile)
+            plt.savefig(outfile,dpi=savedpi)
         else:
             plt.show()
 
@@ -886,7 +904,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
 
 def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
-	padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor): 
+	padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor,savedpi=80): 
     """
     DEFINITION:
         Plot satellite and magnetic data on same plot for storm comparison.
@@ -1001,7 +1019,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 		'-',color='gray')
 
     if outfile:
-        plt.savefig(outfile)
+        plt.savefig(outfile,savedpi=80)
     else:
         plt.show()
 
@@ -1497,7 +1515,8 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
 def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
 	labelcolor=labelcolor,confinex=False,outfile=None,stormanno_s=True,
-	stormanno_m=True,stormanno_r=True,fmt=None,figure=False,fill=[]):
+	stormanno_m=True,stormanno_r=True,fmt=None,figure=False,fill=[],
+	legendposition='upper left'):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
@@ -1556,6 +1575,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         #y = [datar[j][1] for j, el in enumerate(datar)]
         color = data[i]['color']
         symbol = data[i]['symbol']
+        datalabel = data[i]['datalabel']
 
         # CREATE SUBPLOT OBJECT & ADD TITLE:
         loggerplot.info("_plot: Adding subplot for key %s..." % data[i]['ylabel'])
@@ -1576,13 +1596,25 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                     ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
 				bartrange],[0,0,y[num]+0.1,y[num]+0.1],
 				facecolor=cm.RdYlGn((9-y[num])/9.,1),alpha=1,edgecolor='k')
-            ax.plot_date(t,y,color+'|')
+            if datalabel != '':
+                ax.plot_date(t,y,color+'|',label=datalabel)
+            else:
+                ax.plot_date(t,y,color+'|')
 
         # --> Otherwise plot as normal:
         else:
-            ax.plot_date(t,y,color+symbol)
+            if datalabel != '':
+                ax.plot_date(t,y,color+symbol,label=datalabel)
+            else:
+                ax.plot_date(t,y,color+symbol)
             if key in fill:
                 ax.fill_between(t,0,y,color=color)
+
+        # PLOT A LEGEND
+        if datalabel != '':
+            legend = ax.legend(loc=legendposition, shadow=True)
+            for label in legend.get_texts():
+                label.set_fontsize('small')
 
         # DEFINE MIN AND MAX ON Y-AXIS:
         ymin = data[i]['ymin']
