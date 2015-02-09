@@ -181,6 +181,10 @@ def readGSM19(filename, headonly=False, **kwargs):
 
 
     """
+
+    print "Found GEM format"
+    print "-------------------------------------"
+
     timestamp = os.path.getmtime(filename)
     creationdate = datetime.fromtimestamp(timestamp)
     daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
@@ -285,6 +289,12 @@ def readGSM19(filename, headonly=False, **kwargs):
                 headers['col-var1'] = 'Latitude'
                 headers['col-var2'] = 'Longitude'
                 headers['col-var3'] = 'Elevation'
+                headers['col-var5'] = 'Quality'
+                headers['col-df'] = 'delta f'
+                headers['unit-col-df'] = 'nT/m'
+                if dist:
+                    headers['col-z'] = 'f upper'
+                    headers['unit-col-z'] = 'nT'
                 try:
                     row = LineStruct()
                     if elem[0] == '0': # No GPS data -> no altitude
@@ -308,6 +318,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                        row.var4 = 0
                        stream.add(row)
                     else:
+                       print "Test:", elem
                        hour = elem[8][:2]
                        minute = elem[8][2:4]
                        second = elem[8][4:]
@@ -317,10 +328,12 @@ def readGSM19(filename, headonly=False, **kwargs):
                        except:
                             strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
                        row.time=date2num(strtime)
-                       print row.time
+                       #print row.time
                        row.f = float(elem[3])
                        row.df = float(elem[4])
-                       print row.f
+                       #print row.f
+                       if dist:
+                           row.z = row.f-(row.df*dist)
                        row.var5 = float(elem[5])
                        row.var1 = float(elem[0])
                        row.var2 = float(elem[1])

@@ -163,7 +163,7 @@ def _missingvals(myproxy, port, login, passwd, logfile):
 
 
 if ssh:
-    def scptransfer(src,dest,passwd):
+    def scptransfer(src,dest,passwd,**kwargs):
         """
         DEFINITION:
             copy file by scp
@@ -180,10 +180,13 @@ if ssh:
         USED BY:
            cleanup
         """
+        timeout = kwargs.get('timeout')
 
         COMMAND="scp -oPubKeyAuthentication=no %s %s" % (src, dest)
 
         child = pexpect.spawn(COMMAND)
+        if timeout:
+            child.timeout=timeout
         child.expect('password:')
         child.sendline(passwd)
         child.expect(pexpect.EOF)

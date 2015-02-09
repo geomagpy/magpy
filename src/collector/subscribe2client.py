@@ -6,14 +6,21 @@ except:
     from autobahn.wamp import WampClientProtocol
 # For converting Unicode text
 import collections
+# For saving
+import multiprocessing
 # Timing
 from datetime import datetime, timedelta
 # Database
 import MySQLdb
+# sets for removing duplicates
 
 
 #TODO
 """
+Some comments:
+- storage of one input line requires about 400 microseconds
+
+TODO:
 secondary time column in POS1 file was added manually to data base - not available in bin file - please check that
 """
 
@@ -34,6 +41,7 @@ clientname = 'default'
 s = []
 o = []
 marcospath = ''
+
 
 IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
                 10:'f',11:'x',12:'y',13:'z',14:'df',
@@ -119,6 +127,7 @@ class PubSubClient(WampClientProtocol):
         global s
         global destpath
         global printdata
+        global bufferarray
         global output
         global module
         global stationid
@@ -132,8 +141,12 @@ class PubSubClient(WampClientProtocol):
         self.sensorid = ''
         self.sensortype = ''
         self.sensorgroup = ''
+        self.bufferarray = []
+        self.savedirectly = True
         self.module = ''
         self.typ = ''
+        self.count = 0
+        #self.mpjobs = [] # multiprocessing jobs
         #self.output = output # can be either 'db' or 'file', if not db, then file is used
         # Open database connection
         self.db = None
@@ -324,6 +337,124 @@ class PubSubClient(WampClientProtocol):
             return type(data)(map(self.convertUnicode, data))
         else:
             return data
+
+    def storeDataLine(self, row, paralst,revnumber='0001'):
+        """
+        Function which read a row coming from the subscribe command
+        and writes the data to a file or database
+        """
+        sensorid = row[0]
+        module = row[1]
+        line = row[2]
+        if self.output == 'file':
+            # missing namelst, unitlst and multilst - create dicts for that based on STANDARD
+            packcode = '6hL'
+            multiplier = 100000
+            namelst = [elem for elem in NAMEDICT[module]]
+            unitlst = [elem for elem in UNITDICT[module]]
+
+            if module == 'ow':
+                # TODO
+                if not len(line) == len(paralst):
+                    if len(line) == 2:
+                        paralst = ['time','t1']
+                        namelst = ['T']
+                        unitlst = ['degC']
+                    elif len(line) == 5:
+                        paralst = ['time','t1','var1','var2','var3','var4']
+                        namelst = ['T','RH_P','VDD','VAD','VIS']
+                        unitlst = ['degC','percent_mBar','V','V','V']
+                # check length of paralst and self.line
+                else:
+                    pass
+
+            keylst = paralst[1:]
+            packcode = packcode + 'l'*len(keylst)
+            multilst = [multiplier]*len(keylst)
+
+            if not len(line) == len(paralst):
+                # Output only for testing purpose if you dont want to smash your logs
+                #log.msg("ERRRRRRRRRRRRRRRRRRRRROR")
+                self.line = []
+            else:
+                for i, elem in enumerate(line):
+                    if i == 0:
+                        datearray = timeToArray(line[0])
+                    else:
+                        datearray.append(int(line[i]*multiplier))
+                day = datetime.strftime((datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S.%f")),'%Y-%m-%d')
+                line = []
+                try:
+                    header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, str(keylst), str(namelst), str(unitlst), str(multilst), packcode, struct.calcsize(packcode))
+                    data_bin = struct.pack(packcode,*datearray)
+                    dataToFile(os.path.join(destpath,'MartasFiles'), sensorid, day, data_bin, header)
+                except:
+                    #log.msg("error")
+                    pass
+        else:
+            """
+            Please note:
+            Data is always automatically appended to datainfoid 0001 
+            """
+            if module == 'ow':
+                # DB request is necessary as sensorid has no revision information
+                sql = "SELECT SensorID, SensorGroup, SensorType FROM SENSORS WHERE SensorID LIKE '%s%%'" % sensorid
+                self.cursor.execute(sql)
+                results = self.cursor.fetchall()
+                sid = results[-1][0]
+                sgr = results[-1][1]
+                sty = results[-1][2]
+                datainfoid = sid+'_'+revnumber
+                if sty == 'DS18B20':
+                    paralst = ['time','t1']
+                elif sty == 'DS2438':
+                    if sgr == 'humidity':
+                        paralst = ['time', 't1', 'var1', 'var2', 'var3', 'var4']
+                    elif sgr == 'pressure':
+                        paralst = ['time', 't1', 'var1', 'var2', 'var3', 'var4']
+                    else:
+                        paralst = ['time', 't1', 'var1', 'var2', 'var3', 'var4']
+                self.typ = 'ow'
+            else:
+                datainfoid = sensorid+'_0001'
+            
+            # define insert from provided param
+            parastr = ', '.join(paralst)
+            # separate floats and string        
+            nelst = []
+            for elem in line:
+                if isinstance(elem, str):
+                    elem = "'"+elem+"'"
+                nelst.append(elem)
+            linestr = ', '.join(map(str, nelst))
+            sql = "INSERT INTO %s(%s, flag, typ) VALUES (%s, '0000000000000000-', '%s')" % (datainfoid, parastr, linestr, self.typ)
+            #print "!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql
+            self.line = []
+            # Prepare SQL query to INSERT a record into the database.
+            try:
+                # Execute the SQL command
+                self.cursor.execute(sql)
+                # Commit your changes in the database
+                self.db.commit()
+            except:
+                # No regular output here. Otherwise log-file will be smashed
+                #log.msg("client: could not append data to table")
+                # Rollback in case there is any error
+                self.db.rollback()
+
+    def storeData(self,array,paralst):
+        for row in array:
+            self.storeDataLine(row,paralst)
+
+    def sortAndFilter(self,array):
+        # 1) Sorts array into subarrays with identical sensorids
+        sens = array[0][:]
+        print sens
+        #print list(set(sens))
+        # 2) for each subarray:
+        #     filter the dataset
+        #     save the subarray
+        pass
  
     def onEvent(self, topicUri, event):
         eventdict = self.convertUnicode(event)
@@ -351,102 +482,37 @@ class PubSubClient(WampClientProtocol):
                 if printdata:
                     print "Received from %s: %s" % (sensorid,str(self.line))
 
-                if self.output == 'file':
-                    # missing namelst, unitlst and multilst - create dicts for that based on STANDARD
-                    packcode = '6hL'
-                    multiplier = 100000
-                    namelst = [elem for elem in NAMEDICT[module]]
-                    unitlst = [elem for elem in UNITDICT[module]]
- 
-                    if module == 'ow':
-                        # TODO
-                        if not len(self.line) == len(paralst):
-                            if len(self.line) == 2:
-                                paralst = ['time','t1']
-                                namelst = ['T']
-                                unitlst = ['degC']
-                            elif len(self.line) == 5:
-                                paralst = ['time','t1','var1','var2','var3','var4']
-                                namelst = ['T','RH_P','VDD','VAD','VIS']
-                                unitlst = ['degC','percent_mBar','V','V','V']
-                        # check length of paralst and self.line
-                        else:
-                            pass
+                row = [sensorid, module, self.line]
+                self.bufferarray.append(row)
+                if len(self.bufferarray) > 100:
+                    self.bufferarray = self.bufferarray[-100:]
+                self.count += 1
+                self.line=[]
 
-                    keylst = paralst[1:]
-                    packcode = packcode + 'l'*len(keylst)
-                    multilst = [multiplier]*len(keylst)
-
-                    if not len(self.line) == len(paralst):
-                        # Output only for testing purpose if you dont want to smash your logs
-                        #log.msg("ERRRRRRRRRRRRRRRRRRRRROR")
-                        self.line = []
-                    else:
-                        for i, elem in enumerate(self.line):
-                            if i == 0:
-                                datearray = timeToArray(self.line[0])
-                            else:
-                                datearray.append(int(self.line[i]*multiplier))
-                        day = datetime.strftime((datetime.strptime(self.line[0],"%Y-%m-%d %H:%M:%S.%f")),'%Y-%m-%d')
-                        self.line = []
-                        try:
-                            header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, str(keylst), str(namelst), str(unitlst), str(multilst), packcode, struct.calcsize(packcode))
-                            data_bin = struct.pack(packcode,*datearray)
-                            dataToFile(os.path.join(destpath,'MartasFiles'), sensorid, day, data_bin, header)
-                        except:
-                            #log.msg("error")
-                            pass
+                #self.savedirectly = False
+                critvalue = 90
+                if self.savedirectly:
+                    self.count = 0
+                    array = self.bufferarray[-1:]
+                    self.storeData(array,paralst)
+                    # if filter:
+                    # add a filter function after 100 to 1000 steps?
                 else:
-                    """
-                    Please note:
-                    Data is always automatically appended to datainfoid 0001 
-                    """
-                    if module == 'ow':
-                        # DB request is necessary as sensorid has no revision information
-                        sql = "SELECT SensorID, SensorGroup, SensorType FROM SENSORS WHERE SensorID LIKE '%s%%'" % sensorid
-                        self.cursor.execute(sql)
-                        results = self.cursor.fetchall()
-                        sid = results[-1][0]
-                        sgr = results[-1][1]
-                        sty = results[-1][2]
-                        datainfoid = sid+'_0001'
-                        if sty == 'DS18B20':
-                            paralst = ['time','t1']
-                        elif sty == 'DS2438':
-                            if sgr == 'humidity':
-                                paralst = ['time', 't1', 'var1', 'var2', 'var3', 'var4']
-                            elif sgr == 'pressure':
-                                paralst = ['time', 't1', 'var1', 'var2', 'var3', 'var4']
-                            else:
-                                paralst = ['time', 't1', 'var1', 'var2', 'var3', 'var4']
-                        self.typ = 'ow'
-                    else:
-                        datainfoid = sensorid+'_0001'
-                    
-                    # define insert from provided param
-                    parastr = ', '.join(paralst)
-                    # separate floats and string        
-                    nelst = []
-                    for elem in self.line:
-                        if isinstance(elem, str):
-                            elem = "'"+elem+"'"
-                        nelst.append(elem)
-                    linestr = ', '.join(map(str, nelst))
-                    sql = "INSERT INTO %s(%s, flag, typ) VALUES (%s, '0000000000000000-', '%s')" % (datainfoid, parastr, linestr, self.typ)
-                    #print "!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql
-                    self.line = []
-                    # Prepare SQL query to INSERT a record into the database.
-                    try:
-                        # Execute the SQL command
-                        self.cursor.execute(sql)
-                        # Commit your changes in the database
-                        self.db.commit()
-                    except:
-                        # No regular output here. Otherwise log-file will be smashed
-                        #log.msg("client: could not append data to table")
-                        # Rollback in case there is any error
-                        self.db.rollback()
+                    if self.count == critvalue:
+                        # Begin of buffered save
+                        begin = datetime.utcnow()
+                        array = self.bufferarray[-self.count:]
+                        print "Lengths", len(array), self.count
+                        self.count = 0
+                        #self.storeData(array,paralst)
+                        p1 = multiprocessing.Process(target=self.storeData, args=(array,paralst,))
+                        p2 = multiprocessing.Process(target=self.sortAndFilter, args=(array,))
+                        p1.start()
+                        p2.start()
+                        p1.join()
+                        p2.join()
+                        print "Duration of buffered save", datetime.utcnow()-begin
+
         except:
             pass
-
 

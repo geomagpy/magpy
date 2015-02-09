@@ -6,9 +6,9 @@ Written by Roman Leonhardt June 2012
 """
 
 try:
-    from magpy.stream import *
-except:
     from stream import *
+except:
+    from magpy.stream import *
 
 def isIAGA(filename):
     """

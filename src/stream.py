@@ -5822,7 +5822,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         raise TypeError(msg % (format_ep.name,
                                ', '.join(WAVEFORM_ENTRY_POINTS)))
     """
-
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
 
     return stream
