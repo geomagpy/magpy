@@ -3106,6 +3106,7 @@ CALLED BY:
             else:
                 return float("NaN")
 
+
     def multiply(self, factors):
         """
     DEFINITION:

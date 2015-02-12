@@ -12,10 +12,12 @@ CONTAINS:
     (MAIN...)
 	plot:		(Func) Will plot variables from a single stream.
 	plotStreams:	(Func) Plots multiple variables from multiple streams.
+	ploteasy:	(Func) Quick & easy plotting function that plots all data.
     (EXTENDED...)
         plotEMD:	(Func) Plots Empirical Mode Decomposition from opt.emd
         plotNormStreams:(Func) Plot normalised streams
         plotPS: 	(Func) Plots the power spectrum of a given key.
+	plotSatMag:	(Func) Useful tool for plotting magnetic and satellite data.
         plotSpectrogram:(Func) Plots spectrogram of a given key.
 	plotStereoplot:	(Func) Plots stereoplot of inc and dec values.
 	obspySpectrogram:(Func) Spectrogram plotting function taken from ObsPy.
@@ -94,6 +96,23 @@ gridcolor = '#316931'
 labelcolor = '0.2'
 
 def ploteasy(stream):
+    '''
+    DEFINITION:
+        Plots all data in stream. That's it.
+	This function has no formatting options whatsoever.
+	Very useful for quick & easy data evaluation.
+
+    PARAMETERS:
+    Variables:
+        - stream:	(DataStream object) Stream to plot
+
+    RETURNS:
+        - plot: 	(Pyplot plot) Returns plot as plt.show()
+
+    EXAMPLE:
+        >>> ploteasy(somedata)   
+    '''
+
     keys = stream._get_key_headers()
     try:
         sensorid = stream.header['SensorID']
@@ -904,10 +923,13 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
 
 def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
-	padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor,savedpi=80): 
+	padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor,savedpi=80,
+	plottitle=None,legend=True,legendlabels=['Magnetic data','Satellite data'],
+	grid=True,specialdict={}): 
     """
     DEFINITION:
         Plot satellite and magnetic data on same plot for storm comparison.
+	Currently only plots 1x mag variable vs. 1x sat variable.
 
     PARAMETERS:
     Variables:
@@ -915,7 +937,19 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 	- sat_stream:	(DataStream object) Stream of satellite data
         - keys:		(list) Keys to analyse [mag_key,sat_key], e.g. ['x','y']
     Kwargs:
-	- outfile:	(str) Filepath to save plot to
+	- confinex:	(bool) If True, time strs on y-axis will be confined depending on scale.
+	- grid:		(bool) If True, grid will be added to plot. (Doesn't work yet!)
+	- legend:	(bool) If True, legend will be added to plot. Default in legendlabels.
+	- legendlabels:	(list[str]) List of labels to plot in legend.
+	- outfile:	(str) Filepath to save plot to.
+	- padding:	(float) Padding to add to plotted variables
+	- plotfunc:	(bool) If True, fit function will be plotted against sat data.
+	- plottitle:	(str) Title to add to plot
+	- plottype:	(str) 'discontinuous' (nans will be masked) or 'continuous'.
+	- savedpi:	(int) DPI of image if plotting to outfile.
+	- specialdict:	(dict) Contains limits for plot axes in list form. NOTE this is not the
+			same as other specialdicts. Dict keys should be "sat" and "mag":
+			specialdict = {'mag':[40,100],'sat':[300,450]}
 
     RETURNS:
         - plot: 	(matplotlib plot) A plot of the spectrogram.
@@ -926,6 +960,8 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     APPLICATION:
         >>>  
     """
+
+    loggerplot.info("plotSatMag - Starting plotting of satellite and magnetic data...")
 
     t_mag = np.asarray([row[0] for row in mag_stream])
     t_sat = np.asarray([row[0] for row in sat_stream])
@@ -938,19 +974,21 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     ind_mag, ind_sat = KEYLIST.index(key_mag), KEYLIST.index(key_sat)
     y_mag = np.asarray([row[ind_mag] for row in mag_stream])
     y_sat = np.asarray([row[ind_sat] for row in sat_stream])
-    '''
+    
     # Fix if NaNs are present:
     if plottype == 'discontinuous':
-        y_mag = maskNAN(y)
-    else: 
-        nans, test = nan_helper(y_mag)
-        y_mag = [el for idx, el in enumerate(y) if not nans[idx]]
-    if plottype == 'discontinuous':
+        y_mag = maskNAN(y_mag)
         y_sat = maskNAN(y_sat)
-    else: 
+    else:
+        nans, test = nan_helper(y_mag)
+        newt_mag = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+        t_mag = newt_mag
+        y_mag = [el for idx, el in enumerate(y_mag) if not nans[idx]]
         nans, test = nan_helper(y_sat)
-        y_sat = [el for idx, el in enumerate(y) if not nans[idx]]
-    '''
+        newt_sat = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+        t_sat = newt_sat
+        y_sat = [el for idx, el in enumerate(y_sat) if not nans[idx]]
+    
     # Define y-labels:
     try:
         ylabel_mag = mag_stream.header['col-'+key_mag].upper()
@@ -984,30 +1022,60 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         label_sat = ylabel_sat+' $['+yunit_sat+']$'
     else:
         label_sat = ylabel_sat
-    
+
+    # PLOT FIGURE    
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax1.set_ylabel(label_sat,color=labelcolor)
-    ax1.plot(t_sat, y_sat, color='#C0C0C0')
+    axis1 = ax1.plot(t_sat, y_sat, color='#C0C0C0',label=legendlabels[1])
 
     timeunit = ''
     if confinex:
-        tmin = np.min(t_sat)
-        tmax = np.max(t_sat)
+        tmin = np.min(t_mag)
+        tmax = np.max(t_mag)
         # --> If dates to be confined, set value types:
         _confinex(ax1, tmax, tmin, timeunit)
     ax1.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
+    if plottitle:
+        ax1.set_title(plottitle)
 
+    # NOTE: For mag data to be above sat data in zorder, KEEP THIS AXIS ORDER
+    # (twinx() does not play nicely with zorder settings)
     ax2 = ax1.twinx()
-    ax2.plot(t_mag, y_mag, lw=1.5, color='b')
+    axis2 = ax2.plot(t_mag, y_mag, lw=1.5, color='b',label=legendlabels[0])
     ax2.set_ylabel(label_mag,color=labelcolor)
-    ax2.set_ylim(np.min(y_mag)-padding,np.max(y_mag)+padding)
     ax2.yaxis.set_label_position('left')
     ax2.yaxis.set_ticks_position('left')
 
     ax1.yaxis.set_label_position('right')
     ax1.yaxis.tick_right()
 
+    # Define y limits:
+    if 'mag' in specialdict:
+        ax2.set_ylim(specialdict['mag'][0],specialdict['mag'][1])
+    else:
+        ax2.set_ylim(np.min(y_mag)-padding,np.max(y_mag)+padding)
+    if 'sat' in specialdict:
+        ax1.set_ylim(specialdict['sat'][0],specialdict['sat'][1])
+    else:
+        ax1.set_ylim(np.min(y_sat)-padding,np.max(y_sat)+padding)
+
+    # Add a grid:
+    # Difficult with a legend and twinx()...
+    #if grid:
+    #    ax1.grid(zorder=2)
+    #    ax2.grid(zorder=1)
+    #    ax1.yaxis.grid(False)
+
+    # Add a legend:
+    if legend == True:
+        axes = axis2 + axis1
+        labels = [l.get_label() for l in axes]
+        legend = ax1.legend(axes, labels, loc='upper left', shadow=True)
+        for label in legend.get_texts():
+            label.set_fontsize('small')
+
+    # Plot a function to the satellite data:
     if plotfunc:
         sat_stream._drop_nans('y')
         func = sat_stream.fit(['y'],knotstep=0.02)
@@ -1020,8 +1088,10 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
     if outfile:
         plt.savefig(outfile,savedpi=80)
+        loggerplot.info("plotSatMag - Plot saved to %s." % outfile)
     else:
         plt.show()
+        loggerplot.info("plotSatMag - Plot completed.")
 
 
 def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False, 
@@ -1914,6 +1984,7 @@ if __name__ == '__main__':
         # Step 6 - Normalised stream comparison
         try:
             plotNormStreams([teststream], key[0],
+			confinex = True,
 			plottitle = "Normalized stream: Stream key should be normalized to zero.")
             print datetime.utcnow(), "- Plotted normalized streams."
         except Exception as excep:
@@ -1952,8 +2023,20 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['plotStreams-stormphases'] = str(excep)
             print datetime.utcnow(), "--- ERROR with storm phases multiple plot."
+
+        # Step 9 - Plot satellite vs. magnetic data
+        try:
+            xmin, xmax = np.min(teststream._get_column('x')), np.max(teststream._get_column('x'))
+            ymin, ymax = np.min(teststream._get_column('y')), np.max(teststream._get_column('y'))
+            plotSatMag(teststream,teststream,['x','y'],
+                        specialdict={'mag':[xmin-45,xmax+5],'sat':[ymin-5,ymax+45]},
+			plottitle = "Two variables in same plots with double y axes")
+            print datetime.utcnow(), "- Plotted magnetic/satellite data."
+        except Exception as excep:
+            errors['plotSatMag'] = str(excep)
+            print datetime.utcnow(), "--- ERROR with plotSatMagplot."
         
-        # Step 9 - Plot power spectrum
+        # Step 10 - Plot power spectrum
         try:
             freqm, asdm = plotPS(teststream,key[0],
 			returndata=True,
@@ -1964,7 +2047,7 @@ if __name__ == '__main__':
             errors['plotPS'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting power spectrum."
         
-        # Step 10 - Plot normal spectrogram
+        # Step 11 - Plot normal spectrogram
         try:
             plotSpectrogram(teststream,key2,
 			plottitle = "Spectrogram of two keys")
@@ -1973,16 +2056,16 @@ if __name__ == '__main__':
             errors['plotSpectrogram'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting spectrogram."
         
-        # Step 11 - Plot function
+        # Step 12 - Plot function
         try:
-            function = teststream.interpol(key,kind='quadratic')
-            plot_new(teststream,key,function=function,
-			plottitle = "Quadratic function plotted over original data.")
+            func = teststream.fit(key,knotstep=0.02)
+            plot_new(teststream,key,function=func,
+			plottitle = "Fit function plotted over original data.")
         except Exception as excep:
             errors['plot(function)'] = str(excep)
             print datetime.utcnow(), "--- ERROR plotting function."
         
-        # Step 12 - Plot normal stereoplot
+        # Step 13 - Plot normal stereoplot
 	# (This should stay as last step due to coordinate conversion.)
         try:
             teststream._convertstream('xyz2idf')
