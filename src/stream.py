@@ -15,6 +15,12 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 
 print "Initiating MagPy..."
 
+try:
+    from version import __version__
+except:
+    from magpy.version import __version__
+print "MagPy version", __version__
+
 # Standard packages
 # -----------------
 try:

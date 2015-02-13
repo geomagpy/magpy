@@ -114,6 +114,8 @@ def ploteasy(stream):
     '''
 
     keys = stream._get_key_headers()
+    if len(keys) > 9:
+        keys = keys[:8]
     try:
         sensorid = stream.header['SensorID']
     except:

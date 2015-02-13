@@ -17,6 +17,7 @@ try:
     from absolutes import *
     from transfer import *
     from database import *
+    from version import __version__
     from gui.streampage import *
     from gui.dialogclasses import *
     from gui.absolutespage import *
@@ -27,6 +28,7 @@ except:
     from magpy.absolutes import *
     from magpy.transfer import *
     from magpy.database import *
+    from magpy.version import __version__
     from magpy.gui.streampage import *
     from magpy.gui.dialogclasses import *
     from magpy.gui.absolutespage import *
@@ -607,7 +609,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         info.SetIcon(wx.Icon('magpy128.xpm', wx.BITMAP_TYPE_XPM))
         info.SetName('MagPy')
-        info.SetVersion('0.1.285')
+        info.SetVersion(__version__)
         info.SetDescription(description)
         info.SetCopyright('(C) 2011 - 2016 Roman Leonhardt')
         info.SetWebSite('http://www.conrad-observatory.at')
