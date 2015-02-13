@@ -108,6 +108,7 @@ class GSM90Protocol(LineReceiver):
             log.msg('GSM90 - Protocol: Error with binary save routine')
             pass
 
+
         evt1 = {'id': 1, 'value': timestamp}
         evt3 = {'id': 3, 'value': outtime}
         evt10 = {'id': 10, 'value': intensity}

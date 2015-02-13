@@ -7,6 +7,7 @@ except:
 # For converting Unicode text
 import collections
 # For saving
+import numpy as np
 import multiprocessing
 # Timing
 from datetime import datetime, timedelta
@@ -470,7 +471,14 @@ class PubSubClient(WampClientProtocol):
                 eol = eventdict['value']
             if eol == '':
                 if eventdict['id'] in MODIDDICT[module]: # replace by some eol parameter
-                     self.line.append(eventdict['value'])
+                     if eventdict['id']==1: # round time to milliseconds
+                         ar = eventdict['value'].split('.')
+                         millsec= int(np.round(int(ar[1])/1000.)*1000.)
+                         if millsec >= 1000000: ## accept up to one millisec error here
+                             millsec == 999000
+                         self.line.append(ar[0]+'.'+str(millsec).zfill(6))
+                     else:
+                         self.line.append(eventdict['value'])
             else:
                 paralst = []
                 for elem in MODIDDICT[module]:

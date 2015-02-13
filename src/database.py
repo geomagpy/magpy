@@ -1639,10 +1639,22 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                 val = 'null'
             datavals.append(val)
 
-        ct = datetime.strftime(num2date(elem.time).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+        ## All time steps are rounded to millisecond precision for database
+        ## ################################################################
+        normaltime = num2date(elem.time)
+        ms = int(np.round(normaltime.microsecond/1000.)*1000.)
+        if ms < 1000000:
+            ct = datetime.strftime(normaltime.replace(microsecond=ms).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+        else:
+            ct = datetime.strftime(normaltime.replace(microsecond=0).replace(tzinfo=None)+timedelta(seconds=1),'%Y-%m-%d %H:%M:%S.%f')
         # Take the insertstring creation out of loop
-        if not isnan(elem.sectime) and tmpstream._is_number(elem.sectime) and sectimevalidity: 
-            cst = datetime.strftime(num2date(elem.sectime).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+        if not isnan(elem.sectime) and tmpstream._is_number(elem.sectime) and sectimevalidity:
+            furthertime = num2date(elem.sectime)
+            fms = int(np.round(furthertime.microsecond/1000.)*1000.)
+            if fms < 1000000:
+                cst = datetime.strftime(furthertime.replace(microsecond=fms).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
+            else:
+                cst = datetime.strftime(furthertime.replace(microsecond=0).replace(tzinfo=None)+timedelta(seconds=1),'%Y-%m-%d %H:%M:%S.%f')
             lst = [ct, cst]
         else:
             lst = [ct]
