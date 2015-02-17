@@ -892,8 +892,8 @@ CALLED BY:
             try:
                 exec('self.header["col-%s"] = self.header["col-%s"]' % (put2key, key))
                 exec('self.header["unit-col-%s"] = self.header["unit-col-%s"]' % (put2key, key))
-                exec('self.header["col-%s"] = ""' % (key))
-                exec('self.header["unit-col-%s"] = ""' % (key))
+                exec('self.header["col-%s"] = None' % (key))
+                exec('self.header["unit-col-%s"] = None' % (key))
             except:
                 loggerstream.error("_move_column: Error updating headers.")
             loggerstream.info("_move_column: Column %s moved to column %s." % (key, put2key))
@@ -5907,17 +5907,40 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     sta = list(stream_a)
     stb = list(stream_b)
     if addall:
+        loggerstream.info('mergeStreams: Adding streams together with no regard for time data.')
         for elem in stream_b:
             sta.append(elem)
-        sta.sort()
-        return DataStream(sta, headera)
+        newsta = DataStream(sta, headera)
+        for elem in headerb:
+            try:
+                headera[elem]
+                ha = True
+            except:
+                ha = False
+            if headerb[elem] and not ha:
+                newsta.header[elem] = headerb[elem]
+            elif headerb[elem] and ha:
+                loggerstream.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
+        newsta.sorting()
+        return newsta
     elif extend:
+        loggerstream.info('mergeStreams: Extending stream a with data from b.')
         for elem in stream_b:
             if not elem.time in timea:
-                #print timea, elem.time
                 sta.append(elem)
-        sta.sort()
-        return DataStream(sta, headera)
+        newsta = DataStream(sta, headera)
+        for elem in headerb:
+            try:
+                headera[elem]
+                ha = True
+            except:
+                ha = False
+            if headerb[elem] and not ha:
+                newsta.header[elem] = headerb[elem]
+            elif headerb[elem] and ha:
+                loggerstream.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
+        newsta.sorting()
+        return newsta
     else:
         # interpolate stream_b
         # changed the following trim section to prevent removal of first input in trim method 

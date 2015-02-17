@@ -34,7 +34,12 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    # Use only clean data (status var S = 0)
+    cleandata = kwargs.get('cleandata')
     getfile = True
+
+    if cleandata == None:
+        cleandata = True
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -127,6 +132,19 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                         stream.header['unit-col-dz'] = unit
                         stream.header['unit-col-var3'] = unit
                         stream.header['unit-col-var4'] = unit
+                    if colname == 'Bx,By,Bz,Btin':
+                        stream.header['col-x'] = 'Bx'
+                        stream.header['col-y'] = 'By'
+                        stream.header['col-z'] = 'Bz'
+                        stream.header['col-f'] = 'Bt'
+                        stream.header['unit-col-x'] = unit
+                        stream.header['unit-col-y'] = unit
+                        stream.header['unit-col-z'] = unit
+                        stream.header['unit-col-f'] = unit
+                        stream.header['col-var1'] = 'Lat'
+                        stream.header['col-var2'] = 'Lon'
+                        stream.header['unit-col-var1'] = 'degrees'
+                        stream.header['unit-col-var2'] = 'degrees'
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -135,8 +153,17 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                 dataelem = line.split()
                 date = datetime(int(dataelem[0]),int(dataelem[1]),int(dataelem[2]),int(dataelem[3][:2]),int(dataelem[3][2:]))
                 status = int(dataelem[6])
+                row.str1 = status
                 row.time = date2num(date)
-                if status == 0: # indicates good data
+                if cleandata == True:
+                    if status == 0: # indicates good data
+                        usedata = True
+                    else:
+                        usedata = False
+                elif cleandata == False:
+                    usedata = True
+
+                if usedata:
                     if datatype == 'swepam':
                         if (float(dataelem[7]) > -9999): 
                             row.x = float(dataelem[7])
@@ -152,7 +179,18 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                             if (float(dataelem[9]) > -9999): 
                                 row.t2 = float(dataelem[9])
                     elif datatype == 'mag':
-                        pass
+                        if (float(dataelem[7]) > -9999): 
+                            row.x = float(dataelem[7])
+                        if (float(dataelem[8]) > -9999): 
+                            row.y = float(dataelem[8])
+                        if (float(dataelem[9]) > -9999): 
+                            row.z = float(dataelem[9])
+                        if (float(dataelem[10]) > -9999): 
+                            row.f = float(dataelem[10])
+                        if (float(dataelem[11]) > -9999): 
+                            row.var1 = float(dataelem[11])
+                        if (float(dataelem[12]) > -9999): 
+                            row.var2 = float(dataelem[12])
                     elif datatype == 'epam':
                         if (float(dataelem[7]) > -9999): 
                             row.f = float(dataelem[7])

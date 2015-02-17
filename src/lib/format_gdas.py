@@ -30,6 +30,10 @@ def isGDASB1(filename):
         temp = open(filename, 'rb').read(25)
     except:
         return False
+    # This format falsely identifies some ace data.
+    # Temporary fix until a better filter can be created:
+    if 'ace' in temp:
+        return False
     try:
         data= struct.unpack("<BBBBLLLLLc", temp)
     except:
