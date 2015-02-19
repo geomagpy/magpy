@@ -127,8 +127,8 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
         print 'Credentials: user missing'
         return
     if not passwd:
-        print 'Credentials: passwd missing'
-        return
+        print 'Credentials: no password provided'
+        #return
     if typus == 'db':
         if not db:
             print 'Credentials: database missing'

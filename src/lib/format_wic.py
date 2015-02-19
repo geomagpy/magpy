@@ -362,7 +362,7 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
                 for i, elem in enumerate(columns):
                     if i > 1:
                         key = KEYLIST[i-1]
-                        headers['col-'+key] = elem
+                        headers['col-'+key] = elem.strip('_')
             else:
                 colsstr = line.split()
                 if not takehelium:

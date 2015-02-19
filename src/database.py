@@ -740,9 +740,11 @@ def dbfields2dict(db,datainfoid):
         colsel = colselstr.split('_')
         print cols, colsel
         for i, elem in enumerate(cols):
-            if not elem == '_':
-                key = 'col-'+elem
-                metadatadict[key] = colsel[i]
+            if not elem == '-':
+                key = 'col-'+KEYLIST[i]
+                unitkey = 'unit-col-'+KEYLIST[i]
+                metadatadict[key] = cols[i]
+                metadatadict[unitkey] = colsel[i]
     except:
         loggerdatabase.warning("dbfields2dict: Could not assign column name")
 
