@@ -901,7 +901,10 @@ def dbselect(db, element, table, condition=None, expert=None):
         cursor.execute(sql)
         rows = cursor.fetchall()
         for el in rows:
-            returnlist.append(el[0])
+            if len(el) < 2:
+                returnlist.append(el[0])
+            else:
+                returnlist.append(el)
     except:
         pass
 

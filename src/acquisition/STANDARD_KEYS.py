@@ -28,6 +28,7 @@ The asociations with the MagPy stream class are contained as IDKEY dictionary in
 32: T (electronics)		-- float (12.5) [C]
 33: rh (relative humidity)	-- float (99.0) [%]
 34: T (dewpoint)		-- float (6.0) [C]
+35: P (pressure)		-- float (906.4) [hPa]
 38: W (weight)                  -- float (24.0042) [g]
    35-39: 			-- [reserved]
 
