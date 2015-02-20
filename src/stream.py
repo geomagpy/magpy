@@ -3113,7 +3113,7 @@ CALLED BY:
                 return float("NaN")
 
 
-    def multiply(self, factors):
+    def multiply(self, factors, square=False):
         """
     DEFINITION:
         A function to multiply the datastream, should one ever have the need to,
@@ -3124,8 +3124,7 @@ CALLED BY:
         - factors: 	(dict) Dictionary of multiplcation factors with keys to apply to 
 			e.g. {'x': -1, 'f': 2}
     Kwargs:
-        - starttime: 	(Datetime object) Start time to apply offsets
-        - endtime : 	(Datetime object) End time to apply offsets
+        - square:	(bool) If True, key will be squared by the factor.
 
     RETURNS:
         - self: 	(DataStream) Multiplied datastream.
@@ -3143,8 +3142,12 @@ CALLED BY:
                 if key == 'time':
                     loggerstream.error("factor: Multiplying time? That's just plain silly.")
                 else:
-                    newval = [elem * factors[key] for elem in val]
-                    loggerstream.info('factor: Multiplied column %s by %s.' % (key, factors[key]))
+                    if square == False:
+                        newval = [elem * factors[key] for elem in val]
+                        loggerstream.info('factor: Multiplied column %s by %s.' % (key, factors[key]))
+                    else:
+                        newval = [elem ** factors[key] for elem in val]
+                        loggerstream.info('factor: Multiplied column %s by %s.' % (key, factors[key]))
                 self = self._put_column(newval, key)
             else:
                 loggerstream.warning("factor: Key '%s' not in keylist." % key)
