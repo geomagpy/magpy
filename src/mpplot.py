@@ -447,6 +447,9 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             if not yunit == '': 
                 yunit = re.sub('[#$%&~_^\{}]', '', yunit)
                 label = ylabel+' $['+yunit+']$'
+            elif yunit == None:
+                loggerplot.warning("No units for key %s! Empty column?" % key)
+                label = ylabel
             else:
                 label = ylabel
             data_dict['ylabel'] = label
@@ -976,18 +979,18 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     ind_mag, ind_sat = KEYLIST.index(key_mag), KEYLIST.index(key_sat)
     y_mag = np.asarray([row[ind_mag] for row in mag_stream])
     y_sat = np.asarray([row[ind_sat] for row in sat_stream])
-    
+
     # Fix if NaNs are present:
     if plottype == 'discontinuous':
         y_mag = maskNAN(y_mag)
         y_sat = maskNAN(y_sat)
     else:
         nans, test = nan_helper(y_mag)
-        newt_mag = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+        newt_mag = [t_mag[idx] for idx, el in enumerate(y_mag) if not nans[idx]]
         t_mag = newt_mag
         y_mag = [el for idx, el in enumerate(y_mag) if not nans[idx]]
         nans, test = nan_helper(y_sat)
-        newt_sat = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+        newt_sat = [t_sat[idx] for idx, el in enumerate(y_sat) if not nans[idx]]
         t_sat = newt_sat
         y_sat = [el for idx, el in enumerate(y_sat) if not nans[idx]]
     

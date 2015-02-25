@@ -670,13 +670,13 @@ CALLED BY:
         for key in FLAGKEYLIST[1:]:
             try:
                 header = self.header['col-'+key]
-		keylist.append(key)
+                try:
+                    unit = self.header['unit-col-'+key]
+		    keylist.append(key)
+                except:
+                    unit = None
             except:
                 header = None
-            try:
-                unit = self.header['unit-col-'+key]
-            except:
-                unit = None
 
         if not len(keylist) > 0:  # e.g. header col-? does not contain any info
             for key in FLAGKEYLIST[1:]: # use the long way
@@ -1796,8 +1796,11 @@ CALLED BY:
                 break
 
             row = LineStruct()
-            row.time = self[i].time
+	    # Take the values in the middle of the window (not exact but changes are
+	    # not extreme over standard 5s window)
+            row.time = self[i+window/2].time
             data_cut = data[i:i+window]
+            row.x = sum(data_cut)/float(window)
 
 	    # 1c. Calculate wavelet transform coefficients
             # Wavedec produces results in form: [cA_n, cD_n, cD_n-1, ..., cD2, cD1]
@@ -1827,7 +1830,7 @@ CALLED BY:
                 fin_fns.append(val)
 
             # TODO: This is hard-wired for level=3.
-            row.x, row.var1, row.var2, row.var3 = fin_fns
+            row.dx, row.var1, row.var2, row.var3 = fin_fns
             
             DWT_stream.add(row)
             i += window
