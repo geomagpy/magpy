@@ -208,8 +208,13 @@ def readGSM19(filename, headonly=False, **kwargs):
             pass
         elif line.startswith('Gem Systems GSM-19') or line.startswith('/Gem Systems GSM-19'):
             head = line.split()
-            headers['SerialNumber'] =  head[3]
-            headers['Instrument'] = head[2]+head[4]
+            headers['SensorName'] = 'GSM19'
+            headers['SensorDataLogger'] =  head[2]+head[4]
+            headers['SensorDataLoggerSerNum'] =  head[3]
+            headers['SensorGroup'] =  'Magnetism'
+            headers['SensorType'] =  'Overhauzer'
+            
+            headers['SensorDescription'] = 'Gem Systems ' + head[2]+head[4]
             # data header
             pass
         elif line.startswith('ID') or line.startswith('/ID'):
@@ -318,7 +323,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                        row.var4 = 0
                        stream.add(row)
                     else:
-                       print "Test:", elem
+                       #print "Test:", elem
                        hour = elem[8][:2]
                        minute = elem[8][2:4]
                        second = elem[8][4:]

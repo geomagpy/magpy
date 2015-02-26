@@ -1226,9 +1226,22 @@ CALLED BY:
                         timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
                     except:
                         try:
-                            timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
+                            timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S.%f")
                         except:
-                            raise TypeError
+                            try:
+                                timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
+                            except:
+                                try:
+                                    # Not happy with that but necessary to deal 
+                                    # with old 1000000 micro second bug
+                                    timearray = time.split('.')
+                                    if timearray[1] == '1000000':
+                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+                                    else:
+                                        # This would be wrong but leads always to a TypeError 
+                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
+                                except:
+                                    raise TypeError
         elif not isinstance(time, datetime):
             raise TypeError
         else:

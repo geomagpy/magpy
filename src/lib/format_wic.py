@@ -356,17 +356,26 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
                 #1) first get number of columns
                 cols = line.split()
                 if not takehelium:
-                    columns = [elem for elem in cols if not elem.startswith('He')]
+                    try:
+                        columns = [elem for elem in cols if not elem.startswith('He')]
+                    except:
+                        print "Found error in header", filename
+                        columns = []
                 else:
                     columns = cols
                 for i, elem in enumerate(columns):
                     if i > 1:
                         key = KEYLIST[i-1]
-                        headers['col-'+key] = elem.strip('_')
+                        headers['col-'+key] = elem.replace('_','')
             else:
                 colsstr = line.split()
                 if not takehelium:
-                    colsstr = [elem for i, elem in enumerate(colsstr) if not cols[i].startswith('He')]
+                    try:
+                        colsstr = [elem for i, elem in enumerate(colsstr) if not cols[i].startswith('He')]
+                    except:
+                        print "Found error in data sequence", filename
+                        #print colsstr
+                        break
                 row = LineStruct()
                 try:
                     date = colsstr[0]+'-'+colsstr[1]
@@ -386,7 +395,7 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
         headers['SensorName'] = 'Various Meteo sensors'
         headers['SensorID'] = 'RCS_Winkelbauer_0001'
         headers['SensorType'] = 'Environment'
-        headers['col-t2'] = '430_UEV' # Necessary because of none UTF8 coding in header
+        headers['col-t2'] = '430UEV' # Necessary because of none UTF8 coding in header
 
     return DataStream(stream, headers)    
 
