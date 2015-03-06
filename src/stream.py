@@ -1805,7 +1805,7 @@ CALLED BY:
 
         # 1b. Loop for sliding window
         while True:
-            if i >= len(data):
+            if i >= (len(data)-window):
                 break
 
             row = LineStruct()

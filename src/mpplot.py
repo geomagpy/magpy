@@ -930,7 +930,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 	padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor,savedpi=80,
 	plottitle=None,legend=True,legendlabels=['Magnetic data','Satellite data'],
-	grid=True,specialdict={}): 
+	grid=True,specialdict={},annotate=False,returnfig=False): 
     """
     DEFINITION:
         Plot satellite and magnetic data on same plot for storm comparison.
@@ -942,6 +942,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 	- sat_stream:	(DataStream object) Stream of satellite data
         - keys:		(list) Keys to analyse [mag_key,sat_key], e.g. ['x','y']
     Kwargs:
+	- annotate:	(bool) If True, comments in flagged stream lines will be annotated into plot.
 	- confinex:	(bool) If True, time strs on y-axis will be confined depending on scale.
 	- grid:		(bool) If True, grid will be added to plot. (Doesn't work yet!)
 	- legend:	(bool) If True, legend will be added to plot. Default in legendlabels.
@@ -951,6 +952,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 	- plotfunc:	(bool) If True, fit function will be plotted against sat data.
 	- plottitle:	(str) Title to add to plot
 	- plottype:	(str) 'discontinuous' (nans will be masked) or 'continuous'.
+	- returnfig:	(bool) Return figure object if True
 	- savedpi:	(int) DPI of image if plotting to outfile.
 	- specialdict:	(dict) Contains limits for plot axes in list form. NOTE this is not the
 			same as other specialdicts. Dict keys should be "sat" and "mag":
@@ -1080,6 +1082,22 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         for label in legend.get_texts():
             label.set_fontsize('small')
 
+    if annotate == True:
+        flags = mag_stream.flags
+        emptycomment = "-"
+        poslst = [ix for ix,el in enumerate(FLAGKEYLIST) if el == key]
+        indexflag = int(poslst[0])
+        for idx, elem in enumerate(flags[1]):
+            if not elem == emptycomment and flags[0][idx][indexflag] in ['0','3']:
+                ax.annotate(r'%s' % (elem),
+                            xy=(t[idx], y[idx]),
+                            xycoords='data', xytext=(20, 20),
+                            textcoords='offset points',
+                            bbox=dict(boxstyle="round", fc="0.8"),
+                            arrowprops=dict(arrowstyle="->",
+                            shrinkA=0, shrinkB=1,
+                            connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+
     # Plot a function to the satellite data:
     if plotfunc:
         sat_stream._drop_nans('y')
@@ -1090,6 +1108,10 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
             ttmp = arange(0,1,0.0001)
             ax1.plot_date(denormalize(ttmp,func[1],func[2]),func[0][fkey](ttmp),	
 		'-',color='gray')
+
+    if returnfig == True:
+        fig = plt.gcf()
+        return fig
 
     if outfile:
         plt.savefig(outfile,savedpi=80)
