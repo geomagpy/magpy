@@ -132,6 +132,12 @@ def readPYCDF(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
+    # Some identification parameters used by Juergs
+    jind = ["H0", "D0", "Z0", "F0", "HNscv", "HEscv", "Zscv", "Basetrig", "time", \
+"HNvar", "HEvar", "Zvar", "T1", "T2", "timeppm", "timegps", \
+"timefge", "Fsc", "HNflag", "HEflag", "Zflag", "Fscflag", "FscQP", \
+"T1flag", "T2flag", "Timeerr", "Timeerrtrig"]
+
     # Check whether header infromation is already present
     headskip = False
     if stream.header == None:
@@ -156,42 +162,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
     logbaddata = False
 
 
-    """
-    # get day from filename (platform independent)
-    splitpath = os.path.split(filename)
-    tmpdaystring = splitpath[1].split('.')[0]
-    daystring = tmpdaystring[-10:]
-    # test for day month year
-    try:
-        bounddate = datetime.strptime(daystring,'%Y-%m-%d')
-        testdateform = '%Y-%m-%d'
-    except:
-        try:
-            bounddate = datetime.strptime(daystring[-7:],'%Y-%m')
-            testdateform = '%Y-%m'
-        except:
-            try:
-                bounddate = datetime.strptime(daystring[-4:],'%Y')
-                testdateform = '%Y'
-            except:
-                pass
-         
-    try:
-        if starttime:
-            if not bounddate >= datetime.strptime(datetime.strftime(stream._testtime(starttime),testdateform),testdateform):
-                getfile = False
-        if endtime:
-            if not bounddate <= datetime.strptime(datetime.strftime(stream._testtime(endtime),testdateform),testdateform):
-                getfile = False
-    except:
-        # Date format not recognized. Need to read all files
-        getfile = True 
-
-    print bounddate, endtime, datetime.strptime(datetime.strftime(stream._testtime(endtime),testdateform),testdateform)
-    """
-
     # Get format type:
-    # DTU type is using different date format (MATLAB specific)
+    # Juergens DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
     if getfile:
         loggerlib.info("read: %s Format: PYCDF" % filename)
@@ -235,73 +207,98 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         del row
                 #del ti
             elif key == 'HNvar' or key == 'x':
-                #x = cdf_file[key][...]
-                stream._put_column(cdf_file[key][...],'x')
-                #del x
-                #if not headskip:
-                stream.header['col-x'] = 'x'
-                try:
-                    stream.header['col-x'] = cdf_file['x'].attrs['name']
-                except:
-                    pass
-                try:
-                    stream.header['unit-col-x'] = cdf_file['x'].attrs['units']
-                except:
-                    pass
+                x = cdf_file[key][...]
+                if len(x) > 0:
+                    stream._put_column(x,'x')
+                    del x
+                    #if not headskip:
+                    stream.header['col-x'] = 'x'
+                    try:
+                        stream.header['col-x'] = cdf_file['x'].attrs['name']
+                    except:
+                        pass
+                    try:
+                        stream.header['unit-col-x'] = cdf_file['x'].attrs['units']
+                    except:
+                        # Apply default unit:
+                        stream.header['unit-col-x'] = 'nT'
+                        pass
             elif key == 'HEvar' or key == 'y':
-                #y = cdf_file[key][...]
-                stream._put_column(cdf_file[key][...],'y')
-                #del y
-                try:
-                    stream.header['col-y'] = cdf_file['y'].attrs['name']
-                except:
-                    stream.header['col-y'] = 'y'
-                try:
-                    stream.header['unit-col-y'] = cdf_file['y'].attrs['units']
-                except:
-                    pass
+                y = cdf_file[key][...]
+                if len(y) > 0:
+                    stream._put_column(y,'y')
+                    del y
+                    try:
+                        stream.header['col-y'] = cdf_file['y'].attrs['name']
+                    except:
+                        stream.header['col-y'] = 'y'
+                    try:
+                        stream.header['unit-col-y'] = cdf_file['y'].attrs['units']
+                    except:
+                        # Apply default unit:
+                        stream.header['unit-col-y'] = 'nT'
+                        pass
             elif key == 'Zvar' or key == 'z':
-                #z = cdf_file[key][...]
-                stream._put_column(cdf_file[key][...],'z')
-                #del z
-                try:
-                    stream.header['col-z'] = cdf_file['z'].attrs['name']
-                except:
-                    stream.header['col-z'] = 'z'
-                try:
-                    stream.header['unit-col-z'] = cdf_file['z'].attrs['units']
-                except:
-                    pass
+                z = cdf_file[key][...]
+                if len(z) > 0:
+                    stream._put_column(z,'z')
+                    del z
+                    try:
+                        stream.header['col-z'] = cdf_file['z'].attrs['name']
+                    except:
+                        stream.header['col-z'] = 'z'
+                    try:
+                        stream.header['unit-col-z'] = cdf_file['z'].attrs['units']
+                    except:
+                        # Apply default unit:
+                        stream.header['unit-col-z'] = 'nT'
+                        pass
             elif key == 'Fsc' or key == 'f':
-                #f = cdf_file[key][...]
-                stream._put_column(cdf_file[key][...],'f')
-                #del f
+                f = cdf_file[key][...]
+                if len(f) > 0:
+                    stream._put_column(f,'f')
+                    del f
+                    try:
+                        stream.header['col-f'] = cdf_file['f'].attrs['name']
+                    except:
+                        stream.header['col-f'] = 'f'
+                    try:
+                        stream.header['unit-col-f'] = cdf_file['f'].attrs['units']
+                    except:
+                        # Apply default unit:
+                        stream.header['unit-col-f'] = 'nT'
+                        pass
+            elif key.endswith('scv'): # solely found in juergs files - now define magpy header info
                 try:
-                    stream.header['col-f'] = cdf_file['f'].attrs['name']
+                    # Please note: using only the last value to identify scalevalue 
+                    # - a change of scale values should leed to a different cdf archive !!
+                    stream.header['DataScaleX'] = cdf_file['HNscv'][...][-1]
+                    stream.header['DataScaleY'] = cdf_file['HEscv'][...][-1]
+                    stream.header['DataScaleZ'] = cdf_file['Zscv'][...][-1]
+                    stream.header['DataSensorOrientation'] = 'hdz'
                 except:
-                    stream.header['col-f'] = 'f'
-                try:
-                    stream.header['unit-col-f'] = cdf_file['f'].attrs['units']
-                except:
+                    # print "error while interpreting header"
                     pass
             else:
                 if key.lower() in KEYLIST:
-                    #col = cdf_file[key][...]
-                    stream._put_column(cdf_file[key][...],key.lower())
-                    #del col
-                    stream.header['col-'+key.lower()] = key.lower()
-                    try:
-                        stream.header['unit-col-'+key.lower()] = cdf_file[key.lower()].attrs['units']
-                    except:
-                        pass
-                    try:
-                        stream.header['col-'+key.lower()] = cdf_file[key.lower()].attrs['name']
-                    except:
-                        pass
-            
+                    arkey = cdf_file[key][...]
+                    if len(arkey) > 0:
+                        stream._put_column(arkey,key.lower())
+                        stream.header['col-'+key.lower()] = key.lower()
+                        try:
+                            stream.header['unit-col-'+key.lower()] = cdf_file[key.lower()].attrs['units']
+                        except:
+                            # eventually apply default deg C for temperatures if not provided in header
+                            if key.lower() in ['t1','t2']:
+                                stream.header['unit-col-'+key.lower()] = "*C"
+                            pass
+                        try:
+                            stream.header['col-'+key.lower()] = cdf_file[key.lower()].attrs['name']
+                        except:
+                            pass
+
     cdf_file.close()
     del cdf_file
-    #gc.collect()
 
     return DataStream(stream, stream.header)   
 

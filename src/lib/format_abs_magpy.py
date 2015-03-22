@@ -189,6 +189,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     person, f_inst, di_inst = '','',''
     i = 0
     expectedmire,temp = 0.0,0.0
+    delf = 0.0
     key = None
     headfound = False
     dirow = DILineStruct(25)
@@ -240,8 +241,17 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             if headline[0] == ('# Abs-Scalar'):
                 f_inst = headline[1].strip()
                 dirow.f_inst = f_inst
-            if headline[0] == ('# Abs-Temperatur'):
-                temp = float(headline[1].strip('C').replace(',','.').strip(u"\u00B0"))
+            if headline[0] == ('# Abs-DeltaF'):
+                try:
+                    delf = float(headline[1].strip())
+                except:
+                    delf = 0.0
+            if headline[0] == ('# Abs-Temperature'):
+                tempstring = headline[1].replace('C','').strip()
+                if not tempstring == '':
+                    temp = float(tempstring.replace(',','.').strip(u"\u00B0").strip())
+                else:
+                    temp = float(nan)
                 dirow.t = temp
             if headline[0] == ('# Abs-InputDate'):
                 adate= datetime.strptime(headline[1].strip(),'%Y-%m-%d')
@@ -256,13 +266,15 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
         elif numelements == 2:
             # Intensity mesurements
             row = AbsoluteDIStruct()
-            fstr = line.split()
+            fstr = line.split()            
             try:
                 row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
+                dirow.ftime.append(row.time)
             except:
                 logging.warning('ReadAbsolute: Check date format of f measurements in file %s' % filename)
             try:
-                row.f = float(fstr[1])
+                row.f = float(fstr[1]) + delf
+                dirow.f.append(row.f)
             except:
                 logging.warning('ReadAbsolute: Check data format in file %s' % filename)
             stream.add(row)
@@ -364,6 +376,12 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     dirow.res.insert(14,float(nan))
     dirow.res.insert(15,float(nan))
 
+    #print "Check output - dirow"
+    #print "-----------------------------------------------------"
+    #print dirow
+    #print "Check output - stream"
+    #print "-----------------------------------------------------"
+    #print stream
 
     if output == "DIListStruct":
         # -- Return single row list ---- Works !!!!!!   Further Checks necessary

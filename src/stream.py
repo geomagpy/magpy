@@ -545,6 +545,8 @@ CALLED BY:
     def replace(self, datlst):
         # Replace in stream 
         # - replace value with existing data
+        # Method was used by K calc - replaced by internal method there
+        newself = DataStream()
         assert isinstance(self.container, (list, tuple))
         ti = list(self._get_column('time'))
         try:
@@ -556,6 +558,7 @@ CALLED BY:
            return self
         li = [elem for elem in self]
         del li[ind]
+        del ti[ind]
         li.append(datlst)
         return DataStream(li,self.header)
 
@@ -672,11 +675,12 @@ CALLED BY:
                 header = self.header['col-'+key]
                 try:
                     unit = self.header['unit-col-'+key]
-		    keylist.append(key)
                 except:
                     unit = None
+                keylist.append(key)
             except:
                 header = None
+        
 
         if not len(keylist) > 0:  # e.g. header col-? does not contain any info
             for key in FLAGKEYLIST[1:]: # use the long way
@@ -978,97 +982,56 @@ CALLED BY:
         return aicval
 
 
-    def _get_k(self, **kwargs):
+    def harmfit(self,nt, val, fitdegree):
+        # method for harminic fit according to Phil McFadden's fortran program
         """
-        Calculates the k value according to the Bartels scale
-        Requires alpha to be set correctly (default: alpha = 1 valid for Niemegk)
-        default Range nT 0 5 10 20 40 70 120 200 330 500
-        default KValue   0 1  2  3  4  5   6   7   8   9
-        key: defines the column to write k values (default is t2)
-        """
+    DEFINITION:
+        Method for harmonic fit according to Phil McFadden's fortran program
+        Used by k-value determination
 
-        key = kwargs.get('key')
-        put2key = kwargs.get('put2key')
-        puthead = kwargs.get('puthead')
-        putunit = kwargs.get('putunit')
-        alpha = kwargs.get('alpha')
-        scale = kwargs.get('scale')
-        if not alpha:
-            alpha = 1
-        if not key:
-            key = 'dx'
-        if not put2key:
-            put2key = 't2'
-        if not scale:
-            scale = [5,10,20,40,70,120,200,330,500] # Bartles scale
+    PARAMETERS:
+    Kwargs:
+        - nt: 		(list) Normalized time array.
+        - val: 		(list) Value list.
+        - fitdegree: 	(int) hramonic degree default is 5.
 
-        k = 9
-        outstream = DataStream()
-        for elem in self:
-            exec('dH = elem.'+key)
-            if dH < scale[8]*alpha:
-                k = 8
-            if dH < scale[7]*alpha:
-                k = 7
-            if dH < scale[6]*alpha:
-                k = 6
-            if dH < scale[5]*alpha:
-                k = 5
-            if dH < scale[4]*alpha:
-                k = 4
-            if dH < scale[3]*alpha:
-                k = 3
-            if dH < scale[2]*alpha:
-                k = 2
-            if dH < scale[1]*alpha:
-                k = 1
-            if dH < scale[0]*alpha:
-                k = 0
-            exec('elem.'+put2key+' = k')
-            outstream.add(elem)
+    RETURNS:
+        - newval: 	(array) an array with fitted values of length(val).
 
-        return outstream
+    EXAMPLE:
+        >>> f_fit = self.harmfit(nt,val, 5)
 
+        """    
+        N = len(nt)
+        coeff = (val[-1]-val[0]) /(nt[-1]-nt[0])
+        newval = [elem-coeff*(nt[i]-nt[0]) for i, elem in enumerate(val)]
+        ReVal = []
+        ImVal = []
 
-    def _get_k_float(self, value, **kwargs):
-        """
-        Like _get_k, but for testing single values and not full stream keys (used in filtered function)
-        Calculates the k value according to the Bartels scale
-        Requires alpha to be set correctly (default: alpha = 1 valid for Niemegk)
-        default Range nT 0 5 10 20 40 70 120 200 330 500
-        default KValue   0 1  2  3  4  5   6   7   8   9
-        """
+        for h in range(0,fitdegree):
+            ReVal.append(newval[0])
+            ImVal.append(0.0)
+            angle = -h*(2.0*np.pi/N)
+            for i in range(1,len(newval)):
+                si = np.sin(i*angle)
+                co = np.cos(i*angle)
+                ReVal[h] = ReVal[h] + newval[i]*co
+                ImVal[h] = ImVal[h] + newval[i]*si
 
-        puthead = kwargs.get('puthead')
-        putunit = kwargs.get('putunit')
-        alpha = kwargs.get('alpha')
-        scale = kwargs.get('scale')
-        if not alpha:
-            alpha = 1
-        if not scale:
-            scale = [5,10,20,40,70,120,200,330,500] # Bartles scale
+        #print "Parameter:", len(newval)
+        #print len(ReVal), ReVal
+        angle = 2.0*np.pi*(float(N-1)/float(N))/(nt[-1]-nt[0])
+        harmval = []
+        for i,elem in enumerate(newval):
+            harmval.append(ReVal[0])
+            angle2 = (nt[i]-nt[0])*angle
+            for h in range(1,fitdegree):
+                si = np.sin(h*angle2)
+                co = np.cos(h*angle2)
+                harmval[i] = harmval[i]+(2.0*(ReVal[h]*co-ImVal[h]*si))
+            harmval[i] = harmval[i]/float(N)+coeff*(nt[i]-nt[0])
 
-        k = 9
-        if value < scale[8]*alpha:
-            k = 8
-        if value < scale[7]*alpha:
-            k = 7
-        if value < scale[6]*alpha:
-            k = 6
-        if value < scale[5]*alpha:
-            k = 5
-        if value < scale[4]*alpha:
-            k = 4
-        if value < scale[3]*alpha:
-            k = 3
-        if value < scale[2]*alpha:
-            k = 2
-        if value < scale[1]*alpha:
-            k = 1
-        if value < scale[0]*alpha:
-            k = 0
-
-        return k
+        return np.asarray(harmval)
 
 
     def _get_max(self, key, returntime=False):
@@ -2537,9 +2500,10 @@ CALLED BY:
                 ti = polyfit(nt, val, fitdegree)
                 f_fit = polyval(ti,x)
             elif len(val)>1 and fitfunc == 'harmonic':
-                loggerstream.debug('Selected harmonic fit - not yet implemented')
-                ti = polyfit(nt, val, fitdegree)
-                f_fit = polyval(ti,x)
+                loggerstream.debug('Selected harmonic fit - using inverse fourier transform')
+                f_fit = self.harmfit(nt, val, fitdegree)
+                # Don't use resampled list for harmonic time series
+                x = nt
             elif len(val)<=1:
                 loggerstream.warning('Fit: No valid data')
                 return
@@ -2967,99 +2931,428 @@ CALLED BY:
         func = [functionkeylist, sv, ev]
 
         return func
-        
+
     def k_fmi(self, **kwargs):
         """
-        Calculating k values following the fmi approach:
+        DESCRIPTION:
+        Calculating k values following the fmi approach. The method uses three major steps: 
+        Firstly, the record is eventually filtered to minute data, outliers are removed 
+        (using default options) and gaps are interpolated. Ideally, these steps have been 
+        contucted before, which allows for complete control of these steps.
+        Secondly, the last 27 hours are investigated. Starting from the last record, the last
+        three hour segment is taken and the fmi approach is applied. Finally, the provided
+        stream is analyzed from the beginning. Definite values are thus produced for the 
+        previous day after 3:00 am (depending on n - see below).
+        The FMI method:
+        The provided data stream is checked and converted to xyz data. Investigated are the 
+        horizontal components. In a first run k values are calculated by simply determining
+        the max/min difference of the minute variation data within the three hour segements.
+        This is done for both horizontal components and the maximum difference is selected.
+        Using the transformation table related to the Niemegk scale the k values are calculated.
+        Based on these k values, a first estimate of the quiet daily variation (Sr) is obtained.
+        Hourly means with extended time ranges (30min + m + n) are obtained for each x.5 hour.
+        m refers to 120 minutes (0-3a.m., 21-24p.m.), 60 minutes (3-6, 18-21) or 0 minutes.
+        n is determined by k**3.3.
+
+        xyz within the code always refers to the coordinate system of the sensor and not to any geomagnetic reference.
+
+        By default it is assumed that the provided stream comes from a hdz oriented instrument.
+        For xyz (or any other) orientation use the option checky=True to investigate both horizontal components.
+        If the stream contains absolute data, the option hcomp = True transforms the stream to hdz.
+   
+        The following steps are performed:
+        1. Asserts: Signal covers at least 24 hours, sampling rate minute or second
+        2. Produce filtered minute signal, check for gaps, eventually interpolate (done by filter/sm algorythm) - needs some improvements
+        3. from the last value contained get 3 hour segments and calculate max, min and max-min        
+
         kwargs support the following keywords:
+            - k9_level  (float) the value for which k9 is defined, all other values a linearly approximated
+            - magnetic latitude  (float) another way to define the k scale 
             - timerange (timedelta obsject) default=timedelta(hours=1)
-            - fitdegree (float)  default=4
+            - fitdegree (float)  default=5
             - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
             - flag 
         """
-        fitfunc = kwargs.get('fitfunc')
-        put2key = kwargs.get('put2key')
+        plot = kwargs.get('plot')
+        debug = kwargs.get('debug')
+        hcomp = kwargs.get('hcomp')
         fitdegree = kwargs.get('fitdegree')
-        knotstep=kwargs.get('knotstep')
-        m_fmi = kwargs.get('m_fmi')
+        fitfunc=kwargs.get('fitfunc')
+        magnetic_latitude = kwargs.get('magnetic_latitude')
+        k9_level = kwargs.get('k9_level')
+        checky = kwargs.get('checky')  # used for xyz data if True then the y component is checked as well
+
         if not fitfunc:
             fitfunc = 'poly'
         if not fitdegree:
-            fitdegree = 3
-        if not m_fmi:
-            m_fmi = 0
-        if not put2key:
-            put2key = 't2'
+            fitdegree = 5
+        if not k9_level:
+            k9_level = 500
         
-        print "Fitting:", fitdegree
-        stream = DataStream()
-        # extract daily streams/24h slices from input
-        iprev = 0
-        iend = 0
+        # Some basics:
+        startinghours = [0,3,6,9,12,15,18,21]
+        mlist = [120,60,0,0,0,0,60,120]
+
+        #ngkscale = [0,5,10,20,40,70,120,200,330,500]
+
+        fortscale = [0,7.5,15,30,60,105,180,300,495,750]
+        k_scale = [float(k9_level)*elem/750.0 for elem in fortscale]
+
+        # calculate local scale from magnetic latitude (inclination):
+        # important: how to do that - what is the latitudinal relationship, how to transfer the scale, 
+        # it is frequently mentioned to be quasi-log but it is not a simple Log scale
+        # func can be fitted reasonably well by 
+        # func[a_] := Exp[0.8308663199145958 + 0.7894060396483681 k -  0.021250627459823503 k^2]
+
+        kstream = DataStream()
 
         loggerstream.info('--- Starting k value calculation: %s ' % (str(datetime.now())))
 
-        # Start with the full input stream
-        # eventually convert xyz to hdz first
-        gettyp = self[0].typ
+        # Non destructive - using a coyp of the supplied stream
+        stream = self.copy()
 
-        print "Typ:", gettyp
- 
-        if gettyp == 'xyzf':
-            fmistream = self._convertstream('xyz2hdz',keep_header=True)
-        elif gettyp == 'idff':
-            fmistream = self._convertstream('idf2xyz',keep_header=True)
-            fmistream = self._convertstream('xyz2hdz',keep_header=True)
-        elif gettyp == 'hdzf':
-            fmistream = self
-            pass
+        # ############################################
+        # ##           Step 1           ##############
+        # ##   ------------------------ ##############
+        # ##  preparing data:           ##############
+        # ##  - check sampling/length   ##############
+        # ##  - check type (xyz etc)    ##############
+        # ##  - check removing outliers ##############
+        # ##  - eventually filter       ##############
+        # ##  - interpolate/fill gaps   ##############
+        # ############################################
+
+        # removing outliers
+        if debug:
+            print "Removing outliers"
+        stream = stream.remove_outlier(keys=['x','y','z','f'],threshold=6.) # Weak conditions
+        stream = stream.remove_flagged()
+   
+        sr = stream.samplingrate()
+        if debug:
+            print "Sampling rate", sr
+
+        if sr > 65:
+            print "Algorythm requires minute or higher resolution - aborting"
+            return
+        if sr <= 0.9:
+            print "filter to seconds"
+        elif 0.9 < sr < 55:
+            print "filter to minutes"
         else:
-            loggerstream.error('Unkown type (xyz?) in FMI function')
+            print "Seems to be minute data" 
+            # get_gaps - put nans to missing data
+            # then replace nans with interpolated values
+            #nans, x= nan_helper(v)
+            # v[nans]= interp(x(nans), x(~nans), v[~nans])
+
+        timediff = stream[-1].time - stream[0].time
+        print "Coverage in days:", timediff
+        print "Ending at:", num2date(stream[-1].time)
+        if timediff < 1.1:   # 1 corresponds to 24 hours
+            print "not enough time covered - aborting"
             return
 
-        sr = fmistream.get_sampling_period()
-        #print "Sampling rate of stream (sec) = %.1f" % (sr*24*3600)
-        samprate = int(float("%.1f" % (sr*24*3600)))
-        if not samprate in [1,60]:
-            loggerstream.error('K-FMI: please check the sampling rate of the input file - should be second or minute data - current sampling rate is %d seconds' % samprate)
-            return
-        if samprate == 1:
-            fmistream = fmistream.filter(filter_type='gauss',filter_width=timedelta(seconds=45))
-            fmi1stream = fmistream.filter(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-        if samprate == 60:
-            fmi1stream = fmistream.filter(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-
-        fmi2stream = fmistream.filter(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
-
-        loggerstream.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
-
-        t = fmi2stream._get_column('time')
-
-        while iend < len(t)-1:
-            istart = iprev
-            ta, iend = find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timedelta(hours=24)))
-            currsequence = fmi2stream[istart:iend+1]
-            fmitmpstream = DataStream()
-            for el in currsequence:
-                fmitmpstream.add(el)
-            func = fmitmpstream.fit(['x','y','z'],fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
-            #fmitmpstream.plot(['x'],function=func)
-            fmitmpstream = fmitmpstream.func_subtract(func)
-            stream.extend(fmitmpstream,self.header)
-            iprev = iend
-
-        fmi3stream = stream.filter(filter_type='linear',filter_width=timedelta(minutes=180),filter_offset=timedelta(minutes=90))
-        print fmi3stream 
-        print fmi3stream[0].dx
-        fmi4stream = fmi3stream._get_k(put2key=put2key)
-
-        self.header['col-'+put2key] = 'k'
-
-        outstream = mergeStreams(self,fmi4stream,keys=[put2key])
-
-        loggerstream.info('--- finished k value calculation: %s ' % (str(datetime.now())))
+        gettyp = stream[0].typ
+        if debug:
+            print "Typ:", gettyp
         
-        return DataStream(outstream, self.header)
+        if debug:
+            print "converting data to hdz - only analyze h"
+        # TODO Important currently we are only using x (or x and y)
+
+        # By default use H for determination
+        fmistream = stream
+        if gettyp == 'idff':
+            fmistream = stream._convertstream('idf2xyz',keep_header=True)
+        elif gettyp == 'hdzf':
+            fmistream = stream._convertstream('hdz2xyz',keep_header=True)
+        elif not gettyp == 'xyzf':
+            print "Unkown type of data - please provide xyzf, idff, hdzf -aborting"
+            return 
+
+        if hcomp:
+            print "Please note: H comp requires that that xyz contain absolute values"
+            fmistream = fmistream._convertstream('xyz2hdz',keep_header=True)
+
+        # ############################################
+        # ##           Step 2           ##############
+        # ##   ------------------------ ##############
+        # ##  some functions            ##############
+        # ############################################
+
+        def klist2stream(klist, kvalstream):
+            emptystream = DataStream()
+            if len(kvalstream) > 0:
+                li = [elem for elem in kvalstream]
+                ti = [elem.time for elem in kvalstream]
+            for kline in klist:
+                line = LineStruct()
+                line.time = kline[0]
+                line.var1 = kline[1]
+                line.var2 = kline[2]
+                try:
+                    ind = ti.index(line.time)
+                    del li[ind]
+                    del ti[ind]
+                    emptystream.add(line)
+                except:
+                    kvalstream.add(line)
+            if len(emptystream) > 0:
+                for i in li:
+                    emptystream.add(i)
+                return emptystream
+            else:
+                return kvalstream
+
+        def maxmink(datastream, cdlist, index, k_scale, **kwargs):
+            # function returns 3 hour k values for a 24 hour minute time series
+            # The following function is used several times on different !!!!! 24h !!!!!!!  timeseries 
+            #         (with and without removal of daily-quiet signals)    
+            checky = kwargs.get('checky')
+           
+            xmaxval = 0
+            xminval = 0
+            ymaxval = 0
+            yminval = 0
+            deltaday = 0
+            klist = []
+            for j in range(0,8):
+                if debug:
+                    print "Loop Test", j, index, num2date(cdlist[index])-timedelta(days=deltaday)
+                threehours = datastream.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), "<")
+                index = index - 1
+                if index < 0:
+                    index = 7
+                    deltaday += 1
+                if debug:
+                    print "Start", num2date(cdlist[index])-timedelta(days=deltaday)
+                threehours = threehours.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), ">=")
+                if debug:
+                    print "Length of three hour segment", len(threehours)
+                colx = threehours._get_column('x')
+                colx = [elem for elem in colx if not isnan(elem)]
+                xmaxval = max(colx)
+                xminval = min(colx)
+                if checky:
+                    coly = threehours._get_column('y')
+                    coly = [elem for elem in coly if not isnan(elem)]
+                    ymaxval = max(coly)
+                    yminval = min(coly)
+                maxmindiff = max([xmaxval-xminval, ymaxval-yminval])
+                k = 9
+                for count,val  in enumerate(k_scale):
+                    if maxmindiff > val:
+                        k = count
+                if debug:
+                    print "Extrema", k, maxmindiff, xmaxval, xminval, ymaxval, yminval 
+                # create a k-value list
+                ti = date2num(num2date(cdlist[index])-timedelta(days=deltaday)+timedelta(minutes=90))
+                klist.append([ti,k,maxmindiff])
+
+            return klist
+
+        def fmimeans(datastream, laststep, klist):
+            # function returns 3 hour k values for a 24 hour minute time series
+            deltaday = 0
+            hmlist = []
+            meanstream = DataStream()
+
+            lasthour = num2date(laststep).replace(minute=0, second=0, microsecond=0)
+            for j in range(0,24):
+                #if debug:
+                #    print "Loop Test", j
+                # last hour
+                index = lasthour.hour
+                index = index - 1
+                if index < 0:
+                    index = 23
+                #if debug:
+                #print index
+                meanat = lasthour - timedelta(minutes=30)
+                
+                #get m (using index)
+                #if debug:
+                #print int(np.floor(index/3.))
+                m = mlist[int(np.floor(index/3.))]
+                #if debug:
+                #print "m:", m
+                #get n
+                for ind, val in enumerate(startinghours):
+                    if val <= index < val+3:
+                        kval = klist[ind][1]
+                        if debug:
+                            print "n:", kval, kval**3.3
+                        n = kval**3.3
+
+                # extract meanat +/- (30+m+n)
+                valrange = datastream.extract("time", date2num(meanat+timedelta(minutes=30)+timedelta(minutes=m)+timedelta(minutes=n)), "<")
+                valrange = valrange.extract("time", date2num(meanat-timedelta(minutes=30)-timedelta(minutes=m)-timedelta(minutes=n)), ">=")
+                #if debug:
+                #print "Length of Sequence", len(valrange), num2date(valrange[0].time), num2date(valrange[-1].time)
+                if not datastream[0].time < date2num(meanat-timedelta(minutes=30)-timedelta(minutes=m)-timedelta(minutes=n)):
+                    print "##############################################"
+                    print " careful - datastream not long enough for correct k determination"
+                    print "##############################################"
+                    print "Hourly means not correctly determinable for day", meanat
+                    print "as the extended time range is not reached"
+                    #return meanstream
+                # Now get the means
+                meanx = valrange.mean('x')
+                meany = valrange.mean('y')
+                meanz = valrange.mean('z')
+                hmlist.append([date2num(meanat),meanx,meany,meanz])
+                # Describe why we are duplicating values at the end and the beginning!!
+                # Was that necessary for the polyfit??
+                if j == 0:
+                    hmlist.append([date2num(meanat+timedelta(minutes=30)+timedelta(minutes=m)+timedelta(minutes=n)),meanx,meany,meanz])
+                if j == 23:
+                    hmlist.append([date2num(meanat-timedelta(minutes=30)-timedelta(minutes=m)-timedelta(minutes=n)),meanx,meany,meanz])
+
+                lasthour = lasthour - timedelta(hours=1)
+
+            for elem in sorted(hmlist):
+                line = LineStruct()
+                line.time = elem[0]
+                line.x = elem[1]
+                line.y = elem[2]
+                line.z = elem[3]
+                meanstream.add(line)
+            return meanstream
+
+        # ############################################
+        # ##           Step 2           ##############
+        # ##   ------------------------ ##############
+        # ##  analyze last 24 h:        ##############
+        # ##  - get last day            ##############
+        # ##  - get last 3hour segment  ##############
+        # ##  - run backwards           ##############
+        # ##  - calc fmi:               ##############
+        # ##    - 1. get max/min deviation ###########
+        # ##    - 2. use this k to get sr  ###########
+        # ##    - 3. calc k with sr reduced ##########
+        # ##    - 4. recalc sr              ##########
+        # ##    - 5. final k                ##########
+        # ############################################
+
+        currentdate = num2date(fmistream[-1].time)
+        currentdate.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        print "Last effective time series ending at day", currentdate
+
+        print " -----------------------------------------------------"
+        print " ------------- Starting backward analysis ------------"
+        print " --------------- beginning at last time --------------"
+
+        cdlist = [date2num(currentdate.replace(hour=elem)) for elem in startinghours]
+        #print "Daily list", cdlist
+
+        ta, i = find_nearest(np.asarray(cdlist), date2num(num2date(fmistream[-1].time).replace(tzinfo=None) - timedelta(minutes=90)))
+        #print "Nearest three hour mark", ta, i
+
+        if plot:
+            fmistream.plot(noshow=True, plottitle="0")
+
+        # 1. get a backward 24 hour calculation from the last record
+        klist = maxmink(fmistream,cdlist,i,k_scale)
+        kstream = klist2stream(klist, kstream)
+
+        # 2. a) now get the hourly means with extended time ranges (sr function)
+        hmean = fmimeans(fmistream,fmistream[-1].time,klist)
+        func = hmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
+        if plot:
+            hmean.plot(function=func,noshow=True, plottitle="1: SR function")
+
+        # 2. b) subtract sr from original record
+        redfmi = fmistream.func_subtract(func)
+        if plot:
+            redfmi.plot(noshow=True, plottitle="1: reduced")
+            fmistream.plot(noshow=True, plottitle="1")
+
+        # 3. recalc k
+        klist = maxmink(redfmi,cdlist,i,k_scale)
+        kstream = klist2stream(klist, kstream)
+
+        # 4. recalc sr and subtract
+        finalhmean = fmimeans(fmistream,fmistream[-1].time,klist)
+        finalfunc = finalhmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
+        firedfmi = fmistream.func_subtract(finalfunc)
+        if plot:
+            finalhmean.plot(['x','y','z'],function=finalfunc,noshow=True, plottitle="2: SR function")
+            firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
+            fmistream.plot(['x','y','z'],plottitle="2")
+
+        # 5. final k
+        klist = maxmink(firedfmi,cdlist,i,k_scale)
+        kstream = klist2stream(klist, kstream)
+
+        # ############################################
+        # ##           Step 3           ##############
+        # ##   ------------------------ ##############
+        # ##  analyze from beginning:   ##############
+        # ##  - get first record        ##############
+        # ##  - from day to day         ##############
+        # ##  - run backwards           ##############
+        # ##  - calc fmi:               ##############
+        # ##    - 1. get max/min deviation ###########
+        # ##    - 2. use this k to get sr  ###########
+        # ##    - 3. calc k with sr reduced ##########
+        # ##    - 4. recalc sr              ##########
+        # ##    - 5. final k                ##########
+        # ############################################
+        print " -----------------------------------------------------"
+        print " ------------- Starting forward analysis -------------"
+        print " -----------------  from first date ------------------"
+
+        startday = int(np.floor(fmistream[0].time))
+        for daynum in range(1,int(timediff)+1):
+            currentdate = num2date(startday+daynum)
+            print "Running daily chunks backwards for ", currentdate
+            cdlist = [date2num(currentdate.replace(hour=elem)) for elem in startinghours]
+            #print "Daily list", cdlist
+
+            # 1. get a backward 24 hour calculation from the last record
+            klist = maxmink(fmistream,cdlist,0,k_scale)
+            kstream = klist2stream(klist, kstream)
+            # 2. a) now get the hourly means with extended time ranges (sr function)
+            hmean = fmimeans(fmistream,startday+daynum,klist)
+            if not len(hmean) == 0: # Length 0 if not enough data for full extended mean value calc
+                func = hmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
+                #hmean.plot(function=func,noshow=True)
+                if plot:
+                    fmistream.plot(noshow=True)
+                # 2. b) subtract sr from original record
+                redfmi = fmistream.func_subtract(func)
+                # 3. recalc k
+                klist = maxmink(redfmi,cdlist,0,k_scale)
+                kstream = klist2stream(klist, kstream)
+                #print klist
+                # 4. recalc sr and subtract
+                finalhmean = fmimeans(fmistream,startday+daynum,klist)
+                finalfunc = finalhmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
+                firedfmi = fmistream.func_subtract(finalfunc)
+                if plot:
+                    finalhmean.plot(['x','y','z'],noshow=True, function=finalfunc, plottitle="2")
+                    firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
+                    fmistream.plot(['x','y','z'], plottitle="2: fmistream")
+                # 5. final k
+                klist = maxmink(firedfmi,cdlist,0,k_scale)
+                kstream = klist2stream(klist, kstream)
+                #print "Final", klist
+
+        #return kstream
+
+        outstream = DataStream()
+        lst = [[elem.time,elem.var1,elem.var2] for elem in kstream]
+        for el in sorted(lst):
+            line = LineStruct()
+            line.time = el[0]
+            line.var1 = el[1]
+            line.var2 = el[2]
+            outstream.add(line)
+        
+        return outstream
+
 
     def mean(self, key, **kwargs):
         """

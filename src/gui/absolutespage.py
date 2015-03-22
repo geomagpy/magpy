@@ -43,8 +43,9 @@ class AbsolutePage(wx.Panel):
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(130,30))
         self.advancedLabel = wx.StaticText(self, label="Advanced:")
         self.advancedButton = wx.Button(self,-1,"Set parameter",size=(130,30))
+        self.ClearLogButton = wx.Button(self,-1,"Clear Log",size=(130,30))
         self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(300,250),
-                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
 
 
     def doLayout(self):
@@ -94,8 +95,8 @@ class AbsolutePage(wx.Panel):
                  (self.advancedLabel, noOptions),
                   emptySpace,
                  (self.advancedButton, dict(flag=wx.ALIGN_CENTER)),
-                 # emptySpace,
-                 #(self.dilogTextCtrl, expandOption),
+                  emptySpace,
+                 (self.ClearLogButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace]:
             gridSizer.Add(control, **options)
 

@@ -200,6 +200,17 @@ class DILineStruct(object):
         else:
             sortlist.append(tmplist[-1])
 
+        if len(self.ftime) > 0:
+            for i, elem in enumerate(self.ftime):
+                row = AbsoluteDIStruct()
+                row.time = self.ftime[i]
+                row.f = self.f[i]
+                sortlist.append(row)
+
+        #print sortlist
+
+        ## Eventually append f values
+
         for elem in sortlist:
             stream.add(elem)        
         return stream
@@ -374,6 +385,8 @@ class AbsoluteData(object):
 
         xstart = kwargs.get('xstart')
         ystart = kwargs.get('ystart')
+        hbasis = kwargs.get('hbasis')
+        hstart = kwargs.get('hstart')
         deltaD = kwargs.get('deltaD')
         usestep = kwargs.get('usestep')
         scalevalue = kwargs.get('scalevalue')
@@ -386,12 +399,12 @@ class AbsoluteData(object):
             deltaD = 0.0
         if not scalevalue:
             scalevalue = [1.0,1.0,1.0]
-        if not xstart:
-            xstart = 20000.0
-        if not ystart:
-            ystart = 0.0
         if not annualmeans:
-            annualmeans = [20800,1200,43000]
+            annualmeans = [0.0,0.0,0.0]
+        if not xstart:
+            xstart = annualmeans[0]
+        if not ystart:
+            ystart = annualmeans[1]
         if not usestep: 
             usestep = 0
         if not iterator:
@@ -403,11 +416,26 @@ class AbsoluteData(object):
         scale_y = scalevalue[1]
         scale_z = scalevalue[2]
 
+        #xstart = 4114.3
+        #ystart = 0.0
+        if not hstart:
+            hstart = np.sqrt((xstart)**2 + (ystart)**2)
+        #hbasis = 3903.6
+        if not hbasis:
+            hbasis = hstart
+        #print "Running declination calc:", xstart, ystart, hstart, hbasis
+
+
         #drop NANs from input stream - positions
         expmire = self._get_column('expectedmire')
         expmire = [float(elem) for elem in expmire]
         expmire = np.mean([elem for elem in expmire if not isnan(elem)])
         poslst = [elem for elem in self if not isnan(elem.hc) and not isnan(elem.vc)]
+
+        try:
+            temperature = self[0].t
+        except:
+            pass
 
         try:
             if len(poslst) < 1:
@@ -461,24 +489,36 @@ class AbsoluteData(object):
                 val = poslst[k].hc-poslst[k].vc
             else:
                 val = poslst[k].hc + (360) - poslst[k].vc
-            signum = np.sign(np.tan(val))
+            # removed 2015: signum = np.sign(np.tan(val))
+            if k in [0,1,4,5]:
+               signum = 1.0
+            else:
+               signum = -1.0
             # xstart and ystart are already variometercorrected from iteration step 1 on
-            variox = (poslst[k].varx-meanx)*scale_x
-            varioy = (poslst[k].vary-meany)*scale_y
-            if isnan(variox):
-                variox = 0.
-            if isnan(varioy):
-                varioy = 0.
-            hstart = np.sqrt((xstart+variox)**2 + (ystart+varioy)**2)
+            #variox = (poslst[k].varx-meanx)*scale_x
+            #varioy = (poslst[k].vary-meany)*scale_y
+            #if isnan(variox):
+            #    variox = 0.
+            #if isnan(varioy):
+            #    varioy = 0.
+            #hstart = np.sqrt((xstart+variox)**2 + (ystart+varioy)**2)
+            #print "Hstart", hstart, xstart, ystart
             if hstart == 0:
                 rescorr = 0
             else:
-                rescorr = signum * np.arcsin( poslst[k].res / hstart )
-            if (xstart+poslst[k].varx) == 0:
-                variocorr.append(0)
+                #print "Check", signum, poslst[k].res, hstart, xstart, variox
+                if not isnan(poslst[k].varx) and not isnan(poslst[k].vary):
+                    rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (scale_y*poslst[k].vary)**2 ) )
+                else:
+                    rescorr = signum*np.arcsin( poslst[k].res / hstart )
+            if xstart+poslst[k].varx == 0 or isnan(poslst[k].varx):
+                varco = 0.0
             else:
-                variocorr.append(np.arctan((ystart+varioy)/(xstart+variox)))
-            dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k])
+                varco = np.arctan((scale_y*poslst[k].vary)/(hbasis+scale_x*poslst[k].varx))
+            variocorr.append(varco)
+            # a1 = hc + asin(res1/sqrt[ (hstart+vx)**2 + vy**2 ])*180/Pi - atan( vy/(hstart+vx) )*180/Pi
+            #print "TESTVALUE:", poslst[k].hc*np.pi/(180.0)*200/np.pi, rescorr*200/np.pi, varco*200/np.pi
+            dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k] )
             loggerabs.debug("_calcdec: Horizontal angles: %f, %f, %f" % (poslst[k].hc, rescorr, variocorr[k]))
 
         try:
@@ -512,6 +552,10 @@ class AbsoluteData(object):
 
         decmean = np.mean(dl2)*180.0/np.pi - 180.0
 
+        #for elem in dl2:
+        #    print "A", elem*200/np.pi
+        #print "MeanDec", decmean*200/180
+
         loggerabs.debug("_calcdec:  Mean Dec: %f, %f" % (decmean, mirediff))
 
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
@@ -543,31 +587,47 @@ class AbsoluteData(object):
 
         dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi + deltaD)
 
+        dec_baseval = self._corrangle(decmean + mirediff + deltaD)
+
         loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[0], deltaD, ang_fac, hstart))
 
-        s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
-        deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
-        loggerabs.debug("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
-        if dl2tmp[0]<dl2tmp[1]:
-            epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]+2*np.pi)/4*hstart
+        #print "HStart for collimation D", hstart
+        if not hstart == 0:
+            s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
+            deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
+            loggerabs.debug("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
+            if dl2tmp[0]<dl2tmp[1]:
+                epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]+2*np.pi)/4*hstart
+            else:
+                epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]-2*np.pi)/4*hstart
         else:
-            epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]-2*np.pi)/4*hstart
+            s0d = float(nan)
+            deH = float(nan)
+            epZD = float(nan)
         
         resultline = LineStruct()
         resultline.time = poslst[0].time
         resultline.y = dec
-        resultline.typ = 'idff'         
+        resultline.dy = dec_baseval
+        resultline.typ = 'idff'
         resultline.var1 = s0d
         resultline.var2 = deH
         resultline.var3 = epZD
+        resultline.t1 = poslst[0].temp
         resultline.t2 = mirediff
         # general info:
         resultline.str1 = poslst[0].person
         resultline.str2 = poslst[0].di_inst
-        resultline.str3 = poslst[0].f_inst
+        resultline.str3 = str(expmire)
 
         return resultline
 
+
+    def _h(self, f, inc):
+        return f * np.cos(inc*np.pi/(180.0))
+
+    def _z(self, f, inc):
+        return f * np.sin(inc*np.pi/(180.0))
 
     def _calcinc(self, linestruct, **kwargs):
         """
@@ -613,6 +673,8 @@ class AbsoluteData(object):
         ang_fac = 1
         if not scalevalue:
             scalevalue = [1.0,1.0,1.0]
+        if not annualmeans:
+            annualmeans = [0.0,0.0,0.0]
         if not incstart:
             incstart = 45.0
         if not iterator:
@@ -629,6 +691,15 @@ class AbsoluteData(object):
         # Initialize variometer and scalar instruments .... maybe better not here
         variotype = 'None'
         scalartype = 'None'
+        str4 = 'None'  # Hold a value regarding the used F: Fabs (in absolute file), 
+                       # Fext (from file), Fannual (from provided annual means), or None
+
+        S0I1 = 0.
+        S0I2 = 0.
+        S0I3 = 0.
+        EZI1 = 0.
+        EZI2 = 0.
+        EZI3 = 0.
 
         # -- Get the variometer and scalar means from then absolute file
         # --------------------------------------------------------------
@@ -640,7 +711,6 @@ class AbsoluteData(object):
         mfvlst = [elem for elem in fvcol if not isnan(elem)]
         # Select variometer readings for existing intensity data
         variox, varioy, varioz, flist, fvlist, dflist  = [],[],[],[],[],[]
-        foundfirstelem = 0
         for elem in self:
             if len(mflst) > 0 and not isnan(elem.f):
                 flist.append(elem.f)
@@ -652,33 +722,54 @@ class AbsoluteData(object):
                     fvlist.append(elem.varf)
                     dflist.append(elem.f-elem.varf)
             elif len(mflst) == 0 and len(mfvlst) > 0:
+                #print "Fs:", elem.varf
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
                     variox.append(scale_x*elem.varx) 
                     varioy.append(scale_y*elem.vary) 
                     varioz.append(scale_z*elem.varz)
                 if not isnan(elem.varf):
                     fvlist.append(elem.varf)
-                    if foundfirstelem == 0:
-                        if iterator == 0:
-                            loggerabs.debug("_calcinc: %s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
-                        foundfirstelem = 1
+                    #if foundfirstelem == 0:
+                    #    if iterator == 0:
+                    #        loggerabs.debug("_calcinc: %s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
+                    #    foundfirstelem = 1
+
+        # ###################################
+        # determine average F value
+        #     1. check Absolute file - no delta F -> use delta F from abs file
+        #     2. check Scalar path
+        #     3. check provided annual means
+        # ###################################
 
         if len(mflst)>0:
+            #print "Primary F values contained in absolute file"
+            str4 = "Fabs"
             meanf = np.mean(flist)
             loggerabs.debug("_calcinc: Using F from Absolute files") 
         elif len(mfvlst)>0:
+            #print "Primary F values contained in separate file"
+            str4 = "Fext"
             meanf = np.mean(fvlist)
             loggerabs.debug("_calcinc: Using F from provided scalar path") 
         else:
-            #meanf = 0.
+            #print "No primary F values contained - using eventually provided annual means instead"
             loggerabs.warning("_calcinc: No F measurements found - using annual means ...") 
-            meanf = (annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
+            meanf = np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
+            if not meanf == 0:
+                str4 = "Fannual"
             #return emptyline, 20000.0, 0.0
 
+        #print "Mean F and incstart", meanf, incstart
+
+
+        # ###################################
+        # Getting variometer data for F values
+        #      proper correction requires scalar values
+        # ###################################
         
         if len(variox) == 0:
-            if iterator == 0:
-                loggerabs.warning("_calcinc: %s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))
+            #if iterator == 0:
+            #    loggerabs.warning("_calcinc: %s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))
             # set means to zero...
             meanvariox = 0.0
             meanvarioy = 0.0
@@ -688,9 +779,17 @@ class AbsoluteData(object):
             meanvarioy = np.mean(varioy)
             meanvarioz = np.mean(varioz)
 
-        xcorr =  meanf * np.cos( incstart *np.pi/(180.0) ) * np.cos ( linestruct.y *np.pi/(180.0) ) - meanvariox
-        ycorr =  meanf * np.cos( incstart *np.pi/(180.0) ) * np.sin ( linestruct.y *np.pi/(180.0) ) - meanvarioy
-        zcorr =  meanf * np.sin( incstart *np.pi/(180.0) ) - meanvarioz
+        # print "Test variometer means for F", meanvariox, meanvarioy, meanvarioz
+        # TEST OK
+
+        """
+        #Eventually remove the following line
+        xcorr =  self._h(meanf, incstart) * np.cos ( linestruct.y *np.pi/(180.0) ) - meanvariox
+        ycorr =  self._h(meanf, incstart) * np.sin ( linestruct.y *np.pi/(180.0) ) - meanvarioy
+        zcorr =  self._z(meanf, incstart) - meanvarioz
+
+        print xcorr, ycorr, zcorr, np.sqrt(xcorr**2 + ycorr**2 + zcorr**2)
+        """
 
         #drop NANs from input stream - fvalues
         if len(dflist) > 0:
@@ -701,8 +800,9 @@ class AbsoluteData(object):
         # -- Start with the inclination calculation
         # --------------------------------------------------------------
         nr_lines = len(poslst)
-        I0Diff1,I0Diff2,xDiff1,zDiff1,xDiff2,zDiff2= 0,0,0,0,0,0
+        #I0Diff1,I0Diff2,xDiff1,zDiff1,xDiff2,zDiff2= 0,0,0,0,0,0
         I0list, ppmval,testlst = [],[],[]
+        xvals, yvals, zvals =  [],[],[]
         cnt = 0
         mirediff = linestruct.t2
 
@@ -720,10 +820,13 @@ class AbsoluteData(object):
         for k in range((nr_lines-1)/2,nr_lines):
             val = poslst[k].vc
             try:
-                xtmp = (scale_x*poslst[k].varx) + xcorr
-                ytmp = (scale_y*poslst[k].vary) + ycorr
-                ztmp = (scale_z*poslst[k].varz) + zcorr
-                ppmtmp = np.sqrt(xtmp**2 + ytmp**2 + ztmp**2)
+                # Calculate the mean variations during the I measurements -> Used for offset calc
+                xvals.append(scale_x*poslst[k].varx)
+                yvals.append(scale_y*poslst[k].vary)
+                zvals.append(scale_z*poslst[k].varz)
+                ppmtmp = meanf + (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.) + (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.) + ((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf)
+                #print "PPM according to excel", ppmtmp
+                # old version ---> ppmtmp = np.sqrt(xtmp**2 + ytmp**2 + ztmp**2)
                 if isnan(ppmtmp):
                     ppmval.append(meanf)
                 else:
@@ -750,25 +853,50 @@ class AbsoluteData(object):
                 PiVal=2*np.pi
             else:
                 PiVal=np.pi
-            I0 = (signum1*poslst[k].vc*np.pi/180.0 - signum2*rcorri - signum1*PiVal)
 
-            #print signum1, poslst[k].vc, quad, I0, rcorri, signum2, PiVal
-            # check the quadrant
-            if I0 > np.pi:
-                I0 = 2*np.pi-I0
-            elif I0 < -np.pi:
-                I0 += 2*np.pi
-            elif  I0 < 0:
-                I0 = -I0
-                
+            # Starting new approach here
+            if cnt in [0,1,6,7]:
+                signum2 = 1.0
+                signum3 = 1.0
+            else:
+                signum2 = -1.0
+                signum3 = -1.0
+            if incstart < 0: ###### check here
+                signum2 = -1.*signum2
+            if cnt in [0,1]:
+                I0 = (poslst[k].vc*np.pi/180.0 - signum2*rcorri)
+                sigdf = 1.0
+            elif cnt in [2,3]:
+                I0 = (poslst[k].vc*np.pi/180.0 - signum2*rcorri) - np.pi
+                sigdf = -1.0
+            elif cnt in [4,5]:
+                I0 = 2*np.pi - (poslst[k].vc*np.pi/180.0 - signum2*rcorri)
+                sigdf = 1.0
+            elif cnt in [6,7]:
+                I0 = np.pi - (poslst[k].vc*np.pi/180.0 - signum2*rcorri)
+                sigdf = -1.0
+
+            # previous version -- I0 = (signum1*poslst[k].vc*np.pi/180.0 - signum2*rcorri - signum1*PiVal)
+
+            #print "Inc:", signum1*poslst[k].vc*200/180, quad, I0*200./np.pi, rcorri*200./np.pi, signum2, PiVal, ppmval[cnt]
+
+            # S0I
+            # (northern =-(H32-H33+H34-H35)/4/200*PI()*K35-((F15-F16+F17-F18)*SIN(H40/200*PI())-(H15-H16+H17-H18)*COS(H40/200*PI()))/4
+            # southern is identical
+            # test with different azimuth marks from one location
+            # EZ0I
+            #( northern =((-H32-H33+H34+H35)/4/200*PI()-((F15+F16-F17-F18)*SIN(H40/200*PI())-(H15+H16-H17-H18)*COS(H40/200*PI()))/(4*K35))*K38
+            #( southern =((-H32-H33+H34+H35)/4/200*PI()-((F15+F16-F17-F18)*SIN(H40/200*PI())-(H15+H16-H17-H18)*COS(H40/200*PI()))/(4*K35))*K38
+
             if k < nr_lines-1:
-                I0list.append(I0)       
-                I0Diff1 += signum2*I0
-                xDiff1 += signum2*poslst[k].varx
-                zDiff1 += signum2*poslst[k].varz
-                I0Diff2+= signum1*I0
-                xDiff2 += signum1*poslst[k].varx
-                zDiff2 += signum1*poslst[k].varz
+                I0list.append(I0)
+                # new
+                S0I1 += sigdf*I0
+                S0I2 += sigdf*poslst[k].varx
+                S0I3 += sigdf*poslst[k].varz
+                EZI1 += -signum3*sigdf*I0
+                EZI2 += signum3*sigdf*poslst[k].varx
+                EZI3 += signum3*sigdf*poslst[k].varz
             else:
                 scaleangle = poslst[k].vc
                 minimum = 10000
@@ -776,16 +904,18 @@ class AbsoluteData(object):
                 for n in range((nr_lines-1)/2,nr_lines-1):
                     rotation = np.abs(scaleangle - poslst[n].vc)
                     if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value 
-                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/ppmval[cnt] + np.cos(np.mean(I0list))*(poslst[n].vary-poslst[k].vary)/ppmval[cnt])*180/np.pi 
+                        #=(-SIN(B37*PI()/200)*(F20-F19)/K35+COS(B37*PI()/200)*(H20-H19)/K35)*200/PI()
+                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/mean(ppmval) + np.cos(np.mean(I0list))*(poslst[n].varz-poslst[k].varz)/mean(ppmval))*180/np.pi 
                         deltaB = rotation+fieldchange
                         deltaR = np.abs(poslst[n].res-poslst[k].res)
                         minimum = rotation
                         if (deltaR == 0):
                             calcscaleval = 999.0
                         else:
-                            calcscaleval = ppmval[cnt] * deltaB/deltaR * np.pi/180
+                            #print "Scaleval", mean(ppmval), deltaB, deltaR, rotation, fieldchange
+                            calcscaleval = mean(ppmval) * deltaB/deltaR * np.pi/180
                         loggerabs.debug("_calcinc: Scalevalue calculation in calcinc - Fieldchange: %f, Scalevalue: %f, DeltaR: %f" % (fieldchange,calcscaleval,deltaR))
-   
+
             cnt += 1
 
         i1list,i1tmp = [],[]
@@ -800,87 +930,152 @@ class AbsoluteData(object):
             i1tmp.append(i1mean)
             i1list.append(i1mean)
 
+        # Unlike the excel MagPy first uses all individual components and averages afterwards. The Sum
+        # for collimation angle needs to be divided by two 
 
-        I0Diff1 = I0Diff1/2.
-        xDiff1 = xDiff1/2.
-        zDiff1 = zDiff1/2.
-        I0Diff2 = I0Diff2/2.
-        xDiff2 = xDiff2/2.
-        zDiff2 = zDiff2/2.
+        S0I1 = S0I1/2.
+        S0I2 = S0I2/2.
+        S0I3 = S0I3/2.
+        EZI1 = EZI1/2.
+        EZI2 = EZI2/2.
+        EZI3 = EZI3/2.
 
+        #print "Collimation", S0I1, S0I2, S0I3, EZI1, EZI2, EZI3
         # Variometer correction to start time is missing for f value and inc ???
         inc = np.mean(i1list)*180.0/np.pi + deltaI
 
         if isnan(inc): # if only dec measurements are available
             inc = 0.0
         # Dec is already variometer corrected (if possible) and transferred to time[0]
-        tmpH = meanf * np.cos( inc *np.pi/(180.0) )
-        tmpZ = meanf * np.sin( inc *np.pi/(180.0) )
+
+        #print "Testing here", inc, meanf
+
+        if inc > 90:
+            inc = inc-180
+
+        # determine best F
+        # Please note: excel sheet averages all Variometer corrected values:
+        # ppmval list consists of: 1) ppm values corrected for variation if values contained in abs file
+        #                          2) ppm values corrected for variation if values contained in abs file
+        #                          3) F from provided annual means
+        # Note: these averages are used for determining collimation angels si0 and epzi
+
+        meanf =  mean(ppmval)
+        tmpH = self._h(meanf, inc)  
+        tmpZ = self._z(meanf, inc)
+
+        #print "Averages", tmpH, tmpZ, meanf
+
+        #if not meanf == 0.0:
+        #    inc = np.arctan(tmpZ/tmpH)*180.0/np.pi
+
         # check for inclination error in file inc
         #   -- the following part may cause problems in case of close to polar positions and locations were X is larger than Y
         if (90-inc) < 0.1:
-            loggerabs.error('_calcinc: %s : Inclination warning... check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
-            #loggerabs.error(I0list)
-            h_adder = 0.
+            loggerabs.warning('_calcinc: %s : Inclination warning... neglect if you are on the southern hemisphere. If not check your vertical measurements. inc = %f, mean F = %f' % (num2date(self[0].time).replace(tzinfo=None), inc, meanf))
+
+        # ###################################################
+        # #####      Calculating Collimation angles from average intensity and inc
+        # ###################################################
+
+        if not meanf == 0:
+            s0i = -S0I1/4 * meanf -  (S0I2*np.sin(inc*np.pi/180) - S0I3*np.cos(inc*np.pi/180))/4 
+            epzi = (EZI1/4 - ( EZI2*np.sin(inc*np.pi/180) - EZI3*np.cos(inc*np.pi/180) )/(4*meanf))* (meanf*np.sin(inc*np.pi/180))
         else:
-            h_adder = np.sqrt(tmpH**2 - meanvarioy**2) - meanvariox
+            loggerabs.warning("_calcinc: %s : no intensity measurement available - you might provide annual means"  % num2date(self[0].time).replace(tzinfo=None))
+            s0i, epzi = float(nan),float(nan)
+            fstart, deltaF = float(nan),float(nan)
+            xstart = 0.0 ## arbitrary
+            ystart = 0.0
+
+        # ###################################################
+        # #####      Calculating offsets (Base values in Excel sheet) 
+        # ###################################################
+
+        # By default:
+        # Running calc according to script: => offsets are detemined for the average I measurement part
+
+        # =RUNDEN(WURZEL(K37^2-(MITTELWERT(G15:G18))^2)-MITTELWERT(F15:F18);1)
+        if len(xvals) > 0:
+            #print "Found variometer data"
+            h_adder = np.sqrt(tmpH**2 - mean(yvals)**2) - mean(xvals)
+            z_adder = tmpZ-mean(zvals)
+            #print "offsets", h_adder, z_adder
+        else:
+            #print "No variometer data - using estimated H and Z"
+            h_adder = tmpH
+            z_adder = tmpZ
+
+
+        # ###################################################
+        # #####      Recalculating field values at time k=0
+        # ###################################################
 
         if not isnan(poslst[0].varx):
             hstart = np.sqrt((scale_x*poslst[0].varx + h_adder)**2 + (scale_y*poslst[0].vary)**2)
             xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0) )
             ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0) )
-            zstart = scale_z*poslst[0].varz + tmpZ - meanvarioz
-            fstart = np.sqrt(xstart**2 + ystart**2 + zstart**2)
+            zstart = scale_z*poslst[0].varz + z_adder
+            fstart = np.sqrt(hstart**2 + zstart**2)
+            #print "Final Test:", xstart, ystart, zstart, hstart, fstart
+            inc = np.arctan(zstart/hstart)*180.0/np.pi
+            #print testinc, inc
         else:
             variotype = 'None'
             hstart = tmpH
             zstart = tmpZ
-            xstart = hstart # use dec to calc correctly
-            ystart = 0.0
-            fstart = np.sqrt(xstart**2 + ystart**2 + zstart**2)
-            xDiff1 = 0.0
-            zDiff1 = 0.0
-            xDiff2 = 0.0
-            zDiff2 = 0.0
+            xstart = tmpH * np.cos ( linestruct.y *np.pi/(180.0) ) 
+            ystart = tmpH * np.sin ( linestruct.y *np.pi/(180.0) )
+            fstart = np.sqrt(hstart**2 + zstart**2)
 
-        if not meanf == 0:
-            inc = np.arctan(zstart/hstart)*180.0/np.pi
-            # Divided by 4 - need to be corrected if scalevals are used - don't thing so (leon, June 2012)
-            s0i = -I0Diff1/4*fstart - xDiff1*np.sin(inc*np.pi/180) - zDiff1*np.cos(inc*np.pi/180) 
-            epzi = (-I0Diff2/4 - (xDiff2*np.sin(inc*np.pi/180) - zDiff2*np.cos(inc*np.pi/180))/(4*fstart))*zstart;
-        else:
-            loggerabs.warning("_calcinc: %s : no intensity measurement available - presently using an x value of 20000 nT for Dec"  % num2date(self[0].time).replace(tzinfo=None))
-            fstart, deltaF, s0i, epzi = float(nan),float(nan),float(nan),float(nan)
-            xstart = 20000 ## arbitrary
-            ystart = 0.0
+        #print "H, Z, X, Y:", hstart, zstart, xstart, ystart
 
         # Baselinevalues:
-        basex = xstart - scale_x*poslst[0].varx
-        basey = ystart - scale_y*poslst[0].vary
-        basez = zstart - scale_z*poslst[0].varz
+        #basex = xstart - scale_x*poslst[0].varx
+        #basey = ystart - scale_y*poslst[0].vary
+        #basez = zstart - scale_z*poslst[0].varz
+        basex = h_adder
+        #basey = 0.0 # defined in calcdec
+        basez = z_adder
+
+        #baseh = np.sqrt(basex**2+basey**2)
 
         # Putting data to linestruct:
         linestruct.x = inc
         linestruct.z = fstart
         linestruct.f = fstart #np.array([basex,basey,basez])
         linestruct.dx = basex
-        linestruct.dy = basey
+        #linestruct.dy = basey
         linestruct.dz = basez
         linestruct.df = deltaF
         linestruct.typ = 'idff'         
         linestruct.t2 = calcscaleval
         linestruct.var4 = s0i  # replaces Mirediff from _calcdec
         linestruct.var5 = epzi
+        linestruct.str4 = str4 # Holds F type
 
-        return linestruct, xstart, ystart
+        return linestruct, hstart, h_adder
+        #return linestruct, xstart, ystart
 
     def calcabsolutes(self, debugmode=None, **kwargs):
         """
         DEFINITION:
             Calculates DI values by calling calcdec and calcinc methods.
-            Uses an iterative approach of dec and inc calculation.
+            Uses an iterative approach of dec and inc calculation, adopted from the DTU sheet. 
+            Differences:
+                - Variometer correction and residual correction are performed at each individual step
+                   and not average and rounded for repeated measurements before (should be better 
+                   and correct especially for res correction)
+                - Scale values are provided in deg/unit and not gon/unit
             Provide variometer and scalar values for optimal results.
-            If no variometervalues are provided then only dec and inc are calculated correctly
+            If no variometervalues are provided then only dec and inc are calculated correctly.
+            Method:
+                - DI Measurement is analyzed
+                - Scalar data used in the following order: 1) data within file (assumed to be
+                  obtained from the same pier - eventually add dF in Header 2) data from provided
+                  scalar data set
+                  (if available D, I, and F is given)
+                - variation data
 
         PARAMETERS:
         variable:
@@ -917,13 +1112,14 @@ class AbsoluteData(object):
             result = stream.calcabsolutes(usestep=2,annualmeans=[20000,1200,43000],printresults=True)
         """
 
-        #plog = PyMagLog()
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
         annualmeans = kwargs.get('annualmeans')
         unit = kwargs.get('unit')
         xstart = kwargs.get('xstart')
         ystart = kwargs.get('ystart')
+        hstart = kwargs.get('hstart')
+        hbasis = kwargs.get('hbasis')
         deltaD = kwargs.get('deltaD')
         deltaI = kwargs.get('deltaI')
         usestep = kwargs.get('usestep')
@@ -938,17 +1134,27 @@ class AbsoluteData(object):
         if not usestep: 
             usestep = 0
         if not annualmeans:
-            annualmeans = [20800,1200,43500]
+            annualmeans = [0.0,0.0,0.0]
         if not xstart:
             xstart = annualmeans[0]
         if not ystart:
-            xstart = annualmeans[1]
-        if not incstart:
+            ystart = annualmeans[1]
+        if not hstart:
+            hstart = np.sqrt(annualmeans[0]**2 + annualmeans[1]**2)
+        if not incstart and not annualmeans == [0.0,0.0,0.0]:
             incstart = 180/np.pi * np.arctan(annualmeans[2] / np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1]))
+        else:
+            incstart = 0.0
 
+        #print "-----------------------------------------"
+        #print self
+        #print "-----------------------------------------"
+        #print "Lines in file:", len(self)
+ 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
-            resultline = self._calcdec(xstart=xstart,ystart=ystart,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,debugmode=debugmode)
+            #print "STarting with", xstart, ystart
+            resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
                 print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
@@ -968,7 +1174,8 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
+            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
+            #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
@@ -989,7 +1196,7 @@ class AbsoluteData(object):
 
             if printresults:
                 print 'Vector:'
-                print 'Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f)
+                print 'Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f)
                 print 'Collimation and Offset:'
                 print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
 
@@ -1454,8 +1661,8 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 st.header['col-var5'] = 'Inc_epsilonZ'
                 st.header['col-str1'] = 'Person'
                 st.header['col-str2'] = 'DI-Inst'
-                st.header['col-str3'] = 'F-Inst'
-                st.header['col-str4'] = 'Vario-Inst'
+                st.header['col-str3'] = 'Mire'
+                st.header['col-str4'] = 'F-type'
 
                 if outputformat == 'xyz':
                     #for elem in st:
@@ -1604,6 +1811,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         outputformat='idf'
     if not annualmeans:
         annualmeans=[20000,1200,43000]
+        annualmeans=[0.0,0.0,0.0]
     if not abstype:
         abstype = "manual"
     if abstype == 'autodif': # we also check the person given in the file. if this is AutoDIF abstype will be set correctly automatically
@@ -1702,7 +1910,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 filelist.append(absdata)
                 movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
             elif os.path.isfile(absdata):
-                #print "Found single file"
+                print "Found single file"
                 filelist.append(absdata)
             else:
                 if os.path.exists(absdata):
@@ -1771,6 +1979,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print "------------------------------------------------------"
         # a) Read variodata
         try:
+            #print variodata, date, date+timedelta(days=1)
             variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
             print "Length of Variodata:", len(variostr)
         except:
@@ -1803,7 +2012,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             datestr = datetime.strftime(date,"%Y-%m-%d")
             datestr2 = datetime.strftime(date,"%Y%m%d") # autodif
             print "-----------------"
-            #print datestr
+            print datestr, abstype
             if abstype == 'autodif':
                 difiles = [di for di in filelist if datestr2 in di]
             else:
@@ -1860,6 +2069,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
             try:
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False)
+                print result.str4 + "_" + str(deltaF)
+                if not deltaF == 0:
+                    result.str4 = result.str4 + "_" + str(deltaF)
             except:
                 result = LineStruct()
             dataok = True
@@ -1902,12 +2114,18 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['col-z'] = 'f'
     resultstream.header['unit-col-z'] = 'nT'
     resultstream.header['col-f'] = 'f'
-    resultstream.header['col-dx'] = 'basex'
-    resultstream.header['col-dy'] = 'basey'
-    resultstream.header['col-dz'] = 'basez'
+    resultstream.header['unit-col-f'] = 'nT'
+    resultstream.header['col-dx'] = 'H-base'
+    resultstream.header['unit-col-dx'] = 'nT'
+    resultstream.header['col-dy'] = 'Dec-base'
+    resultstream.header['unit-col-dy'] = 'deg'
+    resultstream.header['col-dz'] = 'Z-base'
+    resultstream.header['unit-col-dz'] = 'nT'
     resultstream.header['col-df'] = 'dF'
     resultstream.header['col-t1'] = 'T'
+    resultstream.header['unit-col-t1'] = 'deg C'
     resultstream.header['col-t2'] = 'ScaleValueDI'
+    resultstream.header['unit-col-t2'] = 'deg/unit'
     resultstream.header['col-var1'] = 'Dec_S0'
     resultstream.header['col-var2'] = 'Dec_deltaH'
     resultstream.header['col-var3'] = 'Dec_epsilonZ'
@@ -1915,8 +2133,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['col-var5'] = 'Inc_epsilonZ'
     resultstream.header['col-str1'] = 'Person'
     resultstream.header['col-str2'] = 'DI-Inst'
-    resultstream.header['col-str3'] = 'F-Inst'
-    resultstream.header['col-str4'] = 'Vario-Inst'
+    resultstream.header['col-str3'] = 'Mire'
+    resultstream.header['col-str4'] = 'F-type'
 
     if outputformat == 'xyz':
         #for elem in st:

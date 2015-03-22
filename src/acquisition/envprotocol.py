@@ -100,7 +100,7 @@ class EnvProtocol(LineReceiver):
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
         #header = "# MagPyBin, sensor_id, [parameterlist], [unit-conversion-list], packing string, length"
-        packcode = '6hLLLL'
+        packcode = '6hLllL'
         sensorid = self.sensor
         header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, '[t1,t2,var1]', '[T,DewPoint,RH]', '[deg_C,deg_C,per rh]', '[1000,1000,1000]', packcode, struct.calcsize(packcode))
 
