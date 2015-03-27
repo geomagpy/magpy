@@ -186,7 +186,7 @@ def isFormat(filename, format_type):
     elif (format_type == "GFZKP"): # GFZ Kp
         if (isGFZKP(filename)):
             return True
-    elif (format_type == "NOAAACE"): # NOAA Satellite date
+    elif (format_type == "NOAAACE"): # NOAA ACE Satellite data
         if (isNOAAACE(filename)):
             return True
     else:

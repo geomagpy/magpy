@@ -185,6 +185,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
+            #print key
             # first get time or epoch column
             #lst = cdf_file[key]
             if key == 'time' or key == 'Epoch':
@@ -202,7 +203,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     for elem in cdf_file[key][...]:
                         row = LineStruct()
                         # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
-                        row.time = 730120. + elem
+                        if type(elem) == float:
+                            row.time = 730120. + elem
+                        else:
+                            row.time = date2num(elem)
                         stream.add(row)
                         del row
                 #del ti

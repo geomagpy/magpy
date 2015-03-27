@@ -27,6 +27,24 @@ def isNOAAACE(filename):
     return True
 
 
+def isOMNIACE(filename):
+    """
+    Checks whether a file is NOAA ACE format.
+    """
+    try:
+        tempf = open(filename, 'rt')
+        temp1= tempf.readline()
+        temp2= tempf.readline()
+        temp3= tempf.readline()
+    except:
+        return False
+    if not 'BEGIN METADATA' in temp1:
+        return False
+    if not 'ACE' in temp3:
+        return False
+    loggerlib.info("format_omni: Found OMNI ACE file %s" % filename)
+    return True
+
 
 def readNOAAACE(filename, headonly=False, **kwargs):
     """
@@ -242,5 +260,5 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     fh.close()
 
     return stream
-    #return DataStream(stream, headers)    
+    #return DataStream(stream, headers)  
 

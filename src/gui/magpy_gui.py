@@ -702,7 +702,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 elem = os.path.split(path)
                 self.dirname = elem[0]
                 filelist.append(elem[1])
-                tmp = read(path,tenHz=True,gpstime=True)
+                tmp = read(path,tenHz=False,gpstime=True)
                 stream.extend(tmp.container,tmp.header)
             #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
             #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
@@ -834,7 +834,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif coverage == 'year':
                 coverage = timedelta(year=1)
             mode = dlg.modeComboBox.GetValue()
-            #print "Stream: ", len(self.stream)
+            #print "Stream: ", len(self.stream), len(self.plotstream)
+            #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
             #print "Main : ", dateformat, fileformat, coverage, mode
             try:
                 self.plotstream.write(path,

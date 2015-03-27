@@ -995,6 +995,10 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         newt_sat = [t_sat[idx] for idx, el in enumerate(y_sat) if not nans[idx]]
         t_sat = newt_sat
         y_sat = [el for idx, el in enumerate(y_sat) if not nans[idx]]
+
+    if (len(y_sat) or len(y_mag)) == 0:
+        loggerplot.error("plotSatMag - Can't plot empty column! Full of nans?")
+        raise Exception("plotSatMag - Empty column!")
     
     # Define y-labels:
     try:
@@ -1034,7 +1038,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax1.set_ylabel(label_sat,color=labelcolor)
-    axis1 = ax1.plot(t_sat, y_sat, color='#C0C0C0',label=legendlabels[1])
+    axis1 = ax1.plot_date(t_sat, y_sat, fmt='-', color='#C0C0C0',label=legendlabels[1])
 
     timeunit = ''
     if confinex:
@@ -1049,7 +1053,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     # NOTE: For mag data to be above sat data in zorder, KEEP THIS AXIS ORDER
     # (twinx() does not play nicely with zorder settings)
     ax2 = ax1.twinx()
-    axis2 = ax2.plot(t_mag, y_mag, lw=1.5, color='b',label=legendlabels[0])
+    axis2 = ax2.plot_date(t_mag, y_mag, fmt='-', lw=2, color='b',label=legendlabels[0])
     ax2.set_ylabel(label_mag,color=labelcolor)
     ax2.yaxis.set_label_position('left')
     ax2.yaxis.set_ticks_position('left')
