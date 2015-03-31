@@ -9,6 +9,16 @@ from stream import *
 
 import gc
 
+# K0 ACE-EPAM data from the OMNI database:
+k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(INACTIVE)
+		'Ion_very_lo': 'var1',		# Ion (47-65 keV) 1/(cm2 s ster MeV)
+		'Ion_lo': 'var2',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
+		'Ion_mid': 'var3',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
+		'Ion_hi': 'var5',		# Ion (1060-1910 keV) 1/(cm2 s ster MeV)
+		'Electron_lo': 'z',		# Electron (38-53 keV) 1/(cm2 s ster MeV)
+		'Electron_hi': 'f'		# Electron (175-315 keV) 1/(cm2 s ster MeV)
+		   }
+
 def isPYCDF(filename):
     """
     Checks whether a file is Nasa CDF format.
@@ -185,7 +195,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
         loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
-            #print key
+            #try:
+            #    print key, cdf_file[key].attrs['LABLAXIS'], cdf_file[key].attrs['UNITS']
+            #except:
+            #    print key
             # first get time or epoch column
             #lst = cdf_file[key]
             if key == 'time' or key == 'Epoch':
@@ -283,6 +296,12 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 except:
                     # print "error while interpreting header"
                     pass
+            elif key in k0_epm_KEYDICT:
+                data = cdf_file[key][...]
+                skey = k0_epm_KEYDICT[key]
+                stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
+                stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
+                stream._put_column(data,skey)
             else:
                 if key.lower() in KEYLIST:
                     arkey = cdf_file[key][...]
