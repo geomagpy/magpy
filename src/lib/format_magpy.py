@@ -10,13 +10,19 @@ from stream import *
 import gc
 
 # K0 ACE-EPAM data from the OMNI database:
-k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(INACTIVE)
+k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(UNUSED)
 		'Ion_very_lo': 'var1',		# Ion (47-65 keV) 1/(cm2 s ster MeV)
 		'Ion_lo': 'var2',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
 		'Ion_mid': 'var3',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
 		'Ion_hi': 'var5',		# Ion (1060-1910 keV) 1/(cm2 s ster MeV)
 		'Electron_lo': 'z',		# Electron (38-53 keV) 1/(cm2 s ster MeV)
 		'Electron_hi': 'f'		# Electron (175-315 keV) 1/(cm2 s ster MeV)
+		   }
+# H0 ACE-SWEPAM data from the OMNI database:
+h0_swe_KEYDICT = {'Np':	'var1',			# H_Density #/cc
+		'Vp': 'var2',		# SW_H_Speed km/s
+		'Tpr': 'var3',		# H_Temp_radial Kelvin
+		# (Many other keys unused)
 		   }
 
 def isPYCDF(filename):
@@ -177,11 +183,19 @@ def readPYCDF(filename, headonly=False, **kwargs):
     # MagPy type is using datetime objects
     if getfile:
         loggerlib.info("read: %s Format: PYCDF" % filename)
+        #print cdf_file.attrs
         try:
             cdfformat = cdf_file.attrs['DataFormat']
         except:
             logging.info("No format specification in CDF - passing")
             cdfformat = 'Unknown'
+            pass
+        OMNIACE = False
+        try:
+            title = str(cdf_file.attrs['TITLE'])
+            if 'ACE' in title:
+                OMNIACE = True
+        except:
             pass
         
         if headskip:
@@ -296,9 +310,25 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 except:
                     # print "error while interpreting header"
                     pass
-            elif key in k0_epm_KEYDICT:
+            elif key in k0_epm_KEYDICT and OMNIACE: # EPAM DATA
                 data = cdf_file[key][...]
+                badval = cdf_file[key].attrs['FILLVAL']
+                for i in range(0,len(data)):
+                    d = data[i]
+                    if d == badval:
+                        data[i] = float('nan')
                 skey = k0_epm_KEYDICT[key]
+                stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
+                stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
+                stream._put_column(data,skey)
+            elif key in h0_swe_KEYDICT and OMNIACE: # SWEPAM DATA
+                data = cdf_file[key][...]
+                badval = cdf_file[key].attrs['FILLVAL']
+                for i in range(0,len(data)):
+                    d = data[i]
+                    if d == badval:
+                        data[i] = float('nan')
+                skey = h0_swe_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
                 stream._put_column(data,skey)
