@@ -5954,7 +5954,8 @@ def send_mail(send_from, send_to, **kwargs):
     smtp.set_debuglevel(False)
     smtp.connect(smtpserver, port)
     smtp.ehlo()
-    smtp.starttls()
+    if port == 587:
+        smtp.starttls()
     smtp.ehlo()
     smtp.login(user, pwd)
     smtp.sendmail(send_from, send_to, msg.as_string())
