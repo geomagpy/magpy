@@ -9,7 +9,7 @@ from stream import *
 
 import gc
 
-# K0 ACE-EPAM data from the OMNI database:
+# K0 (Browsing - not for Serious Science) ACE-EPAM data from the OMNI database:
 k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(UNUSED)
 		'Ion_very_lo': 'var1',		# Ion (47-65 keV) 1/(cm2 s ster MeV)
 		'Ion_lo': 'var2',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
@@ -18,11 +18,29 @@ k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(UNUSED)
 		'Electron_lo': 'z',		# Electron (38-53 keV) 1/(cm2 s ster MeV)
 		'Electron_hi': 'f'		# Electron (175-315 keV) 1/(cm2 s ster MeV)
 		   }
-# H0 ACE-SWEPAM data from the OMNI database:
-h0_swe_KEYDICT = {'Np':	'var1',			# H_Density #/cc
-		'Vp': 'var2',		# SW_H_Speed km/s
-		'Tpr': 'var3',		# H_Temp_radial Kelvin
-		# (Many other keys unused)
+# H1 (Level 2 final 5min data) ACE-EPAM data from the OMNI database:
+h1_epm_KEYDICT = {
+		'P1': 'var1',			# Ion (47-65 keV) 1/(cm2 s ster MeV)
+		'P3': 'var2',			# Ion (115-195 keV) 1/(cm2 s ster MeV)
+		'P5': 'var3',			# Ion (310-580 keV) 1/(cm2 s ster MeV)
+		'P7': 'var5',			# Ion (1060-1910 keV) 1/(cm2 s ster MeV)
+		'DE1': 'z',			# Electron (38-53 keV) 1/(cm2 s ster MeV)
+		'DE4': 'f'			# Electron (175-315 keV) 1/(cm2 s ster MeV)
+		# (... Many, MANY other unused keys.)
+		   }
+# H0 (Level 2 final 64s data) ACE-SWEPAM data from the OMNI database:
+h0_swe_KEYDICT = {
+		'Np': 'var1',			# H_Density #/cc
+		'Vp': 'var2',			# SW_H_Speed km/s
+		'Tpr': 'var3',			# H_Temp_radial Kelvin
+		# (... Many other keys unused.)
+		   }
+# H0 (Level 2 final 16s data) ACE-MAG data from the OMNI database:
+h0_mfi_KEYDICT = {
+		'Magnitude': 'f',		# B-field total magnitude (Bt)
+		'BGSM': ['x','y','z'],		# B-field in GSM coordinates (Bx, By, Bz)
+		#'BGSEc': ['x','y','z'],	# B-field in GSE coordinates
+		# (... Many other keys unused.)
 		   }
 
 def isPYCDF(filename):
@@ -310,7 +328,44 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 except:
                     # print "error while interpreting header"
                     pass
-            elif key in k0_epm_KEYDICT and OMNIACE: # EPAM DATA
+            elif key in h0_mfi_KEYDICT and OMNIACE: # MAG DATA (H0)
+                data = cdf_file[key][...]
+                flag = cdf_file['Q_FLAG'][...]
+                #for i in range(0,len(data)):
+                #    f = flag[i]
+                #    if f != 0:
+                #        data[i] = float('nan')
+                if key == 'BGSM':  
+                    skey_x = h0_mfi_KEYDICT[key][0]
+                    skey_y = h0_mfi_KEYDICT[key][1]
+                    skey_z = h0_mfi_KEYDICT[key][2]
+                    splitdata = np.hsplit(data, 3)
+                    stream._put_column(splitdata[0],skey_x)
+                    stream.header['col-'+skey_x] = 'Bx'
+                    stream.header['unit-col-'+skey_x] = 'nT'
+                    stream._put_column(splitdata[1],skey_y)
+                    stream.header['col-'+skey_y] = 'By'
+                    stream.header['unit-col-'+skey_y] = 'nT'
+                    stream._put_column(splitdata[2],skey_z)
+                    stream.header['col-'+skey_z] = 'Bz'
+                    stream.header['unit-col-'+skey_z] = 'nT'
+                elif key == 'Magnitude':
+                    skey = h0_mfi_KEYDICT[key]
+                    stream.header['col-'+skey] = 'Bt'
+                    stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
+                    stream._put_column(data,skey)
+            elif key in h1_epm_KEYDICT and OMNIACE: # EPAM DATA (H1)
+                data = cdf_file[key][...]
+                badval = cdf_file[key].attrs['FILLVAL']
+                for i in range(0,len(data)):
+                    d = data[i]
+                    if d == badval:
+                        data[i] = float('nan')
+                skey = h1_epm_KEYDICT[key]
+                stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
+                stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
+                stream._put_column(data,skey)
+            elif key in k0_epm_KEYDICT and OMNIACE: # EPAM DATA (K0)
                 data = cdf_file[key][...]
                 badval = cdf_file[key].attrs['FILLVAL']
                 for i in range(0,len(data)):
