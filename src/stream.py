@@ -369,6 +369,7 @@ class DataStream(object):
     - stream.offset(self, offsets):
     - stream.plot(self, keys=None, debugmode=None, **kwargs):
     - stream.powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs):
+    - stream.remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
     - stream.remove_outlier(self, **kwargs):
     - stream.resample(self, keys, **kwargs):
@@ -4301,6 +4302,52 @@ CALLED BY:
             plt.show() 
         else: 
             return fig    
+
+
+    def remove(self, starttime=None, endtime=None):
+        """
+    DEFINITION:
+        Removing dates inside of range between start- and endtime.
+	(Does the exact opposite of self.trim().)
+
+    PARAMETERS:
+    Variables:
+        - starttime: 	(datetime/str) Start of period to trim with
+	- endtime:	(datetime/str) End of period to trim to
+
+    RETURNS:
+        - stream: 	(DataStream object) Stream with data between
+			starttime and endtime removed.
+
+    EXAMPLE:
+        >>> data = data.trim(starttime, endtime)
+
+    APPLICATION:
+        """
+
+        if starttime and endtime:
+            if self._testtime(starttime) > self._testtime(endtime):
+                loggerstream.error('Trim: Starttime (%s) is larger than endtime (%s).' % (starttime,endtime))
+                raise ValueError, "Starttime is larger than endtime."
+
+        loggerstream.info('Remove: Started from %s to %s' % (starttime,endtime))
+
+        cutstream = DataStream()
+        cutstream.header = self.header
+        starttime = self._testtime(starttime)
+        endtime = self._testtime(endtime)
+        stval = 0
+        for idx, elem in enumerate(self):
+            newline = LineStruct()
+            if not isnan(elem.time):
+                newline.time = elem.time
+                if elem.time <= date2num(starttime) or elem.time > date2num(endtime):
+                    for key in KEYLIST:
+                        exec('newline.'+key+' = elem.'+key)
+                cutstream.add(newline)
+
+        return cutstream
+
 
     def remove_flagged(self, **kwargs):
         """
