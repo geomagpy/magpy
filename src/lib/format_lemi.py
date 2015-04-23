@@ -259,10 +259,10 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         getfile = True 
@@ -396,10 +396,10 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

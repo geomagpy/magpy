@@ -134,7 +134,7 @@ def ploteasy(stream):
 #								    #
 #####################################################################
 
-def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,noshow=False,
+def plot_new(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
 	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',
 	**kwargs):
@@ -195,6 +195,16 @@ def plot_new(stream,variables,specialdict={},errorbars=False,padding=0,noshow=Fa
     APPLICATION:
         
     '''
+
+    # if no variables are given, use all available:
+    if len(variables) < 1:
+        variables = stream._get_key_headers()
+        if len(variables) > 9:
+            print "More than 8 variables available - plotting only the first nine:", 
+            print "Available:", variables
+            variables = variables[:8]
+            print "Plotting:", variables
+
 
     # Check lists for variables have correct length:
     num_of_var = len(variables)
@@ -546,7 +556,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 
 
 def plotEMD(stream,key,verbose=False,plottitle=None,
-	outfile=None,sratio=0.25):
+	outfile=None,sratio=0.25,max_modes=20,hht=True):
     '''
     DEFINITION:
 	NOTE: EXPERIMENTAL FUNCTION ONLY.
@@ -586,8 +596,9 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
     col = stream._get_column(key)
     timecol = stream._get_column('time')
     if verbose:
-        print "Amount of values and standard deviation:", len(col), col.std()
-    res = emd.emd(col,max_modes=20)
+        print "Amount of values and standard deviation:", len(col), np.std(col)
+      
+    res = emd.emd(col,max_modes=max_modes)
     if verbose:
         print "Found the follwing amount of decomposed modes:", len(res)
     separate = int(np.round(len(res)*sratio,0))
@@ -596,17 +607,19 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
     stdarray = []
     newcurve = [0]*len(res[0])
     noisecurve = [0]*len(res[0])
+    midcurve = [0]*len(res[0])
     smoothcurve = [0]*len(res[0])
     f, axarr = plt.subplots(len(res), sharex=True)
 
     for i, elem in enumerate(res):
         axarr[i].plot(elem)
         newcurve = [x + y for x, y in zip(newcurve, elem)]
-        stdarray.append([i,elem.std()])
+        stdarray.append([i,np.std(elem)])
         ds = stream
         ds._put_column(elem,'x')
         ds._put_column(timecol,'time')
 
+        """
         if i >= len(res)-separate:
             if verbose:
                 print "Smooth:", i
@@ -615,21 +628,40 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
             if verbose:
                 print "Noise:", i
             noisecurve = [x + y for x, y in zip(noisecurve, elem)]
+        """
+        if i >= 15:
+            if verbose:
+                print "Smooth:", i
+            smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
+        if 8 <= i < 14:
+            if verbose:
+                print "Mid:", i
+            midcurve = [x + y for x, y in zip(midcurve, elem)]
+        if 2 < i < 8:
+            if verbose:
+                print "Noise:", i
+            noisecurve = [x + y for x, y in zip(noisecurve, elem)]
 
     plt.show()
 
     plt.plot(smoothcurve)
-    plt.plot(newcurve)
-    plt.title("Variation of H component")
-    plt.xlabel("Time [seconds of day]")
-    plt.ylabel("F [nT]")
+    #plt.plot(newcurve)
+    plt.title("Variation of IMF 14 to 17 component - low frequency content")
+    plt.xlabel("Time [15 min counts]")
+    plt.ylabel("Counts/min")
     plt.legend()
     plt.show()
 
     plt.plot(noisecurve)
-    plt.title("Variation of H component - high frequency content")
-    plt.xlabel("Time [seconds of day]")
-    plt.ylabel("F [nT]")
+    plt.title("Variation of IMF 1 to 8 component - high frequency content")
+    plt.xlabel("Time [15 min counts]")
+    plt.ylabel("Counts/min")
+    plt.show()
+
+    plt.plot(midcurve)
+    plt.title("Variation of IMF 9 to 12 - mid frequency content")
+    plt.xlabel("Time [15 min counts]")
+    plt.ylabel("Counts/min")
     plt.show()
 
     plt.close()
@@ -641,6 +673,9 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
     plt.xlabel("EMD mode")
     plt.ylabel("Standard deviation [nT]")
     plt.show()
+    
+    if hht:
+        print emd.calc_inst_info(res,stream.samplingrate())
 
 
 def plotNormStreams(streamlist, key, normalize=True, normalizet=False,

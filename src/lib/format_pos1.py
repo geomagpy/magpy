@@ -59,10 +59,10 @@ def readPOS1(filename, headonly=False, **kwargs):
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         logging.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % daystring)

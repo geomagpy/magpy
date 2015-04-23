@@ -9,7 +9,7 @@ MagPy - WIK analysis
 from stream import *
 from absolutes import *
 from transfer import *
-
+from mpplot import *
 
 print "Testing internet connection ..."
 

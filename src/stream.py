@@ -5599,6 +5599,7 @@ CALLED BY:
                 if format_type == 'IMF':
                     filename = filename.upper()
                 if len(lst) > 0:
+                    loggerstream.info('write: writing %s' % filename)
                     writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype)
                 starttime = endtime
                 endtime = endtime + coverage
@@ -6004,7 +6005,8 @@ def send_mail(send_from, send_to, **kwargs):
     if port == 587:
         smtp.starttls()
     smtp.ehlo()
-    smtp.login(user, pwd)
+    if user:
+        smtp.login(user, pwd)
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.close()
 
@@ -6941,7 +6943,10 @@ def extractDateFromString(datestring):
             except:
                 pass
 
-    return date
+    try:
+        return datetime.date(date)
+    except:
+        return date
 
 
 def denormalize(column, startvalue, endvalue):

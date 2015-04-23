@@ -49,9 +49,21 @@ def readRADON(filename, headonly=False, **kwargs):
     """
     Reading CR800 format data.
     """
-    #starttime = kwargs.get('starttime')
-    #endtime = kwargs.get('endtime')
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
     getfile = True
+
+    theday = extractDateFromString(filename)
+    try:
+        if starttime:
+            if not theday >= datetime.date(stream._testtime(starttime)):
+                getfile = False
+        if endtime:
+            if not theday <= datetime.date(stream._testtime(endtime)):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True 
 
     # read file and split text into channels
     stream = DataStream()
@@ -61,31 +73,32 @@ def readRADON(filename, headonly=False, **kwargs):
         headers = {}
     else:
         headers = stream.header    
-    
-    try:
-        CSVReader = csv.reader(open(filename, 'rb'))
-        for line in CSVReader:
-            if line[0].isspace():
-                # blank line
-                pass
-            elif headonly:
-                # skip data for option headonly
-                continue
-            else:
-                row = LineStruct()
-                row.time = date2num(datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S"))
-                row.x = float(line[3])
-                row.t1 = float(line[2])
-                row.var1 = float(line[1])
-                stream.add(row)
-        stream.header['col-x'] = 'Counts'
-        stream.header['col-t1'] = 'Temp'                       
-        stream.header['unit-col-t1'] = 'deg'                       
-        stream.header['col-var1'] = 'Voltage'                       
-        stream.header['unit-col-var1'] = 'V'                       
-    except:
-        headers = stream.header
-        stream =[]
+
+    if getfile:
+        try:
+            CSVReader = csv.reader(open(filename, 'rb'))
+            for line in CSVReader:
+                if line[0].isspace():
+                    # blank line
+                    pass
+                elif headonly:
+                    # skip data for option headonly
+                    continue
+                else:
+                    row = LineStruct()
+                    row.time = date2num(datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S"))
+                    row.x = float(line[3])
+                    row.t1 = float(line[2])
+                    row.var1 = float(line[1])
+                    stream.add(row)
+            stream.header['col-x'] = 'Counts'
+            stream.header['col-t1'] = 'Temp'                       
+            stream.header['unit-col-t1'] = 'deg'                       
+            stream.header['col-var1'] = 'Voltage'                       
+            stream.header['unit-col-var1'] = 'V'                       
+        except:
+            headers = stream.header
+            stream =[]
 
     return DataStream(stream, headers) 
 

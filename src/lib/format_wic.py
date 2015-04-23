@@ -332,10 +332,10 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
 
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         print "Did not recognize the date format"
@@ -436,10 +436,10 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
 
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         print "Did not recognize the date format"
@@ -517,10 +517,10 @@ def readIWT(filename, headonly=False, **kwargs):
 
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         print "Did not recognize the date format"
@@ -668,10 +668,10 @@ def readGRAVSG(filename, headonly=False, **kwargs):
 
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

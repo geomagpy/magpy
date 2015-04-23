@@ -111,6 +111,7 @@ class GSM90Protocol(LineReceiver):
 
         evt1 = {'id': 1, 'value': timestamp}
         evt3 = {'id': 3, 'value': outtime}
+        #evt4 = {'id': 4, 'value': internal_time}
         evt10 = {'id': 10, 'value': intensity}
         evt99 = {'id': 99, 'value': 'eol'}
 

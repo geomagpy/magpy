@@ -185,10 +185,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -200,7 +200,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
     # Juergens DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
     if getfile:
-        loggerlib.info("read: %s Format: PYCDF" % filename)
         #print cdf_file.attrs
         try:
             cdfformat = cdf_file.attrs['DataFormat']
@@ -439,10 +438,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -686,6 +685,7 @@ def writePYASCII(datastream, filename, **kwargs):
             datastream = mergeStreams(exst,datastream,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
+            print "write ascii filename", filename
             exst = read(path_or_url=filename)
             datastream = mergeStreams(datastream,exst,extend=True)
             myFile= open( filename, "wb" )

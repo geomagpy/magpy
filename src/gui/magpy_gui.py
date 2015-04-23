@@ -1458,6 +1458,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.changeStatusbar("Ready")
             if len(absstream) > 1:
                 self.stream = absstream
+                self.plotstream = absstream
                 self.OnInitialPlot(self.stream)
 
             redir=RedirectText(self.menu_p.rep_page.logMsg)

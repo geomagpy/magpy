@@ -249,7 +249,9 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             if headline[0] == ('# Abs-Temperature'):
                 tempstring = headline[1].replace('C','').strip()
                 if not tempstring == '':
-                    temp = float(tempstring.replace(',','.').strip(u"\u00B0").strip())
+                    ustr = unicode(tempstring, 'utf-8')
+                    ustr.encode('ascii','ignore')
+                    temp = float(ustr.replace(',','.').strip(u"\u00B0").strip())
                 else:
                     temp = float(nan)
                 dirow.t = temp
