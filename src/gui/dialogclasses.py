@@ -1015,3 +1015,78 @@ class DefineScalarDialog(wx.Dialog):
         dialog.Destroy()
 
 
+class DISetParameterDialog(wx.Dialog):
+    """
+    Dialog for Parameter selection - Di analysis
+    """
+    
+    def __init__(self, parent, title):
+        super(DISetParameterDialog, self).__init__(parent=parent, 
+            title=title, size=(400, 600))
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+        
+    # Widgets
+    def createControls(self):
+        # single anaylsis
+        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        self.azimuthLabel = wx.StaticText(self, label="Azimuth")
+        self.azimuthTextCtrl = wx.TextCtrl(self,value="")
+        self.abstypeLabel = wx.StaticText(self, label="Absolute type (DI/AutoDIF)")
+        self.abstypeTextCtrl = wx.TextCtrl(self, value="DI")
+        self.pierLabel = wx.StaticText(self, label="Pier")
+        self.pierTextCtrl = wx.TextCtrl(self, value="")
+        self.alphaLabel = wx.StaticText(self, label="Horizontal rotation")
+        self.alphaTextCtrl = wx.TextCtrl(self, value="0.0")        
+        self.deltaFLabel = wx.StaticText(self, label="Delta F")
+        self.deltaFTextCtrl = wx.TextCtrl(self, value="0.0")
+        self.expDLabel = wx.StaticText(self, label="Expected D")
+        self.expDTextCtrl = wx.TextCtrl(self, value="2.0")
+  
+        self.closeButton = wx.Button(self, label='Cancel')
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=4, cols=3, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.azimuthLabel, noOptions),
+                 (self.abstypeLabel, noOptions),
+                 (self.pierLabel, noOptions),
+                 (self.azimuthTextCtrl, expandOption),
+                 (self.abstypeTextCtrl, expandOption),
+                 (self.pierTextCtrl, expandOption),
+                 (self.alphaLabel, noOptions),
+                 (self.deltaFLabel, noOptions),
+                 (self.expDLabel, noOptions),
+                 (self.alphaTextCtrl, expandOption),
+                 (self.deltaFTextCtrl, expandOption),
+                 (self.expDTextCtrl, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        
+    def OnClose(self, e):        
+        self.Destroy()
+

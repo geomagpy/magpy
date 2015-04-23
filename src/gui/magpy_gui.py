@@ -87,13 +87,13 @@ def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirna
     if not diid:
         diid = ''
     if not ditype:
-        ditype = '' #abstype = ''
+        ditype = 'DI' #abstype = ''
     if not diazimuth:
         diazimuth = ''
     if not dipier:
         dipier = 'A2'
     if not dialpha:
-        dialpha = ''
+        dialpha = '0.0'
     if not dideltaF:
         dideltaF = '2.1'
     if not didbadd:
@@ -437,6 +437,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
         self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
+        self.Bind(wx.EVT_BUTTON, self.onDISetParameter, self.menu_p.abs_page.advancedButton)
         
         #self.Bind(wx.EVT_CUSTOM_NAME, self.addMsg)
         # Put something on Report page
@@ -933,6 +934,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.dirnameTextCtrl.SetValue(self.dirname)
         #dlg.hostTextCtrl.SetValue(self.compselect)
         #dlg.hostTextCtrl.SetValue(self.host)
+        dlg.diexpDTextCtrl.SetValue(self.diexpD)
+        dlg.diexpITextCtrl.SetValue(self.diexpI)
+        dlg.dialphaTextCtrl.SetValue(self.dialpha)
+        dlg.dideltaFTextCtrl.SetValue(self.dideltaF)
+        dlg.ditypeTextCtrl.SetValue(self.ditype)
         if dlg.ShowModal() == wx.ID_OK:
             host = dlg.hostTextCtrl.GetValue()
             user = dlg.userTextCtrl.GetValue()
@@ -943,10 +949,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
             filename=dlg.filenameTextCtrl.GetValue()
             dirname=dlg.dirnameTextCtrl.GetValue()
             resolution=dlg.resolutionTextCtrl.GetValue()
+            diexpD=dlg.diexpDTextCtrl.GetValue()
+            diexpI=dlg.diexpITextCtrl.GetValue()
+            dialpha=dlg.dialphaTextCtrl.GetValue()
+            dideltaF=dlg.dideltaFTextCtrl.GetValue()
+            ditype=dlg.ditypeTextCtrl.GetValue()
+ 
             compselect= 'xyz' # compselect
             abscompselect= 'xyz' #abscompselect
             basecompselect= 'poly' #basecompselect
-            saveini(host=host, user=user, passwd=passwd, dbname=db, filename=filename, dirname=dirname, compselect=compselect, abscompselect=abscompselect, basecompselect=basecompselect)
+            saveini(host=host, user=user, passwd=passwd, dbname=db, filename=filename, dirname=dirname, compselect=compselect, abscompselect=abscompselect, basecompselect=basecompselect, diexpD=diexpD, diexpI=diexpI, dialpha=dialpha, dideltaF=dideltaF, ditype=ditype)
+
             inipara = loadini()
             self.initParameter(inipara)
 
@@ -1453,7 +1466,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
             print "Paths:", self.divariopath,self.discalarpath
-            absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid)
+            if not self.diazimuth == '': 
+                absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,alpha=self.dialpha,deltaF=self.dideltaF)
+            else:
+                absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid)
             # only if more than one point is selected
             self.changeStatusbar("Ready")
             if len(absstream) > 1:
@@ -1464,6 +1480,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
             redir=RedirectText(self.menu_p.rep_page.logMsg)
             sys.stdout=redir
             
+
+    def onDISetParameter(self,event):
+        """
+        open parameter box for DI analysis
+        """
+
+        dlg = DISetParameterDialog(None, title='Set Parameter')
+        dlg.expDTextCtrl.SetValue(str(self.diexpD))
+        dlg.deltaFTextCtrl.SetValue(str(self.dideltaF))
+        dlg.azimuthTextCtrl.SetValue(str(self.diazimuth))
+        dlg.alphaTextCtrl.SetValue(str(self.dialpha))
+
+        if dlg.ShowModal() == wx.ID_OK:
+            if not dlg.expDTextCtrl.GetValue() == '':
+                self.diexpD = float(dlg.expDTextCtrl.GetValue())
+            if not dlg.azimuthTextCtrl.GetValue() == '':
+                self.diazimuth = float(dlg.azimuthTextCtrl.GetValue())
+            if not dlg.pierTextCtrl.GetValue() == '':
+                self.dipier = dlg.pierTextCtrl.GetValue()
+            if not dlg.alphaTextCtrl.GetValue() == '':
+                self.dialpha = float(dlg.alphaTextCtrl.GetValue())
+            if not dlg.deltaFTextCtrl.GetValue() == '':
+                self.dideltaF = float(dlg.deltaFTextCtrl.GetValue())
+
+        dlg.Destroy()
 
 
 '''
