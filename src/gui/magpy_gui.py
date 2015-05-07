@@ -538,6 +538,12 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Plotting...")
         keylist = []
         keylist = stream._get_key_headers(limit=9)
+        # TODO: remove keys with high percentage of nans
+        #for key in keylist:
+        #    ar = [eval('elem.'+key) for elem in stream if not isnan(eval('elem.'+key))]
+        #    div = float(len(ar))/float(len(stream))*100.0
+        #    if div <= 5.:
+        #        keylist.remove(key)
         self.shownkeylist = keylist
 
         # check comp

@@ -4864,6 +4864,7 @@ CALLED BY:
                 loggerstream.error("Column key %s not valid." % key)
 
             x = self._get_column(key)
+            x = maskNAN(x)
 
             if x.ndim != 1:
                 loggerstream.error("smooth: Only accepts 1 dimensional arrays.")

@@ -1031,7 +1031,8 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         t_sat = newt_sat
         y_sat = [el for idx, el in enumerate(y_sat) if not nans[idx]]
 
-    if (len(y_sat) or len(y_mag)) == 0:
+
+    if (len(y_sat) == 0 or len(y_mag)) == 0:
         loggerplot.error("plotSatMag - Can't plot empty column! Full of nans?")
         raise Exception("plotSatMag - Empty column!")
     
