@@ -182,8 +182,8 @@ def readGSM19(filename, headonly=False, **kwargs):
 
     """
 
-    print "Found GEM format"
-    print "-------------------------------------"
+    #print "Found GEM format"
+    #print "-------------------------------------"
 
     timestamp = os.path.getmtime(filename)
     creationdate = datetime.fromtimestamp(timestamp)
@@ -215,6 +215,12 @@ def readGSM19(filename, headonly=False, **kwargs):
             headers['SensorType'] =  'Overhauzer'
             
             headers['SensorDescription'] = 'Gem Systems ' + head[2]+head[4]
+            typus = ['b']
+            try:
+                dayt = filename.strip('.txt')
+                day = dayt[-8:-4]+'-'+dayt[-4:-2]+'-'+dayt[-2:]
+            except:
+                logging.warning("No date data!")
             # data header
             pass
         elif line.startswith('ID') or line.startswith('/ID'):
@@ -261,9 +267,11 @@ def readGSM19(filename, headonly=False, **kwargs):
                     row = LineStruct()
                     hour = elem[0][:2]
                     minute = elem[0][2:4]
-                    second = elem[0][4:]
+                    second = elem[0][4:6]
+                    #second = elem[0][4:] # TODO
                     # add day
-                    strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
+                    #strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f") # TODO
+                    strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
                     row.time=date2num(strtime)
                     row.f = float(elem[1])
                     row.var5 = float(elem[2])
@@ -358,7 +366,7 @@ def readGSM19(filename, headonly=False, **kwargs):
         headers['col-f'] = 'f'
         headers['unit-col-f'] = 'nT'
 
-    logging.info("Loaded GSM19 file of type %s, using creationdate of file (%s), %d values" % (typus[0],day,len(stream)))
+    logging.info("Loaded GSM19 file of type %s, using creationdate of file (%s), %d values" % (typus[0],filename,len(stream)))
     fh.close()
 
     return DataStream(stream, headers)    
