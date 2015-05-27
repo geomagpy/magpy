@@ -55,6 +55,8 @@ class LemiProtocol(LineReceiver):
         self.soltag = soltag 	# Start-of-line-tag
         self.hostname = socket.gethostname()
         self.outputdir = outputdir
+        self.gpsstate1 = 'A'
+        self.gpsstate2 = 'P'
         flag = 0
 
     @exportRpc("control-led")
@@ -115,7 +117,7 @@ class LemiProtocol(LineReceiver):
 
         currenttime = datetime.utcnow()
         date = datetime.strftime(currenttime, "%Y-%m-%d")
-        actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
+        #actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
 
@@ -157,30 +159,47 @@ class LemiProtocol(LineReceiver):
             biasy = float(data_array[17])/400.
             biasz = float(data_array[18])/400.
             x = (data_array[20])*1000.
+            xarray = [elem * 1000. for elem in data_array[20:50:3]]
             y = (data_array[21])*1000.
+            yarray = [elem * 1000. for elem in data_array[21:50:3]]
             z = (data_array[22])*1000.
+            zarray = [elem * 1000. for elem in data_array[22:50:3]]
             temp_sensor = data_array[11]/100.
             temp_el = data_array[12]/100.
+            vdd = float(data_array[52])/10.
+            gpsstat = data_array[53]
             gps_array = datetime(2000+self.h2d(data_array[5]),self.h2d(data_array[6]),self.h2d(data_array[7]),self.h2d(data_array[8]),self.h2d(data_array[9]),self.h2d(data_array[10]))-timedelta(microseconds=300000)
             gps_time = datetime.strftime(gps_array, "%Y-%m-%d %H:%M:%S")
         except:
             log.err("LEMI - Protocol: Number conversion error.")
 
+        self.gpsstate1 = gpsstat
+        if not self.gpsstate1 == self.gpsstate2:
+            log.msg('LEMI - Protocol: GPSSTATE changed to %s .'  % gpsstat)
+        self.gpsstate2 = gpsstat
+
         # important !!! change outtime to lemi reading when GPS is running 
         try:
-            evt1 = {'id': 1, 'value': timestamp}
+            if gpsstat == 'P': 
+                ## passive mode - no GPS connection -> use ntptime as primary with correction
+                evt1 = currenttime-timedelta(seconds=2.07)
+                evt4 = gps_array
+            else:
+                ## active mode - GPS time is used as primary
+                evt4 = currenttime-timedelta(seconds=2.07)
+                evt1 = gps_array
             evt3 = {'id': 3, 'value': outtime}
-            evt4 = {'id': 4, 'value': gps_time}
-            evt11 = {'id': 11, 'value': x}
-            evt12 = {'id': 12, 'value': y}
-            evt13 = {'id': 13, 'value': z}
+            evt11 = xarray
+            evt12 = yarray
+            evt13 = zarray
             evt31 = {'id': 31, 'value': temp_sensor}
             evt32 = {'id': 32, 'value': temp_el}
+            evt60 = {'id': 60, 'value': vdd}
             evt99 = {'id': 99, 'value': 'eol'}
         except:
             log.err('LEMI - Protocol: Error assigning "evt" values.')
  
-        return evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99
+        return evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt60,evt99
          
     def dataReceived(self, data):
         #print "Lemi data here!", self.buffer
@@ -193,7 +212,7 @@ class LemiProtocol(LineReceiver):
             if (self.buffer).startswith(self.soltag) and len(self.buffer) == 153:
                 currdata = self.buffer
                 self.buffer = ''
-                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(currdata)
+                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt60,evt99 = self.processLemiData(currdata)
                 WSflag = 2
 
             ### Note: this code for fixing data is more complex than the POS fix code
@@ -219,7 +238,7 @@ class LemiProtocol(LineReceiver):
                             if (split_data_string).startswith(self.soltag):
                                 if debug:
                                     log.msg('LEMI - Protocol: Processing data part # %s in string...' % (str(i+1)))
-                                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(split_data_string)
+                                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt60,evt99 = self.processLemiData(split_data_string)
                                 WSflag = 2
                                 self.buffer = self.buffer[153:len(self.buffer)]
                             else:
@@ -230,7 +249,7 @@ class LemiProtocol(LineReceiver):
                             lemisearch = (self.buffer).find(self.soltag, 6)
                             if lemisearch >= 153:
                                 split_data_string = self.buffer[0:153]
-                                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt99 = self.processLemiData(split_data_string)
+                                evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt60,evt99 = self.processLemiData(split_data_string)
                                 WSflag = 2
                                 self.buffer = self.buffer[153:len(self.buffer)]
                             elif lemisearch == -1:
@@ -261,16 +280,26 @@ class LemiProtocol(LineReceiver):
 
         ## publish event to all clients subscribed to topic
         if WSflag == 2:
-            try:
-                self.wsMcuFactory.dispatch(dispatch_url, evt1)
-                self.wsMcuFactory.dispatch(dispatch_url, evt3)
-                self.wsMcuFactory.dispatch(dispatch_url, evt4)
-                self.wsMcuFactory.dispatch(dispatch_url, evt11)
-                self.wsMcuFactory.dispatch(dispatch_url, evt12)
-                self.wsMcuFactory.dispatch(dispatch_url, evt13)
-                self.wsMcuFactory.dispatch(dispatch_url, evt31)
-                self.wsMcuFactory.dispatch(dispatch_url, evt32)
-                self.wsMcuFactory.dispatch(dispatch_url, evt99)
-            except:
-                log.err('LEMI - Protocol: wsMcuFactory error while dispatching data.') 
+            for ind, elem in enumerate(evt11):
+                t1 = evt1+timedelta(seconds=0.1*ind)
+                t2 = evt4+timedelta(seconds=0.1*ind)
+                evt1a = {'id': 1, 'value': datetime.strftime(t1,"%Y-%m-%d %H:%M:%S.%f")}
+                #evt3a = {'id': 1, 'value': datetime.strftime(t1,"%H:%M:%S.%f")}
+                evt4a = {'id': 1, 'value': datetime.strftime(t2,"%Y-%m-%d %H:%M:%S.%f")}
+                evt11a = {'id': 11, 'value': evt11[ind]}
+                evt12a = {'id': 12, 'value': evt12[ind]}
+                evt13a = {'id': 13, 'value': evt13[ind]}
+                try:                    
+                    self.wsMcuFactory.dispatch(dispatch_url, evt1a)
+                    #self.wsMcuFactory.dispatch(dispatch_url, evt3a)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt4a)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt11a)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt12a)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt13a)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt31)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt32)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt60)
+                    self.wsMcuFactory.dispatch(dispatch_url, evt99)
+                except:
+                    log.err('LEMI - Protocol: wsMcuFactory error while dispatching data.') 
 

@@ -233,6 +233,7 @@ KEYLIST = [	'time',		# Timestamp (date2num object)
 		'sectime'	# Secondary time variable (date2num)
 	    ]
 
+NUMKEYLIST = KEYLIST[1:16]
 # Empty key values at initiation of stream:
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),
 		't1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),
@@ -840,8 +841,14 @@ CALLED BY:
             raise ValueError, "Column key not valid"
         if not len(column) == len(self):
             raise ValueError, "Column length does not fit Datastream"
+        print "Putting column..."
+        t1 = datetime.utcnow()
+        #for idx, elem in enumerate(self):
+        #    exec('elem.'+key+' = column[idx]')
         for idx, elem in enumerate(self):
-            exec('elem.'+key+' = column[idx]')
+            setattr(elem, key, column[idx])
+        t2 = datetime.utcnow()
+        print t2-t1
 
         if not columnname:
             try: # TODO correct that
@@ -890,10 +897,12 @@ CALLED BY:
         try:
             for i, elem in enumerate(self):
                 exec('elem.'+put2key+' = '+'elem.'+key)
-                if key in ['x','y','z','f','dx','dy','dz','df','t1','t2','var1','var2','var3','var4']:
-	            exec('elem.'+key+' = float("NaN")')
+                if key in NUMKEYLIST:
+                    setattr(elem, key, float("NaN"))
+	            #exec('elem.'+key+' = float("NaN")')
                 else:
-                    exec('elem.'+key+' = "-"')
+                    setattr(elem, key, "-")
+                    #exec('elem.'+key+' = "-"')
             try:
                 exec('self.header["col-%s"] = self.header["col-%s"]' % (put2key, key))
                 exec('self.header["unit-col-%s"] = self.header["unit-col-%s"]' % (put2key, key))
@@ -920,10 +929,12 @@ CALLED BY:
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
         for idx, elem in enumerate(self):
-            if key in ['x','y','z','f','dx','dy','dz','df','t1','t2','var1','var2','var3','var4']:
-                exec('elem.'+key+' = float("NaN")')
+            if key in NUMKEYLIST:
+                setattr(elem, key, float("NaN"))
+                #exec('elem.'+key+' = float("NaN")')
             else:
-                exec('elem.'+key+' = "-"')
+                setattr(elem, key, "-")
+                #exec('elem.'+key+' = "-"')
                    
         return self
 
@@ -3131,23 +3142,27 @@ CALLED BY:
                 threehours = threehours.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), ">=")
                 if debug:
                     print "Length of three hour segment", len(threehours)
-                colx = threehours._get_column('x')
-                colx = [elem for elem in colx if not isnan(elem)]
-                xmaxval = max(colx)
-                xminval = min(colx)
-                if checky:
-                    coly = threehours._get_column('y')
-                    coly = [elem for elem in coly if not isnan(elem)]
-                    ymaxval = max(coly)
-                    yminval = min(coly)
-                maxmindiff = max([xmaxval-xminval, ymaxval-yminval])
-                k = 9
-                for count,val  in enumerate(k_scale):
-                    if maxmindiff > val:
-                        k = count
-                if debug:
-                    print "Extrema", k, maxmindiff, xmaxval, xminval, ymaxval, yminval 
-                # create a k-value list
+                if len(threehours) > 0: 
+                    colx = threehours._get_column('x')
+                    colx = [elem for elem in colx if not isnan(elem)]
+                    xmaxval = max(colx)
+                    xminval = min(colx)
+                    if checky:
+                        coly = threehours._get_column('y')
+                        coly = [elem for elem in coly if not isnan(elem)]
+                        ymaxval = max(coly)
+                        yminval = min(coly)
+                    maxmindiff = max([xmaxval-xminval, ymaxval-yminval])
+                    k = 9
+                    for count,val  in enumerate(k_scale):
+                        if maxmindiff > val:
+                            k = count
+                    if debug:
+                        print "Extrema", k, maxmindiff, xmaxval, xminval, ymaxval, yminval 
+                    # create a k-value list
+                else:
+                    k = 9
+                    maxmindiff = 0
                 ti = date2num(num2date(cdlist[index])-timedelta(days=deltaday)+timedelta(minutes=90))
                 klist.append([ti,k,maxmindiff])
 
@@ -4636,6 +4651,8 @@ CALLED BY:
 
         # Compare length of new time list with old timelist
         # multiplicator is used to check whether nan value is at the corresponding position of the orgdata file - used for not yet completely but sufficiently correct missing value treatment
+        if not len(t_list) > 0:
+            return DataStream()
         multiplicator = float(len(self))/float(len(t_list))
 
 
@@ -5724,8 +5741,33 @@ class PyMagLog(object):
     
 class LineStruct(object):
     def __init__(self, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
+        #def __init__(self):
+        #- at the end of flag is important to be recognized as string
         """
-        - at the end of flag is important to be recognized as string
+        self.time=float('nan')
+        self.x=float('nan')
+        self.y=float('nan')
+        self.z=float('nan')
+        self.f=float('nan')
+        self.dx=float('nan')
+        self.dy=float('nan')
+        self.dz=float('nan')
+        self.df=float('nan')
+        self.t1=float('nan')
+        self.t2=float('nan')
+        self.var1=float('nan')
+        self.var2=float('nan')
+        self.var3=float('nan')
+        self.var4=float('nan')
+        self.var5=float('nan')
+        self.str1=''
+        self.str2=''
+        self.str3=''
+        self.str4=''
+        self.flag='0000000000000000-'
+        self.comment='-'
+        self.typ="xyzf"
+        self.sectime=float('nan')
         """
         self.time = time
         self.x = x
@@ -5752,13 +5794,17 @@ class LineStruct(object):
         self.typ = typ
         self.sectime = sectime
         
+
     def __repr__(self):
         return repr((self.time, self.x, self.y, self.z, self.f, self.dx, self.dy, self.dz, self.df, self.t1, self.t2, self.var1, self.var2, self.var3, self.var4, self.var5, self.str1, self.str2, self.str3, self.str4, self.flag, self.comment, self.typ))
 
     def __getitem__(self, index):
         key = KEYLIST[index]
-        return eval('self.'+key)
-        #return self.__getitem__(index)
+        return getattr(self, key)
+
+    def __setitem__(self, index, value):
+        key = KEYLIST[index]
+        setattr(self, key.lower(), value)
 
     def idf2xyz(self,**kwargs):
         """

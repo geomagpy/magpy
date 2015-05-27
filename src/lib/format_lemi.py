@@ -215,8 +215,10 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     # Define frequency of output data:
     if not tenHz:
         tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO  happens only when start and endtime are used.. single files can be imported
+    tenHz = True
     if not timeshift:
         timeshift = -300 #milliseconds
+    pcshift = 2.07 # seconds
     if not gpstime:
         gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column 
 
@@ -285,8 +287,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         stream.header['unit-col-t1'] = 'deg'
         stream.header['col-t2'] = 'Te'
         stream.header['unit-col-t2'] = 'deg'
-        stream.header['col-var1'] = 'Voltage'
-        stream.header['unit-col-var1'] = 'V'
+        stream.header['col-var2'] = 'Voltage'
+        stream.header['unit-col-var2'] = 'V'
+        stream.header['col-str1'] = 'GPS-Status'
 
         timediff = []
 
@@ -308,13 +311,18 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             stream.header['DataCompensationY'] = bfy
             stream.header['DataCompensationZ'] = bfz
 
-            if gpstime:
+            # get GPSstate
+            gpsstate = data[53]
+
+            if gpsstate == 'A':
                 time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
-                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])-timedelta(seconds=pcshift)+timedelta(microseconds=timeshift*1000.)			# PC time
                 timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
             else:
                 try:
-                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])			# PC time
+                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])-timedelta(seconds=pcshift)+timedelta(microseconds=timeshift*1000.)			# PC time
+                    sectime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
+                    timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
                 except:
                     loggerlib.error("readLEMIBIN: Error reading line. Aborting read. (See docs.)")
 #--------------------TODO--------------------------------------------
@@ -337,9 +345,10 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                     row.x = (data[20+i*3])*1000.
                     row.y = (data[21+i*3])*1000.
                     row.z = (data[22+i*3])*1000.
-                    row.var1 = data[52]/10.	# Voltage information
-                    if gpstime:
-                        row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
+                    row.var2 = data[52]/10.	# Voltage information
+                    row.str1 = data[53]		# GPS information
+                    #if gpstime:
+                    row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
 
                     stream.add(row)
 
@@ -354,9 +363,10 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                 row.x = (data[20])*1000.
                 row.y = (data[21])*1000.
                 row.z = (data[22])*1000.
-                row.var1 = data[52]/10.
-                if gpstime:
-                    row.sectime = date2num(sectime)
+                row.var2 = data[52]/10.
+                row.str1 = data[53]		# GPS information
+                #if gpstime:
+                row.sectime = date2num(sectime)
 
                 stream.add(row)    
 

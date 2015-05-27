@@ -73,7 +73,7 @@ class PortCommunicationPage(wx.Panel):
 
         self.SetSizerAndFit(boxSizer)
 
-     def collector(self):
+    def collector(self):
         """
         A copy of the collector moon function
         To be called using multiprocessing

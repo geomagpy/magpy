@@ -1356,7 +1356,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         raise
 
 
-    print "Writing data"
+    #print "Starting DB write with some selections...", datetime.utcnow()
+
     # ----------------------------------------------------------------------------
     # --------------------- Checking header information --------------------------
     # ----------------------------------------------------------------------------
@@ -1442,9 +1443,44 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
     #print "stream2db2: ", datetime.utcnow()
 
+
+    # Section 2:
+    # ---------    Checking datastream structure -----------------------------
+    # ------------------------------------------------------------------------
+    #   --- providing datakeys, colstr and unitstr, st and et
+    #print "Checking column contents...", datetime.utcnow()
+
     loggerdatabase.debug("stream2DB: --- Checking column contents ...")
     # HEADER INFO - DATA TABLE
     # select only columss which contain data and get units and column contents
+
+    # Alternative
+    keylst = datastream._get_key_headers()
+    if not 'flag' in keylst:
+        keylst.append('flag')
+    if not 'comment' in keylst:
+        keylst.append('comment')
+    if not 'typ' in keylst:
+        keylst.append('typ')
+
+    for key in keylst:
+       colstr = '-'
+       unitstr = '-'
+       if key in NUMKEYLIST:
+           dataheads.append(key + ' FLOAT')
+           datakeys.append(key)
+       else:
+           dataheads.append(key + ' CHAR(100)')
+           datakeys.append(key)                
+       for hkey in headdict:
+           if key == hkey.replace('col-',''):
+               colstr = headdict[hkey]            
+           elif key == hkey.replace('unit-col-',''):
+               unitstr = headdict[hkey]            
+       collst.append(colstr)            
+       unitlst.append(unitstr)            
+
+    """
     for key in KEYLIST:
        colstr = '-'
        unitstr = '-'
@@ -1471,6 +1507,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                unitstr = headdict[hkey]            
        collst.append(colstr)            
        unitlst.append(unitstr)            
+    """
 
     colstr =  '_'.join(collst)
     unitstr = '_'.join(unitlst)
@@ -1496,6 +1533,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     # ----------------------------------------------------------------------------
     # --------------------- Updating existing tables    --------------------------
     # ----------------------------------------------------------------------------
+    #print "Starting update...", datetime.utcnow()
 
     if not mode == 'force':
         loggerdatabase.debug("stream2DB: --- Checking/Updating existing tables ...")
@@ -1609,6 +1647,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     if clear:
         cursor.execute("DROP TABLE IF EXISTS " + tablename) 
 
+    #print "Creating data table...", datetime.utcnow()
 
     loggerdatabase.info("stream2DB: Creating/updating data table " + tablename)
 
@@ -1637,9 +1676,16 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     datastream = [x for x in datastream if not isnan(x.time)]
     #print "Datastream: ", datastream
 
-    for elem in datastream:
+    #print "Uploading data to database now...", datetime.utcnow()
+
+    #print datakeys
+    #print datastream[0]
+
+    for elem in datastream: 
+        datavals  = []
+        #datavals = ['null' if str(getattr(elem,el))=='nan' else str(getattr(elem,el)) for el in datakeys] 
         for el in datakeys:
-            val = str(eval('elem.'+el))
+            val = str(getattr(elem,el))
             if val=='nan':
                 val = 'null'
             datavals.append(val)
@@ -1647,7 +1693,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         ## All time steps are rounded to millisecond precision for database
         ## ################################################################
         normaltime = num2date(elem.time)
-        ms = int(np.round(normaltime.microsecond/1000.)*1000.)
+        ms = int(round(normaltime.microsecond/1000.)*1000.)
         if ms < 1000000:
             ct = datetime.strftime(normaltime.replace(microsecond=ms).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
         else:
@@ -1655,7 +1701,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         # Take the insertstring creation out of loop
         if not isnan(elem.sectime) and tmpstream._is_number(elem.sectime) and sectimevalidity:
             furthertime = num2date(elem.sectime)
-            fms = int(np.round(furthertime.microsecond/1000.)*1000.)
+            fms = int(round(furthertime.microsecond/1000.)*1000.)
             if fms < 1000000:
                 cst = datetime.strftime(furthertime.replace(microsecond=fms).replace(tzinfo=None),'%Y-%m-%d %H:%M:%S.%f')
             else:
@@ -1666,14 +1712,10 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
         values.append(tuple(lst+datavals))
         #print values
-        datavals  = []
+        #datavals  = []
 
-    #print len(values)
 
-    #print insertmanysql
-    #print values[1]
-    #cursor.executemany(insertmanysql,values)
-    #db.commit()    
+    #print "Finally inserting data ...", datetime.utcnow()
 
     if mode == "replace" or mode == "force":
         try:
@@ -1711,6 +1753,128 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     cursor.close ()
 
     #print "stream2db6: ", datetime.utcnow()
+
+def readDB(db, table, begin=None, end=None, sql=None):
+    """
+    sql: provide any additional search criteria
+        example: sql = "DataSamplingRate=60 AND DataType='variation'"
+    DEFINITION:
+        extract data streams from the data base
+
+    PARAMETERS:
+    Variables:
+        - db:   	    (mysql database) defined by MySQLdb.connect().
+        - table:            (string) tablename or sensorID -> for sensor ID 
+                                     lowest revision is selected    
+        - sql:              (string) provide any additional search criteria
+                                  example: sql = "x>20000 AND str1='P'"
+    Kwargs:
+
+    RETURNS:
+        data stream
+
+    EXAMPLE:
+        >>> db2stream(db,None,None,None,'DIDD_3121331_0002_0001')
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+
+    TODO:
+        - If sampling rate not given in DATAINFO get it from the datastream
+        - begin needs to be string - generalize that 
+    """
+    wherelist = []
+    stream = DataStream()
+
+    if not db:
+        loggerdatabase.error("DB2stream: No database connected - aborting")
+        return stream
+
+    cursor = db.cursor ()
+    
+    if not table:
+        loggerdatabase.error("DB2stream: Aborting ... either sensorid or table must be specified")
+        return
+    if begin:
+        #starttime = stream._testtime(begin)
+        #begin = datetime.strftime(starttime,"%Y-%m%d %H:%M%:%S")
+        wherelist.append('time >= "' + begin + '"')
+    if end:
+        wherelist.append('time <= "' + end + '"')
+    if len(wherelist) > 0:
+        whereclause = ' AND '.join(wherelist)
+    else:
+        whereclause = ''
+    if sql:
+        if len(whereclause) > 0:
+            whereclause = whereclause + ' AND ' + sql
+        else:
+            whereclause = sql
+
+    # 1. Try to locate data table with name 'table'
+    # --------------------------------------------
+    getcols = 'SHOW COLUMNS FROM ' + table
+    try:
+        # Table exists - read it
+        cursor.execute(getcols)
+        rows = cursor.fetchall()
+        keys = [el[0] for el in rows]
+    except MySQLdb.Error, e:
+        # Table does not exist - assume sensor id
+        getdatainfo = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + table + '"'
+        cursor.execute(getdatainfo)
+        rows = cursor.fetchall()
+        if not len(rows) > 0:
+            print "No data found - aborting"
+            return stream
+        rows = sorted(rows)
+        #for tab in rows:
+        #    revision = tab[0].replace(table,'').strip('_')
+        table = rows[0][0]
+        print "Did not find specific DataID - opening table:", table
+        try:
+            cursor.execute('SHOW COLUMNS FROM ' + table)
+            rows = cursor.fetchall()
+            keys = [el[0] for el in rows]
+        except:
+            loggerdatabase.error("readDB: mysqlerror while identifying table: %s" % (e))
+            return stream
+    except:
+        loggerdatabase.error("readDB: mysqlerror while getting table info: %s" % (e))
+        return stream
+
+    if len(keys) > 0:
+        if len(whereclause) > 0:
+            getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table + ' WHERE ' + whereclause
+        else:
+            getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table
+        print getdatasql
+        cursor.execute(getdatasql)
+        rows = cursor.fetchall()
+        print "Reading rows: ", len(rows)
+        if len(rows) > 0:
+            for ind, line in enumerate(rows):
+                row = LineStruct()
+                for i, elem in enumerate(line):
+                    if keys[i][-4:]=='time':
+                        setattr(row,keys[i],date2num(stream._testtime(elem)))
+                    else:
+                        if keys[i] in NUMKEYLIST:
+                            if elem == None or elem == 'null':
+                                elem = float(NaN)
+                            setattr(row,keys[i],float(elem))
+                        else:
+                            setattr(row,keys[i],elem)
+                stream.add(row)
+            stream.header = dbfields2dict(db,table)
+        else:
+            print "No data found"
+            pass
+
+    cursor.close ()
+    return stream
 
 
 def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
@@ -1800,14 +1964,14 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
                     row = LineStruct()
                     for i, elem in enumerate(line):
                         if keylst[i]=='time':
-                            exec('row.'+keylst[i]+' = date2num(stream._testtime(elem))')
+                            setattr(row,keylst[i],date2num(stream._testtime(elem)))
                         else:
                             if elem == None or elem == 'null':
                                 elem = float(NaN)
-                            if keylst[i] in ['x','y','z','f','dx','dy','dz','df','t1','t1','var1','var2','var3','var4','var5']:
-                                exec('row.'+keylst[i]+' = float(elem)')
+                            if keylst[i] in NUMKEYLIST:
+                                setattr(row,keylst[i],float(elem))
                             else:
-                                exec('row.'+keylst[i]+' = elem')
+                                setattr(row,keylst[i],elem)
                     stream.add(row)
                 #print "Loaded data from table", table[0]
                 stream.header = dbfields2dict(db,table[0])
@@ -1831,14 +1995,14 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
             row = LineStruct()
             for i, elem in enumerate(line):
                 if keylst[i]=='time':
-                    exec('row.'+keylst[i]+' = date2num(stream._testtime(elem))')
+                    setattr(row,keylst[i],date2num(stream._testtime(elem)))
                 else:
                     if elem == None or elem == 'null':
                         elem = float(NaN)
-                    if keylst[i] in ['x','y','z','f','dx','dy','dz','df','t1','t1','var1','var2','var3','var4','var5']:
-                        exec('row.'+keylst[i]+' = float(elem)')
+                    if keylst[i] in NUMKEYLIST:
+                        setattr(row,keylst[i],float(elem))
                     else:
-                        exec('row.'+keylst[i]+' = elem')
+                        setattr(row,keylst[i],elem)
             stream.add(row)
 
     if tableext:

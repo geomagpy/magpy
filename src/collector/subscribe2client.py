@@ -48,11 +48,11 @@ IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
                 10:'f',11:'x',12:'y',13:'z',14:'df',
                 30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',38:'var1',40:'var1',60:'var2',61:'var3',62:'var4'} 
 
-MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38]}
+MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38]}
 
-UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g']}
+UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g']}
 
-NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w']}
+NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w']}
 
 def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None):
     print "Getting parameters ..." 

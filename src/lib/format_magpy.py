@@ -178,9 +178,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
         stream.header.clear()
     else:
         headskip = True
-    
-    cdf_file = cdf.CDF(filename)
-
 
     theday = extractDateFromString(filename)
     try:
@@ -200,6 +197,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
     # Juergens DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
     if getfile:
+        try:
+            cdf_file = cdf.CDF(filename)
+        except:
+            return stream
         #print cdf_file.attrs
         try:
             cdfformat = cdf_file.attrs['DataFormat']
@@ -226,6 +227,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
+            print key
             #try:
             #    print key, cdf_file[key].attrs['LABLAXIS'], cdf_file[key].attrs['UNITS']
             #except:
@@ -389,6 +391,13 @@ def readPYCDF(filename, headonly=False, **kwargs):
             else:
                 if key.lower() in KEYLIST:
                     arkey = cdf_file[key][...]
+                    if len(arkey) == 1:
+                        # This is the case if identical data is found
+                        try:
+                            length = len(cdf_file['Epoch'][...])         
+                        except:
+                            length = len(cdf_file['time'][...])         
+                        arkey = [arkey[0]] * length
                     if len(arkey) > 0:
                         stream._put_column(arkey,key.lower())
                         stream.header['col-'+key.lower()] = key.lower()
@@ -404,8 +413,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         except:
                             pass
 
-    cdf_file.close()
-    del cdf_file
+        cdf_file.close()
+        del cdf_file
 
     return DataStream(stream, stream.header)   
 
@@ -638,6 +647,19 @@ def writePYCDF(datastream, filename, **kwargs):
     else:
         mycdf = cdf.CDF(filename, '')
 
+    keylst = datastream._get_key_headers()
+    #print keylst
+    if not 'flag' in keylst:
+        keylst.append('flag')
+    #print keylst
+    if not 'comment' in keylst:
+        keylst.append('comment')
+    if not 'typ' in keylst:
+        keylst.append('typ')
+    tmpkeylst = ['time']
+    tmpkeylst.extend(keylst)
+    keylst = tmpkeylst 
+
     headdict = datastream.header
     head, line = [],[]
 
@@ -647,8 +669,17 @@ def writePYCDF(datastream, filename, **kwargs):
                 mycdf.attrs[key] = headdict[key]
     mycdf.attrs['DataFormat'] = 'MagPyCDF'
 
-    for key in KEYLIST:
+    def checkEqualIvo(lst):
+        # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
+        return not lst or lst.count(lst[0]) == len(lst)
+    def checkEqual3(lst):
+        return lst[1:] == lst[:-1]
+
+    for key in keylst:
         col = datastream._get_column(key)
+        if not False in checkEqual3(col):
+            print "Found identical values only"
+            col = col[:1]
         if key == 'time':
             key = 'Epoch'
             mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
@@ -656,17 +687,18 @@ def writePYCDF(datastream, filename, **kwargs):
             nonetest = [elem for elem in col if not elem == None]
             if len(nonetest) > 0:
                 mycdf[key] = col
-        for keydic in headdict:
-            if keydic == ('col-'+key):
-                try:
-                    mycdf[key].attrs['name'] = headdict.get('col-'+key,'')
-                except:
-                    pass
-            if keydic == ('unit-col-'+key):
-                try:
-                    mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
-                except:
-                    pass
+
+            for keydic in headdict:
+                if keydic == ('col-'+key):
+                    try:
+                        mycdf[key].attrs['name'] = headdict.get('col-'+key,'')
+                    except:
+                        pass
+                if keydic == ('unit-col-'+key):
+                    try:
+                        mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
+                    except:
+                        pass
                     
     mycdf.close()
 
@@ -706,8 +738,10 @@ def writePYASCII(datastream, filename, **kwargs):
         for key in keylst:
             title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit-col-'+key,'') + ']'
             head.append(title)
-        head[0] = 'Time-days'
-        head[1] = 'Time'
+        head[0] = 'Time'
+        headnew = ['Time-days']
+        headnew.extend(head)
+        head = headnew
         wtr.writerow( [' # MagPy ASCII'] )
         wtr.writerow( head )
     for elem in datastream:
