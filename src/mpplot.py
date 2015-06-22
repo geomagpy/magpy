@@ -120,7 +120,11 @@ def ploteasy(stream):
         sensorid = stream.header['SensorID']
     except:
         sensorid = ''
-    datadate = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d')
+    try:
+        datadate = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d')
+    except:
+        datadate = datetime.strftime(num2date(stream.ndarray[0][0]),'%Y-%m-%d')
+
     plottitle = "%s (%s)" % (sensorid,datadate)
     print "Plotting keys:", keys
     plot_new(stream, keys,
@@ -136,7 +140,7 @@ def ploteasy(stream):
 
 def plot_new(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False,
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',
+	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',resolution=None,
 	**kwargs):
     '''
     DEFINITION:
@@ -249,13 +253,13 @@ def plot_new(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow
     plotStreams([stream], [ variables ], specialdict=[specialdict],noshow=noshow,
 	errorbars=errorbars,padding=padding,annotate=annotate,stormphases=stormphases,
 	colorlist=colorlist,symbollist=symbollist,t_stormphases=t_stormphases,
-	includeid=includeid,function=function,plottype=plottype,**kwargs)
+	includeid=includeid,function=function,plottype=plottype,resolution=resolution,**kwargs)
 
 
 def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
 	t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-	noshow=False,labels=False,**kwargs):
+	noshow=False,labels=False,resolution=None,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -313,6 +317,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	- plottype:	(NumPy str='discontinuous') Can also be 'continuous'.
 	- savedpi:	(float=80) Determines dpi of outfile.
 	- symbollist:	(list) List of symbols to plot with. Default= '-' for all.
+	- resolution:	(int) Resolution of plot. Amount of points are reduced to this value.
 	- t_stormphases:(dict) Dictionary (2 <= len(dict) <= 4) containing datetime objects.
 			dict('ssc') = time of SSC
 			dict('mphase') = time of start of main phase / end of SSC
@@ -375,10 +380,27 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     plot_dict = []
     count = 0
 
+    if not resolution:
+        resolution = 1296000  # 15 days of 1 second data can be maximale shown in detail, 1.5 days of 10 Hz
+
     # Iterate through each variable, create dict for each:
     for i in range(len(streamlist)):
         stream = streamlist[i]
-        t = np.asarray([row[0] for row in stream])
+        try:
+            t = stream.ndarray[0]
+            if not len(t) > 0:
+                x=1/0
+            print len(t), resolution
+            if len(t) > resolution:
+                loggerstream.info("plot: Reducing data resultion ...")
+                stepwidth = int(len(t)/resolution)
+                t = t[::stepwidth]
+            loggerstream.info("plot: Start plotting of stream with length %i" % len(stream.ndarray[0]))
+            print len(t)
+        except:
+            t = np.asarray([row[0] for row in stream])
+            loggerstream.info("plot: Start plotting of stream with length %i" % len(stream))
+        #t = np.asarray([row[0] for row in stream])
         for j in range(len(variables[i])):
             data_dict = {}
             key = variables[i][j]
@@ -387,7 +409,16 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 loggerplot.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
-            y = np.asarray([row[ind] for row in stream])
+            try:
+                y = stream.ndarray[ind]
+                if not len(y) > 0:
+                    x=1/0
+                if len(y) > resolution:
+                    stepwidth = int(len(y)/resolution)
+                    y = y[::stepwidth]
+            except:
+                y = np.asarray([float(row[ind]) for row in stream])
+            #y = np.asarray([row[ind] for row in stream])
 
             if len(y) == 0:
                 loggerplot.error("plotStreams: Cannot plot stream of zero length!")

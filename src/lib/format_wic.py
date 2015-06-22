@@ -503,6 +503,7 @@ def readIWT(filename, headonly=False, **kwargs):
 
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    sensorid = kwargs.get('sensorid')
     getfile = True
 
     stream = DataStream()
@@ -557,6 +558,8 @@ def readIWT(filename, headonly=False, **kwargs):
         headers['SensorDescription'] = 'iWT: Tiltmeter system'
         headers['SensorName'] = 'Tiltmeter'
         headers['SensorType'] = 'Tiltmeter'
+        if sensorid:
+            headers['SensorID'] = sensorid
 
     return DataStream(stream, headers)    
 

@@ -227,7 +227,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
-            print key
+            #print key
             #try:
             #    print key, cdf_file[key].attrs['LABLAXIS'], cdf_file[key].attrs['UNITS']
             #except:

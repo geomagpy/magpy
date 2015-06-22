@@ -192,21 +192,6 @@ def dbgetstring(db,tablename,sensorid,columnid,revision=None):
     except:
         return row[0]
 
-
-def dbsamplingrate(stream):
-    """
-    DEFINITION:
-        returns a rounded value of the sampling rate
-    headerdict = 
-    """
-    sr = stream.get_sampling_period()*24*3600
-    #print "SR ", len(stream), sr
-    if np.round(sr,0) == 0:
-        return np.round(sr,1)
-    else:
-        return np.round(sr,0)
-
-
 def dbupload(db, path,stationid,**kwargs):
     """
     DEFINITION:
@@ -259,7 +244,8 @@ def dbupload(db, path,stationid,**kwargs):
     if headerdict:
         stream.header = headerdict
     stream.header['StationID']=stationid
-    stream.header['DataSamplingRate'] = str(dbsamplingrate(stream)) + ' sec'
+    #stream.header['DataSamplingRate'] = str(dbsamplingrate(stream)) + ' sec'
+    stream.header['DataSamplingRate'] = stream.samplingrate()
     if sensorid:
         stream.header['SensorID']=sensorid
 
@@ -738,11 +724,14 @@ def dbfields2dict(db,datainfoid):
     try:
         cols = colsstr.split('_')
         colsel = colselstr.split('_')
-        print cols, colsel
+        #print cols, colsel
         for i, elem in enumerate(cols):
             if not elem == '-':
-                key = 'col-'+KEYLIST[i]
-                unitkey = 'unit-col-'+KEYLIST[i]
+                # corrected on 29.05.2015
+                #key = 'col-'+KEYLIST[i]
+                #unitkey = 'unit-col-'+KEYLIST[i]
+                key = 'col-'+elem
+                unitkey = 'unit-col-'+elem
                 metadatadict[key] = cols[i]
                 metadatadict[unitkey] = colsel[i]
     except:
@@ -1253,6 +1242,111 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     return datainfoid
 
+def writeDB(db, datastream, StationID=None, mode='replace', revision=None, tablename=None, noheader=False, **kwargs):
+    """
+    DEFINITION:
+        Method to write datastreams to a mysql database
+
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - datastream:   (magpy datastream) 
+    Kwargs:
+        - mode:         (string)
+                            mode: replace -- replaces existing table contents with new one, also replaces informations from sensors and station table
+                            mode: delete -- deletes existing tables and writes new ones -- remove (or make it extremeley difficult to use) this method after initializing of tables
+                            mode: extend -- only add new data points with unique ID's (default) - table must exist already !
+                            mode: insert -- create new table with unique ID
+
+                    New Header informations are created with modes 'replace' and 'delete'.
+                    If mode = 'extend' then check for the existence of sensorid and datainfo first -> if not available then request mode = 'insert'
+                    Mode 'extend' requires an existing input in sensor, station and datainfo tables: tablename needs to be given.
+                    Mode 'insert' checks for the existance of existing inputs in sensor, station and datainfo, and eventually adds a new datainfo tab.
+                    Mode 'replace' checks for the existance of existing inputs in sensor, station and datainfo, and replaces the stored information: optional tablename can be given.
+                         if tablename is given, then data from this table is replaced - otherwise only data from station and sensor are replaced
+                    Mode 'delete' completely deletes all tables and creates new ones. 
+                    Mode 'force' does not check sensors and datainfo tabs. Just creates table tablename. All other conditions follow mode 'replace'.
+         - clear:	(bool) If true it will delete the selected table before adding new data
+    REQUIRES:
+        dbdatainfo, dbsensorinfo
+        
+    RETURNS:
+        --
+
+    EXAMPLE:
+        >>> stream.header['StationID'] = 'MyStation'
+        >>> stream2db(db,stream)
+        dont't use >>> stream2db(db,stream,mode='extend',tablename=datainfoid)
+        >>> stream2db(db,stream,mode='replace')
+        >>> stream2db(db,stream,mode='force',tablename='myid_0001_0001')
+
+    APPLICATION:
+        Requires an existing mysql database (e.g. mydb)
+        so first connect to the database
+        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        stream = read('/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK/raw/*', starttime='2013-01-01',endtime='2013-02-01')
+        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
+        stream2db(db,stream)
+
+    TODO:
+        - make it possible to create spezial tables by defining an extension (e.g. _sp2013min) where sp indicates special        
+    """
+    if not db:
+        loggerdatabase.error("stream2DB: No database connected - aborting -- please create and initiate a database first")
+        return
+
+    if tablename or noheader:
+        print "I am not bothering with header, sensorid etc"
+        # Just check whether DataID, if not a table, exists and append data
+        #return some message on success
+
+
+    if not 'SensorID' in datastream.header:
+        loggerdatabase.error("stream2DB: No SensorID provided in header - aborting")
+        return
+
+    if not 'StationID' in datastream.header and not StationID:
+        loggerdatabase.error("stream2DB: No StationID provided - use option StationID='MyID'")
+        return
+
+    ## Determine any missing essential data information
+    if not 'DataSamplingRate' in datastream.header:
+        datastream.samplingrate()
+    if not 'SensorKeys' in datastream.header:
+        varkeys = datastream._get_key_headers()
+        datastream.header['SensorKeys'] = ','.join(varkeys)
+    if not 'SensorRevision' in datastream.header:
+        varkeys = datastream._get_key_headers()
+        datastream.header['SensorKeys'] = ','.join(varkeys)
+
+    print "Got here", datastream.header
+    ## Compare header information with existing header data in DataInfo, Stations and Sensors
+    sensorid = datastream.header['SensorID']
+    for key in datastream.header:
+        if key.startswith('Sensor'):
+            dbcont = dbselect(db, key, 'SENSORS', 'SensorID = "%s"' % sensorid)
+            print dbcont
+            if not dbcont == '' and not dbcont == datastream.header[key]:
+                print "Different data in SENSORS"
+                print "sys.exit()"
+            elif dbcont == '':
+                print "Updating SENSORS"
+            else:
+                print "everything OK"
+        if key.startswith('Data'):
+            if not revision:
+                dbcont = dbselect(db, key, 'Data', 'SensorID = "%s"' % sensorid)
+            else:
+                dbcont = dbselect(db, key, 'Data', 'DataID = "%s_%s"' % (sensorid,revision))
+            print dbcont
+        if key.startswith('Station'):
+            dbcont = dbselect(db, key, 'Data', 'StationID = "%s"' % datastream.header['StationID'])
+
+
+        magsenslist = dbselect(db, 'SensorID', 'SENSORS', 'SensorGroup = "Magnetism"')
+        tempsenslist = dbselect(db, 'SensorID', 'SENSORS','SensorElements LIKE "%T%"')
+        lasttime = dbselect(db,'time','DATATABLE',expert="ORDER BY time DESC LIMIT 1")    
+
 
 def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs):
     """
@@ -1437,7 +1531,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             loggerdatabase.info("stream2DB: --- DataSamplingRate = %s" % sr)
         except:
             #print "Setting sampling rate"
-            datastream.header['DataSamplingRate'] = str(dbsamplingrate(datastream))+' sec'
+            #datastream.header['DataSamplingRate'] = str(dbsamplingrate(datastream))+' sec'
+            datastream.header['DataSamplingRate'] = datastream.samplingrate()
             sr = datastream.header['DataSamplingRate']
             loggerdatabase.info("stream2DB: --- DataSamplingRate = %s" % sr)
 
@@ -1680,7 +1775,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
     #print datakeys
     #print datastream[0]
-
+    loggerdatabase.info("stream2db: now adding data to DB")
     for elem in datastream: 
         datavals  = []
         #datavals = ['null' if str(getattr(elem,el))=='nan' else str(getattr(elem,el)) for el in datakeys] 

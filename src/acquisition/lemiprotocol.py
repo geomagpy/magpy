@@ -182,11 +182,11 @@ class LemiProtocol(LineReceiver):
         try:
             if gpsstat == 'P': 
                 ## passive mode - no GPS connection -> use ntptime as primary with correction
-                evt1 = currenttime-timedelta(seconds=2.07)
+                evt1 = currenttime-timedelta(seconds=2.304) # 2.07 before 15.06.2015
                 evt4 = gps_array
             else:
                 ## active mode - GPS time is used as primary
-                evt4 = currenttime-timedelta(seconds=2.07)
+                evt4 = currenttime-timedelta(seconds=2.304) # 2.07 before 15.06.2015
                 evt1 = gps_array
             evt3 = {'id': 3, 'value': outtime}
             evt11 = xarray

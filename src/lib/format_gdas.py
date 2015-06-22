@@ -77,6 +77,8 @@ def readGDASA1(filename, headonly=False, **kwargs):
     # get day from filename (platform independent)
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    sensorid = kwargs.get('sensorid')
+
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
     try:
@@ -95,31 +97,40 @@ def readGDASA1(filename, headonly=False, **kwargs):
 
     if getfile:
 	logging.info(' Read: %s Format: GDAS ' % (filename))
+        cnt = 0
         for line in fh:
             if line.isspace():
                 # blank line
                 pass
-            elif line.startswith('# Cobs'):
-                # data header
-                pass
-            elif line.startswith('  Time'):
+            elif '  Time' in line: # line.startswith('  Time'):
                 # data header
                 colsstr = line.lower().split()
+                ind = colsstr.index('time')
+                colsstr = colsstr[ind:]
+                
                 for it, elem in enumerate(colsstr):
                     if elem == 'time':
                         stream.header['epoch'] = elem
                     else: # check for headers and replace hd with xy
                         if elem == 'h':
-                            stream.header['InstrumentOrientation'] = 'hdz'
+                            stream.header['DataSensorOrientation'] = 'hdz'
                             elem = 'x'
                         if elem == 'd':
                             elem = 'y'
-                        colname = 'col-%s' % elem
-                        stream.header[colname] = elem
-                        if not elem == 't':
-                            stream.header['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
-                        else:
-                            stream.header['unit-' + colname] = 'C'                        
+                        if elem == 't':
+                            elem = 't1'
+                        if not elem == 'f':
+                            colname = 'col-%s' % elem
+                            stream.header[colname] = elem
+                            if not elem == 't1':
+                                stream.header['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
+                            else:
+                                stream.header['unit-' + colname] = 'C'                        
+                    if sensorid:
+                        stream.header['SensorID'] = sensorid
+            elif line.startswith('# Cobs'):
+                # data header
+                pass
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -140,6 +151,10 @@ def readGDASA1(filename, headonly=False, **kwargs):
                 try:
                     if (float(elem[5]) != 99999):
                         row.f = float(elem[5])/10.0
+                        if cnt == 1:
+                            stream.header['col-f'] = 'f'
+                            stream.header['unit-col-f'] = 'f'
+                        cnt = cnt +1
                 except:
                     pass
                 stream.add(row)         

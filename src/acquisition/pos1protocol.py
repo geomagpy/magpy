@@ -280,6 +280,8 @@ class Pos1Protocol(LineReceiver):
         try:
             # extract time data
             datearray = _timeToArray(timestamp)
+            # new line for time shift
+            datearray = datearray - timedelta(seconds=6.770)
             gpsarray = _timeToArray(gps_time)
             try:
                 datearray.append(int(intensity*1000))

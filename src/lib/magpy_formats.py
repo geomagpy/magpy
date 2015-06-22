@@ -153,6 +153,12 @@ def isFormat(filename, format_type):
     elif (format_type == "POS1TXT"): # Text POS1 data (0.2 Hz)
         if (isPOS1TXT(filename)):
             return True
+    elif (format_type == "IAF"): # Intermagnet Archive Format
+        if (isIAF(filename)):
+            return True
+    elif (format_type == "IMAGCDF"): # Intermagnet CDF Format
+        if (isIMAGCDF(filename)):
+            return True
     elif (format_type == "IMF"): # Intermagnet v1.22,v1.23 data (60 sec)
         try:
             if (isIMF(filename)):
@@ -201,6 +207,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readWDC(filename, headonly, **kwargs)
     elif (format_type == "IMF"):
         return readIMF(filename, headonly, **kwargs)
+    elif (format_type == "IAF"):
+        return readIAF(filename, headonly, **kwargs)
+    elif (format_type == "IMAGCDF"):
+        return readIMAGCDF(filename, headonly, **kwargs)
     elif (format_type == "BLV"): # Intermagnet IBFV2.00
         return readBLV(filename, headonly, **kwargs)
     elif (format_type == "DIDD"):

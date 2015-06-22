@@ -25,6 +25,47 @@ def isIMF(filename):
     return True
 
 
+def isIMAGCDF(filename):
+    """
+    Checks whether a file is ImagCDF format.
+    """
+    try:
+        temp = cdf.CDF(filename)
+    except:
+        return False
+    try:
+        form = temp.attrs['FormatDescription']
+        if not form[0].startswith('INTERMAGNET'):
+            return False
+    except:
+        return False
+    return True
+
+
+def isIAF(filename):
+    """
+    Checks whether a file is BIN IAF INTERMAGNET Archive format.
+    """
+
+    try:
+        temp = open(filename, 'rb').read(64)
+        data= struct.unpack('<4s4l4s4sl4s4sll4s4sll', temp)
+    except:
+        return False
+    try:
+        date = str(data[1])
+        if not len(date) == 7:
+            return False         
+    except:
+        return False
+    try:
+        datetime.strptime(date,"%Y%j")
+    except:
+        return False
+
+    return True
+
+
 def isBLV(filename):
     """
     Checks whether a file is ASCII IMF 1.22,1.23 minute format.
@@ -41,6 +82,345 @@ def isBLV(filename):
         return False
     return True
 
+def readIAF(filename, headonly=False, **kwargs):
+    """
+    Reading Intermagnet archive data format
+
+
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    resolution = kwargs.get('resolution')
+
+    getfile = True
+    gethead = True
+
+    if not resolution:
+        resolution = 'minutes'
+    stream = DataStream()
+    # Check whether header infromation is already present
+
+    if stream.header is None:
+        headers = {}
+    else:
+        headers = stream.header
+    data = []
+    key = None
+
+    if starttime:
+        begin = stream._testtime(starttime)
+    if endtime:
+        end = stream._testtime(endtime)
+
+    x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
+    datelist = []
+
+    fh = open(filename, 'rb')
+    while True:
+      try:
+        getline = True
+        start = fh.read(64)
+        head = struct.unpack('<4s4l4s4sl4s4sll4s4sll', start)
+        date = datetime.strptime(str(head[1]),"%Y%j")
+        datelist.append(date)
+        if starttime:
+            if date < begin:
+                getline = False
+        if endtime:
+            if date > end:
+                getline = False
+        if getline:
+            # unpack header
+            if gethead:
+                stream.header['StationIAGAcode'] = head[0].strip()
+                headers['StationID'] = head[0].strip()
+                #
+                headers['DataAcquisitionLatitude'] = (90-float(head[2]))/1000.
+                headers['DataAcquisitionLongitude'] = float(head[3])/1000.
+                headers['DataElevation'] = head[4]
+                headers['DataComponents'] = head[5].lower()
+                for c in head[5].lower():
+                    if c == 'g':
+                        headers['col-df'] = 'g'                   
+                        headers['unit-col-df'] = 'nT'
+                    else:
+                        headers['col-'+c] = c                   
+                        headers['unit-col-'+c] = 'nT'
+                keystr = ','.join([c for c in head[5].lower()])
+                if len(keystr) < 6:
+                    keystr = keystr + ',f'
+                keystr = keystr.replace('d','y')
+                keystr = keystr.replace('g','df')
+                keystr = keystr.replace('h','x')
+                headers['StationInstitution'] = head[6]
+                headers['DataConversion'] = head[7]
+                headers['DataQuality'] = head[8]
+                headers['SensorType'] = head[9]
+                headers['StationK9'] = head[10]
+                headers['DataDigitalSampling'] = head[11]
+                headers['DataSensorOrientation'] = head[12].lower()
+                pubdate = datetime.strptime(str(head[13]),"%y%m")
+                headers['DataPublicationDate'] = pubdate
+                gethead = False
+            # get minute data
+            xb = fh.read(5760)
+            x.extend(struct.unpack('<1440l', xb))
+            #x = np.asarray(struct.unpack('<1440l', xb))/10. # needs an extend
+            yb = fh.read(5760)
+            y.extend(struct.unpack('<1440l', yb))
+            zb = fh.read(5760)
+            z.extend(struct.unpack('<1440l', zb))
+            fb = fh.read(5760)
+            f.extend(struct.unpack('<1440l', fb))
+            # get hourly means
+            xhb = fh.read(96)
+            xho.extend(struct.unpack('<24l', xhb))
+            #xho = np.asarray(struct.unpack('<24l', xhb))/10.
+            yhb = fh.read(96)
+            yho.extend(struct.unpack('<24l', yhb))
+            zhb = fh.read(96)
+            zho.extend(struct.unpack('<24l', zhb))
+            fhb = fh.read(96)
+            fho.extend(struct.unpack('<24l', fhb))
+            # get daily means
+            xdb = fh.read(4)
+            xd.extend(struct.unpack('<l', xdb))
+            ydb = fh.read(4)
+            yd.extend(struct.unpack('<l', ydb))
+            zdb = fh.read(4)
+            zd.extend(struct.unpack('<l', zdb))
+            fdb = fh.read(4)
+            fd.extend(struct.unpack('<l', fdb))
+            kb = fh.read(32)
+            k.extend(struct.unpack('<8l', kb))
+            ilb = fh.read(16)
+            ir.extend(struct.unpack('<4l', ilb))
+      except:
+        break
+    fh.close()
+
+    #x = np.asarray([val for val in x if not val > 888880])/10.   # use a pythonic way here
+    x = np.asarray(x)/10.
+    x[x > 88880] = float(nan)
+    y = np.asarray(y)/10.
+    y[y > 88880] = float(nan)
+    z = np.asarray(z)/10.
+    z[z > 88880] = float(nan)
+    f = np.asarray(f)/10.
+    f[f > 88880] = float(nan)
+    f[f < -44440] = float(nan)
+    xho = np.asarray(xho)/10.
+    xho[xho > 88880] = float(nan)
+    yho = np.asarray(yho)/10.
+    yho[yho > 88880] = float(nan)
+    zho = np.asarray(zho)/10.
+    zho[zho > 88880] = float(nan)
+    fho = np.asarray(fho)/10.
+    fho[fho > 88880] = float(nan)
+    fho[fho < -44440] = float(nan)
+    xd = np.asarray(xd)/10.
+    xd[xd > 88880] = float(nan)
+    yd = np.asarray(yd)/10.
+    yd[yd > 88880] = float(nan)
+    zd = np.asarray(zd)/10.
+    zd[zd > 88880] = float(nan)
+    fd = np.asarray(fd)/10.
+    fd[fd > 88880] = float(nan)
+    fd[fd < -44440] = float(nan)
+    k = np.asarray(k)/10.
+    k[k > 88880] = float(nan)
+    ir = np.asarray(ir)
+              
+    if resolution == 'days':
+        stream = array2stream([xd,yd,zd,fd],keystr,starttime=min(datelist),sr=86400)
+        headers['DataSamplingRate'] = '86400 sec'
+    elif resolution == 'hours':
+        stream = array2stream([xho,yho,zho,fho],keystr,starttime=min(datelist)+timedelta(minutes=30),sr=3600)
+        headers['DataSamplingRate'] = '3600 sec'
+    elif resolution == 'k':
+        stream = array2stream([k,ir],'k,ir',starttime=min(datelist)+timedelta(minutes=90),sr=10800)
+    else:
+        stream = array2stream([x,y,z,f],keystr,starttime=min(datelist),sr=60)
+        headers['DataSamplingRate'] = '60 sec'
+
+    return DataStream(stream, headers)    
+
+
+def writeIAF(datastream, filename, **kwargs):
+    """
+    Writing Intermagnet archive format (2.1)
+    """
+    pass
+    # Check whether minute file
+    # check whether data covers one year
+    # Check whether f is contained (or delta f)
+    # Check whether all essential header info is present
+
+    # if f calc delta f
+    # get k
+    # filter hourly data
+    # filter daily means
+    
+
+def readIMAGCDF(filename, headonly=False, **kwargs):
+    """
+    Reading Intermagnet CDF format (1.1)
+    """
+
+    print "FOUND IMAGCDF"
+
+    cdfdat = cdf.CDF(filename)
+    # get Attribute list
+    attrslist = [att for att in cdfdat.attrs]
+    # get Data list
+    datalist = [att for att in cdfdat]
+    headers={}
+
+    arraylist = []
+    array = [[] for elem in KEYLIST]
+    startdate = cdfdat[datalist[-1]][0]
+
+    t1 = datetime.utcnow()
+    # Reorder datalist and Drop time column
+    ti = [datalist[-1]]
+    datalist = datalist[:-1]
+    ti.extend(datalist)
+    for elem in ti:
+        if elem.endswith('Times'):
+            ar = date2num(cdfdat[elem][...])
+            arraylist.append(ar)
+            ind = KEYLIST.index('time')
+            array[ind] = ar
+        else:
+            if elem.endswith('X') or elem.endswith('H'):
+                key='x' 
+                headers['col-x'] = elem[-1].lower()                
+                headers['unit-col-x'] = 'nT'
+            elif elem.endswith('Y') or elem.endswith('D'):
+                key='y' 
+                headers['col-y'] = elem[-1].lower()                
+                headers['unit-col-y'] = 'nT'
+            elif elem.endswith('Z'):
+                key='z' 
+                headers['col-z'] = elem[-1].lower()                
+                headers['unit-col-z'] = 'nT'
+            elif elem.endswith('F'):
+                key='f' 
+                headers['col-f'] = elem[-1].lower()                
+                headers['unit-col-f'] = 'nT'
+            elif elem.endswith('G'):
+                key='df' 
+                headers['col-df'] = elem[-1].lower()                
+                headers['unit-col-df'] = 'nT'
+            ar = cdfdat[elem][...]
+            ar[ar > 88880] = float(nan)
+            ind = KEYLIST.index(key)
+            array[ind] = ar
+            arraylist.append(ar)  
+
+    ndarray = np.array(array)
+
+    t2 = datetime.utcnow()
+    print "Duration for array build:", t2-t1
+
+    stream = DataStream()
+    stream = [LineStruct()]
+    #stream = array2stream(arraylist,'time,x,y,z')
+
+    #t2 = datetime.utcnow()
+    #print "Duration for conventional stream assignment:", t2-t1
+
+    return DataStream(stream,headers,ndarray)   
+
+
+def writeIMAGCDF(datastream, filename, **kwargs):
+    """
+    Writing Intermagnet CDF format (1.1)
+    """
+
+    mode = kwargs.get('mode')
+
+    if os.path.isfile(filename+'.cdf'):
+        if mode == 'skip': # skip existing inputs
+            exst = read(path_or_url=filename+'.cdf')
+            datastream = mergeStreams(exst,datastream,extend=True)
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
+        elif mode == 'replace': # replace existing inputs
+            exst = read(path_or_url=filename+'.cdf')
+            datastream = mergeStreams(datastream,exst,extend=True)
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
+        elif mode == 'append':
+            mycdf = cdf.CDF(filename, filename) # append????
+        else: # overwrite mode
+            #print filename
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
+    else:
+        mycdf = cdf.CDF(filename, '')
+
+    keylst = datastream._get_key_headers()
+    #print keylst
+    if not 'flag' in keylst:
+        keylst.append('flag')
+    #print keylst
+    if not 'comment' in keylst:
+        keylst.append('comment')
+    if not 'typ' in keylst:
+        keylst.append('typ')
+    tmpkeylst = ['time']
+    tmpkeylst.extend(keylst)
+    keylst = tmpkeylst 
+
+    headdict = datastream.header
+    head, line = [],[]
+
+    ## Transfer MagPy Header to INTERMAGNET CDF attributes
+    mycdf.attrs['FormatDescription'] = 'INTERMAGNET CDF format'
+    mycdf.attrs['FormatVersion'] = '1.1'
+
+    def checkEqualIvo(lst):
+        # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
+        return not lst or lst.count(lst[0]) == len(lst)
+    def checkEqual3(lst):
+        return lst[1:] == lst[:-1]
+
+    ndarray = False
+    if len(datastream.ndarray[ind]>0):
+        ndarray = True
+
+    for key in keylst:
+        ind = KEYLIST.index(key)
+        if ndarray and len(datastream.ndarray[ind]>0):
+            col = datastream.ndarray[ind]
+        else:
+            col = datastream._get_column(key)
+        
+        if not False in checkEqual3(col):
+            print "Found identical values only"
+            col = col[:1]
+        if key == 'time':
+            key = 'TT'
+            mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
+        elif len(col) > 0:
+            nonetest = [elem for elem in col if not elem == None]
+            if len(nonetest) > 0:
+                mycdf[key] = col
+
+            for keydic in headdict:
+                if keydic == ('col-'+key):
+                    try:
+                        mycdf[key].attrs['name'] = headdict.get('col-'+key,'')
+                    except:
+                        pass
+                if keydic == ('unit-col-'+key):
+                    try:
+                        mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
+                    except:
+                        pass
+                    
+    mycdf.close()
 
 
 def readIMF(filename, headonly=False, **kwargs):

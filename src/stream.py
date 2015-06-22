@@ -250,6 +250,8 @@ PYMAG_SUPPORTED_FORMATS = [
 		'IAGA',		# IAGA 2002 text format
 		'WDC',		# World Data Centre format
 		'IMF',		# Intermagnet Format
+		'IAF',		# Intermagnet archive Format
+		'IMAGCDF',	# Intermagnet CDF Format
 		'BLV',		# Baseline format Intermagnet
 		'DIDD',		# Output format from DIDD
 		'GSM19',	# Output format from GSM19 magnetometer
@@ -464,6 +466,7 @@ class DataStream(object):
     ----------------------------
 
     Useful functions:
+    - array2stream -- returns a data stream  -- converts a list of arrays to a datastream
     - denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
     - find_nearest(array, value) -- find point in array closest to value
     - maskNAN(column) -- Tests for NAN values in array and usually masks them
@@ -515,14 +518,19 @@ CALLED BY:
 *********************************************************************
     """
 
-    def __init__(self, container=None, header={}):
+    def __init__(self, container=None, header={},ndarray=None):
         if container is None:
             container = []
         self.container = container
+        if ndarray is None:
+            ndarray = np.array([[] for elem in KEYLIST])
+        self.ndarray = ndarray ## Test this! -> for better memory efficiency
         #if header is None:
         #    header = {'Test':'Well, it works'}
             #header = {}
         self.header = header
+        #for key in KEYLIST:
+        #    setattr(self,key,np.asarray([]))
         #self.header = {'Test':'Well, it works'}
 
     # ------------------------------------------------------------------------
@@ -604,9 +612,13 @@ CALLED BY:
         """
         self.header = {}
 
-    def extend(self,datlst,header):
+    def extend(self,datlst,header,ndarray):
         self.container.extend(datlst)
         self.header = header
+        if self.ndarray.size == 0:
+            self.ndarray = ndarray
+        else:
+            self.ndarray = np.append(self.ndarray, ndarray,1)
 
     # TODO add a similar function for streams
     def union(self,column):
@@ -683,12 +695,17 @@ CALLED BY:
             except:
                 header = None
         
-
         if not len(keylist) > 0:  # e.g. header col-? does not contain any info
             for key in FLAGKEYLIST[1:]: # use the long way
                 col = self._get_column(key)
                 if len(col) > 1:
                     keylist.append(key)
+
+        if not len(keylist) > 0:  # e.g. Testing ndarray
+            for ind,elem in enumerate(self.ndarray): # use the long way
+                if len(elem) > 0:
+                    if not KEYLIST[ind] == 'time':
+                        keylist.append(KEYLIST[ind])
 
         if limit and len(keylist) > limit:
             keylist = keylist[:limit]
@@ -700,7 +717,7 @@ CALLED BY:
         Sorting data according to time (maybe generalize that to some key)
         """
         liste = sorted(self.container, key=lambda tmp: tmp.time)
-        return DataStream(liste, self.header)
+        return DataStream(liste, self.header, self.ndarray)
 
     # ------------------------------------------------------------------------
     # B. Internal Methods: Line & column functions
@@ -786,6 +803,9 @@ CALLED BY:
         #    return np.asarray([])
         try:
             col = np.asarray([row[ind] for row in self])
+            #get the first three elements and test whether nan is there
+            if np.isnan(np.min(col[:3])):
+                return np.asarray([])
             return col
         except:
             return np.asarray([])
@@ -841,14 +861,14 @@ CALLED BY:
             raise ValueError, "Column key not valid"
         if not len(column) == len(self):
             raise ValueError, "Column length does not fit Datastream"
-        print "Putting column..."
-        t1 = datetime.utcnow()
+        #print "Putting column..."
+        #t1 = datetime.utcnow()
         #for idx, elem in enumerate(self):
         #    exec('elem.'+key+' = column[idx]')
         for idx, elem in enumerate(self):
             setattr(elem, key, column[idx])
-        t2 = datetime.utcnow()
-        print t2-t1
+        #t2 = datetime.utcnow()
+        #print t2-t1
 
         if not columnname:
             try: # TODO correct that
@@ -2833,13 +2853,21 @@ CALLED BY:
             digits = 1
 
         sr = self.get_sampling_period()*24*3600
+        unit = ' sec'
 
-        if np.round(sr,0) == 0:
-            val = np.round(sr,digits)
+        if np.round(sr*10.,0) == 0:
+            val = np.round(sr,2)
+            #unit = ' Hz'
+        elif np.round(sr,0) == 0:
+            if 0.09 < sr < 0.11:
+                val = np.round(sr,digits)
+            else:
+                val = np.round(sr,2)
+                #unit = ' Hz'
         else:
             val = np.round(sr,0)
 
-        self.header['DataSamplingRate'] = str(val) + ' sec'
+        self.header['DataSamplingRate'] = str(val) + unit
 
         return val
 
@@ -3692,8 +3720,10 @@ CALLED BY:
             if key in KEYLIST:
                 val = self._get_column(key)
                 if key == 'time':
-                    newval = [num2date(elem.time).replace(tzinfo=None) + offsets[key] for elem in val]
-                    loggerstream.info('offset: Corrected time column by %s sec' % str(offset.seconds))
+                    print num2date(val[0]).replace(tzinfo=None)
+                    print num2date(val[0]).replace(tzinfo=None) + offsets[key]
+                    newval = [date2num(num2date(elem).replace(tzinfo=None) + offsets[key]) for elem in val]
+                    loggerstream.info('offset: Corrected time column by %s sec' % str(offsets[key]))
                 else:
                     newval = [elem + offsets[key] for elem in val]
                     loggerstream.info('offset: Corrected column %s by %.3f' % (key, offsets[key]))
@@ -3828,6 +3858,8 @@ CALLED BY:
             gridcolor = '#316931'
         if not grid:
             grid =True
+        if not resolution:
+            resolution = 1296000  # 15 days of 1 second data can be maximale shown in detail, 1.5 days of 10 Hz
 
         myyfmt = ScalarFormatter(useOffset=False)
 
@@ -3854,18 +3886,35 @@ CALLED BY:
             stepwidth = int(len(plotstream)/resolution)
             plotstream = DataStream(plotstream[::stepwidth],plotstream.header)
             loggerstream.info("plot: New resolution: %i" % len(plotstream))
-         
 
-        loggerstream.info("plot: Start plotting of stream with length %i" % len(plotstream))
-
-
-        t = np.asarray([row[0] for row in plotstream])
+        try:
+            t = self.ndarray[0]
+            if not len(t) > 0:
+                x=1/0
+            print "Found ndarray time", t
+            if len(t) > resolution:
+                loggerstream.info("plot: Reducing data resultion ...")
+                stepwidth = int(len(t)/resolution)
+                t = t[::stepwidth]
+                print "New length", len(t)               
+            loggerstream.info("plot: Start plotting of stream with length %i" % len(self.ndarray[0]))
+        except:
+            t = np.asarray([row[0] for row in plotstream])
+            loggerstream.info("plot: Start plotting of stream with length %i" % len(plotstream))
         for key in keys:
             if not key in KEYLIST[1:16]:
                 loggerstream.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
-            yplt = np.asarray([float(row[ind]) for row in plotstream])
+            try:
+                yplt = self.ndarray[ind]
+                if not len(yplt) > 0:
+                    x=1/0
+                if len(yplt) > resolution:
+                    stepwidth = int(len(yplt)/resolution)
+                    yplt = yplt[::stepwidth]
+            except:
+                yplt = np.asarray([float(row[ind]) for row in plotstream])
             #yplt = self._get_column(key)
 
             # Switch between continuous and discontinuous plots
@@ -3873,10 +3922,11 @@ CALLED BY:
                 print "column extracted at %s" % datetime.utcnow()
             if plottype == 'discontinuous':
                 yplt = maskNAN(yplt)
-            else: 
+            else:
+                #yplt = yplt[numpy.logical_not(numpy.isnan(yplt))]
                 nans, test = nan_helper(yplt)
-                newt = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
-                t = newt
+                t = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
+                #t = newt
                 yplt = [el for idx, el in enumerate(yplt) if not nans[idx]]
 
             # 1. START PLOTTING (if non-NaN data is present)
@@ -4120,6 +4170,7 @@ CALLED BY:
                     if fkey in function[0]:
                         ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
                         ax.plot_date(denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
+
                 # -- Add Y-axis ticks:
                 if bool((count-1) & 1):
                     ax.yaxis.tick_right()
@@ -4154,6 +4205,7 @@ CALLED BY:
 
             else:
                 loggerstream.warning("plot: No data available for key %s" % key)
+
 
         fig.subplots_adjust(hspace=0)
 
@@ -4679,7 +4731,8 @@ CALLED BY:
                 for ind, item in enumerate(t_list):
                     #print item, ind
                     functime = (item - int_min)/(int_max - int_min)
-                    orgval = eval('self[int(ind*multiplicator)].'+key)
+                    #orgval = eval('self[int(ind*multiplicator)].'+key)
+                    orgval = getattr(self[int(ind*multiplicator)],key)
                     tempval = float(nan)
                     if not isnan(orgval):
                         #print "no nan"
@@ -5280,6 +5333,35 @@ CALLED BY:
 
         loggerstream.info('Trim: Started from %s to %s' % (starttime,endtime))
 
+ 
+        #-ndarrray---------------------------------------
+        if starttime:
+            starttime = self._testtime(starttime)
+            if self.ndarray[0].size > 0:   # time column present
+                idx = (np.abs(self.ndarray[0]-date2num(starttime))).argmin()
+                for i in range(len(self.ndarray)):
+                    if len(self.ndarray[i]) > idx:
+                        j = 0
+                        while j <= idx:
+                            self.ndarray[i] = np.delete(self.ndarray[i],j,0) 
+                            j=j+1
+            print "New length:", len(self.ndarray[0])
+        if endtime:
+            endtime = self._testtime(endtime)
+            if self.ndarray[0].size > 0:   # time column present
+                idx = (np.abs(self.ndarray[0]-date2num(endtime))).argmin()
+                if idx + 1 > len(self.ndarray[0]): ## prevent too large idx values
+                    idx -= 1
+                for i in range(len(self.ndarray)):
+                    length = len(self.ndarray[i])
+                    if length > idx:
+                        j = idx
+                        while j < length:
+                            self.ndarray[i] = np.delete(self.ndarray[i],j,0)
+                            j=j+1 
+                        #self.ndarray[i] = np.delete(self.ndarray[i],range(idx,length),0) 
+        #-ndarrray---------------------------------------
+
 #--------------------------------------------------
 
         if newway:
@@ -5359,7 +5441,7 @@ CALLED BY:
                         break
             self.container = self.container[:edval]
 
-        return DataStream(self.container,self.header)
+        return DataStream(self.container,self.header,self.ndarray)
 
 
 
@@ -6115,7 +6197,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         raise Exception("No path given for data in read function!")
 
     # 2. Create DataStream
-    st = DataStream([],{})
+    st = DataStream([],{},np.array([[] for ke in KEYLIST]))
 
     # 3. Read data
     if not isinstance(path_or_url, basestring):
@@ -6146,7 +6228,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
                     if len(stp) > 0: # important - otherwise header is going to be deleted
-                        st.extend(stp.container,stp.header)
+                        st.extend(stp.container,stp.header,stp.ndarray)
                     os.remove(fh.name)
         else:            
             # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -6166,10 +6248,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some file name
         pathname = path_or_url
         for file in iglob(pathname):
-            stp = DataStream([],{})
+            stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
             stp = _read(file, dataformat, headonly, **kwargs)
             if len(stp) > 0: # important - otherwise header is going to be deleted
-                st.extend(stp.container,stp.header)
+                st.extend(stp.container,stp.header,stp.ndarray)
             #del stp
         if len(st) == 0:
             # try to give more specific information why the stream is empty
@@ -6200,6 +6282,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     if endtime:
         st.trim(endtime=endtime)
 
+    #print st.ndarray
     return st
 
 
@@ -6373,6 +6456,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 for key in keys:
                     if not key in KEYLIST[1:16]:
                         loggerstream.error('mergeStreams: Column key (%s) not valid.' % key)
+                    #keyval = getattr(stream_a[pos], key)# should be much better
                     exec('keyval = stream_a[pos].'+key)
                     fkey = 'f'+key
                     if fkey in function[0] and (isnan(keyval) or not stream_a._is_number(keyval)):
@@ -6701,10 +6785,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 newline = LineStruct()
                 for key in keys:
                     newline.time = elem.time
-                    valstreama = eval('elem.'+key)
+                    #valstreama = eval('elem.'+key)
+                    valstreama = getattr(elem,key)
                     try:
                         valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
-                        realvalb = eval('stream_b[index].'+key)
+                        #realvalb = eval('stream_b[index].'+key)
+                        realvalb = getattr(stream_b[index],key)
                         #if isnan(realvalb):
                         #    print "Found"
                         if isnan(valstreama) or isnan(realvalb):
@@ -6713,7 +6799,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             newval = valstreama - valstreamb
                     except:
                         newval = 'NAN'
-                    exec('newline.'+key+' = float(newval)')
+                    setattr(newline, key, float(newval))
+                    #exec('newline.'+key+' = float(newval)')
                 subtractedstream.add(newline)
 
         # Finally get gaps from stream_b and remove these gaps from the subtracted stream for all keys
@@ -6772,24 +6859,28 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             newval = function[0][fkey](functime)
                             exec('elem.'+key+' -= float(newval)')
                         else:
-                            exec('elem.'+key+' = float(NaN)')
+                            setattr(elem, key, float(NaN))
+                            #exec('elem.'+key+' = float(NaN)')
                     except:
                         loggerstream.warning("subtractStreams: Check why exception was thrown.")
-                        exec('elem.'+key+' = float(NaN)')
+                        setattr(elem, key, float(NaN))
+                        #exec('elem.'+key+' = float(NaN)')
             else:
                 for key in keys:
                     if not key in KEYLIST[1:16]:
                         loggerstream.error("subtractStreams: Column key %s not valid!" % key)
                     fkey = 'f'+key
                     if fkey in function[0]:
-                        exec('elem.'+key+' = float(NaN)')
+                        setattr(elem, key, float(NaN))
+                        #exec('elem.'+key+' = float(NaN)')
         else: # put NaNs in cloumn if no interpolated values in b exist
             for key in keys:
                 if not key in KEYLIST[1:16]:
                     loggerstream.error("subtractStreams: Column key %s not valid!" % key)
                 fkey = 'f'+key
                 if fkey in function[0]:
-                    exec('elem.'+key+' = float(NaN)')
+                    setattr(elem, key, float(NaN))
+                    #exec('elem.'+key+' = float(NaN)')
 
     try:
         headera['SensorID'] = headera['SensorID']+'-'+headerb['SensorID']
@@ -6921,6 +7012,51 @@ def compareStreams(stream_a, stream_b):
 
 
 # Some helpful methods
+def array2stream(listofarrays, keystring,starttime=None,sr=None):
+        """
+        DESCRIPTION:
+            Converts an array to a data stream
+        """
+        keys = keystring.split(',')
+        if not len(listofarrays) > 0:
+            print "Specify a list of array - aborting"
+            return
+        if not len(keys) == len(listofarrays):
+            print "Keys do not match provided arrays - aborting"
+            return
+        st = DataStream()
+        if not 'time' in keys:
+            if not starttime:
+                print "No timing information provided - aborting"
+                return
+            else:
+                #fill time column
+                val = st._testtime(starttime)
+                for ind, elem in enumerate(listofarrays[0]):
+                    #emptyline = [None for elem in KEYLIST[:5]]
+                    #emptyline[0] = date2num(val)
+                    emptyline = LineStruct() ### Upper solution is about 1.5 times faster
+                    emptyline.time = date2num(val)
+                    st.add(emptyline)
+                    val = val+timedelta(seconds=sr)
+            add = 1
+        else:
+            for ind, elem in enumerate(listofarrays[0]):
+                #emptyline = [None for elem in KEYLIST[:5]]
+                emptyline = LineStruct() ### Upper solution is about 1.5 times faster
+                emptyline.time = elem
+                st.add(emptyline)
+            add = 0
+
+        for ind, ar in enumerate(listofarrays):
+            #print "Finished", len(ar)
+            key = keys[ind]
+            index = KEYLIST.index(key)
+            for i,elem in enumerate(ar):
+                st[i][index] = elem
+
+        return st
+            
 
 def extractDateFromString(datestring):
     """
@@ -6942,7 +7078,11 @@ def extractDateFromString(datestring):
         # log ('Found Dateformat of type dateform
     except:
         # test for day month year
-        tmpdaystring = re.findall(r'\d+',daystring)[0]
+        try:
+            tmpdaystring = re.findall(r'\d+',daystring)[0]
+        except:
+            # no number whatsoever
+            return False
         testunder = daystring.replace('-','').split('_')
         for i in range(len(testunder)):
             try:
