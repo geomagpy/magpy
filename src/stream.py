@@ -68,6 +68,7 @@ try:
     print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
     import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize 
+    from matplotlib.widgets import RectangleSelector, RadioButtons
     #from matplotlib.colorbar import ColorbarBase 
     from matplotlib import mlab 
     from matplotlib.dates import date2num, num2date
@@ -407,6 +408,7 @@ class DataStream(object):
     - stream.integrate() -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
     - stream.interpol(keys) -- returns function
     - stream.k_fmi() -- Calculating k values following the fmi approach
+    - stream.linestruct2ndarray() -- converts linestrcut data to ndarray. should be avoided
     - stream.mean() -- Calculates mean values for the specified key, Nan's are regarded for
     - stream.obspyspectrogram() -- Computes and plots spectrogram of the input data
     - stream.offset() -- Apply constant offsets to elements of the datastream
@@ -416,6 +418,7 @@ class DataStream(object):
     - stream.remove_outlier() -- returns stream (adds flags and comments)
     - stream.resample(period) -- Resample stream to given sampling period.
     - stream.rotation() -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
+    - stream.selectkeys(keys) -- ndarray: remove all data except for provided keys (and flag/comment)
     - stream.smooth(key) -- smooth the data using a window with requested size
     - stream.spectrogram() -- Creates a spectrogram plot of selected keys
     - stream.trim() -- returns stream within new time frame
@@ -634,6 +637,8 @@ CALLED BY:
             The index position of the line and the line itself
         """
         st = date2num(self._testtime(time))
+        if len(self.ndarray[0]) > 0:
+            return list(self.ndarray[0]).index(st), LineStruct()
         for index, line in enumerate(self):
             if line.time == st:
                 return index, line
@@ -669,7 +674,7 @@ CALLED BY:
     def _get_key_headers(self,**kwargs):
 	"""
     DEFINITION:
-	get a list of existing keys in stream.
+	get a list of existing numerical keys in stream.
 
     PARAMETERS:
     kwargs:
@@ -682,8 +687,15 @@ CALLED BY:
 	"""
 
         limit = kwargs.get('limit')
+        numerical = kwargs.get('numerical')
+
+        if numerical:
+            TESTLIST = FLAGKEYLIST
+        else:
+            TESTLIST = KEYLIST
 
         keylist = []
+        """
         for key in FLAGKEYLIST[1:]:
             try:
                 header = self.header['col-'+key]
@@ -694,30 +706,77 @@ CALLED BY:
                 keylist.append(key)
             except:
                 header = None
-        
+        """
+
         if not len(keylist) > 0:  # e.g. header col-? does not contain any info
-            for key in FLAGKEYLIST[1:]: # use the long way
+            #for key in FLAGKEYLIST[1:]: # use the long way
+            for key in TESTLIST[1:]: # use the long way
                 col = self._get_column(key)
                 if len(col) > 1:
                     keylist.append(key)
 
         if not len(keylist) > 0:  # e.g. Testing ndarray
             for ind,elem in enumerate(self.ndarray): # use the long way
-                if len(elem) > 0:
-                    if not KEYLIST[ind] == 'time':
-                        keylist.append(KEYLIST[ind])
+                if len(elem) > 0 and ind <= len(TESTLIST):
+                    if not TESTLIST[ind] == 'time':
+                        keylist.append(TESTLIST[ind])
 
         if limit and len(keylist) > limit:
             keylist = keylist[:limit]
 
         return keylist
 
+    def dropempty(self):
+        """
+        DESCRIPTION:
+            Drop empty arrays from ndarray and store their posotions
+        """
+        if not len(self.ndarray[0]) > 0:
+            return self.ndarray, np.asarray([]) 
+        newndarray = []
+        indexarray = []
+        for ind,elem in enumerate(self.ndarray):
+            if len(elem) > 0:
+               newndarray.append(elem)
+               indexarray.append(ind)
+        keylist = [el for ind,el in enumerate(KEYLIST) if ind in indexarray]
+        return np.asarray(newndarray), keylist 
+
+    def fillempty(self, ndarray, keylist):
+        """
+        DESCRIPTION:
+            Fills empty arrays into ndarray at all position of KEYLIST not provided in keylist 
+        """
+        if not len(ndarray[0]) > 0:
+            return self
+
+        if len(self.ndarray) == KEYLIST:
+            return self
+
+        lst = list(ndarray)
+        for i,key in enumerate(KEYLIST):
+            if not key in keylist:
+                lst.insert(i,[])
+
+        newndarray = np.asarray(lst)
+        return newndarray
+
     def sorting(self):
         """
         Sorting data according to time (maybe generalize that to some key)
         """
         liste = sorted(self.container, key=lambda tmp: tmp.time)
-        return DataStream(liste, self.header, self.ndarray)
+        if len(self.ndarray[0]) > 0:
+            self.ndarray, keylst = self.dropempty()
+            try:
+                ndarray = self.ndarray[np.argsort(self.ndarray[0,:])]
+                ndarray = self.fillempty(ndarray,keylst)
+            except:
+                ndarray = self.ndarray
+                ndarray = self.fillempty(ndarray,keylst)
+        else:
+            ndarray = self.ndarray
+        return DataStream(liste, self.header, ndarray)
 
     # ------------------------------------------------------------------------
     # B. Internal Methods: Line & column functions
@@ -794,7 +853,7 @@ CALLED BY:
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
 
-        # Speeded up this technic:
+        # Speeded up this technique:
 
         ind = KEYLIST.index(key)
         # Check for initialization value
@@ -804,8 +863,11 @@ CALLED BY:
         try:
             col = np.asarray([row[ind] for row in self])
             #get the first three elements and test whether nan is there
-            if np.isnan(np.min(col[:3])):
-                return np.asarray([])
+            try: # in case of string....
+                if np.isnan(np.min(col[:3])):
+                    return np.asarray([])
+            except:
+                return col
             return col
         except:
             return np.asarray([])
@@ -859,16 +921,14 @@ CALLED BY:
 
         if not key in KEYLIST:
             raise ValueError, "Column key not valid"
-        if not len(column) == len(self):
-            raise ValueError, "Column length does not fit Datastream"
-        #print "Putting column..."
-        #t1 = datetime.utcnow()
-        #for idx, elem in enumerate(self):
-        #    exec('elem.'+key+' = column[idx]')
-        for idx, elem in enumerate(self):
-            setattr(elem, key, column[idx])
-        #t2 = datetime.utcnow()
-        #print t2-t1
+        if len(self.ndarray[0]) > 0:
+            ind = KEYLIST.index(key)
+            self.ndarray[ind] = np.asarray(column)
+        else:
+            if not len(column) == len(self):
+                raise ValueError, "Column length does not fit Datastream"
+            for idx, elem in enumerate(self):
+                setattr(elem, key, column[idx])
 
         if not columnname:
             try: # TODO correct that
@@ -1255,6 +1315,29 @@ CALLED BY:
         newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
         return DataStream(newst,self.header)
 
+
+    def _select_timerange(self,starttime=None, endtime=None):
+
+        ndarray = self.ndarray
+        if starttime:
+            starttime = self._testtime(starttime)
+            if self.ndarray[0].size > 0:   # time column present
+                idx = (np.abs(self.ndarray[0]-date2num(starttime))).argmin()
+                for i in range(len(self.ndarray)):
+                    if len(self.ndarray[i]) > idx:
+                        ndarray[i] =  self.ndarray[i][idx:]
+        if endtime:
+            endtime = self._testtime(endtime)
+            if self.ndarray[0].size > 0:   # time column present
+                idx = (np.abs(self.ndarray[0]-date2num(endtime))).argmin()
+                if idx + 1 > len(self.ndarray[0]): ## prevent too large idx values
+                    idx -= 1
+                for i in range(len(self.ndarray)):
+                    length = len(self.ndarray[i])
+                    if length > idx:
+                        ndarray[i] = self.ndarray[i][:idx+1]
+
+        return ndarray
 
     # ------------------------------------------------------------------------
     # C. Application methods
@@ -1650,7 +1733,8 @@ CALLED BY:
 
     def delta_f(self, **kwargs):
         """
-        Calculates the difference of x+y+z to f
+        DESCRIPTION:
+            Calculates the difference of x+y+z to f
         keywords:
         :type offset: float
         :param offset: constant offset to f values
@@ -1668,9 +1752,15 @@ CALLED BY:
             digits = 8
 
         loggerstream.info('--- Calculating delta f started at %s ' % str(datetime.now()))
-        for elem in self:
-            elem.df = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.f + offset)
+        if len(self.ndarray[0])>0 and len(self.ndarray[1])>0 and len(self.ndarray[2])>0 and len(self.ndarray[3])>0 and len(self.ndarray[4])>0:
+            # requires x,y,z and f
+            ind = KEYLIST.index("df")
+            self.ndarray[ind] = np.sqrt(self.ndarray[1]**2+self.ndarray[2]**2+self.ndarray[3]**2) - (self.ndarray[4] + offset)
+        else:
+            for elem in self:
+                elem.df = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.f + offset)
 
+        self.header['col-df'] = 'delta f'
         self.header['unit-col-df'] = 'nT'
         
         loggerstream.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
@@ -1715,9 +1805,19 @@ CALLED BY:
             loggerstream.error('Amount of columns read must be equal to outputcolumns')
             return self
 
-        t = self._get_column('time')
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            t = self.ndarray[0]
+            ndtype = True
+        else:
+            t = self._get_column('time')
+
         for i, key in enumerate(keys):
-            val = self._get_column(key)
+            if ndtype:
+                ind = KEYLIST.index(key)
+                val = self.ndarray[ind]
+            else:
+                val = self._get_column(key)
             dval = np.gradient(np.asarray(val))
             self._put_column(dval, put2keys[i])
             self.header['col-'+put2keys[i]] = r"d%s vs dt" % (key)
@@ -2092,7 +2192,7 @@ CALLED BY:
         dontfillgaps = kwargs.get('dontfillgaps')
 
         if not keys:
-            keys = self._get_key_headers()
+            keys = self._get_key_headers(numerical=True)
         if not filter_width:
             filter_width = timedelta(minutes=1)
         if not noresample:
@@ -2120,6 +2220,8 @@ CALLED BY:
             print "##############  Warning ##############"
             print "option RESAMPLESTART is not used any more. Switch to resampleoffset for modifying time steps"
 
+        ndtype = False
+
         # ########################
         # Basic validity checks and window size definitions
         # ########################
@@ -2128,7 +2230,7 @@ CALLED BY:
             loggerstream.debug("smooth: You entered non-existing filter type -  %s  - " % filter_type)
             return self
 
-        if not len(self) > 1:
+        if not len(self) > 0:
             loggerstream.error("Filter: stream needs to contain data - returning.")
             return self
 
@@ -2176,16 +2278,25 @@ CALLED BY:
         # Reading data of each selected column in stream
         # ########################
 
-        t = self._get_column('time')
+        if len(self.ndarray[0])>0:
+            t = self.ndarray[0]
+            ndtype = True
+        else:
+            t = self._get_column('time')
 
         if debugmode:
             print "Length time column:", len(t)
+
 
         for key in keys:
             #print "Start filtering for", key
             if not key in KEYLIST:
                 loggerstream.error("Column key %s not valid." % key)
-            v = self._get_column(key)
+            keyindex = KEYLIST.index(key)
+            if len(self.ndarray[keyindex])>0:
+                v = self.ndarray[keyindex]
+            else:
+                v = self._get_column(key)
 
             if key in autofill:
                 loggerstream.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
@@ -2234,7 +2345,10 @@ CALLED BY:
                     ax1.plot(t, res, 'r.-', linewidth=2, label = filter_type)
                     plt.show()
 
-                self._put_column(res,key)
+                if ndtype:
+                    self.ndarray[keyindex] = res
+                else:
+                    self._put_column(res,key)
 
         if resample:
             if debugmode:
@@ -2550,6 +2664,83 @@ CALLED BY:
         return func
 
 
+    def flagfast(self,indexarray,flag, comment,keys=None):
+        """
+    DEFINITION:
+        Add a flag to specific indicies of the streams ndarray.
+
+    PARAMETERS:
+    Variables:
+        - keys: 	(list) Optional: list of keys to mark ['x','y','z']
+	- flag:		(int) 0 ok, 1 remove, 2 force ok, 3 force remove, 
+			4 merged from other instrument
+	- comment:	(str) The reason for flag
+	- indexarray:	(array) indicies of the datapoint(s) to mark
+
+    RETURNS:
+        - DataStream: 	Input stream with flags and comments.
+
+    EXAMPLE:
+        >>> data = data.flagfast([155],'3','Lawnmower',['x','y','z'])
+
+    APPLICATION:
+        """
+
+        print "Adding flags .... please be patient"
+        print "Test2", self.ndarray[1]
+        # Define Defaultflag
+        flagls = [str(0) for elem in FLAGKEYLIST]
+        defaultflag = '-' + ''.join(flagls)
+
+        # Get new flag
+        newflagls = []
+        if not keys:
+            for idx,key in enumerate(FLAGKEYLIST): # Flag all existing data
+                if len(self.ndarray[idx]) > 0:
+                    newflagls.append(str(flag)) 
+                else:
+                    newflagls.append(str(0))
+            newflag = '-' + ''.join(newflagls)
+        else:
+            for idx,key in enumerate(FLAGKEYLIST): # Only key column
+                if len(self.ndarray[idx]) > 0 and FLAGKEYLIST[idx] in keys:
+                    newflagls.append(str(flag)) 
+                else:
+                    newflagls.append(str(0))
+            newflag = '-' + ''.join(newflagls)
+        
+        flagarray, commentarray = [],[]
+        flagindex = KEYLIST.index('flag')
+        commentindex = KEYLIST.index('comment')
+        for i in range(len(self.ndarray[0])):
+            if i not in indexarray:
+                if len(self.ndarray[flagindex]) == 0:
+                    flagarray.append(defaultflag)
+                else:
+                    flagarray.append(self.ndarray[flagindex][i])
+                if len(self.ndarray[commentindex]) == 0:
+                    commentarray.append('-')
+                else:
+                    commentarray.append(self.ndarray[commentindex][i])
+            else:
+                indexarray.remove(i) # for speed
+                flagarray.append(newflag)
+                commentarray.append(comment)
+        # TODO check type
+        commentarray = np.asarray(commentarray, dtype='object')
+        flagarray = np.asarray(flagarray, dtype='object')
+        #flagarray = np.asarray([defaultflag if i not in indexarray else newflag for i in range(len(self.ndarray[0]))])
+        #commentarray = np.asarray(['-' if i not in indexarray else comment for i in range(len(self.ndarray[0]))])
+
+        flagnum = KEYLIST.index('flag')
+        commentnum = KEYLIST.index('comment')
+        self.ndarray[flagnum] = flagarray
+        self.ndarray[commentnum] = commentarray
+        print "Test3", self.ndarray[1]
+        print "... finished"
+        return self
+
+
     def flag_stream(self, key, flag, comment, startdate, enddate=None):
         """
     DEFINITION:
@@ -2760,6 +2951,7 @@ CALLED BY:
 
         stream = DataStream()
         stream.header = self.header
+        stream.ndarray = self.ndarray
         prevtime = 0
         maxtime = self[-1].time
 
@@ -2804,7 +2996,10 @@ CALLED BY:
         """
         timedifflist = [[0,0]]
         timediff = 0
-        timecol= self._get_column('time')
+        if len(self.ndarray[0]) > 0:
+            timecol = self.ndarray[0]
+        else:
+            timecol= self._get_column('time')
         if len(timecol) <= 1000:
             testrange = len(timecol)
         else:
@@ -3397,6 +3592,39 @@ CALLED BY:
         
         return outstream
 
+    def linestruct2ndarray(self):
+        """
+    DEFINITION:
+        Converts linestruct data to ndarray.
+    RETURNS:
+        - self with ndarray filled 
+    EXAMPLE:
+        >>> data = data.linestruct2ndarray()
+
+    APPLICATION:
+        """
+        def checkEqual3(lst):
+            return lst[1:] == lst[:-1]
+
+        array = [[] for elem in KEYLIST]
+
+        keys = self._get_key_headers()
+
+        t = np.asarray(self._get_column('time'))
+        array[0] = t
+        for key in keys:
+            ind = KEYLIST.index(key)
+            col = self._get_column(key)
+            if not False in checkEqual3(col) and col[0] == '-':
+                col = np.asarray([])
+            array[ind] = col
+
+        array = np.asarray(array)
+        steam = DataStream()
+        stream = [LineStruct()]
+        return DataStream(stream,self.header,array)
+
+       
 
     def mean(self, key, **kwargs):
         """
@@ -3830,7 +4058,7 @@ CALLED BY:
         symbollist = kwargs.get('symbollist')
 
         if not keys:
-            keys = self._get_key_headers(limit=9)
+            keys = self._get_key_headers(limit=9,numerical=True)
             print "Plotting keys:", keys
         if not function:
             function = None
@@ -3878,6 +4106,11 @@ CALLED BY:
             fig = figure
 
         #fig = matplotlib.figure.Figure()
+        lst = np.asarray([elem.comment for elem in self])
+        lst2 = [elem.comment for elem in self if not elem.comment == '-']
+        print "Starting", lst2, lst
+
+        #print "Starting", self._get_column('flag')
 
         plotstream = self
         if resolution and len(plotstream) > resolution:
@@ -4051,14 +4284,20 @@ CALLED BY:
 
                 # -- Add annotations for flagged data:
                 if annotate:
+                    print "Yesss"
                     flag = plotstream._get_column('flag')
                     comm = plotstream._get_column('comment')
                     elemprev = "-"
                     try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
+                        print "Got here"
+                        idxflag = FLAGKEYLIST.index(key)
                         poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
                         indexflag = int(poslst[0])
+                        print idxflag, poslst, indexflag
+                        print comm, flag
                         for idx, elem in enumerate(comm):
                             if not elem == elemprev:
+                                print "Yesss, again"
                                 if not elem == "-" and flag[idx][indexflag] in ['0','3']:
                                     annotecount = idx
                                     ax.annotate(r'%s' % (elem),
@@ -4637,6 +4876,7 @@ CALLED BY:
         if not period:
             period = 60.
 
+        ndtype = False
 	sp = self.samplingrate()
 
 	loggerstream.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
@@ -4644,7 +4884,11 @@ CALLED BY:
 	loggerstream.info("resample: Resampling keys %s " % (','.join(keys)))
 
         # Determine the minimum time
-	t_min = num2date(self._get_min('time'))
+        if len(self.ndarray[0]) > 0:
+            t_min = num2date(np.min(self.ndarray[0]))
+            ndtype = True
+        else:
+            t_min = num2date(self._get_min('time'))
         t_start = t_min
 
         if offset:
@@ -4672,20 +4916,21 @@ CALLED BY:
                     loggerstream.warning("resample: Resampling period must be larger than original sampling period.")
                     return self
 
-                #if not startperiod:
-                #    startperiod = 0
-                #    line = []
-                #else:
-                #    startperiod, line = self.findtime(t_min)
-                #    print "Test:", startperiod, line
-
-                #loggerstream.info("resample: Fast resampling - startperiod and line", startperiod, line)
-                if not line == []:
+                if not line == [] or ndtype :
                     xx = np.round(period/sampling_period)
                     newstream = DataStream()
                     newstream.header = self.header
-                    for line in self[startperiod::xx]:
-                        newstream.add(line)
+                    if ndtype:
+                        lst = []
+                        for ind,elem in enumerate(self.ndarray):
+                            if len(elem) > 0:
+                                lst.append(np.asarray(elem[startperiod::xx]))
+                            else:
+                                lst.append(np.asarray([]))
+                        newstream.ndarray = np.asarray(lst) 
+                    else:
+                        for line in self[startperiod::xx]:
+                            newstream.add(line)
                     newstream.header['DataSamplingRate'] = str(period) + ' sec'
                     return newstream
                 loggerstream.warning("resample: Fast resampling failed - switching to slow mode")
@@ -4693,6 +4938,7 @@ CALLED BY:
                 loggerstream.warning("resample: Fast resampling failed - switching to slow mode")
                 pass
 
+        print "RESAMPLE Here 3"
         # Create a list containing time steps
 	t_max = num2date(self._get_max('time'))
 	t_list = []
@@ -4803,6 +5049,15 @@ CALLED BY:
 	xyz.n = ortho.l*a[2][0]+ortho.m*a[2][1]+ortho.n*a[2][2];
         """
 
+        if len(self.ndarray[0]) > 0:
+            if len(self.ndarray[1]) > 0 and len(self.ndarray[2]) > 0 and len(self.ndarray[3]) > 0: 
+                ra = np.pi*alpha/(180.*ang_fac)
+                rb = np.pi*beta/(180.*ang_fac)
+                self.ndarray[1] = self.ndarray[1]*np.cos(rb)*np.cos(ra)-self.ndarray[2]*np.sin(ra)+self.ndarray[3]*np.sin(rb)*np.cos(ra)
+                self.ndarray[2] = self.ndarray[1]*np.cos(rb)*np.sin(ra)+self.ndarray[2]*np.cos(ra)+self.ndarray[3]*np.sin(rb)*np.sin(ra)
+                self.ndarray[3] = -self.ndarray[1]*np.sin(rb)+self.ndarray[3]*np.cos(rb)
+
+
         for elem in self:
             ra = np.pi*alpha/(180.*ang_fac)
             rb = np.pi*beta/(180.*ang_fac)
@@ -4882,6 +5137,41 @@ CALLED BY:
 
         return self
 
+    def selectkeys(self, keys, **kwargs):
+        """
+    DEFINITION:
+	Take data stream and remove all except the provided keys from ndarray
+    RETURNS:
+        - self: 	(DataStream) with ndarray limited to keys
+
+    EXAMPLE:
+        >>> keydata = fulldata.selectkeys(['x','y','z'])
+
+    APPLICATION:
+
+        """
+
+        if not 'time' in keys:
+            ti = ['time']
+            ti.extend(keys)
+            keys = ti
+
+        if len(self.ndarray[0]) > 0:
+            # Check for flagging and comment column
+            flagidx = KEYLIST.index('flag')
+            commentidx = KEYLIST.index('comment')
+            if len(self.ndarray[flagidx]) > 0:
+                keys.append('flag')
+            if len(self.ndarray[commentidx]) > 0:
+                keys.append('comment')
+
+            # Remove all missing
+            for idx, elem in enumerate(self.ndarray):
+                if not KEYLIST[idx] in keys:
+                    self.ndarray[idx] = np.asarray([])
+            return self
+        else:
+            return self
 
     def smooth(self, keys, **kwargs):
         """
@@ -5341,11 +5631,7 @@ CALLED BY:
                 idx = (np.abs(self.ndarray[0]-date2num(starttime))).argmin()
                 for i in range(len(self.ndarray)):
                     if len(self.ndarray[i]) > idx:
-                        j = 0
-                        while j <= idx:
-                            self.ndarray[i] = np.delete(self.ndarray[i],j,0) 
-                            j=j+1
-            print "New length:", len(self.ndarray[0])
+                        self.ndarray[i] =  self.ndarray[i][idx:]
         if endtime:
             endtime = self._testtime(endtime)
             if self.ndarray[0].size > 0:   # time column present
@@ -5355,15 +5641,11 @@ CALLED BY:
                 for i in range(len(self.ndarray)):
                     length = len(self.ndarray[i])
                     if length > idx:
-                        j = idx
-                        while j < length:
-                            self.ndarray[i] = np.delete(self.ndarray[i],j,0)
-                            j=j+1 
-                        #self.ndarray[i] = np.delete(self.ndarray[i],range(idx,length),0) 
+                        self.ndarray[i] = self.ndarray[i][:idx]
         #-ndarrray---------------------------------------
 
-#--------------------------------------------------
 
+        #--------------------------------------------------
         if newway:
 	# Non-destructive trimming of stream 
             trimmedstream = DataStream()
@@ -5381,8 +5663,7 @@ CALLED BY:
                         trimmedstream.add(newline)
 
             return trimmedstream
-
-#--------------------------------------------------
+        #--------------------------------------------------
 
         stream = DataStream()
 
@@ -5658,15 +5939,23 @@ CALLED BY:
         if not mode:
             mode= 'overwrite'
 
-
         if len(self) < 1:
             loggerstream.error('write: Stream is empty!')
             raise Exception("Can't write an empty stream to file!")
-            
+
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            starttime = datetime.strptime(datetime.strftime(num2date(self.ndarray[0][0]).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            lasttime = num2date(self.ndarray[0][-1]).replace(tzinfo=None)
+            ndtype = True
+        else:
+            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            lasttime = num2date(self[-1].time).replace(tzinfo=None)
+
         # divide stream in parts according to coverage and save them
         newst = DataStream()
         if coverage == 'month':
-            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            #starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
             cmonth = int(datetime.strftime(starttime,'%m')) + 1
             cyear = int(datetime.strftime(starttime,'%Y'))
             if cmonth == 13:
@@ -5674,11 +5963,17 @@ CALLED BY:
                cyear = cyear + 1
             monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
             endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
-            while starttime < num2date(self[-1].time).replace(tzinfo=None):
-                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                newst = DataStream(lst,self.header)
+            while starttime < lasttime:
+                if ndtype:
+                    lst = []
+                    ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
+                    print "Trying to write ndarrays", ndarray
+                else:
+                    lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                    ndarray = np.asarray([])
+                newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
-                if len(lst) > 0:
+                if len(lst) > 0 or len(ndarray[0]) > 0:
                     writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
                 starttime = endtime
                 # get next endtime
@@ -5689,16 +5984,27 @@ CALLED BY:
                    cyear = cyear + 1
                 monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
                 endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
+        elif coverage == 'year':
+            pass
         elif not coverage == 'all':
-            starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            #starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
             endtime = starttime + coverage
-            while starttime < num2date(self[-1].time).replace(tzinfo=None):
-                lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                newst = DataStream(lst,self.header)
+            while starttime < lasttime:
+                #lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                #newst = DataStream(lst,self.header)
+                if ndtype:
+                    lst = []
+                    #ndarray = np.asarray([elem[(starttime<=num2date(self.ndarray[0])) & (num2date(self.ndarray[0])<endtime)] for elem in self.ndarray])
+                    ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
+                else:
+                    lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
+                    ndarray = np.asarray([])
+                newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+
                 if format_type == 'IMF':
                     filename = filename.upper()
-                if len(lst) > 0:
+                if len(lst) > 0 or ndtype:
                     loggerstream.info('write: writing %s' % filename)
                     writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype)
                 starttime = endtime
@@ -6203,6 +6509,17 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     if not isinstance(path_or_url, basestring):
         # not a string - we assume a file-like object
         pass
+        """
+        elif path_or_url.startswith("DB:"):
+        # a database table
+        if 
+        loggerstream.error("read: File not specified.")
+        raise Exception("No path given for data in read function!")
+        pathname = path_or_url
+        for file in iglob(pathname):
+            stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
+            stp = _read(file, dataformat, headonly, **kwargs)
+        """
     elif "://" in path_or_url:
         # some URL
         # extract extension if any
@@ -6382,27 +6699,63 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     headera = stream_a.header
     headerb = stream_b.header
 
+    # Checking ndtype
+    ndtypea = False
+    if len(stream_a.ndarray[0]) > 0:
+        len_a = len(stream_a.ndarray[0])
+        ndtypea = True
+    else:
+        len_a = len(stream_a)
+    ndtypeb = False
+    if len(stream_b.ndarray[0]) > 0:
+        len_b = len(stream_b.ndarray[0])
+        ndtypea = True
+    else:
+        len_b = len(stream_b)
+
     # Test streams
-    if len(stream_a) == 0 and len(stream_b) == 0:
+    if len_a == 0 and len_b == 0:
         loggerstream.debug('mergeStreams: stream_a and _b are empty - doing nothing')
         return stream_a
-    if len(stream_a) == 0:
+    if len_a == 0:
         loggerstream.debug('mergeStreams: stream_a is empty - retruning stream_b')
         return stream_b
-    if len(stream_b) == 0:
+    if len_b == 0:
         loggerstream.debug('mergeStreams: stream_b is empty - returning unchanged stream_a')
         return stream_a
+
     # take stream_b data and find nearest element in time from stream_a
-    timea = stream_a._get_column('time')
+    if ndtypea:
+        timea = stream_a.ndarray[0]
+    else:
+        timea = stream_a._get_column('time')
     timea = maskNAN(timea)
 
     sta = list(stream_a)
     stb = list(stream_b)
     if addall:
-        loggerstream.info('mergeStreams: Adding streams together with no regard for time data.')
-        for elem in stream_b:
-            sta.append(elem)
-        newsta = DataStream(sta, headera)
+        loggerstream.info('mergeStreams: Adding streams together not regarding for timeconstraints of data.')
+        if ndtypea:
+            for idx,elem in enumerate(stream_a.ndarray):
+                ndarray = stream_a.ndarray
+                if len(elem) == 0 and len(stream_b.ndarray[idx]) > 0:
+                    # print add nan's of len_a to stream a
+                    # then append stream b
+                    pass
+                elif len(elem) > 0 and len(stream_b.ndarray[idx]) == 0:
+                    # print add nan's of len_b to stream a
+                    pass
+                elif len(elem) == 0 and len(stream_b.ndarray[idx]) == 0:
+                    # do nothing
+                    pass
+                else: #len(elem) > 0 and len(stream_b.ndarray[idx]) > 0:
+                    # append b to a
+                    pass
+            newsta = DataStream(sta, headera, ndarray)
+        else: 
+            for elem in stream_b:
+                sta.append(elem)
+            newsta = DataStream(sta, headera, stream_a.ndarray)
         for elem in headerb:
             try:
                 headera[elem]
@@ -6677,6 +7030,31 @@ def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
     # RESULTS
     return t_offset               
 
+
+def diffStreams(stream_a, stream_b, **kwargs):
+    """
+    DESCRIPTION:
+      obtain and return the differences of two stream:
+    """
+    
+    ndtype_a = False
+    if len(stream_a.ndarray[0]) > 0:
+        ndtype_a = True
+
+    if not ndtype_a or not len(stream_a) > 0:
+        loggerstream.error('diffStreams: stream_a empty - aborting.')
+        return stream_a
+
+    ndtype_b = False
+    if len(stream_b.ndarray[0]) > 0:
+        ndtype_b = True
+
+    # 1. Amount of columns
+    #if ndtype
+
+    # 2. Line contents
+    #  --- amount of lines
+    #  --- differences of lines        
 
 def subtractStreams(stream_a, stream_b, **kwargs):
     """

@@ -296,6 +296,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeWDC(datastream, filename, **kwargs)
     elif (format_type == "IMF"):
         return writeIMF(datastream, filename, **kwargs)
+    elif (format_type == "IMAGCDF"):
+        return writeIMAGCDF(datastream, filename, **kwargs)
     elif (format_type == "BLV"):
         return writeBLV(datastream, filename, **kwargs)
     elif (format_type == "DIDD"):
@@ -325,6 +327,7 @@ def writeFormat(datastream, filename, format_type, **kwargs):
     elif (format_type == "LATEX"):
         return writeLATEX(datastream, filename, **kwargs)
     else:
+        print "magpy-formats: Writing not succesful - format not recognized"
         logging.warning("magpy-formats: Writing not succesful - format not recognized")
 
 

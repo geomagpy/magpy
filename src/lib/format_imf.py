@@ -280,48 +280,149 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     array = [[] for elem in KEYLIST]
     startdate = cdfdat[datalist[-1]][0]
 
-    t1 = datetime.utcnow()
+    #  #################################
+    # Get header info:
+    #  #################################
+    if 'FormatDescription' in attrslist:
+        form = cdfdat.attrs['FormatDescription']
+        headers['DataFormat'] = str(cdfdat.attrs['FormatDescription'])     
+    if 'FormatVersion' in attrslist:
+        vers = cdfdat.attrs['FormatVersion']
+        headers['DataFormat'] = str(form) + '; ' + str(vers)       
+    if 'Title' in attrslist:
+        pass
+    if 'IagaCode' in attrslist:
+        headers['StationIAGAcode'] = str(cdfdat.attrs['IagaCode'])
+        headers['StationID'] = str(cdfdat.attrs['IagaCode'])
+    if 'ElementsRecorded' in attrslist:
+        headers['DataComponents'] = str(cdfdat.attrs['ElementsRecorded'])
+    if 'PublicationLevel' in attrslist:
+        headers['DataPublicationLevel'] = str(cdfdat.attrs['PublicationLevel'])
+    if 'PublicationDate' in attrslist:
+        headers['DataPublicationDate'] = str(cdfdat.attrs['PublicationDate'])
+    if 'ObservatoryName' in attrslist:
+        headers['StationName'] = str(cdfdat.attrs['ObservatoryName'])
+    if 'Latitude' in attrslist:
+        headers['DataAcquisitionLatitude'] = str(cdfdat.attrs['Latitude'])
+    if 'Longitude' in attrslist:
+        headers['DataAcquisitionLongitude'] = str(cdfdat.attrs['Longitude'])
+    if 'Elevation' in attrslist:
+        headers['DataElevation'] = str(cdfdat.attrs['Elevation'])
+    if 'Institution' in attrslist:
+        headers['StationInstitution'] = str(cdfdat.attrs['Institution'])
+    if 'VectorSensOrient' in attrslist:
+        headers['DataSensorOrientation'] = str(cdfdat.attrs['VectorSensOrient'])
+    if 'StandardLevel' in attrslist:
+        headers['DataStandardLevel'] = str(cdfdat.attrs['StandardLevel'])
+    if 'StandardName' in attrslist:
+        headers['DataStandardName'] = str(cdfdat.attrs['StandardName'])
+    if 'StandardVersion' in attrslist:
+        headers['DataStandardVersion'] = str(cdfdat.attrs['StandardVersion'])
+    if 'PartialStandDesc' in attrslist:
+        headers['DataPartialStandDesc'] = str(cdfdat.attrs['PartialStandDesc'])
+    if 'Source' in attrslist:
+        headers['DataSource'] = str(cdfdat.attrs['Source'])
+    if 'TermsOfUse' in attrslist:
+        headers['DataTerms'] = str(cdfdat.attrs['TermsOfUse'])
+    if 'References' in attrslist:
+        headers['DataReferences'] = str(cdfdat.attrs['References'])
+    if 'UniqueIdentifier' in attrslist:
+        headers['DataID'] = str(cdfdat.attrs['UniqueIdentifier'])
+    if 'ParentIdentifiers' in attrslist:
+        headers['SensorID'] = str(cdfdat.attrs['ParentIdentifier'])
+    if 'ReferenceLinks' in attrslist:
+        headers['StationWebInfo'] = str(cdfdat.attrs['ReferenceLinks'])
+
+    #  #################################
+    # Get data:
+    #  #################################
+
     # Reorder datalist and Drop time column
-    ti = [datalist[-1]]
-    datalist = datalist[:-1]
-    ti.extend(datalist)
-    for elem in ti:
+    # #########################################################
+    # 1. Get the amount of Times columns and associated lengths
+    # #########################################################
+    #print "Analyzing file structure and returning values"
+    #print datalist
+    mutipletimerange = False
+    newdatalist = []
+    tllist = []
+    for elem in datalist:
         if elem.endswith('Times'):
-            ar = date2num(cdfdat[elem][...])
+            #print "Found Time Column"
+            # Get length
+            tl = int(str(cdfdat[elem]).split()[1].strip('[').strip(']'))
+            #print "Length", tl
+            tllist.append([tl,elem])
+    if len(tllist) < 1:
+        #print "No time column identified"
+        # Check for starttime and sampling rate in header
+        if 'StartTime' in attrslist and 'SamplingPeriod' in attrslist:
+            # TODO Write that function
+            st = str(cdfdat.attrs['StartTime'])
+            sr = str(cdfdat.attrs['SamplingPeriod'])
+        else:
+            print "No Time information available - aborting"
+            return
+    elif len(tllist) > 1:
+        tl = [el[0] for el in tllist]
+        if not max(tl) == min(tl):
+            print "Time columns of different length. Choosing longest as basis"
+            newdatalist.append(max(tllist)[1])
+            mutipletimerange = True
+        else:
+            print "Equal length time axes found - assuming identical time"
+            if 'GeomagneticVectorTimes' in datalist:
+                newdatalist.append(['time','GeomagneticVectorTimes'])
+            else:
+                newdatalist.append(['time',tllist[0][1]]) # Take the first one
+    else:
+        #print "Single time axis found in file"
+        newdatalist.append(['time',tllist[0][1]])
+
+    datalist = [elem for elem in datalist if not elem.endswith('Times')]
+
+    # #########################################################
+    # 2. Sort the datalist according to KEYLIST
+    # #########################################################
+    for key in KEYLIST:
+        possvals = [key]
+        if key == 'x':
+            possvals.extend(['h','i'])
+        if key == 'y':
+            possvals.append('d')
+        if key == 'df':
+            possvals.append('g')
+        for elem in datalist:
+            try:
+                label = cdfdat[elem].attrs['LABLAXIS'].lower()
+                if label in possvals:
+                    newdatalist.append([key,elem])
+            except:
+                pass # for lines which have no Label
+
+    if not len(datalist) == len(newdatalist)-1:
+        print "error encountered in key assignment - please check"
+
+    # 3. Create equal length array reducing all data to primary Times and filling nans for non-exist
+    # (4. eventually completely drop time cols and just store start date and sampling period in header)
+    # Deal with scalar data (independent or whatever
+    
+    for elem in newdatalist:
+        if elem[0] == 'time':
+            ar = date2num(cdfdat[elem[1]][...])
             arraylist.append(ar)
             ind = KEYLIST.index('time')
             array[ind] = ar
         else:
-            if elem.endswith('X') or elem.endswith('H'):
-                key='x' 
-                headers['col-x'] = elem[-1].lower()                
-                headers['unit-col-x'] = 'nT'
-            elif elem.endswith('Y') or elem.endswith('D'):
-                key='y' 
-                headers['col-y'] = elem[-1].lower()                
-                headers['unit-col-y'] = 'nT'
-            elif elem.endswith('Z'):
-                key='z' 
-                headers['col-z'] = elem[-1].lower()                
-                headers['unit-col-z'] = 'nT'
-            elif elem.endswith('F'):
-                key='f' 
-                headers['col-f'] = elem[-1].lower()                
-                headers['unit-col-f'] = 'nT'
-            elif elem.endswith('G'):
-                key='df' 
-                headers['col-df'] = elem[-1].lower()                
-                headers['unit-col-df'] = 'nT'
-            ar = cdfdat[elem][...]
+            ar = cdfdat[elem[1]][...]
             ar[ar > 88880] = float(nan)
-            ind = KEYLIST.index(key)
+            ind = KEYLIST.index(elem[0])
+            headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()                
+            headers['unit-col-'+elem[0]] = cdfdat[elem[1]].attrs['UNITS']
             array[ind] = ar
             arraylist.append(ar)  
 
     ndarray = np.array(array)
-
-    t2 = datetime.utcnow()
-    print "Duration for array build:", t2-t1
 
     stream = DataStream()
     stream = [LineStruct()]
@@ -338,6 +439,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     Writing Intermagnet CDF format (1.1)
     """
 
+    print "Writing IMAGCDF Format"
+    #print "filename"
     mode = kwargs.get('mode')
 
     if os.path.isfile(filename+'.cdf'):
@@ -361,34 +464,75 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         mycdf = cdf.CDF(filename, '')
 
     keylst = datastream._get_key_headers()
-    #print keylst
-    if not 'flag' in keylst:
-        keylst.append('flag')
-    #print keylst
-    if not 'comment' in keylst:
-        keylst.append('comment')
-    if not 'typ' in keylst:
-        keylst.append('typ')
     tmpkeylst = ['time']
     tmpkeylst.extend(keylst)
     keylst = tmpkeylst 
 
-    headdict = datastream.header
+    headers = datastream.header
     head, line = [],[]
+
+    print "Getting Header"
 
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     mycdf.attrs['FormatDescription'] = 'INTERMAGNET CDF format'
     mycdf.attrs['FormatVersion'] = '1.1'
-
+    mycdf.attrs['Title'] = 'Geomagnetic time series data'
+    for key in headers:
+        if key == 'StationIAGAcode':
+            mycdf.attrs['IagaCode'] = headers[key]
+        if key == 'DataComponents':
+            mycdf.attrs['ElementsRecorded'] = headers[key]
+        if key == 'DataPublicationLevel':
+            mycdf.attrs['PublicationLevel'] = headers[key]
+        if key == 'DataPublicationDate':
+            mycdf.attrs['PublicationDate'] = headers[key]
+        if key == 'StationName':
+            mycdf.attrs['ObservatoryName'] = headers[key]
+        if key == 'DataAcquisitionLatitude':
+            mycdf.attrs['Latitude'] = headers[key]
+        if key == 'DataAcquisitionLongitude':
+            mycdf.attrs['Longitude'] = headers[key]
+        if key == 'DataElevation':
+            mycdf.attrs['Elevation'] = headers[key]
+        if key == 'StationInstitution':
+            mycdf.attrs['Institution'] = headers[key]
+        if key == 'DataSensorOrientation':
+            mycdf.attrs['VectorSensOrient'] = headers[key]
+        if key == 'DataStandardLevel':
+            mycdf.attrs['StandardLevel'] = headers[key]
+        if key == 'DataStandardName':
+            mycdf.attrs['StandardName'] = headers[key]
+        if key == 'DataStandardVersion':
+            mycdf.attrs['StandardVersion'] = headers[key]
+        if key == 'DataPartialStandDesc':
+            mycdf.attrs['PartialStandDesc'] = headers[key]
+        if key == 'DataSource':
+            mycdf.attrs['Source'] = headers[key]
+        if key == 'DataTerms':
+            mycdf.attrs['TermsOfUse'] = headers[key]
+        if key == 'DataReferences':
+            mycdf.attrs['References'] = headers[key]
+        if key == 'DataID':
+            mycdf.attrs['UniqueIdentifier'] = headers[key]
+        if key == 'SensorID':
+            mycdf.attrs['ParentIdentifier'] = headers[key]
+        if key == 'StationWebInfo':
+            mycdf.attrs['ReferenceLinks'] = headers[key]
+    if not 'StationIagaCode' in headers and 'StationID' in headers:
+            mycdf.attrs['IagaCode'] = headers['StationID']
+    
     def checkEqualIvo(lst):
         # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
         return not lst or lst.count(lst[0]) == len(lst)
+
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 
     ndarray = False
-    if len(datastream.ndarray[ind]>0):
+    if len(datastream.ndarray[0]>0):
         ndarray = True
+
+    print "Putting Data -- ndarray:", ndarray
 
     for key in keylst:
         ind = KEYLIST.index(key)
@@ -401,22 +545,49 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             print "Found identical values only"
             col = col[:1]
         if key == 'time':
-            key = 'TT'
-            mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
+            key = 'GeomagneticVectorTimes'
+            try: ## requires spacepy >= 1.5 
+                mycdf[key] = np.asarray([cdf.datetime_to_tt2000(num2date(elem).replace(tzinfo=None)) for elem in col])
+            except:
+                mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
         elif len(col) > 0:
+            cdfkey = 'GeomagneticField'+key.upper() 
             nonetest = [elem for elem in col if not elem == None]
             if len(nonetest) > 0:
-                mycdf[key] = col
+                mycdf[cdfkey] = col
+                
+                mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticVectorTimes"
+                mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time series"
+                mycdf[cdfkey].attrs['LABLAXIS'] = key.upper()
+                if key in ['x','y','z','h']:
+                    mycdf[cdfkey].attrs['VALIDMIN'] = -88880.0
+                    mycdf[cdfkey].attrs['VALIDMAX'] = 88880.0
+                elif key == 'i':
+                    mycdf[cdfkey].attrs['VALIDMIN'] = -90.0
+                    mycdf[cdfkey].attrs['VALIDMAX'] = 90.0
+                elif key == 'd':
+                    mycdf[cdfkey].attrs['VALIDMIN'] = -360.0
+                    mycdf[cdfkey].attrs['VALIDMAX'] = 360.0
+                elif key == 'f':
+                    mycdf[cdfkey].attrs['VALIDMIN'] = 0.0
+                    mycdf[cdfkey].attrs['VALIDMAX'] = 88880.0
 
-            for keydic in headdict:
+
+            for keydic in headers:
                 if keydic == ('col-'+key):
                     try:
-                        mycdf[key].attrs['name'] = headdict.get('col-'+key,'')
+                        mycdf[cdfkey].attrs['FIELDNAM'] = "Geomagnetic Field Element "+key.upper()
                     except:
                         pass
                 if keydic == ('unit-col-'+key):
                     try:
-                        mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
+                        if 'unit-col-'+key == 'deg C':
+                            unit = 'Celsius'
+                        elif 'unit-col-'+key == 'deg':
+                            unit = 'Degrees of arc'
+                        else:
+                            unit = headers.get('unit-col-'+key,'')
+                        mycdf[cdfkey].attrs['UNITS'] = unit
                     except:
                         pass
                     

@@ -42,9 +42,12 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
 			'DataAcquisitionLatitude','DataAcquisitionLongitude','DataLocationReference',
 			'DataElevation','DataElevationRef','DataFlagModification','DataAbsFunc',
 			'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate',
-			'DataRating','DataComments']
+			'DataRating','DataComments','DataSource',
+                        'DataDeltaValues', 'DataTerms', 'DataReferences',        
+                        'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
+                        'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc']
 
-DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(20)',
+DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                         'CHAR(50)','CHAR(50)',
                         'CHAR(100)','CHAR(100)','CHAR(10)','CHAR(100)',
                         'CHAR(100)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)', 'DECIMAL(20,9)',
@@ -56,7 +59,10 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(20
                         'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(20)',
                         'DECIMAL(20,9)','CHAR(10)','CHAR(50)','CHAR(20)',
                         'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
-                        'CHAR(10)','TEXT']
+                        'CHAR(10)','TEXT','CHAR(100)','CHAR(100)', 
+                        'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
+                        'CHAR(50)','TEXT']
+
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
 			'SensorDataLoggerSerNum','SensorDataLoggerRevision','SensorDataLoggerRevisionComment',
@@ -65,7 +71,7 @@ SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','Sensor
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
 			'StationCity','StationPostalCode','StationCountry','StationWebInfo',
-			'StationEmail','StationDescription']
+			'StationEmail','StationDescription','StationK9']
 
 FLAGSKEYLIST = ['FlagID','SensorID','FlagBeginTime','FlagEndTime','FlagComponents','FlagNum','FlagReason','ModificationDate']
 
@@ -76,6 +82,8 @@ IPKEYLIST = ['IpName','IP','IpSensors','IpDuty','IpType','IpAccess','IpLocation'
 
 """
 Standard tables:
+TODO:  add StationK9, DataPublicationDate, DataSource (e.g. WDC...), DataDeltaValues (array with KEYLIST and deltas), DataTerms, DataReferences, DataPublicationLevel, DataPublicationDate
+DataStandardLevel, DataStandardName, DataStandardVersion, DataPartialStandDesc
 
 SENSOR:
 	SensorID: a combination of name, serialnumber and revision
@@ -107,6 +115,7 @@ STATION:
         StationInstitution: 'Zentralanstalt fuer Meteorologie und Geodynamik',
         StationWebInfo: 'http://www.zamg.ac.at',
         StationDescription: 'Running since 1951.'
+        StationK9: k9 limit for location
 DATAINFO:
 	DataID:
 
@@ -844,7 +853,7 @@ def dbalter(db):
     try:
         checksql = 'SELECT DataID FROM DATAINFO'
         cursor.execute(checksql)
-        for key in DATAINFOKEYLIST:
+        for ind,key in enumerate(DATAINFOKEYLIST):
             try:
                 checksql = 'SELECT ' + key+ ' FROM DATAINFO'
                 loggerdatabase.debug("Checking key: %s" % key)
@@ -852,7 +861,11 @@ def dbalter(db):
                 loggerdatabase.debug("Found key: %s" % key)
             except:
                 loggerdatabase.debug("Missing key: %s" % key)
-                addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' CHAR(100)'
+                if len(DATAVALUEKEYLIST) == len(DATAINFOKEYLIST):
+                    addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' ' + DATAVALUEKEYLIST[ind]
+                else:
+                    print "dbalter: Differences between provided DATAVALUEKEYLIST and DATAINFOKEYLIST"
+                    addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' CHAR(100)' 
                 cursor.execute(addstr)
                 loggerdatabase.debug("Key added: %s" % key)
     except:
@@ -1057,7 +1070,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     RETURNS:
        datainfoid e.g. DIDD_235178_0001_0001
     USED BY:
-       stream2db
+       stream2db, writeDB
     EXAMPLE:
         >>> tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
 
@@ -1102,7 +1115,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                             datainfovalue.append(str(datakeydict[key]))
                     else:
                         datainfovalue.append(str(datakeydict[key]))
-                    if key == 'DataID' or key.startswith('Column'):
+                    if key == 'DataID' or key.startswith('Column') or key == 'DataFormat' or key == 'DataTerms' or key == 'DataFlagModification' or key.startswith('DataPubli'):
                         pass
                     else:
                         searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
@@ -1131,6 +1144,29 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.warning("dbdatainfo: Column StationID not yet existing in table DATAINFO (very old magpy version) - creating it ...")
         stationaddstr = 'ALTER TABLE DATAINFO ADD StationID CHAR(50) AFTER SensorID'
         cursor.execute(stationaddstr)
+
+    # Check STATIONS
+    # ##############
+    if datakeydict:
+        checkstation = 'SELECT StationID FROM STATIONS WHERE StationID = "' + datakeydict["StationID"] +'"' 
+        try:
+            cursor.execute(checkstation)
+            rows = cursor.fetchall()
+        except:
+            loggerdatabase.warning("dbdatainfo: STATIONS not yet existing ...")
+            rows=[1]
+        if not len(rows) > 0:
+            print "dbdatainfo: Did not find StationID in STATIONS - adding it"
+            # Add all Station info to STATIONS
+            stationhead, stationvalue = [],[]
+            for key in datakeydict:
+                if key in STATIONSKEYLIST:
+                    stationhead.append(key)
+                    stationvalue.append('"'+str(datakeydict[key])+'"')
+            sql = 'INSERT INTO STATIONS(%s) VALUES (%s)' % (', '.join(stationhead), ', '.join(stationvalue))
+            #loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
+            if updatedb:
+                cursor.execute(sql)
 
     checkinput = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"'
     loggerdatabase.debug("dbdatainfo: %s " % checkinput) 
@@ -1242,7 +1278,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     return datainfoid
 
-def writeDB(db, datastream, StationID=None, mode='replace', revision=None, tablename=None, noheader=False, **kwargs):
+def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, **kwargs):
+
     """
     DEFINITION:
         Method to write datastreams to a mysql database
@@ -1255,20 +1292,14 @@ def writeDB(db, datastream, StationID=None, mode='replace', revision=None, table
         - mode:         (string)
                             mode: replace -- replaces existing table contents with new one, also replaces informations from sensors and station table
                             mode: delete -- deletes existing tables and writes new ones -- remove (or make it extremeley difficult to use) this method after initializing of tables
-                            mode: extend -- only add new data points with unique ID's (default) - table must exist already !
-                            mode: insert -- create new table with unique ID
+                            mode: insert -- add data not existing in table from stream
 
-                    New Header informations are created with modes 'replace' and 'delete'.
-                    If mode = 'extend' then check for the existence of sensorid and datainfo first -> if not available then request mode = 'insert'
-                    Mode 'extend' requires an existing input in sensor, station and datainfo tables: tablename needs to be given.
-                    Mode 'insert' checks for the existance of existing inputs in sensor, station and datainfo, and eventually adds a new datainfo tab.
-                    Mode 'replace' checks for the existance of existing inputs in sensor, station and datainfo, and replaces the stored information: optional tablename can be given.
-                         if tablename is given, then data from this table is replaced - otherwise only data from station and sensor are replaced
-                    Mode 'delete' completely deletes all tables and creates new ones. 
-                    Mode 'force' does not check sensors and datainfo tabs. Just creates table tablename. All other conditions follow mode 'replace'.
-         - clear:	(bool) If true it will delete the selected table before adding new data
+         - tablename:	(string) provide the tablename to which data is written
+                                 SENSORS and STATIONS remain unchanged, DATAINFO data
+                                 is updated if existing
+         - StationID:	(string) provide the StationID
     REQUIRES:
-        dbdatainfo, dbsensorinfo
+        dbdatainfo
         
     RETURNS:
         --
@@ -1276,76 +1307,195 @@ def writeDB(db, datastream, StationID=None, mode='replace', revision=None, table
     EXAMPLE:
         >>> stream.header['StationID'] = 'MyStation'
         >>> stream2db(db,stream)
-        dont't use >>> stream2db(db,stream,mode='extend',tablename=datainfoid)
-        >>> stream2db(db,stream,mode='replace')
-        >>> stream2db(db,stream,mode='force',tablename='myid_0001_0001')
+
+        # Replace existing contents of table with has meta info of stream and 
+        # highest revision
+        >>> writeDB(db,stream,mode='replace')
+
+        # Writing data without any header info (does not update SENSORS, STATIONS)
+        # DATAINFO is updated however, keeping blanks for sensorid and stationid
+        >>> writeDB(db,stream,tablename='myid_0001_0001',noheader=True)
 
     APPLICATION:
-        Requires an existing mysql database (e.g. mydb)
-        so first connect to the database
         db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        stream = read('/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK/raw/*', starttime='2013-01-01',endtime='2013-02-01')
-        datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
-        stream2db(db,stream)
+        stream = read('/path/to/my/files/*', starttime='2013-01-01',endtime='2013-02-01')
+        writeDB(db,stream,StationID='MyObsCode')
 
     TODO:
         - make it possible to create spezial tables by defining an extension (e.g. _sp2013min) where sp indicates special        
     """
+
     if not db:
         loggerdatabase.error("stream2DB: No database connected - aborting -- please create and initiate a database first")
         return
 
-    if tablename or noheader:
-        print "I am not bothering with header, sensorid etc"
+    if not len(datastream.ndarray[0]) > 0:
+        print "writeDB is used for ndarray type - use stream2DB for LineStruct"
+        return
+
+    # ----------------------------------------------
+    #   Identify tablename
+    # ----------------------------------------------
+
+    if tablename:
+        print "writeDB: not bothering with header, sensorid etc"
+        print "         updating DATAINFO if existing"
         # Just check whether DataID, if not a table, exists and append data
         #return some message on success
+    else:
+        if not 'SensorID' in datastream.header:
+            #loggerdatabase.error("writeDB: No SensorID provided in header - aborting")
+            print ("writeDB: No SensorID provided in header - define by datastream.header['SensorID'] = 'YourID' before calling writeDB - aborting")
+            return
+        if not 'StationID' in datastream.header and not StationID:
+            #loggerdatabase.error("writeDB: No StationID provided - use option StationID='MyID'")
+            print ("writeDB: No StationID provided - use option StationID='MyStationID'")
+            return
+
+        datastream.header['DataSamplingRate'] = datastream.samplingrate()
+
+        # Updating DATAINFO, SENSORS and STATIONS
+        tablename = dbdatainfo(db,datastream.header['SensorID'],datastream.header,None,datastream.header['StationID'])
 
 
-    if not 'SensorID' in datastream.header:
-        loggerdatabase.error("stream2DB: No SensorID provided in header - aborting")
-        return
+    # ----------------------------------------------
+    #   Putting together all data
+    # ----------------------------------------------
 
-    if not 'StationID' in datastream.header and not StationID:
-        loggerdatabase.error("stream2DB: No StationID provided - use option StationID='MyID'")
-        return
+    keys = datastream._get_key_headers()
+    ti = ['time']
+    ti.extend(keys)
+    keys = ti
+    dollarstring = ['%s' for elem in keys]
+    array = np.asarray([elem for elem in datastream.ndarray if len(elem) > 0], dtype=object)
 
-    ## Determine any missing essential data information
-    if not 'DataSamplingRate' in datastream.header:
-        datastream.samplingrate()
-    if not 'SensorKeys' in datastream.header:
-        varkeys = datastream._get_key_headers()
-        datastream.header['SensorKeys'] = ','.join(varkeys)
-    if not 'SensorRevision' in datastream.header:
-        varkeys = datastream._get_key_headers()
-        datastream.header['SensorKeys'] = ','.join(varkeys)
+    def trim_time(t):
+        # Rounding time to milliseconds
+        s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
+        tail = s[-7:]
+        f = round(float(tail), 3)
+        temp = "%.3f000" % f
+        if f == 1.0:
+            t = t+timedelta(seconds=1)
+            s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
+        return "%s%s" % (s[:-7], temp[1:])
 
-    print "Got here", datastream.header
-    ## Compare header information with existing header data in DataInfo, Stations and Sensors
-    sensorid = datastream.header['SensorID']
-    for key in datastream.header:
-        if key.startswith('Sensor'):
-            dbcont = dbselect(db, key, 'SENSORS', 'SensorID = "%s"' % sensorid)
-            print dbcont
-            if not dbcont == '' and not dbcont == datastream.header[key]:
-                print "Different data in SENSORS"
-                print "sys.exit()"
-            elif dbcont == '':
-                print "Updating SENSORS"
+    # Reformat times...
+    for key in keys:
+        if key.endswith('time'):
+            ind = KEYLIST.index(key)
+            col = num2date(array[ind])
+            col = [trim_time(elem.replace(tzinfo=None)) for elem in col]
+            array[ind]=np.asarray(col)
+                
+    values = array.T
+
+    insertmanysql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename, ', '.join(keys), ', '.join(dollarstring))
+
+    values = tuple([tuple(list(val)) for val in values])
+    #print values[0]
+
+    # ----------------------------------------------
+    #   if tablename does not yet exist create table/ add column if not yet existing
+    # ----------------------------------------------
+    cursor = db.cursor ()
+
+    count = 0
+    dataheads,collst,unitlst = [],[],[]
+    for key in keys:
+        if key in NUMKEYLIST:
+            dataheads.append(key + ' FLOAT')
+        elif key.endswith('time'):
+            if key == 'time':
+                dataheads.append(key + ' CHAR(40) NOT NULL PRIMARY KEY')
             else:
-                print "everything OK"
-        if key.startswith('Data'):
-            if not revision:
-                dbcont = dbselect(db, key, 'Data', 'SensorID = "%s"' % sensorid)
-            else:
-                dbcont = dbselect(db, key, 'Data', 'DataID = "%s_%s"' % (sensorid,revision))
-            print dbcont
-        if key.startswith('Station'):
-            dbcont = dbselect(db, key, 'Data', 'StationID = "%s"' % datastream.header['StationID'])
+                dataheads.append(key + ' CHAR(40)')
+        else:
+            dataheads.append(key + ' CHAR(100)')
+        ## Getting column and units
+        for hkey in datastream.header:
+            if key == hkey.replace('col-',''):
+                colstr = datastream.header[hkey]            
+                collst.append(colstr)            
+            elif key == hkey.replace('unit-col-',''):
+                unitstr = datastream.header[hkey]            
+                unitlst.append(unitstr)            
+
+        #print "Checking key", key
+        try:
+            sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
+            cursor.execute(sql)
+            count +=1
+        except MySQLdb.Error, e:
+            emsg = str(e)
+            if emsg.find("Table") >= 0 and emsg.find("doesn't exist") >= 0:
+                # if table not existing
+                pass
+            elif emsg.find("Unknown column") >= 0:                
+                print "writeDB: key %s not existing - adding it" % key
+                # if key not yet existing
+                addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
+                cursor.execute(addsql)
+            else:                
+                print "writeDB: unkown MySQL error when checking for existing tables: %s" %e
+        except:
+            print "writeDB: unkown error when checking for existing tables"
+
+    if count == 0:
+        print "Table not existing - creating it"
+        # Creating table
+        createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,', '.join(dataheads))
+        cursor.execute(createdatatablesql)
+
+    #print "Table created/alered"
+
+    # ----------------------------------------------
+    #   upload data
+    # ----------------------------------------------
+
+    #print insertmanysql
+    if mode == 'replace':
+        insertmanysql = insertmanysql.replace("INSERT","REPLACE")
+    cursor.executemany(insertmanysql,values)
+
+    # ----------------------------------------------
+    #   update DATAINFO - move to a separate method
+    # ----------------------------------------------
+
+    dbsetTimesinDataInfo(db, tablename,','.join(collst),','.join(unitlst))
+
+    db.commit()
+    cursor.close ()
 
 
-        magsenslist = dbselect(db, 'SensorID', 'SENSORS', 'SensorGroup = "Magnetism"')
-        tempsenslist = dbselect(db, 'SensorID', 'SENSORS','SensorElements LIKE "%T%"')
-        lasttime = dbselect(db,'time','DATATABLE',expert="ORDER BY time DESC LIMIT 1")    
+def dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
+    """
+    DEFINITION:
+        Method to update min time and max time variables in DATAINFO table
+        using data from table tablename
+
+    PARAMETERS:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - tablename:    (string) name of the table
+    APPLICATION:
+        >>> dbsetTimesDataInfo(db, "MyTable_12345_0001_0001")
+    USED BY:
+        - writeDB, stream2DB
+    """
+    cursor = db.cursor ()
+
+    getminmaxtimesql = "Select MIN(time),MAX(time) FROM " + tablename
+    cursor.execute(getminmaxtimesql)
+    rows = cursor.fetchall()
+    #print rows
+    loggerdatabase.info("stream2DB: Table now covering a time range from " + str(rows[0][0]) + " to " + str(rows[0][1]))
+    # removed columncontents and units from update
+    updatedatainfotimesql = 'UPDATE DATAINFO SET DataMinTime = "' + rows[0][0] + '", DataMaxTime = "' + rows[0][1] +'", ColumnContents = "' + colstr +'", ColumnUnits = "' + unitstr +'" WHERE DataID = "'+ tablename + '"'
+    #print updatedatainfotimesql
+    cursor.execute(updatedatainfotimesql)
+    
+    db.commit()
+    cursor.close ()
 
 
 def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs):
@@ -1410,6 +1560,13 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     if not db:
         loggerdatabase.error("stream2DB: No database connected - aborting -- please create an empty database first")
         return
+
+    if len(datastream.ndarray[0]) > 0:
+        print "stream2DB: Found ndarray data -- running writeDB"
+        writeDB(db,datastream,tablename=tablename,mode='replace')
+        return
+
+
     cursor = db.cursor ()
 
     headdict = datastream.header
@@ -1849,7 +2006,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
     #print "stream2db6: ", datetime.utcnow()
 
-def readDB(db, table, begin=None, end=None, sql=None):
+def readDB(db, table, starttime=None, endtime=None, sql=None):
     """
     sql: provide any additional search criteria
         example: sql = "DataSamplingRate=60 AND DataType='variation'"
@@ -1892,11 +2049,12 @@ def readDB(db, table, begin=None, end=None, sql=None):
     if not table:
         loggerdatabase.error("DB2stream: Aborting ... either sensorid or table must be specified")
         return
-    if begin:
+    if starttime:
         #starttime = stream._testtime(begin)
-        #begin = datetime.strftime(starttime,"%Y-%m%d %H:%M%:%S")
+        begin = datetime.strftime(stream._testtime(starttime),"%Y-%m%d %H:%M%:%S")
         wherelist.append('time >= "' + begin + '"')
-    if end:
+    if endtime:
+        end = datetime.strftime(stream._testtime(endtime),"%Y-%m%d %H:%M%:%S")
         wherelist.append('time <= "' + end + '"')
     if len(wherelist) > 0:
         whereclause = ' AND '.join(wherelist)
@@ -1940,6 +2098,10 @@ def readDB(db, table, begin=None, end=None, sql=None):
         loggerdatabase.error("readDB: mysqlerror while getting table info: %s" % (e))
         return stream
 
+
+    def checkEqual3(lst):
+        return lst[1:] == lst[:-1]
+
     if len(keys) > 0:
         if len(whereclause) > 0:
             getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table + ' WHERE ' + whereclause
@@ -1947,29 +2109,51 @@ def readDB(db, table, begin=None, end=None, sql=None):
             getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table
         print getdatasql
         cursor.execute(getdatasql)
-        rows = cursor.fetchall()
+        rows = list(cursor.fetchall())
         print "Reading rows: ", len(rows)
+        ls = []
+        for i in range(len(KEYLIST)):
+            ls.append([])
+
         if len(rows) > 0:
             for ind, line in enumerate(rows):
-                row = LineStruct()
                 for i, elem in enumerate(line):
+                    index = KEYLIST.index(keys[i])
                     if keys[i][-4:]=='time':
-                        setattr(row,keys[i],date2num(stream._testtime(elem)))
+                        ls[index].append(date2num(stream._testtime(elem)))
                     else:
                         if keys[i] in NUMKEYLIST:
                             if elem == None or elem == 'null':
                                 elem = float(NaN)
-                            setattr(row,keys[i],float(elem))
+                            ls[index].append(float(elem))
                         else:
-                            setattr(row,keys[i],elem)
-                stream.add(row)
+                            ls[index].append(elem)
+
+            for idx, elem in enumerate(ls):
+                ls[idx] = np.asarray(elem)
+
+            for key in keys:
+                print "Reformating key", key
+                index = KEYLIST.index(key)
+                col = np.asarray(ls[index])
+                if not False in checkEqual3(col):
+                    print "Found identical values only: %s" % key
+                    #try:
+                    if str(col[0]) == '-' or str(col[0]).find('0000000000000000') or str(col[0]).find('xyz'):
+                        ls[index] = np.asarray([])
+                    else:
+                        ls[index] = col[:1]
+                if key in NUMKEYLIST:
+                    ls[index] = np.asarray(col).astype('<f8')
             stream.header = dbfields2dict(db,table)
         else:
             print "No data found"
             pass
 
+    stream.ndarray = np.asarray(ls)
+
     cursor.close ()
-    return stream
+    return DataStream([LineStruct],stream.header,stream.ndarray)
 
 
 def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):

@@ -530,8 +530,10 @@ def readIWT(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rt')
 
-    if getfile: 
+    if getfile:
+        ta,xa,ya,za = [],[],[],[]
         for line in fh:
+            skipline = False
             if line.isspace():
                 # blank line
                 continue
@@ -539,20 +541,37 @@ def readIWT(filename, headonly=False, **kwargs):
                 continue
             else:
                 colsstr = line.split()
-                row = LineStruct()
+                #row = LineStruct()
                 try:
-                    row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
+                    #row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
+                    ta.append(date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f")))
                 except:
-                    row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
-                row.x = float(colsstr[1])
-                row.y = float(colsstr[2])
-                row.z = float(colsstr[3])
-                stream.add(row)
+                    #row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
+                    try:
+                        ta.append(date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S")))
+                    except:
+                        skipline = True
+                #row.x = float(colsstr[1])
+                #row.y = float(colsstr[2])
+                #row.z = float(colsstr[3])
+                #stream.add(row)
+                if not skipline:
+                    xa.append(float(colsstr[1]))
+                    ya.append(float(colsstr[2]))
+                    za.append(float(colsstr[3]))
+        array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
 
-        headers['unit-col-x'] = 'lambda' 
-        headers['col-x'] = 'phase' 
+
+        ndarray = np.array(array)
+
+        stream = DataStream()
+        stream = [LineStruct()]
+
+
+        headers['unit-col-x'] = 'nrad' 
+        headers['col-x'] = 'tilt'
         headers['unit-col-y'] = 'lambda' 
-        headers['col-y'] = 'val2' 
+        headers['col-y'] = 'phase' 
         headers['unit-col-z'] = 'arb' 
         headers['col-z'] = 'val3' 
         headers['SensorDescription'] = 'iWT: Tiltmeter system'
@@ -561,7 +580,7 @@ def readIWT(filename, headonly=False, **kwargs):
         if sensorid:
             headers['SensorID'] = sensorid
 
-    return DataStream(stream, headers)    
+    return DataStream(stream,headers,ndarray)   
 
 
 def readCS(filename, headonly=False, **kwargs):

@@ -85,20 +85,34 @@ class GSM90Protocol(LineReceiver):
         actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
-        packcode = '6hLL'
-        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
+        packcode = '6hLLL6hL'
+        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f,var1,sectime]', '[f,errorcode,internaltime]', '[nT,none,none]', '[1000,1,1]', packcode, struct.calcsize(packcode))
 
         try:
             # Extract data
+            # old data looks like 04-22-2015 142244  48464.53 99
             data_array = data.strip().split()
-            intensity = float(data_array[0])
+            if len(data_array) == 4:
+                intensity = float(data_array[2])
+                err_code = int(data_array[3])
+                internal_t = datetime.strptime(data_array[0]+'T'+data_array[1], "%m-%d-%YT%H%M%S")
+                internal_time = datetime.strftime(internal_t, "%Y-%m-%d %H:%M:%S.%f")
+                #print internal_time
+            else:
+                err_code = 0
+                intensity = float(data_array[0])
+                internal_time = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S")
         except:
-            log.err('GSM90 - Protocol: Data formatting error.')
+            log.err('GSM90 - Protocol: Data formatting error. Data looks like: %s' % data)
         try:
             # extract time data
             datearray = timeToArray(timestamp)
             try:
                 datearray.append(int(intensity*1000.))
+                datearray.append(err_code)
+                #print timestamp, internal_time
+                internalarray = timeToArray(internal_time)
+                datearray.extend(internalarray)
                 data_bin = struct.pack(packcode,*datearray)
                 dataToFile(self.outputdir,self.sensor, date, data_bin, header)
             except:
@@ -111,8 +125,9 @@ class GSM90Protocol(LineReceiver):
 
         evt1 = {'id': 1, 'value': timestamp}
         evt3 = {'id': 3, 'value': outtime}
-        #evt4 = {'id': 4, 'value': internal_time}
+        evt4 = {'id': 4, 'value': internal_time}
         evt10 = {'id': 10, 'value': intensity}
+        evt40 = {'id': 40, 'value': err_code}
         evt99 = {'id': 99, 'value': 'eol'}
 
         return evt1,evt3,evt10,evt99
@@ -121,6 +136,7 @@ class GSM90Protocol(LineReceiver):
         dispatch_url =  "http://example.com/"+self.hostname+"/gsm#"+self.sensor+"-value"
         try:
             data = line
+            #print "Line", line
             evt1, evt3, evt10, evt99 = self.processData(data)
         except ValueError:
             log.err('GSM90 - Protocol: Unable to parse data %s' % line)

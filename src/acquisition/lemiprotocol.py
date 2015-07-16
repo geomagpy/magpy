@@ -57,6 +57,7 @@ class LemiProtocol(LineReceiver):
         self.outputdir = outputdir
         self.gpsstate1 = 'A'
         self.gpsstate2 = 'P'
+        self.gpsstatelst = []
         flag = 0
 
     @exportRpc("control-led")
@@ -176,22 +177,32 @@ class LemiProtocol(LineReceiver):
         self.gpsstate1 = gpsstat
         if not self.gpsstate1 == self.gpsstate2:
             log.msg('LEMI - Protocol: GPSSTATE changed to %s .'  % gpsstat)
-        self.gpsstate2 = gpsstat
-
+        self.gpsstatelst.append(gpsstat)
+        self.gpsstatelst = self.gpsstatelst[-10:]
+        # get the most frequent gpsstate of the last 10 secs
+        # this avoids error messages for singular one sec state changes
+        self.gpsstate2 = max(set(self.gpsstatelst),key=self.gpsstatelst.count)
+ 
+        #print "GPSSTAT", gpsstat
         # important !!! change outtime to lemi reading when GPS is running 
         try:
-            if gpsstat == 'P': 
+            if self.gpsstate2 == 'P': 
                 ## passive mode - no GPS connection -> use ntptime as primary with correction
-                evt1 = currenttime-timedelta(seconds=2.304) # 2.07 before 15.06.2015
+                evt1 = currenttime-timedelta(seconds=1.9)
                 evt4 = gps_array
             else:
                 ## active mode - GPS time is used as primary
-                evt4 = currenttime-timedelta(seconds=2.304) # 2.07 before 15.06.2015
+                evt4 = currenttime-timedelta(seconds=1.9)
                 evt1 = gps_array
             evt3 = {'id': 3, 'value': outtime}
+            #evt1 = {'id': 1, 'value': timestamp}
+            #evt4 = {'id': 4, 'value': gps_time}
             evt11 = xarray
             evt12 = yarray
             evt13 = zarray
+            #evt11 = {'id': 11, 'value': x}
+            #evt12 = {'id': 12, 'value': y}
+            #evt13 = {'id': 13, 'value': z}
             evt31 = {'id': 31, 'value': temp_sensor}
             evt32 = {'id': 32, 'value': temp_el}
             evt60 = {'id': 60, 'value': vdd}
@@ -207,6 +218,20 @@ class LemiProtocol(LineReceiver):
         flag = 0
         WSflag = 0
         debug = False
+
+        """
+        # Test range
+        self.buffer = self.buffer + data
+        if not (self.buffer).startswith(self.soltag):
+            lemisearch = (self.buffer).find(self.soltag, 6)
+            if not lemisearch == -1:
+                print "Lemiserach", lemisearch, self.buffer
+                self.buffer = self.buffer[lemisearch:len(self.buffer)]
+        if len(self.buffer) == 153:
+            # Process data
+            print self.buffer
+            self.buffer = ''
+        """            
 
         try:
             if (self.buffer).startswith(self.soltag) and len(self.buffer) == 153:
@@ -263,7 +288,8 @@ class LemiProtocol(LineReceiver):
 
                 else:
                     log.msg('LEMI - Protocol: Incorrect header. Attempting to fix buffer... Bufferlength:', len(self.buffer))
-                    lemisearch = repr(self.buffer).find(self.soltag)
+                    lemisearch = (self.buffer).find(self.soltag, 6)
+                    #lemisearch = repr(self.buffer).find(self.soltag)
                     if lemisearch == -1:
                         log.msg('LEMI - Protocol: No header found. Deleting buffer.')
                         self.buffer = ''
@@ -283,6 +309,7 @@ class LemiProtocol(LineReceiver):
             for ind, elem in enumerate(evt11):
                 t1 = evt1+timedelta(seconds=0.1*ind)
                 t2 = evt4+timedelta(seconds=0.1*ind)
+                #print t1, t2
                 evt1a = {'id': 1, 'value': datetime.strftime(t1,"%Y-%m-%d %H:%M:%S.%f")}
                 #evt3a = {'id': 1, 'value': datetime.strftime(t1,"%H:%M:%S.%f")}
                 evt4a = {'id': 1, 'value': datetime.strftime(t2,"%Y-%m-%d %H:%M:%S.%f")}

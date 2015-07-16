@@ -153,14 +153,15 @@ def readPYSTR(filename, headonly=False, **kwargs):
                 pass
     qFile.close()
 
-    return DataStream(stream, headers)    
+    return DataStream(stream, headers, stream.ndarray)    
 
 
 def readPYCDF(filename, headonly=False, **kwargs):
     """
     Reading CDF format data - DTU type.
     """
-    stream = DataStream([],{})
+    stream = DataStream()
+    #stream = DataStream([],{})
 
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -416,7 +417,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         cdf_file.close()
         del cdf_file
 
-    return DataStream(stream, stream.header)   
+    return DataStream(stream, stream.header,stream.ndarray)   
 
 def readPYBIN(filename, headonly=False, **kwargs):
     """
@@ -625,6 +626,9 @@ def writePYCDF(datastream, filename, **kwargs):
     #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
     #    head.append(title)
 
+    print datastream.ndarray
+    #print "WriteFormat length 0", len(datastream.ndarray[0])
+
     mode = kwargs.get('mode')
 
     if os.path.isfile(filename+'.cdf'):
@@ -675,10 +679,27 @@ def writePYCDF(datastream, filename, **kwargs):
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 
+    ndtype = False
+    try:
+        if len(datastream.ndarray[0]) > 0:
+            ndtype = True
+    except:
+        pass
+
+    #print "WriteFormat length 1", len(datastream.ndarray[0])
     for key in keylst:
-        col = datastream._get_column(key)
+        print "Writing:", key
+        if ndtype:
+            ind = KEYLIST.index(key)
+            col = datastream.ndarray[ind]
+            if not key in NUMKEYLIST:
+                if not key == 'time':
+                    print "converting"
+                    col = col.astype('|S100')
+        else:
+            col = datastream._get_column(key)
         if not False in checkEqual3(col):
-            print "Found identical values only"
+            print "Found identical values only: %s" % key
             col = col[:1]
         if key == 'time':
             key = 'Epoch'
@@ -686,6 +707,7 @@ def writePYCDF(datastream, filename, **kwargs):
         elif len(col) > 0:
             nonetest = [elem for elem in col if not elem == None]
             if len(nonetest) > 0:
+                print col
                 mycdf[key] = col
 
             for keydic in headdict:

@@ -113,6 +113,9 @@ def readIAGA(filename, headonly=False, **kwargs):
                 if key.find('Data Type') > -1:
                     if not val == '': 
                         stream.header['DataType'] = val
+                if key.find('Publication Date') > -1:
+                    if not val == '': 
+                        stream.header['DataPublicationDate'] = val
             elif line.startswith('DATE'):
                 # data header
                 colsstr = line.lower().split()

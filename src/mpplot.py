@@ -14,6 +14,7 @@ CONTAINS:
 	plotStreams:	(Func) Plots multiple variables from multiple streams.
 	ploteasy:	(Func) Quick & easy plotting function that plots all data.
     (EXTENDED...)
+        plotFlag:	(Func) Enables flagging in plot
         plotEMD:	(Func) Plots Empirical Mode Decomposition from opt.emd
         plotNormStreams:(Func) Plot normalised streams
         plotPS: 	(Func) Plots the power spectrum of a given key.
@@ -113,7 +114,7 @@ def ploteasy(stream):
         >>> ploteasy(somedata)   
     '''
 
-    keys = stream._get_key_headers()
+    keys = stream._get_key_headers(numerical=True)
     if len(keys) > 9:
         keys = keys[:8]
     try:
@@ -386,17 +387,17 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     # Iterate through each variable, create dict for each:
     for i in range(len(streamlist)):
         stream = streamlist[i]
+        ndtype = False
         try:
             t = stream.ndarray[0]
             if not len(t) > 0:
                 x=1/0
-            print len(t), resolution
             if len(t) > resolution:
                 loggerstream.info("plot: Reducing data resultion ...")
                 stepwidth = int(len(t)/resolution)
                 t = t[::stepwidth]
             loggerstream.info("plot: Start plotting of stream with length %i" % len(stream.ndarray[0]))
-            print len(t)
+            ndtype = True
         except:
             t = np.asarray([row[0] for row in stream])
             loggerstream.info("plot: Start plotting of stream with length %i" % len(stream))
@@ -500,14 +501,20 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 if type(errorbars) == list:
                     if errorbars[i][j]:
                         ind = KEYLIST.index('d'+key)
-                        errors = np.asarray([row[ind] for row in stream])
+                        if ndtype:
+                            errors = stream.ndarray[ind]
+                        else:
+                            errors = np.asarray([row[ind] for row in stream])
                         if len(errors) > 0: 
                             data_dict['errors'] = errors
                         else:
                             loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
                 else:
                     ind = KEYLIST.index('d'+key)
-                    errors = np.asarray([row[ind] for row in stream])
+                    if ndtype:
+                        errors = stream.ndarray[ind]
+                    else:
+                        errors = np.asarray([row[ind] for row in stream])
                     if len(errors) > 0: 
                         data_dict['errors'] = errors
                     else:
@@ -517,16 +524,28 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             if annotate:
 	        if type(annotate) == list:
                     if annotate[i][j]:
-                        flag = stream._get_column('flag')
-                        comments = stream._get_column('comment')
+                        if ndtype:
+                            ind = KEYLIST.index('flag')
+                            flag = stream.ndarray[ind]
+                            ind = KEYLIST.index('comment')
+                            comments = stream.ndarray[ind]
+                        else:
+                            flag = stream._get_column('flag')
+                            comments = stream._get_column('comment')
                         flags = array([flag,comments])
 	    	        data_dict['annotate'] = True
                         data_dict['flags'] = flags
                     else:
                         data_dict['annotate'] = False
                 else:
-                    flag = stream._get_column('flag')
-                    comments = stream._get_column('comment')
+                    if ndtype:
+                        ind = KEYLIST.index('flag')
+                        flag = stream.ndarray[ind]
+                        ind = KEYLIST.index('comment')
+                        comments = stream.ndarray[ind]
+                    else:
+                        flag = stream._get_column('flag')
+                        comments = stream._get_column('comment')
                     flags = array([flag,comments])
                     data_dict['annotate'] = True
                     data_dict['flags'] = flags
@@ -585,6 +604,307 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 #								    #
 #####################################################################
 
+
+
+#####################################################################
+#		Flagging					    #
+#####################################################################
+
+def toggle_selector(event):
+    print (' Key pressed.')
+    if event.key in ['Q', 'q'] and toggle_selector.RS.active:
+        print ' RectangleSelector deactivated.'
+        toggle_selector.RS.set_active(False)
+    if event.key in ['A', 'a'] and not toggle_selector.RS.active:
+        print ' RectangleSelector activated.'
+        toggle_selector.RS.set_active(True)
+
+class figFlagger():
+
+    def __init__(self, data = None):
+        
+        self.data = data
+
+        self.mainnum = 1
+        self.flagid = 3
+        self.reason = 'why because'
+        self.idxarray = []
+
+        self.orgkeylist = self.data._get_key_headers()
+        self.data = self.analyzeData(self.orgkeylist)
+
+        keylist = self.data._get_key_headers(numerical=True)
+        annotatelist = [True if elem in self.orgkeylist else False for elem in keylist] # if elem in ['x','y','z'] else False]
+        #print "Annotating data", annotatelist
+
+        self.fig = plotStreams([self.data], [keylist], noshow=True, annotate=[annotatelist])
+
+        radio, hzfunc = self.startup(self.fig, self.data)
+        radio.on_clicked(hzfunc)
+        plt.show()
+
+    def analyzeData(self,keylist):
+        #keylist = self.data._get_key_headers()
+        if not len(self.data.ndarray[0]) > 0:
+            print "No ndarrayfound:"
+            print " -- stream will be converted to ndarray type"
+            self.data = self.data.linestruct2ndarray()
+
+        if 'x' in keylist and 'y' in keylist and 'z' in keylist:
+            self.data = self.data.differentiate(keys=['x','y','z'],put2keys = ['dx','dy','dz'])
+            if 'f' in keylist:
+                self.data = self.data.delta_f()
+        return self.data
+
+    def line_select_callback(self, eclick, erelease):
+        'eclick and erelease are the press and release events'
+        #print  "Selected line---:",self.mainnum 
+        x1, y1 = eclick.xdata, eclick.ydata
+        x2, y2 = erelease.xdata, erelease.ydata
+        #print "(%3.2f, %3.2f) --> (%3.2f, %3.2f)" % (x1, y1, x2, y2)
+        #print " The button you used were: %s %s" % (eclick.button, erelease.button)
+        self.selarray = [x1, y1, x2, y2]
+        self.annotate(self.data, self.mainnum, self.selarray)
+
+    def toggle_selector(self, event):
+        #print (' Key pressed.')
+        if event.key in ['Q', 'q'] and toggle_selector.RS.active:
+            print ' RectangleSelector deactivated.'
+            toggle_selector.RS.set_active(False)
+        if event.key in ['A', 'a'] and not toggle_selector.RS.active:
+            print ' RectangleSelector activated.'
+            toggle_selector.RS.set_active(True)
+        if event.key in ['F', 'f']:
+            print ' Flag data:'
+            print ' ------------------------------------------'
+            print " Selected data point:", len(self.idxarray)
+            plt.clf()
+            plt.close()
+        if event.key in ['2']:
+            print ' Setting default Flag ID to 2.'
+            print ' ------------------------------------------'
+            print " -- keep data in any case - Observators decision"
+            self.flagid = 2
+        if event.key in ['3']:
+            print ' Setting default Flag ID to 3.'
+            print ' ------------------------------------------'
+            print " -- not to be used for definite - Observators decision"
+            self.flagid = 3
+        if event.key in ['L', 'l']:
+            print ' Data:'
+            print ' ------------------------------------------'
+            print "Length:", len(data), len(data.ndarray), len(data.ndarray[0])
+            #stream.write("")
+        if event.key in ['H', 'h']:
+            print ' Header:'
+            print ' ------------------------------------------'
+            print data.header
+        if event.key in ['c', 'C']:
+            print ' Close flagging and store data:'
+            print ' ------------------------------------------'
+            self.idxarray = 0
+            plt.clf()
+            plt.close('all')
+
+
+    def annotate(self, data, numb, selarray):
+        # Selecting the time range
+
+        #print "Dataarray", data.ndarray
+
+        selectedndarray = []
+        keyar = []
+        #print "Selected range:", selarray
+        minbound = min([selarray[1],selarray[3]])
+        maxbound = max([selarray[1],selarray[3]])
+
+        idxstart = np.abs(data.ndarray[0]-min(selarray[0],selarray[2])).argmin()
+        idxend = np.abs(data.ndarray[0]-max(selarray[0],selarray[2])).argmin()
+        
+        for i in range(len(data.ndarray)):
+            if len(data.ndarray[i]) > idxstart:
+                if i in range(len(FLAGKEYLIST)):
+                    keyar.append(KEYLIST[i])
+                    timear = data.ndarray[i][idxstart:idxend]
+                    selectedndarray.append(timear)
+        selectedndarray = np.asarray(selectedndarray)
+        #print selectedndarray[numb]
+        #print selectedndarray[numb][selectedndarray[numb]<maxbound] 
+        #print "Selected dataarray:",numb, len(selectedndarray) 
+        #print "Selected dataarray:",idxstart,idxend,minbound,maxbound 
+
+        newselectedndarray = []
+        for i in range(len(selectedndarray)):
+            allar = [elem for idx, elem in enumerate(selectedndarray[i]) if selectedndarray[numb][idx] >= minbound and selectedndarray[numb][idx] <= maxbound ]
+            #print allar
+            if i == 0:
+                self.idxar = [idx+idxstart for idx, elem in enumerate(selectedndarray[i]) if selectedndarray[numb][idx] >= minbound and selectedndarray[numb][idx] <= maxbound ]             
+            newselectedndarray.append(allar)
+        newselectedndarray = np.asarray(newselectedndarray)
+        self.idxar = np.asarray(self.idxar)
+        # Some cleanup
+        del selectedndarray
+
+        self.markpoints(newselectedndarray,keyar)
+        self.idxarray.extend(self.idxar)
+        print "Selected %d points to annotate:" % len(self.idxarray)   
+
+    def markpoints(self, dataarray,keyarray):
+        for idx,elem in enumerate(dataarray):
+            key = keyarray[idx]
+            #print "Selected curve - markpoints:", idx
+            #print dataarray[idx]
+            if not idx == 0 and not len(elem) == 0 and key in FLAGKEYLIST:
+                #print ( idx, self.axlist[idx-1] )
+                ax = self.axlist[idx-1]
+                #ax.clear()
+                #ax.text(dataarray[0][1],dataarray[1][1], "(%s, %3.2f)"%("Hello",3.67), )
+                ax.scatter(dataarray[0].astype('<f8'),elem.astype('<f8'), c='r', zorder=100) #, marker='d', c='r') #, zorder=100)
+
+        #plt.connect('key_press_event', toggle_selector)
+        plt.draw()
+    
+    def hzfunc(self,label):
+        ax = self.hzdict[label]
+        num = int(label.replace("plot ",""))
+        #print "Selected axis number:", num
+        #global mainnum
+        self.mainnum = num
+        # drawtype is 'box' or 'line' or 'none'
+        toggle_selector.RS = RectangleSelector(ax, self.line_select_callback,
+                                           drawtype='box', useblit=True,
+                                           button=[1,3], # don't use middle button
+                                           minspanx=5, minspany=5,
+                                           spancoords='pixels',
+                                           rectprops = dict(facecolor='red', edgecolor = 'black', alpha=0.2, fill=True))
+
+        #plt.connect('key_press_event', toggle_selector)
+        plt.draw()
+
+    def flag(self, idxarray , flagid, reason, keylist):
+
+        try:
+            flagid = int(flagid)
+        except:
+            flagid = self.flagid
+        if not flagid in [0,1,2,3,4]:
+            flagid = self.flagid
+        if reason == '':
+            reason = self.reason
+        if keylist == []:
+            keylist = self.orgkeylist
+
+        print "Flagging components %s with flagid %d, because of %s" % (','.join(keylist), flagid, reason) 
+        self.data = self.data.flagfast(idxarray, flagid, reason, keylist)
+
+
+    def startup(self, fig, data):
+        print "--------------------------------------------"
+        print " you started the build-in flagging function"
+        print "--------------------------------------------"
+        print "    -- use mouse to select rectangular areas"
+        print "    -- press f for flagging this region"
+        print "    --      press 2,3 to change default flag ID"
+        print "    -- press l to get some basic data info"
+        print "    -- press h to get all meta information"
+        print "    -- press c to close the window and allow saving"
+
+        # Arrays to exchange data
+        self.selarray = []
+        # Globals
+        self.idxar = [] # holds all selected index values
+        #mainnum = 1 # holds the selected figure axis
+
+        self.axlist = fig.axes
+
+        # #############################################################
+        ## Adding Radiobttons to switch selector between different plot
+        # #############################################################
+
+        plt.subplots_adjust(left=0.2)
+        axcolor = 'lightgoldenrodyellow'
+        rax = plt.axes([0.02, 0.8, 0.10, 0.15], axisbg=axcolor)
+        # create dict and list 
+        numlst = ['plot '+str(idx+1) for idx,elem in enumerate(self.axlist)]
+        ## python 2.7 and higher
+        #  self.hzdict = {'plot '+str(idx+1):elem for idx,elem in enumerate(self.axlist)}
+        ## python 2.6 and lower
+        self.hzdict = dict(('plot '+str(idx+1),elem) for idx,elem in enumerate(self.axlist))
+        radio = RadioButtons(rax, numlst)
+
+        # #############################################################
+        ## Getting a rectangular selector
+        # #############################################################
+
+        toggle_selector.RS = RectangleSelector(self.axlist[0], self.line_select_callback, drawtype='box', useblit=True,button=[1,3],minspanx=5, minspany=5,spancoords='pixels', rectprops = dict(facecolor='red', edgecolor = 'black', alpha=0.2, fill=True))
+
+        plt.connect('key_press_event', self.toggle_selector)
+
+        return radio, self.hzfunc
+
+def addFlag(data, flagger, indeciestobeflagged):
+        # INPUT section
+        print "Provide flag ID (2 or 3):"
+        print "  -- 2: keep data"
+        print "  -- 3: remove data"
+        flagid = raw_input(" -- default: %d \n" % flagger.flagid)
+        print flagid
+        reason = raw_input("Provide reason: \n")
+        print reason
+        flagkeys = raw_input("Keys to flag: e.g. x,y,z\n")
+        if not flagkeys == '':
+            if ',' in flagkeys:
+                keylist = flagkeys.split(',')
+                keylist = [elem for elem in keylist if elem in KEYLIST]
+            else:
+                if flagkeys in KEYLIST:
+                    keylist = [flagkeys]
+                else:
+                    keylist = []
+        else:
+            keylist = []
+        #print keylist
+
+        # ANALYSIS section
+        # now flag the data and restart figure
+        flagger.flag(indeciestobeflagged, flagid, reason, keylist)
+        # reduce to original keys
+        orgkeys = flagger.orgkeylist
+        data = data.selectkeys(orgkeys)
+        flagger = figFlagger(data)
+        #flagger.flag(data)
+        return flagger.idxarray
+
+def plotFlag(data):
+    '''
+    DEFINITION:
+	Creates a plot for flagging.
+        Rectangular selection is possible and flagging can be conducted.
+	Several additional keys provide data info.
+    RETURNS:
+        - stream: 	(Datastream) ndarray stream to be saved
+
+    REQUIRES:
+        - class figFlagger
+    EXAMPLE:
+        >>> flaggedstream = plotFlag(stream)
+    '''
+    flagger = figFlagger(data)
+    indeciestobeflagged = flagger.idxarray
+    while indeciestobeflagged > 0:
+        indeciestobeflagged = addFlag(flagger.data, flagger, indeciestobeflagged)
+
+    print "Returning data ...."
+    print "  -- original format: %s " % data.header['DataFormat']
+
+    orgkeys = flagger.orgkeylist
+    data = flagger.data.selectkeys(orgkeys)
+    return data
+
+
+#####################################################################
+#		Flagging					    #
+#####################################################################
 
 def plotEMD(stream,key,verbose=False,plottitle=None,
 	outfile=None,sratio=0.25,max_modes=20,hht=True):

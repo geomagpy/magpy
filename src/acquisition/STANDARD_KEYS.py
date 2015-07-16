@@ -20,7 +20,13 @@ The asociations with the MagPy stream class are contained as IDKEY dictionary in
 12: y				-- float (-30.0) [nT]
 13: z				-- float (43229.7) [nT]
 14: df				-- float (0.06) [nT]
-    15-29: 			-- [reserved]
+20: f				-- float (48633041.002) [pT]
+21: f				-- float (48633041.002) [pT]
+22: f				-- float (48633041.002) [pT]
+23: df				-- float (23.06) [pT]
+24: df				-- float (1.06) [pT]
+25: df				-- float (0.06) [pT]
+    15-19,26-29: 		-- [reserved]
 
 **30-39 : Temperature and Environment Data**
 30: T (ambient)			-- float (7.2) [C]
