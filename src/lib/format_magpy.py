@@ -160,11 +160,14 @@ def readPYCDF(filename, headonly=False, **kwargs):
     """
     Reading CDF format data - DTU type.
     """
-    stream = DataStream()
+    #stream = DataStream()
     #stream = DataStream([],{})
+    stream = DataStream([],{},[[] for key in KEYLIST])
 
+    array = [[] for key in KEYLIST]
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    ftype = kwargs.get('ftype')
     getfile = True
 
     # Some identification parameters used by Juergs
@@ -239,28 +242,40 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 #ti = cdf_file[key][...]
                 #row = LineStruct()
                 if str(cdfformat) == 'MagPyCDF':
-                    #ti = [date2num(elem) for elem in ti]
-                    #stream._put_column(ti,'time')
-                    for elem in cdf_file[key][...]:
-                        row = LineStruct()
-                        row.time = date2num(elem)
-                        stream.add(row)
-                        del row
-                else:
-                    for elem in cdf_file[key][...]:
-                        row = LineStruct()
-                        # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
-                        if type(elem) == float:
-                            row.time = 730120. + elem
-                        else:
+                    if ftype:
+                        ind = KEYLIST.index('time')
+                        array[ind] = np.asarray(date2num(cdf_file[key][...]))
+                    else:
+                        #ti = [date2num(elem) for elem in ti]
+                        #stream._put_column(ti,'time')
+                        for elem in cdf_file[key][...]:
+                            row = LineStruct()
                             row.time = date2num(elem)
-                        stream.add(row)
-                        del row
+                            stream.add(row)
+                            del row
+                else:
+                    if ftype:
+                        ind = KEYLIST.index(key)
+                        array[ind] = np.asarray(cdf_file[key][...]) + 730120.
+                    else:
+                        for elem in cdf_file[key][...]:
+                            row = LineStruct()
+                            # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
+                            if type(elem) == float:
+                                row.time = 730120. + elem
+                            else:
+                                row.time = date2num(elem)
+                            stream.add(row)
+                            del row
                 #del ti
             elif key == 'HNvar' or key == 'x':
                 x = cdf_file[key][...]
                 if len(x) > 0:
-                    stream._put_column(x,'x')
+                    if ftype:
+                        ind = KEYLIST.index('x')
+                        array[ind] = np.asarray(cdf_file[key][...])
+                    else:
+                        stream._put_column(x,'x')
                     del x
                     #if not headskip:
                     stream.header['col-x'] = 'x'
@@ -277,7 +292,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'HEvar' or key == 'y':
                 y = cdf_file[key][...]
                 if len(y) > 0:
-                    stream._put_column(y,'y')
+                    if ftype:
+                        ind = KEYLIST.index('y')
+                        array[ind] = np.asarray(cdf_file[key][...])
+                    else:
+                        stream._put_column(y,'y')
                     del y
                     try:
                         stream.header['col-y'] = cdf_file['y'].attrs['name']
@@ -292,7 +311,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'Zvar' or key == 'z':
                 z = cdf_file[key][...]
                 if len(z) > 0:
-                    stream._put_column(z,'z')
+                    if ftype:
+                        ind = KEYLIST.index('z')
+                        array[ind] = np.asarray(cdf_file[key][...])
+                    else:
+                        stream._put_column(z,'z')
                     del z
                     try:
                         stream.header['col-z'] = cdf_file['z'].attrs['name']
@@ -307,7 +330,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'Fsc' or key == 'f':
                 f = cdf_file[key][...]
                 if len(f) > 0:
-                    stream._put_column(f,'f')
+                    if ftype:
+                        ind = KEYLIST.index('f')
+                        array[ind] = np.asarray(cdf_file[key][...])
+                    else:
+                        stream._put_column(f,'f')
                     del f
                     try:
                         stream.header['col-f'] = cdf_file['f'].attrs['name']
@@ -400,7 +427,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             length = len(cdf_file['time'][...])         
                         arkey = [arkey[0]] * length
                     if len(arkey) > 0:
-                        stream._put_column(arkey,key.lower())
+                        if ftype:
+                            ind = KEYLIST.index(key.lower())
+                            array[ind] = np.asarray(cdf_file[key][...])
+                        else:
+                            stream._put_column(arkey,key.lower())
                         stream.header['col-'+key.lower()] = key.lower()
                         try:
                             stream.header['unit-col-'+key.lower()] = cdf_file[key.lower()].attrs['units']
@@ -417,7 +448,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
         cdf_file.close()
         del cdf_file
 
-    return DataStream(stream, stream.header,stream.ndarray)   
+    if ftype:
+        return DataStream([LineStruct()], stream.header,np.asarray(array))   
+    else:
+        return DataStream(stream, stream.header,stream.ndarray)   
 
 def readPYBIN(filename, headonly=False, **kwargs):
     """
@@ -441,9 +475,11 @@ def readPYBIN(filename, headonly=False, **kwargs):
     keylist = kwargs.get('keylist') # required for very old format, does not affect other formats
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    ftype = kwargs.get('ftype')
+
     getfile = True
 
-    stream = DataStream([],{})
+    stream = DataStream([],{},[[] for key in KEYLIST])
 
     theday = extractDateFromString(filename)
     try:
@@ -465,7 +501,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         header = fh.readline()
         h_elem = header.strip().split()
         if not h_elem[1] == 'MagPyBin':
-            print 'No MagPyBin format - aborting'
+            print 'readPYBIN: No MagPyBin format - aborting'
             return
         #print "Length ", len(h_elem), h_elem[2]
 
@@ -533,6 +569,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         stream.header['SensorID'] = h_elem[2]
         stream.header['SensorElements'] = ','.join(elemlist)
         stream.header['SensorKeys'] = ','.join(keylist)
+        array = [[] for key in KEYLIST]
         if nospecial:
             for idx, elem in enumerate(keylist):
                 stream.header['col-'+elem] = elemlist[idx]
@@ -544,13 +581,35 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     data= struct.unpack(packstr, line)
                 except:
                     print "readPYBIN: struct error", filename, packstr, struct.calcsize(packstr)
-                try:
+                try:                    
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-                    row = LineStruct()
-                    row.time = date2num(stream._testtime(time))
-                    for idx, elem in enumerate(elemlist):
-                        exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
-                    stream.add(row)
+                    if ftype:
+                        array[0].append(date2num(stream._testtime(time)))
+                        for idx, elem in enumerate(elemlist):
+                            try:
+                                index = KEYLIST.index(elem)
+                                if not elem.endswith('time'):
+                                    array[index].append(data[idx+7]/float(multilist[idx]))
+                                else:
+                                    try:
+                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                        array[index].append(date2num(stream._testtime(sectime)))
+                                    except:
+                                        pass
+                            except:
+                                if elem.endswith('time'):
+                                    try:
+                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                        index = KEYLIST.index('sectime')
+                                        array[index].append(date2num(stream._testtime(sectime)))
+                                    except:
+                                        pass
+                    else:
+                        row = LineStruct()
+                        row.time = date2num(stream._testtime(time))
+                        for idx, elem in enumerate(elemlist):
+                            exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
+                        stream.add(row)
                     if logbaddata == True:
                         loggerlib.error("readPYBIN: Good data resumes with: %s" % str(data))
                         logbaddata = False
@@ -562,6 +621,12 @@ def readPYBIN(filename, headonly=False, **kwargs):
         else:
             print "To be done ..."
             pass
+
+    array = np.asarray([np.asarray(el) for el in array])
+    stream.ndarray = array
+    if len(stream.ndarray[0]) > 0:
+        print "readPYBIN: Imported bin as ndarray"
+        stream.container = [LineStruct()]
 
     #print stream.header     
     return stream 
@@ -695,6 +760,7 @@ def writePYCDF(datastream, filename, **kwargs):
             if not key in NUMKEYLIST:
                 if not key == 'time':
                     print "converting"
+                    col = np.asarray(col)
                     col = col.astype('|S100')
         else:
             col = datastream._get_column(key)

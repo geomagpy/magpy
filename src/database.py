@@ -2139,7 +2139,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                 if not False in checkEqual3(col):
                     print "Found identical values only: %s" % key
                     #try:
-                    if str(col[0]) == '-' or str(col[0]).find('0000000000000000') or str(col[0]).find('xyz'):
+                    if str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find('0000000000000000') or str(col[0]).find('xyz'):
                         ls[index] = np.asarray([])
                     else:
                         ls[index] = col[:1]
@@ -2760,17 +2760,28 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         cursor.execute("DROP TABLE IF EXISTS FLAGS") 
 
     flagstr = 'FlagID INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, SensorID CHAR(50), FlagBeginTime CHAR(50), FlagEndTime CHAR(50), FlagComponents CHAR(50), FlagNum INT, FlagReason TEXT, ModificationDate CHAR(50)'
-    createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
-    cursor.execute(createflagtablesql)
+
+    # Check whether table exists
+    flagids = dbselect(db, 'FlagID', 'FLAGS')
+    if not len(flagids) > 0:
+        createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
+        cursor.execute(createflagtablesql)
+        flagid = 0
+    else:
+        flagid = int(max(flagids))
 
     # add flagging data
     #if lentype <= 4:
     #    flaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagNum, FlagReason, FlagComponents'
-    flaghead = 'FlagBeginTime, FlagEndTime, FlagNum, FlagReason, SensorID, ModificationDate, FlagComponents'
+    flaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagNum, FlagReason, SensorID, ModificationDate, FlagComponents'
 
     for elem in newlst:
-        elem = [str(el) for el in elem]
+        flagid = flagid+1
+        ne = [str(flagid)]
+        ne.extend(elem)
+        elem = [str(el) for el in ne]
         flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
+        print flagsql
         if mode == "replace":
             try:
                 cursor.execute(flagsql.replace("INSERT","REPLACE"))

@@ -38,6 +38,8 @@ try:
     from glob import glob, iglob, has_magic
     from StringIO import StringIO
     import operator # used for stereoplot legend
+    from itertools import groupby
+    from operator import itemgetter
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)
@@ -358,6 +360,7 @@ class DataStream(object):
     - stream.nfilter(self,debugmode=None,**kwargs):
     - stream.filter(self, **kwargs):
     - stream.fit(self, keys, **kwargs):
+    - stream.flag_outlier(self, **kwargs):
     - stream.flag_stream(self, key, flag, comment, startdate, enddate=None):
     - stream.func_add(self,function,**kwargs):
     - stream.func_subtract(self,function,**kwargs):
@@ -582,20 +585,31 @@ CALLED BY:
         APPLICATION:
            for non-destructive methods
         """
+        #print self.container
         #assert isinstance(self.container, (list, tuple))
-        assert isinstance(self.container, DataStream)
         co = DataStream()
         co.header = self.header
-        for el in self:
-            li = LineStruct()
-            for key in KEYLIST:
-                if key == 'time':
-                    li.time = el.time
-                else:
-                    exec('li.'+key+' = el.'+key)
-            co.add(li)
+        array = [[] for el in KEYLIST]
+        if len(self.ndarray[0])> 0:
+            for ind, key in enumerate(KEYLIST):
+                liste = []
+                for val in self.ndarray[ind]: ## This is necessary to really copy the content
+                    liste.append(val)
+                array[ind] = np.asarray(liste)
+            co.container = [LineStruct()]
+        else:
+            for el in self:
+                li = LineStruct()
+                for key in KEYLIST:
+                    if key == 'time':
+                        li.time = el.time
+                    else:
+                        #exec('li.'+key+' = el.'+key)
+                        elkey = getattr(el,key)
+                        setattr(li, key, elkey)
+                co.add(li)
 
-        return co
+        return DataStream(co,co.header,np.asarray(array))
             
 
     def __str__(self):
@@ -622,7 +636,18 @@ CALLED BY:
         if self.ndarray.size == 0:
             self.ndarray = ndarray
         else:
-            self.ndarray = np.append(self.ndarray, ndarray,1)
+            for idx,elem in enumerate(self.ndarray):
+                if len(ndarray[idx]) > 0:
+                    if len(self.ndarray) > 0:
+                        self.ndarray[idx] = np.append(self.ndarray[idx], ndarray[idx],1)
+                    else:
+                        fill = ''
+                        if len(NUMKEYLIST) <= idx:
+                            fill = float('nan')
+                        self.ndarray[idx] = fill * len(self.ndarray[0])
+                        self.ndarray[idx] = np.append(self.ndarray[idx], ndarray[idx],1)
+            #self.ndarray = np.asarray((list(self.ndarray)).extend(list(ndarray)))
+            #self.ndarray = np.append(self.ndarray, ndarray,1)
 
     # TODO add a similar function for streams
     def union(self,column):
@@ -639,7 +664,10 @@ CALLED BY:
         """
         st = date2num(self._testtime(time))
         if len(self.ndarray[0]) > 0:
-            return list(self.ndarray[0]).index(st), LineStruct()
+            try:
+                return list(self.ndarray[0]).index(st), LineStruct()
+            except:
+                return 0, []
         for index, line in enumerate(self):
             if line.time == st:
                 return index, line
@@ -653,8 +681,12 @@ CALLED BY:
         RETURNS:
             Two datetime objects, start and end.
         """
-        t_start = num2date(self[0].time)
-        t_end = num2date(self[-1].time)
+        if len(self.ndarray[0]) > 0:
+            t_start = num2date(np.min(self.ndarray[0])).replace(tzinfo=None)
+            t_end = num2date(np.max(self.ndarray[0])).replace(tzinfo=None)
+        else:
+            t_start = num2date(self[0].time).replace(tzinfo=None)
+            t_end = num2date(self[-1].time).replace(tzinfo=None)
 
         return t_start, t_end
 
@@ -770,7 +802,8 @@ CALLED BY:
         if len(self.ndarray[0]) > 0:
             self.ndarray, keylst = self.dropempty()
             try:
-                ndarray = self.ndarray[np.argsort(self.ndarray[0,:])]
+                ti = np.argsort(self.ndarray[0])                
+                ndarray = self.ndarray[:,ti]
                 ndarray = self.fillempty(ndarray,keylst)
             except:
                 ndarray = self.ndarray
@@ -1307,14 +1340,32 @@ CALLED BY:
 
 
     def _drop_nans(self, key):
-        """Helper to drop lines with NaNs in any of the selected keys.
-
         """
-        #print key
-        #keylst = [eval('elem.'+key) for elem in self]
-        #print keylst
-        newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
-        return DataStream(newst,self.header)
+    DEFINITION:
+        Helper to drop all lines when NaNs or INFs are found within the selected key
+
+    RETURNS:
+        - DataStream: 	(DataStream object) a new data stream object with out identified lines.
+
+    EXAMPLE:
+        >>> newstream = stream._drop_nans('x')
+
+    APPLICATION:
+        used for plotting and fitting of data
+        
+        """
+        array = [[] for elem in KEYLIST]
+        if len(self.ndarray[0]) > 0:
+            ind = KEYLIST.index(key)
+            indicieslst = [i for i,el in enumerate(self.ndarray[ind]) if isnan(el) or isinf(el)]
+            for index,key in enumerate(KEYLIST):
+                if len(self.ndarray[index])>0:
+                    array[index] = np.delete(self.ndarray[index], indicieslst)
+            newst = [LineStruct()]
+        else:
+            newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
+
+        return DataStream(newst,self.header,np.asarray(array))
 
 
     def _select_timerange(self,starttime=None, endtime=None):
@@ -1682,8 +1733,13 @@ CALLED BY:
                 loggerstream.error('calc_f: offset with wrong dimension given - needs to contain a three dim array like [a,b,c] - returning stream without changes')
                 return self 
 
+        ndtype = False
         try:
-            if len(self) < 1:
+            if len(self.ndarray[0]) > 0:
+                ndtype = True
+            elif len(self) > 1:
+                ndtype = False
+            else:
                 loggerstream.error('calc_f: empty stream - aborting')
                 return self 
         except:
@@ -1691,8 +1747,18 @@ CALLED BY:
             return self
 
         loggerstream.info('calc_f: --- Calculating f started at %s ' % str(datetime.now()))
-        for elem in self:
-            elem.f = np.sqrt((elem.x+offset[0])**2+(elem.y+offset[1])**2+(elem.z+offset[2])**2)
+        if ndtype:
+            indf = KEYLIST.index('f')
+            indx = KEYLIST.index('x')
+            indy = KEYLIST.index('y')
+            indz = KEYLIST.index('z')
+            x2 = ((self.ndarray[indx]+offset[0])**2).astype('float')
+            y2 = ((self.ndarray[indy]+offset[1])**2).astype('float')
+            z2 = ((self.ndarray[indz]+offset[2])**2).astype('float')
+            self.ndarray[indf] = np.sqrt(x2+y2+z2)
+        else:
+            for elem in self:
+                elem.f = np.sqrt((elem.x+offset[0])**2+(elem.y+offset[1])**2+(elem.z+offset[2])**2)
 
         self.header['col-f'] = 'f'
         self.header['unit-col-f'] = 'nT'
@@ -1725,6 +1791,12 @@ CALLED BY:
 
         header = self.header
         newstream = DataStream()
+        array = self.ndarray
+
+        if len(ndarray[0]) > 0:
+            ndtype = True
+            secsperday = 3600*24
+            ndarray[0] = ndarray[0] + offset.total_seconds/secsperday
 
         for elem in self:
             newtime = num2date(elem.time).replace(tzinfo=None) + offset
@@ -1732,9 +1804,9 @@ CALLED BY:
             elem.time = date2num(newtime)
             newstream.add(elem)
         
-        loggerstream.info('date_offset: Corrected time column by %s sec' % str(offset.seconds))
+        loggerstream.info('date_offset: Corrected time column by %s sec' % str(offset.total_seconds))
 
-        return DataStream(newstream,header)
+        return DataStream(newstream,header,array)
 
 
     def delta_f(self, **kwargs):
@@ -2248,7 +2320,7 @@ CALLED BY:
             if debugmode:
                 print "length after getting gaps:", len(self)
 
-        window_period = filter_width.seconds
+        window_period = filter_width.total_seconds()
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
 
@@ -2355,6 +2427,8 @@ CALLED BY:
                     self.ndarray[keyindex] = res
                 else:
                     self._put_column(res,key)
+
+        print self.ndarray[4]
 
         if resample:
             if debugmode:
@@ -2565,8 +2639,8 @@ CALLED BY:
                     lowlim = 0
 
         # Add filtering information to header:
-        self.header['DataSamplingRate'] = str(filter_width.seconds) + ' sec'
-        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange.seconds) + ' sec'
+        self.header['DataSamplingRate'] = str(filter_width.total_seconds()) + ' sec'
+        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange.total_seconds()) + ' sec'
         #self.header['DataInterval'] = str(filter_width.seconds)+' sec'
         
         loggerstream.info('filter: Finished filtering.')
@@ -2616,19 +2690,31 @@ CALLED BY:
             raise ValueError, "Knotstep needs to be smaller than 0.5"
 
         functionkeylist = {}
-        
+
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            ndtype=True
+
         for key in keys:
             tmpst = self._drop_nans(key)
-            if len(tmpst) < 1:
+            if ndtype:
+                t = tmpst.ndarray[0]
+            else:
+                t = tmpst._get_column('time')
+            if len(t) < 1:
                 break
-            t = tmpst._get_column('time')
             nt,sv,ev = self._normalize(t)
             sp = self.get_sampling_period()
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256
             if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
-            val = tmpst._get_column(key)
+            if ndtype:
+                ind = KEYLIST.index(key)
+                val = tmpst.ndarray[ind]
+            else:
+                val = tmpst._get_column(key)
+
             # interplolate NaN values
             #nans, xxx= nan_helper(val)
             #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
@@ -2692,11 +2778,10 @@ CALLED BY:
     APPLICATION:
         """
 
-        print "Adding flags .... please be patient"
-        print "Test2", self.ndarray[1]
+        print "Adding flags .... "
         # Define Defaultflag
-        flagls = [str(0) for elem in FLAGKEYLIST]
-        defaultflag = '-' + ''.join(flagls)
+        flagls = [str('-') for elem in FLAGKEYLIST]
+        defaultflag = ''
 
         # Get new flag
         newflagls = []
@@ -2705,45 +2790,201 @@ CALLED BY:
                 if len(self.ndarray[idx]) > 0:
                     newflagls.append(str(flag)) 
                 else:
-                    newflagls.append(str(0))
-            newflag = '-' + ''.join(newflagls)
+                    newflagls.append('-')
+            newflag = ''.join(newflagls)
         else:
             for idx,key in enumerate(FLAGKEYLIST): # Only key column
                 if len(self.ndarray[idx]) > 0 and FLAGKEYLIST[idx] in keys:
                     newflagls.append(str(flag)) 
                 else:
-                    newflagls.append(str(0))
-            newflag = '-' + ''.join(newflagls)
+                    newflagls.append('-')
+            newflag = ''.join(newflagls)
         
         flagarray, commentarray = [],[]
         flagindex = KEYLIST.index('flag')
         commentindex = KEYLIST.index('comment')
-        for i in range(len(self.ndarray[0])):
-            if i not in indexarray:
-                if len(self.ndarray[flagindex]) == 0:
-                    flagarray.append(defaultflag)
-                else:
-                    flagarray.append(self.ndarray[flagindex][i])
-                if len(self.ndarray[commentindex]) == 0:
-                    commentarray.append('-')
-                else:
-                    commentarray.append(self.ndarray[commentindex][i])
-            else:
-                indexarray.remove(i) # for speed
-                flagarray.append(newflag)
-                commentarray.append(comment)
-        # TODO check type
+
+        # create a predefined list
+        # ########################
+        # a) get existing flags and comments or create empty lists
+        if len(self.ndarray[flagindex]) > 0:
+            flagarray = self.ndarray[flagindex]
+        else:
+            flagarray = [''] * len(self.ndarray[0])
+        if len(self.ndarray[commentindex]) > 0:
+            commentarray = self.ndarray[commentindex]
+        else:
+            commentarray = [''] * len(self.ndarray[0])
+        # b) insert new info
+        for i in indexarray:
+            flagarray[i] = newflag
+            commentarray[i] = comment
+
         commentarray = np.asarray(commentarray, dtype='object')
         flagarray = np.asarray(flagarray, dtype='object')
-        #flagarray = np.asarray([defaultflag if i not in indexarray else newflag for i in range(len(self.ndarray[0]))])
-        #commentarray = np.asarray(['-' if i not in indexarray else comment for i in range(len(self.ndarray[0]))])
 
         flagnum = KEYLIST.index('flag')
         commentnum = KEYLIST.index('comment')
         self.ndarray[flagnum] = flagarray
         self.ndarray[commentnum] = commentarray
-        print "Test3", self.ndarray[1]
-        print "... finished"
+        #print "... finished"
+        return self
+
+    def flag_outlier(self, **kwargs):
+        """
+    DEFINITION:
+        Flags outliers in data, using quartiles.
+        Coding : 0 take, 1 remove, 2 force take, 3 force remove
+        Example:
+        0000000, 0001000, etc
+        012 = take f, automatically removed v, and force use of other
+        300 = force remove f, take v, and take other
+
+    PARAMETERS:
+    Variables:
+        - None.
+    Kwargs:
+	- keys:		(list) List of keys to evaluate. Default=['f']
+        - threshold: 	(float) Determines threshold for outliers.
+			1.5 = standard
+			5 = keeps storm onsets in
+			4 = Default as comprimise.
+        - timerange: 	(timedelta Object) Time range. Default = timedelta(hours=1)
+        - stdout:        prints removed values to stdout
+    RETURNS:
+        - stream: 	(DataStream Object) Stream with flagged data.
+
+    EXAMPLE:
+
+        >>> stream.flag_outlier(keys=['x','y','z'], threshold=2)
+
+    APPLICATION:
+        """
+        # Defaults:
+        timerange = kwargs.get('timerange')
+        threshold = kwargs.get('threshold')
+        keys = kwargs.get('keys')
+        markall = kwargs.get('markall')
+        stdout = kwargs.get('stdout')
+
+        sr = self.samplingrate()
+
+        if not timerange:
+            sr = self.samplingrate()
+            timerange = timedelta(seconds=sr*600)
+        if not keys:
+            keys = self._get_key_headers(numerical=True)
+        if not threshold:
+            threshold = 5.0
+
+        # Position of flag in flagstring
+        # f (intensity): pos 0
+        # x,y,z (vector): pos 1
+        # other (vector): pos 2
+
+        if not len(self.ndarray[0]) > 0:
+            loggerstream.info('flag_outlier: No ndarray - starting remove_outlier.')
+            self = self.remove_outlier(keys=keys,threshold=threshold,timerange=timerange,stdout=stdout,markall=markall)
+            return self
+
+        loggerstream.info('flag_outlier: Starting outlier removal.')
+
+        flagidx = KEYLIST.index('flag')
+        commentidx = KEYLIST.index('comment')
+        if not len(self.ndarray[flagidx]) > 0:
+            self.ndarray[flagidx] = [''] * len(self.ndarray[0])
+        if not len(self.ndarray[commentidx]) > 0:
+            self.ndarray[commentidx] = [''] * len(self.ndarray[0])
+
+        # get a poslist of all keys - used for markall
+        flagposls = [FLAGKEYLIST.index(key) for key in keys]
+        # Start here with for key in keys:
+        for key in keys:
+            flagpos = FLAGKEYLIST.index(key)
+            if not len(self.ndarray[flagpos]) > 0:
+                print "Flag_outlier: No data for key %s - skipping" % key
+                break
+            #print key, flagpos
+
+            st = 0
+            et = len(self.ndarray[0])
+            incrt = int(timerange.total_seconds()/sr)
+            if incrt == 0:
+                print "Flag_outlier: check timerange ... seems to be smaller as sampling rate"
+                break
+            at = incrt
+
+            while st < et:
+                idxst = st
+                idxat = at
+                st = at
+                at += incrt
+                if idxat > et:
+                    idxat = et
+
+                selcol = self.ndarray[flagpos][idxst:idxat]
+                selcol = selcol[~np.isnan(selcol)]
+
+                try:
+                    q1 = stats.scoreatpercentile(selcol,25)
+                    q3 = stats.scoreatpercentile(selcol,75)
+                    iqd = q3-q1
+                    md = np.median(selcol)
+                    whisker = threshold*iqd
+                except:
+                    try:
+                        md = np.median(selcol) 
+                        whisker = md*0.005
+                    except:
+                        loggerstream.warning("remove_outlier: Eliminate outliers produced a problem: please check.")
+                        pass
+
+                #print md, whisker, np.asarray(selcol)
+                for elem in range(idxst,idxat):
+                    #print flagpos, elem
+                    if not md-whisker < self.ndarray[flagpos][elem] < md+whisker and not np.isnan(self.ndarray[flagpos][elem]):
+                        try:
+                            if not self.ndarray[flagidx][elem] == '':
+                                #print self.ndarray[flagidx][elem]
+                                newflagls = self.ndarray[flagidx][elem].split()
+                                if not newflagls[flagpos] > 1:
+                                    newflagls[flagpos] = '1'
+                                if markall:
+                                    for p in flagposls:
+                                        if not newflagls[p] > 1:
+                                            newflagls[p] = '1'
+                                newflag = ''.join(newflagls)
+                            else:
+                                x=1/0 # Force except
+                        except:
+                            newflagls = []
+                            for idx,el in enumerate(FLAGKEYLIST): # Only key column
+                                if idx == flagpos:
+                                    newflagls.append('1') 
+                                else:
+                                    newflagls.append('-')
+                            if markall:
+                                for p in flagposls:
+                                    newflagls[p] = '1'
+                            newflag = ''.join(newflagls)
+
+                        self.ndarray[flagidx][elem] = newflag
+                        self.ndarray[commentidx][elem] = "aof - threshold: %s, window: %s sec" % (str(threshold), str(timerange.total_seconds()))
+                        infoline = "remove_outlier: at %s - removed %s (= %f)" % (str(self.ndarray[0][elem]), key, self.ndarray[flagpos][elem])
+                        loggerstream.info(infoline)
+                        if stdout:
+                            print infoline
+                    else:
+                        try:
+                            if not self.ndarray[flagidx][elem] == '':
+                                pass
+                            else:
+                                x=1/0 # Well not elegant but working
+                        except:
+                            self.ndarray[flagidx][elem] = ''
+                            self.ndarray[commentidx][elem] = ''
+        loggerstream.info('remove_outlier: Outlier removal finished.')
+
         return self
 
 
@@ -2779,6 +3020,10 @@ CALLED BY:
         if not len(self) > 0:
             return DataStream()
 
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            ndtype = True
+
         startdate = self._testtime(startdate)
 
         if not enddate:
@@ -2786,7 +3031,10 @@ CALLED BY:
             check_startdate, val = self.findtime(start)
 	    if check_startdate == 0:
 	        loggerstream.info("flag_stream: No data at given date for flag. Finding nearest data point.")
-	        time = self._get_column('time')
+                if ndtype:
+                    time = self.ndarray[0]
+                else:
+                    time = self._get_column('time')
                 #print start, len(time)
 	        new_endtime, index = find_nearest(time, start)
 	        if new_endtime > start:
@@ -2800,20 +3048,55 @@ CALLED BY:
         else:
             enddate = self._testtime(enddate)
 
-        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-        pos = poslst[0]
+        pos = FLAGKEYLIST.index(key)
+        #poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+        #pos = poslst[0]
 
-        for elem in self:
-            if elem.time >= date2num(startdate) and elem.time <= date2num(enddate):
-                fllist = list(elem.flag)
-                fllist[pos] = str(flag)
-                elem.flag=''.join(fllist)
-                elem.comment = comment
+        # Get start and end indicies:
+        start = date2num(startdate)
+        st, ls = self.findtime(startdate)
+        end = date2num(enddate)
+        ed, le = self.findtime(enddate)
+        if ed == len(self.ndarray[0]):
+            ed = ed-1
+        # Create a defaultflag
+        defaultflag = ['-' for el in FLAGKEYLIST]
+
+        if ndtype:
+            flagind = KEYLIST.index('flag')
+            commentind = KEYLIST.index('comment')
+            # Check whether flag and comment are exisiting - if not create empty
+            if not len(self.ndarray[flagind]) > 0:
+                self.ndarray[flagind] = [''] * len(self.ndarray[0])
+            if not len(self.ndarray[commentind]) > 0:
+                self.ndarray[commentind] = [''] * len(self.ndarray[0])
+            # Now either modify existing or add new flag
+            for i in range(st,ed+1):
+                if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
+                    flagls = defaultflag
+                else:
+                    flagls = list(self.ndarray[flagind][i])
+                # if existing flaglistlength is shorter, because new columns where added later to ndarray
+                if len(flagls) < pos:
+                    flagls.extend(['-' for j in range(pos+1-flagls)])
+                flagls[pos] = str(flag)
+                self.ndarray[flagind][i] = ''.join(flagls)
+                self.ndarray[commentind][i] = comment
+        else:
+            for elem in self:
+                if elem.time >= start and elem.time <= end:
+                    fllist = list(elem.flag)
+                    if not len(fllist) > 1:
+                        fllist = defaultflag
+                    fllist[pos] = str(flag)
+                    elem.flag=''.join(fllist)
+                    elem.comment = comment
         if flag == 1 or flag == 3:
             if enddate:	
                 loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
             else:
                 loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat(),comment))
+
         return self
             
         
@@ -3142,7 +3425,12 @@ CALLED BY:
             loggerstream.warning("interpol: Interpolation kind %s not valid. Using linear interpolation instead." % kind)
             kind = 'linear'
 
-        t = self._get_column('time')
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            t = self.ndarray[0]
+            ndtype = True
+        else:
+            t = self._get_column('time')
         nt,sv,ev = self._normalize(t)
         sp = self.get_sampling_period()
         functionkeylist = {}
@@ -3152,7 +3440,11 @@ CALLED BY:
         for key in keys:
             if not key in KEYLIST[1:16]:
                 loggerstream.error("interpol: Column key not valid!")
-            val = self._get_column(key)
+            if ndtype:
+                ind = KEYLIST.index(key)
+                val = self.ndarray[ind]
+            else:
+                val = self._get_column(key)
             # interplolate NaN values
             nans, xxx= nan_helper(val)
             try: # Try to interpolate nan values
@@ -3670,9 +3962,12 @@ CALLED BY:
         if not std:
             std = False
 
-        try:
-            assert len(self) > 0
-        except:
+        ndtype = False
+        if len(self.ndarray[0])>0:
+            ndtype = True
+        elif len(self) > 0:
+            pass
+        else:
             loggerstream.error('mean: empty stream - aborting')
             if std:
                 return float("NaN"), float("NaN")
@@ -3684,8 +3979,15 @@ CALLED BY:
         if not key in KEYLIST[:16]:
             loggerstream.error("mean: Column key not valid!")
 
-        ar = [eval('elem.'+key) for elem in self if not isnan(eval('elem.'+key))]
-        div = float(len(ar))/float(len(self))*100.0
+        if ndtype:
+            ind = KEYLIST.index(key)
+            length = len(self.ndarray[0])
+            ar = self.ndarray[ind]
+            ar = ar[~np.isnan(ar)]
+        else:
+            ar = [getattr(elem,key) for elem in self if not isnan(getattr(elem,key))]
+            length = float(len(self))
+        div = float(len(ar))/length*100.0
 
         if div >= percentage:
             if std:
@@ -3703,8 +4005,8 @@ CALLED BY:
     def multiply(self, factors, square=False):
         """
     DEFINITION:
-        A function to multiply the datastream, should one ever have the need to,
-	for whatever bizarre reasons.
+        A function to multiply the datastream, should one ever have the need to.
+	Scale value correction for example.
 
     PARAMETERS:
     Variables:
@@ -3949,19 +4251,37 @@ CALLED BY:
     APPLICATION:
 
         """
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            ndtype =True
 
         for key in offsets:
             if key in KEYLIST:
-                val = self._get_column(key)
+                if ndtype:
+                    ind = KEYLIST.index(key)
+                    val = self.ndarray[ind]
+                else:
+                    val = self._get_column(key)
                 if key == 'time':
-                    print num2date(val[0]).replace(tzinfo=None)
-                    print num2date(val[0]).replace(tzinfo=None) + offsets[key]
-                    newval = [date2num(num2date(elem).replace(tzinfo=None) + offsets[key]) for elem in val]
+                    try:
+                        secperday = 24*3600
+                        os = offsets[key].total_seconds()/secperday
+                    except:
+                        print "offset: error with time offset - check provided timedelta"
+                        break
+                    val = val + os
+                    #print num2date(val[0]).replace(tzinfo=None)
+                    #print num2date(val[0]).replace(tzinfo=None) + offsets[key]
+                    #newval = [date2num(num2date(elem).replace(tzinfo=None) + offsets[key]) for elem in val]
                     loggerstream.info('offset: Corrected time column by %s sec' % str(offsets[key]))
                 else:
-                    newval = [elem + offsets[key] for elem in val]
+                    val = val + offsets[key]
+                    #newval = [elem + offsets[key] for elem in val]
                     loggerstream.info('offset: Corrected column %s by %.3f' % (key, offsets[key]))
-                self = self._put_column(newval, key)
+                if ndtype:
+                    self.ndarray[ind] = val
+                else:
+                    self = self._put_column(val, key)
             else:
                 loggerstream.error("offset: Key '%s' not in keylist." % key)
     
@@ -4646,17 +4966,27 @@ CALLED BY:
 
         cutstream = DataStream()
         cutstream.header = self.header
+        cutstream.ndarray = self.ndarray
         starttime = self._testtime(starttime)
         endtime = self._testtime(endtime)
         stval = 0
-        for idx, elem in enumerate(self):
-            newline = LineStruct()
-            if not isnan(elem.time):
-                newline.time = elem.time
-                if elem.time <= date2num(starttime) or elem.time > date2num(endtime):
-                    for key in KEYLIST:
-                        exec('newline.'+key+' = elem.'+key)
-                cutstream.add(newline)
+
+        if len(cutstream.ndarray[0]) > 0:
+            st,ls = cutstream.findtime(starttime)
+            ed,le = cutstream.findtime(endtime)
+            dropind = [i for i in range(st,ed)]
+            for index,key in enumerate(KEYLIST):
+                if len(cutstream.ndarray[index])>0:
+                    cutstream.ndarray[index] = np.delete(cutstream.ndarray[index], dropind)
+        else:
+            for idx, elem in enumerate(self):
+                newline = LineStruct()
+                if not isnan(elem.time):
+                    newline.time = elem.time
+                    if elem.time <= date2num(starttime) or elem.time > date2num(endtime):
+                        for key in KEYLIST:
+                            exec('newline.'+key+' = elem.'+key)
+                    cutstream.add(newline)
 
         return cutstream
 
@@ -4690,25 +5020,44 @@ CALLED BY:
         if not keys:
             keys = FLAGKEYLIST
 
+        # Converting elements of flaglist to strings
+        flaglist = [str(fl) for fl in flaglist]
+        array = self.ndarray
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            flagind = KEYLIST.index('flag')
+            ndtype = True
+
         for key in keys:
-            poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-            pos = poslst[0]
+            pos = KEYLIST.index(key)
             liste = []
             emptyelem = LineStruct()
-            for elem in self:
-                fllst = list(elem.flag)
-                try: # test whether useful flag is present: flaglst length changed during the program development
-                    flag = int(fllst[pos])
-                except:
-                    flag = 0
-                if not flag in flaglist:
-                    liste.append(elem)
-                else:
-                    exec('elem.'+key+' = float("nan")')
-                    liste.append(elem)
+            if ndtype:
+                # get indicies of all non-empty flag contents
+                indlst = [i for i,el in enumerate(self.ndarray[flagind]) if not el in ['','-']]
+                for i in indlst:
+                    flagls = list(self.ndarray[flagind][i])
+                    flag = flagls[pos]
+                    if flag in flaglist:
+                        array[pos][i] = float("nan")
+                liste = [LineStruct()]
+            else:
+                for elem in self:
+                    fllst = list(elem.flag)
+                    try: # test whether useful flag is present: flaglst length changed during the program development
+                        flag = int(fllst[pos])
+                    except:
+                        flag = 0
+                    if not flag in flaglist:
+                        liste.append(elem)
+                    else:
+                        setattr(elem, key, float("nan"))
+                        #exec('elem.'+key+' = float("nan")')
+                        liste.append(elem)
 
         #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
-        return DataStream(liste, self.header)      
+        return DataStream(liste, self.header,array)      
+
 
 
     def remove_outlier(self, **kwargs):
@@ -4774,22 +5123,31 @@ CALLED BY:
         
         loggerstream.info('remove_outlier: Starting outlier removal.')
 
-        if len(self) < 1:
+        ndtype = False
+        if len(self.ndarray[0]) > 0:
+            ndtype = True
+            arraytime = self.ndarray[0]
+            flagind = KEYLIST.index('flag')
+            commentind = KEYLIST.index('comment')
+            print ("Use flag_outlier instead")
+        elif len(self) > 1:
+            arraytime = self._get_column('time')
+        else:
             loggerstream.warning('remove_outlier: No data - Stopping outlier removal.')
             return self
         
+        # Working non-destructive
+        restream = self.copy()
+
         # Start here with for key in keys:
         for key in keys:
-            poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-            flagpos = poslst[0]
+            flagpos = FLAGKEYLIST.index(key)
 
-            st = self._get_min('time')
-            et = self._get_max('time')
+            st,et = self._find_t_limits()
+            st = date2num(st)
+            et = date2num(et)
             at = date2num((num2date(st).replace(tzinfo=None)) + timerange)
             incrt = at-st
-            
-
-            arraytime = self._get_column('time')
 
             newst = DataStream()
             while st < et:
@@ -4800,10 +5158,16 @@ CALLED BY:
                 st = at
                 at += incrt
 
-                lstpart = self[idxst:idxat]
-                # changed at 28.08.2014
-                #selcol = [eval('row.'+key) for row in lstpart]
-                selcol = [eval('row.'+key) for row in lstpart if not isnan(eval('row.'+key))]
+                if ndtype:
+                    ind = KEYLIST.index(key)
+                    lstpart = self.ndarray[ind][idxst:idxat]
+                    selcol = lstpart[~np.isnan(lstpart)]
+                else:
+                    lstpart = self[idxst:idxat]
+                    # changed at 28.08.2014
+                    #selcol = [eval('row.'+key) for row in lstpart]             
+                    selcol = [eval('row.'+key) for row in lstpart if not isnan(eval('row.'+key))]
+
 
                 try:
                     q1 = stats.scoreatpercentile(selcol,25)
@@ -4819,37 +5183,70 @@ CALLED BY:
                         loggerstream.warning("remove_outlier: Eliminate outliers produced a problem: please check.")
                         pass
 
-                for elem in lstpart:
-                    row = LineStruct()
-                    row = elem
-                    if isNumber(row.flag): # if somehow the flag has been transfered to a number - create a string again
-                        num = str(int(row.flag))[:-1]
-                        row.flag = num+'-'
-                    if not md-whisker < eval('elem.'+key) < md+whisker:
-                        fllist = list(row.flag)
-                        if not int(fllist[flagpos]) > 1:
-                            if markall:
-                                for n in range(len(fllist)):
-                                    if not int(fllist[flagpos]) > 1:
-                                        fllist[n] = '1'
-                            fllist[flagpos] = '1'
-                            row.flag=''.join(fllist)
-                            row.comment = "%s removed by automatic outlier removal" % key
-                            if not isnan(eval('elem.'+key)):
-                                infoline = "remove_outlier: at %s - removed %s (= %f)" % (str(num2date(elem.time)),key, eval('elem.'+key))
-                                loggerstream.info(infoline)
-                                if stdout:
-                                    print infoline
-                    else:
-                        fllist = list(row.flag)
-                        if not int(fllist[flagpos]) > 1:
-                            fllist[flagpos] = '0'
-                            row.flag=''.join(fllist)
-                    newst.add(row)
+                if ndtype:
+                    for i in range(idxst,idxat):
+                        if row.flag == '' or row.flag == '0000000000000000-' or row.flag == '-' or row.flag == '-0000000000000000':
+                            row.flag = '-' * len(FLAGKEYLIST)
+                        if row.comment == '-':
+                            row.comment = ''
+                else:
+                    for elem in lstpart:
+                        row = LineStruct()
+                        row = elem
+                        if row.flag == '' or row.flag == '0000000000000000-' or row.flag == '-' or row.flag == '-0000000000000000':
+                            #row.flag = '0000000000000000-'
+                            row.flag = '-----------------'
+                        if row.comment == '-':
+                            row.comment = ''
+                        if isNumber(row.flag): # if somehow the flag has been transfered to a number - create a string again
+                            num = str(int(row.flag))[:-1]
+                            row.flag = num+'-'
+                        if not md-whisker < eval('elem.'+key) < md+whisker:
+                            fllist = list(row.flag)
+                            #print "Found", key
+                            if len(fllist) >= flagpos:
+                                fllist = np.asarray(fllist, dtype=object)
+                                if not fllist[flagpos] in [1,2,3,4] :
+                                    if markall:
+                                        #print "mark"
+                                        fl = []
+                                        for j,f in enumerate(FLAGKEYLIST):
+                                            if f in keys:
+                                                fl.append('1')
+                                            else:
+                                                fl.append('-')
+                                        for idx, el in enumerate(fllist):
+                                            if el in [1,2,3,4]:
+                                                fl[idx] = el
+                                        fllist = fl
+                                    fllist[flagpos] = '1'
+                                    row.flag=''.join(fllist)
+                                    row.comment = "aof - threshold: %s, window: %s sec" % (str(threshold), str(timerange.total_seconds()))
+                                    #print row.flag, key
+                                    if not isnan(eval('elem.'+key)):
+                                        infoline = "remove_outlier: at %s - removed %s (= %f)" % (str(num2date(elem.time)),key, eval('elem.'+key))
+                                        loggerstream.info(infoline)
+                                        if stdout:
+                                            print infoline
+                        else:
+                            fllist = list(row.flag)
+                            if len(fllist) >= flagpos:
+                                if row.flag == '':
+                                    pass
+                                elif fllist[flagpos] == '-':
+                                    testlst = [el for el in fllist if el in ['0','1','2','3','4']]
+                                    if not len(testlst) > 0:
+                                        row.flag = ''
+                                else:
+                                    pass
+                        newst.add(row)
 
         loggerstream.info('remove_outlier: Outlier removal finished.')
 
-        return DataStream(newst, self.header)        
+        if ndtype:
+            return restream
+        else:
+            return DataStream(newst, self.header, self.ndarray)
 
 
     def resample(self, keys, **kwargs):
@@ -4883,6 +5280,9 @@ CALLED BY:
             period = 60.
 
         ndtype = False
+        if len(self.ndarray[0]) > 0:
+            ndtype = True
+
 	sp = self.samplingrate()
 
 	loggerstream.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
@@ -4890,11 +5290,7 @@ CALLED BY:
 	loggerstream.info("resample: Resampling keys %s " % (','.join(keys)))
 
         # Determine the minimum time
-        if len(self.ndarray[0]) > 0:
-            t_min = num2date(np.min(self.ndarray[0]))
-            ndtype = True
-        else:
-            t_min = num2date(self._get_min('time'))
+        t_min,t_max = self._find_t_limits()
         t_start = t_min
 
         if offset:
@@ -4907,12 +5303,8 @@ CALLED BY:
         else:
             t_min = ceil_dt(t_min,period)
             startperiod, line = self.findtime(t_min)
-            #t_min = ceil_dt(t_min,0)
-            #startperiod, line = self.findtime(t_min)
-            #startperiod = 0
-            #line = self[0]
 
-        if fast:
+        if fast:   # To be done if timesteps are at period timesteps
             try:
          	loggerstream.info("resample: Using fast algorithm.")
                 si = timedelta(seconds=sp)
@@ -4922,13 +5314,15 @@ CALLED BY:
                     loggerstream.warning("resample: Resampling period must be larger than original sampling period.")
                     return self
 
-                if not line == [] or ndtype :
-                    xx = np.round(period/sampling_period)
+                print "Trying fast algorythm"
+                if not line == [] or ndtype: # or (ndtype and not line == []):
+                    xx = int(np.round(period/sampling_period))
                     newstream = DataStream()
                     newstream.header = self.header
                     if ndtype:
                         lst = []
                         for ind,elem in enumerate(self.ndarray):
+                            #print "Now here", elem
                             if len(elem) > 0:
                                 lst.append(np.asarray(elem[startperiod::xx]))
                             else:
@@ -4944,9 +5338,12 @@ CALLED BY:
                 loggerstream.warning("resample: Fast resampling failed - switching to slow mode")
                 pass
 
+        # This is done if timesteps are not at period intervals
+        # -----------------------------------------------------
+
         print "RESAMPLE Here 3"
         # Create a list containing time steps
-	t_max = num2date(self._get_max('time'))
+	#t_max = num2date(self._get_max('time'))
 	t_list = []
         time = t_min
         while time <= t_max:
@@ -4962,19 +5359,24 @@ CALLED BY:
 
 	res_stream = DataStream()
 	res_stream.header = self.header
-        for item in t_list:
-            row = LineStruct()
-            row.time = item
-            res_stream.add(row)
+        array=[[] for elem in KEYLIST]
+        if ndtype:
+            array[0] = np.asarray(t_list)
+            res_stream.add(LineStruct())
+        else:
+            for item in t_list:
+                row = LineStruct()
+                row.time = item
+                res_stream.add(row)
 
         for key in keys:
             print "Resampling:", key
             if key not in KEYLIST[1:16]:
                 loggerstream.warning("resample: Key %s not supported!" % key)
 
+            index = KEYLIST.index(key)
             try:
                 int_data = self.interpol([key],kind='linear')#'cubic')
-
                 int_func = int_data[0]['f'+key]
                 int_min = int_data[1]
                 int_max = int_data[2]
@@ -4984,16 +5386,28 @@ CALLED BY:
                     #print item, ind
                     functime = (item - int_min)/(int_max - int_min)
                     #orgval = eval('self[int(ind*multiplicator)].'+key)
-                    orgval = getattr(self[int(ind*multiplicator)],key)
+                    if ndtype:
+                        if int(ind*multiplicator) <= len(self.ndarray[index]):
+                            orgval = self.ndarray[index][int(ind*multiplicator)]
+                        else:
+                            print "Check Resampling method"
+                            orgval = 1.0
+                    else:
+                        orgval = getattr(self[int(ind*multiplicator)],key)
                     tempval = float(nan)
                     if not isnan(orgval):
                         #print "no nan"
                         tempval = int_func(functime)
                     key_list.append(float(tempval))
 
-                res_stream._put_column(key_list,key)
+                if ndtype:
+                    array[index] = np.asarray(key_list)
+                else:
+                    res_stream._put_column(key_list,key)
             except:
                 loggerstream.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
+
+        res_stream.ndarray = np.asarray(array)
 
         loggerstream.info("resample: Data resampling complete.")
 	#return DataStream(res_stream,self.headers)
@@ -5097,6 +5511,8 @@ CALLED BY:
         EXAMPLES:
             >>> stream = stream.scale_correction(['x','y','z'],[1,0.988,1])
         """
+
+        print "Function will be removed - use e.g. self.multiply({'y': 0.988}) instead"
 
         # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
 
@@ -5629,7 +6045,11 @@ CALLED BY:
 
         loggerstream.info('Trim: Started from %s to %s' % (starttime,endtime))
 
- 
+        ndtype = False
+        if self.ndarray[0].size > 0:
+            ndtype = True
+            self.container = [LineStruct()]
+
         #-ndarrray---------------------------------------
         if starttime:
             starttime = self._testtime(starttime)
@@ -5641,8 +6061,8 @@ CALLED BY:
         if endtime:
             endtime = self._testtime(endtime)
             if self.ndarray[0].size > 0:   # time column present
-                idx = (np.abs(self.ndarray[0]-date2num(endtime))).argmin()
-                if idx + 1 > len(self.ndarray[0]): ## prevent too large idx values
+                idx = 1 + (np.abs(self.ndarray[0]-date2num(endtime))).argmin()
+                if idx > len(self.ndarray[0]): ## prevent too large idx values
                     idx -= 1
                 for i in range(len(self.ndarray)):
                     length = len(self.ndarray[i])
@@ -5652,7 +6072,7 @@ CALLED BY:
 
 
         #--------------------------------------------------
-        if newway:
+        if newway and not ndtype:
 	# Non-destructive trimming of stream 
             trimmedstream = DataStream()
             trimmedstream.header = self.header
@@ -5671,62 +6091,35 @@ CALLED BY:
             return trimmedstream
         #--------------------------------------------------
 
-        stream = DataStream()
+        if not ndtype:
+            stream = DataStream()
 
-        if starttime:
-            # check starttime input
-            starttime = self._testtime(starttime)
-            stval = 0
-            """
-            if isinstance(starttime, float) or isinstance(starttime, int):
-                try:
-                    starttime = num2date(starttime)
-                except:
-                    raise TypeError
-            elif isinstance(starttime, str):
-                try:
-                    starttime = datetime.strptime(starttime,"%Y-%m-%d")
-                except:
-                    raise TypeError
-            elif not isinstance(starttime, datetime):
-                raise TypeError
-            """
-            for idx, elem in enumerate(self):
-                if not isnan(elem.time):
-                    if num2date(elem.time).replace(tzinfo=None) > starttime.replace(tzinfo=None):
-                        #stval = idx-1 # changed because of latex output
-                        stval = idx
-                        break
-            if stval < 0:
+            if starttime:
+                # check starttime input
+                starttime = self._testtime(starttime)
                 stval = 0
-            self.container = self.container[stval:]
+                for idx, elem in enumerate(self):
+                    if not isnan(elem.time):
+                        if num2date(elem.time).replace(tzinfo=None) > starttime.replace(tzinfo=None):
+                            #stval = idx-1 # changed because of latex output
+                            stval = idx
+                            break
+                if stval < 0:
+                    stval = 0
+                self.container = self.container[stval:]
        
-        # remove data prior to endtime input
-        if endtime:
-            # check endtime input
-            endtime = self._testtime(endtime)
-            """
-            if isinstance(endtime, float) or isinstance(endtime, int):
-                try:
-                    endtime = num2date(endtime).replace(tzinfo=None)
-                except:
-                    raise TypeError
-            elif isinstance(endtime, str):
-                try:
-                    endtime = datetime.strptime(endtime,"%Y-%m-%d")
-                except:
-                    raise TypeError
-            elif not isinstance(endtime, datetime):
-                raise TypeError
-            """
-            edval = len(self)
-            for idx, elem in enumerate(self):
-                if not isnan(elem.time):
-                    if num2date(elem.time).replace(tzinfo=None) > endtime.replace(tzinfo=None):
-                        edval = idx
-                        #edval = idx-1
-                        break
-            self.container = self.container[:edval]
+            # remove data prior to endtime input
+            if endtime:
+                # check endtime input
+                endtime = self._testtime(endtime)
+                edval = len(self)
+                for idx, elem in enumerate(self):
+                    if not isnan(elem.time):
+                        if num2date(elem.time).replace(tzinfo=None) > endtime.replace(tzinfo=None):
+                            edval = idx
+                            #edval = idx-1
+                            break
+                self.container = self.container[:edval]
 
         return DataStream(self.container,self.header,self.ndarray)
 
@@ -6652,8 +7045,23 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
 def mergeStreams(stream_a, stream_b, **kwargs):
     """
     DEFINITION:
-        Combine the contents of two data streams.
-        Basically two methods are possible:
+        Combine the contents of two data streams realtive to stream_a.
+        Basically three methods are possible:
+        1. Insert data from stream_b into stream_a based on timesteps of a
+           - if keys are provided only these specific columns are inserted into a
+           - if data is existing in stream_a only nans are replaced
+                 here flags (4) are set and a comment "inserted from SensorID" is added 
+           - use get_gaps for adding missing timesteps to stream_a before
+        2. Replace 
+           - same as insert but here all existing time series data is replaced by 
+             corresponding data from stream_b
+        3. Addall 
+           - addall adds (inserts) all data from stream_b to stream_a including all 
+             timesteps not existing in a 
+        The streams need to overlapp, base stream is stream_a of which the time range 
+        is not modfified. If you want to extend this stream by new data use the extend
+        method.
+ 
         1. replace data from specific columns of stream_a with data from stream_b.
         - requires keys
         2. fill gaps in stream_a data with stream_b data without replacing any data.
@@ -6665,12 +7073,14 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 	- stream_b	(DataStream object) this stream is merged into stream_a
     Kwargs:
         - addall: 	(bool) Add all elements from stream_b
-        - comment: 	(str) Add comment to stream_b data in stream_a.
         - extend:	(bool) Time range of stream b is eventually added to stream a. 
 			Default False.
 			If extend = true => any existing date which is not present in stream_a 
 			will be filled by stream_b
+        - mode:		(string) 'insert' or 'replace' or 'addall'.
         - keys:		(list) List of keys to add from stream_b into stream_a.
+        - comment: 	(str) Define comment to stream_b data in stream_a.
+
         - offset: 	(float) Offset is added to stream b values. Default 0.
         - replace: 	(bool) Allows existing stream_a values to be replaced by stream_b ones.
 
@@ -6683,6 +7093,12 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
     APPLICATION:
     """
+    # new
+    mode = kwargs.get('mode')
+
+    if not mode:
+        mode = 'insert'  # other possibilities: replace, ... 
+
 
     addall = kwargs.get('addall') 
     comment = kwargs.get('comment')
@@ -6691,32 +7107,121 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     offset = kwargs.get('offset')
     replace = kwargs.get('replace')
 
-    if not comment:
-        comment = '-'
-    if not keys:
-        keys = KEYLIST[1:16]
     if not offset:
         offset = 0
     if not replace:
         replace = False
+    if not keys:
+        keys = stream_b._get_key_headers()
    
     loggerstream.info('mergeStreams: Start mergings at %s.' % str(datetime.now()))
 
     headera = stream_a.header
     headerb = stream_b.header
+    
+    # Defining deaufault comment
+    # --------------------------------------
+    try:
+        sensidb = headerb['SensorID']
+    except:
+        sensidb = 'stream_b'
+
+    if not comment:
+        comment = 'added from '+sensidb
+    
+    # Check stream type and eventually convert them to ndarrays
+    # --------------------------------------
+    ndtype = False
+    if len(stream_a.ndarray[0]) > 0:
+        # Using ndarray and eventually convert stream_b to ndarray as well
+        ndtype = True
+        if not len(stream_b.ndarray[0]) > 0:
+            stream_b = stream_b.linestruct2ndarray()
+    elif len(stream_b.ndarray[0]) > 0:
+        ndtype = True
+        stream_a = stream_a.linestruct2ndarray()
+    else:  
+        ndtype = True
+        stream_a = stream_a.linestruct2ndarray()
+        stream_b = stream_b.linestruct2ndarray()
+        if not len(stream_a.ndarray[0]) > 0 and len(stream_b.ndarray[0]) > 0:
+            loggerstream.error('subtractStreams: stream(s) empty - aborting subtraction.')
+            return stream_a
+        
+        #try:
+        #    assert len(stream_a) > 0
+        #    assert len(stream_b) > 0
+        #except:
+        #    loggerstream.error('subtractStreams: stream_a empty - aborting subtraction.')
+        #    return stream_a
+
+    # non-destructive
+    # --------------------------------------
+    sa = stream_a.copy()
+    sb = stream_b.copy()
+
+    # Sampling rates
+    # --------------------------------------
+    sampratea = sa.samplingrate()
+    samprateb = sb.samplingrate()
+    minsamprate = min(sampratea,samprateb)
+    
+    if ndtype:
+        timea = sa.ndarray[0]
+    else:
+        timea = sa._get_column('time')
+
+    # truncate b to time range of a
+    # --------------------------------------
+    try:
+        sb = sb.trim(starttime=num2date(timea[0]).replace(tzinfo=None), endtime=num2date(timea[-1]).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
+    except:
+        print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        return stream_a
+
+    if ndtype:
+        timeb = sb.ndarray[0]
+    else:
+        timeb = sb._get_column('time')
+
+    print timeb[0],timeb[-1]
+    # truncate a to range of b
+    # --------------------------------------
+    try:
+        sa = sa.trim(starttime=num2date(timeb[0]).replace(tzinfo=None), endtime=num2date(timeb[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
+    except:
+        print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        return stream_a
+
+    # testing overlapp
+    # --------------------------------------
+    if not len(sb) > 0:
+        print "subtractStreams: stream_a and stream_b are not overlapping - returning stream_a"
+        return stream_a
+
+    timea = maskNAN(timea)
+    timeb = maskNAN(timeb)
+
+
+    """
+    headera = stream_a.header
+    headerb = stream_b.header
 
     # Checking ndtype
-    ndtypea = False
+    ndtype = False
     if len(stream_a.ndarray[0]) > 0:
+        # Using ndarray and eventually convert stream_b to ndarray as well
         len_a = len(stream_a.ndarray[0])
-        ndtypea = True
+        ndtype = True
+        if not len(stream_b.ndarray[0]) > 0:
+            stream_b = stream_b.linestruct2ndarray()
+            len_b = len(stream_b.ndarray[0])
+    elif len(stream_b.ndarray[0]) > 0:
+        len_b = len(stream_b.ndarray[0])
+        ndtype = True
+        stream_a = stream_a.linestruct2ndarray()
     else:
         len_a = len(stream_a)
-    ndtypeb = False
-    if len(stream_b.ndarray[0]) > 0:
-        len_b = len(stream_b.ndarray[0])
-        ndtypea = True
-    else:
         len_b = len(stream_b)
 
     # Test streams
@@ -6731,17 +7236,143 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         return stream_a
 
     # take stream_b data and find nearest element in time from stream_a
-    if ndtypea:
+    if ndtype:
         timea = stream_a.ndarray[0]
+        timeb = stream_b.ndarray[0]
     else:
         timea = stream_a._get_column('time')
+        timeb = stream_b._get_column('time')
     timea = maskNAN(timea)
+    timeb = maskNAN(timeb)
+    """
+
+    orgkeys = stream_a._get_key_headers()
+
+    if ndtype:
+            array = [[] for key in KEYLIST]
+            # Init array with keys from stream_a
+            for key in orgkeys:
+                keyind = KEYLIST.index(key)
+                array[keyind] = sa.ndarray[keyind]
+            indtib = np.nonzero(np.in1d(timea, timeb))[0]
+            # If equal elements occur in time columns 
+            if len(indtib) > int(0.5*len(timeb)):
+                print "Found identical timesteps - using simple merge"
+                # get tb times for all matching indicies
+                tb = np.asarray([timeb[ind] for ind in indtib])
+                # Get indicies of stream_a of which times are present in matching tbs 
+                indtia = np.nonzero(np.in1d(tb, timea))[0]
+                #print tb, indtib, indtia, timea,timeb
+                if len(indtia) == len(indtib):
+                    nanind = []
+                    for key in keys:
+                        keyind = KEYLIST.index(key)
+                        #array[keyind] = sa.ndarray[keyind]
+                        if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
+                            #print "Found sb values", key
+                            valb = [sb.ndarray[keyind][ind] for ind in indtib]
+                            if len(array[keyind]) > 0: # values are present 
+                                #print " Modifying column"
+                                for i,ind in enumerate(indtia):
+                                    if mode == 'insert' and isnan(array[keyind][ind]):
+                                        array[keyind][ind] = valb[i]
+                                    elif mode == 'replace':
+                                        array[keyind][ind] = valb[i]
+                            else: # no values so far for this column - just adding
+                                array[keyind] = np.asarray(valb)
+                                #for i in range(indtia[-1]):
+                                #    if i in indtia:
+                                #        array[keyind][i] = valb[i]
+                                #    else:
+                                #        if keyind <= len(NUMKEYLIST):
+                                #            array[keyind][i] = float('nan')
+                                #        else:
+                                #            array[keyind][i] = ''
+
+                    array[0] = np.asarray(sa.ndarray[0])
+                    array = np.asarray(array)
+            else:
+                print "Did not find identical timesteps - linearily interpolating stream b"
+                print "- please note... this needs considerably longer"
+                print "- only data is used which is within 1/2 sampling rate distance of stream_a timesteps" 
+                print "- put in the larger (higher resolution) stream as stream_a"
+                print "- otherwise you might wait endless"
+                # interpolate b
+                function = sb.interpol(keys)
+                #print function, len(function), keys, sa.ndarray, sb.ndarray
+                # Get a list of indicies for which timeb values are 
+                #   in the vicintiy of a (within half of samplingrate)
+                indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
+                # limit time range to valued covered by the interpolation function
+                #print len(indtia), len(timeb), np.asarray(indtia)
+                indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]  
+                #t2temp = datetime.utcnow()
+                #print "Timediff %s" % str(t2temp-t1temp)
+                #print len(indtia), len(timeb), np.asarray(indtia)
+                #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
+                if len(function) > 0:
+                    for key in keys:
+                        keyind = KEYLIST.index(key)
+                        #print key, keyind
+                        #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
+                        if len(sb.ndarray[keyind]) > 0: # and key in function:
+
+                            valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
+                            if len(array[keyind]) > 0: # values are present 
+                                for i,ind in enumerate(indtia):
+                                    if mode == 'insert' and isnan(array[keyind][ind]):
+                                        array[keyind][ind] = valb[i]
+                                    elif mode == 'replace':
+                                        array[keyind][ind] = valb[i]
+                            else: # no values so far for this column - just adding
+                                array[keyind] = np.asarray(valb)
+                                #for i in range(indtia[-1]):
+                                #    if i in indtia:
+                                #        array[keyind][i] = valb[i]
+                                #    else:
+                                #        if keyind <= len(NUMKEYLIST):
+                                #            array[keyind][i] = float('nan')
+                                #        else:
+                                #            array[keyind][i] = ''
+
+                    array[0] = np.asarray(sa.ndarray[0])
+                    array = np.asarray(array)
+                
+            #t2e = datetime.utcnow()
+            #print "Total Timediff %s" % str(t2e-t1s)
+            #print "mergeTest", array, len(array), len(array[0])
+
+            header = sa.header
+            for key in keys:
+                try:
+                    header['col-'+key] = 'delta '+key
+                except:
+                    pass
+                try:
+                    header['unit-col-'+key] = sa.header['unit-col-'+key] 
+                except:
+                    pass
+            try:
+                header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
+            except:
+                pass
+            
+            #subtractedstream = DataStream([LineStruct()],sa.header,np.asarray(array))
+            #for key in keys:
+            #    subtractedstream = subtractedstream._drop_nans(key)
+            return DataStream([LineStruct()],header,array)      
+
+
+    #    # find indicies of timesteps
+    #    for key in keys:
+
+
 
     sta = list(stream_a)
     stb = list(stream_b)
     if addall:
         loggerstream.info('mergeStreams: Adding streams together not regarding for timeconstraints of data.')
-        if ndtypea:
+        if ndtype:
             for idx,elem in enumerate(stream_a.ndarray):
                 ndarray = stream_a.ndarray
                 if len(elem) == 0 and len(stream_b.ndarray[idx]) > 0:
@@ -7063,37 +7694,223 @@ def diffStreams(stream_a, stream_b, **kwargs):
     #  --- differences of lines        
 
 def subtractStreams(stream_a, stream_b, **kwargs):
-    """
-    combine the contents of two data streams:
-    basically two methods are possible:
-    1. replace all data from stream_a with differences (stream_a-stream_b)
+    '''
+    DEFINITION:
+        Default function will subtract stream_b from stream_a. If timesteps are different
+        stream_b will be interpolated
 
-    2. fill gaps in stream_a data with stream_b data without replacing
-    """
-    try:
-        assert len(stream_a) > 0
-    except:
-        loggerstream.error('subtractStreams: stream_a empty - aborting merging function.')
-        return stream_a
+    PARAMETERS:
+    Variables:
+        - stream_a: 	(DataStream) First stream
+        - stream_b: 	(DataStream) Second stream, which is subtracted from a
+
+    Optional:
+        - keys: 	(list) key list for subtraction - default: all keys present in both streams
+
+    RETURNS:
+        - difference: 	(DataStream) Description.
+
+    EXAMPLE:
+        >>> diff = subtractStreams(gsm_stream, pos_stream)
+
+    APPLICATION:
+
+
+    '''
         
     keys = kwargs.get('keys')
     newway = kwargs.get('newway')
     getmeans = kwargs.get('getmeans')
+
     if not keys:
-        keys = KEYLIST[1:16]
+        keys = stream_a._get_key_headers(numerical=True)
+    keysb = stream_b._get_key_headers(numerical=True)
+    keys = list(set(keys)&set(keysb))
+
+    if not len(keys) > 0:
+        print "subtractStreams: No common keys found - aborting"
+        return DataStream()
+
+    ndtype = False
+    if len(stream_a.ndarray[0]) > 0:
+        # Using ndarray and eventually convert stream_b to ndarray as well
+        ndtype = True
+        newway = True
+        if not len(stream_b.ndarray[0]) > 0:
+            stream_b = stream_b.linestruct2ndarray()
+    elif len(stream_b.ndarray[0]) > 0:
+        ndtype = True
+        stream_a = stream_a.linestruct2ndarray()
+    else:  
+        try:
+            assert len(stream_a) > 0
+        except:
+            loggerstream.error('subtractStreams: stream_a empty - aborting subtraction.')
+            return stream_a
          
     loggerstream.info('subtractStreams: Start subtracting streams.')
 
     headera = stream_a.header
     headerb = stream_b.header
 
-    newst = DataStream()
 
-    # take stream_b data and find nearest element in time from stream_a
-    timea = stream_a._get_column('time')
+    # non-destructive
+    sa = stream_a.copy()
+    sb = stream_b.copy()
+
+    # Sampling rates
+    sampratea = sa.samplingrate()
+    samprateb = sb.samplingrate()
+    minsamprate = min(sampratea,samprateb)
+    
+    if ndtype:
+        timea = sa.ndarray[0]
+    else:
+        timea = sa._get_column('time')
+
+    # truncate b to time range of a
+    try:
+        sb = sb.trim(starttime=num2date(timea[0]).replace(tzinfo=None), endtime=num2date(timea[-1]).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
+    except:
+        print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        return stream_a
+
+    if ndtype:
+        timeb = sb.ndarray[0]
+    else:
+        timeb = sb._get_column('time')
+
+    # truncate a to range of b
+    try:
+        sa = sa.trim(starttime=num2date(timeb[0]).replace(tzinfo=None), endtime=num2date(timeb[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
+    except:
+        print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        return stream_a
+
+    # testing overlapp
+    if not len(sb) > 0:
+        print "subtractStreams: stream_a and stream_b are not overlapping - returning stream_a"
+        return stream_a
+
     timea = maskNAN(timea)
-    timeb = stream_b._get_column('time')
     timeb = maskNAN(timeb)
+
+    # Check for the following cases:
+    # 1- No overlap of a and b
+    # 2- a high resolution and b low resolution (tested)
+    # 3- a low resolution and b high resolution (tested)
+    # 4- a shorter and fully covered by b (tested)
+    # 5- b shorter and fully covered by a 
+
+    if ndtype:
+            print "Running ndtype subtraction"
+            # Assuming similar time steps
+            #t1s = datetime.utcnow()
+            # Get indicies of stream_b of which times are present in stream_a 
+            array = [[] for key in KEYLIST]
+            indtib = np.nonzero(np.in1d(timeb, timea))[0]
+            # If equal elements occur in time columns 
+            if len(indtib) > int(0.5*len(timeb)):
+                print "Found identical timesteps - using simple subtraction"
+                # get tb times for all matching indicies
+                tb = np.asarray([timeb[ind] for ind in indtib])
+                # Get indicies of stream_a of which times are present in matching tbs 
+                indtia = np.nonzero(np.in1d(tb, timea))[0]
+                if len(indtia) == len(indtib):
+                    nanind = []
+                    for key in keys:
+                        foundnan = False
+                        keyind = KEYLIST.index(key)
+                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
+                            vala = [sa.ndarray[keyind][ind] for ind in indtia] 
+                            valb = [sb.ndarray[keyind][ind] for ind in indtib] 
+                            diff = np.asarray(vala) - np.asarray(valb)
+                            if isnan(diff).any():
+                                foundnan = True
+                            if foundnan:
+                                nankeys = [ind for ind,el in enumerate(diff) if isnan(el)]
+                                nanind.extend(nankeys)
+                            array[keyind] = diff
+                    nanind = np.unique(np.asarray(nanind))
+                    array[0] = np.asarray([sa.ndarray[0][ind] for ind in indtia])
+                    if foundnan:
+                        for ind,elem in enumerate(array):
+                            if len(elem) > 0:
+                                array[ind] = np.delete(np.asarray(elem), nanind)
+                    array = np.asarray(array)
+            else:
+                print "Did not find identical timesteps - linearily interpolating stream b"
+                print "- please note... this needs considerably longer"
+                print "- put in the larger (higher resolution) stream as stream_a"
+                print "- otherwise you might wait endless"
+                # interpolate b
+                function = sb.interpol(keys)
+                #print function, len(function), keys, sa.ndarray, sb.ndarray
+                # Get a list of indicies for which timeb values are 
+                #   in the vicintiy of a (within half of samplingrate)
+                indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
+                # limit time range to valued covered by the interpolation function
+                #print len(indtia), len(timeb), np.asarray(indtia)
+                indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]  
+                #t2temp = datetime.utcnow()
+                #print "Timediff %s" % str(t2temp-t1temp)
+                #print len(indtia), len(timeb), np.asarray(indtia)
+                #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
+                if len(function) > 0:
+                    nanind = []
+                    for key in keys:
+                        foundnan = False
+                        keyind = KEYLIST.index(key)
+                        #print key, keyind
+                        #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
+                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0: # and key in function:
+                            #check lengths of sa.ndarray and last value of indtia
+                            indtia = list(np.asarray(indtia)[np.asarray(indtia)<len(sa.ndarray[0])]) 
+                            #print keyind, len(indtia), len(sa.ndarray[keyind]), indtia[0], indtia[-1] 
+                            #print sa.ndarray[4][indtia[-2]]
+                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
+                            #print "VALA", np.asarray(vala) 
+                            valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
+                            #print "VALB", np.asarray(valb) 
+                            diff = np.asarray(vala) - np.asarray(valb)
+                            if isnan(diff).any():
+                                foundnan = True
+                            if foundnan:
+                                nankeys = [ind for ind,el in enumerate(diff) if isnan(el)]
+                                nanind.extend(nankeys)
+                            array[keyind] = diff
+                    nanind = np.unique(np.asarray(nanind))
+                    array[0] = np.asarray([sa.ndarray[0][ind] for ind in indtia])
+                    if foundnan:
+                        for ind,elem in enumerate(array):
+                            if len(elem) > 0:
+                                array[ind] = np.delete(np.asarray(elem), nanind)
+                    array = np.asarray(array)
+                
+            #t2e = datetime.utcnow()
+            #print "Total Timediff %s" % str(t2e-t1s)
+            #print array, len(array), len(array[0])
+
+            for key in keys:
+                try:
+                    sa.header['col-'+key] = 'delta '+key
+                except:
+                    pass
+                try:
+                    sa.header['unit-col-'+key] = sa.header['unit-col-'+key] 
+                except:
+                    pass
+            try:
+                sa.header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
+            except:
+                pass
+            
+            #subtractedstream = DataStream([LineStruct()],sa.header,np.asarray(array))
+            #for key in keys:
+            #    subtractedstream = subtractedstream._drop_nans(key)
+
+            return DataStream([LineStruct()],sa.header,np.asarray(array))      
+
 
     if np.min(timeb) < np.min(timea):
         stime = np.min(timea)
@@ -7122,7 +7939,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 break
     else:
         stimeb = stime
-        
+    
     if (etime <= stime):
         loggerstream.error('subtractStreams: Streams are not overlapping!')
         return stream_a
@@ -7135,10 +7952,9 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # modification to keep original streams unbiased 
     # need to check all subsequent functions !!!
     if newway == True:
-        
-        subtractedstream = DataStream([],{})
-        sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None),newway=True)
-        sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None),newway=True)
+        subtractedstream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
+        sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
+        sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
         samplingrate_b = sb.get_sampling_period()
 
         loggerstream.info('subtractStreams (newway): Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
@@ -7148,44 +7964,48 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         function = sb.interpol(keys)
         taprev = 0
 
-        for elem in sa:
-            tb, itmp = find_nearest(timeb,elem.time)
+        # Check for the following cases:
+        # 1- No overlap of a and b
+        # 2- a shorter and fully covered by b
+        ## Better and probably faster way: recalc b at timesteps of a
+        ## subtract a-b
+        if not ndtype:
+            print "Running for LineStruct"
+            for idx,elem in enumerate(sa):
+                tb, itmp = find_nearest(timeb,elem.time)
+                index = timeblst.index(tb)
 
-            # get index of tb
-            tib = list(timeb)
-            index = tib.index(tb)
+                # get index of tb
+                #tib = list(timeb)
+                #index = tib.index(tb)
 
-            #def find_nearest(array, value):
-            #    idx = (np.abs(array-value)).argmin()
-            #    return array[idx], idx
+                #print tb-elem.time
 
-            #print tb-elem.time
-
-            # --------------------------------------------------------------------
-            # test whether data points are present within a sampling rate distance 
-            # and whether the timestep is within the interpolation range
-            # --------------------------------------------------------------------
-            if abs(tb-elem.time) < samplingrate_b  and function[1]<=elem.time<=function[2]:
-                newline = LineStruct()
-                for key in keys:
-                    newline.time = elem.time
-                    #valstreama = eval('elem.'+key)
-                    valstreama = getattr(elem,key)
-                    try:
-                        valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
-                        #realvalb = eval('stream_b[index].'+key)
-                        realvalb = getattr(stream_b[index],key)
-                        #if isnan(realvalb):
-                        #    print "Found"
-                        if isnan(valstreama) or isnan(realvalb):
+                # --------------------------------------------------------------------
+                # test whether data points are present within a sampling rate distance 
+                # and whether the timestep is within the interpolation range
+                # --------------------------------------------------------------------
+                if abs(tb-elem.time) < samplingrate_b  and function[1]<=elem.time<=function[2]:
+                    newline = LineStruct()
+                    for key in keys:
+                        newline.time = elem.time
+                        #valstreama = eval('elem.'+key)
+                        valstreama = getattr(elem,key)
+                        try:
+                            valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
+                            #realvalb = eval('stream_b[index].'+key)
+                            realvalb = getattr(stream_b[index],key)
+                            #if isnan(realvalb):
+                            #    print "Found"
+                            if isnan(valstreama) or isnan(realvalb):
+                                newval = 'NAN'
+                            else:
+                                newval = valstreama - valstreamb
+                        except:
                             newval = 'NAN'
-                        else:
-                            newval = valstreama - valstreamb
-                    except:
-                        newval = 'NAN'
-                    setattr(newline, key, float(newval))
-                    #exec('newline.'+key+' = float(newval)')
-                subtractedstream.add(newline)
+                        setattr(newline, key, float(newval))
+                        #exec('newline.'+key+' = float(newval)')
+                    subtractedstream.add(newline)
 
         # Finally get gaps from stream_b and remove these gaps from the subtracted stream for all keys
         # TODO

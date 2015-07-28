@@ -143,6 +143,17 @@ def plot_new(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow
 	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
 	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',resolution=None,
 	**kwargs):
+
+        plot(stream,variables=variables,specialdict=specialdict,errorbars=errorbars,padding=padding,
+                        noshow=noshow,annotate=annotate,stormphases=stormphases,colorlist=colorlist,
+                        symbollist=symbollist,t_stormphases=t_stormphases,includeid=includeid,  
+                        function=function,plottype=plottype,resolution=resolution, **kwargs)
+
+
+def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False,
+	annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
+	t_stormphases=None,includeid=False,function=None,plottype='discontinuous',resolution=None,
+	**kwargs):
     '''
     DEFINITION:
         This function creates a graph from a single stream.
@@ -634,6 +645,7 @@ class figFlagger():
         self.data = self.analyzeData(self.orgkeylist)
 
         keylist = self.data._get_key_headers(numerical=True)
+        self.keylist = keylist
         annotatelist = [True if elem in self.orgkeylist else False for elem in keylist] # if elem in ['x','y','z'] else False]
         #print "Annotating data", annotatelist
 
@@ -783,17 +795,6 @@ class figFlagger():
 
     def flag(self, idxarray , flagid, reason, keylist):
 
-        try:
-            flagid = int(flagid)
-        except:
-            flagid = self.flagid
-        if not flagid in [0,1,2,3,4]:
-            flagid = self.flagid
-        if reason == '':
-            reason = self.reason
-        if keylist == []:
-            keylist = self.orgkeylist
-
         print "Flagging components %s with flagid %d, because of %s" % (','.join(keylist), flagid, reason) 
         self.data = self.data.flagfast(idxarray, flagid, reason, keylist)
 
@@ -866,14 +867,43 @@ def addFlag(data, flagger, indeciestobeflagged):
         #print keylist
 
         # ANALYSIS section
+        try:
+            flagid = int(flagid)
+        except:
+            flagid = flagger.flagid
+        if not flagid in [0,1,2,3,4]:
+            flagid = flagger.flagid
+        if reason == '':
+            reason = flagger.reason
+        if keylist == []:
+            keylist = [key for key in flagger.orgkeylist if key in FLAGKEYLIST]
+
+        try:
+            sensid = data.header["SensorID"]
+        except:
+            print "plotFlag: Flagging requires SensorID - set with stream.header['SensorID'] = 'MyID'" 
+            sensid = "Dummy_1234_0001"
+
+        flaglst = []
+        for k, g in groupby(enumerate(indeciestobeflagged), lambda ix: ix[0] - ix[1]):
+            consecutives = map(itemgetter(1), g)
+            #print consecutives
+            begintime = num2date(data.ndarray[0][consecutives[0]]).replace(tzinfo=None)
+            endtime = num2date(data.ndarray[0][consecutives[-1]]).replace(tzinfo=None)
+            modtime = datetime.utcnow()
+            for key in keylist:
+                if not sensid == '':
+                    flaglst.append([begintime, endtime, key, flagid, reason, sensid, modtime])
+
         # now flag the data and restart figure
         flagger.flag(indeciestobeflagged, flagid, reason, keylist)
+
         # reduce to original keys
         orgkeys = flagger.orgkeylist
         data = data.selectkeys(orgkeys)
         flagger = figFlagger(data)
         #flagger.flag(data)
-        return flagger.idxarray
+        return flagger.idxarray, flaglst
 
 def plotFlag(data):
     '''
@@ -889,17 +919,22 @@ def plotFlag(data):
     EXAMPLE:
         >>> flaggedstream = plotFlag(stream)
     '''
+    flaglist = []
     flagger = figFlagger(data)
     indeciestobeflagged = flagger.idxarray
     while indeciestobeflagged > 0:
-        indeciestobeflagged = addFlag(flagger.data, flagger, indeciestobeflagged)
+        indeciestobeflagged, flaglst = addFlag(flagger.data, flagger, indeciestobeflagged)
+        flaglist.extend(flaglst)
 
     print "Returning data ...."
-    print "  -- original format: %s " % data.header['DataFormat']
+    try:
+        print "  -- original format: %s " % data.header['DataFormat']
+    except:
+        pass
 
     orgkeys = flagger.orgkeylist
     data = flagger.data.selectkeys(orgkeys)
-    return data
+    return data, flaglist
 
 
 #####################################################################
@@ -2117,18 +2152,64 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         if data[i]['annotate'] == True:
             flags = data[i]['flags']
             emptycomment = "-"
-            poslst = [ix for ix,el in enumerate(FLAGKEYLIST) if el == key]
-            indexflag = int(poslst[0])
-            for idx, elem in enumerate(flags[1]):
-                if not elem == emptycomment and flags[0][idx][indexflag] in ['0','3']:
-                    ax.annotate(r'%s' % (elem),
-                                xy=(t[idx], y[idx]),
-                                xycoords='data', xytext=(20, 20),
-                                textcoords='offset points',
-                                bbox=dict(boxstyle="round", fc="0.8"),
-                                arrowprops=dict(arrowstyle="->",
-                                shrinkA=0, shrinkB=1,
-                                connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+            indexflag = KEYLIST.index(key)
+            # identfy subsequent idx nums in flags[1]
+            a_t,a_y,b_t,b_y,c_t,c_y,d_t,d_y = [],[],[],[],[],[],[],[]
+            if len(flags[1]) > 0:
+                # 1. get different comments
+                tmp = DataStream()
+                uniqueflags = tmp.union(flags[1])
+                #print "Flags", uniqueflags, key
+                for fl in uniqueflags:
+                    #print "Flag", fl
+                    #if fl in ['-','']:
+                    #    break
+                    #print fl
+                    # 1. get all indicies of this comment
+                    flagindicies = []
+                    for idx, elem in enumerate(flags[1]):
+                        if not elem == '' and elem == fl:
+                            flagindicies.append(idx)
+                    #print "IDX", np.asarray(flagindicies)
+                    # 2. get consecutive groups
+                    for k, g in groupby(enumerate(flagindicies), lambda ix: ix[0] - ix[1]):
+                        consecutives = map(itemgetter(1), g)
+                        #print "Cons", np.asarray(consecutives)
+                        # 3. add annotation arrow for all but 1
+                        cnt0 = consecutives[0]
+                        #print cnt0, indexflag
+                        if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
+                            ax.annotate(r'%s' % (flags[1][cnt0]),
+                                        xy=(t[cnt0], y[cnt0]),
+                                        xycoords='data', xytext=(20, 20),
+                                        textcoords='offset points',
+                                        bbox=dict(boxstyle="round", fc="0.9"),
+                                        arrowprops=dict(arrowstyle="->",
+                                        shrinkA=0, shrinkB=1, connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                        for idx in consecutives:
+                            if flags[0][idx][indexflag] in ['3']:
+                                a_t.append(t[idx])
+                                a_y.append(y[idx])
+                            elif flags[0][idx][indexflag] in ['1']:
+                                b_t.append(t[idx])
+                                b_y.append(y[idx])
+                            elif flags[0][idx][indexflag] in ['2']:
+                                c_t.append(t[idx])
+                                c_y.append(y[idx])
+                            elif flags[0][idx][indexflag] in ['4']:
+                                d_t.append(t[idx])
+                                d_y.append(y[idx])
+                if len(a_t) > 0:
+                    ax.scatter(a_t,a_y,c='r')
+                if len(b_t) > 0:
+                    ax.scatter(b_t,b_y,c='orange')
+                if len(c_t) > 0:
+                    # TODO Here we have a masked nan warning - too be solved
+                    #print np.asarray(c_t)
+                    #print np.asarray(c_y)
+                    ax.scatter(c_t,c_y,c='g')
+                if len(d_t) > 0:
+                    ax.scatter(d_t,d_y,c='b')
 
 	# PLOT A GIVEN FUNCTION:     
         if 'function' in data[i]:

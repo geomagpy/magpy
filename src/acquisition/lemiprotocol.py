@@ -174,14 +174,14 @@ class LemiProtocol(LineReceiver):
         except:
             log.err("LEMI - Protocol: Number conversion error.")
 
-        self.gpsstate1 = gpsstat
-        if not self.gpsstate1 == self.gpsstate2:
-            log.msg('LEMI - Protocol: GPSSTATE changed to %s .'  % gpsstat)
-        self.gpsstatelst.append(gpsstat)
-        self.gpsstatelst = self.gpsstatelst[-10:]
         # get the most frequent gpsstate of the last 10 secs
         # this avoids error messages for singular one sec state changes
-        self.gpsstate2 = max(set(self.gpsstatelst),key=self.gpsstatelst.count)
+        self.gpsstatelst.append(gpsstat)
+        self.gpsstatelst = self.gpsstatelst[-10:]
+        self.gpsstate1 = max(set(self.gpsstatelst),key=self.gpsstatelst.count)
+        if not self.gpsstate1 == self.gpsstate2:
+            log.msg('LEMI - Protocol: GPSSTATE changed to %s .'  % gpsstat)
+        self.gpsstate2 = self.gpsstate1
  
         #print "GPSSTAT", gpsstat
         # important !!! change outtime to lemi reading when GPS is running 
