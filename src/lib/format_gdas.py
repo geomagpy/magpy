@@ -144,10 +144,14 @@ def readGDASA1(filename, headonly=False, **kwargs):
                         row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S"))
                     except:
                         raise ValueError, "Wrong date format in %s" % filename
-                row.x = float(elem[1])/10.0
-                row.y = float(elem[2])/10.0
-                row.z = float(elem[3])/10.0
-                row.t1 = float(elem[4])/10.0
+                if float(elem[1]) < 99999.:
+                    row.x = float(elem[1])/10.0
+                if float(elem[1]) < 99999.:
+                    row.y = float(elem[2])/10.0
+                if float(elem[1]) < 99999.:
+                    row.z = float(elem[3])/10.0
+                if float(elem[1]) < 99999.:
+                    row.t1 = float(elem[4])/10.0
                 try:
                     if (float(elem[5]) != 99999):
                         row.f = float(elem[5])/10.0

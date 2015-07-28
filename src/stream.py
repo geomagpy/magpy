@@ -582,7 +582,8 @@ CALLED BY:
         APPLICATION:
            for non-destructive methods
         """
-        assert isinstance(self.container, (list, tuple))
+        #assert isinstance(self.container, (list, tuple))
+        assert isinstance(self.container, DataStream)
         co = DataStream()
         co.header = self.header
         for el in self:
@@ -1066,7 +1067,7 @@ CALLED BY:
 
     def _aic(self, signal, k, debugmode=None):
         try:
-            aicval = k* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
+            aicval = (k)* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
         except:
             if debugmode:
                 loggerstream.debug('_AIC: could not evaluate AIC at index position %i' % (k))
@@ -1351,6 +1352,9 @@ CALLED BY:
         - extract one dimensional array from DataStream (e.g. H) -> signal
         - take the first k values of the signal and calculates variance and log
         - plus the rest of the signal (variance and log)
+	NOTE: Best results come from evaluating two data series - one with original
+	data, one of same data with AIC timerange offset by timerange/2 to cover
+	any signals that may occur at the points between evaluations.
 
     PARAMETERS:
     Variables:
@@ -1411,7 +1415,8 @@ CALLED BY:
                 aicarray = []
                 for idx, el in enumerate(currsequence):
                     if idx > 1 and idx < len(currsequence):
-                        aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normailze to sampling rate and timerange
+			# CALCULATE AIC
+                        aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normalize to sampling rate and timerange
                         exec('self[idx+istart].'+ aic2key +' = aicval')
                         if not isnan(aicval):
                             aicarray.append(aicval)
@@ -1441,6 +1446,7 @@ CALLED BY:
         self.header['col-var2'] = 'aic'
 
         return self
+
 
     def baseline(self, absolutestream, **kwargs):
         """
