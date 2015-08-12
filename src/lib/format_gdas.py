@@ -68,7 +68,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
     data = []
     getfile = True
     key = None
-    stream = DataStream([],{})
+    stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
     # Check whether header infromation is already present
     #if stream.header is None:
     #    headers = {}
@@ -182,6 +182,7 @@ def readGDASB1(filename, headonly=False, **kwargs):
     getfile = True
     key = None
     stream = DataStream()
+    array = [[] for key in KEYLIST]
     # Check whether header infromation is already present
     if stream.header is None:
         headers = {}
@@ -250,6 +251,6 @@ def readGDASB1(filename, headonly=False, **kwargs):
         headers = stream.header
         stream =[]
 
-    return DataStream(stream, headers)    
+    return DataStream(stream, headers,np.asarray(array))    
 
 

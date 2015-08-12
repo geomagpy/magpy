@@ -40,13 +40,15 @@ def readDIDD(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rt')
     # read file and split text into channels
-    stream = DataStream()
+    #stream = DataStream()
+    stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
     if stream.header is None:
         headers = {}
     else:
         headers = stream.header
 
     data = []
+    array = [[] for key in KEYLIST]
     key = None
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
@@ -122,10 +124,13 @@ def readDIDD(filename, headonly=False, **kwargs):
         headers = stream.header
         stream = []
 
+    headers['DataSensorOrientation'] = 'xyz'
+    stream.header['SensorElements'] = ','.join(colsstr)
+    stream.header['SensorKeys'] = ','.join(colsstr)
     headers['unit-col-f'] = 'nT'
     fh.close()
 
-    return DataStream(stream, headers)    
+    return DataStream(stream, headers, np.asarray(array))    
 
 
 

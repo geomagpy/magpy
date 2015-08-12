@@ -215,11 +215,11 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
     # if no variables are given, use all available:
     if len(variables) < 1:
         variables = stream._get_key_headers()
-        if len(variables) > 9:
-            print "More than 8 variables available - plotting only the first nine:", 
-            print "Available:", variables
-            variables = variables[:8]
-            print "Plotting:", variables
+    if len(variables) > 9:
+        print "More than 9 variables available - plotting only the first nine:", 
+        print "Available:", variables
+        variables = variables[:9]
+        print "Plotting:", variables
 
 
     # Check lists for variables have correct length:
@@ -393,7 +393,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     count = 0
 
     if not resolution:
-        resolution = 1296000  # 15 days of 1 second data can be maximale shown in detail, 1.5 days of 10 Hz
+        resolution = 1296000  # 15 days of 1 second data can be maximaly shown in detail, 1.5 days of 10 Hz
 
     # Iterate through each variable, create dict for each:
     for i in range(len(streamlist)):
@@ -417,7 +417,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             data_dict = {}
             key = variables[i][j]
             loggerplot.info("plotStreams: Determining plot properties for key %s." % key)
-            if not key in KEYLIST[1:16]:
+            if not key in NUMKEYLIST:
                 loggerplot.error("plot: Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
@@ -431,22 +431,49 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             except:
                 y = np.asarray([float(row[ind]) for row in stream])
             #y = np.asarray([row[ind] for row in stream])
+            
 
             if len(y) == 0:
                 loggerplot.error("plotStreams: Cannot plot stream of zero length!")
 
+
+            # eventually remove flagged:
+            dropflagged = False
+            if dropflagged:
+                flagind = KEYLIST.index('flag')
+                flags = stream.ndarray[flagind]
+                ind = KEYLIST.index(key)
+                flagarray =  np.asarray([list(el)[ind] for el in flags])
+                print "Flagarray", flagarray
+                indicies = np.where(flagarray == '1')
+                print "Indicies", indicies
+                #for index in indicies:
+                #    y[index] = NaN
+                    #y[index] = float('nan')
+                    #newflag = flags[0][ind]
+                    #newflag[indexflag] = '0'
+                    #data[i]['flags'][0][ind] == newflag 
+                #y = np.delete(np.asarray(y),indicies)
+
+
+            #print len(t), len(y), np.asarray(y)
+
 	    # Fix if NaNs are present:
             if plottype == 'discontinuous':
                 y = maskNAN(y)
-            else: 
+            else:
                 nans, test = nan_helper(y)
                 newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
                 t = newt
                 y = [el for idx, el in enumerate(y) if not nans[idx]]
 
+            #print len(t), len(y), np.asarray(y), np.asarray(t)
+
+
             if len(y) == 0:
                 loggerplot.error("plotStreams: Cannot plot stream without data - Filling with 9999999!")
                 y = np.asarray([9999999 for row in stream])
+
 
             data_dict['key'] = key
             data_dict['tdata'] = t
@@ -461,7 +488,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 else:
                     ypadding = padding
             else:
-                ypadding = 0
+                ypadding = (np.max(y)- np.min(y))*0.05 # 0
 
             # If limits are specified, use these:
             if specialdict:
@@ -558,10 +585,13 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                         flag = stream._get_column('flag')
                         comments = stream._get_column('comment')
                     flags = array([flag,comments])
+                    #print "plotStreams1", flags
                     data_dict['annotate'] = True
                     data_dict['flags'] = flags
             else:
                 data_dict['annotate'] = False
+
+            #print "plotStreams2", data_dict['flags']
 
             # Plot a function:
             if function:
@@ -632,7 +662,7 @@ def toggle_selector(event):
 
 class figFlagger():
 
-    def __init__(self, data = None):
+    def __init__(self, data = None, variables=None):
         
         self.data = data
 
@@ -642,12 +672,18 @@ class figFlagger():
         self.idxarray = []
 
         self.orgkeylist = self.data._get_key_headers()
-        self.data = self.analyzeData(self.orgkeylist)
+        if not variables: #or variables == ['x','y','z','f'] or variables == ['x','y','z']:
+            self.data = self.analyzeData(self.orgkeylist)
 
         keylist = self.data._get_key_headers(numerical=True)
+        #print keylist
+        if variables:
+            keylist = variables
+        if len(keylist) > 9:
+            keylist = keylist[:8]
+        #print keylist
         self.keylist = keylist
         annotatelist = [True if elem in self.orgkeylist else False for elem in keylist] # if elem in ['x','y','z'] else False]
-        #print "Annotating data", annotatelist
 
         self.fig = plotStreams([self.data], [keylist], noshow=True, annotate=[annotatelist])
 
@@ -732,23 +768,18 @@ class figFlagger():
 
         idxstart = np.abs(data.ndarray[0]-min(selarray[0],selarray[2])).argmin()
         idxend = np.abs(data.ndarray[0]-max(selarray[0],selarray[2])).argmin()
-        
+
         for i in range(len(data.ndarray)):
-            if len(data.ndarray[i]) > idxstart:
-                if i in range(len(FLAGKEYLIST)):
+            if len(data.ndarray[i]) > idxstart: # and KEYLIST[i] in self.keylist:
+                if KEYLIST[i] in self.keylist or KEYLIST[i] == 'time': #i in range(len(FLAGKEYLIST)) and
                     keyar.append(KEYLIST[i])
                     timear = data.ndarray[i][idxstart:idxend]
                     selectedndarray.append(timear)
         selectedndarray = np.asarray(selectedndarray)
-        #print selectedndarray[numb]
-        #print selectedndarray[numb][selectedndarray[numb]<maxbound] 
-        #print "Selected dataarray:",numb, len(selectedndarray) 
-        #print "Selected dataarray:",idxstart,idxend,minbound,maxbound 
 
         newselectedndarray = []
         for i in range(len(selectedndarray)):
             allar = [elem for idx, elem in enumerate(selectedndarray[i]) if selectedndarray[numb][idx] >= minbound and selectedndarray[numb][idx] <= maxbound ]
-            #print allar
             if i == 0:
                 self.idxar = [idx+idxstart for idx, elem in enumerate(selectedndarray[i]) if selectedndarray[numb][idx] >= minbound and selectedndarray[numb][idx] <= maxbound ]             
             newselectedndarray.append(allar)
@@ -766,7 +797,7 @@ class figFlagger():
             key = keyarray[idx]
             #print "Selected curve - markpoints:", idx
             #print dataarray[idx]
-            if not idx == 0 and not len(elem) == 0 and key in FLAGKEYLIST:
+            if not idx == 0 and not len(elem) == 0 and key in self.keylist: #FLAGKEYLIST:
                 #print ( idx, self.axlist[idx-1] )
                 ax = self.axlist[idx-1]
                 #ax.clear()
@@ -843,7 +874,7 @@ class figFlagger():
 
         return radio, self.hzfunc
 
-def addFlag(data, flagger, indeciestobeflagged):
+def addFlag(data, flagger, indeciestobeflagged, variables):
         # INPUT section
         print "Provide flag ID (2 or 3):"
         print "  -- 2: keep data"
@@ -864,7 +895,6 @@ def addFlag(data, flagger, indeciestobeflagged):
                     keylist = []
         else:
             keylist = []
-        #print keylist
 
         # ANALYSIS section
         try:
@@ -901,11 +931,11 @@ def addFlag(data, flagger, indeciestobeflagged):
         # reduce to original keys
         orgkeys = flagger.orgkeylist
         data = data.selectkeys(orgkeys)
-        flagger = figFlagger(data)
+        flagger = figFlagger(data, variables)
         #flagger.flag(data)
         return flagger.idxarray, flaglst
 
-def plotFlag(data):
+def plotFlag(data,variables=None):
     '''
     DEFINITION:
 	Creates a plot for flagging.
@@ -920,10 +950,12 @@ def plotFlag(data):
         >>> flaggedstream = plotFlag(stream)
     '''
     flaglist = []
-    flagger = figFlagger(data)
+    flagdata = data.copy()
+
+    flagger = figFlagger(flagdata,variables)
     indeciestobeflagged = flagger.idxarray
     while indeciestobeflagged > 0:
-        indeciestobeflagged, flaglst = addFlag(flagger.data, flagger, indeciestobeflagged)
+        indeciestobeflagged, flaglst = addFlag(flagger.data, flagger, indeciestobeflagged, variables)
         flaglist.extend(flaglst)
 
     print "Returning data ...."
@@ -933,8 +965,8 @@ def plotFlag(data):
         pass
 
     orgkeys = flagger.orgkeylist
-    data = flagger.data.selectkeys(orgkeys)
-    return data, flaglist
+    flagdata = flagger.data.selectkeys(orgkeys)
+    return flagdata, flaglist
 
 
 #####################################################################
@@ -2110,6 +2142,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         else:
             ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
 
+
         # PLOT DATA:
         # --> If bars are in the data (for e.g. k-index):
         if symbol == 'z':
@@ -2159,7 +2192,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                 # 1. get different comments
                 tmp = DataStream()
                 uniqueflags = tmp.union(flags[1])
-                #print "Flags", uniqueflags, key
+                #print "Flags", flags,uniqueflags, key
                 for fl in uniqueflags:
                     #print "Flag", fl
                     #if fl in ['-','']:
@@ -2187,6 +2220,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                                         arrowprops=dict(arrowstyle="->",
                                         shrinkA=0, shrinkB=1, connectionstyle="angle,angleA=0,angleB=90,rad=10"))
                         for idx in consecutives:
+                            #if not flags[0][idx][indexflag] == '0':
+                            #    print "Got", flags[0][idx][indexflag], idx
                             if flags[0][idx][indexflag] in ['3']:
                                 a_t.append(t[idx])
                                 a_y.append(y[idx])
@@ -2199,6 +2234,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                             elif flags[0][idx][indexflag] in ['4']:
                                 d_t.append(t[idx])
                                 d_y.append(y[idx])
+                #print "Hello"
                 if len(a_t) > 0:
                     ax.scatter(a_t,a_y,c='r')
                 if len(b_t) > 0:

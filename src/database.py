@@ -730,21 +730,6 @@ def dbfields2dict(db,datainfoid):
             except:
                 loggerdatabase.error("dbfields2dict: unkown error while adding key %s" % key)
 
-    try:
-        cols = colsstr.split('_')
-        colsel = colselstr.split('_')
-        #print cols, colsel
-        for i, elem in enumerate(cols):
-            if not elem == '-':
-                # corrected on 29.05.2015
-                #key = 'col-'+KEYLIST[i]
-                #unitkey = 'unit-col-'+KEYLIST[i]
-                key = 'col-'+elem
-                unitkey = 'unit-col-'+elem
-                metadatadict[key] = cols[i]
-                metadatadict[unitkey] = colsel[i]
-    except:
-        loggerdatabase.warning("dbfields2dict: Could not assign column name")
 
     for key in SENSORSKEYLIST:
         getsens = 'SELECT '+ key +' FROM SENSORS WHERE SensorID = "'+ids[0]+'"'
@@ -753,21 +738,45 @@ def dbfields2dict(db,datainfoid):
         if isinstance(row[0], basestring):
             metadatadict[key] = row[0]
             if key == 'SensorKeys':
-                colsstr = row[0]
+                senscolsstr = row[0]
             if key == 'SensorElements':
-                colselstr = row[0]
+                senscolselstr = row[0]
         else:
             if row[0] == None:
                 pass
                 #metadatadict[key] = row[0]
             else:
                 metadatadict[key] = float(row[0])
+
     try:
-        cols = colsstr.split(',')
-        colsel = colselstr.split(',')
-        for i, elem in enumerate(cols):
-            key = 'col-'+elem
-            metadatadict[key] = colsel[i]
+        if colsstr.find(',') >= 0:
+            splitter = ','
+        else:
+            splitter = '_'
+        cols = colsstr.split(splitter)
+        colsel = colselstr.split(splitter)
+    except:
+        loggerdatabase.warning("dbfields2dict: Could not interpret column field in DATAINFO")
+
+    try:
+        senscols = senscolsstr.split(',')
+        senscolsel = senscolselstr.split(',')
+        # check whether key info corresponds to column info
+        if not len(senscols) == len(cols):
+            print "dbfield2dict: DATAINFO column_contents does not match SensorKeys - Using Column_Contents"
+            for i, elem in enumerate(cols):
+                if not elem == '-':
+                    key = 'col-'+elem
+                    unitkey = 'unit-col-'+elem
+                    metadatadict[key] = cols[i]
+                    metadatadict[unitkey] = colsel[i]
+        else:
+            for i, elem in enumerate(senscols):
+                key = 'col-'+elem
+                unitkey = 'unit-col-'+elem
+                pos = cols.index(senscolsel[i])
+                metadatadict[key] = senscolsel[i]
+                metadatadict[unitkey] = colsel[pos] 
     except:
         loggerdatabase.warning("dbfields2dict: Could not assign column name")
 
@@ -2145,6 +2154,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                         ls[index] = col[:1]
                 if key in NUMKEYLIST:
                     ls[index] = np.asarray(col).astype('<f8')
+
             stream.header = dbfields2dict(db,table)
         else:
             print "No data found"

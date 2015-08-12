@@ -511,13 +511,13 @@ class AbsoluteData(object):
                     rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (scale_y*poslst[k].vary)**2 ) )
                 else:
                     rescorr = signum*np.arcsin( poslst[k].res / hstart )
-            if xstart+poslst[k].varx == 0 or isnan(poslst[k].varx):
+            if xstart+poslst[k].varx == 0 or isnan(poslst[k].varx) or isnan(hbasis):
                 varco = 0.0
             else:
                 varco = np.arctan((scale_y*poslst[k].vary)/(hbasis+scale_x*poslst[k].varx))
             variocorr.append(varco)
             # a1 = hc + asin(res1/sqrt[ (hstart+vx)**2 + vy**2 ])*180/Pi - atan( vy/(hstart+vx) )*180/Pi
-            #print "TESTVALUE:", poslst[k].hc*np.pi/(180.0)*200/np.pi, rescorr*200/np.pi, varco*200/np.pi
+            #print "TESTVALUE:", poslst[k].hc*np.pi/(180.0)*200/np.pi, rescorr*200/np.pi, varco*200/np.pi, hbasis
             dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k] )
             loggerabs.debug("_calcdec: Horizontal angles: %f, %f, %f" % (poslst[k].hc, rescorr, variocorr[k]))
 
@@ -585,13 +585,15 @@ class AbsoluteData(object):
 
         loggerabs.debug("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
 
+        #print decmean, mirediff, variocorr[0], deltaD
+
         dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi + deltaD)
 
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
 
         loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[0], deltaD, ang_fac, hstart))
 
-        #print "HStart for collimation D", hstart
+        #print "HStart for collimation D", hstart, dec
         if not hstart == 0:
             s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
             deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
@@ -795,7 +797,7 @@ class AbsoluteData(object):
         if len(dflist) > 0:
             deltaF = np.mean(dflist)
         else:
-            deltaF = float(nan)
+            deltaF = float('nan')
 
         # -- Start with the inclination calculation
         # --------------------------------------------------------------
@@ -824,7 +826,10 @@ class AbsoluteData(object):
                 xvals.append(scale_x*poslst[k].varx)
                 yvals.append(scale_y*poslst[k].vary)
                 zvals.append(scale_z*poslst[k].varz)
-                ppmtmp = meanf + (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.) + (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.) + ((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf)
+                if meanf == 0:
+                    ppmtmp = float('nan')
+                else:
+                    ppmtmp = meanf + (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.) + (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.) + ((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf)
                 #print "PPM according to excel", ppmtmp
                 # old version ---> ppmtmp = np.sqrt(xtmp**2 + ytmp**2 + ztmp**2)
                 if isnan(ppmtmp):
@@ -905,7 +910,10 @@ class AbsoluteData(object):
                     rotation = np.abs(scaleangle - poslst[n].vc)
                     if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value 
                         #=(-SIN(B37*PI()/200)*(F20-F19)/K35+COS(B37*PI()/200)*(H20-H19)/K35)*200/PI()
-                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/mean(ppmval) + np.cos(np.mean(I0list))*(poslst[n].varz-poslst[k].varz)/mean(ppmval))*180/np.pi 
+                        if mean(ppmval) == 0:
+                            fieldchange = float('nan')
+                        else:
+                            fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/mean(ppmval) + np.cos(np.mean(I0list))*(poslst[n].varz-poslst[k].varz)/mean(ppmval))*180/np.pi 
                         deltaB = rotation+fieldchange
                         deltaR = np.abs(poslst[n].res-poslst[k].res)
                         minimum = rotation
@@ -998,20 +1006,23 @@ class AbsoluteData(object):
         # =RUNDEN(WURZEL(K37^2-(MITTELWERT(G15:G18))^2)-MITTELWERT(F15:F18);1)
         if len(xvals) > 0:
             #print "Found variometer data"
-            h_adder = np.sqrt(tmpH**2 - mean(yvals)**2) - mean(xvals)
-            z_adder = tmpZ-mean(zvals)
+            if tmpH**2 - mean(yvals)**2 < 0: # if no scalar data is available
+                h_adder = float('nan')
+                z_adder = float('nan')
+            else:
+                h_adder = np.sqrt(tmpH**2 - mean(yvals)**2) - mean(xvals)
+                z_adder = tmpZ-mean(zvals)
             #print "offsets", h_adder, z_adder
         else:
             #print "No variometer data - using estimated H and Z"
             h_adder = tmpH
             z_adder = tmpZ
 
-
         # ###################################################
         # #####      Recalculating field values at time k=0
         # ###################################################
 
-        if not isnan(poslst[0].varx):
+        if not np.isnan(poslst[0].varx) and not np.isnan(h_adder):
             hstart = np.sqrt((scale_x*poslst[0].varx + h_adder)**2 + (scale_y*poslst[0].vary)**2)
             xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0) )
             ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0) )
@@ -1028,7 +1039,6 @@ class AbsoluteData(object):
             ystart = tmpH * np.sin ( linestruct.y *np.pi/(180.0) )
             fstart = np.sqrt(hstart**2 + zstart**2)
 
-        #print "H, Z, X, Y:", hstart, zstart, xstart, ystart
 
         # Baselinevalues:
         #basex = xstart - scale_x*poslst[0].varx
@@ -1065,7 +1075,7 @@ class AbsoluteData(object):
             Differences:
                 - Variometer correction and residual correction are performed at each individual step
                    and not average and rounded for repeated measurements before (should be better 
-                   and correct especially for res correction)
+                   and correct especially for residual correction)
                 - Scale values are provided in deg/unit and not gon/unit
             Provide variometer and scalar values for optimal results.
             If no variometervalues are provided then only dec and inc are calculated correctly.
@@ -1198,7 +1208,7 @@ class AbsoluteData(object):
                 print 'Vector:'
                 print 'Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f)
                 print 'Collimation and Offset:'
-                print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
+                print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f deg/unit' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
 
         except:
             text = 'calcabsolutes: invalid LineStruct Object returned from calcinc function'
@@ -1334,7 +1344,7 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
     # file format should be known by now
-    print format_type
+    print "DI format:", format_type
 
     stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
 
@@ -1345,395 +1355,6 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
         stream = DataStream()
 
     return stream
-
-
-def analyzeAbsFiles(debugmode=None,**kwargs):
-    """
-    Analyze absolute files from a specific path
-    Requires an analysis directory for treatment of downloaded absolute files.
-    By default flagged data is removed. In order to keep them for analysis use the useflagged=True keyword
-    Optional keywords:
-    useflagged (boolean) -- default False
-    archivepath -- archive directory to which tsuccessfully analyzed data is moved to
-    access_ftp -- retrives data from an ftp directory first and removes them after successful analysis
-    printresults (boolean) -- screen output of calculation results
-    disableproxy (boolean) -- by default system settings are used        
-    -- calcabs calculation parameters:
-            usestep: (int) for selecting whether first (1), second (2) or a mean (0) of both repeated measurements at each "Lage" is used 
-    """
-
-    plog = PyMagLog()
-    
-    path_or_url = kwargs.get('path_or_url')
-    variopath = kwargs.get('variopath')
-    scalarpath = kwargs.get('scalarpath')
-    deltaF = kwargs.get('deltaF')
-    printresults = kwargs.get('printresults')
-    # Parameters for absolute calculation (used in calcabs -> und subfunctions _calcdev, _calcinc
-    incstart = kwargs.get('incstart')
-    scalevalue = kwargs.get('scalevalue')
-    unit = kwargs.get('unit')
-    xstart = kwargs.get('xstart')
-    ystart = kwargs.get('ystart')
-    deltaD = kwargs.get('deltaD')
-    deltaI = kwargs.get('deltaI')
-    alpha = kwargs.get('alpha')
-    beta = kwargs.get('beta')
-    useflagged = kwargs.get('useflagged')
-    usestep = kwargs.get('usestep')
-    outputformat  = kwargs.get('outputformat')
-    summaryfile = kwargs.get('summaryfile')
-    analysispath = kwargs.get('analysispath')
-    archivepath = kwargs.get('archivepath')
-    absidentifier = kwargs.get('absidentifier') # Part of filename, which defines absolute files
-    # Timerange
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-    # Not used so far are username and passwd
-    username = kwargs.get('username')
-    password = kwargs.get('password')
-    disableproxy = kwargs.get('disableproxy')
-    
-    if not absidentifier:
-        absidentifier = 'AbsoluteMeas.txt'
-    if not deltaF:
-        deltaF = 0.0
-    if not deltaI:
-        deltaI = 0.0
-    if not deltaD:
-        deltaD = 0.0
-    if not scalevalue:
-        scalevalue = [1.0,1.0,1.0]
-    if not unit:
-        unit = 'deg'
-    if unit=='gon':
-        ang_fac = 400./360.
-    elif unit == 'rad':
-        ang_fac = np.pi/180.
-    else:
-        ang_fac = 1
-    if not incstart:
-        incstart = 45.0
-    if not xstart:
-        xstart = 20000.0
-    if not ystart:
-        ystart = 0.0
-    if not usestep: 
-        usestep = 0
-    if not outputformat: # accepts idf, hdz and xyz
-        outputformat = 'xyz'
-    if username: # Needs to be checked: Using username and passwd within url instead
-        passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        passman.add_password(None, path_or_url, username, password)
-        authhandler = urllib2.HTTPBasicAuthHandler(passman)
-        opener = urllib2.build_opener(authhandler)
-        urllib2.install_opener(opener)
-    if disableproxy:
-        proxy_handler = urllib2.ProxyHandler( {} )           
-        opener = urllib2.build_opener(proxy_handler)
-        # install this opener
-        urllib2.install_opener(opener)
-
-    localfilelist = []
-    st = DataStream()
-    varioinst = '-'
-    scalarinst = '-'
-
-    loggerabs.info('--- Start absolute analysis at %s ' % str(datetime.now()))
-    print "Using unit with angfac", unit, ang_fac
-
-    # now check the contents of the analysis path - url part is yet missing
-    if not os.path.isfile(path_or_url):
-        if os.path.exists(path_or_url):
-            for infile in iglob(os.path.join(path_or_url,'*'+absidentifier)):
-                localfilelist.append(infile)
-        elif  "://" in path_or_url: # URL part
-            # get all files in URL path
-            # (changes from 04.09)
-            req = urllib2.Request(path_or_url)
-            try:
-                response = urllib2.urlopen(req)
-            except urllib2.URLError, e:
-                if hasattr(e, 'reason'):
-                    loggerabs.error('URLLIB2 Failed to reach a server. Reason: %s' % e.reason)
-                elif hasattr(e, 'code'):
-                    loggerabs.error('The server couldn\'t fulfill the request. Error code: %s' % e.code)
-                return
-
-            path = response.geturl()
-            html_string = response.read()
-
-            # Distinguish between directory and file - get filename and add to path -> add to list
-            datlst = html_string.split("\n")
-            firstline = datlst[0].split()
-            if datlst[0].startswith('# MagPy Absolutes') or datlst[1].startswith('Miren:'):
-                # found single file
-                localfilelist.append(path)
-                pass
-            elif len(datlst[0].split()) > 8: 
-                for elem in datlst:
-                    try:
-                        absfile = elem.split()[-1]
-                        if absfile.endswith(absidentifier):
-                            localfilelist.append(path+absfile)
-                    except:
-                        pass
-            else:
-                loggerabs.error('--- -- Aborting AbsAnalysis: no apropriate file found')              
-        else:
-            loggerabs.error('--- -- Aborting AbsAnalysis: could not identify path_or_url')
-            return  
-    else:
-        localfilelist.append(path_or_url)
-
-    # Escape for single files:
-    assert type(localfilelist)==list
-
-    if len(localfilelist) < 1:
-        loggerabs.info('--- -- Aborting AbsAnalysis: no data available')
-        print "Aborting AbsAnalysis: no data available"
-        return
-    
-    # if time range is given then limit the localfilelist
-    elem = localfilelist[0].split('/')
-    splitter = '/'
-    try:
-        elem = elem.split('\\')
-        splitter = '\\'
-        loggerabs.info('--- -- AbsAnalysis: Windows type path found')
-    except:
-        loggerabs.info('--- -- AbsAnalysis: Linux type path found')
-    if starttime:
-        localfilelist = [elem for elem in localfilelist if (datetime.strptime(elem.split(splitter)[-1][:10],"%Y-%m-%d") >= st._testtime(starttime))]
-
-    if endtime:
-        localfilelist = [elem for elem in localfilelist if (datetime.strptime(elem.split(splitter)[-1][:10],"%Y-%m-%d") <= st._testtime(endtime))]
-        
-    if len(localfilelist) > 0:
-        loggerabs.info('--- -- AbsAnalysis: %d DI measurements to be analyzed' % len(localfilelist))
-    else:
-        loggerabs.error('--- -- Aborting AbsAnalysis: check time range or data source: no DI data present')
-        return
- 
-    # get files from localfilelist and analyze them (localfilelist is not sorted!)
-    cnt = 0
-
-    # firstly load all absolutes and get min and max time
-    # load vario and scalar data between min and max
-    # then do the analysis
-    loggerabs.info('AbsAnalysis: Getting time range')
-    mintime = 9999999999.0
-    maxtime = 0.0
-    abst = []
-    print 'Getting time range', datetime.utcnow()
-    for fi in localfilelist:
-        abstr = absRead(path_or_url=fi,archivepath=archivepath)
-        if len(abstr) > 0:
-            mint = abstr._get_min('time')
-            maxt = abstr._get_max('time')
-            if mint < mintime:
-                mintime = mint
-            if maxt > maxtime:
-                maxtime = maxt
-            abst.append(abstr)
-
-    print 'Min Time', num2date(mintime)
-    print 'Max Time', num2date(maxtime)
-
-    # Test of iterative procedure with variable length  (chnage days=30) 
-    iterationtime = date2num(num2date(mintime).replace(tzinfo=None)+timedelta(days=30))
-    start = mintime
-    while start < maxtime:
-        print "Do 30 days of analysis between start and iterationtime: starting at ", num2date(start)
-        # 1.) Get vario
-        print 'Reading varios', datetime.utcnow()
-        if variopath:
-            variost = read(path_or_url=variopath,starttime=start-0.04,endtime=iterationtime+0.04)
-            print "Reading from ", num2date(start), num2date(iterationtime), len(variost)
-            variost.header.clear()
-            if not useflagged:
-                variost = variost.remove_flagged()
-            # Provide reorientation angles in case of non-geographically oriented systems: simple case HDZ -> use alpha = dec (at time of sensor setup)
-            variost = variost.rotation(alpha=alpha,beta=beta,unit=unit)
-            if len(variost) > 0:
-                vafunc = variost.interpol(['x','y','z'])
-
-        # 2.) Get scalars
-        print 'Reading scalars', datetime.utcnow()
-        if scalarpath:
-            # scalar instrument and dF are then required
-            scalarst = read(path_or_url=scalarpath,starttime=start-0.04,endtime=iterationtime+0.04)
-            scalarst.header.clear()
-            if not useflagged:
-                scalarst = scalarst.remove_flagged()
-            if len(scalarst) > 0:
-                scfunc = scalarst.interpol(['f'])
-
-        # 3.) Analyse streams
-        testlst = [elem for elem in abst if elem._get_min('time') >= start and elem._get_max('time') < iterationtime]
-        start = iterationtime
-        iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))    
-        for stream in testlst:
-            #print len(stream)
-            lengthoferrorsbefore = _logfile_len(logfile,'ERROR')
-
-            # XXX ###################################
-            # XXX   Remove the reference to plog !!!
-            # XXX ###################################
-            cnt += 1
-            plog.addcount(cnt, len(localfilelist))
-            # ######## Process counter
-            print plog.proc_count, " percent"
-            # ######## Process counter
-            
-            # initialize the move function for each fi
-            if not archivepath:
-                movetoarchive = False
-            else:
-                movetoarchive = True # this variable will be set false in case of warnings
-            loggerabs.info('%s : Analyzing absolute file of length %d' % (fi,len(stream)))
-            if len(stream) > 0:
-                mint = stream._get_min('time')
-                maxt = stream._get_max('time')
-                # -- Obtain variometer record and f record for the selected time (1 hour more before and after)
-                if variopath:
-                    if len(variost) > 0:
-                        stream = stream._insert_function_values(vafunc)
-                        varioinst = os.path.split(variopath)[0]
-                    else:
-                        loggerabs.warning('%s : No variometer correction possible' % fi) 
-                # Now check for f values in file
-                fcol = stream._get_column('f')
-                if not len(fcol) > 0 and not scalarpath:
-                    movetoarchive = False
-                    loggerabs.error('%s : f values are required for analysis -- aborting' % fi)
-                    break
-                if scalarpath:
-                    if len(scalarst) > 0:
-                        stream = stream._insert_function_values(scfunc, funckeys=['f'],offset=deltaF)
-                        scalarinst = os.path.split(scalarpath)[0]
-                    else:
-                        loggerabs.warning('%s : Did not find independent scalar values' % fi)
-                        
-                # use DataStream and its LineStruct to store results
-                #print unit
-                result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
-                result.str4 = varioinst
-                if (result.str3 == '-' or result.str3 == '') and not scalarinst == '-':
-                    result.str3 = scalarinst
-
-                # Get the amount of error messages after the analysis
-                lengthoferrorsafter = _logfile_len(logfile,'ERROR')
-
-                if lengthoferrorsafter > lengthoferrorsbefore:
-                    movetoarchive = False
-                    
-                # check for presence of result in summary-file and append / replace existing data (if more non-NAN values are present)
-                nonnan_result, nonnan_line = [],[]
-                for key in KEYLIST:
-                    try:
-                        if not isnan(eval('result.'+key)):
-                            nonnan_result.append(eval('result.'+key))
-                    except:
-                        pass
-                newst = DataStream()
-
-                # Create header keys and attributes
-                line = LineStruct()
-                st.header['col-time'] = 'Epoch'
-                st.header['col-x'] = 'i'
-                st.header['unit-col-x'] = unit
-                st.header['col-y'] = 'd'
-                st.header['unit-col-y'] = unit
-                st.header['col-z'] = 'f'
-                st.header['unit-col-z'] = 'nT'
-                st.header['col-f'] = 'f'
-                st.header['col-dx'] = 'basex'
-                st.header['col-dy'] = 'basey'
-                st.header['col-dz'] = 'basez'
-                st.header['col-df'] = 'dF'
-                st.header['col-t1'] = 'T'
-                st.header['col-t2'] = 'ScaleValueDI'
-                st.header['col-var1'] = 'Dec_S0'
-                st.header['col-var2'] = 'Dec_deltaH'
-                st.header['col-var3'] = 'Dec_epsilonZ'
-                st.header['col-var4'] = 'Inc_S0'
-                st.header['col-var5'] = 'Inc_epsilonZ'
-                st.header['col-str1'] = 'Person'
-                st.header['col-str2'] = 'DI-Inst'
-                st.header['col-str3'] = 'Mire'
-                st.header['col-str4'] = 'F-type'
-
-                if outputformat == 'xyz':
-                    #for elem in st:
-                    result = result.idf2xyz(unit=unit)
-                    result.typ = 'xyzf'         
-                    st.header['col-x'] = 'x'
-                    st.header['unit-col-x'] = 'nT'
-                    st.header['col-y'] = 'y'
-                    st.header['unit-col-y'] = 'nT'
-                    st.header['col-z'] = 'z'
-                    st.header['unit-col-z'] = 'nT'
-                elif outputformat == 'hdz':
-                    #for elem in st:
-                    result = result.idf2xyz(unit=unit)
-                    #for elem in st:
-                    result = result.xyz2hdz(unit=unit)
-                    result.typ = 'hdzf'         
-                    st.header['col-x'] = 'h'
-                    st.header['unit-col-x'] = 'nT'
-                    st.header['col-y'] = 'd'
-                    st.header['unit-col-y'] = unit
-                    st.header['col-z'] = 'z'
-                    st.header['unit-col-z'] = 'nT'
-
-                # only write results if no warnings were issued:
-                #if movetoarchive:
-                if not lengthoferrorsafter > lengthoferrorsbefore:
-                    newst.add(result)
-                    st.extend(newst, st.header)
-            else: # len(stream) <= 0
-                movetoarchive = False
-                loggerabs.error('%s: File or data format problem - please check' % fi)
-
-            # Get the list index of stream and select the appropriate filename for storage
-            if movetoarchive:
-                # Get the list index of stream and select the appropriate filename for storage
-                index = abst.index(stream)
-                fi = localfilelist[index]
-                if not "://" in fi: 
-                    src = fi
-                    fname = os.path.split(src)[1]
-                    dst = os.path.join(archivepath,fname)
-                    shutil.move(src,dst)
-                else:
-                    fname = fi.split('/')[-1]
-                    suffix = fname.split('.')[-1]
-                    passwdtyp = fi.split(':')
-                    typus = passwdtyp[0]
-                    port = 21
-                    passwd = passwdtyp[2].split('@')[0]
-                    restpath = passwdtyp[2].split('@')[1]
-                    myproxy = restpath.split('/')[0]
-                    ftppath = restpath.split('/')[1]
-                    login = passwdtyp[1].split('//')[1]
-                    dst = os.path.join(archivepath,fname)
-                    fh = NamedTemporaryFile(suffix=suffix,delete=False)
-                    print "Fi: ", fi
-                    fh.write(urllib2.urlopen(fi).read())
-                    fh.close()
-                    shutil.move(fh.name,dst)
-                    if (typus == 'ftp'):
-                        ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
-        #start = iterationtime
-        #iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))    
-
-    st = st.sorting()
-    
-    loggerabs.info('--- Finished absolute analysis at %s ' % str(datetime.now()))
-                            
-    return st
-
 
 
 def absoluteAnalysis(absdata, variodata, scalardata, **kwargs): 
@@ -1810,7 +1431,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if not outputformat:
         outputformat='idf'
     if not annualmeans:
-        annualmeans=[20000,1200,43000]
+        #annualmeans=[20000,1200,43000]
         annualmeans=[0.0,0.0,0.0]
     if not abstype:
         abstype = "manual"
@@ -1821,54 +1442,18 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             return
     if not expT:
         expT = 1
-
-    # ####################################
-    # 1. Get parameters from db or input (input overrides)
-    # ####################################
-    if db: 
-        cursor = db.cursor()
-        # Get all othere relevant data first before trying to read table (only if not provided by the user)
-        try:
-            if not stationid:
-                stationid =  dbgetstring(db, 'DATAINFO', vario, 'StationID')
-        except:
-            pass
-        try:
-            if not pier:
-                pier = dbgetstring(db, 'DATAINFO', vario, 'DataDeltaReferencePier')
-        except:
-            pass
-        try:
-            if not alpha:
-                alpha =  dbgetfloat(db, 'DATAINFO', vario, 'DataSensorAzimuth')
-        except:
-            pass
-        try:
-            if not beta:
-                beta =  dbgetfloat(db, 'DATAINFO', vario, 'DataSensorTilt')
-        except:
-            pass
-        try:
-            if not deltaF:
-                deltaF =  dbgetfloat(db, 'DATAINFO', scalar, 'DataDeltaF')
-        except:
-            pass
-
     if not alpha: 
         alpha=0.0
     if not beta:
         beta=0.0
-    if not deltaF:
-        deltaF=0.0
+    #if not deltaF:
+    #    deltaF=0.0
     if not stationid:
         stationid=''
     if not pier:
         pier=''
     if not diid:
         diid=".txt"
-
-    # Please Note for pier information always the existing pier in the file is used
-    print "Using the following parameters (alpha, beta, stationid, pier, deltaF, diid):", alpha, beta, stationid, pier, deltaF, diid
 
     # ####################################
     # 2. Get absolute data
@@ -1880,7 +1465,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     filelist, datelist = [],[]
     failinglist = []
     successlist = []
-    if db:        
+    if db:
         # Check whether absdata exists as table
         cursor.execute("SHOW TABLES LIKE '%s'" % absdata)
         try:
@@ -1937,8 +1522,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 print "Could not interpret absdata"
                 return
 
-             
-
+            
         for elem in filelist:
             head, tail = os.path.split(elem)
             try:
@@ -1963,6 +1547,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print "absoluteAnalysis: No matching dates found - aborting"
         return
 
+
+        # Please Note for pier information always the existing pier in the file is used
+
     # 2.2 Cycle through datetimelist 
     # --------------------
     # read varios, scalar and all absfiles of one day
@@ -1979,13 +1566,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print "------------------------------------------------------"
         # a) Read variodata
         try:
-            #print variodata, date, date+timedelta(days=1)
-            variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-            print "Length of Variodata:", len(variostr)
+            variodbtest = variodata.split(',')
+            if len(variodbtest) > 1:
+                variostr = readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
+            else:
+                variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
+            print "Length of Variodata:", len(variostr), len(variostr.ndarray[0])
         except:
             print "absoluteAnalysis: reading variometer data failed"
             variostr = DataStream()
-        if len(variostr) > 3: # can contain ([], 'File not specified')
+        if (len(variostr) > 3 and not np.isnan(variostr.mean('time'))) or len(variostr.ndarray[0]) > 0: # can contain ([], 'File not specified')
             variostr =variostr.rotation(alpha=alpha, beta=beta)
             vafunc = variostr.interpol(['x','y','z'])
         else:
@@ -1995,15 +1585,24 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         # b) Load Scalardata
         print "-----------------"
         try:
-            scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
-            print "Length of Scalardata:", len(scalarstr)
+            scalardbtest = scalardata.split(',')
+            if len(scalardbtest) > 1:
+                scalarstr = readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
+            else:
+                scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
+            print "Length of Scalardata:", len(scalarstr), len(scalarstr.ndarray[0])
         except:
-            print "absoluteAnalysis: reading scalar data failed"
+            print "absoluteAnalysis: reading scalar data from file failed"
             scalarstr = DataStream()
-        if len(scalarstr) > 3: # Because scalarstr can contain ([], 'File not specified')
+        if not deltaF:
+            try:
+                deltaF = scalarstr.header['DataDeltaF']            
+            except:
+                deltaF = 0.0
+        if (len(scalarstr) > 3 and not np.isnan(scalarstr.mean('time'))) or len(scalarstr.ndarray[0]) > 0: # Because scalarstr can contain ([], 'File not specified')
             scfunc = scalarstr.interpol(['f'])
         else:
-            print "absoluteAnalysis: no scalar data available"
+            print "absoluteAnalysis: no external scalar data provided"
             scalarfound = False
 
         # c) get absolute data
@@ -2019,6 +1618,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 difiles = [di for di in filelist if datestr in di]
             if len(difiles) > 0:
                 for elem in difiles:
+                    # Get stationid and pier from name (if not provided)
+                    tmpname = os.path.split(elem)[1].split('.')[0].split('_')
+                    if not stationid or stationid == '':
+                        stationid = tmpname[-1]
+                    if not pier or pier == '':
+                        pier = tmpname[-2]
+                    print "Data from %s, pier %s: deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta)
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     #print "LENGTH:",len(absst)
                     try:
@@ -2053,23 +1659,23 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
         for absst in abslist:
             print "-----------------"
-            print "Analyzing %s measurement from %s" % (abstype,str(date))
+            print "Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d"))
             #if readfile:
             try:
                 stream = absst[0].getAbsDIStruct()
             except:
                 stream = absst.getAbsDIStruct()
-            # if usestep not given and AutoDIF measruement found
+            # if usestep not given and AutoDIF measurement found
             if stream[0].person == 'AutoDIF' and not usestep:
                 usestep = 2
-            print "USESTEP:", usestep
+            #print "USESTEP:", usestep
             if variofound:
                 stream = stream._insert_function_values(vafunc)
             if scalarfound:
                 stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
             try:
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False)
-                print result.str4 + "_" + str(deltaF)
+                print "%s with delta F of %s nT" % (result.str4,str(deltaF))
                 if not deltaF == 0:
                     result.str4 = result.str4 + "_" + str(deltaF)
             except:
@@ -2104,8 +1710,25 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # 3. Format output
     # ####################################
 
+    # 3.0 Convert result to ndarray and dx,dy,dz to XYZ in nT 
+    #     --- This is important for baseline correction as all variometer provided components in nT
+
+    # cleanup resultsstream:
+    # replace all 999999.99 and -inf with NaN
+    resultstream = resultstream.linestruct2ndarray()
+    for idx, elem in enumerate(resultstream.ndarray):
+        if KEYLIST[idx] in NUMKEYLIST:
+            resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
+            resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
+    resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
+
+    #print "outfile"
+    #print resultstream.ndarray
+
     # 3.1 Header information 
     # --------------------
+    resultstream.header['StationID'] = stationid
+    resultstream.header['DataPier'] = pier
     resultstream.header['col-time'] = 'Epoch'
     resultstream.header['col-x'] = 'i'
     resultstream.header['unit-col-x'] = 'deg'
@@ -2115,10 +1738,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['unit-col-z'] = 'nT'
     resultstream.header['col-f'] = 'f'
     resultstream.header['unit-col-f'] = 'nT'
-    resultstream.header['col-dx'] = 'H-base'
+    resultstream.header['col-dx'] = 'X-base'
     resultstream.header['unit-col-dx'] = 'nT'
-    resultstream.header['col-dy'] = 'Dec-base'
-    resultstream.header['unit-col-dy'] = 'deg'
+    resultstream.header['col-dy'] = 'Y-base'
+    resultstream.header['unit-col-dy'] = 'nT'
     resultstream.header['col-dz'] = 'Z-base'
     resultstream.header['unit-col-dz'] = 'nT'
     resultstream.header['col-df'] = 'dF'
@@ -2136,6 +1759,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['col-str3'] = 'Mire'
     resultstream.header['col-str4'] = 'F-type'
 
+    """
     if outputformat == 'xyz':
         #for elem in st:
         result = result.idf2xyz()
@@ -2158,6 +1782,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         resultstream.header['unit-col-y'] = 'deg'
         resultstream.header['col-z'] = 'z'
         resultstream.header['unit-col-z'] = 'nT'
+    """
 
     #print "Files for archive:"
     #print "---------------------------"
@@ -2246,7 +1871,6 @@ def getAbsFilesFTP(**kwargs):
 
     filelist = []
     
-    msg = PyMagLog()
     loggerabs.info(" -- Starting downloading Absolute files from %s" % ftppath)
 
     # -- Checking whether new data is available
@@ -2294,7 +1918,6 @@ def removeAbsFilesFTP(**kwargs):
     ftpfilelist = kwargs.get('ftpfilelist')
     localfilelist = kwargs.get('localfilelist')
 
-    msg = PyMagLog()
     loggerabs.info(" -- Starting removing already successfully analyzed files from %s" % ftppath)
 
     doubles = list(set(ftpfilelist) & set(localfilelist))

@@ -344,6 +344,10 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
 
     fh = open(filename, 'rt')
 
+    array = [[] for key in KEYLIST]
+    fkeys = []
+    felements = []
+ 
     if getfile: 
         for line in fh:
             if line.isspace():
@@ -366,7 +370,10 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
                 for i, elem in enumerate(columns):
                     if i > 1:
                         key = KEYLIST[i-1]
+                        fkeys.append(key)
                         headers['col-'+key] = elem.replace('_','')
+                        headers['unit-col-'+key] = '-'
+
             else:
                 colsstr = line.split()
                 if not takehelium:
@@ -379,25 +386,49 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
                 row = LineStruct()
                 try:
                     date = colsstr[0]+'-'+colsstr[1]
-                    row.time = date2num(datetime.strptime(date,"%Y%m%d-%H%M%S"))
+                    array[0].append(date2num(datetime.strptime(date,"%Y%m%d-%H%M%S")))
+                    #row.time = date2num(datetime.strptime(date,"%Y%m%d-%H%M%S"))
                     for i in range(2,len(colsstr)):
                         key = KEYLIST[i-1]
-                        if not key.startswith('str'):
-                            exec('row.'+key+' = float(colsstr[i])')
-                        else:
-                            exec('row.'+key+' = str(float(colsstr[i]))')
-                        row.typ = 'other'
-                    stream.add(row)
+                        if not key.startswith('str') and not key in ['flag','comment','typ']:
+                            array[i-1].append(float(colsstr[i]))
+                            #exec('row.'+key+' = float(colsstr[i])')
+                        elif not key in ['flag','comment','typ']:
+                            array[i-1].append(str(float(colsstr[i])))
+                            #exec('row.'+key+' = str(float(colsstr[i]))')
+                        #row.typ = 'other'
+                    #stream.add(row)
                 except:
                     pass
 
-        headers['SensorDescription'] = 'RCS: filteres METEO data'
-        headers['SensorName'] = 'Various Meteo sensors'
-        headers['SensorID'] = 'RCS_Winkelbauer_0001'
-        headers['SensorType'] = 'Environment'
-        headers['col-t2'] = '430UEV' # Necessary because of none UTF8 coding in header
+        for idx,el in enumerate(array):
+            array[idx] = np.asarray(el)
 
-    return DataStream(stream, headers)    
+        headers['SensorDescription'] = 'RCS: filtered Meteorlogical data - Andreas Winkelbauer'
+        headers['SensorName'] = 'Various Meteorology sensors'
+        headers['SensorID'] = 'METEO_RCS2015_0001'
+        headers['SensorType'] = 'Various'
+        headers['SensorModule'] = 'RCS'
+        headers['SensorDataLogger'] = 'F77'
+        headers['SensorGroup'] = 'environment'
+        headers['DataFormat'] = 'RCSMETEO v3.0'
+        headers['col-t2'] = '430UEV' # Necessary because of none UTF8 coding in header
+        headers['col-f'] = 'T'
+        headers['unit-col-f'] = 'deg C'
+        headers['col-z'] = 'Schneehoehe'
+        headers['unit-col-z'] = 'cm'
+        if not takehelium:
+            headers['col-t1'] = 'rh'
+            headers['unit-col-t1'] = 'percent'
+            headers['col-var5'] = 'P'
+            headers['unit-col-var5'] = 'hPa'
+            headers['col-var1'] = 'Wind'
+            headers['unit-col-var1'] = 'm/s'
+
+        headers['SensorKeys'] = ','.join(fkeys)
+        headers['SensorElements'] = ','.join([eval("headers['col-"+key+"']") for key in KEYLIST if key in fkeys])
+
+    return DataStream([LineStruct()], headers, np.asarray(array))    
 
 
 def readLIPPGRAV(filename, headonly=False, **kwargs):

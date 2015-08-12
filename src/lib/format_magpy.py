@@ -9,6 +9,7 @@ from stream import *
 
 import gc
 
+
 # K0 (Browsing - not for Serious Science) ACE-EPAM data from the OMNI database:
 k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(UNUSED)
 		'Ion_very_lo': 'var1',		# Ion (47-65 keV) 1/(cm2 s ster MeV)
@@ -162,14 +163,15 @@ def readPYCDF(filename, headonly=False, **kwargs):
     """
     #stream = DataStream()
     #stream = DataStream([],{})
-    stream = DataStream([],{},[[] for key in KEYLIST])
+    stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
 
     array = [[] for key in KEYLIST]
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    ftype = kwargs.get('ftype')
+    oldtype = kwargs.get('oldtype')
     getfile = True
 
+    #oldtype=True
     # Some identification parameters used by Juergs
     jind = ["H0", "D0", "Z0", "F0", "HNscv", "HEscv", "Zscv", "Basetrig", "time", \
 "HNvar", "HEvar", "Zvar", "T1", "T2", "timeppm", "timegps", \
@@ -196,7 +198,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
         getfile = True 
     logbaddata = False
 
-
     # Get format type:
     # Juergens DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
@@ -222,7 +223,12 @@ def readPYCDF(filename, headonly=False, **kwargs):
         
         if headskip:
             for key in cdf_file.attrs:
-                stream.header[key] = str(cdf_file.attrs[key])
+                if not key == 'DataAbsFunctionObject':
+                    stream.header[key] = str(cdf_file.attrs[key])
+                else:
+                    print "Found DataAbsFunctionObject - loading and unpickling"
+                    func = pickle.loads(str(cdf_file.attrs[key]))
+                    stream.header[key] = func
 
         #if headonly:
         #    cdf_file.close()
@@ -242,7 +248,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 #ti = cdf_file[key][...]
                 #row = LineStruct()
                 if str(cdfformat) == 'MagPyCDF':
-                    if ftype:
+                    if not oldtype:
                         ind = KEYLIST.index('time')
                         array[ind] = np.asarray(date2num(cdf_file[key][...]))
                     else:
@@ -254,14 +260,14 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             stream.add(row)
                             del row
                 else:
-                    if ftype:
+                    if not oldtype:
                         ind = KEYLIST.index(key)
                         array[ind] = np.asarray(cdf_file[key][...]) + 730120.
                     else:
                         for elem in cdf_file[key][...]:
                             row = LineStruct()
                             # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
-                            if type(elem) == float:
+                            if type(elem) in [float,np.float64]:
                                 row.time = 730120. + elem
                             else:
                                 row.time = date2num(elem)
@@ -271,7 +277,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'HNvar' or key == 'x':
                 x = cdf_file[key][...]
                 if len(x) > 0:
-                    if ftype:
+                    if not oldtype:
                         ind = KEYLIST.index('x')
                         array[ind] = np.asarray(cdf_file[key][...])
                     else:
@@ -292,7 +298,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'HEvar' or key == 'y':
                 y = cdf_file[key][...]
                 if len(y) > 0:
-                    if ftype:
+                    if not oldtype:
                         ind = KEYLIST.index('y')
                         array[ind] = np.asarray(cdf_file[key][...])
                     else:
@@ -311,7 +317,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'Zvar' or key == 'z':
                 z = cdf_file[key][...]
                 if len(z) > 0:
-                    if ftype:
+                    if not oldtype:
                         ind = KEYLIST.index('z')
                         array[ind] = np.asarray(cdf_file[key][...])
                     else:
@@ -330,7 +336,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
             elif key == 'Fsc' or key == 'f':
                 f = cdf_file[key][...]
                 if len(f) > 0:
-                    if ftype:
+                    if not oldtype:
                         ind = KEYLIST.index('f')
                         array[ind] = np.asarray(cdf_file[key][...])
                     else:
@@ -427,9 +433,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             length = len(cdf_file['time'][...])         
                         arkey = [arkey[0]] * length
                     if len(arkey) > 0:
-                        if ftype:
+                        if not oldtype:
                             ind = KEYLIST.index(key.lower())
-                            array[ind] = np.asarray(cdf_file[key][...])
+                            array[ind] = np.asarray(arkey).astype(object)
                         else:
                             stream._put_column(arkey,key.lower())
                         stream.header['col-'+key.lower()] = key.lower()
@@ -448,7 +454,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         cdf_file.close()
         del cdf_file
 
-    if ftype:
+    if not oldtype:
         return DataStream([LineStruct()], stream.header,np.asarray(array))   
     else:
         return DataStream(stream, stream.header,stream.ndarray)   
@@ -475,7 +481,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     keylist = kwargs.get('keylist') # required for very old format, does not affect other formats
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    ftype = kwargs.get('ftype')
+    oldtype = kwargs.get('oldtype')
 
     getfile = True
 
@@ -583,7 +589,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     print "readPYBIN: struct error", filename, packstr, struct.calcsize(packstr)
                 try:                    
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-                    if ftype:
+                    if not oldtype:
                         array[0].append(date2num(stream._testtime(time)))
                         for idx, elem in enumerate(elemlist):
                             try:
@@ -622,11 +628,11 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print "To be done ..."
             pass
 
-    array = np.asarray([np.asarray(el) for el in array])
-    stream.ndarray = array
-    if len(stream.ndarray[0]) > 0:
-        print "readPYBIN: Imported bin as ndarray"
-        stream.container = [LineStruct()]
+        array = np.asarray([np.asarray(el) for el in array])
+        stream.ndarray = array
+        if len(stream.ndarray[0]) > 0:
+            print "readPYBIN: Imported bin as ndarray"
+            stream.container = [LineStruct()]
 
     #print stream.header     
     return stream 
@@ -661,7 +667,7 @@ def writePYSTR(datastream, filename, **kwargs):
     if not mode == 'append':
         wtr.writerow( [' # MagPy - ASCII'] )
         for key in headdict:
-            if not key.find('col') >= 0:
+            if not key.find('col') >= 0 and not key == 'DataAbsFunctionObject':
                 line = [' # ' + key +':  ' + str(headdict[key])]
                 wtr.writerow( line )
         wtr.writerow( ['# head:'] )
@@ -670,18 +676,35 @@ def writePYSTR(datastream, filename, **kwargs):
             head.append(title)
         wtr.writerow( head )
         wtr.writerow( ['# data:'] )
-    for elem in datastream:
-        row = []
-        for key in KEYLIST:
-            if key.find('time') >= 0:
-                try:
-                    row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                except:
-                    row.append( float('nan') )
-                    pass
-            else:
-                row.append(eval('elem.'+key))
-        wtr.writerow( row )
+
+    if len(datastream.ndarray[0]) > 0:
+        for i in range(len(datastream.ndarray[0])):
+            row = []
+            for idx,el in enumerate(datastream.ndarray):
+                if len(datastream.ndarray[idx]) > 0:
+                    if KEYLIST[idx].find('time') >= 0:
+                        row.append(datetime.strftime(num2date(el[i]).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                    else:
+                        row.append(el[i])
+                else:
+                    if KEYLIST[idx] in NUMKEYLIST:
+                        row.append(float('nan'))
+                    else:
+                        row.append('-')
+            wtr.writerow(row)
+    else:
+        for elem in datastream:
+            row = []
+            for key in KEYLIST:
+                if key.find('time') >= 0:
+                    try:
+                        row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                    except:
+                        row.append( float('nan') )
+                        pass
+                else:
+                    row.append(eval('elem.'+key))
+            wtr.writerow( row )
     myFile.close()
 
 
@@ -691,8 +714,13 @@ def writePYCDF(datastream, filename, **kwargs):
     #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
     #    head.append(title)
 
-    print datastream.ndarray
+    #print datastream.ndarray, len(datastream.ndarray[0])
     #print "WriteFormat length 0", len(datastream.ndarray[0])
+    # Test for file content
+    #if not len(datastream) > 0 and not len(datastream.ndarray)
+
+    if not len(datastream.ndarray[0]) > 0 and not len(datastream) > 0:
+        return
 
     mode = kwargs.get('mode')
 
@@ -735,12 +763,19 @@ def writePYCDF(datastream, filename, **kwargs):
     if not mode == 'append':
         for key in headdict:
             if not key.find('col') >= 0:
-                mycdf.attrs[key] = headdict[key]
+                #print key, headdict[key]
+                if not key == 'DataAbsFunctionObject':
+                    mycdf.attrs[key] = headdict[key]
+                else:
+                    print "Found DataAbsFunctionObject - pickle and dump "
+                    pfunc = pickle.dumps(headdict[key])
+                    mycdf.attrs[key] = pfunc
+                 
     mycdf.attrs['DataFormat'] = 'MagPyCDF'
 
-    def checkEqualIvo(lst):
-        # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
-        return not lst or lst.count(lst[0]) == len(lst)
+    #def checkEqualIvo(lst):
+    #    # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
+    #    return not lst or lst.count(lst[0]) == len(lst)
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 
@@ -753,28 +788,37 @@ def writePYCDF(datastream, filename, **kwargs):
 
     #print "WriteFormat length 1", len(datastream.ndarray[0])
     for key in keylst:
-        print "Writing:", key
         if ndtype:
             ind = KEYLIST.index(key)
             col = datastream.ndarray[ind]
             if not key in NUMKEYLIST:
                 if not key == 'time':
-                    print "converting"
+                    #print "converting"
                     col = np.asarray(col)
-                    col = col.astype('|S100')
         else:
             col = datastream._get_column(key)
-        if not False in checkEqual3(col):
+
+        # Sort out columns only containing nan's
+        try:
+            test = [elem for elem in col if not isnan(elem)]
+            if not len(test) > 0:
+                col = np.asarray([])
+        except:
+            pass
+        if not False in checkEqual3(col) and len(col) > 0:
             print "Found identical values only: %s" % key
-            col = col[:1]
+            if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
+                col = col[:1]
+            else:
+                col = np.asarray([])
         if key == 'time':
             key = 'Epoch'
             mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
+            print "Last time saved", col[-1]
         elif len(col) > 0:
-            nonetest = [elem for elem in col if not elem == None]
-            if len(nonetest) > 0:
-                print col
-                mycdf[key] = col
+            if not key in NUMKEYLIST:
+                col = np.asarray(list(col)) # to get string conversion
+            mycdf[key] = col
 
             for keydic in headdict:
                 if keydic == ('col-'+key):
