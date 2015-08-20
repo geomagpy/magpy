@@ -1670,6 +1670,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         stationid = tmpname[-1]
                     if not pier or pier == '':
                         pier = tmpname[-2]
+                    if not alpha:
+                        alpha = 0.0
+                    if not beta:
+                        beta = 0.0
+                    if not deltaF:
+                        deltaF = 0.0
+                    #print stationid, pier, deltaF, alpha, beta
                     print "Data from %s, pier %s: deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta)
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     #print "LENGTH:",len(absst)
