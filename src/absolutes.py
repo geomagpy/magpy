@@ -51,7 +51,7 @@ ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx'
 miredict = {'UA': 290.0, 'MireTower':41.80333,'MireChurch':51.1831,'MireCobenzl':353.698}
 
 class AbsoluteDIStruct(object):
-    def __init__(self, time=0, hc=float(nan), vc=float(nan), res=float(nan), f=float(nan), mu=float(nan), md=float(nan), expectedmire=float(nan),varx=float(nan), vary=float(nan), varz=float(nan), varf=float(nan), var1=float(nan), var2=float(nan), temp=float(nan), person='', di_inst='', f_inst=''):
+    def __init__(self, time=0, hc=float('nan'), vc=float('nan'), res=float('nan'), f=float('nan'), mu=float('nan'), md=float('nan'), expectedmire=float('nan'),varx=float('nan'), vary=float('nan'), varz=float('nan'), varf=float('nan'), var1=float('nan'), var2=float('nan'), temp=float('nan'), person='', di_inst='', f_inst=''):
         self.time = time
         self.hc = hc
         self.vc = vc
@@ -76,7 +76,7 @@ class AbsoluteDIStruct(object):
 
 
 class DILineStruct(object):
-    def __init__(self, ndi, nf=0, time=float(nan), laser=float(nan), hc=float(nan), vc=float(nan), res=float(nan), ftime=float(nan), f=float(nan), opt=float(nan), t=float(nan), scaleflux=float(nan), scaleangle=float(nan), azimuth=float(nan), pier='', person='', di_inst='', f_inst='', fluxgatesensor ='', inputdate=''):
+    def __init__(self, ndi, nf=0, time=float('nan'), laser=float('nan'), hc=float('nan'), vc=float('nan'), res=float('nan'), ftime=float('nan'), f=float('nan'), opt=float('nan'), t=float('nan'), scaleflux=float('nan'), scaleangle=float('nan'), azimuth=float('nan'), pier='', person='', di_inst='', f_inst='', fluxgatesensor ='', inputdate=''):
         self.time = ndi*[time]
         self.hc = ndi*[hc]
         self.vc = ndi*[vc]
@@ -603,9 +603,9 @@ class AbsoluteData(object):
             else:
                 epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]-2*np.pi)/4*hstart
         else:
-            s0d = float(nan)
-            deH = float(nan)
-            epZD = float(nan)
+            s0d = float('nan')
+            deH = float('nan')
+            epZD = float('nan')
         
         resultline = LineStruct()
         resultline.time = poslst[0].time
@@ -991,8 +991,8 @@ class AbsoluteData(object):
             epzi = (EZI1/4 - ( EZI2*np.sin(inc*np.pi/180) - EZI3*np.cos(inc*np.pi/180) )/(4*meanf))* (meanf*np.sin(inc*np.pi/180))
         else:
             loggerabs.warning("_calcinc: %s : no intensity measurement available - you might provide annual means"  % num2date(self[0].time).replace(tzinfo=None))
-            s0i, epzi = float(nan),float(nan)
-            fstart, deltaF = float(nan),float(nan)
+            s0i, epzi = float('nan'),float('nan')
+            fstart, deltaF = float('nan'),float('nan')
             xstart = 0.0 ## arbitrary
             ystart = 0.0
 
@@ -1038,16 +1038,35 @@ class AbsoluteData(object):
             xstart = tmpH * np.cos ( linestruct.y *np.pi/(180.0) ) 
             ystart = tmpH * np.sin ( linestruct.y *np.pi/(180.0) )
             fstart = np.sqrt(hstart**2 + zstart**2)
-
-
-        # Baselinevalues:
-        #basex = xstart - scale_x*poslst[0].varx
-        #basey = ystart - scale_y*poslst[0].vary
-        #basez = zstart - scale_z*poslst[0].varz
+        
+        # Directional base values -- would avoid them
         basex = h_adder
         #basey = 0.0 # defined in calcdec
         basez = z_adder
 
+        def coordinate(vec):
+            #vec = [64.2787283564,3.76836507656,48459.6180931]
+            dc = vec[1]*np.pi/(180.)
+            ic = vec[0]*np.pi/(180.)
+            x = vec[2]*np.cos(dc)*np.cos(ic)
+            y = vec[2]*np.sin(dc)*np.cos(ic)
+            z = vec[2]*np.sin(ic)
+            return [x,y,z]
+
+        # The following was tested for consitency - basevalues + variometervalues should return DI
+        #1.) get x,y,z from i,d,f
+        #xyz = coordinate([inc,linestruct.y,fstart])
+        #2.) Baselinevalues:
+        #basex = xyz[0] - scale_x*poslst[0].varx
+        #basey = xyz[1] - scale_y*poslst[0].vary
+        #basez = xyz[2] - scale_z*poslst[0].varz
+        #basex2 = xyz[0] - mean(xvals)
+        #basey2 = xyz[1] - mean(yvals)
+        #basez2 = xyz[2] - mean(zvals)
+        #print "Variometer values 1", poslst[0].varx, poslst[0].vary, poslst[0].varz
+        #print "Variometer values 2", mean(xvals),mean(yvals),mean(zvals)
+
+        #print "Basevalues", basex1,basey1,basez1, basex2,basey2,basez2
         #baseh = np.sqrt(basex**2+basey**2)
 
         # Putting data to linestruct:
@@ -1055,7 +1074,7 @@ class AbsoluteData(object):
         linestruct.z = fstart
         linestruct.f = fstart #np.array([basex,basey,basez])
         linestruct.dx = basex
-        #linestruct.dy = basey
+        #linestruct.dy = basey   # if not used, then the declination value will be returned
         linestruct.dz = basez
         linestruct.df = deltaF
         linestruct.typ = 'idff'         
@@ -1374,6 +1393,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         - alpha:        (float) orientation angle 1 in deg (if z is vertical, alpha is the horizontal rotation angle)
         - beta:         (float) orientation angle 2 in deg 
         - deltaF:       (float) difference between scalar measurement point and pier (TODO: check the sign)
+        - deltaD:	(float) = kwargs.get('deltaD')
+        - deltaI: 	(float) = kwargs.get('deltaI')
         - diid:         (string) identifier (id) of di files (e.g. A2_WIC.txt)
         - outputformat: (string) one of 'idf', 'xyz', 'hdf'
         - usestep:      (int) which step to use for analysis, usually both, in autodif only 2
@@ -1417,6 +1438,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     stationid = kwargs.get('stationid')
     pier = kwargs.get('pier')
     deltaF = kwargs.get('deltaF')
+    deltaD = kwargs.get('deltaD')
+    deltaI = kwargs.get('deltaI')
     diid = kwargs.get('diid')
     outputformat = kwargs.get('outputformat')
     usestep = kwargs.get('usestep')
@@ -1442,10 +1465,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             return
     if not expT:
         expT = 1
-    if not alpha: 
-        alpha=0.0
-    if not beta:
-        beta=0.0
+    #if not alpha: 
+    #    alpha=0.0
+    #if not beta:
+    #    beta=0.0
     #if not deltaF:
     #    deltaF=0.0
     if not stationid:
@@ -1466,7 +1489,18 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     failinglist = []
     successlist = []
     if db:
+        print "absoluteAnalysis:  You selected a DB. Tyring to import database methods"
+        try:
+            try:
+                from database import diline2db, db2diline
+            except:
+                from magpy.database import diline2db, db2diline
+        except:
+            print "absoluteAnalysis:  import failed - skipping eventually selected option dbadd"        
+            dbadd = False
+        cursor = db.cursor()
         # Check whether absdata exists as table
+        print "absoluteAnalysis:  Tyring to interprete the didata path as DB Table"
         cursor.execute("SHOW TABLES LIKE '%s'" % absdata)
         try:
             value = cursor.fetchone()[0]
@@ -1482,7 +1516,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 return
             # DI TABLE FOUND
             readfile = False
+            print "absoluteAnalysis:  ... success"
         except:
+            print "absoluteAnalysis:  Could not read DB Table with DI values - checking files"
             pass
         
     if readfile:
@@ -1576,6 +1612,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             print "absoluteAnalysis: reading variometer data failed"
             variostr = DataStream()
         if (len(variostr) > 3 and not np.isnan(variostr.mean('time'))) or len(variostr.ndarray[0]) > 0: # can contain ([], 'File not specified')
+            if not alpha:
+                try:
+                    alpha = float(variostr.header['DataRotationAlpha'])
+                except:
+                    alpha = 0.0
+            if not beta:
+                try:
+                    beta = float(variostr.header['DataRotationBeta'])
+                except:
+                    beta = 0.0
             variostr =variostr.rotation(alpha=alpha, beta=beta)
             vafunc = variostr.interpol(['x','y','z'])
         else:
@@ -1596,7 +1642,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             scalarstr = DataStream()
         if not deltaF:
             try:
-                deltaF = scalarstr.header['DataDeltaF']            
+                deltaF = float(scalarstr.header['DataDeltaF'])
             except:
                 deltaF = 0.0
         if (len(scalarstr) > 3 and not np.isnan(scalarstr.mean('time'))) or len(scalarstr.ndarray[0]) > 0: # Because scalarstr can contain ([], 'File not specified')
@@ -1651,10 +1697,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             startd = datetime.strftime(date,"%Y-%m-%d")
             endd = datetime.strftime(date+timedelta(days=1),"%Y-%m-%d")
             #pier = 'D'
-            #stationid = 'WIK'
+            if not stationid or stationid == '':
+                stationid = absdata.split('_')[1]
+
             sql = "Pier='%s'" % pier
-            tablename = 'DIDATA_%s' % stationid
-            #print sql, tablename
+            #tablename = 'DIDATA_%s' % stationid
+            tablename = absdata
+            #print sql, tablename, absdata
             abslist = db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
 
         for absst in abslist:
@@ -1674,8 +1723,22 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if scalarfound:
                 stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
             try:
-                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False)
+                # get delta D and delta I values here
+                if not deltaD:
+                    try:
+                        deltaD = 0.0
+                        #get from dict
+                    except:
+                        deltaD = 0.0
+                if not deltaI:
+                    try:
+                        deltaI = 0.0
+                        #get from dict
+                    except:
+                        deltaI = 0.0
+                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI)
                 print "%s with delta F of %s nT" % (result.str4,str(deltaF))
+                print "Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI))
                 if not deltaF == 0:
                     result.str4 = result.str4 + "_" + str(deltaF)
             except:
@@ -1720,7 +1783,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         if KEYLIST[idx] in NUMKEYLIST:
             resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
             resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
-    resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
+    #resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
 
     #print "outfile"
     #print resultstream.ndarray
@@ -1729,6 +1792,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # --------------------
     resultstream.header['StationID'] = stationid
     resultstream.header['DataPier'] = pier
+    resultstream.header['DataFormat'] = 'MagPyDI'
+    resultstream.header['DataComponents'] = 'IDFF'
     resultstream.header['col-time'] = 'Epoch'
     resultstream.header['col-x'] = 'i'
     resultstream.header['unit-col-x'] = 'deg'
@@ -1738,10 +1803,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['unit-col-z'] = 'nT'
     resultstream.header['col-f'] = 'f'
     resultstream.header['unit-col-f'] = 'nT'
-    resultstream.header['col-dx'] = 'X-base'
+    resultstream.header['col-dx'] = 'H-base'
     resultstream.header['unit-col-dx'] = 'nT'
-    resultstream.header['col-dy'] = 'Y-base'
-    resultstream.header['unit-col-dy'] = 'nT'
+    resultstream.header['col-dy'] = 'D-base'
+    resultstream.header['unit-col-dy'] = 'deg'
     resultstream.header['col-dz'] = 'Z-base'
     resultstream.header['unit-col-dz'] = 'nT'
     resultstream.header['col-df'] = 'dF'

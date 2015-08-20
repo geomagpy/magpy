@@ -212,16 +212,23 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
         
     '''
 
+    # Test whether columns really contain data or whether only nans are present:
+    #print stream.ndarray
+    stream = stream._remove_nancolumns()
+    availablekeys = stream._get_key_headers(numerical=True)
+    #print stream.ndarray
+
     # if no variables are given, use all available:
     if len(variables) < 1:
-        variables = stream._get_key_headers()
+        variables = availablekeys
+    else:
+        variables = [var for var in variables if var in availablekeys]
     if len(variables) > 9:
         print "More than 9 variables available - plotting only the first nine:", 
         print "Available:", variables
         variables = variables[:9]
         print "Plotting:", variables
-
-
+    
     # Check lists for variables have correct length:
     num_of_var = len(variables)
     if num_of_var > 9:
@@ -765,15 +772,14 @@ class figFlagger():
         #print "Selected range:", selarray
         minbound = min([selarray[1],selarray[3]])
         maxbound = max([selarray[1],selarray[3]])
-
-        idxstart = np.abs(data.ndarray[0]-min(selarray[0],selarray[2])).argmin()
-        idxend = np.abs(data.ndarray[0]-max(selarray[0],selarray[2])).argmin()
+        idxstart = np.abs(data.ndarray[0].astype(float)-min(selarray[0],selarray[2])).argmin()
+        idxend = np.abs(data.ndarray[0].astype(float)-max(selarray[0],selarray[2])).argmin()
 
         for i in range(len(data.ndarray)):
             if len(data.ndarray[i]) > idxstart: # and KEYLIST[i] in self.keylist:
                 if KEYLIST[i] in self.keylist or KEYLIST[i] == 'time': #i in range(len(FLAGKEYLIST)) and
                     keyar.append(KEYLIST[i])
-                    timear = data.ndarray[i][idxstart:idxend]
+                    timear = data.ndarray[i][idxstart:idxend].astype(float)
                     selectedndarray.append(timear)
         selectedndarray = np.asarray(selectedndarray)
 
@@ -783,7 +789,7 @@ class figFlagger():
             if i == 0:
                 self.idxar = [idx+idxstart for idx, elem in enumerate(selectedndarray[i]) if selectedndarray[numb][idx] >= minbound and selectedndarray[numb][idx] <= maxbound ]             
             newselectedndarray.append(allar)
-        newselectedndarray = np.asarray(newselectedndarray)
+        newselectedndarray = np.asarray(newselectedndarray).astype(float)
         self.idxar = np.asarray(self.idxar)
         # Some cleanup
         del selectedndarray
@@ -918,8 +924,8 @@ def addFlag(data, flagger, indeciestobeflagged, variables):
         for k, g in groupby(enumerate(indeciestobeflagged), lambda ix: ix[0] - ix[1]):
             consecutives = map(itemgetter(1), g)
             #print consecutives
-            begintime = num2date(data.ndarray[0][consecutives[0]]).replace(tzinfo=None)
-            endtime = num2date(data.ndarray[0][consecutives[-1]]).replace(tzinfo=None)
+            begintime = num2date(data.ndarray[0][consecutives[0]].astype(float)).replace(tzinfo=None)
+            endtime = num2date(data.ndarray[0][consecutives[-1]].astype(float)).replace(tzinfo=None)
             modtime = datetime.utcnow()
             for key in keylist:
                 if not sensid == '':
@@ -2122,8 +2128,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 
         # DEFINE DATA:
         key = data[i]['key']
-        t = data[i]['tdata']
-        y = data[i]['ydata']
+        t = np.asarray(data[i]['tdata']).astype(float)
+        y = np.asarray(data[i]['ydata']).astype(float)
         # Sort data before plotting - really necessary ? costs 0.1 seconds for 1 day second data 
         #datar = sorted([[t[j],y[j]] for j, el in enumerate(t)])
         #t = [datar[j][0] for j, el in enumerate(datar)]
@@ -2223,16 +2229,16 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                             #if not flags[0][idx][indexflag] == '0':
                             #    print "Got", flags[0][idx][indexflag], idx
                             if flags[0][idx][indexflag] in ['3']:
-                                a_t.append(t[idx])
+                                a_t.append(float(t[idx]))
                                 a_y.append(y[idx])
                             elif flags[0][idx][indexflag] in ['1']:
-                                b_t.append(t[idx])
+                                b_t.append(float(t[idx]))
                                 b_y.append(y[idx])
                             elif flags[0][idx][indexflag] in ['2']:
-                                c_t.append(t[idx])
+                                c_t.append(float(t[idx]))
                                 c_y.append(y[idx])
                             elif flags[0][idx][indexflag] in ['4']:
-                                d_t.append(t[idx])
+                                d_t.append(float(t[idx]))
                                 d_y.append(y[idx])
                 #print "Hello"
                 if len(a_t) > 0:

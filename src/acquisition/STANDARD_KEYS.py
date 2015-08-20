@@ -35,12 +35,18 @@ The asociations with the MagPy stream class are contained as IDKEY dictionary in
 33: rh (relative humidity)	-- float (99.0) [%]
 34: T (dewpoint)		-- float (6.0) [C]
 35: P (pressure)		-- float (906.4) [hPa]
+36: pr (precipitaion)		-- float (7856.97) [mm]
+37: V (visibility)		-- int (100) [m]
 38: W (weight)                  -- float (24.0042) [g]
-   35-39: 			-- [reserved]
+39: N (amount of partciles)	-- int (100) [N]
 
-**40+ : Other Variables**
+**40-49 : Other Variables**
 40: Error code (POS1)		-- float (80) [-]
-   41-59: 			-- [reserved]
+   41-49: 			-- [reserved]
+
+**50-59 : Temperature and Environment Data - continued**
+50: WS (windspeed)			-- float (7.2) [m/s]
+   51-59: 			-- [reserved]
 
 **60-69 : Voltages**
 60: VDD (support voltage)	-- float (5.02) [V]

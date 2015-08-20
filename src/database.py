@@ -26,6 +26,33 @@ except:
     print "SQL package import failed"
     pass
 
+
+"""
+AVAILABLE METHODS:
+---------------------------------
+dbgetfloat(db,tablename,sensorid,columnid,revision=None)
+dbgetstring(db,tablename,sensorid,columnid,revision=None)
+dbupload(db, path,stationid,**kwargs):
+dbinit(db):
+dbdelete(db,datainfoid,**kwargs):
+dbdict2fields(db,header_dict,**kwargs):
+dbfields2dict(db,datainfoid):
+dbalter(db):
+dbselect(db, element, table, condition=None, expert=None):
+dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
+dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',updatedb=True):
+writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, **kwargs):
+dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
+stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs):
+readDB(db, table, starttime=None, endtime=None, sql=None):
+db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
+diline2db(db, dilinestruct, mode=None, **kwargs):
+db2diline(db,**kwargs):
+getBaselineProperties(db,datastream,pier=None,distream=None):
+flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
+db2flaglist(db,sensorid, begin=None, end=None):
+
+"""
 # ----------------------------------------------------------------------------
 # Part 2: Default list definitions - defining fields of database standard tables
 # ----------------------------------------------------------------------------
@@ -42,10 +69,10 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
 			'DataAcquisitionLatitude','DataAcquisitionLongitude','DataLocationReference',
 			'DataElevation','DataElevationRef','DataFlagModification','DataAbsFunc',
 			'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate',
-			'DataRating','DataComments','DataSource',
+			'DataRating','DataComments','DataSource','DataAbsFunctionObject',
                         'DataDeltaValues', 'DataTerms', 'DataReferences',        
                         'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
-                        'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc']
+                        'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta']
 
 DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                         'CHAR(50)','CHAR(50)',
@@ -59,9 +86,9 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                         'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(20)',
                         'DECIMAL(20,9)','CHAR(10)','CHAR(50)','CHAR(20)',
                         'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
-                        'CHAR(10)','TEXT','CHAR(100)','CHAR(100)', 
+                        'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)', 
                         'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
-                        'CHAR(50)','TEXT']
+                        'CHAR(50)','TEXT','DECIMAL(20,9)','DECIMAL(20,9)']
 
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
@@ -79,6 +106,9 @@ BASELINEKEYLIST = ['SensorID','MinTime','MaxTime','TmpMaxTime','BaseFunction','B
 
 # Optional (if acquisition routine is used)
 IPKEYLIST = ['IpName','IP','IpSensors','IpDuty','IpType','IpAccess','IpLocation','IpLocationLat','IpLocationLong','IpSystem','IpMainUser','IpComment']
+
+# Optional (if many piers are available)
+PIERLIST = ['PierID','PierName','PierAlternativeName','PierType','PierConstruction','StationID','PierLong','PierLat','PierAltitude','PierCoordinateSystem','PierReference','DeltaDictionary','AzimuthDictionary','DeltaComment']
 
 """
 Standard tables:
@@ -137,6 +167,31 @@ IP:
 	IpMainUser	add the user
 	IpComment	optional comments
 
+PIER:
+	PierName		e.g. A2
+	PierID			Reference Number used by BEV
+	PierAlernativeName	e.g. Mioara
+	PierType		e.g. Aim, Pillar, Groundmark
+	PierConstruction	e.g. Glascube, Concretepillar with glasplate, Groundmark
+	PierLong		Longitude
+	PierLat			Latitude
+	PierAltidude		Altitude surface of Pier or 
+	PierCoordinateSystem	Location name (GMO-Lab1)
+        PierReference		Reference(s) for coordinates and construction 
+        DeltaDictinoary		Reference List: Looking like A2: 201502_-0.45_0.002_201504_2.15, A16: None_None_None_201505_1.15
+                                ( containing pier plus epoch - year or year/month of determination- for dir
+                                  as well as delta D, Delta I; and Epoch and delta D - order sensitive - 
+                                  separated by underlines; non-existing values are marked by 'None')  
+        AzimuthDictinoary	Reference List: Looking like Z12345_xxx.xx, Z12345_xxx.xx 
+                                ( containing AzimuthMark plus angle )  
+        DeltaComment		optional comments on delta values
+        PierComment		optional comments on Pier
+        StationID		Station at which Pier is located
+
+"""
+
+"""
+dbgetfloat
 
 """
 
@@ -144,6 +199,66 @@ IP:
 #  Part 3: Main methods for mysql database communication --
 #      dbalter, dbsensorinfo, dbdatainfo, dbdict2fields, dbfields2dict and 
 # ----------------------------------------------------------------------------
+
+def dbgetPier(db,pierid, rp, value,maxdate=None,l=False):
+    """
+    DEFINITION:
+        Gets values from DeltaDictionary of the PIERS table
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - pierid:   	(string) The pier you are interested in   
+        - RP:   	(string) ReferencePier 
+        - value:   	(string) one of 'deltaD', 'deltaI' and 'deltaF' - default is 'deltaF' 
+        - maxdate:   	(string) get last value before maxdate
+        - l:   		(bool) if true return a list of all inputs
+    APPLICATION:
+        >>>deltaD =  dbgetPier(db, 'A7','A2','deltaD')
+          
+        returns deltaD of A7 relative to A2
+    """
+    sql = 'SELECT DeltaDictionary FROM PIERS WHERE PierID = "' + pierid + '"';
+    cursor = db.cursor()
+    cursor.execute(sql)
+    row = cursor.fetchone()
+
+    if not row:
+        print "dbgetPier: No data found for your selection"
+        return 0.0
+
+    key = ['pier','epochDir','deltaD','deltaI','epochF','deltaF']
+    ind = key.index(value)
+    indtdir = key.index('epochDir')
+    indtf = key.index('epochF')
+
+    if not row[0] == None:
+        try:
+            pl1 = row[0].split(',')
+            pierlist = [elem.strip().split('_') for elem in pl1 if elem.split('_')[0] == rp]
+            if l:
+                return pierlist
+            else:
+                if not value in ['deltaD','deltaI','deltaF']:
+                    print "dbgetPier: Select a valid value paramater - check help"
+                    return 0.0
+                if value in ['deltaD','deltaI']:
+                    valuetimes = [t[indtdir] for t in pierlist]
+                else:
+                    valuetimes = [t[indtf] for t in pierlist]
+                if not maxdate:
+                    indlv = valuetimes.index(max(valuetimes))
+                    return pierlist[indlv][ind]
+                else:
+                    # reformat maxdate to yearmonth
+                    valuetimes = [el for el in valuetimes if el <= maxdate]
+                    indlv = valuetimes.index(max(valuetimes))             
+                    return pierlist[indlv][ind]
+        except:
+            print "no deltas found"
+            #return row[0] 
+    else:
+        return 0.0
+
 
 def dbgetfloat(db,tablename,sensorid,columnid,revision=None):
     """
@@ -304,6 +419,7 @@ def dbinit(db):
     DEFINITION:
         set up standard tables of magpy:
         DATAINFO, SENSORS, and STATIONS (and FlAGGING).
+        Existing and valid inputs remain unchanged
         
     PARAMETERS:
     Variables:
@@ -335,7 +451,8 @@ def dbinit(db):
     stationstr = ' CHAR(100), '.join(STATIONSKEYLIST) + ' CHAR(100)'
     stationstr = stationstr.replace('StationID CHAR(100)', 'StationID CHAR(50) NOT NULL PRIMARY KEY')
     stationstr = stationstr.replace('StationDescription CHAR(100)', 'StationDescription TEXT')
-    stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
+    stationstr = stationstr.replace('StationIAGAcode CHAR(100)', 'StationIAGAcode CHAR(10)')
+    #stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
     createstationtablesql = "CREATE TABLE IF NOT EXISTS STATIONS (%s)" % stationstr
 
     # DATAINFO TABLE
@@ -348,8 +465,6 @@ def dbinit(db):
         newelem = elem + ' ' + DATAVALUEKEYLIST[i]
         FULLDATAKEYLIST.append(newelem)
     datainfostr = ', '.join(FULLDATAKEYLIST)
-
-    #datainfostr = 'DataID CHAR(50) NOT NULL PRIMARY KEY, SensorID CHAR(50), StationID CHAR(50), ColumnContents TEXT, ColumnUnits TEXT, DataFormat CHAR(20),DataMinTime CHAR(50), DataMaxTime CHAR(50), DataSamplingFilter CHAR(100), DataDigitalSampling CHAR(100), DataComponents CHAR(10), DataSamplingRate CHAR(100), DataType CHAR(100), DataDeltaX DECIMAL(20,9), DataDeltaY DECIMAL(20,9), DataDeltaZ DECIMAL(20,9),DataDeltaF DECIMAL(20,9),DataDeltaReferencePier CHAR(20),DataDeltaReferenceEpoch CHAR(50),DataScaleX DECIMAL(20,9),DataScaleY DECIMAL(20,9),DataScaleZ DECIMAL(20,9),DataScaleUsed CHAR(2),DataSensorOrientation CHAR(10),DataSensorAzimuth DECIMAL(20,9),DataSensorTilt DECIMAL(20,9), DataAngularUnit CHAR(5),DataPier CHAR(20),DataAcquisitionLatitude DECIMAL(20,9), DataAcquisitionLongitude DECIMAL(20,9), DataLocationReference CHAR(20), DataElevation DECIMAL(20,9), DataElevationRef CHAR(10), DataFlagModification CHAR(50), DataAbsFunc CHAR(20), DataAbsDegree INT, DataAbsKnots DECIMAL(20,9), DataAbsMinTime CHAR(50), DataAbsMaxTime CHAR(50), DataAbsDate CHAR(50), DataRating CHAR(10), DataComments TEXT'
     createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
 
     # FLAGS TABLE
@@ -366,13 +481,23 @@ def dbinit(db):
     createbaselinetablesql = "CREATE TABLE IF NOT EXISTS BASELINE (%s)" % basestr
 
     # IP TABLE
-    # Create baseline table
+    # Create ip addresses table
     ipstr = ' CHAR(100), '.join(IPKEYLIST) + ' CHAR(100)'
     ipstr = ipstr.replace('IP CHAR(100)', 'IP CHAR(50) NOT NULL')
     ipstr = ipstr.replace('IpComment CHAR(100)', 'IpComment TEXT')
     ipstr = ipstr.replace('IpSensors CHAR(100)', 'IpSensors TEXT')
     createiptablesql = "CREATE TABLE IF NOT EXISTS IPS (%s)" % ipstr
 
+
+    # Pier TABLE
+    # Create Pier overview table
+    pierstr = ' CHAR(100), '.join(PIERLIST) + ' CHAR(100)'
+    pierstr = pierstr.replace('PierID CHAR(100)', 'PierID CHAR(50) NOT NULL')
+    pierstr = pierstr.replace('PierComment CHAR(100)', 'PierComment TEXT')
+    pierstr = pierstr.replace('DeltaComment CHAR(100)', 'DeltaComment TEXT')
+    pierstr = pierstr.replace('DeltaDictionary CHAR(100)', 'DeltaDictionary TEXT')
+    pierstr = pierstr.replace('PierReference CHAR(100)', 'PierReference TEXT')
+    createpiertablesql = "CREATE TABLE IF NOT EXISTS PIERS (%s)" % pierstr
 
     cursor = db.cursor()
 
@@ -382,6 +507,7 @@ def dbinit(db):
     cursor.execute(createflagtablesql)
     cursor.execute(createbaselinetablesql)
     cursor.execute(createiptablesql)
+    cursor.execute(createpiertablesql)
 
     db.commit()
     cursor.close ()
@@ -722,6 +848,9 @@ def dbfields2dict(db,datainfoid):
                         colsstr = row[0]
                     if key == 'ColumnUnits':
                         colselstr = row[0]
+                    if key == 'DataAbsFunctionObject':
+                        func = pickle.loads(str(cdf_file.attrs[key]))
+                        stream.header[key] = func
                 else:
                     if not row[0] == None:
                         metadatadict[key] = float(row[0])
@@ -879,6 +1008,23 @@ def dbalter(db):
                 loggerdatabase.debug("Key added: %s" % key)
     except:
         loggerdatabase.warning("Table DATAINFO not existing")
+
+    try:
+        checksql = 'SELECT PierID FROM PIERS'
+        cursor.execute(checksql)
+        for ind,key in enumerate(PIERLIST):
+            try:
+                checksql = 'SELECT ' + key+ ' FROM PIERS'
+                loggerdatabase.debug("Checking key: %s" % key)
+                cursor.execute(checksql)
+                loggerdatabase.debug("Found key: %s" % key)
+            except:
+                loggerdatabase.debug("Missing key: %s" % key)
+                addstr = 'ALTER TABLE PIERS ADD ' + key + ' TEXT'
+                cursor.execute(addstr)
+                loggerdatabase.debug("Key added: %s" % key)
+    except:
+        loggerdatabase.warning("Table PIERS not existing")
 
     db.commit()
     cursor.close ()
@@ -1101,8 +1247,13 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         DataMaxTime CHAR(50)
     """
 
+    # Define keys here which do not trigger a new revision number in the table
+    SKIPKEYS = ['DataID', 'ColumnContents','ColumnUnits', 'DataFormat','DataTerms','DataDeltaF','DataDeltaT1','DataDeltaT2', 'DataFlagModification', 'DataAbsFunc',
+'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate', 'DataRating','DataComments','DataSource','DataAbsFunctionObject', 'DataDeltaValues', 'DataTerms', 'DataReferences', 'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel','DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta']
+
     searchlst = ' '
     datainfohead,datainfovalue=[],[]
+    novalues = False
     if datakeydict:
         for key in datakeydict:
             if key in DATAINFOKEYLIST and not key == 'DataMaxTime' and not key == 'DataMinTime': 
@@ -1110,7 +1261,10 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                 if not str(datakeydict[key]) == '':
                     datainfohead.append(key)
                     ind = DATAINFOKEYLIST.index(key)
-                    if DATAVALUEKEYLIST[ind].startswith('DEC') or DATAVALUEKEYLIST[ind].startswith('FLO'):
+                    if key == 'DataAbsFunctionObject':
+                        pfunc = pickle.dumps(datakeydict[key])
+                        datainfovalue.append( pfunc )
+                    elif DATAVALUEKEYLIST[ind].startswith('DEC') or DATAVALUEKEYLIST[ind].startswith('FLO'):
                         try:
                             datainfovalue.append(float(datakeydict[key]))
                         except:
@@ -1124,7 +1278,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                             datainfovalue.append(str(datakeydict[key]))
                     else:
                         datainfovalue.append(str(datakeydict[key]))
-                    if key == 'DataID' or key.startswith('Column') or key == 'DataFormat' or key == 'DataTerms' or key == 'DataFlagModification' or key.startswith('DataPubli'):
+                    #if key == 'DataID' or key.startswith('Column') or key == 'DataFormat' or key == 'DataTerms' or key == 'DataFlagModification' or key.startswith('DataPubli'):
+                    if key in SKIPKEYS:
                         pass
                     else:
                         searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
@@ -1212,6 +1367,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     # check whether input in DATAINFO with sensorid is existing already
     if len(rows) > 0:
+        print "dbdatainfo: Found existing tables"
         # Get maximum number
         for i in range(len(rows)):
             rowval = rows[i][0].replace(sensorid + '_','')
@@ -1234,6 +1390,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: using searchlist %s"% intensivesearch)
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
+            print "dbdatainfo: data existing - should be updated?"
+            selectupdate = True
             for i in range(len(intensiverows)):
                 # if more than one record is existing select the latest (highest) number
                 introwval = intensiverows[i][0].replace(sensorid + '_','')
@@ -1244,21 +1402,37 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             intmaxnum = max(intnumlst)
             datainfonum = '{0:04}'.format(intmaxnum)
         else:
+            print "dbdatainfo: Creating new Datainfo input - new revision number"
+            selectupdate = False
             datainfonum = '{0:04}'.format(maxnum+1)
             # select maximum number + 1
             if 'DataID' in datainfohead:
-                index = datainfohead.index('DataID') 
+                selectindex = datainfohead.index('DataID') 
                 datainfovalue[index] = sensorid + '_' + datainfonum
             else:
                 datainfohead.append('DataID')
                 datainfovalue.append(sensorid + '_' + datainfonum)
             datainfostring = joindatainfovalues(datainfohead, datainfovalue)
+        if selectupdate:
+            sqllst = [key + " ='" + str(datainfovalue[idx]) +"'" for idx, key in enumerate(datainfohead) if key in SKIPKEYS and not key == 'DataAbsFunctionObject']
+            if 'DataAbsFunctionObject' in datainfohead: ### Tested Text and Binary so far. No quotes is OK.
+                print "dbdatainfo: adding DataAbsFunctionObjects to DATAINFO is not yet working"
+                #pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataAbsFunctionObject')]) 
+                #sqllst.append('DataAbsFunctionObject' + '=' + pfunc)
+                # For testing:
+                    #datainfosql = 'INSERT INTO DATAINFO(DataAbsFunctionObject) VALUES (%s)' % (pfunc)
+                    #cursor.execute(datainfosql)
+            if not len(sqllst) > 0:
+                novalues = True
+            datainfosql = "UPDATE DATAINFO SET " + ", ".join(sqllst) +  " WHERE DataID = '" + sensorid + "_" + datainfonum + "'"
+        else:
             datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
             loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
-            if updatedb:
-                cursor.execute(datainfosql)
+        if updatedb and not novalues:
+            cursor.execute(datainfosql)
         datainfoid = sensorid + '_' + datainfonum
     else:
+        print "dbdatainfo: Creating new table"
         # return 0001
         datainfoid = sensorid + '_' + datainfonum
         if not 'DataID' in datainfohead:
@@ -1348,7 +1522,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
 
     if tablename:
         print "writeDB: not bothering with header, sensorid etc"
-        print "         updating DATAINFO if existing"
+        print "         updating DATAINFO only if existing"
         # Just check whether DataID, if not a table, exists and append data
         #return some message on success
     else:
@@ -1375,8 +1549,11 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     ti = ['time']
     ti.extend(keys)
     keys = ti
-    dollarstring = ['%s' for elem in keys]
-    array = np.asarray([elem for elem in datastream.ndarray if len(elem) > 0], dtype=object)
+    #array = np.asarray([elem for elem in datastream.ndarray if len(elem) > 0], dtype=object)
+
+    # delete all columns which only contain nans ot '-'
+    def checkEqual3(lst):
+        return lst[1:] == lst[:-1]
 
     def trim_time(t):
         # Rounding time to milliseconds
@@ -1389,20 +1566,37 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
         return "%s%s" % (s[:-7], temp[1:])
 
-    # Reformat times...
-    for key in keys:
-        if key.endswith('time'):
-            ind = KEYLIST.index(key)
-            col = num2date(array[ind])
-            col = [trim_time(elem.replace(tzinfo=None)) for elem in col]
-            array[ind]=np.asarray(col)
-                
-    values = array.T
+
+    array = [[] for key in KEYLIST]
+    for idx,col in enumerate(datastream.ndarray):
+        key = KEYLIST[idx]
+        if not False in checkEqual3(col) and len(col) > 0:
+            if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
+                array[idx] = np.asarray([])
+        elif key.endswith('time') and len(col) > 0:
+            tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
+            tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
+            array[idx]=np.asarray(tcol)
+        elif len(col) > 0: # and KEYLIST[idx] in NUMKEYLIST:
+            array[idx] = datastream.ndarray[idx]
+            try:
+                array[idx][np.isnan(array[idx].astype(float))] = None
+            except:
+                pass # will fail for strings
+        #elif len(col) > 0:
+        #    valid_chars='-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        #    el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])  
+        #    array[idx] = datastream.ndarray[idx].astype(object)
+    keys = np.asarray([KEYLIST[idx] for idx,elem in enumerate(array) if len(elem)>0])
+    array = np.asarray([elem for elem in array if len(elem)>0], dtype=object)
+    dollarstring = ['%s' for elem in keys]
+
+    values = array.transpose()
+
 
     insertmanysql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename, ', '.join(keys), ', '.join(dollarstring))
 
     values = tuple([tuple(list(val)) for val in values])
-    #print values[0]
 
     # ----------------------------------------------
     #   if tablename does not yet exist create table/ add column if not yet existing
@@ -1456,7 +1650,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,', '.join(dataheads))
         cursor.execute(createdatatablesql)
 
-    #print "Table created/alered"
+    #print "Table created/altered"
 
     # ----------------------------------------------
     #   upload data
@@ -1669,7 +1863,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                     if not key == "Station": 
                         stationhead.append(key)
                 if not key == "Station": 
-                    stationvalue.append(headdict[key].replace('http://',''))
+                    stationvalue.append(str(headdict[key]).replace('http://',''))
             elif key.startswith('col'):
                 pass            
             elif key.startswith('unit'):
@@ -2345,6 +2539,7 @@ def diline2db(db, dilinestruct, mode=None, **kwargs):
         tablename = 'DIDATA'
 
     cursor = db.cursor ()
+    cursor._defer_warnings = True
 
     headstr = ' CHAR(100), '.join(DIDATAKEYLIST) + ' CHAR(100)'
     headstr = headstr.replace('DIID CHAR(100)', 'DIID CHAR(100) NOT NULL PRIMARY KEY')
@@ -2494,7 +2689,7 @@ def db2diline(db,**kwargs):
     else:
         getdidata = 'SELECT * FROM ' + tablename
  
-    print "Where: ", whereclause   
+    #print "Where: ", whereclause   
     cursor.execute(getdidata)
     rows = cursor.fetchall()
     for di in rows:
@@ -2711,7 +2906,6 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     within flagging information to a data base table
     required parameters are the 
     db: name of the mysql data base
-    cursor: a pointer to the data base
     flaglist: the list containing flagging information of format:
                 [[starttime, endtime, singlecomp, flagNum, flagReason, (SensorID, ModificationDate)],...]
 

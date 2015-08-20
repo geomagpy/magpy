@@ -82,6 +82,21 @@ def isMETEO(filename):
     return True
 
 
+def isLNM(filename):
+    """
+    Checks whether a file is ASCII Laser-Niederschlags-Monitor file (Thies).
+    """
+
+    try:
+        fh = open(filename, 'rt')
+        temp = fh.readline()
+    except:
+        return False
+    if not temp.startswith('# LNM '):
+        return False
+    return True
+
+
 def isLIPPGRAV(filename):
     """
     Checks whether a file is an ASCII Lippmann tiltmeter file.
@@ -246,6 +261,117 @@ def readRMRCS(filename, headonly=False, **kwargs):
     return DataStream(stream, headers)    
 
 
+def readLNM(filename, headonly=False, **kwargs):
+    """
+    Reading ASCII LNM data files.
+
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    getfile = True
+
+    array = [[] for key in KEYLIST]
+    stream = DataStream([],{},np.asarray(array))
+
+
+    print "Found LNM file"
+
+    # get day from filename (platform independent)
+    theday = extractDateFromString(filename)
+    try:
+        day = datetime.strftime(theday,"%Y-%m-%d")
+        # Select only files within eventually defined time range
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+                getfile = False
+    except:
+        logging.warning("Could not identify typical date in %s. Reading all ..." % daystring)
+        getfile = True
+    # Check whether header infromation is already present
+    
+    if getfile:
+        if stream.header is None:
+            headers = {}
+        else:
+            headers = stream.header
+        # Get the indicies to be used for the array
+        indx = KEYLIST.index('x')
+        indy = KEYLIST.index('y')
+        indz = KEYLIST.index('z')
+        indf = KEYLIST.index('f')
+        inddx = KEYLIST.index('dx')
+        inddy = KEYLIST.index('dy')
+        inddz = KEYLIST.index('dz')
+        indt1 = KEYLIST.index('t1')
+        indt2 = KEYLIST.index('t2')
+        indvar1 = KEYLIST.index('var1')
+        indvar2 = KEYLIST.index('var2')
+        indvar3 = KEYLIST.index('var3')
+        indvar4 = KEYLIST.index('var4')
+        indvar5 = KEYLIST.index('var5')
+
+        qFile= file( filename, "rb" )
+        csvReader= csv.reader( qFile, delimiter=';')
+        for elem in csvReader:
+            try:
+                if elem[0].startswith('# LNM'):
+                    headers['col-x'] = 'rainfall'
+                    headers['unit-col-x'] = 'mm'
+                    headers['col-y'] = 'visibility'
+                    headers['unit-col-y'] = 'm'
+                    headers['col-z'] = 'reflectivity'
+                    headers['unit-col-z'] = 'dBZ'
+                    headers['col-f'] = 'P_tot'
+                    headers['col-t1'] = 'T'
+                    headers['unit-col-t1'] = 'degC'
+                    headers['col-t2'] = 'T_el'
+                    headers['unit-col-t2'] = 'degC'
+                    headers['col-var1'] = 'I_tot'
+                    headers['col-var2'] = 'I_fluid'
+                    headers['col-var3'] = 'I_solid'
+                    headers['col-var4'] = 'd(hail)'
+                    headers['unit-col-var4'] = 'mm'
+                    headers['col-var5'] = 'qualtiy'
+                    headers['unit-col-var5'] = 'percent'
+                    headers['col-dx'] = 'P_slow'
+                    headers['col-dy'] = 'P_fast'
+                    headers['col-dz'] = 'P_small'
+                elif len(elem) == 527:
+                    #print datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")
+                    array[0].append(date2num(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")))
+                    array[indx].append(elem[17])
+                    array[indy].append(elem[18])
+                    array[indz].append(elem[19])
+                    array[indf].append(elem[51])
+                    array[indt1].append(elem[46])
+                    array[indt2].append(elem[38])
+                    array[indvar1].append(elem[14])
+                    array[indvar2].append(elem[15])
+                    array[indvar3].append(elem[16])
+                    array[indvar4].append(elem[21])
+                    array[indvar5].append(elem[20])
+                    array[inddx].append(elem[53])
+                    array[inddy].append(elem[55])
+                    array[inddz].append(elem[57])
+                else:
+                    pass
+            except:
+                pass
+    qFile.close()
+
+    for idx,elem in enumerate(array):
+        array[idx] = np.asarray(array[idx]).astype(float)
+    # Add some Sensor specific header information
+    headers['SensorDescription'] = 'Thies Laser Niederschlags Monitor: Percipitation analysis'
+    headers['SensorName'] = 'LNM'
+    headers['SensorType'] = 'meteorology'
+    headers['SensorGroup'] = 'environment'
+
+    return DataStream([LineStruct()], headers, np.asarray(array))    
+
 
 def readUSBLOG(filename, headonly=False, **kwargs):
     """
@@ -296,6 +422,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     headers['SensorDescription'] = 'Model HMHT-LG01: This Humidity and Temperature USB data logger measures and stores relative humidity temperature readings over 0 to 100 per RH and -35 to +80 deg C measurement ranges. Humidity: Repeatability (short term) 0.1 per RH, Accuracy (overall error) 3.0* 6.0 per RH, Internal resolution 0.5 per RH, Long term stability 0.5 per RH/Yr; Temperature: Repeatability 0.1 deg C, Accuracy (overall error) 0.5 and 2  deg C, Internal resolution 0.5 deg C'
     headers['SensorName'] = 'HMHT-LG01'
     headers['SensorType'] = 'Temperature/Humidity'
+    headers['SensorGroup'] = 'environment'
 
     return DataStream(stream, headers)    
 

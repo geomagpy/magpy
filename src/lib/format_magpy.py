@@ -99,6 +99,8 @@ def readPYSTR(filename, headonly=False, **kwargs):
     """
     stream = DataStream([],{})
 
+    array = [[] for key in KEYLIST]
+
     # Check whether header infromation is already present
     if stream.header == None:
         headers = {}
@@ -113,7 +115,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
         if elem==[]:
             # blank line
             pass
-        elif elem[0]=='#':
+        elif elem[0].startswith('#'):
             # blank header
             pass
         elif elem[0].startswith(' #') and not elem[0].startswith(' # MagPy - ASCII'):
@@ -122,7 +124,10 @@ def readPYSTR(filename, headonly=False, **kwargs):
             headkey = headlst[0]
             headval = headlst[1]
             if not headkey.startswith('Column'):
-                headers[headkey] = headval
+                headers[headkey] = headval.strip()
+        elif elem[0].startswith(' # MagPy - ASCII'):
+            # blank header
+            pass
         elif elem[0]=='Epoch[]':
             for i in range(len(elem)):
                 headval = elem[i].split('[')                
@@ -135,6 +140,28 @@ def readPYSTR(filename, headonly=False, **kwargs):
             continue
         else:
             try:
+                if not len(elem) == len(KEYLIST):
+                    print "readPYSTR: Warning file contents does not fit to KEYLIST"
+                for idx, key in enumerate(KEYLIST):
+                    if key.find('time') >= 0:
+                        try:
+                            ti = date2num(datetime.strptime(elem[idx],"%Y-%m-%d-%H:%M:%S.%f"))
+                        except:
+                            try:
+                                ti = date2num(datetime.strptime(elem[idx],"%Y-%m-%dT%H:%M:%S.%f"))
+                            except:
+                                ti = elem[idx]
+                                pass
+                                #raise ValueError, "Wrong date format in file %s" % filename
+                        array[idx].append(ti)
+                    else:
+                        if key in NUMKEYLIST:
+                            array[idx].append(float(elem[idx]))
+                        else:
+                            #if elem[idx] == '':
+                            #    elem[idx] = '-'
+                            array[idx].append(elem[idx])
+                """
                 row = LineStruct()
                 try:
                     row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%d-%H:%M:%S.%f"))
@@ -150,11 +177,25 @@ def readPYSTR(filename, headonly=False, **kwargs):
                         except:
                             exec('row.'+key+' =  elem[idx]')
                 stream.add(row)
+                """
             except ValueError:
                 pass
     qFile.close()
 
-    return DataStream(stream, headers, stream.ndarray)    
+    # Clean up the file contents
+    def checkEqual3(lst):
+        return lst[1:] == lst[:-1]
+
+    for idx,ar in enumerate(array):
+        if KEYLIST[idx] in NUMKEYLIST:
+            tester = float('nan')
+        else:
+            tester = '-'
+        array[idx] = np.asarray(array[idx])
+        if not False in checkEqual3(array[idx]) and ar[0] == tester:
+            array[idx] = np.asarray([])
+
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))    
 
 
 def readPYCDF(filename, headonly=False, **kwargs):
@@ -206,7 +247,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
             cdf_file = cdf.CDF(filename)
         except:
             return stream
-        #print cdf_file.attrs
         try:
             cdfformat = cdf_file.attrs['DataFormat']
         except:
@@ -244,13 +284,21 @@ def readPYCDF(filename, headonly=False, **kwargs):
             #    print key
             # first get time or epoch column
             #lst = cdf_file[key]
-            if key == 'time' or key == 'Epoch':
+            #print key
+            if key.find('time')>=0 or key == 'Epoch':
                 #ti = cdf_file[key][...]
                 #row = LineStruct()
                 if str(cdfformat) == 'MagPyCDF':
                     if not oldtype:
-                        ind = KEYLIST.index('time')
-                        array[ind] = np.asarray(date2num(cdf_file[key][...]))
+                        if not key == 'sectime':
+                            ind = KEYLIST.index('time')
+                        else:
+                            ind = KEYLIST.index('sectime')
+                        try:
+                            array[ind] = np.asarray(date2num(cdf_file[key][...]))                        
+                        except:
+                            array[ind] = np.asarray([])
+                            pass ### catches exceptions if sectime is nan
                     else:
                         #ti = [date2num(elem) for elem in ti]
                         #stream._put_column(ti,'time')
@@ -261,8 +309,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             del row
                 else:
                     if not oldtype:
-                        ind = KEYLIST.index(key)
-                        array[ind] = np.asarray(cdf_file[key][...]) + 730120.
+                        if key  == 'time':
+                            ind = KEYLIST.index(key)
+                            array[ind] = np.asarray(cdf_file[key][...]) + 730120.
                     else:
                         for elem in cdf_file[key][...]:
                             row = LineStruct()
@@ -505,6 +554,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
         fh = open(filename, 'rb')
         # read header line and extract packing format
         header = fh.readline()
+        # some cleaning actions for false header inputs
+        header = header.replace(', ',',')
+        header = header.replace('deg C','deg')
         h_elem = header.strip().split()
         if not h_elem[1] == 'MagPyBin':
             print 'readPYBIN: No MagPyBin format - aborting'
@@ -570,11 +622,15 @@ def readPYBIN(filename, headonly=False, **kwargs):
             else:
                 length = lengthcode
 
-
         line = fh.read(length)
         stream.header['SensorID'] = h_elem[2]
         stream.header['SensorElements'] = ','.join(elemlist)
         stream.header['SensorKeys'] = ','.join(keylist)
+        lenel = len([el for el in elemlist if el in KEYLIST]) # If elemlist and Keylist are disorderd
+        lenke = len([el for el in keylist if el in KEYLIST])
+        if lenel > lenke:
+            keylist = elemlist
+
         array = [[] for key in KEYLIST]
         if nospecial:
             for idx, elem in enumerate(keylist):
@@ -591,7 +647,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:
                         array[0].append(date2num(stream._testtime(time)))
-                        for idx, elem in enumerate(elemlist):
+                        # check elemlist and keylist
+                        for idx, elem in enumerate(keylist):
                             try:
                                 index = KEYLIST.index(elem)
                                 if not elem.endswith('time'):
@@ -613,7 +670,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     else:
                         row = LineStruct()
                         row.time = date2num(stream._testtime(time))
-                        for idx, elem in enumerate(elemlist):
+                        for idx, elem in enumerate(keylist):
                             exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
                         stream.add(row)
                     if logbaddata == True:
@@ -649,11 +706,11 @@ def writePYSTR(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = joinStreams(exst,datastream)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = joinStreams(datastream,exst)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
@@ -668,7 +725,7 @@ def writePYSTR(datastream, filename, **kwargs):
         wtr.writerow( [' # MagPy - ASCII'] )
         for key in headdict:
             if not key.find('col') >= 0 and not key == 'DataAbsFunctionObject':
-                line = [' # ' + key +':  ' + str(headdict[key])]
+                line = [' # ' + key +':  ' + str(headdict[key]).strip()]
                 wtr.writerow( line )
         wtr.writerow( ['# head:'] )
         for key in KEYLIST:
@@ -683,8 +740,15 @@ def writePYSTR(datastream, filename, **kwargs):
             for idx,el in enumerate(datastream.ndarray):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
-                        row.append(datetime.strftime(num2date(el[i]).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        #print el[i]
+                        row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
                     else:
+                        if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
+                            try:
+                                valid_chars='-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                                el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])  
+                            except:
+                                pass
                         row.append(el[i])
                 else:
                     if KEYLIST[idx] in NUMKEYLIST:
@@ -727,12 +791,13 @@ def writePYCDF(datastream, filename, **kwargs):
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename+'.cdf')
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = joinStreams(exst,datastream,extend=True)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
         elif mode == 'replace': # replace existing inputs
+            #print filename
             exst = read(path_or_url=filename+'.cdf')
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = joinStreams(datastream,exst,extend=True)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
         elif mode == 'append':
@@ -811,13 +876,20 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = col[:1]
             else:
                 col = np.asarray([])
-        if key == 'time':
-            key = 'Epoch'
-            mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
-            print "Last time saved", col[-1]
+        if key.find('time') >= 0:
+            if key == 'time':
+                key = 'Epoch'
+                #col = col.astype
+                mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
+                print "Last time saved", col[-1]
+            elif key == 'sectime':
+                mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
         elif len(col) > 0:
             if not key in NUMKEYLIST:
                 col = np.asarray(list(col)) # to get string conversion
+            else:
+                print col, key
+                col = col.astype(float)
             mycdf[key] = col
 
             for keydic in headdict:
@@ -846,12 +918,12 @@ def writePYASCII(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = joinStreams(exst,datastream,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
             print "write ascii filename", filename
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = joinStreams(datastream,exst,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )

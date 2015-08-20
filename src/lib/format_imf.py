@@ -446,12 +446,12 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename+'.cdf')
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = joinStreams(exst,datastream)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename+'.cdf')
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = joinStreams(datastream,exst)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
         elif mode == 'append':
@@ -478,45 +478,45 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     mycdf.attrs['FormatVersion'] = '1.1'
     mycdf.attrs['Title'] = 'Geomagnetic time series data'
     for key in headers:
-        if key == 'StationIAGAcode':
+        if key == 'StationIAGAcode' or key == 'IagaCode':
             mycdf.attrs['IagaCode'] = headers[key]
-        if key == 'DataComponents':
+        if key == 'DataComponents' or key == 'ElementsRecorded':
             mycdf.attrs['ElementsRecorded'] = headers[key]
-        if key == 'DataPublicationLevel':
+        if key == 'DataPublicationLevel' or key == 'PublicationLevel':
             mycdf.attrs['PublicationLevel'] = headers[key]
-        if key == 'DataPublicationDate':
+        if key == 'DataPublicationDate' or key == 'PublicationDate':
             mycdf.attrs['PublicationDate'] = headers[key]
-        if key == 'StationName':
+        if key == 'StationName' or key == 'ObservatoryName':
             mycdf.attrs['ObservatoryName'] = headers[key]
-        if key == 'DataAcquisitionLatitude':
+        if key == 'DataAcquisitionLatitude' or key == 'Latitude':
             mycdf.attrs['Latitude'] = headers[key]
-        if key == 'DataAcquisitionLongitude':
+        if key == 'DataAcquisitionLongitude' or key == 'Longitude':
             mycdf.attrs['Longitude'] = headers[key]
-        if key == 'DataElevation':
+        if key == 'DataElevation' or key == 'Elevation':
             mycdf.attrs['Elevation'] = headers[key]
-        if key == 'StationInstitution':
+        if key == 'StationInstitution' or key == 'Institution':
             mycdf.attrs['Institution'] = headers[key]
-        if key == 'DataSensorOrientation':
+        if key == 'DataSensorOrientation' or key == 'VectorSensOrient':
             mycdf.attrs['VectorSensOrient'] = headers[key]
-        if key == 'DataStandardLevel':
+        if key == 'DataStandardLevel' or key == 'StandardLevel':
             mycdf.attrs['StandardLevel'] = headers[key]
-        if key == 'DataStandardName':
+        if key == 'DataStandardName' or key == 'StandardName':
             mycdf.attrs['StandardName'] = headers[key]
-        if key == 'DataStandardVersion':
+        if key == 'DataStandardVersion' or key == 'StandardVersion':
             mycdf.attrs['StandardVersion'] = headers[key]
-        if key == 'DataPartialStandDesc':
+        if key == 'DataPartialStandDesc' or key == 'PartialStandDesc':
             mycdf.attrs['PartialStandDesc'] = headers[key]
-        if key == 'DataSource':
+        if key == 'DataSource' or key == 'Source':
             mycdf.attrs['Source'] = headers[key]
-        if key == 'DataTerms':
+        if key == 'DataTerms' or key == 'TermsOfUse':
             mycdf.attrs['TermsOfUse'] = headers[key]
-        if key == 'DataReferences':
+        if key == 'DataReferences' or key == 'References':
             mycdf.attrs['References'] = headers[key]
-        if key == 'DataID':
+        if key == 'DataID' or key == 'UniqueIdentifier':
             mycdf.attrs['UniqueIdentifier'] = headers[key]
-        if key == 'SensorID':
+        if key == 'SensorID'or key == 'ParentIdentifier':
             mycdf.attrs['ParentIdentifier'] = headers[key]
-        if key == 'StationWebInfo':
+        if key == 'StationWebInfo' or key == 'ReferenceLinks':
             mycdf.attrs['ReferenceLinks'] = headers[key]
     if not 'StationIagaCode' in headers and 'StationID' in headers:
             mycdf.attrs['IagaCode'] = headers['StationID']
@@ -708,11 +708,11 @@ def writeIMF(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = joinStreams(exst,datastream)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = joinStreams(datastream,exst)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
@@ -932,7 +932,8 @@ def writeBLV(datastream, filename, **kwargs):
     Writing Intermagnet - baseline data.
     uses baseline function
     """
-  
+
+    baselinefunction = kwargs.get('baselinefunction')   
     fitfunc = kwargs.get('fitfunc')
     fitdegree = kwargs.get('fitdegree')
     knotstep = kwargs.get('knotstep')
@@ -941,19 +942,38 @@ def writeBLV(datastream, filename, **kwargs):
     year = kwargs.get('year')
     meanh = kwargs.get('meanh')
     meanf = kwargs.get('meanf')
+    keys = kwargs.get('keys')
+    delta = kwargs.get('delta')
+    deltaF = kwargs.get('deltaF')
 
     if not year:
         year = datetime.strftime(datetime.utcnow(),'%Y')
+        t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
+        t2 = date2num(datetime.utcnow())
+    else:
+        t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
+        t2 = date2num(datetime.strptime(str(int(year)+1)+'-01-01','%Y-%m-%d'))
+
+    if not extradays:
+        extradays = 15
+    if not fitfunc:
+        fitfunc = 'spline'
+    if not fitdegree:
+        fitdegree = 5
+    if not knotstep:
+        knotstep = 0.1
+    if not keys:
+        keys = ['dx','dy','dz']#,'df']
 
     # 2. check whether file exists and according to mode either create, append, replace
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = joinStreams(exst,datastream)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = joinStreams(datastream,exst)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
@@ -963,50 +983,99 @@ def writeBLV(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
-    # 3. check whether datastream corresponds to a baseline file and remove unreasonable inputs
-    datastream = datastream.extract('x',compare='<', value=700000)    
+    # 3. check whether datastream corresponds to an absolute file and remove unreasonable inputs
+    #     - check whether F measurements were performed at the main pier - delta F's are available
+
+    try:
+        if not datastream.header['DataFormat'] == 'MagPyDI':
+            return
+    except:
+        pass
+     
+    indf = KEYLIST.index('df')
+    if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:
+        keys = ['dx','dy','dz','df']
+    else:
+        if not deltaF:
+            array = np.asarray([88888.00]*len(datastream.ndarray[0]))
+            datastream = datastream._put_column(array, 'df')
+        else:
+            array = np.asarray([deltaF]*len(datastream.ndarray[0]))
+            datastream = datastream._put_column(array, 'df')
 
     # 4. create dummy stream with time range
     dummystream = DataStream()
+    array = [[] for key in KEYLIST]
     row1, row2 = LineStruct(), LineStruct()
-    row1.time = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
-    row2.time = date2num(datetime.strptime(str(int(year)+1)+'-01-01','%Y-%m-%d'))
+    row1.time = t1
+    row2.time = t2
+    array[0].append(row1.time)
+    array[0].append(row2.time)
+    indx = KEYLIST.index('dx')
+    indy = KEYLIST.index('dy')
+    indz = KEYLIST.index('dz')
+    indf = KEYLIST.index('df')
+    for i in range(0,2):
+        array[indx].append(0.0)
+        array[indy].append(0.0)
+        array[indz].append(0.0)
+        array[indf].append(0.0)
     dummystream.add(row1)
     dummystream.add(row2)
+    for idx, elem in enumerate(array):
+        array[idx] = np.asarray(array[idx])
+    dummystream.ndarray = np.asarray(array)
+
+    #print "1", row1.time, row2.time
 
     # 5. Extract the data for one year and calculate means 
-    datastream = datastream.trim(starttime=row1.time, endtime=row2.time)
-    datatyp = datastream[0].typ
+    backupabsstream = datastream.copy()
+    if not len(datastream.ndarray[0]) > 0:
+        backupabsstream = backupabsstream.linestruct2ndarray()
+
+    datastream = datastream.trim(starttime=t1, endtime=t2)
+    try:
+        comps = datastream.header['DataComponents']
+        if comps in ['IDFF','idff','idf','IDF']:
+            datastream = datastream.idf2xyz()
+            datastream = datastream.xyz2hdz()
+        elif comps in ['XYZF','xyzf','xyz','XYZ']:
+            datastream = datastream.xyz2hdz()
+        comps = 'HDZF'
+    except:
+        # assume idf orientation
+        datastream = datastream.idf2xyz()
+        datastream = datastream.xyz2hdz()
+        comps = 'HDZF'
+
     if not meanf:
         meanf = datastream.mean('f')
     if not meanh:
-        if datatyp == 'hdzf':
-            meanh = datastream.mean('x')
-        elif datatyp == 'xyzf':
-            meanh = np.sqrt(datastream.mean('x')*datastream.mean('x') + datastream.mean('y')*datastream.mean('y'))
-        elif datatyp == 'xyzf':
-            pass
+        meanh = datastream.mean('x')
 
-    backupabsstream = DataStream()
-    for elem in datastream:
-        backupabsstream.add(elem)
+    print min(dummystream.ndarray[0])
+    print min(datastream.ndarray[0])
+    print min(backupabsstream.ndarray[0])
 
     # 6. calculate baseline function
-    emptystream,basefunction = dummystream.baseline(backupabsstream,keys=['x','y','z','df'],returnfunction=True, fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,extradays=extradays)
+    basefunction = dummystream.baseline(backupabsstream,keys=keys, fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,extradays=extradays)
 
-    yearstream = DataStream()
-    for day in range(int(row1.time),int(row2.time)):
-        date = date2num(datetime.strptime(datetime.strftime(num2date(day),'%Y-%m-%d')+'_12:00:00','%Y-%m-%d_%H:%M:%S'))
-        row = LineStruct()
-        row.time = date
-        row.x = 0.0
-        row.y = 0.0
-        row.z = 0.0
-        row.df = 0.0
-        yearstream.add(row) 
-    yearstream = yearstream.func_add(basefunction,keys=['x','y','z','df'])
+    print dummystream.ndarray[0], min(backupabsstream.ndarray[0]), basefunction, t1, t2
+    yar = [[] for key in KEYLIST]
+    datelist = [day+0.5 for day in range(int(t1),int(t2))]
+    for idx, elem in enumerate(yar):
+        if idx == 0:
+            yar[idx] = np.asarray(datelist)
+        elif idx in [indx,indy,indz,indf]:
+            yar[idx] = np.asarray([0]*len(datelist))
+        else:
+            yar[idx] = np.asarray(yar[idx])
+   
 
-    print "Year: ", yearstream[5]
+    yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar))
+    yearstream = yearstream.func2stream(basefunction,mode='addbaseline',keys=keys)
+
+    #print yearstream.ndarray,np.asarray(yar) 
 
     # 7. Get essential header info
     header = datastream.header
@@ -1015,78 +1084,98 @@ def writeBLV(datastream, filename, **kwargs):
     except:
         logging.error("format-imf: No station code specified. Aborting ...")        
         return
-    headerline = '%s %5.f %5.f %s %s' % (datatyp.upper(),meanh,meanf,idc,year)
+    headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
     myFile.writelines( headerline+'\r\n' )
 
+    datastream = datastream.trim(starttime=t1, endtime=t2)
+
     # 8. Basevalues
-    for elem in datastream:
-        #DDD_aaaaaa.aa_bbbbbb.bb_zzzzzz.zz_ssssss.ssCrLf
-        day = datetime.strftime(num2date(elem.time),'%j')
-        if isnan(elem.x):
-            x = 999999.00
-        else:
-            if not elem.typ == 'idff':
-                x = elem.x
+    if len(datastream.ndarray[0]) > 0:
+        for idx, elem in enumerate(datastream.ndarray[0]):
+            day = datetime.strftime(num2date(elem),'%j')
+            x = float(datastream.ndarray[indx][idx])
+            y = float(datastream.ndarray[indy][idx])*60.
+            z = float(datastream.ndarray[indz][idx])
+            df = float(datastream.ndarray[indf][idx])
+            if isnan(x):
+                x = 999999.00
+            if isnan(y):
+                y = 999999.00
+            if isnan(z):
+                z = 999999.00
+            if isnan(df):
+                df = 999999.00
+            line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
+            myFile.writelines( line )
+    else:
+        for elem in datastream:
+            #DDD_aaaaaa.aa_bbbbbb.bb_zzzzzz.zz_ssssss.ssCrLf
+            day = datetime.strftime(num2date(elem.time),'%j')
+            if isnan(elem.x):
+                x = 999999.00
             else:
-                x = elem.x*60
-        if isnan(elem.y):
-            y = 999999.00
-        else:
-            if elem.typ == 'xyzf':
-                y = elem.y
+                if not elem.typ == 'idff':
+                    x = elem.x
+                else:
+                    x = elem.x*60
+            if isnan(elem.y):
+                y = 999999.00
             else:
-                y = elem.y*60
-        if isnan(elem.z):
-            z = 999999.00
-        else:
-            z = elem.z
-        if isnan(elem.df):
-            f = 999999.00
-        else:
-            f = elem.df
-        line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,f)
-        myFile.writelines( line )
+                if elem.typ == 'xyzf':
+                    y = elem.y
+                else:
+                    y = elem.y*60
+            if isnan(elem.z):
+                z = 999999.00
+            else:
+                z = elem.z
+            if isnan(elem.df):
+                f = 999999.00
+            else:
+                f = elem.df
+            line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,f)
+            myFile.writelines( line )
 
     # 9. adopted basevalues
     myFile.writelines( '*\r\n' )
     #TODO: deltaf and continuity parameter from db
     parameter = 'c' # corresponde to m
-    for elem in yearstream:
+    for idx, t in enumerate(yearstream.ndarray[0]):
         #001_AAAAAA.AA_BBBBBB.BB_ZZZZZZ.ZZ_SSSSSS.SS_DDDD.DD_mCrLf
-        day = datetime.strftime(num2date(elem.time),'%j')
-        if isnan(elem.x):
+        day = datetime.strftime(num2date(t),'%j')
+        if np.isnan(yearstream.ndarray[indx][idx]):
             x = 999999.00
         else:
-            if not elem.typ == 'idff':
-                x = elem.x
+            if not comps.lower() == 'idff':
+                x = yearstream.ndarray[indx][idx]
             else:
-                x = elem.x*60
-        if isnan(elem.y):
+                x = yearstream.ndarray[indx][idx]*60.
+        if np.isnan(yearstream.ndarray[indy][idx]):
             y = 999999.00
         else:
-            if elem.typ == 'xyzf':
-                y = elem.y
+            if comps.lower() == 'xyzf':
+                y = yearstream.ndarray[indy][idx]
             else:
-                y = elem.y*60
-        if isnan(elem.z):
+                y = yearstream.ndarray[indy][idx]*60.
+        if np.isnan(yearstream.ndarray[indz][idx]):
             z = 999999.00
         else:
-            z = elem.z
-        if isnan(elem.df):
+            z = yearstream.ndarray[indz][idx]
+        if np.isnan(yearstream.ndarray[indf][idx]):
             f = 999999.00
         else:
-            f = elem.df
-        df = 9999.00
+            f = yearstream.ndarray[indf][idx]
+        df = 8888.00
         line = '%s %9.2f %9.2f %9.2f %9.2f %7.2f %s\r\n' % (day,x,y,z,f,df,parameter)
         myFile.writelines( line )
 
     # 9. comments
     myFile.writelines( '*\r\n' )
     myFile.writelines( 'Comments:\r\n' )
-    funcline1 = 'Baselinefunction: %s\r\n' % emptystream.header['DataAbsFunc']
-    funcline2 = 'Degree: %s, Knots: %s\r\n' % (emptystream.header['DataAbsDegree'],emptystream.header['DataAbsKnots'])
+    funcline1 = 'Baselinefunction: %s\r\n' % dummystream.header['DataAbsFunc']
+    funcline2 = 'Degree: %s, Knots: %s\r\n' % (dummystream.header['DataAbsDegree'],dummystream.header['DataAbsKnots'])
     funcline3 = 'For adopted values the fit has been applied between\r\n'
-    funcline4 = '%s and %s\r\n' % (emptystream.header['DataAbsMinTime'],emptystream.header['DataAbsMaxTime'])
+    funcline4 = '%s and %s\r\n' % (str(num2date(dummystream.header['DataAbsMinTime']).replace(tzinfo=None)),str(num2date(dummystream.header['DataAbsMaxTime']).replace(tzinfo=None)))
     # get some data:
     infolist = [] # contains all provided information for comment section
     db = False 

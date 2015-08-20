@@ -60,16 +60,30 @@ def readGFZKP(filename, headonly=False, **kwargs):
     # read file and split text into channels
     li,ld,lh,lx,ly,lz,lf = [],[],[],[],[],[],[]
     code = ''
+    array = [[] for key in KEYLIST]
+    indvar1 = KEYLIST.index('var1')
+    indvar2 = KEYLIST.index('var2')
+    indvar3 = KEYLIST.index('var3')
+    indvar4 = KEYLIST.index('var4')
+
     for line in fh:
+        elements = line.split()
+        getdat = True
+        try:
+            day = datetime.strptime(elements[0],"%y%m%d")
+            getdat = True
+        except:
+            getdat = False
         if line.isspace():
             # blank line
             pass
         elif headonly:
             # skip data for option headonly
             continue
-        elif len(line) > 6: # hour file  
+        elif len(line) > 6 and getdat: # hour file 
             # skip data for option headonly
             elements = line.split()
+            #try:
             day = datetime.strptime(elements[0],"%y%m%d")
             if len(elements) == 12:
                 cum = float(elements[9].strip('o').strip('-').strip('+'))
@@ -92,24 +106,39 @@ def readGFZKP(filename, headonly=False, **kwargs):
                     adderval = -0.33333333
                 elif signval == '+':
                     adderval = +0.33333333
-                row.var1 = float(elements[i][:1])+adderval
+                array[indvar1].append(float(elements[i][:1])+adderval)
                 dt = i*3-1.5
-                row.time = date2num(day + timedelta(hours=dt))
-                row.var2 = cum
-                row.var3 = num
-                row.var4 = fum
-                stream.add(row)
+                array[0].append(date2num(day + timedelta(hours=dt)))
+                array[indvar2].append(cum)
+                array[indvar3].append(num)
+                array[indvar4].append(fum)
+        elif len(line) > 6 and not getdat: # monthly mean 
+            if line.split()[1] == 'Mean':
+                means = line.split()
+                # Not used so far
+                monthlymeanap = means[2]
+                monthlymeancp = means[3]
+            pass
         else:
             print "Error while reading GFZ Kp format"
             pass
     fh.close()
 
 
+    array[0]=np.asarray(array[0])
+    array[indvar1]=np.asarray(array[indvar1])
+    array[indvar2]=np.asarray(array[indvar2])
+    array[indvar3]=np.asarray(array[indvar3])
+    array[indvar4]=np.asarray(array[indvar4])
+
     # header info
     headers['col-var1'] = 'Kp'
-    headers['col-var2'] = 'Cumulative Kp'
-    headers['col-var3'] = '?'
-    headers['col-var3'] = '?'
+    headers['col-var2'] = 'Sum Kp'
+    headers['col-var3'] = 'Ap'
+    headers['col-var4'] = 'Cp'
+    headers['DataSource'] = 'GFZ Potsdam'
+    headers['DataReferences'] = 'http://www-app3.gfz-potsdam.de/kp_index/'
     
-    return DataStream(stream, headers)  
+    return DataStream([LineStruct()], headers, np.asarray(array))  
+    #return DataStream(stream, headers, np.asarray(array))  
 

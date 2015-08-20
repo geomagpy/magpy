@@ -34,9 +34,12 @@ def readIAGA(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
+    array = [[] for key in KEYLIST]
+
     fh = open(filename, 'rt')
     # read file and split text into channels
-    stream = DataStream([],{})
+    stream = DataStream()
+
     # Check whether header infromation is already present
     if stream.header is None:
         headers = {}
@@ -132,6 +135,14 @@ def readIAGA(filename, headonly=False, **kwargs):
                         stream.header[colname] = elem.lower()
                         if elem.lower() in ['x','y','z','f']:
                             stream.header['unit-'+colname] = 'nT'
+                if (stream.header['col-x']=='x'):
+                    stream.header['DataType'] = 'XYZ'    
+                elif (stream.header['col-h']=='h'):
+                    stream.header['DataType'] = 'HDZ'    
+                elif (stream.header['col-i']=='i'):
+                    stream.header['DataType'] = 'IDF'    
+                else:
+                    raise ValueError
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -147,10 +158,29 @@ def readIAGA(filename, headonly=False, **kwargs):
                     # nur nicht-leere Spalten hinzufuegen
                     if string.strip(val)!="":
                         row.append(string.strip(val))
-                # Baue zweidimensionales Array auf       
+                        
+                # Baue zweidimensionales Array auf
+                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )      
+                array[1].append( float(row[3]) )      
+                array[2].append( float(row[4]) )      
+                array[3].append( float(row[5]) )      
+                try:
+                    if not float(row[6]) == 88888:
+                        if stream.header['col-f']=='f':
+                            array[4].append(float(elem[6]))
+                        elif stream.header['col-g']=='g':
+                            array[4].append(np.sqrt(row[3]**2+row[4]**2+row[5]**2) + float(row[6]))
+                        else:
+                            raise ValueError
+                except:
+                    if not float(row[6]) == 88888:
+                        array[4].append(float(row[6]))
                 data.append(row)
 
     fh.close()
+    for idx, elem in enumerate(array):
+        array[idx] = np.asarray(array[idx])
+    print np.asarray(array)
 
     for elem in data:
         # Time conv:
@@ -185,49 +215,10 @@ def readIAGA(filename, headonly=False, **kwargs):
                 row.f = float(elem[6])
         stream.add(row)
 
-    """
-    Speed optimization:
-    Change the whole thing to column operations
-
-
-    col = ColStruct(len(data))
-    for idx, elem in enumerate(data):
-        # Time conv:
-        xxx = col.time
-        col.time[idx] = (date2num(datetime.strptime(elem[0]+'-'+elem[1],"%Y-%m-%d-%H:%M:%S.%f")))
-        xval = float(elem[3])
-        yval = float(elem[4])
-        zval = float(elem[5])
-        if (headers['col-x']=='x'):
-            col.x[idx] = xval
-            col.y[idx] = yval
-            col.z[idx] = zval
-        elif (headers['col-h']=='h'):
-            col.x[idx], col.y[idx], col.z[idx] = hdz2xyz(xval,yval,zval)
-        elif (headers['col-i']=='i'):
-            col.x[idx], col.y[idx], col.z[idx] = idf2xyz(xval,yval,zval)
-        else:
-            raise ValueError
-        if not float(elem[6]) == 88888:
-            if headers['col-f']=='f':
-                col.f[idx] = float(elem[6])
-            elif headers['col-g']=='g':
-                col.f[idx] = np.sqrt(row.x**2+row.y**2+row.z**2) + float(elem[6])
-            else:
-                raise ValueError
-
-    arraystream = np.asarray(col)
-    try:
-        print len(col.time)
-        print "got it"
-    except:
-        pass
-    stream = col
-    """
 
     #print "Finished file reading of %s" % filename
 
-    return stream    
+    return DataStream(stream,stream.header,np.asarray(array))    
 
 
 def writeIAGA(datastream, filename, **kwargs):
@@ -279,6 +270,9 @@ def writeIAGA(datastream, filename, **kwargs):
 
     try:
         line = []
+        #if len(datastream.ndarray[0]) > 0:
+
+
         for elem in datastream:
             row = ''
             for key in KEYLIST:

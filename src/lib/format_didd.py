@@ -38,50 +38,68 @@ def readDIDD(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    fh = open(filename, 'rt')
-    # read file and split text into channels
-    #stream = DataStream()
-    stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
-
-    data = []
     array = [[] for key in KEYLIST]
-    key = None
-    # get day from filename (platform independent)
-    splitpath = os.path.split(filename)
-    daystring = splitpath[1].split('.')
-    try:
-        day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
-    except:
-        logging.warning("format-DIDD: Wrong dateformat in Filename %s" % daystring[0])
-        fh.close()
-        return DataStream([], headers)
-    # Select only files within eventually defined time range
-    if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
-            getfile = False
-    if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
-            getfile = False
+    stream = DataStream([],{},np.asarray(array))
+
+    ### Speed up test - not faster as traditional method (at least not for small DIDD files)
+    # 1. get a filelist
+    #    and limit the filelist to matching date ranges
+    #dirname = os.path.dirname(filename)
+    #flist = []
+    #for (dirpath, dirnames, filenames) in os.walk(dirname):
+    #    flist.extend(filenames)
+    #    break
+    
+    fi = os.path.split(filename)[1]
+
+    if fi: # in flist:
+        if starttime:
+            startdate = datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d')
+        if endtime:
+            enddate = datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d')
+        #for fi in flist:
+        daystring = fi.split('.')
+        try:
+            day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
+        except:
+            logging.warning("format-DIDD: Wrong dateformat in Filename %s" % daystring[0])
+            return stream
+        # Select only files within eventually defined time range
+        if starttime:
+            if not datetime.strptime(day,'%Y-%m-%d') >= startdate:          
+                getfile = False
+        if endtime:
+            if not datetime.strptime(day,'%Y-%m-%d') <= enddate:
+                getfile = False
+        #print daystring, day, startdate, enddate, getfile
+    else:
+        print "read DIDD Format: no files found in choosen directory"
+        return stream
+
 
     if getfile:
+        fh = open(filename, 'rt')
+        if stream.header is None:
+            headers = {}
+        else:
+            headers = stream.header
+        
         for line in fh:
             if line.isspace():
                 # blank line
                 continue
             elif line.startswith('hh mm') or line.startswith('%hh %mm'):
                 # data header
+                line = line.replace('%hh %mm','')
+                line = line.replace('hh mm','')
                 colsstr = line.lower().split()
-                for it, elem in enumerate(colsstr):
-                    if it>1: # dont take hh and mm
-                        colname = "col-%s" % KEYLIST[it-1]
-                        colname = colname.lower()
-                        headers[colname] = elem
-                        unitstr =  'unit-%s' % colname        
-                        headers[unitstr] = 'nT'
+                
+                for idx, elem in enumerate(colsstr):
+                    colname = "col-%s" % KEYLIST[idx+1]
+                    colname = colname.lower()
+                    headers[colname] = elem
+                    unitstr =  'unit-%s' % colname        
+                    headers[unitstr] = 'nT'
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -89,46 +107,39 @@ def readDIDD(filename, headonly=False, **kwargs):
                 row = LineStruct()
                 elem = line.split()
                 if len(elem) < 6:
-                    fval = 9999  # why 9999 ??
+                    #fval = 9999  # why 9999 ??
+                    fval = float('nan')
                 else:
                     try:
                         fval = float(elem[5])
                     except:
                         logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
-                        fval = 999999.0
-                if fval < 999990:
+                        fval = float('nan')
+                if not np.isnan(fval):
                     try:
-                        row.time=date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M"))
-                        xval = float(elem[2])
-                        yval = float(elem[3])
-                        zval = float(elem[4])
-                        if (headers['col-x']=='x'):
-                            row.x = xval
-                            row.y = yval
-                            row.z = zval
-                        elif (headers['col-x']=='h'):
-                            row.x, row.y, row.z = hdz2xyz(xval,yval,zval)
-                        elif (headers['col-x']=='i'):
-                            row.x, row.y, row.z = idf2xyz(xval,yval,zval)
-                        else:
-                            row.x = xval
-                            row.y = yval
-                            row.z = zval
-                            #raise ValueError
-                        row.f = fval
-                        stream.add(row)
+                        array[0].append(date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M")))
+                        array[1].append(float(elem[2]))
+                        array[2].append(float(elem[3]))
+                        array[3].append(float(elem[4]))
+                        array[4].append(fval)
                     except:
                         logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
-         
+        array[0] = np.asarray(array[0]) 
+        array[1] = np.asarray(array[1]) 
+        array[2] = np.asarray(array[2]) 
+        array[3] = np.asarray(array[3]) 
+        array[4] = np.asarray(array[4]) 
+
+        headers['DataSensorOrientation'] = 'xyz'
+        stream.header['SensorElements'] = ','.join(colsstr)
+        stream.header['SensorKeys'] = ','.join(colsstr)
+        headers['unit-col-f'] = 'nT'
+        fh.close()
     else:
         headers = stream.header
         stream = []
 
-    headers['DataSensorOrientation'] = 'xyz'
-    stream.header['SensorElements'] = ','.join(colsstr)
-    stream.header['SensorKeys'] = ','.join(colsstr)
-    headers['unit-col-f'] = 'nT'
-    fh.close()
+    stream = [LineStruct()]
 
     return DataStream(stream, headers, np.asarray(array))    
 
@@ -141,8 +152,14 @@ def writeDIDD(datastream, filename, **kwargs):
     00 00  20826.8   1206.1  43778.3  48494.8
     00 01  20833.3   1202.2  43779.3  48498.5
     """
-    if (datastream[-1].time - datastream[0].time) > 1:
-        return "Writing DIDD format requires daily coverage - choose"
+    ndtype = False
+    if len(datastream.ndarray[0]) > 0:
+        ndtype = True
+        # don't argue about time range
+        pass
+    else:
+        if (datastream[-1].time - datastream[0].time) > 1:
+            return "Writing DIDD format requires daily coverage - choose"
 
     headdict = datastream.header
 
@@ -150,9 +167,14 @@ def writeDIDD(datastream, filename, **kwargs):
     wtr= csv.writer( myFile )
     headline = 'hh mm        '+headdict.get('col-x').upper()+'        '+headdict.get('col-y').upper()+'        '+headdict.get('col-z').upper()+'        '+headdict.get('col-f').upper()
     wtr.writerow( [headline] )
-    for elem in datastream:
-        time = datetime.strftime(num2date(elem.time).replace(tzinfo=None), "%H %M")
-        line = '%s %8.1f %8.1f %8.1f %8.1f' % (time, elem.x, elem.y, elem.z, elem.f)
-        wtr.writerow( [line] )
+    if ndtype:
+        for idx,elem in enumerate(datastream.ndarray[0]):
+            time = datetime.strftime(num2date(elem).replace(tzinfo=None), "%H %M")
+            line = '%s %8.1f %8.1f %8.1f %8.1f' % (time, datastream.ndarray[1][idx], datastream.ndarray[2][idx], datastream.ndarray[3][idx], datastream.ndarray[4][idx])
+    else:
+        for elem in datastream:
+            time = datetime.strftime(num2date(elem.time).replace(tzinfo=None), "%H %M")
+            line = '%s %8.1f %8.1f %8.1f %8.1f' % (time, elem.x, elem.y, elem.z, elem.f)
+            wtr.writerow( [line] )
     myFile.close()
 

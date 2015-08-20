@@ -114,6 +114,9 @@ def isFormat(filename, format_type):
     elif (format_type == "METEO"): # Conrad Observatory RCS System - METEO files
         if (isMETEO(filename)):
             return True
+    elif (format_type == "LNM"): # Conrad Observatory LaserNiederschlagsMonitor - LNM Telegram 5 files
+        if (isLNM(filename)):
+            return True
     elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
         if (isGRAVSG(filename)):
             return True
@@ -223,6 +226,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readRMRCS(filename, headonly, **kwargs)
     elif (format_type == "METEO"):
         return readMETEO(filename, headonly, **kwargs)
+    elif (format_type == "LNM"):
+        return readLNM(filename, headonly, **kwargs)
     elif (format_type == "PYSTR"):
         return readPYSTR(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):
