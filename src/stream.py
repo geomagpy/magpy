@@ -935,7 +935,13 @@ CALLED BY:
 
         # Speeded up this technique:
 
+
         ind = KEYLIST.index(key)
+
+        if len(self.ndarray[0]) > 0:
+            col = self.ndarray[ind]
+            return col
+
         # Check for initialization value
         #testval = self[0][ind]
         # if testval == KEYINITDICT[key] or isnan(testval):
@@ -1157,7 +1163,7 @@ CALLED BY:
 
     def _aic(self, signal, k, debugmode=None):
         try:
-            aicval = (k)* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
+            aicval = (k-1)* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
         except:
             if debugmode:
                 loggerstream.debug('_AIC: could not evaluate AIC at index position %i' % (k))
@@ -1219,21 +1225,43 @@ CALLED BY:
     def _get_max(self, key, returntime=False):
         if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
-        elem = max(self, key=lambda tmp: eval('tmp.'+key))
-        if returntime:
-            return eval('elem.'+key), elem.time
+        key_ind = KEYLIST.index(key)
+        t_ind = KEYLIST.index('time')
+
+        if len(self.ndarray[0]) > 0:
+            result = np.max(self.ndarray[key_ind])
+            ind = np.argmax(self.ndarray[key_ind])
+            tresult = self.ndarray[t_ind][ind]
         else:
-            return eval('elem.'+key)
+            elem = max(self, key=lambda tmp: eval('tmp.'+key))
+            result = eval('elem.'+key)
+            tresult = elem.time
+
+        if returntime:
+            return result, tresult
+        else:
+            return result
 
 
     def _get_min(self, key, returntime=False):
         if not key in KEYLIST[:16]:
             raise ValueError, "Column key not valid"
-        elem = min(self, key=lambda tmp: eval('tmp.'+key))
-        if returntime:
-            return eval('elem.'+key), elem.time
+        key_ind = KEYLIST.index(key)
+        t_ind = KEYLIST.index('time')
+
+        if len(self.ndarray[0]) > 0:
+            result = np.min(self.ndarray[key_ind])
+            ind = np.argmin(self.ndarray[key_ind])
+            tresult = self.ndarray[t_ind][ind]
         else:
-            return eval('elem.'+key)
+            elem = min(self, key=lambda tmp: eval('tmp.'+key))
+            result = eval('elem.'+key)
+            tresult = elem.time
+
+        if returntime:
+            return result, tresult
+        else:
+            return result
 
 
     def _gf(self, t, tau):
@@ -1579,6 +1607,8 @@ CALLED BY:
         iprev = 0
         iend = 0
 
+        aic2ind = KEYLIST.index(aic2key)
+
         while iend < len(t)-1:
             istart = iprev
             ta, iend = find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
@@ -1591,7 +1621,10 @@ CALLED BY:
                     if idx > 1 and idx < len(currsequence):
 			# CALCULATE AIC
                         aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normalize to sampling rate and timerange
-                        exec('self[idx+istart].'+ aic2key +' = aicval')
+                        if len(self.ndarray[0]) > 0:
+                            self.ndarray[aic2ind][idx+istart] = aicval
+                        else:
+                            exec('self[idx+istart].'+ aic2key +' = aicval')
                         if not isnan(aicval):
                             aicarray.append(aicval)
                         # store start value - aic: is a measure for the significance of information change
@@ -1603,6 +1636,7 @@ CALLED BY:
                 cnt = 0
                 for idx, el in enumerate(currsequence):
                     if idx > 1 and idx < len(currsequence):
+                        # TODO: this does not yet work with ndarrays
                         try:
                             if aicminstack:
                                 if not eval('isnan(self[idx+istart].'+aicmin2key+')'):
@@ -2226,8 +2260,17 @@ CALLED BY:
 
 	# 1a. Grab array from stream
         data = self._get_column(key)
+        t_ind = KEYLIST.index('time')
 
-        DWT_stream = DataStream([],{})
+        #DWT_stream = DataStream([],{})
+        DWT_stream = DataStream()
+        headers = DWT_stream.header
+        array = [[] for key in KEYLIST]
+        x_ind = KEYLIST.index('x')
+        dx_ind = KEYLIST.index('dx')
+        var1_ind = KEYLIST.index('var1')
+        var2_ind = KEYLIST.index('var2')
+        var3_ind = KEYLIST.index('var3')
         i = 0
         loggerstream.info("DWT_calc: Starting Discrete Wavelet Transform of key %s." % key)
 
@@ -2236,12 +2279,14 @@ CALLED BY:
             if i >= (len(data)-window):
                 break
 
-            row = LineStruct()
+            #row = LineStruct()
 	    # Take the values in the middle of the window (not exact but changes are
 	    # not extreme over standard 5s window)
-            row.time = self[i+window/2].time
+            #row.time = self[i+window/2].time
+            array[t_ind].append(self.ndarray[t_ind][i+window/2])
             data_cut = data[i:i+window]
-            row.x = sum(data_cut)/float(window)
+            #row.x = sum(data_cut)/float(window)
+            array[x_ind].append(sum(data_cut)/float(window))
 
 	    # 1c. Calculate wavelet transform coefficients
             # Wavedec produces results in form: [cA_n, cD_n, cD_n-1, ..., cD2, cD1]
@@ -2271,9 +2316,13 @@ CALLED BY:
                 fin_fns.append(val)
 
             # TODO: This is hard-wired for level=3.
-            row.dx, row.var1, row.var2, row.var3 = fin_fns
+            #row.dx, row.var1, row.var2, row.var3 = fin_fns
+            array[dx_ind].append(fin_fns[0])
+            array[var1_ind].append(fin_fns[1])
+            array[var2_ind].append(fin_fns[2])
+            array[var3_ind].append(fin_fns[3])
             
-            DWT_stream.add(row)
+            #DWT_stream.add(row)
             i += window
 
         loggerstream.info("DWT_calc: Finished DWT.")
@@ -2299,7 +2348,8 @@ CALLED BY:
                 DWT_stream.plot(['x','var1','var2','var3'],
 				plottitle="DWT Decomposition of %s (%s)" % (key,date))
 
-        return DWT_stream
+        #return DWT_stream
+        return DataStream([LineStruct()], headers, np.asarray(array))  
 
 
     def eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
@@ -5868,6 +5918,8 @@ CALLED BY:
             keys = ['f']
         if not threshold:
             threshold = 4.0
+        if not stdout:
+            stdout = False
         # Position of flag in flagstring
         # f (intensity): pos 0
         # x,y,z (vector): pos 1
