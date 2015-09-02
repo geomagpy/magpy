@@ -34,6 +34,21 @@ DEPENDENCIES:
 
 CALLED BY:
 	External analysis scripts only.
+
+EXAMPLE SCRIPT:
+        >>> from magpy.stream import *  
+        >>> from magpy.opt.stormdet import *
+        >>> date = '2015-03-17'
+        >>> magdata = read("FGE_"+date+".cdf")
+        >>> sat_1m = read("ace_1m_"+date+".cdf")
+        >>> sat_5m = read("ace_5m_"+date+".cdf")
+        >>> magdata = magdata.smooth('x',window_len=15)
+        >>> offsets = [20851.,0.,43453.]
+        >>> magdata.offset({'x': offsets[0], 'y': offsets[1], 'z': offsets[2]})
+        >>> magdata = magdata._convertstream('xyz2hdz')
+        >>> detection, ssc_list = seekStorm(magdata, satdata_1m=sat_1m, satdata_5m=sat_5m, 
+		verbose=True, method='DWT3')
+        >>> print(ssc_list)
 '''
 
 import sys, os
@@ -74,8 +89,8 @@ b_varr =  0.0599247768 #0.0560048791
 #    MAIN FUNCTION:   seekStorm()                                   #
 #####################################################################
 
-def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables=None, returnsat=False,
-	dwt_level='db4', dwt_var='D2', magkey='x', plot_vars=False, verbose=False):
+def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables=None, 
+	magkey='x', dwt_level='db4', returnsat=False, plot_vars=False, verbose=False):
     '''
     DEFINITION:
         Main function. Input data and it will return a dictionary detailing if
@@ -85,25 +100,35 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
     Variables:
         - magdata: 	(DataStream) Stream of magnetic (1s) data.
     Kwargs:
-	- evalfn:	(str) Evaluation function. There are three options:
-			'AIC': Akaike Information Criterion (default)
-			'DWT': Discrete Wavelet Transform
-			'FDM': First Derivative Method
-			'JDM': Jump Detection Method
-	- magkey:	(str) Key in magnetic data to evaluate. Default is x (H-component)
-	- method:	(str) Choice of 'AIC', 'DWT2', 'DWT3', 'FDM', 'JDM'. Default = 'AIC'
-	- plot_vars:	(bool) If True, plots of variables will be shown during func call.
         - satdata_1m: 	(DataStream) Stream of 1m ACE swepam data.
         - satdata_5m: 	(DataStream) Stream of 5m ACE epam data.
+	- method:	(str) Evaluation function. There are three options:
+			'AIC': Akaike Information Criterion (default)
+			'DWT2': Discrete Wavelet Transform (2nd detail) - see Hafez et al. (2013)
+			'DWT3': Discrete Wavelet Transform (3rd detail)
+			'FDM': First Derivative Method
 	- variables:	(list) List of variables used in individual functions. Len = 2 (except AIC)
+			Defaults: funcvars = {	
+				'AIC':  [4.,	3.,	20],
+				'DWT2': [0.000645, 60],
+				'DWT3': [2.4499e-05, 65],
+				'FDM':  [0.0005, 55],
+				'JDM':  [11,	1] 	}
+	- magkey:	(str) Key in magnetic data to evaluate. Default is x (H-component)
+	- dwt_level:	(str) Type of filter for wavelet analysis. Default 4th-order Daubechies filter.
+			For more options consult pywt.wavedec() documentation.
+	- returnsat:	(bool) If True, will return results from satellite evaluation
+	- plot_vars:	(bool) If True, plots of variables will be shown during func call.
 	- verbose:	(bool) If True, calculation steps will be printed.
 
     RETURNS:
         - detection: 	(bool) If True, storm was detected
 	- ssc_list:	(list[dict]) List of dictionaries, one for each storm in format:
 			'ssctime': time of storm detection (datetime.datetime object)
-			'vwind': solar wind speed at storm detection (float)
-			'pflux': proton flux at storm detection (float)
+			'amp': size of SSC in nT (float)
+			'duration': length of SSC in s (float)
+			'probf': probability that detection is real, 50-100 % (float)
+			(Only consider those with probf > 80!)
 
     EXAMPLE:
         >>> detection, ssc_list = seekStorm(magstream)
@@ -212,10 +237,10 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
 #	findSSC_AIC()						    #
 #********************************************************************
 
-def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,lastcompare=20,verbose=False,
-	vwind_bracket=[380., 450.], dvwind_bracket=[40., 80.], stdlo_bracket=[15., 7.5], 
-	stdhi_bracket=[0.5, 2.], pflux_bracket=[10000., 50000.],
-	vwind_weight=1., dvwind_weight=1., stdlo_weight=1., stdhi_weight=1., pflux_weight=4.):
+def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,lastcompare=20,
+	vwind_bracket=[380., 450.], vwind_weight=1., dvwind_bracket=[40., 80.], dvwind_weight=1., 
+	stdlo_bracket=[15., 7.5], stdlo_weight=1., stdhi_bracket=[0.5, 2.], stdhi_weight=1., 
+	pflux_bracket=[10000., 50000.],	pflux_weight=4., verbose=False):
     '''
     DEFINITION:
         This function picks out rough timings of behaviour in ACE measurements that
@@ -230,24 +255,48 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
     Kwargs:
 	- ACE_5m:	(DataStream) Stream of 5min ACE epam data
 			Must contain: Proton flux 47-68
-        - acevars: 	(dict) Variables containing relevant variables for solar wind
+        - acevars: 	(dict) Variables containing relevant stream keys for solar wind
 			('1m' = swepam)	and proton flux ('5m' = epam) in each stream.
 			Default: '1m':'var2','5m':'var1'
 	- timestep:	(int) Number of minutes to use as timestep when looking for
-			storm onset. Default = 20 [minutes]
+			storm onset. Default = 20 [mins]
 	- lastcompare:	(int) Number of minutes to compare timestep to. Default = 20 [mins]
+	- vwind_bracket:(list) Bracket defining limits for solar wind speed probability calc.
+			Default [380., 450.].
+	- vwind_weight: (float) Weighting factor determining weight of vwind in total prob calc.
+			Default 1.
+			Together they work like this - the same is true for all bracket/weights:
+			if v_max < vwind_bracket[0]: v_prob = 50.
+			elif vwind_bracket[0] <= v_max < vwind_bracket[1]: v_prob = 75.
+			elif v_max > vwind_bracket[1]: v_prob = 100.
+			else: v_prob = 50.
+			v_prob = v_prob * vwind_weight
+	- dvwind_bracket:(list) Bracket defining limits for change in solar wind speed 
+			probability calc. Default [40., 80.].
+	- dvwind_weight:(float) Weighting factor determining weight of change in vwind in 
+			total prob calc. Default 1.
+	- stdlo_bracket:(list) Bracket defining limits for stddev before CME probability 
+			calc. Default [15., 7.5]
+	- stdlo_weight: (float) Weighting factor determining weight of stddev before CME
+			 in total prob calc. Default 1.
+	- stdhi_bracket:(list) Bracket defining limits for stddev after > x*stddev before
+			probability calc. Default [0.5, 2.].
+	- stdhi_weight: (float) Weighting factor determining weight of ... in total prob calc.
+			Default 1.
 	- verbose:	(bool) If True, will print variables used in detection for
 			evaluation. Default = False
-
     RETURNS:
         - detection: 	(bool) If True, storm was detected. False, no storm detected.
 	- ssc_list:	(list[dict]) List of dictionaries, one for each storm in format:
-			'ssctime': time of storm detection (datetime.datetime object)
-			'vwind': solar wind speed at storm detection (float)
-			'pflux': proton flux at storm detection (float)
+			'satssctime': time of detected CME arrival (datetime.datetime object)
+			'estssctime': estimated time of SSC on Earth (datetime.datetime object)
+			'vwind': solar wind speed at CME detection (float)
+			'pflux': proton flux at CME detection (float)
+			'probf': probability that detection is real, 50-100 % (float)
+			(Only consider those with probf > 75!)
 
     EXAMPLE:
-        >>> ACE_det, ACE_ssc_list = checkACE(ACE_1m,ACE_5m=ACE_5m,timestep=20,lastcompare=20,verbose=True)
+        >>> ACE_det, ACE_ssc_list = checkACE(ACE_1m, ACE_5m=ACE_5m, verbose=True)
     '''
 
     # CHECK DATA:
@@ -461,8 +510,8 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
     return detection, ace_ssc
 
 
-def findSSC(var_stream, var_key, a, p, verbose=False, useACE=False, ACE_results=None,
-	dh_bracket=[5.,10.], satprob_weight=1., dh_weight=1., estt_weight=2.):
+def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracket=[5.,10.], 
+	satprob_weight=1., dh_weight=1., estt_weight=2., verbose=False, ):
     '''
     DEFINITION:
         This function works on data evaluated using either a Discrete Wavelet
@@ -472,15 +521,23 @@ def findSSC(var_stream, var_key, a, p, verbose=False, useACE=False, ACE_results=
 
     PARAMETERS:
     Variables:
-        - stream: 	(DataStream) Stream containing data to be analysed (e.g. DWT stream)
+        - var_stream: 	(DataStream) Stream containing data to be analysed (e.g. DWT stream)
 	- var_key:	(str) Key of variable to be analysed in stream
 	- a:		(float) Minimum amplitude threshold for peak
-	- p:		(float) Minimum duration peak must exceed 
+	- p:		(float) Minimum duration peak must exceed a
     Kwargs:
         - useACE: 	(bool) If True, ACE results will be implemented in detection as a
 			further criterium. Require ACE_results != None. Default = False
-	- ACE_results:	(list(dict)) Results in format returned from checkACE function. Should
+	- ACE_results:	(list[dict]) Results in format returned from checkACE function. Should
 			be a list of SSCs in ACE data. Default = None
+	- dh_bracket:	(list) Bracket definining probabilities of detections with dh
+			within certain ranges.
+	- satprob_weight:(float) Weight applied to original CME detection prob in final prob
+			calc. Default 1.
+	- dh_weight:	(float) Weight applied to dH of SSC prob in final prob calculation.
+			Default 1.
+	- estt_weight:	(float) Weight applied to probability calculated from arrival time in
+			relation to estimated arrival time in final prob calculation. Default 2.
 	- verbose:	(bool) If True, will print variables used in detection for
 			evaluation. Default = False
 
@@ -491,7 +548,7 @@ def findSSC(var_stream, var_key, a, p, verbose=False, useACE=False, ACE_results=
 			'amp': size of SSC in nT (float)
 			'duration': length of SSC in s (float)
 			'probf': probability that detection is real, 50-100 % (float)
-			(Only consider those with probf > 70!)
+			(Only consider those with probf > 80!)
 
     EXAMPLE:
         >>> magdata = read(FGE_file)
@@ -501,7 +558,8 @@ def findSSC(var_stream, var_key, a, p, verbose=False, useACE=False, ACE_results=
         >>> DWT = magdata.DWT_calc()
         >>> var_key = 'var2'		# use second detail D2
 	>>> a, p = 0.0004, 45		# amplitude 0.0004 in D2 var must be exceeded over period 45 seconds
-        >>> detection, ssc_list = findSSC(DWT, var_key, a, p, useACE=useACE, ACE_results=ACE_results, verbose=verbose)
+        >>> detection, ssc_list = findSSC(DWT, var_key, a, p, useACE=useACE, 
+		ACE_results=ACE_results, verbose=verbose)
     '''
 
     # CHECK DATA:
@@ -626,7 +684,7 @@ def findSSC(var_stream, var_key, a, p, verbose=False, useACE=False, ACE_results=
                             print ssc_init, d_amp
                     elif useACE == False:
                         detection = True
-                        final_probf = dh_prob/dh_weight
+                        final_probf = dh_prob
                         if verbose == True:
                             print "No ACE data. Not sure!"
 
@@ -647,7 +705,7 @@ def findSSC(var_stream, var_key, a, p, verbose=False, useACE=False, ACE_results=
 
 
 def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=False, ACE_results=None,
-	satprob_weight=1., dh_weight=1., estt_weight=2., verbose=False):
+	satprob_weight=1., dh_bracket=[5.,10.], dh_weight=1., estt_weight=2., verbose=False):
     '''
     DEFINITION:
         This function picks out peaks in AIC analysis data that signify a 
@@ -670,6 +728,14 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
 			further criterium. Require ACE_results != None. Default = False
 	- ACE_results:	(list(dict)) Results in format returned from checkACE function. Should
 			be a list of SSCs in ACE data. Default = None
+	- dh_bracket:	(list) Bracket definining probabilities of detections with dh
+			within certain ranges.
+	- satprob_weight:(float) Weight applied to original CME detection prob in final prob
+			calc. Default 1.
+	- dh_weight:	(float) Weight applied to dH of SSC prob in final prob calculation.
+			Default 1.
+	- estt_weight:	(float) Weight applied to probability calculated from arrival time in
+			relation to estimated arrival time in final prob calculation. Default 2.
 	- verbose:	(bool) If True, will print variables used in detection for
 			evaluation. Default = False
 
@@ -801,17 +867,17 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
 	        # ***************************************************
                 if d_amp > d_amp_min:
 
-                    if d_amp >= 5. and d_amp < 10.:
-                        probf = 50.
-                    if d_amp >= 10.:
-                        probf = 100.
+                    if d_amp >= dh_bracket[0] and d_amp < dh_bracket[1]:
+                        dh_prob = 50.
+                    if d_amp >= dh_bracket[1]:
+                        dh_prob = 100.
 
                     # CRITERION #4: ACE storm must have occured 45 (+-20) min before detection
                     # ************************************************************************
                     if useACE == True and ACE_results != None:
                         for sat_ssc in ACE_results:
                             det, final_probf = _calcProbWithSat(ssc_init, sat_ssc,
-				probf, dh_weight, satprob_weight, estt_weight, verbose=verbose)
+				dh_prob, dh_weight, satprob_weight, estt_weight, verbose=verbose)
                             if det == True:
                                 break
                             '''
@@ -846,7 +912,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                             #print "Storm onset =", num2date(elevatedrange[0].time), d_amp
                             print "Storm onset =", num2date(elevatedrange[t_ind][0]), d_amp
                         detection = True
-                        final_probf = probf
+                        final_probf = dh_prob
                         if verbose == True:
                             print "No ACE data. Not sure!"
 
@@ -1029,5 +1095,212 @@ def _calcProbWithSat(ssctime, sat_dict, dh_prob, dh_weight, satprob_weight, estt
         return True, final_probf
     else:
         return False, None
+
+
+
+if __name__ == '__main__':
+
+    import subprocess
+
+    print
+    print "----------------------------------------------------------"
+    print "TESTING: STORM DETECTOR PACKAGE"
+    print "THIS IS A TEST RUN OF THE MAGPY OPT.STORMDET PACKAGE."
+    print "All main methods will be tested."
+    print "A summary will be presented at the end. Any protocols"
+    print "or functions with errors will be listed."
+    print "----------------------------------------------------------"
+    print
+
+    print "Please enter path of a (variometer) data file for testing:"
+    print "!! IMPORTANT: pick a day with a known SSC !!"
+    print "(Examples: 2013-10-02, 2014-02-15, 2014-06-07, 2015-03-17...)"
+    print "(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)"
+    while True:
+        magdata_path = raw_input("> ")
+        if os.path.exists(magdata_path):
+            break
+        else:
+            print "Sorry, that file doesn't exist. Try again."
+            print ""
+
+    print ""
+    print "Please enter path of ACE SWEPAM data for the same day:"
+    while True:
+        satdata_1m_path = raw_input("> ")
+        if os.path.exists(satdata_1m_path):
+            break
+        else:
+            print "Sorry, that file doesn't exist. Try again."
+            print ""
+
+    print ""
+    print "Please enter path of ACE EPAM data for the same day:"
+    while True:
+        satdata_5m_path = raw_input("> ")
+        if os.path.exists(satdata_5m_path):
+            break
+        else:
+            print "Sorry, that file doesn't exist. Try again."
+            print ""
+        
+    now = datetime.utcnow()
+    testrun = 'stormdettest_'+datetime.strftime(now,'%Y%m%d-%H%M')
+    t_start_test = time.time()
+    errors = {}
+    print 
+    print datetime.utcnow(), "- Starting stormdet package test. This run: %s." % testrun
+
+    while True:
+
+        # Step 1 - Read magnetic data
+        try:
+            magdata = read(magdata_path)
+            print datetime.utcnow(), "- Magnetic data successfully read."
+        except Exception as excep:
+            errors['readmag'] = str(excep)
+            print datetime.utcnow(), "--- ERROR reading magnetic data. Aborting test."
+            break
+
+        # Step 2 - Read ACE SWEPAM data 
+        try:
+            satdata_1m = read(satdata_1m_path)
+            print datetime.utcnow(), "- ACE SWEPAM data successfully read."
+        except Exception as excep:
+            errors['readsat1m'] = str(excep)
+            print datetime.utcnow(), "--- ERROR reading ACE SWEPAM data. Aborting test."
+            break
+
+        # Step 3 - Read ACE EPAM data
+        try:
+            satdata_5m = read(satdata_5m_path)
+            print datetime.utcnow(), "- ACE EPAM data successfully read."
+        except Exception as excep:
+            errors['readsat5m'] = str(excep)
+            print datetime.utcnow(), "--- ERROR reading ACE EPAM data. Aborting test."
+            break
+
+        # Step 4 - Prepare data
+        try:
+            magdata = magdata.smooth('x',window_len=25)
+            offsets = [21000.,0.,44000.]
+            magdata.offset({'x': offsets[0], 'y': offsets[1], 'z': offsets[2]})
+            magdata = magdata._convertstream('xyz2hdz')
+            print datetime.utcnow(), "- Data smoothed, offset and rotated in preparation."
+        except Exception as excep:
+            errors['dataprep'] = str(excep)
+            print datetime.utcnow(), "--- ERROR preparing data (smooth, offset, _convertstream funcs)."
+
+        # Step 5 - Plot Data (for lols)
+        try:
+            print datetime.utcnow(), "- Plotting x, vwind and pflux. Everything look correct?"
+            plotStreams([magdata, satdata_1m, satdata_5m], [['x'], ['var2'], ['var1']])
+            print datetime.utcnow(), "- Plotted data."
+        except Exception as excep:
+            errors['plotting'] = str(excep)
+            print datetime.utcnow(), "--- ERROR plotting data."
+
+        # Step 6 - Use DWT3 method
+        try:
+            detection_DWT, ssc_list_DWT, sat_ssc_list = seekStorm(magdata, satdata_1m=satdata_1m, 	
+		satdata_5m=satdata_5m, method='DWT3', returnsat=True)
+            print datetime.utcnow(), "- Discrete Wavelet Transform (DWT3) method applied to data."
+        except Exception as excep:
+            errors['dwt'] = str(excep)
+            print datetime.utcnow(), "--- ERROR using DWT method."
+
+        # Step 6 - Use AIC method
+        try:
+            detection_AIC, ssc_list_AIC = seekStorm(magdata, satdata_1m=satdata_1m, satdata_5m=satdata_5m, 
+		method='AIC')
+            print datetime.utcnow(), "- Akaike Information Criterion (AIC) method applied to data."
+        except Exception as excep:
+            errors['AIC'] = str(excep)
+            print datetime.utcnow(), "--- ERROR using AIC method."
+
+        # Step 6 - Use FDM method
+        try:
+            detection_FDM, ssc_list_FDM = seekStorm(magdata, satdata_1m=satdata_1m, satdata_5m=satdata_5m, 
+		method='FDM')
+            print datetime.utcnow(), "- First Derivative method (FDM) applied to data."
+        except Exception as excep:
+            errors['fdm'] = str(excep)
+            print datetime.utcnow(), "--- ERROR using FD method."
+
+        # If end of routine is reached... break.
+        break
+
+    t_end_test = time.time()
+    time_taken = t_end_test - t_start_test
+    print datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken
+
+    print
+    print "----------------------------------------------------------"
+    print "RESULTS:"
+    print "--------"
+    print 
+    print "ACE:"
+    i = 1
+    if detection_DWT:
+        for item in sat_ssc_list:
+            print "Detection # %s \n SATSSCTIME: %s \n ESTSSCTIME: %s \n VWIND: %.2f \n PFLUX: %.2f \n PROBF: %.0f" % (i,
+		item['satssctime'], item['estssctime'], item['vwind'], item['pflux'], item['probf'])
+            i += 1  
+    else:
+        print "No ACE detections :("
+    print
+    print "DWT3:"
+    i = 1
+    if detection_DWT:
+        for item in ssc_list_DWT:
+            print "Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
+		item['ssctime'], item['amp'], item['duration'], item['probf'])
+            i += 1  
+    else:
+        print "No results from this method :("
+    print
+    print "AIC:"
+    i = 1
+    if detection_AIC:
+        for item in ssc_list_AIC:
+            print "Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
+		item['ssctime'], item['amp'], item['duration'], item['probf'])
+            i += 1  
+    else:
+        print "No results from this method :("
+    print
+    print "FDM:"
+    i = 1
+    if detection_FDM:
+        for item in ssc_list_FDM:
+            print "Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
+		item['ssctime'], item['amp'], item['duration'], item['probf'])
+            i += 1  
+    else:
+        print " No results from this method :("
+    
+    print
+    print "----------------------------------------------------------"
+    print "ERRORS:"
+    print "-------"
+    if errors == {}:
+        print "0 errors! Great! :)"
+    else:
+        print len(errors), "errors were found in the following functions:"
+        print str(errors.keys())
+        print
+        print "Would you like to print the exceptions thrown?"
+        excep_answer = raw_input("(Y/n) > ")
+        if excep_answer.lower() == 'y':
+            i = 0
+            for item in errors:
+                print errors.keys()[i] + " error string:"
+                print "    " + errors[errors.keys()[i]]
+                i += 1
+
+    print
+    print "Good-bye!"
+    print "----------------------------------------------------------"
+
 
 
