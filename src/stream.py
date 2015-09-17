@@ -2146,7 +2146,7 @@ CALLED BY:
         keys: (list - default ['x','y','z','f'] provide limited key-list
         put2key
         - keys: 	(list) Provide limited key-list. default = ['x','y','z','f'] 
-        - put2key: 	(type) Provide keys to put differentiated keys to.
+        - put2keys: 	(type) Provide keys to put differentiated keys to.
 			Default = ['dx','dy','dz','df'] 
     Kwargs:
 
@@ -7118,14 +7118,14 @@ CALLED BY:
     Kwargs:
         - coverage: 	(str/timedelta) day files or hour or month or year or all - default day. 
 			'month','year','all',etc., otherwise timedelta object
-        - dateformat: 	(str) outformat of date in filename (e.g. "%Y-%m-%d" -> "2011_11_22".
+        - dateformat: 	(str) outformat of date in filename (e.g. "%Y-%m-%d" -> "2011-11-22".
         - filenamebegins: 	(str) providing the begin of savename (e.g. "WIK_").
         - filenameends: 	(str) providing the end of savename (e.g. ".min").
         - format_type: 	(str) Which format - default pystr.
-        - keys: 	(list) Keys to write to file.
 			Current supported formats: PYSTR, PYCDF, IAGA, WDC, DIDD,
 				PMAG1, PMAG2, DTU1,  GDASA1, RMRCS, AUTODIF_FREAD, 
 				USBLOG, CR800, LATEX
+        - keys: 	(list) Keys to write to file.
         - mode: 	(str) Mode for handling existing files/data in files.
 			Options: append, overwrite, replace, skip
         [- period: 	(str) Supports hour, day, month, year, all - default day.]
@@ -7220,7 +7220,7 @@ CALLED BY:
         if not mode:
             mode= 'overwrite'
 
-        if len(self) < 1:
+        if len(self) < 1 and len(self.ndarray[0]) < 1:
             loggerstream.error('write: Stream is empty!')
             raise Exception("Can't write an empty stream to file!")
 

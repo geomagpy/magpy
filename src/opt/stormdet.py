@@ -1014,6 +1014,7 @@ def _calcDVals(stream, key, m, n):
 
         # ASSIGN VALUES WITH DIFFERENCES:
         # -------------------------------
+	# TODO: update this to write ndarrays.
         row = LineStruct()
         row.time = t[i]
         row.x = y[i]
@@ -1099,8 +1100,6 @@ def _calcProbWithSat(ssctime, sat_dict, dh_prob, dh_weight, satprob_weight, estt
 
 
 if __name__ == '__main__':
-
-    import subprocess
 
     print
     print "----------------------------------------------------------"
