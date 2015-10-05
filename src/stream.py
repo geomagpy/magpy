@@ -6179,7 +6179,8 @@ CALLED BY:
                 loggerstream.warning("resample: Key %s not supported!" % key)
 
             index = KEYLIST.index(key)
-            try:
+            #try:
+            if True: # XXX
                 int_data = self.interpol([key],kind='linear')#'cubic')
                 int_func = int_data[0]['f'+key]
                 int_min = int_data[1]
@@ -6199,6 +6200,10 @@ CALLED BY:
                     else:
                         orgval = getattr(self[int(ind*multiplicator)],key)
                     tempval = float(nan)
+                    # Not a safe fix, but appears to cover decimal leftover problems
+                    # (e.g. functime = 1.0000000014, which raises an error)
+                    if functime > 1.0: 
+                        functime = 1.0
                     if not isnan(orgval):
                         #print "no nan"
                         tempval = int_func(functime)
@@ -6208,8 +6213,8 @@ CALLED BY:
                     array[index] = np.asarray(key_list)
                 else:
                     res_stream._put_column(key_list,key)
-            except:
-                loggerstream.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
+            #except:
+                #loggerstream.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
         res_stream.ndarray = np.asarray(array)
 
