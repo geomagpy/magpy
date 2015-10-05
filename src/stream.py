@@ -6179,8 +6179,7 @@ CALLED BY:
                 loggerstream.warning("resample: Key %s not supported!" % key)
 
             index = KEYLIST.index(key)
-            #try:
-            if True: # XXX
+            try:
                 int_data = self.interpol([key],kind='linear')#'cubic')
                 int_func = int_data[0]['f'+key]
                 int_min = int_data[1]
@@ -6213,8 +6212,8 @@ CALLED BY:
                     array[index] = np.asarray(key_list)
                 else:
                     res_stream._put_column(key_list,key)
-            #except:
-                #loggerstream.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
+            except:
+                loggerstream.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
         res_stream.ndarray = np.asarray(array)
 
