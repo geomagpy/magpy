@@ -102,6 +102,9 @@ def isFormat(filename, format_type):
     elif (format_type == "PYSTR"):
         if (isPYSTR(filename)):
             return True
+    elif (format_type == "PYASCII"):
+        if (isPYASCII(filename)):
+            return True
     elif (format_type == "PYCDF"):
         if (isPYCDF(filename)):
             return True
@@ -230,6 +233,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readLNM(filename, headonly, **kwargs)
     elif (format_type == "PYSTR"):
         return readPYSTR(filename, headonly, **kwargs)
+    elif (format_type == "PYASCII"):
+        return readPYASCII(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):
         return readPYCDF(filename, headonly, **kwargs)
     elif (format_type == "PYBIN"):

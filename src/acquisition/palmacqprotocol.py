@@ -191,7 +191,7 @@ class PalmAcqProtocol(LineReceiver):
              except:
                  #print "PALMACQ: an error occurred while interpreting the hexadecimal code"
                  return [], 'N'
-         else:
+        else:
              return [], 'N'
 
     def processPalmAcqData(self, data):

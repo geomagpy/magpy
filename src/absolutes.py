@@ -1743,6 +1743,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         #get from dict
                     except:
                         deltaI = 0.0
+                #print "here", deltaD, deltaI
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI)
                 print "%s with delta F of %s nT" % (result.str4,str(deltaF))
                 print "Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI))
@@ -1902,6 +1903,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
 
     resultstream = resultstream.sorting()
+
+    #print "Finished", resultstream, resultstream.ndarray
 
     return resultstream
 

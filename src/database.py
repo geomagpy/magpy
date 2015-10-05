@@ -200,7 +200,7 @@ dbgetfloat
 #      dbalter, dbsensorinfo, dbdatainfo, dbdict2fields, dbfields2dict and 
 # ----------------------------------------------------------------------------
 
-def dbgetPier(db,pierid, rp, value,maxdate=None,l=False):
+def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'):
     """
     DEFINITION:
         Gets values from DeltaDictionary of the PIERS table
@@ -212,12 +212,13 @@ def dbgetPier(db,pierid, rp, value,maxdate=None,l=False):
         - value:   	(string) one of 'deltaD', 'deltaI' and 'deltaF' - default is 'deltaF' 
         - maxdate:   	(string) get last value before maxdate
         - l:   		(bool) if true return a list of all inputs
+        - dic:   	(string) dictionary to look at, default is 'DeltaDictionary'
     APPLICATION:
         >>>deltaD =  dbgetPier(db, 'A7','A2','deltaD')
           
         returns deltaD of A7 relative to A2
     """
-    sql = 'SELECT DeltaDictionary FROM PIERS WHERE PierID = "' + pierid + '"';
+    sql = 'SELECT '+ dic +' FROM PIERS WHERE PierID = "' + pierid + '"';
     cursor = db.cursor()
     cursor.execute(sql)
     row = cursor.fetchone()
@@ -247,12 +248,12 @@ def dbgetPier(db,pierid, rp, value,maxdate=None,l=False):
                     valuetimes = [t[indtf] for t in pierlist]
                 if not maxdate:
                     indlv = valuetimes.index(max(valuetimes))
-                    return pierlist[indlv][ind]
+                    return float(pierlist[indlv][ind])
                 else:
                     # reformat maxdate to yearmonth
                     valuetimes = [el for el in valuetimes if el <= maxdate]
                     indlv = valuetimes.index(max(valuetimes))             
-                    return pierlist[indlv][ind]
+                    return float(pierlist[indlv][ind])
         except:
             print "no deltas found"
             #return row[0] 

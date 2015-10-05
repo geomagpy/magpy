@@ -78,6 +78,21 @@ def isPYSTR(filename):
     return True
 
 
+def isPYASCII(filename):
+    """
+    Checks whether a file is ASCII PyStr format.
+    """
+    try:
+        temp = open(filename, 'rt').readline()
+    except:
+        return False
+    if not temp.startswith(' # MagPy ASCII'):
+        return False
+
+    #loggerlib.debug("format_magpy: Found PYSTR file %s" % filename)
+    return True
+
+
 def isPYBIN(filename):
     """
     Checks whether a file is binary PyStr format.
@@ -91,6 +106,109 @@ def isPYBIN(filename):
 
     #loggerlib.debug("format_magpy: Found PYBIN file %s" % filename)
     return True
+
+
+def readPYASCII(filename, headonly=False, **kwargs):
+    """
+    Reading basic ASCII format data.
+    Should look like:
+	 # MagPy ASCII
+	Time-days,Time,Temp[deg],Voltage[V]
+	734928.0416666666,2013-03-01T01:00:00.000000,14061.940719529965,6.8539941994665305,11.869002442573095
+
+    """
+    stream = DataStream([],{})
+
+    array = [[] for key in KEYLIST]
+
+    # Check whether header infromation is already present
+    if stream.header == None:
+        headers = {}
+    else:
+        headers = stream.header
+
+    loggerlib.info('readPYASCII: Reading %s' % (filename))
+    qFile= file( filename, "rb" )
+    csvReader= csv.reader( qFile )
+    keylst = []
+    timeconv = False
+    timecol = -1
+
+    for elem in csvReader:
+        if elem==[]:
+            # blank line
+            pass
+        elif elem[0].startswith('#'):
+            # blank header
+            pass
+        elif elem[0].startswith(' #') and not elem[0].startswith(' # MagPy ASCII'):
+            # attributes - assign header values
+            headlst = elem[0].strip(' # ').split(':')
+            headkey = headlst[0]
+            headval = headlst[1]
+            if not headkey.startswith('Column'):
+                headers[headkey] = headval.strip()
+        elif elem[0].startswith(' # MagPy ASCII'):
+            # blank header
+            pass
+        elif elem[0].startswith('Time'): # extract column info and keys            
+            for i in range(len(elem)):
+                print elem[i]
+                if not elem[i].startswith('Time'):
+                    try:  # neglecte columns without units (e.g. text)
+                         headval = elem[i].split('[')                
+                         colval = headval[0]
+                         unitval = headval[1].strip(']')
+                         exec('headers["col-'+NUMKEYLIST[len(keylst)]+'"] = colval')
+                         exec('headers["unit-col-'+NUMKEYLIST[len(keylst)]+'"] = unitval')
+                         keylst.append(i)
+                    except:
+                         pass
+                elif elem[i] == 'Time' and not timecol > 0:
+                    timecol = i
+                    timeconv = True
+                elif elem[i] == 'Time-days':
+                    timecol = i
+                    timeconv = False
+            if len(keylst) > len(NUMKEYLIST):
+                keylst = keylist[:len(NUMKEYLIST)]
+        elif headonly:
+            # skip data for option headonly
+            continue
+        else:
+            try:
+                if timeconv:
+                    ti = date2num(stream._testtime(elem[timecol]))
+                else:
+                    ti = elem[timecol]
+                array[0].append(ti)
+                for idx,i in enumerate(keylst):
+                    array[idx+1].append(float(elem[i]))
+                    #print NUMKEYLIST[idx]
+            except ValueError:
+                pass
+    qFile.close()
+
+    #print np.asarray(array[0])
+    #print np.asarray(array[1])
+    #print np.asarray(array[2])
+    #print headers
+    # Clean up the file contents
+    def checkEqual3(lst):
+        return lst[1:] == lst[:-1]
+
+    for idx,ar in enumerate(array):
+        if len(ar) > 0:
+            if KEYLIST[idx] in NUMKEYLIST:
+                tester = float('nan')
+            else:
+                tester = '-'
+            array[idx] = np.asarray(array[idx])
+            if not False in checkEqual3(array[idx]) and ar[0] == tester:
+                array[idx] = np.asarray([])
+
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))    
+
 
 
 def readPYSTR(filename, headonly=False, **kwargs):
@@ -690,8 +808,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
         if len(stream.ndarray[0]) > 0:
             print "readPYBIN: Imported bin as ndarray"
             stream.container = [LineStruct()]
+            # if unequal lengths are found, then usually txt and bin files are loaded together
 
-    #print stream.header     
     return stream 
 
 
@@ -948,18 +1066,37 @@ def writePYASCII(datastream, filename, **kwargs):
         head = headnew
         wtr.writerow( [' # MagPy ASCII'] )
         wtr.writerow( head )
-    for elem in datastream:
-        row = []
-        for key in keylst:
-            if key.find('time') >= 0:
-                row.append(elem.time)
-                try:
-                    row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                except:
-                    row.append( float('nan') )
-                    pass
-            else:
-                row.append(eval('elem.'+key))
-        wtr.writerow( row )
+    if len(datastream.ndarray[0]) > 0:
+        for i in range(len(datastream.ndarray[0])):
+            row = []
+            for idx,el in enumerate(datastream.ndarray):
+                if len(datastream.ndarray[idx]) > 0:
+                    if KEYLIST[idx].find('time') >= 0:
+                        #print el[i]
+                        row.append(float(el[i]))
+                        row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                    else:
+                        if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
+                            try:
+                                valid_chars='-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                                el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])  
+                            except:
+                                pass
+                        row.append(el[i])
+            wtr.writerow(row)
+    else:
+        for elem in datastream:
+            row = []
+            for key in keylst:
+                if key.find('time') >= 0:
+                    row.append(elem.time)
+                    try:
+                        row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                    except:
+                        row.append( float('nan') )
+                        pass
+                else:
+                    row.append(eval('elem.'+key))
+            wtr.writerow( row )
     myFile.close()
 

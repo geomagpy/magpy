@@ -1053,14 +1053,9 @@ def writeBLV(datastream, filename, **kwargs):
     if not meanh:
         meanh = datastream.mean('x')
 
-    print min(dummystream.ndarray[0])
-    print min(datastream.ndarray[0])
-    print min(backupabsstream.ndarray[0])
-
     # 6. calculate baseline function
     basefunction = dummystream.baseline(backupabsstream,keys=keys, fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,extradays=extradays)
 
-    print dummystream.ndarray[0], min(backupabsstream.ndarray[0]), basefunction, t1, t2
     yar = [[] for key in KEYLIST]
     datelist = [day+0.5 for day in range(int(t1),int(t2))]
     for idx, elem in enumerate(yar):
@@ -1075,8 +1070,6 @@ def writeBLV(datastream, filename, **kwargs):
     yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar))
     yearstream = yearstream.func2stream(basefunction,mode='addbaseline',keys=keys)
 
-    #print yearstream.ndarray,np.asarray(yar) 
-
     # 7. Get essential header info
     header = datastream.header
     try:
@@ -1087,27 +1080,27 @@ def writeBLV(datastream, filename, **kwargs):
     headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
     myFile.writelines( headerline+'\r\n' )
 
-    datastream = datastream.trim(starttime=t1, endtime=t2)
-
     # 8. Basevalues
     if len(datastream.ndarray[0]) > 0:
         for idx, elem in enumerate(datastream.ndarray[0]):
-            day = datetime.strftime(num2date(elem),'%j')
-            x = float(datastream.ndarray[indx][idx])
-            y = float(datastream.ndarray[indy][idx])*60.
-            z = float(datastream.ndarray[indz][idx])
-            df = float(datastream.ndarray[indf][idx])
-            if isnan(x):
-                x = 999999.00
-            if isnan(y):
-                y = 999999.00
-            if isnan(z):
-                z = 999999.00
-            if isnan(df):
-                df = 999999.00
-            line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
-            myFile.writelines( line )
+            if t2 >= elem >= t1:
+                day = datetime.strftime(num2date(elem),'%j')
+                x = float(datastream.ndarray[indx][idx])
+                y = float(datastream.ndarray[indy][idx])*60.
+                z = float(datastream.ndarray[indz][idx])
+                df = float(datastream.ndarray[indf][idx])
+                if isnan(x):
+                    x = 999999.00
+                if isnan(y):
+                    y = 999999.00
+                if isnan(z):
+                    z = 999999.00
+                if isnan(df):
+                    df = 999999.00
+                line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
+                myFile.writelines( line )
     else:
+        datastream = datastream.trim(starttime=t1, endtime=t2)
         for elem in datastream:
             #DDD_aaaaaa.aa_bbbbbb.bb_zzzzzz.zz_ssssss.ssCrLf
             day = datetime.strftime(num2date(elem.time),'%j')

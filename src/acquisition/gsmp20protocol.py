@@ -118,7 +118,7 @@ class GSMP20Protocol(LineReceiver):
                 grad3 = intensity2-intensity1
             elif len(data_array) == 19:
                 print "Found header data", data_array
-                    """
+                """
                         10071506 A 13 250 492 496 329 150 1023 39 39 39 30 29 30 YYYyyyEEENNN 148 149 117
 
 			<GPS> day/month/year/hour A - locked, V unlocked
@@ -142,7 +142,7 @@ class GSMP20Protocol(LineReceiver):
 			<148> Sensor 1 RF dc voltage (14.8V)
 			<149> Sensor 2 RF dc voltage (14.9V)
 			<117> Sensor 3 RF dc voltage (11.7V)
-                    """
+                """
                 headerlinecoming = True
 
                 try:

@@ -206,13 +206,13 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             line = line.strip('\n')
             headline = line.split(':')
             if headline[0] == ('# Abs-Observer'):
-                person = headline[1].strip()
+                person = headline[1].strip().replace(' ','_')
                 dirow.person = person
             if headline[0] == ('# Abs-Theodolite'):
-                di_inst = headline[1].replace(', ','_').strip()
+                di_inst = headline[1].replace(', ','_').strip().replace(' ','_')
                 dirow.di_inst = di_inst
             if headline[0] == ('# Abs-TheoUnit'):
-                unit = headline[1].strip()
+                unit = headline[1].strip().replace(' ','_')
                 # Any given unit is transformed to degree
                 # Therefor no further angular corrections are necessary 
                 if unit=='gon':
@@ -223,7 +223,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                     ang_fac = 1.
                 unit = 'deg'
             if headline[0] == ('# Abs-FGSensor'):
-                fgsensor = headline[1].strip()
+                fgsensor = headline[1].strip().replace(' ','_')
                 dirow.fluxgatesensor = fgsensor
             if headline[0] == ('# Abs-AzimuthMark'):
                 try:
