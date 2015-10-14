@@ -7031,8 +7031,11 @@ CALLED BY:
                 #idx = 1+ (np.abs(self.ndarray[0]-date2num(endtime))).argmin() # get the nearest index to endtime
                 if idx >= len(self.ndarray[0]): ## prevent too large idx values
                     idx = len(self.ndarray[0]) - 1
-                if not self.ndarray[0][idx] < date2num(endtime): # Make sure that last value is smaller than endtime
-                    idx -= 1 
+                while True:
+                    if not self.ndarray[0][idx] < date2num(endtime): # Make sure that last value is smaller than endtime
+                        idx -= 1 
+                    else:
+                        break
 
                 self.ndarray = list(self.ndarray)
                 for i in range(len(self.ndarray)):

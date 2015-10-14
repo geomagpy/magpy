@@ -122,11 +122,28 @@ def readIAGA(filename, headonly=False, **kwargs):
             elif line.startswith('DATE'):
                 # data header
                 colsstr = line.lower().split()
+                varstr = ''
                 for it, elem in enumerate(colsstr):
                     if it > 2:
-                        colname = "col-%s" % elem[-1]
-                        colname = colname.lower()
-                        stream.header[colname] = elem[-1].lower()
+                        varstr += elem[-1]
+                        if elem[-1] == 'H':
+                            stream.header["col-x"] = 'H'
+                            stream.header["col-y"] = 'D'
+                            stream.header["col-z"] = 'Z'
+                            stream.header['DataType'] = 'HDZ'    
+                        elif elem[-1] == 'X':
+                            stream.header["col-x"] = 'X'
+                            stream.header["col-y"] = 'Y'
+                            stream.header["col-z"] = 'Z'
+                            stream.header['DataType'] = 'HDZ'       
+                        elif elem[-1] == 'I':
+                            stream.header["col-x"] = 'I'
+                            stream.header["col-y"] = 'D'
+                            #stream.header["col-z"] = 'Z'
+                            stream.header['DataType'] = 'IDF'    
+                        #colname = "col-%s" % elem[-1]
+                        #colname = colname.lower()
+                        #stream.header[colname] = elem[-1].lower()
                         if elem[-1].lower() in ['x','y','z','f']:
                             stream.header['unit-'+colname] = 'nT' 
                     else:
@@ -135,14 +152,14 @@ def readIAGA(filename, headonly=False, **kwargs):
                         stream.header[colname] = elem.lower()
                         if elem.lower() in ['x','y','z','f']:
                             stream.header['unit-'+colname] = 'nT'
-                if (stream.header['col-x']=='x'):
-                    stream.header['DataType'] = 'XYZ'    
-                elif (stream.header['col-h']=='h'):
-                    stream.header['DataType'] = 'HDZ'    
-                elif (stream.header['col-i']=='i'):
-                    stream.header['DataType'] = 'IDF'    
-                else:
-                    raise ValueError
+                #if (stream.header['col-x']=='x'):
+                #    stream.header['DataType'] = 'XYZ'    
+                #elif (stream.header['col-h']=='h'):
+                #    stream.header['DataType'] = 'HDZ'    
+                #elif (stream.header['col-i']=='i'):
+                #    stream.header['DataType'] = 'IDF'    
+                #else:
+                #    raise ValueError
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -160,10 +177,15 @@ def readIAGA(filename, headonly=False, **kwargs):
                         row.append(string.strip(val))
                         
                 # Baue zweidimensionales Array auf
-                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )      
-                array[1].append( float(row[3]) )      
-                array[2].append( float(row[4]) )      
-                array[3].append( float(row[5]) )      
+                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) ) 
+                if varstr[:4] == 'dhzf':  
+                    array[1].append( float(row[4]) )      
+                    array[2].append( float(row[3]) )      
+                    array[3].append( float(row[5]) )
+                else:
+                    array[1].append( float(row[3]) )      
+                    array[2].append( float(row[4]) )      
+                    array[3].append( float(row[5]) )      
                 try:
                     if not float(row[6]) == 88888:
                         if stream.header['col-f']=='f':
