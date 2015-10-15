@@ -260,6 +260,119 @@ def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'
     else:
         return 0.0
 
+def dbgetlines(db, tablename, lines):
+    """
+    DEFINITION:
+        Get the last x lines from the selected table
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - tablename:   	name of the table 
+        - lines:   	(int) amount of lines to extract
+    APPLICATION:
+        >>>data = dbgetlines(db, 'DATA_0001_0001', 3600)
+        returns a data stream object
+    """
+    cursor = db.cursor()
+
+    stream = DataStream()
+    headsql = 'SHOW COLUMNS FROM %s' % (tablename)
+    try:
+        cursor.execute(headsql)
+    except MySQLdb.IntegrityError, message:
+        return message
+    except MySQLdb.Error, message:
+        return message
+    except:
+        return 'dbgetlines: unkown error'
+    head = cursor.fetchall()
+    keys = list(np.transpose(np.asarray(head))[0])
+
+    getsql = 'SELECT * FROM %s ORDER BY time DESC LIMIT %d' % (tablename, lines)
+    try:
+        cursor.execute(getsql)
+    except MySQLdb.IntegrityError, message:
+        print message
+        return stream
+    except MySQLdb.Error, message:
+        print message
+        return stream
+    except:
+        print 'dbgetlines: unkown error'
+        return stream
+    result = cursor.fetchall()
+    res = np.transpose(np.asarray(result))
+
+    array =[[] for key in KEYLIST]
+    for idx,key in enumerate(KEYLIST):
+        if key in keys:
+            pos = keys.index(key)
+            if key == 'time':
+                array[idx] = np.asarray(date2num([stream._testtime(elem) for elem in res[pos]]))
+            elif key in NUMKEYLIST:
+                array[idx] = res[pos].astype(float)
+            else:
+                array[idx] = res[pos].astype(object)
+
+    header = dbfields2dict(db,tablename)
+    stream = DataStream([LineStruct()],header,np.asarray(array)) 
+
+    return stream.sorting()
+
+
+def dbupdate(db,tablename, keys, values, condition=None):
+    """
+    DEFINITION:
+        Perform an update call to add values into specific keys of the selected table
+    PARAMETERS:
+    Variables:
+        - db:   	(mysql database) defined by MySQLdb.connect().
+        - tablename:   	name of the table 
+        - keys:   	(list) list of keys to modify
+        - values:   	(list) list of values for the keys
+    Kwargs:
+        - condition:     (string) put in an optional where condition
+    APPLICATION:
+        >>>dbupdate(db, 'DATAINFO', [], [], condition='SensorID="MySensor"')
+        returns a string with either 'success' or an error message 
+    """
+    try:
+        if not len(keys) == len(values):
+            print "dbupdate: amount of keys does not fit provided values"
+            return False
+    except:
+        print "dbupdate: keys and values must be provided as list e.g. [key1,key2,...]"
+    if not len(keys) > 0:
+        print "dbupdate: provide at least on key/value pair"
+        return False
+     
+    if not condition:
+        condition = ''
+    else:
+        condition = 'WHERE %s' % condition
+    
+    setlist = []
+    for idx,el in enumerate(keys):
+        st = '%s="%s"' % (el, values[idx])
+        setlist.append(st)
+    if len(setlist) > 0:
+        setstring = ','.join(setlist)
+    else:
+        setstring = setlist[0]
+    updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
+    cursor = db.cursor()
+    print updatesql
+    try:
+        cursor.execute(updatesql)
+    except MySQLdb.IntegrityError, message:
+        return message
+    except MySQLdb.Error, message:
+        return message
+    except:
+        return 'dbupdate: unkown error'
+    db.commit()
+    cursor.close()
+    return 'success'
 
 def dbgetfloat(db,tablename,sensorid,columnid,revision=None):
     """
@@ -1383,6 +1496,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: Maxnum: %i" % maxnum)
         # Perform intensive search using any given meta info
         intensivesearch = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"' + searchlst
+        #print ("dbdatainfo: Searchlist: %s" % intensivesearch)
         loggerdatabase.debug("dbdatainfo: Searchlist: %s" % intensivesearch)
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
@@ -1402,20 +1516,24 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                     pass
             intmaxnum = max(intnumlst)
             datainfonum = '{0:04}'.format(intmaxnum)
+            #print datainfonum, intmaxnum
         else:
             print "dbdatainfo: Creating new Datainfo input - new revision number"
             selectupdate = False
             datainfonum = '{0:04}'.format(maxnum+1)
+            #print "dbdatainfo", datainfohead, datainfovalue, datainfonum
             # select maximum number + 1
             if 'DataID' in datainfohead:
                 selectindex = datainfohead.index('DataID') 
-                datainfovalue[index] = sensorid + '_' + datainfonum
+                datainfovalue[selectindex] = sensorid + '_' + datainfonum
             else:
                 datainfohead.append('DataID')
                 datainfovalue.append(sensorid + '_' + datainfonum)
             datainfostring = joindatainfovalues(datainfohead, datainfovalue)
+            #print "dbdatainfo", datainfohead, datainfostring
         if selectupdate:
-            sqllst = [key + " ='" + str(datainfovalue[idx]) +"'" for idx, key in enumerate(datainfohead) if key in SKIPKEYS and not key == 'DataAbsFunctionObject']
+            #print "Here", datainfohead
+            sqllst = [key + " ='" + str(datainfovalue[idx]) +"'" for idx, key in enumerate(datainfohead) if key in SKIPKEYS and not key == 'DataAbsFunctionObject' and not key=='DataID']
             if 'DataAbsFunctionObject' in datainfohead: ### Tested Text and Binary so far. No quotes is OK.
                 print "dbdatainfo: adding DataAbsFunctionObjects to DATAINFO is not yet working"
                 #pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataAbsFunctionObject')]) 
@@ -1426,7 +1544,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             if not len(sqllst) > 0:
                 novalues = True
             datainfosql = "UPDATE DATAINFO SET " + ", ".join(sqllst) +  " WHERE DataID = '" + sensorid + "_" + datainfonum + "'"
+            #print datainfosql
         else:
+            #print "No, Here"
             datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
             loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
         if updatedb and not novalues:
@@ -1539,8 +1659,10 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         datastream.header['DataSamplingRate'] = datastream.samplingrate()
 
         # Updating DATAINFO, SENSORS and STATIONS
+        #print "Before", datastream.header['SensorID']
         tablename = dbdatainfo(db,datastream.header['SensorID'],datastream.header,None,datastream.header['StationID'])
 
+        #print "After", tablename, datastream.header['SensorID']
 
     # ----------------------------------------------
     #   Putting together all data
@@ -2255,10 +2377,10 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
         return
     if starttime:
         #starttime = stream._testtime(begin)
-        begin = datetime.strftime(stream._testtime(starttime),"%Y-%m%d %H:%M%:%S")
+        begin = datetime.strftime(stream._testtime(starttime),"%Y-%m-%d %H:%M:%S")
         wherelist.append('time >= "' + begin + '"')
     if endtime:
-        end = datetime.strftime(stream._testtime(endtime),"%Y-%m%d %H:%M%:%S")
+        end = datetime.strftime(stream._testtime(endtime),"%Y-%m-%d %H:%M:%S")
         wherelist.append('time <= "' + end + '"')
     if len(wherelist) > 0:
         whereclause = ' AND '.join(wherelist)
@@ -2903,11 +3025,13 @@ def getBaselineProperties(db,datastream,pier=None,distream=None):
 
 def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     """
-    Function to converts a python list (actually an array)
-    within flagging information to a data base table
-    required parameters are the 
-    db: name of the mysql data base
-    flaglist: the list containing flagging information of format:
+    DESCRIPTION:
+       Function to converts a python list (actually an array)
+       within flagging information to a data base table
+
+    PARAMETER: 
+       db: name of the mysql data base
+       flaglist: the list containing flagging information of format:
                 [[starttime, endtime, singlecomp, flagNum, flagReason, (SensorID, ModificationDate)],...]
 
     Optional:
@@ -2923,13 +3047,17 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     if not sensorid:
         sensorid = 'defaultsensor'
     if not modificationdate:
-        sensorid = '1971-11-22 11:22:00'
+        modificationdate = '1971-11-22 11:22:00'
 
     if not db:
         print "No database connected - aborting"
         return
     cursor = db.cursor ()
 
+    # Check flaglist:
+    if not len(flaglist) > 0:
+        print "No data found in flaglist - aborting"
+        return
     lentype = len(flaglist[0])
 
     if lentype <= 5:
@@ -2973,7 +3101,8 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         cursor.execute(createflagtablesql)
         flagid = 0
     else:
-        flagid = int(max(flagids))
+        flagids = [int(el) for el in flagids] 
+        flagid = max(flagids)
 
     # add flagging data
     #if lentype <= 4:

@@ -443,10 +443,17 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 #del ti
             elif key == 'HNvar' or key == 'x':
                 x = cdf_file[key][...]
+                if len(x) == 1:
+                    # This is the case if identical data is found
+                    try:
+                        length = len(cdf_file['Epoch'][...])         
+                    except:
+                        length = len(cdf_file['time'][...])         
+                    x = [x[0]] * length
                 if len(x) > 0:
                     if not oldtype:
                         ind = KEYLIST.index('x')
-                        array[ind] = np.asarray(cdf_file[key][...])
+                        array[ind] = np.asarray(x)
                     else:
                         stream._put_column(x,'x')
                     del x
@@ -464,10 +471,17 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         pass
             elif key == 'HEvar' or key == 'y':
                 y = cdf_file[key][...]
+                if len(y) == 1:
+                    # This is the case if identical data is found
+                    try:
+                        length = len(cdf_file['Epoch'][...])         
+                    except:
+                        length = len(cdf_file['time'][...])         
+                    y = [y[0]] * length
                 if len(y) > 0:
                     if not oldtype:
                         ind = KEYLIST.index('y')
-                        array[ind] = np.asarray(cdf_file[key][...])
+                        array[ind] = np.asarray(y)
                     else:
                         stream._put_column(y,'y')
                     del y
@@ -483,10 +497,17 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         pass
             elif key == 'Zvar' or key == 'z':
                 z = cdf_file[key][...]
+                if len(z) == 1:
+                    # This is the case if identical data is found
+                    try:
+                        length = len(cdf_file['Epoch'][...])         
+                    except:
+                        length = len(cdf_file['time'][...])         
+                    z = [z[0]] * length
                 if len(z) > 0:
                     if not oldtype:
                         ind = KEYLIST.index('z')
-                        array[ind] = np.asarray(cdf_file[key][...])
+                        array[ind] = np.asarray(z)
                     else:
                         stream._put_column(z,'z')
                     del z
@@ -502,10 +523,17 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         pass
             elif key == 'Fsc' or key == 'f':
                 f = cdf_file[key][...]
+                if len(f) == 1:
+                    # This is the case if identical data is found
+                    try:
+                        length = len(cdf_file['Epoch'][...])         
+                    except:
+                        length = len(cdf_file['time'][...])         
+                    f = [f[0]] * length
                 if len(f) > 0:
                     if not oldtype:
                         ind = KEYLIST.index('f')
-                        array[ind] = np.asarray(cdf_file[key][...])
+                        array[ind] = np.asarray(f)
                     else:
                         stream._put_column(f,'f')
                     del f
@@ -928,7 +956,7 @@ def writePYCDF(datastream, filename, **kwargs):
         mycdf = cdf.CDF(filename, '')
 
     keylst = datastream._get_key_headers()
-    #print keylst
+    print "writeCDF", keylst
     if not 'flag' in keylst:
         keylst.append('flag')
     #print keylst
@@ -969,6 +997,7 @@ def writePYCDF(datastream, filename, **kwargs):
     except:
         pass
 
+    print "writing keys", keylst
     #print "WriteFormat length 1", len(datastream.ndarray[0])
     for key in keylst:
         if ndtype:
@@ -990,10 +1019,12 @@ def writePYCDF(datastream, filename, **kwargs):
             pass
         if not False in checkEqual3(col) and len(col) > 0:
             print "Found identical values only: %s" % key
-            if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
-                col = col[:1]
-            else:
-                col = np.asarray([])
+            col = col[:1]
+            #if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders 
+            #- better not!!! 2015-10-14 --- if two files are loaded, one with flags, one without, then column lengths will not fit 
+            #    col = col[:1]
+            #else:
+            #    col = np.asarray([])
         if key.find('time') >= 0:
             if key == 'time':
                 key = 'Epoch'
@@ -1003,6 +1034,7 @@ def writePYCDF(datastream, filename, **kwargs):
             elif key == 'sectime':
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
         elif len(col) > 0:
+            print "writing", np.asarray(col)
             if not key in NUMKEYLIST:
                 col = np.asarray(list(col)) # to get string conversion
             else:

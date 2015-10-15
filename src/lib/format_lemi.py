@@ -109,6 +109,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
+    array = [[] for key in KEYLIST]
     # Check whether header information is already present
     if stream.header is None:
         headers = {}
@@ -147,13 +148,18 @@ def readLEMIHF(filename, headonly=False, **kwargs):
                 # skip data for option headonly
                 continue
             else:
-                row = LineStruct()
+                #row = LineStruct()
                 elem = line.split()
-                row.time = date2num(datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f'))
-                row.x = float(elem[6])
-                row.y = float(elem[7])
-                row.z = float(elem[8])
-                stream.add(row)         
+                tim = date2num(datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f'))
+                #row.time = tim
+                array[0].append(tim)
+                array[1].append(float(elem[6]))
+                array[2].append(float(elem[7]))
+                array[3].append(float(elem[8]))
+                #row.x = float(elem[6])
+                #row.y = float(elem[7])
+                #row.z = float(elem[8])
+                #stream.add(row)         
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -166,7 +172,11 @@ def readLEMIHF(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    return DataStream(stream, headers)
+    for idx,ar in enumerate(array):
+        if len(ar) > 0:
+            array[idx] = np.asarray(array[idx])
+
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
 
 def readLEMIBIN(filename, headonly=False, **kwargs):
@@ -175,7 +185,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     KWARGS:
         tenHz:		(bool) to use 10Hz data
-        timeshift:	(float) given time shift of GPS reading
+        timeshift:	(float) providing a time shift, which is added to PC time column (usually NTP)
 
     COMPLETE DATA STRUCTURE:'<4cb6B8hb30f3BcBcc5hL'
      --TAG:            data[0:4]		# L025
@@ -208,17 +218,15 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    tenHz = kwargs.get('tenHz')
     timeshift = kwargs.get('timeshift')
     gpstime = kwargs.get('gpstime')
 
-    # Define frequency of output data:
-    if not tenHz:
-        tenHz = False # True # 		# Currently gives memory errors for t > 1 day. 10Hz stream too large? TODO  happens only when start and endtime are used.. single files can be imported
-    tenHz = True
+    print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)" 
+
+    ## Moved the following into acquisition
     if not timeshift:
-        timeshift = -300 #milliseconds
-    pcshift = 2.07 # seconds
+        timeshift = 0.0 # milliseconds and time delay (PC-GPS) are already considered in acquisition
+
     if not gpstime:
         gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column 
 
@@ -254,6 +262,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     fh = open(filename, 'rb')
 
     stream = DataStream([],{})
+    array = [[] for key in KEYLIST]
 
     data = []
     key = None
@@ -315,13 +324,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             gpsstate = data[53]
 
             if gpsstate == 'A':
-                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
-                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])-timedelta(seconds=pcshift)+timedelta(microseconds=timeshift*1000.)			# PC time
+                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time 
+                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)			# PC time
                 timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
             else:
                 try:
-                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])-timedelta(seconds=pcshift)+timedelta(microseconds=timeshift*1000.)			# PC time
-                    sectime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))+timedelta(microseconds=timeshift*1000.)  # Lemi GPS time 
+                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)			# PC time
+                    sectime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time 
                     timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
                 except:
                     loggerlib.error("readLEMIBIN: Error reading line. Aborting read. (See docs.)")
@@ -334,50 +343,41 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 # iterative search.
 #--------------------------------------------------------------------
 
-            if tenHz:
-                for i in range(10):
-                    row = LineStruct()
-
-                    row.time = date2num(time+timedelta(microseconds=(100000.*i)))
-                    row.t1 = data[11]/100.
-                    row.t2 = data[12]/100.
-
-                    row.x = (data[20+i*3])*1000.
-                    row.y = (data[21+i*3])*1000.
-                    row.z = (data[22+i*3])*1000.
-                    row.var2 = data[52]/10.	# Voltage information
-                    row.str1 = data[53]		# GPS information
-                    #if gpstime:
-                    row.sectime = date2num(sectime+timedelta(microseconds=(100000.*i)))
-
-                    stream.add(row)
-
-            else:
-    	        newtime = []
-                row = LineStruct()   
-
-                row.time = date2num(time)
-                row.t1 = data[11]/100.
-                row.t2 = data[12]/100.
-
-                row.x = (data[20])*1000.
-                row.y = (data[21])*1000.
-                row.z = (data[22])*1000.
-                row.var2 = data[52]/10.
-                row.str1 = data[53]		# GPS information
-                #if gpstime:
-                row.sectime = date2num(sectime)
-
-                stream.add(row)    
+            xpos = KEYLIST.index('x')
+            ypos = KEYLIST.index('y')
+            zpos = KEYLIST.index('z')
+            t1pos = KEYLIST.index('t1')
+            t2pos = KEYLIST.index('t2')
+            var2pos = KEYLIST.index('var2')
+            str1pos = KEYLIST.index('str1')
+            secpos = KEYLIST.index('sectime')
+            for i in range(10):
+                tim = date2num(time+timedelta(microseconds=(100000.*i)))
+                array[0].append(tim)
+                array[xpos].append((data[20+i*3])*1000.)
+                array[ypos].append((data[21+i*3])*1000.)
+                array[zpos].append((data[22+i*3])*1000.)
+                array[t1pos].append(data[11]/100.)
+                array[t2pos].append(data[12]/100.)
+                array[var2pos].append(data[52]/10.)
+                array[str1pos].append(data[53])
+                sectim = date2num(sectime+timedelta(microseconds=(100000.*i)))
+                array[secpos].append(sectim)
 
     	    line = fh.read(linelength)
 
     fh.close()
+    gpstime = True
     if gpstime:
-        loggerlib.info("readLEMIBIN2: Time difference between GPS and PC (GPS-PC): %f , %f" % (np.mean(timediff), np.std(timediff)))
+        loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): %f sec +- %f" % (np.mean(timediff), np.std(timediff)))
         print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
+
+    for idx,ar in enumerate(array):
+        if len(ar) > 0:
+            array[idx] = np.asarray(array[idx]).astype(object)
+
+    return DataStream([LineStruct()], stream.header, np.asarray(array))
    
-    return stream   
 
 
 def readLEMIBIN1(filename, headonly=False, **kwargs):
@@ -395,6 +395,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     fh = open(filename, 'rb')
     # read file and split text into channels
     stream = DataStream()
+    array = [[] for key in KEYLIST]
     # Check whether header infromation is already present
     if stream.header is None:
         headers = {}

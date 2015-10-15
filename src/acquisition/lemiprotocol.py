@@ -116,6 +116,9 @@ class LemiProtocol(LineReceiver):
         if len(data) != 153:
             log.err('LEMI - Protocol: Unable to parse data of length %i' % len(data))
 
+        """ TIMESHIFT between serial output (and thus NTP time) and GPS timestamp """
+        timedelay = 0.0   ## in sec, most likely in order of 0.1 sec
+
         currenttime = datetime.utcnow()
         date = datetime.strftime(currenttime, "%Y-%m-%d")
         #actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
@@ -188,11 +191,11 @@ class LemiProtocol(LineReceiver):
         try:
             if self.gpsstate2 == 'P': 
                 ## passive mode - no GPS connection -> use ntptime as primary with correction
-                evt1 = currenttime-timedelta(seconds=1.9)
+                evt1 = currenttime-timedelta(seconds=timedelay)
                 evt4 = gps_array
             else:
                 ## active mode - GPS time is used as primary
-                evt4 = currenttime-timedelta(seconds=1.9)
+                evt4 = currenttime-timedelta(seconds=timedelay)
                 evt1 = gps_array
             evt3 = {'id': 3, 'value': outtime}
             #evt1 = {'id': 1, 'value': timestamp}

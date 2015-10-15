@@ -587,6 +587,15 @@ CALLED BY:
         #except:
         #    print list(self.container).append(datlst)
 
+
+    def length(self):
+        #try:
+        if len(self.ndarray[0]) > 0:
+            ll = [len(elem) for elem in self.ndarray]
+            return ll
+        else:
+            return [len(self)]
+
     def replace(self, datlst):
         # Replace in stream 
         # - replace value with existing data
@@ -2615,7 +2624,7 @@ CALLED BY:
         #return DataStream(self,self.header,self.ndarray)
 
 
-    def nfilter(self,debugmode=None,**kwargs):
+    def filter(self,**kwargs):
         """
         DEFINITION:
             Uses a selected window to filter the datastream - similar to the smooth function.
@@ -2685,6 +2694,8 @@ CALLED BY:
         testplot = kwargs.get('testplot')
         autofill = kwargs.get('autofill')
         dontfillgaps = kwargs.get('dontfillgaps')
+        fillgaps = kwargs.get('fillgaps')
+        debugmode = kwargs.get('debugmode')
 
         if not keys:
             keys = self._get_key_headers(numerical=True)
@@ -2706,6 +2717,8 @@ CALLED BY:
                 resamplefast = True
             else:
                 resamplefast = False
+        if not debugmode: 
+            debugmode = None
         if not filter_type: 
             filter_type = 'gaussian'
         if not gaussian_factor: 
@@ -2732,7 +2745,8 @@ CALLED BY:
         if debugmode:
             print "Starting length:", len(self)
 
-        if not dontfillgaps:
+        #if not dontfillgaps:   ### changed--- now using dont fill gaps as default
+        if fillgaps:
             self = self.get_gaps()
             if debugmode:
                 print "length after getting gaps:", len(self)
@@ -2859,7 +2873,7 @@ CALLED BY:
 
 
 
-    def filter(self, **kwargs):
+    def nfilter(self, **kwargs):
         """
     DEFINITION:
         Code for simple application, filtering function.
@@ -2886,6 +2900,9 @@ CALLED BY:
 
         """
 
+        return self.filter(**kwargs)
+
+        """
         # Defaults:
         filter_type = kwargs.get('filter_type')
         filter_width = kwargs.get('filter_width')
@@ -3060,7 +3077,7 @@ CALLED BY:
         loggerstream.info('filter: Finished filtering.')
 
         return DataStream(resdata,self.header)  
-
+        """
         
     def fit(self, keys, **kwargs):
         """
@@ -3557,6 +3574,8 @@ CALLED BY:
                     flagls[pos] = str(flag)
                     self.ndarray[flagind][i] = ''.join(flagls)
                     self.ndarray[commentind][i] = comment
+            self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
+            self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
         else:
             for elem in self:
                 if elem.time >= start and elem.time <= end:
@@ -3848,6 +3867,7 @@ CALLED BY:
                 projtime = np.linspace(mintime, maxtime, num=expN, endpoint=True)
                 loggerstream.info("get_gaps: Found gaps - Filling nans to them")
                 for i in np.where(diff > newsp+accuracy)[0]:
+                    print i
                     nf = num_fills[i]
                     nans = [np.nan] * nf
                     for idx,elem in enumerate(stream.ndarray):
@@ -3926,16 +3946,33 @@ CALLED BY:
         
         for time savings, this function only tests the first 1000 elements
         """
-        timedifflist = [[0,0]]
-        timediff = 0
+
         if len(self.ndarray[0]) > 0:
             timecol = self.ndarray[0].astype(float)
         else:
             timecol= self._get_column('time')
+
+        # New way:
+        if len(timecol) > 1:
+            diffs = np.asarray(timecol[1:]-timecol[:-1])
+            me = np.median(diffs)
+            st = np.std(diffs)
+            diffs = [el for el in diffs if el < me+2*st and el > me-2*st]
+            return np.median(diffs)
+        else:
+            return 0.0
+
+        """
+        timedifflist = [[0,0]]
+        timediff = 0
         if len(timecol) <= 1000:
             testrange = len(timecol)
         else:
             testrange = 1000
+
+        print "Get_sampling_rate", np.asarray(timecol[1:]-timecol[:-1])
+        print "Get_sampling_rate", np.median(np.asarray(timecol[1:]-timecol[:-1]))*3600.*24.
+
 
         for idx, val in enumerate(timecol[:testrange]):
             if idx > 1 and not isnan(val):
@@ -3966,6 +4003,7 @@ CALLED BY:
             except:
                 loggerstream.error("get_sampling_period: could not identify dominant sampling rate")
                 return 0
+        """
 
     def samplingrate(self, **kwargs):
         """
@@ -3976,12 +4014,33 @@ CALLED BY:
         """
         # XXX include that in the stream reading process....
         digits = kwargs.get('digits')
+        notrounded = kwargs.get('notrounded')
+
         if not digits:
             digits = 1
 
         sr = self.get_sampling_period()*24*3600
         unit = ' sec'
 
+        # Create a suitable rounding function:
+        # Use simple rounds if sr > 60 secs
+        # Check accuracy for sr < 10 secs (three digits:
+        #	if abs(sr-round(sr,0)) * 1000 e.g. (1.002 -> 2, 0.998 -> 2) 
+        if sr < 59:
+            for i in range(0,3):
+                multi = 10**i
+                srfloor = np.floor(sr*multi)
+                if srfloor >= 1:
+                    # found multiplicator
+                    # now determine significance taking into account three more digits
+                    digs = np.floor(np.abs(sr*multi-srfloor)*1000)                  
+                    if digs<5: # round to zero
+                        val = np.round(srfloor/multi,1)
+                    else:
+                        val = np.round(sr,3)
+                    break
+
+        """
         if np.round(sr*10.,0) == 0:
             val = np.round(sr,2)
             #unit = ' Hz'
@@ -3993,6 +4052,9 @@ CALLED BY:
                 #unit = ' Hz'
         else:
             val = np.round(sr,0)
+        """
+        if notrounded:
+            val = sr
 
         self.header['DataSamplingRate'] = str(val) + unit
 
@@ -7400,7 +7462,7 @@ CALLED BY:
                     # non-destructive
                     print "write: start and end", starttime, endtime
                     ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
-                    print len(ndarray)
+                    print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                     ndarray = np.asarray([np.asarray([]) for key in KEYLIST])
@@ -8173,6 +8235,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     if headonly and (starttime or endtime):
         msg = "read: Keyword headonly cannot be combined with starttime or endtime."
         loggerstream.error(msg)
+
     # Sort the input data regarding time
     if not skipsorting:
         st = st.sorting()
