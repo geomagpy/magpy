@@ -22,6 +22,8 @@ def isIMF(filename):
         pass
     else:
         return False
+
+    print "Found IMF data"
     return True
 
 
@@ -100,10 +102,8 @@ def readIAF(filename, headonly=False, **kwargs):
     stream = DataStream()
     # Check whether header infromation is already present
 
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
+
     data = []
     key = None
 
@@ -606,10 +606,11 @@ def readIMF(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    #if stream.header is None:
+    #    headers = {}
+    #else:
+    #    headers = stream.header
+    headers = {}
     data = []
     key = None
 
@@ -848,6 +849,8 @@ def readBLV(filename, headonly=False, **kwargs):
         headers = {}
     else:
         headers = stream.header
+    headers = {}
+
     data = []
     key = None
 

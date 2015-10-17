@@ -941,6 +941,8 @@ def dbfields2dict(db,datainfoid):
     metadatadict = {}
     cursor = db.cursor()
 
+
+    print "DBfields2dic: Running"
     #getids = 'SELECT sensorid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
     getids = 'SELECT sensorid,stationid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
     cursor.execute(getids)
@@ -1001,9 +1003,24 @@ def dbfields2dict(db,datainfoid):
     except:
         loggerdatabase.warning("dbfields2dict: Could not interpret column field in DATAINFO")
 
+    # Use ColumnContent info for creating col information
+    print "DBfields2dict: ", cols
+    try:
+        for ind,el in enumerate(cols):
+            if not el=='':
+                col = KEYLIST[ind+1]
+                key = 'col-'+col
+                unitkey = 'unit-col-'+col
+                metadatadict[key] = el
+                metadatadict[unitkey] = colsel[ind]
+    except:
+        loggerdatabase.warning("dbfields2dict: Could not assign column name")
+    
+    """
     try:
         senscols = senscolsstr.split(',')
         senscolsel = senscolselstr.split(',')
+        print [KEYLIST[ind] for ind,el in enumerate(cols) if not el==''] 
         # check whether key info corresponds to column info
         if not len(senscols) == len(cols):
             print "dbfield2dict: DATAINFO column_contents does not match SensorKeys - Using Column_Contents"
@@ -1022,7 +1039,7 @@ def dbfields2dict(db,datainfoid):
                 metadatadict[unitkey] = colsel[pos] 
     except:
         loggerdatabase.warning("dbfields2dict: Could not assign column name")
-
+    """
     for key in STATIONSKEYLIST:
         getstat = 'SELECT '+ key +' FROM STATIONS WHERE StationID = "'+ids[1]+'"'
         cursor.execute(getstat)
@@ -1728,44 +1745,50 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
 
     count = 0
     dataheads,collst,unitlst = [],[],[]
-    for key in keys:
-        if key in NUMKEYLIST:
-            dataheads.append(key + ' FLOAT')
-        elif key.endswith('time'):
-            if key == 'time':
-                dataheads.append(key + ' CHAR(40) NOT NULL PRIMARY KEY')
+    for key in KEYLIST:
+        colstr = ''
+        unitstr = ''
+        if key in keys:
+            if key in NUMKEYLIST:
+                dataheads.append(key + ' FLOAT')
+            elif key.endswith('time'):
+                if key == 'time':
+                    dataheads.append(key + ' CHAR(40) NOT NULL PRIMARY KEY')
+                else:
+                    dataheads.append(key + ' CHAR(40)')
             else:
-                dataheads.append(key + ' CHAR(40)')
-        else:
-            dataheads.append(key + ' CHAR(100)')
-        ## Getting column and units
-        for hkey in datastream.header:
-            if key == hkey.replace('col-',''):
-                colstr = datastream.header[hkey]            
-                collst.append(colstr)            
-            elif key == hkey.replace('unit-col-',''):
-                unitstr = datastream.header[hkey]            
-                unitlst.append(unitstr)            
+                dataheads.append(key + ' CHAR(100)')
+            ## Getting column and units
+            for hkey in datastream.header:
+                if key == hkey.replace('col-',''):
+                    colstr = datastream.header[hkey]            
+                elif key == hkey.replace('unit-col-',''):
+                    unitstr = datastream.header[hkey]            
 
-        #print "Checking key", key
-        try:
-            sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
-            cursor.execute(sql)
-            count +=1
-        except MySQLdb.Error, e:
-            emsg = str(e)
-            if emsg.find("Table") >= 0 and emsg.find("doesn't exist") >= 0:
-                # if table not existing
-                pass
-            elif emsg.find("Unknown column") >= 0:                
-                print "writeDB: key %s not existing - adding it" % key
-                # if key not yet existing
-                addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
-                cursor.execute(addsql)
-            else:                
-                print "writeDB: unkown MySQL error when checking for existing tables: %s" %e
-        except:
-            print "writeDB: unkown error when checking for existing tables"
+            #print "Checking key", key
+            try:
+                sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
+                cursor.execute(sql)
+                count +=1
+            except MySQLdb.Error, e:
+                emsg = str(e)
+                if emsg.find("Table") >= 0 and emsg.find("doesn't exist") >= 0:
+                    # if table not existing
+                    pass
+                elif emsg.find("Unknown column") >= 0:                
+                    print "writeDB: key %s not existing - adding it" % key
+                    # if key not yet existing
+                    addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
+                    cursor.execute(addsql)
+                else:                
+                    print "writeDB: unkown MySQL error when checking for existing tables: %s" %e
+            except:
+                print "writeDB: unkown error when checking for existing tables"
+
+        if not key=='time':
+            collst.append(colstr)            
+            unitlst.append(unitstr)            
+
 
     if count == 0:
         print "Table not existing - creating it"
@@ -2041,22 +2064,24 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     if not 'typ' in keylst:
         keylst.append('typ')
 
-    for key in keylst:
-       colstr = '-'
-       unitstr = '-'
-       if key in NUMKEYLIST:
-           dataheads.append(key + ' FLOAT')
-           datakeys.append(key)
-       else:
-           dataheads.append(key + ' CHAR(100)')
-           datakeys.append(key)                
-       for hkey in headdict:
-           if key == hkey.replace('col-',''):
-               colstr = headdict[hkey]            
-           elif key == hkey.replace('unit-col-',''):
-               unitstr = headdict[hkey]            
-       collst.append(colstr)            
-       unitlst.append(unitstr)            
+    for key in KEYLIST:
+        colstr = ''
+        unitstr = ''
+        if key in keylst:
+            if key in NUMKEYLIST:
+                dataheads.append(key + ' FLOAT')
+                datakeys.append(key)
+            else:
+                dataheads.append(key + ' CHAR(100)')
+                datakeys.append(key)                
+            for hkey in headdict:
+                if key == hkey.replace('col-',''):
+                    colstr = headdict[hkey]            
+                elif key == hkey.replace('unit-col-',''):
+                    unitstr = headdict[hkey]
+        if not key == 'time':
+            collst.append(colstr)            
+            unitlst.append(unitstr)            
 
     """
     for key in KEYLIST:
@@ -2087,8 +2112,8 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
        unitlst.append(unitstr)            
     """
 
-    colstr =  '_'.join(collst)
-    unitstr = '_'.join(unitlst)
+    colstr =  ','.join(collst)
+    unitstr = ','.join(unitlst)
 
     # Update the column data at the end together with time
     #print "stream2db3: ", datetime.utcnow(), datakeys

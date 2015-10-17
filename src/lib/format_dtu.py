@@ -59,10 +59,7 @@ def readDTU1(filename, headonly=False, **kwargs):
     stream = DataStream()
 
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     # get day from filename (platform independent)
     starttime = kwargs.get('starttime')

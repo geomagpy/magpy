@@ -177,10 +177,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
     # --------------------------------------
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     measurement = []
     unit = []
@@ -387,10 +384,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     """
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     qFile= file( filename, "rb" )
     csvReader= csv.reader( qFile )
     for elem in csvReader:
@@ -450,10 +444,7 @@ Date	Time	SK	AP23	JC	430A_T	430A_F	430A_UEV	HePKS	HePKR	HePCS	HePCR	HeTKS	HeTKR	
     stream = DataStream()
     
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     theday = extractDateFromString(filename)
 
@@ -585,10 +576,7 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
     stream = DataStream()
     
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     theday = extractDateFromString(filename)
 
@@ -667,10 +655,7 @@ def readIWT(filename, headonly=False, **kwargs):
     stream = DataStream()
     
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     theday = extractDateFromString(filename)
 
@@ -750,10 +735,7 @@ def readCS(filename, headonly=False, **kwargs):
 
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     qFile= file( filename, "rb" )
     csvReader= csv.reader( qFile )
 
@@ -839,10 +821,7 @@ def readGRAVSG(filename, headonly=False, **kwargs):
     stream = DataStream()
     
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     theday = extractDateFromString(filename)
 

@@ -4039,7 +4039,8 @@ CALLED BY:
                     else:
                         val = np.round(sr,3)
                     break
-
+        else:
+            val = np.round(sr,1)
         """
         if np.round(sr*10.,0) == 0:
             val = np.round(sr,2)

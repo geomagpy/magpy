@@ -111,10 +111,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     stream = DataStream()
     array = [[] for key in KEYLIST]
     # Check whether header information is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     key = None
 
@@ -397,10 +394,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     stream = DataStream()
     array = [[] for key in KEYLIST]
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     key = None
 

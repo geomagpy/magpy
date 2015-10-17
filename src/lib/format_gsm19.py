@@ -194,10 +194,7 @@ def readGSM19(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header information is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     key = None
     logging.info(' Read: %s Format: GSM19' % (filename))

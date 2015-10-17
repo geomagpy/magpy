@@ -76,10 +76,7 @@ def readOPT(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     key = None
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
@@ -165,10 +162,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     day = ''
     key = None
@@ -244,10 +238,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     day = ''
     key = None

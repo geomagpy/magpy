@@ -31,10 +31,7 @@ def readENV05(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
     data = []
     key = None
 
