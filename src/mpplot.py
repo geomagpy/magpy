@@ -680,7 +680,11 @@ class figFlagger():
 
         self.orgkeylist = self.data._get_key_headers()
         if not variables: #or variables == ['x','y','z','f'] or variables == ['x','y','z']:
-            self.data = self.analyzeData(self.orgkeylist)
+            try:
+                self.data = self.analyzeData(self.orgkeylist)
+            except:
+                print "plotFlag: You have to provide variables for this data set"
+                
 
         keylist = self.data._get_key_headers(numerical=True)
         #print keylist
@@ -2077,7 +2081,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
 	labelcolor=labelcolor,confinex=False,outfile=None,stormanno_s=True,
 	stormanno_m=True,stormanno_r=True,fmt=None,figure=False,fill=[],
-	legendposition='upper left'):
+	legendposition='upper left',singlesubplot=False):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
@@ -2121,6 +2125,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
     for i in range(n_subplots):
 
         subplt = "%d%d%d" %(n_subplots,1,i+1)
+        if singlesubplot:
+            subplt = "111"
 
 	#------------------------------------------------------------
 	# PART 1: Dealing with data
@@ -2216,7 +2222,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                         #print "Cons", np.asarray(consecutives)
                         # 3. add annotation arrow for all but 1
                         cnt0 = consecutives[0]
-                        #print cnt0, indexflag
+                        #print consecutives
+                        #print cnt0, indexflag, flags[0], flags[0][cnt0], flags[1][cnt0], flags[0][cnt0][indexflag]
                         if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
                             ax.annotate(r'%s' % (flags[1][cnt0]),
                                         xy=(t[cnt0], y[cnt0]),

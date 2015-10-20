@@ -220,10 +220,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
     array = [[] for key in KEYLIST]
 
     # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers={}
 
     loggerlib.info('readPYSTR: Reading %s' % (filename))
     qFile= file( filename, "rb" )
@@ -956,7 +953,7 @@ def writePYCDF(datastream, filename, **kwargs):
         mycdf = cdf.CDF(filename, '')
 
     keylst = datastream._get_key_headers()
-    print "writeCDF", keylst
+    #print "writeCDF", keylst
     if not 'flag' in keylst:
         keylst.append('flag')
     #print keylst
@@ -997,7 +994,7 @@ def writePYCDF(datastream, filename, **kwargs):
     except:
         pass
 
-    print "writing keys", keylst
+    #print "writing keys", keylst
     #print "WriteFormat length 1", len(datastream.ndarray[0])
     for key in keylst:
         if ndtype:

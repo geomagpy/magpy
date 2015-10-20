@@ -1520,7 +1520,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         except:
             print "absoluteAnalysis:  Could not read DB Table with DI values - checking files"
             pass
-        
+
     if readfile:
         # Get list of files
         if isinstance(absdata, basestring):
@@ -1558,7 +1558,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 print "Could not interpret absdata"
                 return
 
-            
         for elem in filelist:
             head, tail = os.path.split(elem)
             try:

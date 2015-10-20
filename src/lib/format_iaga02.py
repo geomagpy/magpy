@@ -199,7 +199,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     fh.close()
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
-    print np.asarray(array)
+    #print np.asarray(array)
 
     for elem in data:
         # Time conv:

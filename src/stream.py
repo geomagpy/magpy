@@ -865,6 +865,7 @@ CALLED BY:
                 self.ndarray[idx] = np.asarray(self.ndarray[idx]).astype(object)
         else:
             self.ndarray = self.ndarray
+
         return DataStream(liste, self.header, self.ndarray)
 
     # ------------------------------------------------------------------------
@@ -3559,8 +3560,10 @@ CALLED BY:
             # Check whether flag and comment are exisiting - if not create empty
             if not len(self.ndarray[flagind]) > 0:
                 self.ndarray[flagind] = [''] * len(self.ndarray[0])
+                self.ndarray[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
             if not len(self.ndarray[commentind]) > 0:
                 self.ndarray[commentind] = [''] * len(self.ndarray[0])
+                self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
             # Now either modify existing or add new flag      
             if not st==0 and not ed==0:
                 for i in range(st,ed+1):
@@ -3572,8 +3575,10 @@ CALLED BY:
                     if len(flagls) < pos:
                         flagls.extend(['-' for j in range(pos+1-flagls)])
                     flagls[pos] = str(flag)
+                    #print "flag", ''.join(flagls), comment
                     self.ndarray[flagind][i] = ''.join(flagls)
                     self.ndarray[commentind][i] = comment
+                    #print "flag2", self.ndarray[flagind][i], self.ndarray[commentind][i]
             self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
             self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
         else:
@@ -3591,6 +3596,9 @@ CALLED BY:
                 loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
             else:
                 loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat(),comment))
+
+        #print self.ndarray[flagind][np.where(self.ndarray[flagind] != '')]
+        #print self.ndarray[flagind]
 
         return self
 
@@ -7095,8 +7103,8 @@ CALLED BY:
                 if idx >= len(self.ndarray[0]): ## prevent too large idx values
                     idx = len(self.ndarray[0]) - 1
                 while True:
-                    if not self.ndarray[0][idx] < date2num(endtime): # Make sure that last value is smaller than endtime
-                        idx -= 1 
+                    if not float(self.ndarray[0][idx]) < date2num(endtime): # Make sure that last value is smaller than endtime
+                        idx -= 1
                     else:
                         break
 
@@ -9081,6 +9089,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     
     if ndtype:
         timea = sa.ndarray[0]
+        timea = timea.astype(float)
     else:
         timea = sa._get_column('time')
 
@@ -9098,7 +9107,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     # truncate a to range of b
     try:
-        sa = sa.trim(starttime=num2date(timeb[0]).replace(tzinfo=None), endtime=num2date(timeb[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
+        sa = sa.trim(starttime=num2date(timeb.astype(float)[0]).replace(tzinfo=None), endtime=num2date(timeb.astype(float)[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
     except:
         print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
         return stream_a
@@ -9137,8 +9146,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     for key in keys:
                         foundnan = False
                         keyind = KEYLIST.index(key)
-                        print key, keyind, len(sa.ndarray[keyind]), len(sb.ndarray[keyind])
-                        print indtia, indtib
+                        #print key, keyind, len(sa.ndarray[keyind]), len(sb.ndarray[keyind])
+                        #print indtia, indtib
                         if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
                             for ind in indtia:
                                 try:
@@ -9147,7 +9156,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                                     print ind, keyind
                             vala = [sa.ndarray[keyind][ind] for ind in indtia] 
                             valb = [sb.ndarray[keyind][ind] for ind in indtib] 
-                            diff = np.asarray(vala) - np.asarray(valb)
+                            diff = np.asarray(vala).astype(float) - np.asarray(valb).astype(float)
                             if isnan(diff).any():
                                 foundnan = True
                             if foundnan:
