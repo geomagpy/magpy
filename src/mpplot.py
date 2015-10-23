@@ -329,6 +329,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 	- includeid:	(bool) If True, sensor IDs will be extracted from header data and
 			plotted alongside corresponding data. Default=False
 	- labelcolor:	(color='0.2') Colour of labels.
+	- opacity:	(0.0 to 1.0) Opacity applied to fills and bars.
 	- legendposition: (str) Position of legend (when var labels is used), e.g. 'upper left'
 	- noshow:	(bool) If True, figure object will be returned. Default=False
 	- outfile:	(str) Path of file to plot figure to.
@@ -2081,7 +2082,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 	bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
 	labelcolor=labelcolor,confinex=False,outfile=None,stormanno_s=True,
 	stormanno_m=True,stormanno_r=True,fmt=None,figure=False,fill=[],
-	legendposition='upper left',singlesubplot=False):
+	legendposition='upper left',singlesubplot=False,opacity=1.0):
     '''
     For internal use only. Feed a list of dictionaries in here to plot.
     Every dictionary should contain all data needed for one single subplot.
@@ -2163,11 +2164,11 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                 if bartrange < t[num] < np.max(t)-bartrange:
                     ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
 				bartrange],[0,0,y[num]+0.1,y[num]+0.1],
-				facecolor=cm.RdYlGn((9-y[num])/9.,1),alpha=1,edgecolor='k')
+				facecolor=cm.RdYlGn((9-y[num])/9.,1),alpha=opacity,edgecolor='k')
             if datalabel != '':
-                ax.plot_date(t,y,color+'|',label=datalabel)
+                ax.plot_date(t,y,color+'|',label=datalabel,alpha=opacity)
             else:
-                ax.plot_date(t,y,color+'|')
+                ax.plot_date(t,y,color+'|',alpha=opacity)
 
         # --> Otherwise plot as normal:
         else:
@@ -2176,7 +2177,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
             else:
                 ax.plot_date(t,y,color+symbol)
             if key in fill:
-                ax.fill_between(t,0,y,color=color)
+                ax.fill_between(t,0,y,color=color,alpha=opacity)
 
         # PLOT A LEGEND
         if datalabel != '':
