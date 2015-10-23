@@ -250,6 +250,7 @@ def writeIAF(datastream, filename, **kwargs):
     """
     Writing Intermagnet archive format (2.1)
     """
+    return False
     pass
     # Check whether minute file
     # check whether data covers one year
@@ -415,12 +416,13 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             array[ind] = ar
         else:
             ar = cdfdat[elem[1]][...]
-            ar[ar > 88880] = float(nan)
-            ind = KEYLIST.index(elem[0])
-            headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()                
-            headers['unit-col-'+elem[0]] = cdfdat[elem[1]].attrs['UNITS']
-            array[ind] = ar
-            arraylist.append(ar)  
+            if elem[0] in NUMKEYLIST:
+                ar[ar > 88880] = float(nan)
+                ind = KEYLIST.index(elem[0])
+                headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()                
+                headers['unit-col-'+elem[0]] = cdfdat[elem[1]].attrs['UNITS']
+                array[ind] = ar
+                arraylist.append(ar)  
 
     ndarray = np.array(array)
 
@@ -470,6 +472,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     headers = datastream.header
     head, line = [],[]
+    success = False
 
     print "Getting Header"
 
@@ -532,8 +535,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if len(datastream.ndarray[0]>0):
         ndarray = True
 
-    print "Putting Data -- ndarray:", ndarray
-
     for key in keylst:
         ind = KEYLIST.index(key)
         if ndarray and len(datastream.ndarray[ind]>0):
@@ -542,7 +543,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             col = datastream._get_column(key)
         
         if not False in checkEqual3(col):
-            print "Found identical values only"
+            print "Found identical values only:", key
             col = col[:1]
         if key == 'time':
             key = 'GeomagneticVectorTimes'
@@ -590,8 +591,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         mycdf[cdfkey].attrs['UNITS'] = unit
                     except:
                         pass
-                    
+        success = True            
     mycdf.close()
+    return success
 
 
 def readIMF(filename, headonly=False, **kwargs):
@@ -682,7 +684,6 @@ def readIMF(filename, headonly=False, **kwargs):
                     except:
                         logging.error('format_imf: problem with dataformat - check block header')
                         return DataStream(stream, headers)
-                stream.add(row)
                 minute = minute + 2
 
     fh.close()
@@ -700,10 +701,11 @@ def writeIMF(datastream, filename, **kwargs):
     gin = kwargs.get('gin')
     datatype = kwargs.get('datatype')
 
+    success = False
     # 1. check whether datastream corresponds to minute file
     if not 0.9 < datastream.get_sampling_period()*60*24 < 1.1:
-        logging.error("format-imf: Data needs to be minute data for Intermagent - filter it accordingly")
-        return
+        print ("format-imf: Data needs to be minute data for Intermagent - filter it accordingly")
+        return False
 
     # 2. check whether file exists and according to mode either create, append, replace
     if os.path.isfile(filename):
@@ -732,26 +734,59 @@ def writeIMF(datastream, filename, **kwargs):
     try:
         idc = header['StationID']
     except:
-        logging.error("format-imf: No station code specified. Aborting ...")        
-        return
+        print ("format-imf: No station code specified. Setting to XYZ ...")
+        idc = 'XYZ'
+        #return False
     try:
         colat = 90 - float(header['DataAcquisitionLatitude'])
         longi = float(header['DataAcquisitionLongitude'])
     except:
-        logging.error("format-imf: No location specified. Aborting ...")        
-        return
+        print ("format-imf: No location specified. Setting 99,999 ...")        
+        colat = 99.9
+        longi = 999.9
+        #return False
     try:
         decbas = float(header['DataSensorAzimuth'])
     except:
-        logging.error("format-imf: No orientation angle specified. Aborting ...")        
-        return
+        print ("format-imf: No orientation angle specified. Setting 999.9 ...")
+        decbas = 999.9
+        #return False
 
     # 4. Data
     dataline,blockline = '',''
     minuteprev = 0
 
-    for i, elem in enumerate(datastream):
-        date = num2date(elem.time).replace(tzinfo=None)
+    elemtype = 'XYZF'
+    try:
+        elemtpye = datastream.header['']
+    except:
+        pass
+
+    fulllength = datastream.length()[0]
+    ndtype = False
+    if len(datastream.ndarray[0]) > 0:
+        ndtype = True
+
+    xind = KEYLIST.index('x')
+    yind = KEYLIST.index('y')
+    zind = KEYLIST.index('z')
+    find = KEYLIST.index('f')
+    for i in range(fulllength):
+        if not ndtype:
+            elem = datastream[i]
+            elemx = elem.x
+            elemy = elem.y
+            elemz = elem.z
+            elemf = elem.f
+            timeval = elem.time
+        else:
+            elemx = datastream.ndarray[xind][i]
+            elemy = datastream.ndarray[yind][i]
+            elemz = datastream.ndarray[zind][i]
+            elemf = datastream.ndarray[find][i]
+            timeval = datastream.ndarray[0][i]
+
+        date = num2date(timeval).replace(tzinfo=None)
         doy = datetime.strftime(date, "%j")
         day = datetime.strftime(date, "%b%d%y")
         hh = datetime.strftime(date, "%H")
@@ -759,7 +794,7 @@ def writeIMF(datastream, filename, **kwargs):
         strcola = '%3.f' % (colat*10)
         strlong = '%3.f' % (longi*10)
         decbasis = str(int(np.round(decbas*60*10)))
-        blockline = "%s %s %s %s %s %s %s %s%s %s %s\r\n" % (idc.upper(),day.upper(),doy, hh, elem.typ.upper(), datatype, gin, strcola.zfill(4), strlong.zfill(4), decbasis.zfill(6),'RRRRRRRRRRRRRRRR')
+        blockline = "%s %s %s %s %s %s %s %s%s %s %s\r\n" % (idc.upper(),day.upper(),doy, hh, elemtype, datatype, gin, strcola.zfill(4), strlong.zfill(4), decbasis.zfill(6),'RRRRRRRRRRRRRRRR')
         if minute == 0 and not i == 0:
             #print blockline
             myFile.writelines( blockline )
@@ -776,20 +811,20 @@ def writeIMF(datastream, filename, **kwargs):
                     else: # even
                         dataline = '9999999 9999999 9999999 999999'
                     j = j+1
-        if not isnan(elem.x):
-            x = elem.x*10
+        if not isnan(elemx):
+            x = elemx*10
         else:
             x = 999999 
-        if not isnan(elem.y):
-            y = elem.y*10
+        if not isnan(elemy):
+            y = elemy*10
         else:
             y = 999999 
-        if not isnan(elem.z):
-            z = elem.z*10
+        if not isnan(elemz):
+            z = elemz*10
         else:
             z = 999999 
-        if not isnan(elem.f):
-            f = elem.f*10
+        if not isnan(elemf):
+            f = elemf*10
         else:
             f = 999999
         if minute > minuteprev + 1:
@@ -824,12 +859,7 @@ def writeIMF(datastream, filename, **kwargs):
  
     myFile.close()
 
-    #try:
-    #        myFile.writelines( dataline )
-    #finally:
-    #    myFile.close()
-    #except IOError:
-    #    pass
+    return True
 
 
 
@@ -991,9 +1021,11 @@ def writeBLV(datastream, filename, **kwargs):
 
     try:
         if not datastream.header['DataFormat'] == 'MagPyDI':
-            return
+            print "writeBLV: Format not recognized - needs to be MagPyDI"
+            return False
     except:
-        pass
+        print "writeBLV: Format not recognized - needs to be MagPyDI"
+        return False
      
     indf = KEYLIST.index('df')
     if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:
@@ -1078,8 +1110,8 @@ def writeBLV(datastream, filename, **kwargs):
     try:
         idc = header['StationID']
     except:
-        logging.error("format-imf: No station code specified. Aborting ...")        
-        return
+        logging.error("formatBLV: No station code specified. Aborting ...")        
+        return False
     headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
     myFile.writelines( headerline+'\r\n' )
 
@@ -1198,4 +1230,4 @@ def writeBLV(datastream, filename, **kwargs):
     myFile.writelines( summaryline )
 
     myFile.close()
-
+    return True

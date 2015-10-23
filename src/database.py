@@ -1042,8 +1042,12 @@ def dbfields2dict(db,datainfoid):
     """
     for key in STATIONSKEYLIST:
         getstat = 'SELECT '+ key +' FROM STATIONS WHERE StationID = "'+ids[1]+'"'
-        cursor.execute(getstat)
-        row = cursor.fetchone()
+        try:
+            cursor.execute(getstat)
+            row = cursor.fetchone()
+        except:
+            print "dbfields2dict: error when executing %s" % getstat
+            row = [None]
         if isinstance(row[0], basestring):
             metadatadict[key] = row[0]
         else:
@@ -1713,6 +1717,12 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         if not False in checkEqual3(col) and len(col) > 0:
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
+            else: # add as usual
+                array[idx] = datastream.ndarray[idx]
+                try:
+                    array[idx][np.isnan(array[idx].astype(float))] = None
+                except:
+                    pass # will fail for strings
         elif key.endswith('time') and len(col) > 0:
             tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
             tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
@@ -1730,9 +1740,8 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     keys = np.asarray([KEYLIST[idx] for idx,elem in enumerate(array) if len(elem)>0])
     array = np.asarray([elem for elem in array if len(elem)>0], dtype=object)
     dollarstring = ['%s' for elem in keys]
-
+    
     values = array.transpose()
-
 
     insertmanysql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename, ', '.join(keys), ', '.join(dollarstring))
 
@@ -1765,7 +1774,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 elif key == hkey.replace('unit-col-',''):
                     unitstr = datastream.header[hkey]            
 
-            #print "Checking key", key
+            print "Checking key", key
             try:
                 sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                 cursor.execute(sql)

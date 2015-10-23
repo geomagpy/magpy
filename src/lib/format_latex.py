@@ -23,7 +23,7 @@ def writeLATEX(datastream, filename, **kwargs):
     if not keys:
         keys = ['x','y','z','f']
     header = datastream.header
-    iagacode = header.get('IAGAcode',"").upper()
+    iagacode = header.get('StationIAGAcode',"").upper()
     caption = header.get('TEXcaption',"")
     label = header.get('TEXlabel',"")
     justs = header.get('TEXjusts',"") # e.g. 'lrccc'
@@ -36,8 +36,21 @@ def writeLATEX(datastream, filename, **kwargs):
         tablewidth = '0pt'
     if not fontsize:
         fontsize = '\\footnotesize'
-    
+
+    keylst = datastream._get_key_headers()
+    if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst:
+        print "formatWDC: writing WDC data requires at least x,y,z components"
+        return False 
+    elif not 'f' in keylst:
+        keys = ['x','y','z']
+
+    ndtype = False
+    if len(datastream.ndarray[0]) > 0:
+        ndtype = True
+    datalen = datastream.length()[0]
+
     if mode == 'wdc':
+        print "formatLATEX: Writing wdc mode"
         # 1. determine sampling rate
         samplinginterval = datastream.get_sampling_period()
         # get difference between first and last time in days
@@ -90,22 +103,41 @@ def writeLATEX(datastream, filename, **kwargs):
         for key in keys:
             # exec('...' % key) 
             # here starts the key dependend analysis
-            exec('%sarray = np.empty((srange+1,int(np.round(float(len(datastream))/float(srange))),))' % key)
+            exec('%sarray = np.empty((srange+1,int(np.round(float(datalen)/float(srange))),))' % key)
             exec('%sarray[:] = np.NAN' % key)
             exec('%sarray = %sarray.tolist()' % (key,key)) # using list, so that strings can be used
             # get means and variation:
-            exec('%sar = np.array([elem.%s for elem in datastream if not isnan(elem.%s)])' % (key,key,key))
+            if ndtype:
+                ind = KEYLIST.index(key)
+                ar = datastream.ndarray[ind]
+                exec('%sar = ar' % key)
+            else:
+                exec('%sar = np.array([elem.%s for elem in datastream if not isnan(elem.%s)])' % (key,key,key))
             exec('m%s = np.floor(np.min(%sar)/100)*100' % (key,key))
             if np.max(eval(key+'ar')) - eval('m'+key) < 1000:
                 sigfigs = 3
 
-            for elem in datastream:
-                dateobj = num2date(elem.time).replace(tzinfo=None)
+            #for elem in datastream:
+            for i in range(datalen):
+                if not ndtype:
+                    elem = datastream[i]
+                    elemx = elem.x
+                    elemy = elem.y
+                    elemz = elem.z
+                    elemf = elem.f
+                    timeval = elem.time
+                else:
+                    elemx = datastream.ndarray[1][i]
+                    elemy = datastream.ndarray[2][i]
+                    elemz = datastream.ndarray[3][i]
+                    elemf = datastream.ndarray[4][i]
+                    timeval = datastream.ndarray[0][i]
+                dateobj = num2date(timeval).replace(tzinfo=None)
                 currx = eval('dateobj.'+sint) + 1
                 curry = eval('dateobj.'+sintprev)-1
-                datecnt = datetime.strftime(num2date(elem.time).replace(tzinfo=None),datestr)
+                datecnt = datetime.strftime(num2date(timeval).replace(tzinfo=None),datestr)
                 exec('%sarray[0][curry] = datecnt' % key)
-                exec('%sarray[currx][curry] = elem.%s-m%s' % (key,key,key))
+                exec('%sarray[currx][curry] = elem%s-m%s' % (key,key,key))
 
             mecol = []
             addcollist = eval(key+'array')
@@ -132,6 +164,7 @@ def writeLATEX(datastream, filename, **kwargs):
 
         t.print_table(fout)
         fout.close()
+        return True
     else:
         numcols = len(keys)+1
         if not justs:
@@ -171,4 +204,6 @@ def writeLATEX(datastream, filename, **kwargs):
         t.add_data(addcollist, sigfigs=3)
         t.print_table(fout)
         fout.close()
+
+        return True
 

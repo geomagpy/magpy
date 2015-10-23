@@ -2661,7 +2661,7 @@ CALLED BY:
         EXAMPLE:
             >>> nice_data = bad_data.filter(keys=['x','y','z'])
             or
-            >>> nice_data = bad_data.filter(keys=['x','y','z'],filter_type='gaussian',filter_width=timedelta(hours=1))
+            >>> nice_data = bad_data.filter(filter_type='gaussian',filter_width=timedelta(hours=1))
 
         APPLICATION:
 
@@ -2712,7 +2712,7 @@ CALLED BY:
             if not isinstance(autofill, (list, tuple)):
                 return
         if not resamplemode:
-            resamplefast = True
+            resamplefast = False
         else:
             if resamplemode == 'fast':
                 resamplefast = True
@@ -7356,6 +7356,7 @@ CALLED BY:
         version = kwargs.get('version')
         gin = kwargs.get('gin')
         datatype = kwargs.get('datatype')
+        success = True
 
         # Preconfigure some fileformats - can be overwritten by keywords
         if format_type == 'IMF':
@@ -7447,7 +7448,7 @@ CALLED BY:
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -7469,9 +7470,9 @@ CALLED BY:
                     lst = []
                     #ndarray = np.asarray([elem[(starttime<=num2date(self.ndarray[0])) & (num2date(self.ndarray[0])<endtime)] for elem in self.ndarray])
                     # non-destructive
-                    print "write: start and end", starttime, endtime
+                    #print "write: start and end", starttime, endtime
                     ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
-                    print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
+                    #print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                     ndarray = np.asarray([np.asarray([]) for key in KEYLIST])
@@ -7483,14 +7484,14 @@ CALLED BY:
                 if len(lst) > 0 or ndtype:
                     loggerstream.info('write: writing %s' % filename)
                     #print "Here", len(newst.ndarray[0])
-                    writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype)
                 starttime = endtime
                 endtime = endtime + coverage
         else:
             filename = filenamebegins + filenameends
-            writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,meanh=meanh,meanf=meanf,year=year,extradays=extradays)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,meanh=meanh,meanf=meanf,year=year,extradays=extradays)
 
-        return True
+        return success
 
 
     def idf2xyz(self,**kwargs):
@@ -9609,7 +9610,7 @@ def extractDateFromString(datestring):
         daystring = datestring
 
     try:
-        date = datetime.strptime(daystring, '%b%d%y')
+        date = datetime.strptime(daystring[-7:], '%b%d%y')
         dateform = '%b%d%y'
         # log ('Found Dateformat of type dateform
     except:

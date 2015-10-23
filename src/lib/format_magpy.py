@@ -153,7 +153,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
             pass
         elif elem[0].startswith('Time'): # extract column info and keys            
             for i in range(len(elem)):
-                print elem[i]
+                #print elem[i]
                 if not elem[i].startswith('Time'):
                     try:  # neglecte columns without units (e.g. text)
                          headval = elem[i].split('[')                
@@ -243,7 +243,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
         elif elem[0].startswith(' # MagPy - ASCII'):
             # blank header
             pass
-        elif elem[0]=='Epoch[]':
+        elif elem[0]=='Epoch[]' or elem[0]=='-[]' or elem[0]=='time[]':
             for i in range(len(elem)):
                 headval = elem[i].split('[')                
                 colval = headval[0]
@@ -276,23 +276,6 @@ def readPYSTR(filename, headonly=False, **kwargs):
                             #if elem[idx] == '':
                             #    elem[idx] = '-'
                             array[idx].append(elem[idx])
-                """
-                row = LineStruct()
-                try:
-                    row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%d-%H:%M:%S.%f"))
-                except:
-                    try:
-                        row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
-                    except:
-                        raise ValueError, "Wrong date format in file %s" % filename
-                for idx, key in enumerate(KEYLIST):
-                    if not key == 'time':
-                        try:
-                            exec('row.'+key+' =  float(elem[idx])')
-                        except:
-                            exec('row.'+key+' =  elem[idx]')
-                stream.add(row)
-                """
             except ValueError:
                 pass
     qFile.close()
@@ -913,6 +896,7 @@ def writePYSTR(datastream, filename, **kwargs):
                     row.append(eval('elem.'+key))
             wtr.writerow( row )
     myFile.close()
+    return True
 
 
 def writePYCDF(datastream, filename, **kwargs):
@@ -927,7 +911,7 @@ def writePYCDF(datastream, filename, **kwargs):
     #if not len(datastream) > 0 and not len(datastream.ndarray)
 
     if not len(datastream.ndarray[0]) > 0 and not len(datastream) > 0:
-        return
+        return False
 
     mode = kwargs.get('mode')
 
@@ -1027,15 +1011,18 @@ def writePYCDF(datastream, filename, **kwargs):
                 key = 'Epoch'
                 #col = col.astype
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
-                print "Last time saved", col[-1]
+                #print "Last time saved", col[-1]
             elif key == 'sectime':
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
         elif len(col) > 0:
-            print "writing", np.asarray(col)
+            #print "writing", np.asarray(col)
             if not key in NUMKEYLIST:
-                col = np.asarray(list(col)) # to get string conversion
+                col = list(col)
+                col = ['' if el is None else el for el in col]
+                col = np.asarray(col) # to get string conversion
             else:
-                print col, key
+                #print col, key
+                col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)
             mycdf[key] = col
 
@@ -1052,6 +1039,7 @@ def writePYCDF(datastream, filename, **kwargs):
                         pass
                     
     mycdf.close()
+    return True
 
 
 def writePYASCII(datastream, filename, **kwargs):
@@ -1128,4 +1116,5 @@ def writePYASCII(datastream, filename, **kwargs):
                     row.append(eval('elem.'+key))
             wtr.writerow( row )
     myFile.close()
+    return True
 

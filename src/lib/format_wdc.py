@@ -208,6 +208,11 @@ def writeWDC(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     #createlatex = kwargs.get('createlatex')
 
+    keylst = datastream._get_key_headers()
+    if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst or not 'f' in keylst:
+        print "formatWDC: writing WDC data requires x,y,z,f components"
+        return False 
+
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = pmRead(path_or_url=filename)
@@ -225,6 +230,7 @@ def writeWDC(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
+    success = False
     # 1.) Test whether min or hourly data are used
     hourly, minute = False, False
     samplinginterval = datastream.get_sampling_period()
@@ -233,7 +239,9 @@ def writeWDC(datastream, filename, **kwargs):
     elif 0.98 < samplinginterval*24*60 < 1.02:
         minute = True
     else:
-        print "Wrong sampling interval"
+        print "Wrong sampling interval - please filter the data to minutes or hours"
+        return success
+        
 
     # 2.) Get Iaga code
     header = datastream.header
@@ -245,15 +253,39 @@ def writeWDC(datastream, filename, **kwargs):
         line, textable = [],[]
         rowx, rowy, rowz, rowf = '','','',''
         latexrowx = ''
-        for elem in datastream:
+
+        ndtype = False
+        if len(datastream.ndarray[0]) > 0:
+            ndtype = True
+
+        fulllength = datastream.length()[0]
+
+        xind = KEYLIST.index('x')
+        yind = KEYLIST.index('y')
+        zind = KEYLIST.index('z')
+        find = KEYLIST.index('f')
+        for i in range(fulllength):
+            if not ndtype:
+                elem = datastream[i]
+                elemx = elem.x
+                elemy = elem.y
+                elemz = elem.z
+                elemf = elem.f
+                timeval = elem.time
+            else:
+                elemx = datastream.ndarray[xind][i]
+                elemy = datastream.ndarray[yind][i]
+                elemz = datastream.ndarray[zind][i]
+                elemf = datastream.ndarray[find][i]
+                timeval = datastream.ndarray[0][i]
             arb = '  '
             for key in KEYLIST:
                 if key == 'time':
                     try:
-                        year = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y")
-                        month = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%m")
-                        day = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%d")
-                        hour = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%H")
+                        year = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%Y")
+                        month = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%m")
+                        day = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%d")
+                        hour = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%H")
                         ye = year[2:]
                         ar = year[:-2]
                     except:
@@ -262,13 +294,13 @@ def writeWDC(datastream, filename, **kwargs):
                 elif key == 'x':
                     xname = iagacode + ye + month + header['col-x'].upper() + day + '  ' + arb + ar
                     if rowx[:16] == xname:
-                        if not isnan(elem.x):
-                            xel.append(elem.x)
+                        if not isnan(elemx):
+                            xel.append(elemx)
                             xhourel.append(int(hour))
                     elif rowx == '':
                         rowx = xname
-                        if not isnan(elem.x):
-                            xel = [elem.x]
+                        if not isnan(elemx):
+                            xel = [elemx]
                             xhourel = [int(hour)]
                         else:
                             xel = []
@@ -297,19 +329,19 @@ def writeWDC(datastream, filename, **kwargs):
                         line.append(rowx)
                         rowx = xname
                         xel, xhourel = [], []
-                        if not isnan(elem.x):
-                            xel.append(elem.x)
+                        if not isnan(elemx):
+                            xel.append(elemx)
                             xhourel.append(int(hour))
                 elif key == 'y':
                     yname = iagacode + ye + month + header['col-y'].upper() + day + '  ' + arb  + ar
                     if rowy[:16] == yname:
-                        if not isnan(elem.y):
-                            yel.append(elem.y)
+                        if not isnan(elemy):
+                            yel.append(elemy)
                             yhourel.append(int(hour))
                     elif rowy == '':
                         rowy = yname
-                        if not isnan(elem.y):
-                            yel = [elem.y]
+                        if not isnan(elemy):
+                            yel = [elemy]
                             yhourel = [int(hour)]
                         else:
                             yel = []
@@ -337,19 +369,19 @@ def writeWDC(datastream, filename, **kwargs):
                         line.append(rowy)
                         rowy = yname
                         yel, yhourel = [], []
-                        if not isnan(elem.y):
-                            yel.append(elem.y)
+                        if not isnan(elemy):
+                            yel.append(elemy)
                             yhourel.append(int(hour))
                 elif key == 'z':
                     zname = iagacode + ye + month + header['col-z'].upper() + day + '  ' + arb  + ar
                     if rowz[:16] == zname:
-                        if not isnan(elem.z):
-                            zel.append(elem.z)
+                        if not isnan(elemz):
+                            zel.append(elemz)
                             zhourel.append(int(hour))
                     elif rowz == '':
                         rowz = zname
-                        if not isnan(elem.z):
-                            zel = [elem.z]
+                        if not isnan(elemz):
+                            zel = [elemz]
                             zhourel = [int(hour)]
                         else:
                             zel = []
@@ -377,19 +409,19 @@ def writeWDC(datastream, filename, **kwargs):
                         line.append(rowz)
                         rowz = zname
                         zel, zhourel = [], []
-                        if not isnan(elem.z):
-                            zel.append(elem.z)
+                        if not isnan(elemz):
+                            zel.append(elemz)
                             zhourel.append(int(hour))
                 elif key == 'f':
                     fname = iagacode + ye + month + header['col-f'].upper() + day + '  ' + arb  + ar
                     if rowf[:16] == fname:
-                        if not isnan(elem.f):
-                            fel.append(elem.f)
+                        if not isnan(elemf):
+                            fel.append(elemf)
                             fhourel.append(int(hour))
                     elif rowf == '':
                         rowf = fname
-                        if not isnan(elem.f):
-                            fel = [elem.f]
+                        if not isnan(elemf):
+                            fel = [elemf]
                             fhourel = [int(hour)]
                         else:
                             fel = []
@@ -417,8 +449,8 @@ def writeWDC(datastream, filename, **kwargs):
                         line.append(rowf)
                         rowf = fname
                         fel, fhourel = [], []
-                        if not isnan(elem.f):
-                            fel.append(elem.f)
+                        if not isnan(elemf):
+                            fel.append(elemf)
                             fhourel.append(int(hour))
         # Finally save data of the last day, which dropped out by above procedure
         for comp in ['x','y','z','f']:
@@ -451,6 +483,7 @@ def writeWDC(datastream, filename, **kwargs):
            myFile.close()
         #except IOError:
         #    pass
+        success = True
     elif minute:
         pass
     else:
@@ -505,8 +538,31 @@ COLUMNS   FORMAT   DESCRIPTION
             day_dict[str(day).zfill(2)] = ''
 
 	# Read data into dictionaries for ease of writing:
-        for elem in datastream:
-	    timestamp = num2date(elem.time).replace(tzinfo=None)
+        ndtype = False
+        if len(datastream.ndarray[0]) > 0:
+            ndtype = True
+
+        fulllength = datastream.length()[0]
+
+        xind = KEYLIST.index('x')
+        yind = KEYLIST.index('y')
+        zind = KEYLIST.index('z')
+        find = KEYLIST.index('f')
+        for i in range(fulllength):
+            if not ndtype:
+                elem = datastream[i]
+                elemx = elem.x
+                elemy = elem.y
+                elemz = elem.z
+                elemf = elem.f
+                timeval = elem.time
+            else:
+                elemx = datastream.ndarray[xind][i]
+                elemy = datastream.ndarray[yind][i]
+                elemz = datastream.ndarray[zind][i]
+                elemf = datastream.ndarray[find][i]
+                timeval = datastream.ndarray[0][i]
+	    timestamp = num2date(timeval).replace(tzinfo=None)
 	    minute = datetime.strftime(timestamp, "%M")
             if minute == '00':
                 if len(min_dict['x']) != 360:
@@ -524,7 +580,7 @@ COLUMNS   FORMAT   DESCRIPTION
             year = datetime.strftime(timestamp, "%Y")
             day = datetime.strftime(timestamp, "%d")
             for key in write_KEYLIST:
-                exec('value = elem.'+key)
+                exec('value = elem'+key)
                 if not isnan(value):
                     if len(str(value)) > 6:
                         if value >= 10000:
@@ -557,10 +613,14 @@ COLUMNS   FORMAT   DESCRIPTION
 	    iagacode = 'WIC'
 	try:
 	    station_lat = header.get('DataAcquisitionLatitude'," ")
+            if station_lat == ' ':
+                station_lat = 47.93
 	except:
 	    station_lat = 47.93
 	try:
 	    station_long = header.get('DataAcquisitionLongitude'," ")
+            if station_long == ' ':
+                station_long = 15.865
 	except:
 	    station_long = 15.865
 	northpolardistance = int(round((90-float(station_lat))*1000))
@@ -624,63 +684,7 @@ COLUMNS   FORMAT   DESCRIPTION
 		    myFile.write(line)
             day = day + timedelta(days=1)
 
-        '''
-        # Finally save data of the last day, which dropped out by above procedure
-        for comp in ['x','y','z','f']:
-            if len(eval(comp+'el'))<1:
-                exec(comp+'dailymean = int(9999)')
-                exec(comp+'base = int(9999)') 
-            else:
-                exec(comp+'mean = round(np.mean(' + comp +'el),0)') 
-                exec(comp+'base = ' + comp +'mean - 5000.0') 
-                exec(comp+'base = int(' + comp +'base/100)') 
-                exec(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)') 
-            exec('row'+comp+'+= "%4i" % '+comp+'base')
-            count = 0
-            for i in range(24):
-                if len(eval(comp+'hourel')) > 0 and count < len(eval(comp+'hourel')) and eval(comp+'hourel[count]') == i:
-                    exec(comp+'val = int(' + comp +'el[count] - ' + comp + 'base*100)')
-                    count = count+1
-                else:
-                    exec(comp+'val = int(9999)')
-                    exec(comp+'dailymean = int(9999)')
-                exec('row' + comp + '+="%4i" % ' + comp + 'val')
-            eol = '\n'
-            exec('row' + comp + '+="%4i%s" % (' + comp + 'dailymean,eol)')
-            line.append(eval('row'+comp))
-        line.sort()
-        try:
-            myFile.writelines( line )
-            pass
-        finally:
-           myFile.close()
-        #except IOError:
-        #    pass
-    elif minute:
-        pass
-    else:
-        logging.warning("Could not save WDC data. Please provide hour or minute data")
-        '''
-   
+        success = True
+    return success
 
-"""
-def textable_preamble(fp, kwargs**):
-TEX Table generator
-written by Chris Burn, http://users.obs.carnegiescience.edu/~cburns/site/?p=22
-
-    :type justs: String 
-    :param justs: String defining justifictaions of the table
-    :type fontsize: int 
-    :param fontsize: fontsize of table
-    :type rotate: bool 
-    :param rotate: turn the table
-    :type tablewidth: int 
-    :param tablewidth: width of the table
-    :type numcols: int 
-    :param numcols: number of columns of the table
-    :type caption: String 
-    :param caption: String with table caption
-    :type label: String 
-    :param label: String with table label
-"""
 

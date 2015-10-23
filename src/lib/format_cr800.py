@@ -154,5 +154,5 @@ def writeCR800(filename, headonly=False, **kwargs):
     """
     Writing CR800 format data.
     """
-    pass
+    return False
    

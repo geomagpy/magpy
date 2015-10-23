@@ -46,13 +46,15 @@ marcospath = ''
 
 IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
                 10:'f',11:'x',12:'y',13:'z',14:'df',
-                30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',38:'var1',40:'var1',60:'var2',61:'var3',62:'var4'} 
+                30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',35:'x',36:'x',37:'y',38:'var1',39:'f',
+                40:'var1',           
+                50:'var1',51:'var2',60:'var2',61:'var3',62:'var4'} 
 
-MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38]}
+MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38], 'ult': [1,32,50,51], 'lnm': [1,30,36,37,39], 'pal': [1,11,12,13], 'ard': [1,10,11,12,13,14,30,33,35]}
 
-UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g']}
+UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g'], 'ult': ['degC','m_s','deg'], 'lnm': ['degC','mm','m','N'], 'ard': ['nT','nT','nT','nT','-','degC','percent','HPa']}
 
-NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w']}
+NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P']}
 
 def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None):
     print "Getting parameters ..." 
@@ -214,6 +216,8 @@ class PubSubClient(WampClientProtocol):
                             stream.header['DataLocationReference'] = row[3]
                         if not row[4] == 'info':
                             stream.header['SensorDescription'] = row[4]
+                        if not len(stream.ndarray[0]) > 0:
+                            stream = stream.linestruct2ndarray()
                         stream2db(self.db,stream)
                         log.msg("collectors owclient: Stream uploaded successfully")
                     except:
@@ -259,28 +263,31 @@ class PubSubClient(WampClientProtocol):
                 # if not present then get a file and upload it
                 log.msg("collectors client: No sensors registered so far - Getting data file from moon and uploading it using stream2db")
                 day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
-                destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.bin') 
-                datafile = os.path.join('/srv/ws/', clientname, sensorid, sensorid+'_'+day+'.bin')
-                try:
-                    log.msg("collectors client: Downloading data: %s" % datafile)
-                    scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1])
-                    stream = st.read(destfile)
-                    log.msg("collectors client: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
-                    stream.header['StationID'] = self.stationid
-                    stream.header['SensorModule'] = sensorshort
+                for exten in ['bin','asc']:
+                    destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.'+exten) 
+                    datafile = os.path.join('/srv/ws/', clientname, sensorid, sensorid+'_'+day+'.'+exten)
                     try:
-                        stream.header['SensorRevision'] = sensorid[-4:]
+                        log.msg("collectors client: Downloading data: %s" % datafile)
+                        scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1])
+                        stream = st.read(destfile)
+                        log.msg("collectors client: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
+                        stream.header['StationID'] = self.stationid
+                        stream.header['SensorModule'] = sensorshort
+                        try:
+                            stream.header['SensorRevision'] = sensorid[-4:]
+                        except:
+                            log.msg("collectors client: Could not extract revision number for %s" % sensorid)
+                            pass
+                        try:
+                            stream.header['SensorSerialNum'] = sensorid.split('_')[-2]
+                        except:
+                            log.msg("collectors client: Could not extract serial number for %s" % sensorid)
+                            pass
+                        if not len(stream.ndarray[0]) > 0:
+                            stream = stream.linestruct2ndarray()
+                        stream2db(self.db,stream)
                     except:
-                        log.msg("collectors client: Could not extract revision number for %s" % sensorid)
-                        pass
-                    try:
-                        stream.header['SensorSerialNum'] = sensorid.split('_')[-2]
-                    except:
-                        log.msg("collectors client: Could not extract serial number for %s" % sensorid)
-                        pass
-                    stream2db(self.db,stream)
-                except:
-                    log.msg("collectors client: Could not upload data to the data base - subscription failed")
+                        log.msg("collectors client: Could not upload data to the data base - subscription failed")
             else:
                 log.msg("collectors client: Found sensor(s) in DB - subscribing to the highest revision number")
             subscriptionstring = "%s:%s-value" % (module, sensorid)
@@ -428,7 +435,7 @@ class PubSubClient(WampClientProtocol):
                     elem = "'"+elem+"'"
                 nelst.append(elem)
             linestr = ', '.join(map(str, nelst))
-            sql = "INSERT INTO %s(%s, flag, typ) VALUES (%s, '0000000000000000-', '%s')" % (datainfoid, parastr, linestr, self.typ)
+            sql = "INSERT INTO %s(%s) VALUES (%s)" % (datainfoid, parastr, linestr)
             #print "!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql
             self.line = []
             # Prepare SQL query to INSERT a record into the database.

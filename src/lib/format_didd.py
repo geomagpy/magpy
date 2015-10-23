@@ -62,8 +62,10 @@ def readDIDD(filename, headonly=False, **kwargs):
         try:
             day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
         except:
-            logging.warning("format-DIDD: Wrong dateformat in Filename %s" % daystring[0])
-            return stream
+            logging.warning("format-DIDD: Unusual dateformat in Filename %s" % daystring[0])
+            day = datetime.strftime(extractDateFromString(filename),"%Y-%m-%d")
+            pass
+            #return stream
         # Select only files within eventually defined time range
         if starttime:
             if not datetime.strptime(day,'%Y-%m-%d') >= startdate:          
@@ -76,13 +78,9 @@ def readDIDD(filename, headonly=False, **kwargs):
         print "read DIDD Format: no files found in choosen directory"
         return stream
 
-
     if getfile:
         fh = open(filename, 'rt')
-        if stream.header is None:
-            headers = {}
-        else:
-            headers = stream.header
+        headers = {}
         
         for line in fh:
             if line.isspace():
@@ -112,6 +110,8 @@ def readDIDD(filename, headonly=False, **kwargs):
                 else:
                     try:
                         fval = float(elem[5])
+                        if np.isnan(fval):
+                            fval = 88888.0
                     except:
                         logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
                         fval = float('nan')
@@ -159,22 +159,39 @@ def writeDIDD(datastream, filename, **kwargs):
         pass
     else:
         if (datastream[-1].time - datastream[0].time) > 1:
-            return "Writing DIDD format requires daily coverage - choose"
+            print "Writing DIDD format requires daily coverage - choose"
+            return False
+
+    sr = datastream.samplingrate()
+    if not sr < 62 or not sr > 58:
+         print "writeDIDD: currently only minute data is supported"
+         return False
 
     headdict = datastream.header
 
+    try:
+        xhead = headdict.get('col-x').upper()
+        yhead = headdict.get('col-y').upper()
+        zhead = headdict.get('col-z').upper()
+        fhead = headdict.get('col-f').upper()
+    except:
+        xhead = 'X'
+        yhead = 'Y'
+        zhead = 'Z'
+        fhead = 'F'
     myFile= open( filename, 'wb' )
     wtr= csv.writer( myFile )
-    headline = 'hh mm        '+headdict.get('col-x').upper()+'        '+headdict.get('col-y').upper()+'        '+headdict.get('col-z').upper()+'        '+headdict.get('col-f').upper()
+    headline = 'hh mm        '+xhead+'        '+yhead+'        '+zhead+'        '+fhead
     wtr.writerow( [headline] )
     if ndtype:
         for idx,elem in enumerate(datastream.ndarray[0]):
             time = datetime.strftime(num2date(elem).replace(tzinfo=None), "%H %M")
             line = '%s %8.1f %8.1f %8.1f %8.1f' % (time, datastream.ndarray[1][idx], datastream.ndarray[2][idx], datastream.ndarray[3][idx], datastream.ndarray[4][idx])
+            wtr.writerow( [line] )
     else:
         for elem in datastream:
             time = datetime.strftime(num2date(elem.time).replace(tzinfo=None), "%H %M")
             line = '%s %8.1f %8.1f %8.1f %8.1f' % (time, elem.x, elem.y, elem.z, elem.f)
             wtr.writerow( [line] )
     myFile.close()
-
+    return True

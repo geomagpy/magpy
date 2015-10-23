@@ -312,16 +312,6 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeBLV(datastream, filename, **kwargs)
     elif (format_type == "DIDD"):
         return writeDIDD(datastream, filename, **kwargs)
-    elif (format_type == "PMAG1"):
-        return writePMAG1(datastream, filename, **kwargs)
-    elif (format_type == "PMAG2"):
-        return writePMAG2(datastream, filename, **kwargs)
-    elif (format_type == "DTU1"):
-        return writeDTU1(datastream, filename, **kwargs)
-    elif (format_type == "GDASA1"):
-        return writeGDASA1(datastream, filename, **kwargs)
-    elif (format_type == "RMRCS"):
-        return writeRMRCS(datastream, filename, **kwargs)
     elif (format_type == "PYSTR"):
         return writePYSTR(datastream, filename, **kwargs)
     elif (format_type == "PYASCII"):
@@ -330,8 +320,6 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writePYCDF(datastream, filename, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return writeAUTODIF_FREAD(datastream, filename, **kwargs)
-    elif (format_type == "USBLOG"):
-        return writeUSBLOG(datastream, filename, **kwargs)
     elif (format_type == "CR800"):
         return writeCR800(datastream, filename, **kwargs)
     elif (format_type == "LATEX"):

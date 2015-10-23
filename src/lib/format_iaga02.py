@@ -191,9 +191,13 @@ def readIAGA(filename, headonly=False, **kwargs):
                             array[4].append(np.sqrt(row[3]**2+row[4]**2+row[5]**2) + float(row[6]))
                         else:
                             raise ValueError
+                    else:
+                        array[4].append(float('nan'))
                 except:
                     if not float(row[6]) == 88888:
                         array[4].append(float(row[6]))
+                    else:
+                        array[4].append(float('nan'))
                 data.append(row)
 
     fh.close()
@@ -289,41 +293,55 @@ def writeIAGA(datastream, filename, **kwargs):
 
     try:
         line = []
-        #if len(datastream.ndarray[0]) > 0:
+        ndtype = False
+        if len(datastream.ndarray[0]) > 0:
+            ndtype = True
 
+        fulllength = datastream.length()[0]
 
-        for elem in datastream:
+        xind = KEYLIST.index('x')
+        yind = KEYLIST.index('y')
+        zind = KEYLIST.index('z')
+        find = KEYLIST.index('f')
+        for i in range(fulllength):
+            if not ndtype:
+                elem = datastream[i]
+                xval = elem.x
+                yval = elem.y
+                zval = elem.z
+                fval = elem.f
+                timeval = elem.time
+            else:
+                xval = datastream.ndarray[xind][i]
+                yval = datastream.ndarray[yind][i]
+                zval = datastream.ndarray[zind][i]
+                fval = datastream.ndarray[find][i]
+                timeval = datastream.ndarray[0][i]
             row = ''
-            for key in KEYLIST:
-                if key == 'time':
-                    try:
-                        row = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%d %H:%M:%S.%f")
-                        row = row[:-3]
-                        doi = datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%j")
-                        row += ' %s' % str(doi)
-                    except:
-                        row = ''
-                        pass
-                elif key == 'x':
-                    if isnan(elem.x):
-                        row += '%13.2f' % 88888.0
-                    else:
-                        row += '%13.2f' % elem.x
-                elif key == 'y':
-                    if isnan(elem.y):
-                        row += '%10.2f' % 88888.0
-                    else:
-                        row += '%10.2f' % elem.y
-                elif key == 'z':
-                    if isnan(elem.z):
-                        row += '%10.2f' % 88888.0
-                    else:
-                        row += '%10.2f' % elem.z
-                elif key == 'f':
-                    if isnan(elem.f):
-                        row += '  %.2f' % 88888.0
-                    else:
-                        row += '  %.2f' % elem.f
+            try:
+                row = datetime.strftime(num2date(timeval).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                row = row[:-3]
+                doi = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%j")
+                row += ' %s' % str(doi)
+            except:
+                row = ''
+                pass
+            if isnan(xval):
+                row += '%13.2f' % 88888.0
+            else:
+                row += '%13.2f' % xval
+            if isnan(yval):
+                row += '%10.2f' % 88888.0
+            else:
+                row += '%10.2f' % yval
+            if isnan(zval):
+                row += '%10.2f' % 88888.0
+            else:
+                row += '%10.2f' % zval
+            if isnan(fval):
+                row += '  %.2f' % 88888.0
+            else:
+                row += '  %.2f' % fval
             line.append(row + '\n')
         try:
             myFile.writelines( line )
@@ -331,7 +349,9 @@ def writeIAGA(datastream, filename, **kwargs):
         finally:
             myFile.close()
     except IOError:
+        return False
         pass
 
+    return True
 
 
