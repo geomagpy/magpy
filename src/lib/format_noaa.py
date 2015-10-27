@@ -71,13 +71,13 @@ def readNOAAACE(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rt')
     # read file and split text into channels
-    #stream = DataStream()
-    stream = DataStream([],{})
+    stream = DataStream()
+    #stream = DataStream([],{})
     # Check whether header infromation is already present
-    #if stream.header is None:
-    #    headers = {}
-    #else:
-    #    headers = stream.header
+    if stream.header is None:
+        headers = {}
+    else:
+        headers = stream.header
     #data = []
     #key = None
 
@@ -115,7 +115,24 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         getfile = True
 
     if getfile:
+
+        array = [[] for key in KEYLIST]
+        indtime = KEYLIST.index('time')
+        indx = KEYLIST.index('x')
+        indy = KEYLIST.index('y')
+        indz = KEYLIST.index('z')
+        indf = KEYLIST.index('f')
+        indt1 = KEYLIST.index('t1')
+        indt2 = KEYLIST.index('t2')
+        indvar1 = KEYLIST.index('var1')
+        indvar2 = KEYLIST.index('var2')
+        indvar3 = KEYLIST.index('var3')
+        indvar4 = KEYLIST.index('var4')
+        indvar5 = KEYLIST.index('var5')
+        indstr1 = KEYLIST.index('str1')
+
         loggerlib.info('readNOAAACE: Reading %s' % (filename))
+
         for line in fh:
             if line.isspace():
                 # blank line
@@ -129,62 +146,66 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                     unitelem = unitline.split()
                     unit = unitelem[-1]
                     colname = ''
+                    keytypes = ['time', 'str1']
                     # NOTE: Some keys repeat themselves. They are ordered so that they do not
 		    # double in 1min and 5min combined datasets.
                     for i in range(len(unitelem)-1):
                         colname += unitelem[i]
                     if colname == 'Protondensity':
-                        stream.header['col-var1'] = colname
-                        stream.header['unit-col-var1'] = unit
+                        headers['col-var1'] = colname
+                        headers['unit-col-var1'] = unit
                     if colname == 'Bulkspeed':
-                        stream.header['col-var2'] = 'Solar wind speed'
-                        stream.header['unit-col-var2'] = unit
+                        headers['col-var2'] = 'Solar wind speed'
+                        headers['unit-col-var2'] = unit
                     if colname == 'Iontempeturedegrees':
-                        stream.header['col-var3'] = 'Ion temperature'
-                        stream.header['unit-col-var3'] = unit
+                        headers['col-var3'] = 'Ion temperature'
+                        headers['unit-col-var3'] = unit
                     if colname == 'protonflux':
-                        stream.header['col-x'] = 'Integral Proton flux > 10 MeV'
-                        stream.header['col-y'] = 'Integral Proton flux > 30 MeV'
-                        stream.header['unit-col-x'] = unit
-                        stream.header['unit-col-y'] = unit
+                        headers['col-x'] = 'Integral Proton flux > 10 MeV'
+                        headers['col-y'] = 'Integral Proton flux > 30 MeV'
+                        headers['unit-col-x'] = unit
+                        headers['unit-col-y'] = unit
                     if colname == 'DifferentialFlux':
-                        stream.header['col-z'] = 'Diff Electron flux 38-53'
-                        stream.header['col-f'] = 'Diff Electron flux 175-315'
-                        stream.header['unit-col-z'] = unit
-                        stream.header['unit-col-f'] = unit
-                        stream.header['col-var1'] = 'Diff Proton flux 47-68 keV'
-                        stream.header['col-var2'] = 'Diff Proton flux 115-195 keV'
-                        stream.header['col-var3'] = 'Diff Proton flux 310-580 keV'
-                        stream.header['col-var4'] = 'Diff Proton flux 795-1193 keV'
-                        stream.header['col-var5'] = 'Diff Proton flux 1060-1900 keV'
-                        stream.header['unit-col-var1'] = unit
-                        stream.header['unit-col-var2'] = unit
-                        stream.header['unit-col-var3'] = unit
-                        stream.header['unit-col-var4'] = unit
-                        stream.header['unit-col-var5'] = unit
+                        headers['col-z'] = 'Diff Electron flux 38-53'
+                        headers['col-f'] = 'Diff Electron flux 175-315'
+                        headers['unit-col-z'] = unit
+                        headers['unit-col-f'] = unit
+                        headers['col-var1'] = 'Diff Proton flux 47-68 keV'
+                        headers['col-var2'] = 'Diff Proton flux 115-195 keV'
+                        headers['col-var3'] = 'Diff Proton flux 310-580 keV'
+                        headers['col-var4'] = 'Diff Proton flux 795-1193 keV'
+                        headers['col-var5'] = 'Diff Proton flux 1060-1900 keV'
+                        headers['unit-col-var1'] = unit
+                        headers['unit-col-var2'] = unit
+                        headers['unit-col-var3'] = unit
+                        headers['unit-col-var4'] = unit
+                        headers['unit-col-var5'] = unit
                     if colname == 'Bx,By,Bz,Btin':
-                        stream.header['col-x'] = 'Bx'
-                        stream.header['col-y'] = 'By'
-                        stream.header['col-z'] = 'Bz'
-                        stream.header['col-f'] = 'Bt'
-                        stream.header['unit-col-x'] = 'nT'
-                        stream.header['unit-col-y'] = 'nT'
-                        stream.header['unit-col-z'] = 'nT'
-                        stream.header['unit-col-f'] = 'nT'
-                        stream.header['col-t1'] = 'Lat'
-                        stream.header['col-t2'] = 'Lon'
-                        stream.header['unit-col-t1'] = 'degrees'
-                        stream.header['unit-col-t2'] = 'degrees'
+                        headers['col-x'] = 'Bx'
+                        headers['col-y'] = 'By'
+                        headers['col-z'] = 'Bz'
+                        headers['col-f'] = 'Bt'
+                        headers['unit-col-x'] = 'nT'
+                        headers['unit-col-y'] = 'nT'
+                        headers['unit-col-z'] = 'nT'
+                        headers['unit-col-f'] = 'nT'
+                        headers['col-t1'] = 'Lat'
+                        headers['col-t2'] = 'Lon'
+                        headers['unit-col-t1'] = 'degrees'
+                        headers['unit-col-t2'] = 'degrees'
             elif headonly:
                 # skip data for option headonly
                 continue
             else:
+                nanval = float(NaN)
                 row = LineStruct()
                 dataelem = line.split()
                 date = datetime(int(dataelem[0]),int(dataelem[1]),int(dataelem[2]),int(dataelem[3][:2]),int(dataelem[3][2:]))
                 status = int(dataelem[6])
                 row.str1 = status
                 row.time = date2num(date)
+                array[indstr1].append(status)
+                array[indtime].append(date2num(date))
                 if cleandata == True:
                     if status == 0: # indicates good data
                         usedata = True
@@ -197,49 +218,148 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                     if datatype == 'swepam':
                         if (float(dataelem[7]) > -9999): 
                             row.var1 = float(dataelem[7])
-                            #stream.header['col-x'] = headercol[0]
+                            array[indvar1].append(float(dataelem[7]))
+                        else:
+                            array[indvar1].append(nanval)
                         if (float(dataelem[8]) > -9999): 
                             row.var2 = float(dataelem[8])
+                            array[indvar2].append(float(dataelem[8]))
+                        else:
+                            array[indvar2].append(nanval)
                         if (float(dataelem[9]) > -9999): 
                             row.var3 = float(dataelem[9])
+                            array[indvar3].append(float(dataelem[9]))
+                        else:
+                            array[indvar3].append(nanval)
                     elif datatype == 'sis':
                         if (float(dataelem[7]) > -9999): 
                             row.x = float(dataelem[7])
+                            array[indx].append(float(dataelem[7]))
+                        else:
+                            array[indx].append(nanval)
                         if (float(dataelem[8]) == 0): # status of high energy 
+                            keytypes.append('y')
                             if (float(dataelem[9]) > -9999): 
                                 row.y = float(dataelem[9])
+                                array[indy].append(float(dataelem[9]))
+                            else:
+                                array[indy].append(nanval)
+                        else:
+                            array[indy].append(nanval)
                     elif datatype == 'mag':
                         if (float(dataelem[7]) > -9999): 
                             row.x = float(dataelem[7])
+                            array[indx].append(float(dataelem[7]))
+                        else:
+                            array[indx].append(nanval)
                         if (float(dataelem[8]) > -9999): 
                             row.y = float(dataelem[8])
+                            array[indy].append(float(dataelem[8]))
+                        else:
+                            array[indy].append(nanval)
                         if (float(dataelem[9]) > -9999): 
                             row.z = float(dataelem[9])
+                            array[indz].append(float(dataelem[9]))
+                        else:
+                            array[indz].append(nanval)
                         if (float(dataelem[10]) > -9999): 
                             row.f = float(dataelem[10])
+                            array[indf].append(float(dataelem[10]))
+                        else:
+                            array[indf].append(nanval)
                         if (float(dataelem[11]) > -9999): 
                             row.t1 = float(dataelem[11])
+                            array[indt1].append(float(dataelem[11]))
+                        else:
+                            array[indt1].append(nanval)
                         if (float(dataelem[12]) > -9999): 
                             row.t2 = float(dataelem[12])
+                            array[indt2].append(float(dataelem[12]))
+                        else:
+                            array[indt2].append(nanval)
                     elif datatype == 'epam':
                         if (float(dataelem[7]) > -9999): 
                             row.z = float(dataelem[7])
+                            array[indz].append(float(dataelem[7]))
+                        else:
+                            array[indz].append(nanval)
                         if (float(dataelem[8]) > -9999): 
                             row.f = float(dataelem[8])
+                            array[indf].append(float(dataelem[8]))
+                        else:
+                            array[indf].append(nanval)
                         if (float(dataelem[9]) == 0): 
                             if (float(dataelem[10]) > -9999): 
                                 row.var1 = float(dataelem[10])
+                                array[indvar1].append(float(dataelem[10]))
+                            else:
+                                array[indvar1].append(nanval)
                             if (float(dataelem[11]) > -9999): 
                                 row.var2 = float(dataelem[11])
+                                array[indvar2].append(float(dataelem[11]))
+                            else:
+                                array[indvar2].append(nanval)
                             if (float(dataelem[12]) > -9999): 
                                 row.var3 = float(dataelem[12])
+                                array[indvar3].append(float(dataelem[12]))
+                            else:
+                                array[indvar3].append(nanval)
                             if (float(dataelem[13]) > -9999): 
                                 row.var4 = float(dataelem[13])
+                                array[indvar4].append(float(dataelem[13]))
+                            else:
+                                array[indvar4].append(nanval)
                             if (float(dataelem[14]) > -9999): 
                                 row.var5 = float(dataelem[14])
-                stream.add(row)
+                                array[indvar5].append(float(dataelem[14]))
+                            else:
+                                array[indvar5].append(nanval)
+                        else:
+                            array[indvar1].append(nanval)
+                            array[indvar2].append(nanval)
+                            array[indvar3].append(nanval)
+                            array[indvar4].append(nanval)
+                            array[indvar5].append(nanval)
+                else:
+                    if datatype == 'swepam':
+                        array[indvar1].append(nanval)
+                        array[indvar2].append(nanval)
+                        array[indvar3].append(nanval)
+                    elif datatype == 'sis':
+                        array[indx].append(nanval)
+                        array[indy].append(nanval)
+                    elif datatype == 'mag':
+                        array[indx].append(nanval)
+                        array[indx].append(nanval)
+                        array[indz].append(nanval)
+                        array[indf].append(nanval)
+                        array[indt1].append(nanval)
+                        array[indt2].append(nanval)
+                    elif datatype == 'epam':
+                        array[indz].append(nanval)
+                        array[indf].append(nanval)
+                        array[indvar1].append(nanval)
+                        array[indvar2].append(nanval)
+                        array[indvar3].append(nanval)
+                        array[indvar4].append(nanval)
+                        array[indvar5].append(nanval)
+                #stream.add(row)
     fh.close()
 
-    return stream
+    if datatype == 'swepam':
+        keytypes = ['time', 'str1', 'var1', 'var2', 'var3']
+    elif datatype == 'sis':
+        keytypes = ['time', 'str1', 'x', 'y']
+    elif datatype == 'mag':
+        keytypes = ['time', 'str1', 'x', 'y', 'z', 'f', 't1', 't2']
+    elif datatype == 'epam':
+        keytypes = ['time', 'str1', 'z', 'f', 'var1', 'var2', 'var3', 'var4', 'var5']
+
+    for key in keytypes:
+        array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
+
+    return DataStream([LineStruct()], headers, np.asarray(array))  
+
+    #return stream
     #return DataStream(stream, headers)  
 

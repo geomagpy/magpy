@@ -1615,14 +1615,17 @@ CALLED BY:
         t = self._get_column('time')
         signal = self._get_column(key)
         #Clear the projected results column
+        array = []
+        aic2ind = KEYLIST.index(aic2key)
         self = self._clear_column(aic2key)
+        if len(self.ndarray[0]) > 0.:
+            self.ndarray[aic2ind] = np.empty((len(self.ndarray[0],)))
+            self.ndarray[aic2ind][:] = np.NAN
         # get sampling interval for normalization - need seconds data to test that
         sp = self.get_sampling_period()*24*60
         # corrcet approach
         iprev = 0
         iend = 0
-
-        aic2ind = KEYLIST.index(aic2key)
 
         while iend < len(t)-1:
             istart = iprev

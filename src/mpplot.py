@@ -408,10 +408,11 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         stream = streamlist[i]
         ndtype = False
         try:
-            t = stream.ndarray[0]
-            if not len(t) > 0:
+            t = stream.ndarray[KEYLIST.index('time')]
+            lentime = len(t)
+            if not lentime > 0:
                 x=1/0
-            if len(t) > resolution:
+            if lentime > resolution:
                 loggerstream.info("plot: Reducing data resultion ...")
                 stepwidth = int(len(t)/resolution)
                 t = t[::stepwidth]
@@ -430,12 +431,16 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
             try:
+
                 y = stream.ndarray[ind]
                 if not len(y) > 0:
                     x=1/0
                 if len(y) > resolution:
                     stepwidth = int(len(y)/resolution)
                     y = y[::stepwidth]
+                if len(y) != lentime:
+                    loggerplot.error("plotStreams: Dimensions of time and %s do not match!" % key)
+                    raise Exception("Dimensions of time and %s do not match!")
             except:
                 y = np.asarray([float(row[ind]) for row in stream])
             #y = np.asarray([row[ind] for row in stream])
