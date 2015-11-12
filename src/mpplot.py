@@ -1439,17 +1439,26 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
     loggerplot.info("plotSatMag - Starting plotting of satellite and magnetic data...")
 
-    t_mag = np.asarray([row[0] for row in mag_stream])
-    t_sat = np.asarray([row[0] for row in sat_stream])
     key_mag, key_sat = keys[0], keys[1]
+    ind_mag, ind_sat, ind_t = KEYLIST.index(key_mag), KEYLIST.index(key_sat), KEYLIST.index('time')
+
+    if len(mag_stream.ndarray) > 0.:
+        t_mag = mag_stream.ndarray[ind_t]
+        t_sat = sat_stream.ndarray[ind_t]
+    else:
+        t_mag = np.asarray([row[0] for row in mag_stream])
+        t_sat = np.asarray([row[0] for row in sat_stream])
     if key_mag not in KEYLIST:
         raise Exception("Column key (%s) not valid!" % key)
     if key_sat not in KEYLIST:
         raise Exception("Column key (%s) not valid!" % key)
 
-    ind_mag, ind_sat = KEYLIST.index(key_mag), KEYLIST.index(key_sat)
-    y_mag = np.asarray([row[ind_mag] for row in mag_stream])
-    y_sat = np.asarray([row[ind_sat] for row in sat_stream])
+    if len(mag_stream.ndarray) > 0.:
+        y_mag = mag_stream.ndarray[ind_mag]
+        y_sat = sat_stream.ndarray[ind_sat]
+    else:
+        y_mag = np.asarray([row[ind_mag] for row in mag_stream])
+        y_sat = np.asarray([row[ind_sat] for row in sat_stream])
 
     # Fix if NaNs are present:
     if plottype == 'discontinuous':

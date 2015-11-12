@@ -8500,7 +8500,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     try:
         sb = sb.trim(starttime=num2date(timea[0]).replace(tzinfo=None), endtime=num2date(timea[-1]).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
     except:
-        print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        print "mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
         return stream_a
 
     if ndtype:
@@ -8514,7 +8514,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     try:
         sa = sa.trim(starttime=num2date(timeb[0]).replace(tzinfo=None), endtime=num2date(timeb[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
     except:
-        print "subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        print "mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
         return stream_a
 
     # testing overlapp
