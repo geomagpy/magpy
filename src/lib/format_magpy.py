@@ -271,12 +271,16 @@ def readPYSTR(filename, headonly=False, **kwargs):
                         array[idx].append(ti)
                     else:
                         if key in NUMKEYLIST:
+                            if elem[idx] in ['-','']:
+                                elem[idx]=np.nan
                             array[idx].append(float(elem[idx]))
                         else:
+                            #print elem[idx]
                             #if elem[idx] == '':
                             #    elem[idx] = '-'
                             array[idx].append(elem[idx])
             except ValueError:
+                print "readPYSTR: Found value error when reading data"
                 pass
     qFile.close()
 
@@ -293,6 +297,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
         if not False in checkEqual3(array[idx]) and ar[0] == tester:
             array[idx] = np.asarray([])
 
+    print "lib format-magpy", [len(el) for el in array]
     return DataStream([LineStruct()], headers, np.asarray(array).astype(object))    
 
 
@@ -1022,7 +1027,8 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = np.asarray(col) # to get string conversion
             else:
                 #print col, key
-                col = np.asarray([float(nan) if el is None else el for el in col])
+                col = np.asarray([np.nan if el is None else el for el in col])
+                #col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)
             mycdf[key] = col
 

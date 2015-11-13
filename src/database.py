@@ -1191,7 +1191,7 @@ def dbselect(db, element, table, condition=None, expert=None):
     else:
         sql = "SELECT "+element+" from "+table+" WHERE "+condition
     try:
-        cursor = db.cursor()    
+        cursor = db.cursor()
         cursor.execute(sql)
         rows = cursor.fetchall()
         for el in rows:
@@ -1710,7 +1710,6 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
         return "%s%s" % (s[:-7], temp[1:])
 
-
     array = [[] for key in KEYLIST]
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
@@ -1759,7 +1758,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         unitstr = ''
         if key in keys:
             if key in NUMKEYLIST:
-                dataheads.append(key + ' FLOAT')
+                dataheads.append(key + ' DOUBLE')
             elif key.endswith('time'):
                 if key == 'time':
                     dataheads.append(key + ' CHAR(40) NOT NULL PRIMARY KEY')
@@ -2480,13 +2479,18 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                 for i, elem in enumerate(line):
                     index = KEYLIST.index(keys[i])
                     if keys[i][-4:]=='time':
-                        ls[index].append(date2num(stream._testtime(elem)))
+                        try:
+                            ls[index].append(date2num(stream._testtime(elem)))
+                        except:
+                            print "readDB: could not identify time:", index, elem
                     else:
                         if keys[i] in NUMKEYLIST:
                             if elem == None or elem == 'null':
                                 elem = float(NaN)
                             ls[index].append(float(elem))
                         else:
+                            if elem == None or elem == 'null':
+                                elem = ''
                             ls[index].append(elem)
 
             for idx, elem in enumerate(ls):
@@ -3177,14 +3181,16 @@ def db2flaglist(db,sensorid, begin=None, end=None):
 
     searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS WHERE SensorID = "%s"' % sensorid
     if begin:
-        addbeginsql = ' AND FlagBeginTime >= "%s"' % begin
+        #addbeginsql = ' AND FlagBeginTime >= "%s"' % begin
+        addbeginsql = ' AND FlagEndTime >= "%s"' % begin
     else:
         addbeginsql = '' 
     if end:
-        addendsql = ' AND FlagEndTime <= "%s"' % end 
+        #addendsql = ' AND FlagEndTime <= "%s"' % end 
+        addendsql = ' AND FlagBeginTime <= "%s"' % end 
     else:
         addendsql = '' 
-    
+
     cursor.execute (searchsql + addbeginsql + addendsql)
     rows = cursor.fetchall()
 

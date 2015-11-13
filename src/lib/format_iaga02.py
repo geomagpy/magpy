@@ -315,7 +315,10 @@ def writeIAGA(datastream, filename, **kwargs):
                 xval = datastream.ndarray[xind][i]
                 yval = datastream.ndarray[yind][i]
                 zval = datastream.ndarray[zind][i]
-                fval = datastream.ndarray[find][i]
+                if len(datastream.ndarray[find]) > 0:
+                    fval = datastream.ndarray[find][i]
+                else:
+                    fval = 88888.0
                 timeval = datastream.ndarray[0][i]
             row = ''
             try:

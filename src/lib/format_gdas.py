@@ -63,21 +63,20 @@ def readGDASA1(filename, headonly=False, **kwargs):
     01-07-2011-00:00:06    -156     -40     184      67   99999
     01-07-2011-00:00:07    -155     -40     184      67   99999
     """
-    fh = open(filename, 'rt')
     # read file and split text into channels
     data = []
     getfile = True
     key = None
-    stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
-    # Check whether header infromation is already present
-    #if stream.header is None:
-    #    headers = {}
-    #else:
-    #    headers = stream.header
-    # get day from filename (platform independent)
+
+    array = [[] for key in KEYLIST]
+    stream = DataStream([],{},np.asarray(array))
+    linestruct = False
+
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     sensorid = kwargs.get('sensorid')
+    linestruct = kwargs.get('linestruct')   # for testing purposes of old data struct
+
 
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
@@ -96,8 +95,10 @@ def readGDASA1(filename, headonly=False, **kwargs):
             getfile = False
 
     if getfile:
+        fh = open(filename, 'rt')
 	logging.info(' Read: %s Format: GDAS ' % (filename))
         cnt = 0
+        tpos = KEYLIST.index('t1')
         for line in fh:
             if line.isspace():
                 # blank line
@@ -125,7 +126,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
                             if not elem == 't1':
                                 stream.header['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
                             else:
-                                stream.header['unit-' + colname] = 'C'                        
+                                stream.header['unit-' + colname] = 'degC'                        
                     if sensorid:
                         stream.header['SensorID'] = sensorid
             elif line.startswith('# Cobs'):
@@ -135,40 +136,79 @@ def readGDASA1(filename, headonly=False, **kwargs):
                 # skip data for option headonly
                 continue
             else:
-                row = LineStruct()
                 elem = line.split()
-                try:
-                    row.time=date2num(datetime.strptime(elem[0],"%d-%m-%Y-%H:%M:%S"))
-                except:
+                if linestruct:
+                    row = LineStruct()
                     try:
-                        row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S"))
+                        row.time=date2num(datetime.strptime(elem[0],"%d-%m-%Y-%H:%M:%S"))
                     except:
-                        raise ValueError, "Wrong date format in %s" % filename
-                if float(elem[1]) < 99999.:
-                    row.x = float(elem[1])/10.0
-                if float(elem[1]) < 99999.:
-                    row.y = float(elem[2])/10.0
-                if float(elem[1]) < 99999.:
-                    row.z = float(elem[3])/10.0
-                if float(elem[1]) < 99999.:
-                    row.t1 = float(elem[4])/10.0
-                try:
-                    if (float(elem[5]) != 99999):
-                        row.f = float(elem[5])/10.0
-                        if cnt == 1:
-                            stream.header['col-f'] = 'f'
-                            stream.header['unit-col-f'] = 'f'
-                        cnt = cnt +1
-                except:
-                    pass
-                stream.add(row)         
+                        try:
+                            row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S"))
+                        except:
+                            raise ValueError, "Wrong date format in %s" % filename
+                    if float(elem[1]) < 99999.:
+                        row.x = float(elem[1])/10.0
+                    if float(elem[1]) < 99999.:
+                        row.y = float(elem[2])/10.0
+                    if float(elem[1]) < 99999.:
+                        row.z = float(elem[3])/10.0
+                    if float(elem[1]) < 99999.:
+                        row.t1 = float(elem[4])/10.0
+                    try:
+                        if (float(elem[5]) != 99999):
+                            row.f = float(elem[5])/10.0
+                            if cnt == 1:
+                                stream.header['col-f'] = 'f'
+                                stream.header['unit-col-f'] = 'f'
+                            cnt = cnt +1
+                    except:
+                        pass
+                    stream.add(row)
+                else:
+                    try:
+                        array[0].append(date2num(datetime.strptime(elem[0],"%d-%m-%Y-%H:%M:%S")))
+                    except:
+                        try:
+                            array[0].append(date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S")))
+                        except:
+                            raise ValueError, "Wrong date format in %s" % filename
+                    if float(elem[1]) < 99999.:
+                        array[1].append(float(elem[1])/10.0)
+                    else:
+                        array[1].append(np.nan)
+                    if float(elem[2]) < 99999.:
+                        array[2].append(float(elem[2])/10.0)
+                    else:
+                        array[2].append(np.nan)
+                    if float(elem[3]) < 99999.:
+                        array[3].append(float(elem[3])/10.0)
+                    else:
+                        array[3].append(np.nan)
+                    if float(elem[4]) < 99999.:
+                        array[tpos].append(float(elem[4])/10.0)
+                    else:
+                        array[tpos].append(np.nan)
+                    try:
+                        if (float(elem[5]) != 99999):
+                            array[4].append(float(elem[5])/10.0)
+                        else:
+                            array[4].append(np.nan)
+                    except:
+                        pass
 
         fh.close()
-    #else:
-    #    headers = stream.header
-    #    stream =[]
 
-    return stream   
+        array[0] = np.asarray(array[0]) 
+        array[1] = np.asarray(array[1]) 
+        array[2] = np.asarray(array[2]) 
+        array[3] = np.asarray(array[3]) 
+        array[tpos] = np.asarray(array[tpos]) 
+        array[4] = np.asarray(array[4]) 
+
+    if linestruct:
+        return stream
+    else:
+         return DataStream([LineStruct()], stream.header, np.asarray(array))    
 
 
 def readGDASB1(filename, headonly=False, **kwargs):

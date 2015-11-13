@@ -401,7 +401,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     count = 0
 
     if not resolution:
-        resolution = 1296000  # 15 days of 1 second data can be maximaly shown in detail, 1.5 days of 10 Hz
+        resolution = 5000000  # 40 days of 1 second data can be maximaly shown in detail, 5 days of 10 Hz
 
     # Iterate through each variable, create dict for each:
     for i in range(len(streamlist)):
@@ -416,6 +416,8 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 loggerstream.info("plot: Reducing data resultion ...")
                 stepwidth = int(len(t)/resolution)
                 t = t[::stepwidth]
+                # Redetermine lentime
+                lentime = len(t)
             loggerstream.info("plot: Start plotting of stream with length %i" % len(stream.ndarray[0]))
             ndtype = True
         except:
@@ -445,7 +447,6 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 y = np.asarray([float(row[ind]) for row in stream])
             #y = np.asarray([row[ind] for row in stream])
             
-
             if len(y) == 0:
                 loggerplot.error("plotStreams: Cannot plot stream of zero length!")
 
@@ -938,6 +939,7 @@ def addFlag(data, flagger, indeciestobeflagged, variables):
             endtime = num2date(data.ndarray[0][consecutives[-1]].astype(float)).replace(tzinfo=None)
             modtime = datetime.utcnow()
             for key in keylist:
+                #print begintime, endtime, key, flagid, reason, sensid, modtime
                 if not sensid == '':
                     flaglst.append([begintime, endtime, key, flagid, reason, sensid, modtime])
 
@@ -2239,30 +2241,34 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                         cnt0 = consecutives[0]
                         #print consecutives
                         #print cnt0, indexflag, flags[0], flags[0][cnt0], flags[1][cnt0], flags[0][cnt0][indexflag]
-                        if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
-                            ax.annotate(r'%s' % (flags[1][cnt0]),
+                        if len(flags[0][cnt0]) >= indexflag:
+                            if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
+                                ax.annotate(r'%s' % (flags[1][cnt0]),
                                         xy=(t[cnt0], y[cnt0]),
                                         xycoords='data', xytext=(20, 20),
                                         textcoords='offset points',
                                         bbox=dict(boxstyle="round", fc="0.9"),
                                         arrowprops=dict(arrowstyle="->",
                                         shrinkA=0, shrinkB=1, connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                        for idx in consecutives:
-                            #if not flags[0][idx][indexflag] == '0':
-                            #    print "Got", flags[0][idx][indexflag], idx
-                            if flags[0][idx][indexflag] in ['3']:
-                                a_t.append(float(t[idx]))
-                                a_y.append(y[idx])
-                            elif flags[0][idx][indexflag] in ['1']:
-                                b_t.append(float(t[idx]))
-                                b_y.append(y[idx])
-                            elif flags[0][idx][indexflag] in ['2']:
-                                c_t.append(float(t[idx]))
-                                c_y.append(y[idx])
-                            elif flags[0][idx][indexflag] in ['4']:
-                                d_t.append(float(t[idx]))
-                                d_y.append(y[idx])
-                #print "Hello"
+                            for idx in consecutives:
+                                #if not flags[0][idx][indexflag] == '0':
+                                #    print "Got", flags[0][idx][indexflag], idx
+                                if flags[0][idx][indexflag] in ['3']:
+                                    a_t.append(float(t[idx]))
+                                    a_y.append(y[idx])
+                                elif flags[0][idx][indexflag] in ['1']:
+                                    b_t.append(float(t[idx]))
+                                    b_y.append(y[idx])
+                                elif flags[0][idx][indexflag] in ['2']:
+                                    c_t.append(float(t[idx]))
+                                    c_y.append(y[idx])
+                                elif flags[0][idx][indexflag] in ['4']:
+                                    d_t.append(float(t[idx]))
+                                    d_y.append(y[idx])
+                        else:
+                            print "Found problem in flagging information - still to be solved"
+                            print "Flag at count and its index position", cnt0, indexflag
+                            print "Flag and Comment", flags[0][cnt0], flags[1][cnt0]
                 if len(a_t) > 0:
                     ax.scatter(a_t,a_y,c='r')
                 if len(b_t) > 0:

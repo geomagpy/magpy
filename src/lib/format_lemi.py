@@ -218,7 +218,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     timeshift = kwargs.get('timeshift')
     gpstime = kwargs.get('gpstime')
 
-    print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)" 
+    #print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)" 
+    timediff = []
 
     ## Moved the following into acquisition
     if not timeshift:
@@ -327,10 +328,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             else:
                 try:
                     time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)			# PC time
+                except:
+                    loggerlib.error("readLEMIBIN: Error reading line. Aborting read. (See docs.)")
+                try:
                     sectime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time 
                     timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
                 except:
-                    loggerlib.error("readLEMIBIN: Error reading line. Aborting read. (See docs.)")
+                    loggerlib.warning("readLEMIBIN: Could not read secondary time column.")
 #--------------------TODO--------------------------------------------
 # This is usually an error that comes about during an interruption of data writing
 # that leads to only a partial line being written. Normal data usually follows if the
@@ -365,7 +369,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     fh.close()
     gpstime = True
-    if gpstime:
+    if gpstime and len(timediff) > 0:
         loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): %f sec +- %f" % (np.mean(timediff), np.std(timediff)))
         print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
 
