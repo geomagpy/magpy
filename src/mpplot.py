@@ -2154,6 +2154,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         key = data[i]['key']
         t = np.asarray(data[i]['tdata']).astype(float)
         y = np.asarray(data[i]['ydata']).astype(float)
+        if not len(t) == len(y):
+            y = [99999]*len(t)
         # Sort data before plotting - really necessary ? costs 0.1 seconds for 1 day second data 
         #datar = sorted([[t[j],y[j]] for j, el in enumerate(t)])
         #t = [datar[j][0] for j, el in enumerate(datar)]

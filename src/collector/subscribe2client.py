@@ -46,15 +46,17 @@ marcospath = ''
 
 IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
                 10:'f',11:'x',12:'y',13:'z',14:'df',
+                20:'x',21:'y',22:'z',23:'dx',24:'dy',25:'dz',
                 30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',35:'x',36:'x',37:'y',38:'var1',39:'f',
                 40:'var1',           
-                50:'var1',51:'var2',60:'var2',61:'var3',62:'var4'} 
+                50:'var1',51:'var2',
+                60:'var2',61:'var3',62:'var4'} 
 
-MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38], 'ult': [1,32,50,51], 'lnm': [1,30,36,37,39], 'pal': [1,11,12,13], 'ard': [1,10,11,12,13,14,30,33,35]}
+MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38], 'ult': [1,32,50,51], 'lnm': [1,30,36,37,39], 'pal': [1,11,12,13], 'ard': [1,10,11,12,13,14,30,33,35], 'sug': [1,20,21,22,23,24,25]}
 
-UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g'], 'ult': ['degC','m_s','deg'], 'lnm': ['degC','mm','m','N'], 'ard': ['nT','nT','nT','nT','-','degC','percent','HPa']}
+UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g'], 'ult': ['degC','m_s','deg'], 'lnm': ['degC','mm','m','N'], 'ard': ['nT','nT','nT','nT','-','degC','percent','HPa'], 'sug': ['nT','nT','nT','-','-','-']}
 
-NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P']}
+NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P'],'sug': ['S1','S2','S3','Grad_S3_S1','Grad_S3_S2','Grad_S2_S1']}
 
 def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None):
     print "Getting parameters ..." 
@@ -322,6 +324,8 @@ class PubSubClient(WampClientProtocol):
             module = 'kern'
         elif sensshort == 'LEM':
             module = 'lemi'
+        elif sensshort == 'GP2':
+            module = 'sug'
         else:
             module = sensshort.lower()
         self.module = module
@@ -436,7 +440,8 @@ class PubSubClient(WampClientProtocol):
                 nelst.append(elem)
             linestr = ', '.join(map(str, nelst))
             sql = "INSERT INTO %s(%s) VALUES (%s)" % (datainfoid, parastr, linestr)
-            #print "!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql
+            if printdata:
+                print "!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql
             self.line = []
             # Prepare SQL query to INSERT a record into the database.
             try:

@@ -141,7 +141,7 @@ def readIAF(filename, headonly=False, **kwargs):
                 headers['DataComponents'] = head[5].lower()
                 for c in head[5].lower():
                     if c == 'g':
-                        headers['col-df'] = 'g'                   
+                        headers['col-df'] = 'dF'                   
                         headers['unit-col-df'] = 'nT'
                     else:
                         headers['col-'+c] = c                   
@@ -227,40 +227,402 @@ def readIAF(filename, headonly=False, **kwargs):
     fd = np.asarray(fd)/10.
     fd[fd > 88880] = float(nan)
     fd[fd < -44440] = float(nan)
-    k = np.asarray(k)/10.
-    k[k > 88880] = float(nan)
+    k = np.asarray(k).astype(float)
+    k[k > 880] = float(nan)
     ir = np.asarray(ir)
-              
-    if resolution == 'days':
-        stream = array2stream([xd,yd,zd,fd],keystr,starttime=min(datelist),sr=86400)
+
+    # ndarray
+    def data2array(arlist,keylist,starttime,sr):
+        array = [[] for key in KEYLIST]
+        ta = []
+        val = starttime
+        for ind, elem in enumerate(arlist[0]):
+            ta.append(date2num(val))
+            val = val+timedelta(seconds=sr)
+        array[0] = np.asarray(ta)
+        for idx,ar in enumerate(arlist):
+            pos = KEYLIST.index(keylist[idx])
+            array[pos] = np.asarray(ar)
+
+        return np.asarray(array)
+
+    if resolution in ['day','days','Day','Days','DAY','DAYS']:
+        ndarray = data2array([xd,yd,zd,fd],keystr.split(','),min(datelist),sr=86400)
         headers['DataSamplingRate'] = '86400 sec'
-    elif resolution == 'hours':
-        stream = array2stream([xho,yho,zho,fho],keystr,starttime=min(datelist)+timedelta(minutes=30),sr=3600)
+    elif resolution in ['hour','hours','Hour','Hours','HOUR','HOURS']:
+        ndarray = data2array([xho,yho,zho,fho],keystr.split(','),min(datelist)+timedelta(minutes=30),sr=3600)
         headers['DataSamplingRate'] = '3600 sec'
-    elif resolution == 'k':
-        stream = array2stream([k,ir],'k,ir',starttime=min(datelist)+timedelta(minutes=90),sr=10800)
+    elif resolution in ['k','K']:
+        ndarray = data2array([k,ir],['var1','var2'],min(datelist)+timedelta(minutes=90),sr=10800)
+        headers['DataSamplingRate'] = '10800 sec'
     else:
-        stream = array2stream([x,y,z,f],keystr,starttime=min(datelist),sr=60)
+        ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
         headers['DataSamplingRate'] = '60 sec'
 
-    return DataStream(stream, headers)    
+    return DataStream([LineStruct()], headers, ndarray)    
 
 
 def writeIAF(datastream, filename, **kwargs):
     """
     Writing Intermagnet archive format (2.1)
     """
-    return False
-    pass
-    # Check whether minute file
-    # check whether data covers one year
-    # Check whether f is contained (or delta f)
-    # Check whether all essential header info is present
+    
+    kvals = kwargs.get('kvals')
+    mode = kwargs.get('mode')
 
+    df=False
+    # Check whether data is present at all
+    if not len(datastream.ndarray[0]) > 0:
+        print "writeIAF: No data found - check ndarray"
+        return False
+    # Check whether minute file
+    sr = datastream.samplingrate()
+    if not int(sr) == 60:
+        print "writeIAF: Minute data needs to be provided"
+        return False
+    # check whether data covers one month
+    tdiff = int(np.round(datastream.ndarray[0][-1]-datastream.ndarray[0][0]))
+    if not tdiff >= 28:
+        print "writeIAF: Data needs to cover one month"
+        return False
+
+    try:
+        # Convert data to XYZ if HDZ
+        if datastream.header['DataComponents'].startswith('HDZ'):
+            datastream = datastream.hdz2xyz()
+    except:
+        print "writeIAF: HeaderInfo on DataComponents seems to be missing"
+        return False
+
+    try:
+        # Preserve sampling filter of original data
+        dsf = datastream.header['DataSamplingFilter']
+    except:
+        dsf = ''
+
+    # Check whether f is contained (or delta f)
     # if f calc delta f
-    # get k
-    # filter hourly data
-    # filter daily means
+    dfpos = KEYLIST.index('df')
+    fpos = KEYLIST.index('f')
+    dflen = len(datastream.ndarray[dfpos])
+    flen = len(datastream.ndarray[fpos])
+    if not dflen == len(datastream.ndarray[0]):
+        #check for F and calc
+        if not flen == len(datastream.ndarray[0]):
+            df=False
+        else:
+            datastream = datastream.delta_f()
+            df=True
+            if datastream.header['DataComponents'] in ['HDZ','XYZ']:
+                datastream.header['DataComponents'] += 'G'
+            if datastream.header['DataSensorOrientation'] in ['HDZ','XYZ']:
+                datastream.header['DataSensorOrientation'] += 'F'
+    else:
+        df=True
+        if datastream.header['DataComponents'] in ['HDZ','XYZ']:
+            datastream.header['DataComponents'] += 'G'
+        if datastream.header['DataSensorOrientation'] in ['HDZ','XYZ']:
+            datastream.header['DataSensorOrientation'] += 'F'
+
+    # Check whether all essential header info is present
+    requiredinfo = ['StationIAGAcode','StartDate','DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataElevation', 'DataComponents', 'StationInstitution', 'DataConversion', 'DataQuality', 'SensorType', 'StationK9', 'DataDigitalSampling', 'DataSensorOrientation', 'DataPublicationDate','FormatVersion','Reserved']
+
+    # cycle through data - day by day
+    t0 = int(datastream.ndarray[0][1])
+    output = ''
+    kstr=[]
+    for i in range(tdiff):  
+        dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
+        # get all indicies
+        temp = DataStream([LineStruct],datastream.header,dayar)
+        temp = temp.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
+
+        head = []
+        for elem in requiredinfo:
+            #print "Checking", elem
+            try:
+                if elem == 'StationIAGAcode':
+                    value = datastream.header['StationIAGAcode']
+                    value = value[:3]
+                    #print value
+                elif elem == 'StartDate':
+                    value = int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y%j'))
+                elif elem == 'DataAcquisitionLatitude':
+                    if not float(datastream.header['DataAcquisitionLatitude']) < 90 and float(datastream.header['DataAcquisitionLatitude']) > -90:
+                        print "Latitude and Longitude need to be provided in Degree"
+                        x=1/0
+                    value = int(np.round((90-float(datastream.header['DataAcquisitionLatitude']))*1000))
+                elif elem == 'DataAcquisitionLongitude':
+                    value = int(np.round(float(datastream.header['DataAcquisitionLongitude'])*1000))
+                elif elem == 'DataElevation':
+                    value = int(datastream.header['DataElevation'])
+                elif elem == 'DataConversion':
+                    value = int(datastream.header['DataConversion'])
+                elif elem == 'DataPublicationDate':
+                    value = datetime.strftime(datastream.header['DataPublicationDate'],'%y%m')
+                elif elem == 'FormatVersion':
+                    value = 3
+                elif elem == 'Reserved':
+                    value = 0
+                else:
+                    value = datastream.header[elem]
+                head.append(value)
+            except:
+                print "%s missing in datastream header"
+                if elem == 'DataPublicationDate':
+                    print "  --  appending current date"
+                    value = datetime.strftime(datetime.utcnow(),'%y%m')
+                    head.append(value)
+                else:
+                    print "  --  critical information missing in data header  --"
+                    print "  ---------------------------------------------------"
+                    print " Please provide: StationIAGAcode, DataAcquisitionLatitude, "
+                    print " DataAcquisitionLongitude, DataElevation, DataConversion, "
+                    print " DataComponents, StationInstitution, DataQuality, SensorType, "
+                    print " StationK9, DataDigitalSampling, DataSensorOrientation"
+                    print " e.g. data.header['StationK9'] = 750"
+                    return False
+
+        # Constructing header Info
+        #print head, len(head)
+        packcode = '4s4l4s4sl4s4sll4s4sll' # fh.read(64)
+        head_bin = struct.pack(packcode,*head)
+
+        # add minute values
+        packcode += '1440l' # fh.read(64)
+        xvals = np.asarray(dayar[1]*10).astype(int)
+        xvals = np.asarray([elem if not isnan(elem) else 999999 for elem in xvals])
+        head.extend(xvals)
+        packcode += '1440l' # fh.read(64)
+        yvals = np.asarray(dayar[2]*10).astype(int)
+        yvals = np.asarray([elem if not isnan(elem) else 999999 for elem in yvals])
+        head.extend(yvals)
+        packcode += '1440l' # fh.read(64)
+        zvals = np.asarray(dayar[3]*10).astype(int)
+        zvals = np.asarray([elem if not isnan(elem) else 999999 for elem in zvals])
+        head.extend(zvals)
+        packcode += '1440l' # fh.read(64)
+        if df:
+            dfvals = np.asarray(dayar[dfpos]*10).astype(int)
+            dfvals = np.asarray([elem if not isnan(elem) else 999999 for elem in dfvals])
+        else:
+            dfvals = np.asarray([888888]*len(dayar[0])).astype(int)
+        head.extend(dfvals)
+
+        # add hourly means
+        packcode += '24l'
+        xhou = np.asarray(temp.ndarray[1]*10).astype(int)
+        xhou = np.asarray([elem if not isnan(elem) else 999999 for elem in xhou])
+        head.extend(xhou)
+        packcode += '24l'
+        yhou = np.asarray(temp.ndarray[2]*10).astype(int)
+        yhou = np.asarray([elem if not isnan(elem) else 999999 for elem in yhou])
+        head.extend(yhou)
+        packcode += '24l'
+        zhou = np.asarray(temp.ndarray[3]*10).astype(int)
+        zhou = np.asarray([elem if not isnan(elem) else 999999 for elem in zhou])
+        head.extend(zhou)
+        packcode += '24l'
+        if df:
+            dfhou = np.asarray(temp.ndarray[dfpos]*10).astype(int)
+            dfhou = np.asarray([elem if not isnan(elem) else 999999 for elem in dfhou])
+        else:
+            dfhou = np.asarray([888888]*24).astype(int)
+        head.extend(dfhou)
+        
+        # add daily means
+        packcode += '4l'
+        # -- drop all values above 88888
+        xvalid = np.asarray([elem for elem in xvals if elem < 888880])
+        yvalid = np.asarray([elem for elem in yvals if elem < 888880])
+        zvalid = np.asarray([elem for elem in zvals if elem < 888880])
+        if len(xvalid)>0.9*len(xvals):
+            head.append(int(np.mean(xvalid)))
+        else:
+            head.append(999999)
+        if len(xvalid)>0.9*len(xvals):
+            head.append(int(np.mean(yvalid)))
+        else:
+            head.append(999999)
+        if len(xvalid)>0.9*len(xvals):
+            head.append(int(np.mean(zvalid)))
+        else:
+            head.append(999999)
+        if df:
+            dfvalid = np.asarray([elem for elem in dfvals if elem < 88888])
+            if len(dfvalid)>0.9*len(dfvals):
+                head.append(int(np.mean(dfvalid)))
+            else:
+                head.append(999999)
+        else:
+            head.append(888888)
+
+        # add k values
+        if kvals:
+            dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
+            dayk = dayk[KEYLIST.index('var1')]
+            packcode += '8l'
+            if not len(dayk) == 8:
+                ks = [999]*8
+            else:
+                ks = dayk
+            sumk = int(sum(ks))
+            if sumk > 999:
+                sumk = 999
+            linestr = "  {0}   {1}".format(datetime.strftime(num2date(t0+i),'%d-%b-%y'), datetime.strftime(num2date(t0+i),'%j'))
+            tup = tuple([str(int(elem)) for elem in ks])
+            linestr += "{0:>6}{1:>5}{2:>5}{3:>5}{4:>7}{5:>5}{6:>5}{7:>5}".format(*tup)
+            linestr += "{0:>9}".format(str(sumk))
+            kstr.append(linestr)
+            head.extend(ks)
+        else:
+            packcode += '8l'
+            ks = [999]*8
+            head.extend(ks)
+        # add reserved
+        packcode += '4l'
+        reserved = [0,0,0,0]
+        head.extend(reserved)
+
+        #print head      
+        #print [num2date(elem) for elem in temp.ndarray[0]]
+        line = struct.pack(packcode,*head)
+        output = output + line
+
+    path = os.path.split(filename)
+    filename = os.path.join(path[0],path[1].upper())    
+
+    if len(kstr) > 0:
+        station=datastream.header['StationIAGAcode']
+        k9=datastream.header['StationK9']
+        lat=datastream.header['DataAcquisitionLatitude']
+        lon=datastream.header['DataAcquisitionLongitude']
+        year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
+        ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
+        kfile = os.path.join(path[0],station.upper()+year+'K.DKA')
+        print "Writing k summary file:", kfile
+        head = []
+        if not os.path.isfile(kfile):
+            head.append("{0:^66}".format(station.upper()))
+            head2 = '                  Geographical latitude: {:>10} N'.format(lat)
+            head3 = '                  Geographical longitude:{:>10} E'.format(lon)
+            head4 = '            K-index values for {0}     (K9-limit = {1:>4} nT)'.format(ye, k9)
+            head5 = '  DA-MON-YR  DAY #    1    2    3    4      5    6    7    8       SK'
+            emptyline = ''
+            head.append("{0:<50}".format(head2))
+            head.append("{0:<50}".format(head3))
+            head.append("{0:<50}".format(emptyline))
+            head.append("{0:<50}".format(head4))
+            head.append("{0:<50}".format(emptyline))
+            head.append("{0:<50}".format(head5))
+            head.append("{0:<50}".format(emptyline))
+            with open(kfile, "wb") as myfile:
+                for elem in head:
+                    myfile.write(elem+'\r\n')
+                #print elem
+        # write data            
+        with open(kfile, "a") as myfile:
+            for elem in kstr:
+                myfile.write(elem+'\r\n')
+                #print elem
+
+    print "Writing monthly IAF data format:", path[1].upper()
+    if os.path.isfile(filename):
+        if mode == 'append':
+            with open(filename, "a") as myfile:
+                myfile.write(output)
+        else: # overwrite mode
+            os.remove(filename)
+            myfile = open(filename, "wb")
+            myfile.write(output)
+            myfile.close()
+    else:
+        myfile = open(filename, "wb")
+        myfile.write(output)
+        myfile.close()
+
+    print "Creating README from header info:", path[1].upper()
+    readme = True
+    if readme:
+        requiredhead = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo', 'StationEmail','StationK9']
+        acklist = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo' ]
+        conlist = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry', 'StationEmail']
+
+        for h in requiredhead:
+            try:
+                test = datastream.header[h]
+            except:
+                print ("README file could not be generated")
+                print ("Info on {0} is missing".format(h))
+                return True
+        ack = []
+        contact = []
+        for a in acklist:
+            try:
+                ack.append("               {0}".format(datastream.header[a]))
+            except:
+                pass
+        for c in conlist:
+            try:
+                contact.append("               {0}".format(datastream.header[c]))
+            except:
+                pass
+        
+        # 1. Check completeness of essential header information
+        station=datastream.header['StationIAGAcode']
+        stationname = datastream.header['StationName']
+        k9=datastream.header['StationK9']
+        lat=datastream.header['DataAcquisitionLatitude']
+        lon=datastream.header['DataAcquisitionLongitude']
+        ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
+        rfile = os.path.join(path[0],"README."+station.upper())
+        head = []
+        print "Writing README file:", rfile
+        
+        if not os.path.isfile(rfile):
+            emptyline = ''
+            head.append("{0:^66}".format(station.upper()))
+            head.append("{0:<50}".format(emptyline))
+            head.append("{0:>23} OBSERVATORY INFOMATION {1:>5}".format(stationname.upper(), ye))
+            head.append("{0:<50}".format(emptyline))
+            head.append("ACKNOWLEDGEMT: Users of {0:}-data should acknowledge:".format(station.upper()))
+            for elem in ack:
+                head.append(elem)
+            head.append("{0:<50}".format(emptyline))
+            head.append("STATION ID   : {0}".format(station.upper()))
+            head.append("LOCATION     : {0}, {1}".format(datastream.header['StationCity'],datastream.header['StationCountry']))
+            head.append("ORGANIZATION : {0:<50}".format(datastream.header['StationInstitution']))
+            head.append("CO-LATITUDE  : {:.2} Deg.".format(90-float(lat)))
+            head.append("LONGITUDE    : {:.2} Deg. E".format(float(lon)))
+            head.append("ELEVATION    : {0} meters".format(int(datastream.header['DataElevation'])))
+            head.append("{0:<50}".format(emptyline))
+            head.append("ABSOLUTE")
+            head.append("INSTRUMENTS  : please insert manually")
+            head.append("RECORDING")
+            head.append("VARIOMETER   : please insert manually")
+            head.append("ORIENTATION  : {0}".format(datastream.header['DataSensorOrientation']))
+            head.append("{0:<50}".format(emptyline))
+            head.append("DYNAMIC RANGE: please insert manually")
+            head.append("RESOLUTION   : please insert manually")
+            head.append("SAMPLING RATE: please insert manually")
+            head.append("FILTER       : {0}".format(dsf))
+            # Provide method with head of kvals
+            head.append("K-NUMBERS    : Computer derived (FMI method, MagPy)")
+            head.append("K9-LIMIT     : {0:>4} nT".format(k9))
+            head.append("{0:<50}".format(emptyline))
+            head.append("GINS         : please insert manually")
+            head.append("SATELLITE    : please insert manually")
+            head.append("OBSERVER(S)  : please insert manually")
+            head.append("ENGINEER(S)  : please insert manually")
+            head.append("CONTACT      : ")
+            for elem in contact:
+                head.append(elem)
+            with open(rfile, "wb") as myfile:
+                for elem in head:
+                    myfile.write(elem+'\r\n')
+            myfile.close()
+
+    return True
     
 
 def readIMAGCDF(filename, headonly=False, **kwargs):
@@ -488,7 +850,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if key == 'DataPublicationLevel' or key == 'PublicationLevel':
             mycdf.attrs['PublicationLevel'] = headers[key]
         if key == 'DataPublicationDate' or key == 'PublicationDate':
-            mycdf.attrs['PublicationDate'] = headers[key]
+            pubdate = datetime.strftime(datastream._testtime(headers[key]),'%Y-%m-%d %H:%M:%S')
+            mycdf.attrs['PublicationDate'] = pubdate
         if key == 'StationName' or key == 'ObservatoryName':
             mycdf.attrs['ObservatoryName'] = headers[key]
         if key == 'DataAcquisitionLatitude' or key == 'Latitude':
@@ -962,8 +1325,20 @@ def readBLV(filename, headonly=False, **kwargs):
 
 def writeBLV(datastream, filename, **kwargs):
     """
-    Writing Intermagnet - baseline data.
-    uses baseline function
+    DESCRIPTION:
+        Writing Intermagnet - baseline data.
+        uses baseline function
+    PARAMETERS:
+        datastream	: (DataStream) basevalue data stream
+        filename	: (string) path
+
+      Optional:
+        deltaF		: (float) average field difference in nT between DI pier and F 
+                          measurement position. If provided, this value is assumed to
+                          represent the adopted value for all days: If not, then the baseline
+                          function is assumed to be used.
+        diff		: (ndarray) array containing dayly averages of delta F values between
+                          variometer and F measurement
     """
 
     baselinefunction = kwargs.get('baselinefunction')   
@@ -976,8 +1351,11 @@ def writeBLV(datastream, filename, **kwargs):
     meanh = kwargs.get('meanh')
     meanf = kwargs.get('meanf')
     keys = kwargs.get('keys')
-    delta = kwargs.get('delta')
     deltaF = kwargs.get('deltaF')
+    diff = kwargs.get('diff')
+    # add list for baseline data/jumps -> extract from db
+    #  list contains time ranges and parameters for baselinecalc
+    baseparam =  kwargs.get('baseparam')
 
     if not year:
         year = datetime.strftime(datetime.utcnow(),'%Y')
@@ -1016,6 +1394,8 @@ def writeBLV(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
+    print "writeBLV: file:", filename
+
     # 3. check whether datastream corresponds to an absolute file and remove unreasonable inputs
     #     - check whether F measurements were performed at the main pier - delta F's are available
 
@@ -1024,8 +1404,9 @@ def writeBLV(datastream, filename, **kwargs):
             print "writeBLV: Format not recognized - needs to be MagPyDI"
             return False
     except:
-        print "writeBLV: Format not recognized - needs to be MagPyDI"
-        return False
+        print "writeBLV: Format not recognized - should be MagPyDI"
+        print "writeBLV: is not yet assigned during database access"
+        #return False
      
     indf = KEYLIST.index('df')
     if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:
@@ -1050,6 +1431,7 @@ def writeBLV(datastream, filename, **kwargs):
     indy = KEYLIST.index('dy')
     indz = KEYLIST.index('dz')
     indf = KEYLIST.index('df')
+    indFtype = KEYLIST.index('str4')
     for i in range(0,2):
         array[indx].append(0.0)
         array[indy].append(0.0)
@@ -1088,6 +1470,13 @@ def writeBLV(datastream, filename, **kwargs):
     if not meanh:
         meanh = datastream.mean('x')
 
+    ##### ###########################################################################
+    print "TODO: cycle through parameter baseparam here"
+    print " baseparam contains time ranges their valid baseline function parameters"
+    print " -> necessary for discontiuous fits"
+    print " join the independent year stream, and create datelist for marking jumps with d" 
+    ##### ###########################################################################
+
     # 6. calculate baseline function
     basefunction = dummystream.baseline(backupabsstream,keys=keys, fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,extradays=extradays)
 
@@ -1105,15 +1494,28 @@ def writeBLV(datastream, filename, **kwargs):
     yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar))
     yearstream = yearstream.func2stream(basefunction,mode='addbaseline',keys=keys)
 
+    #print "writeBLV:", yearstream.length()
+
+    #print "writeBLV: Testing deltaF (between Pier and F):"
+    #print "adopted diff is yearly average"
+    #print "adopted average daily delta F comes from diff of vario and scalar"
+    #pos = KEYLIST.index('df')
+    #dfl = [val for val in datastream.ndarray[pos] if not isnan(val)]
+    #meandf = datastream.mean('df')
+    #print "Mean df", meandf, mean(dfl)
+
     # 7. Get essential header info
     header = datastream.header
     try:
         idc = header['StationID']
     except:
+        print "formatBLV: No station code specified. Aborting ..."
         logging.error("formatBLV: No station code specified. Aborting ...")        
         return False
     headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
     myFile.writelines( headerline+'\r\n' )
+
+    #print "writeBLV:", headerline
 
     # 8. Basevalues
     if len(datastream.ndarray[0]) > 0:
@@ -1124,14 +1526,15 @@ def writeBLV(datastream, filename, **kwargs):
                 y = float(datastream.ndarray[indy][idx])*60.
                 z = float(datastream.ndarray[indz][idx])
                 df = float(datastream.ndarray[indf][idx])
+                ftype = datastream.ndarray[indFtype][idx]
                 if isnan(x):
-                    x = 999999.00
+                    x = 99999.00
                 if isnan(y):
-                    y = 999999.00
+                    y = 99999.00
                 if isnan(z):
-                    z = 999999.00
-                if isnan(df):
-                    df = 999999.00
+                    z = 99999.00
+                if isnan(df) or ftype.startswith('Fext'): 
+                    df = 99999.00
                 line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
                 myFile.writelines( line )
     else:
@@ -1140,25 +1543,25 @@ def writeBLV(datastream, filename, **kwargs):
             #DDD_aaaaaa.aa_bbbbbb.bb_zzzzzz.zz_ssssss.ssCrLf
             day = datetime.strftime(num2date(elem.time),'%j')
             if isnan(elem.x):
-                x = 999999.00
+                x = 99999.00
             else:
                 if not elem.typ == 'idff':
                     x = elem.x
                 else:
                     x = elem.x*60
             if isnan(elem.y):
-                y = 999999.00
+                y = 99999.00
             else:
                 if elem.typ == 'xyzf':
                     y = elem.y
                 else:
                     y = elem.y*60
             if isnan(elem.z):
-                z = 999999.00
+                z = 99999.00
             else:
                 z = elem.z
             if isnan(elem.df):
-                f = 999999.00
+                f = 99999.00
             else:
                 f = elem.df
             line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,f)
@@ -1167,33 +1570,43 @@ def writeBLV(datastream, filename, **kwargs):
     # 9. adopted basevalues
     myFile.writelines( '*\r\n' )
     #TODO: deltaf and continuity parameter from db
-    parameter = 'c' # corresponde to m
+    parameter = 'c' # corresponds to m
     for idx, t in enumerate(yearstream.ndarray[0]):
         #001_AAAAAA.AA_BBBBBB.BB_ZZZZZZ.ZZ_SSSSSS.SS_DDDD.DD_mCrLf
         day = datetime.strftime(num2date(t),'%j')
         if np.isnan(yearstream.ndarray[indx][idx]):
-            x = 999999.00
+            x = 99999.00
         else:
             if not comps.lower() == 'idff':
                 x = yearstream.ndarray[indx][idx]
             else:
                 x = yearstream.ndarray[indx][idx]*60.
         if np.isnan(yearstream.ndarray[indy][idx]):
-            y = 999999.00
+            y = 99999.00
         else:
             if comps.lower() == 'xyzf':
                 y = yearstream.ndarray[indy][idx]
             else:
                 y = yearstream.ndarray[indy][idx]*60.
         if np.isnan(yearstream.ndarray[indz][idx]):
-            z = 999999.00
+            z = 99999.00
         else:
             z = yearstream.ndarray[indz][idx]
-        if np.isnan(yearstream.ndarray[indf][idx]):
-            f = 999999.00
+        if deltaF:
+            f = deltaF
+        elif np.isnan(yearstream.ndarray[indf][idx]):
+            f = 99999.00
         else:
             f = yearstream.ndarray[indf][idx]
-        df = 8888.00
+        if diff:
+            posdf = KEYLIST.index('df')
+            indext = [i for i,tpos in enumerate(diff.ndarray[0]) if num2date(tpos).date() == num2date(t).date()]
+            if len(indext) > 0:
+                df = diff.ndarray[posdf][indext[0]]
+            else:
+                df = 999.00
+        else:
+            df = 888.00
         line = '%s %9.2f %9.2f %9.2f %9.2f %7.2f %s\r\n' % (day,x,y,z,f,df,parameter)
         myFile.writelines( line )
 

@@ -282,7 +282,7 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Elevation %-12s %-44s |\n' % (' ',str(header.get('DataElevation'," "))[:44]))
         line.append(' Reported %-13s %-44s |\n' % (' ',header.get('DataComponents'," ")))
         line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('DataSensorOrientation'," ")[:44]))
-        line.append(' Digital Sampling %-5s %-44s |\n' % (' ',header.get('DataDigitalSampling'," ")[:44]))
+        line.append(' Digital Sampling %-5s %-44s |\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(str(header.get('DataSamplingRate'," "))+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('DataType'," ")[:44]))
         line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (header.get('col-x',"x").upper(),header.get('col-y',"y").upper(),header.get('col-z',"z").upper(),header.get('col-f',"f").upper()))

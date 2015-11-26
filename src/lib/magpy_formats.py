@@ -306,6 +306,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeWDC(datastream, filename, **kwargs)
     elif (format_type == "IMF"):
         return writeIMF(datastream, filename, **kwargs)
+    elif (format_type == "IAF"):
+        return writeIAF(datastream, filename, **kwargs)
     elif (format_type == "IMAGCDF"):
         return writeIMAGCDF(datastream, filename, **kwargs)
     elif (format_type == "BLV"):

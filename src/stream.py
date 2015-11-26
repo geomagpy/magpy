@@ -383,7 +383,6 @@ class DataStream(object):
     - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
     - stream.extract(self, key, value, compare=None, debugmode=None):
     - stream.extrapolate(self, start, end):
-    - stream.nfilter(self,debugmode=None,**kwargs):
     - stream.filter(self, **kwargs):
     - stream.fit(self, keys, **kwargs):
     - stream.flag_outlier(self, **kwargs):
@@ -399,20 +398,14 @@ class DataStream(object):
     - stream.k_fmi(self, **kwargs):
     - stream.mean(self, key, **kwargs):
     - stream.multiply(self, factors):
-    - stream.obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False, 
     - stream.offset(self, offsets):
-    - stream.plot(self, keys=None, debugmode=None, **kwargs):
-    - stream.powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs):
     - stream.remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
-    - stream.remove_outlier(self, **kwargs):
     - stream.resample(self, keys, **kwargs):
     - stream.rotation(self,**kwargs):
     - stream.scale_correction(self, keys, scales, **kwargs):
     - stream.smooth(self, keys, **kwargs):
-    - stream.spectrogram(self, keys, per_lap=0.9, wlen=None, log=False, 
     - stream.steadyrise(self, key, timewindow, **kwargs):
-    - stream.stereoplot(self, **kwargs):
     - stream.trim(self, starttime=None, endtime=None, newway=False):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
     - stream.write(self, filepath, **kwargs):
@@ -441,12 +434,10 @@ class DataStream(object):
     - stream.k_fmi() -- Calculating k values following the fmi approach
     - stream.linestruct2ndarray() -- converts linestrcut data to ndarray. should be avoided
     - stream.mean() -- Calculates mean values for the specified key, Nan's are regarded for
-    - stream.obspyspectrogram() -- Computes and plots spectrogram of the input data
     - stream.offset() -- Apply constant offsets to elements of the datastream
     - stream.plot() -- plot keys from stream
     - stream.powerspectrum() -- Calculating the power spectrum following the numpy fft example
     - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
-    - stream.remove_outlier() -- returns stream (adds flags and comments)
     - stream.resample(period) -- Resample stream to given sampling period.
     - stream.rotation() -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
     - stream.selectkeys(keys) -- ndarray: remove all data except for provided keys (and flag/comment)
@@ -2079,10 +2070,12 @@ CALLED BY:
     def calc_f(self, **kwargs):
         """
         DEFINITION:
-            Calculates the f form  x^2+y^2+z^2
+            Calculates the f form  x^2+y^2+z^2. If delta F is present, then by default 
+            this value is added as well
         PARAMETERS:
          Kwargs:
-            - offset:  (array) containing three elements [xoffset,yoffset,zoffset],
+            - offset:     (array) containing three elements [xoffset,yoffset,zoffset],
+            - skipdelta   (bool)  id selecetd then an existing delta f is not accounted for
         RETURNS:
             - DataStream with f and, if given, offset corrected xyz values
 
@@ -2094,6 +2087,8 @@ CALLED BY:
         # Take care: if there is only 0.1 nT accuracy then there will be a similar noise in the deltaF signal
 
         offset = kwargs.get('offset')
+        skipdelta = kwargs.get('skipdelta')
+
         if not offset:
             offset = [0,0,0]
         else:
@@ -2115,15 +2110,21 @@ CALLED BY:
             return self
 
         loggerstream.info('calc_f: --- Calculating f started at %s ' % str(datetime.now()))
+
         if ndtype:
+            inddf = KEYLIST.index('df')
             indf = KEYLIST.index('f')
             indx = KEYLIST.index('x')
             indy = KEYLIST.index('y')
             indz = KEYLIST.index('z')
+            if len(self.ndarray[inddf]) > 0 and not skipdelta:
+                df = self.ndarray[inddf].astype(float)
+            else:
+                df = np.asarray([0.0]*len(self.ndarray[indx]))
             x2 = ((self.ndarray[indx]+offset[0])**2).astype(float)
             y2 = ((self.ndarray[indy]+offset[1])**2).astype(float)
             z2 = ((self.ndarray[indz]+offset[2])**2).astype(float)
-            self.ndarray[indf] = np.sqrt(x2+y2+z2)
+            self.ndarray[indf] = np.sqrt(x2+y2+z2) + df
         else:
             for elem in self:
                 elem.f = np.sqrt((elem.x+offset[0])**2+(elem.y+offset[1])**2+(elem.z+offset[2])**2)
@@ -2180,7 +2181,7 @@ CALLED BY:
     def delta_f(self, **kwargs):
         """
         DESCRIPTION:
-            Calculates the difference of x+y+z to f
+            Calculates the difference of x+y+z to f and puts the result to the df column
         
         PARAMETER:
             keywords:
@@ -2789,7 +2790,7 @@ CALLED BY:
             loggerstream.debug("smooth: You entered non-existing filter type -  %s  - " % filter_type)
             return self
 
-        print self.length()[0]
+        #print self.length()[0]
         if not self.length()[0] > 1:
             loggerstream.error("Filter: stream needs to contain data - returning.")
             return self
@@ -6418,7 +6419,7 @@ CALLED BY:
                 res_stream.add(row)
 
         for key in keys:
-            print "Resampling:", key
+            #print "Resampling:", key
             if key not in KEYLIST[1:16]:
                 loggerstream.warning("resample: Key %s not supported!" % key)
 
@@ -7390,10 +7391,13 @@ CALLED BY:
         - year          (int) year
         - meanh         (float) annual mean of H component
         - meanf         (float) annual mean of F component
+        - deltaF        (float) given deltaF value between pier and f position
+        - diff          (DataStream) diff (deltaF) between vario and scalar
        --- specific functions for intermagnet file
         - version       (str) file version
         - gin           (gin) information node code
         - datatype      (str) R: reported, A: adjusted, Q: quasi-definit, D: definite
+        - kvals		(Datastream) contains K value for iaf storage
 
 
     RETURNS:
@@ -7426,13 +7430,17 @@ CALLED BY:
         year = kwargs.get('year')
         meanh = kwargs.get('meanh')
         meanf = kwargs.get('meanf')
+        deltaF = kwargs.get('deltaF')
+        diff = kwargs.get('diff')
+        baseparam =  kwargs.get('baseparam')
         version = kwargs.get('version')
         gin = kwargs.get('gin')
         datatype = kwargs.get('datatype')
+        kvals = kwargs.get('kvals')
         success = True
 
         t1 = datetime.utcnow()
-        print "write - Start:", t1
+        #print "write - Start:", t1
 
         # Preconfigure some fileformats - can be overwritten by keywords
         if format_type == 'IMF':
@@ -7442,12 +7450,23 @@ CALLED BY:
             except:
                 extension = 'txt'
             filenameends = '.'+extension
+        if format_type == 'IAF':
+            try:
+                filenamebegins = (self.header['StationIAGAcode']).upper()
+            except:
+                filenamebegins = 'XXX'
+            dateformat = '%y%b'
+            extension = 'BIN'
+            filenameends = '.'+extension
         if format_type == 'BLV':
             if len(self.ndarray[0]) > 0:
                 lt = max(self.ndarray[0].astype(float))
             else:
                 lt = self[-1].time
-            blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
+            if year:
+                blvyear = str(year)
+            else:
+                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
             try:
                 filenamebegins = (self.header['StationID']).upper()+blvyear
             except:
@@ -7503,7 +7522,7 @@ CALLED BY:
             lasttime = num2date(self[-1].time).replace(tzinfo=None)
 
         t2 = datetime.utcnow()
-        print "write - initial selection:", t2-t1
+        #print "write - initial selection:", t2-t1
 
         # divide stream in parts according to coverage and save them
         newst = DataStream()
@@ -7520,14 +7539,14 @@ CALLED BY:
                 if ndtype:
                     lst = []
                     ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
-                    print "Trying to write ndarrays", ndarray
+                    #print "Trying to write ndarrays", ndarray
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                     ndarray = np.asarray([])
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -7548,7 +7567,7 @@ CALLED BY:
                 #lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                 #newst = DataStream(lst,self.header)
                 t3 = datetime.utcnow()
-                print "write - writing day:", t3
+                #print "write - writing day:", t3
 
                 if ndtype:
                     lst = []
@@ -7557,7 +7576,7 @@ CALLED BY:
                     #print dailystream.length()
                     #ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
                     #print starttime, endtime, coverage
-                    print "Maxidx", maxidx
+                    #print "Maxidx", maxidx
                     ndarray=dailystream._select_timerange(starttime=starttime, endtime=endtime, maxidx=maxidx)
                     if len(ndarray[0]) > 0:
                         maxidx = len(ndarray[0])*2
@@ -7568,7 +7587,7 @@ CALLED BY:
                     ndarray = np.asarray([np.asarray([]) for key in KEYLIST])
 
                 t4 = datetime.utcnow()
-                print "write - selecting time range needs:", t4-t3
+                #print "write - selecting time range needs:", t4-t3
 
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
@@ -7583,12 +7602,12 @@ CALLED BY:
                 endtime = endtime + coverage
 
                 t5 = datetime.utcnow()
-                print "write - written:", t5-t3
-                print "write - End:", t5
+                #print "write - written:", t5-t3
+                #print "write - End:", t5
 
         else:
             filename = filenamebegins + filenameends
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,meanh=meanh,meanf=meanf,year=year,extradays=extradays)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays)
 
         return success
 
@@ -9198,21 +9217,37 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             #t1s = datetime.utcnow()
             # Get indicies of stream_b of which times are present in stream_a 
             array = [[] for key in KEYLIST]
-            indtib = np.nonzero(np.in1d(timeb, timea))[0]
+            #indtib = np.nonzero(np.in1d(timeb, timea))[0]
+
+            idxB = np.argsort(timeb)
+            sortedB = timeb[idxB]
+            idxA = np.searchsorted(sortedB, timea)
+            indtib = idxB[idxA]
+            #print timeb[pos]
+            #print timea
+            #print indtib
             # If equal elements occur in time columns 
             if len(indtib) > int(0.5*len(timeb)):
                 print "Found identical timesteps - using simple subtraction"
                 # get tb times for all matching indicies
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs 
-                indtia = np.nonzero(np.in1d(tb, timea))[0]
+                #indtia = np.nonzero(np.in1d(tb, timea))[0]
+                idxA = np.argsort(timea)
+                sortedA = timea[idxA]
+                idxB = np.searchsorted(sortedA, tb)
+                indtia = idxA[idxB]
+                #idxB = np.argsort(tb)
+                #sortedB = tb[idxB]
+                #idxA = np.searchsorted(sortedB, timea)
+                #indtia = idxB[idxA]
                 if len(indtia) == len(indtib):
                     nanind = []
                     for key in keys:
                         foundnan = False
                         keyind = KEYLIST.index(key)
                         #print key, keyind, len(sa.ndarray[keyind]), len(sb.ndarray[keyind])
-                        #print indtia, indtib
+                        #print indtia, indtib,len(indtia), len(indtib)
                         if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
                             for ind in indtia:
                                 try:
@@ -9255,18 +9290,21 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
                 if len(function) > 0:
                     nanind = []
+                    sa.ndarray[0] = sa.ndarray[0].astype(float)
                     for key in keys:
                         foundnan = False
                         keyind = KEYLIST.index(key)
                         #print key, keyind
                         #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
-                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0: # and key in function:
+                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0 and key in NUMKEYLIST: # and key in function:
                             #check lengths of sa.ndarray and last value of indtia
                             indtia = list(np.asarray(indtia)[np.asarray(indtia)<len(sa.ndarray[0])]) 
                             #print keyind, len(indtia), len(sa.ndarray[keyind]), indtia[0], indtia[-1] 
+                            # Convert array to float just in case
+                            sa.ndarray[keyind] = sa.ndarray[keyind].astype(float)
                             #print sa.ndarray[4][indtia[-2]]
                             vala = [sa.ndarray[keyind][ind] for ind in indtia]
-                            #print "VALA", np.asarray(vala) 
+                            #print "VALA", np.asarray(vala)
                             valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
                             #print "VALB", np.asarray(valb) 
                             diff = np.asarray(vala) - np.asarray(valb)
@@ -9492,11 +9530,126 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     return DataStream(stream_a, headera)      
 
 
-def stackStreams(stream_a, stream_b, **kwargs): # TODO
+def stackStreams(streamlist, **kwargs): # TODO
     """
-    stack the contents of two data stream:
+    DEFINITION:
+        Stack the contents of data streams. Eventually calculate mean and uncertainty.
+        Only time steps present in all data streams are stacked. 
+
+    PARAMETERS:
+    Variables:
+        - streamlist: 	(list) list of DataStreams
+
+    Optional:
+        - keys: 	(list) keys to be stacked/averaged
+        - get:	 	(string) obtain either "sum" or "mean" of the stacked data
+        - skipdate: 	(bool) if True then date is not regarded in stream. To be used
+                               for stacking data of different days at same time
+        - uncert:	(bool) in case of get='mean' and provided that x,y,z or f keys are available
+                               and 'dx','dy','dz','df' columns are empty, the latter will be filled
+                               with standard deviations
+
+    RETURNS:
+        A DataStream
+
+    EXAMPLE:
+        # e.g. Getting average 3 hour K values of quiet days
+        >>> meanstream = stackStreams([kvals_of_severals_days],skipdate=True,get='mean')
+        # Mean variation curve of two different variometers
+        >>> meanstream = stackStreams([vario1,vario2],get='mean',uncert='True')
+
+    APPLICATION:
     """
-    pass
+
+    keys = kwargs.get('keys')
+    skipdate = kwargs.get('skipdate')
+    get = kwargs.get('get')
+    uncert = kwargs.get('uncert')
+
+    result = DataStream()
+
+    if not isinstance(streamlist, (list, tuple)):
+        print "stackStream: provide a list of streams to be stacked" 
+        return result
+
+    if not len(streamlist[0].ndarray[0]) > 0:
+        return result
+
+    if not len(streamlist) > 1:
+        return streamlist[0]
+
+    result = streamlist[0].copy()
+    timea = result.ndarray[0]
+    numday = int(result.ndarray[0][-1])
+    skipdate = True
+    if skipdate:
+        print "1", timea
+        timea = np.asarray([elem-numday for elem in timea])
+        print "2", timea
+    if not keys:
+        keys = result._get_key_headers(numerical=True)
+    keys = [key for key in keys if key in NUMKEYLIST]
+
+    sumarray = [[] for key in KEYLIST]
+    for idx,stream in enumerate(streamlist):
+        if idx == 0:
+            pass
+        else:
+            # identify all indicies of b of which times are present in first stream
+            timeb = stream.ndarray[0]
+            numday = int(stream.ndarray[0][-1])
+            timeb = np.asarray([elem-numday for elem in timeb])
+            idxB = np.argsort(timeb)
+            sortedB = timeb[idxB]
+            idxA = np.searchsorted(sortedB, timea)
+            indtib = idxB[idxA]
+            # identify all indicies of first stream of which times are present in current stream
+            tb = np.asarray([timeb[ind] for ind in indtib])
+            # Get indicies of stream_a of which times are present in matching tbs and rewrite timea 
+            idxA = np.argsort(timea)
+            sortedA = timea[idxA]
+            idxB = np.searchsorted(sortedA, tb)
+            indtia = idxA[idxB]
+            timea = np.asarray([timea[ind] for ind in indtia])
+            # Now cycle through keys and stack data
+            for key in keys:
+                # firstly create an array with streamlist[0] data
+                keyind = KEYLIST.index(key)
+                if idx == 1:
+                    if len(result.ndarray[keyind]) > 0:
+                        vala = [[float(result.ndarray[keyind][ind])] for ind in indtia]
+                    else:
+                        vala = [[]]
+                else:
+                    vala = [sumarray[keyind][ind] for ind in indtia]
+                if len(result.ndarray[keyind]) > 0 and len(stream.ndarray[keyind]) > 0:
+                    for ind in indtia:
+                        vala[ind].append(stream.ndarray[keyind][ind])
+                sumarray[keyind] = vala
+
+    # Determine position of delta values
+    pos = KEYLIST.index('x')
+    dpos = KEYLIST.index('dx')
+    dif = dpos-pos
+
+    array = [[] for key in KEYLIST]
+    for idx,elem in enumerate(sumarray):
+        if len(elem) > 0:
+            for el in elem:
+                if get == 'mean':
+                    val = mean(el)
+                    if uncert and idx in [1,2,3,4]:
+                        val2 = np.std(el)
+                        array[idx+dif].append(val2)                        
+                else:
+                    val = sum(el)
+                array[idx].append(val)
+        array[idx] = np.asarray(array[idx])
+    array[0] = np.asarray([result.ndarray[0][ind] for ind in indtia])
+    array = np.asarray(array)
+
+    return DataStream([LineStruct()],result.header,array)        
+
 
 def compareStreams(stream_a, stream_b):
     '''

@@ -190,6 +190,7 @@ def readWDC(filename, headonly=False, **kwargs):
                     #else:
                     #    array[xind].append(val)
             lasttimestr = timestr
+
         else:
             print "Can not open WDC format"
             pass
@@ -272,6 +273,7 @@ def readWDC(filename, headonly=False, **kwargs):
     headers['col-f'] = 'f'
     headers['unit-col-f'] = 'nT'
     headers['StationIAGAcode'] = code
+    headers['StationID'] = code
     
     return DataStream(stream, headers)  
 

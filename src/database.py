@@ -978,20 +978,24 @@ def dbfields2dict(db,datainfoid):
 
     for key in SENSORSKEYLIST:
         getsens = 'SELECT '+ key +' FROM SENSORS WHERE SensorID = "'+ids[0]+'"'
-        cursor.execute(getsens)
-        row = cursor.fetchone()
-        if isinstance(row[0], basestring):
-            metadatadict[key] = row[0]
-            if key == 'SensorKeys':
-                senscolsstr = row[0]
-            if key == 'SensorElements':
-                senscolselstr = row[0]
-        else:
-            if row[0] == None:
-                pass
-                #metadatadict[key] = row[0]
+        try:
+            cursor.execute(getsens)
+            row = cursor.fetchone()
+            if isinstance(row[0], basestring):
+                metadatadict[key] = row[0]
+                if key == 'SensorKeys':
+                    senscolsstr = row[0]
+                if key == 'SensorElements':
+                    senscolselstr = row[0]
             else:
-                metadatadict[key] = float(row[0])
+                if row[0] == None:
+                    pass
+                    #metadatadict[key] = row[0]
+                else:
+                    metadatadict[key] = float(row[0])
+        except:
+            # if no sensor information is available e.g. BLV data
+            pass
 
     try:
         if colsstr.find(',') >= 0:
@@ -1383,7 +1387,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     """
 
     # Define keys here which do not trigger a new revision number in the table
-    SKIPKEYS = ['DataID', 'ColumnContents','ColumnUnits', 'DataFormat','DataTerms','DataDeltaF','DataDeltaT1','DataDeltaT2', 'DataFlagModification', 'DataAbsFunc',
+    SKIPKEYS = ['DataID', 'SensorID', 'ColumnContents','ColumnUnits', 'DataFormat','DataTerms','DataDeltaF','DataDeltaT1','DataDeltaT2', 'DataFlagModification', 'DataAbsFunc',
 'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate', 'DataRating','DataComments','DataSource','DataAbsFunctionObject', 'DataDeltaValues', 'DataTerms', 'DataReferences', 'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel','DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta']
 
     searchlst = ' '
@@ -1518,7 +1522,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         # Perform intensive search using any given meta info
         intensivesearch = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"' + searchlst
         #print ("dbdatainfo: Searchlist: %s" % intensivesearch)
-        loggerdatabase.debug("dbdatainfo: Searchlist: %s" % intensivesearch)
+        loggerdatabase.info("dbdatainfo: Searchlist: %s" % intensivesearch)
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
         #print intensivesearch, intensiverows
@@ -1681,6 +1685,9 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
 
         # Updating DATAINFO, SENSORS and STATIONS
         #print "Before", datastream.header['SensorID']
+        # TODO: Abolute function object
+        # Current solution: remove it
+        datastream.header['DataAbsFunctionObject'] = ''
         tablename = dbdatainfo(db,datastream.header['SensorID'],datastream.header,None,datastream.header['StationID'])
 
         #print "After", tablename, datastream.header['SensorID']

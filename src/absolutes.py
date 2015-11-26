@@ -1790,6 +1790,18 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         if KEYLIST[idx] in NUMKEYLIST:
             resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
             resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
+
+    # Add deltaF to resultsstream vor all Fext:  if nan then df == deltaF else df = df+deltaF, 
+    posF = KEYLIST.index('str4')
+    posdf = KEYLIST.index('df')
+    print resultstream.ndarray[posdf]
+    for idx,elem in enumerate(resultstream.ndarray[posF]):
+        print elem
+        if deltaF and elem.startswith('Fext'):
+            resultstream.ndarray[posdf][idx] = deltaF
+        elif deltaF and elem.startswith('Fabs'):
+            resultstream.ndarray[posdf][idx] = float(resultstream.ndarray[posdf][idx])+float(deltaF)
+    print "After", resultstream.ndarray[posdf]
     #resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
 
     #print "outfile"

@@ -51,14 +51,15 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
         log.err("GSMP20 - Protocol: Error while saving file")        
 
 
-## GEM -GSMP-20S3 protocol
+## GEM -GSMP-20S3 protocol -- North-South
 ##
-class GSMP20Protocol(LineReceiver):
+class GSMP20NSProtocol(LineReceiver):
     def __init__(self, wsMcuFactory, sensor, outputdir):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
         self.outputdir = outputdir
         self.hostname = socket.gethostname()
+        self.dateprev = datetime.strftime(datetime.utcnow(), "%Y-%m-%d")
 
     def connectionLost(self):
         log.msg('GSMP20 connection lost. Perform steps to restart it!')
@@ -79,46 +80,8 @@ class GSMP20Protocol(LineReceiver):
         10071506 A 13 250 492 496 329 150 1023 39 39 39 30 29 30 YYYyyyEEENNN 148 149 117 (every hour)
         time 111 field1 field2 field3                                            (every sec or faster)
         time 111 field1 field2 field3                                            (every sec or faster)
-        """
 
-        currenttime = datetime.utcnow()
-        date = datetime.strftime(currenttime, "%Y-%m-%d")
-        actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
-        outtime = datetime.strftime(currenttime, "%H:%M:%S")
-        timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
-        packcode = '6hLQQQqqq'
-        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[x,y,z,dx,dy,dz]', '[f1,f2,f3,g1,g2,g3]', '[pT,pT,pT,pT,pT,pT]', '[1000,1000,1000,1000,1000,1000]', packcode, struct.calcsize(packcode))
-
-        try:
-            # Extract data
-            data_array = data.strip().split()
-        except:
-            log.err('GSMP20 - Protocol: Data formatting error.')
-
-        try:
-            if len(data_array) == 5:
-                try:
-                    gpstime = float(data_array[0])
-                    if gpstime > 235900.0: # use date of last day if gpstime > 235900 to prevent next day date for 235959 gps when pctime already is on next day
-                        cdate = dateprev
-                    else:
-                        cdate = date
-                        dateprev = date
-                    gpsdate = date+'T'+str(gpstime)
-                    gpstimestamp = datetime.strftime(datetime.strptime(gpsdate, "%Y-%m-%dT%H%M%S.%f"), "%Y-%m-%d %H:%M:%S.%f")
-                except:
-                    gpstimestamp = timestamp
-
-                timestamp = gpstimestamp
-                intensity1 = float(data_array[2])
-                intensity2 = float(data_array[3])
-                intensity3 = float(data_array[4])
-                grad1 = intensity3-intensity1
-                grad2 = intensity3-intensity2
-                grad3 = intensity2-intensity1
-            elif len(data_array) == 19:
-                print "Found header data", data_array
-                """
+        Header:
                         10071506 A 13 250 492 496 329 150 1023 39 39 39 30 29 30 YYYyyyEEENNN 148 149 117
 
 			<GPS> day/month/year/hour A - locked, V unlocked
@@ -142,20 +105,63 @@ class GSMP20Protocol(LineReceiver):
 			<148> Sensor 1 RF dc voltage (14.8V)
 			<149> Sensor 2 RF dc voltage (14.9V)
 			<117> Sensor 3 RF dc voltage (11.7V)
-                """
+
+        """
+
+        currenttime = datetime.utcnow()
+        date = datetime.strftime(currenttime, "%Y-%m-%d")
+        cdate = date
+        actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
+        outtime = datetime.strftime(currenttime, "%H:%M:%S")
+        timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
+        packcode = '6hLqqqqqq'
+        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[x,y,z,dx,dy,dz]', '[NS,N,S,SNS,SN,NNS]', '[pT,pT,pT,pT,pT,pT]', '[1000,1000,1000,1000,1000,1000]', packcode, struct.calcsize(packcode))
+        headerlinecoming = False
+        datacoming = False
+
+        try:
+            # Extract data
+            data_array = data.strip().split()
+        except:
+            log.err('GSMP20 - Protocol: Data formatting error.')
+
+        try:
+            if len(data_array) == 5:
+                try:
+                    gpstime = float(data_array[0])
+                    if gpstime > 235900.0: # use date of last day if gpstime > 235900 to prevent next day date for 235959 gps when pctime already is on next day
+                        cdate = self.dateprev
+                    else:
+                        cdate = date
+                        self.dateprev = date
+                    gpsdate = cdate+'T'+data_array[0]
+                    gpstimestamp = datetime.strftime(datetime.strptime(gpsdate, "%Y-%m-%dT%H%M%S.%f"), "%Y-%m-%d %H:%M:%S.%f")
+                except:
+                    gpstimestamp = timestamp
+
+                #print "Timestamp", gpstime, gpstimestamp, timestamp, cdate, data_array[0]
+                timestamp = gpstimestamp
+                intensity1 = float(data_array[2])
+                intensity2 = float(data_array[3])
+                intensity3 = float(data_array[4])
+                grad1 = intensity3-intensity1
+                grad2 = intensity3-intensity2
+                grad3 = intensity2-intensity1
+                datacoming =True
+            elif len(data_array) == 19:
                 headerlinecoming = True
 
                 try:
                     gpstime = str(data_array[0])
-                    gpstimestamp = datetime.strftime(datetime.strptime(gpstime, "%d%m%yT%H"), "%Y-%m-%d %H:%M:%S.%f")
-                    print "Header", gpstimestamp
+                    gpstimestamp = datetime.strftime(datetime.strptime(gpstime, "%d%m%y%H"), "%Y-%m-%d %H:%M:%S.%f")
+                    #print "Header", gpstimestamp
                 except:
                     gpstimestamp = timestamp
-                timestamp = gpstimestamp
+                headtimestamp = gpstimestamp
                 gpstatus = data_array[1]			# str1
                 telec = int(data_array[2])			# t2
                 Vbat = float(data_array[3])/10.			# f
-                Vsup1 = float(data_array[4]/100.		# var4
+                Vsup1 = float(data_array[4])/100.		# var4
                 Vsup2 = float(data_array[5])/100.		# var5
                 Vlow = float(data_array[6])/100.		# t1
                 PowerSup = float(data_array[7])/10.		# df
@@ -171,38 +177,50 @@ class GSMP20Protocol(LineReceiver):
                 Vsens2 = float(data_array[17])/10.		# var2
                 Vsens3 = float(data_array[18])/10.		# var3 
             else:
-                print "Found other data_length", data, len(data_array)
+                #print "Found other data:", data, len(data_array)
+                pass
         except:
             log.err('GSMP20 - Protocol: Data extraction error.')
 
-        try:
-            # extract time data
-            datearray = timeToArray(timestamp)
-            try:
-                datearray.append(int(intensity1*1000.))
-                datearray.append(int(intensity2*1000.))
-                datearray.append(int(intensity3*1000.))
-                datearray.append(int(grad1*1000.))
-                datearray.append(int(grad2*1000.))
-                datearray.append(int(grad3*1000.))
-                data_bin = struct.pack(packcode,*datearray)
-                dataToFile(self.outputdir,self.sensor, date, data_bin, header)
-            except:
-                log.msg('GSMP20 - Protocol: Error while packing binary data')
-                print data
-                pass
-        except:
-            log.msg('GSMP20 - Protocol: Error with binary save routine')
-            pass
-
-
-        if headerlinecoming:
-            headpackcode = '6hLllllllllllllllsss'
-            headheader = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[x,y,z,f,t1,t2,dx,dy,dz,df,var1,var2,var3,var4,var5,str1,str2,str3]', '[Ts1,Ts2,Ts3,Vbat,V3,Tel,L1,L2,L3,Vps,V1,V2,V3,V5p,V5n,GPSstat,Status,OCXO]', '[degC,degC,degC,V,V,degC,A,A,A,V,V,V,V,V,V]', '[1,1,1,10,100,1,10,10,10,10,10,10,10,100,100]', packcode, struct.calcsize(packcode))
+        if datacoming:
             try:
                 # extract time data
-                gpstimestamp = datetime.strftime(datetime.strptime(gpsdate, "%Y-%m-%dT%H%M%S.%f"), "%Y-%m-%d %H:%M:%S.%f")
-                headarray = timeToArray(timestamp)
+                datearray = timeToArray(timestamp)
+                #print datearray
+                try:
+                    datearray.append(int(intensity1*1000.))
+                    datearray.append(int(intensity2*1000.))
+                    datearray.append(int(intensity3*1000.))
+                    datearray.append(int(grad1*1000.))
+                    datearray.append(int(grad2*1000.))
+                    datearray.append(int(grad3*1000.))
+                    data_bin = struct.pack(packcode,*datearray)
+                    dataToFile(self.outputdir,self.sensor, cdate, data_bin, header)
+                except:
+                    log.msg('GSMP20 - Protocol: Error while packing binary data')
+                    print data
+                    pass
+            except:
+                log.msg('GSMP20 - Protocol: Error with binary save routine')
+                pass
+
+            evt1 = {'id': 1, 'value': timestamp}
+            evt3 = {'id': 3, 'value': outtime}
+            evt20 = {'id': 20, 'value': intensity1}
+            evt21 = {'id': 21, 'value': intensity2}
+            evt22 = {'id': 22, 'value': intensity3}
+            evt23 = {'id': 23, 'value': grad1}
+            evt24 = {'id': 24, 'value': grad2}
+            evt25 = {'id': 25, 'value': grad3}
+            evt99 = {'id': 99, 'value': 'eol'}
+
+            return evt1,evt3,evt20,evt21,evt22,evt23,evt24,evt25,evt99
+
+        elif headerlinecoming:
+            headpackcode = '6hL15lsss'
+            try:
+                # extract time data
+                headarray = timeToArray(headtimestamp)
                 try:
                     headarray.append(int(tsens1))			# x
                     headarray.append(int(tsens2))			# y
@@ -223,50 +241,34 @@ class GSMP20Protocol(LineReceiver):
                     headarray.append(statusstring)			# str2
                     headarray.append(level)				# str3
 
-                    data_bin = struct.pack(packcode,*headarray)
-                    statuslst = self.sensor.split('_')
+                    data_head = struct.pack(headpackcode,*headarray)
+                    na = self.sensor
+                    #statusname
+                    statuslst = na.split('_')
                     if len(statuslst) == 3:
-                        statusname = '_'.join([statuslst[0]+'status',statuslst[1],statuslst[2]])
-                    print statusname, statuslst
-                    dataToFile(self.outputdir,statusname, date, data_bin, headheader)
+                        statusname = '_'.join([statuslst[0]+'Status',statuslst[1],statuslst[2]])
+                    headheader = "# MagPyBin %s %s %s %s %s %s %d" % (statusname, '[x,y,z,f,t1,t2,dx,dy,dz,df,var1,var2,var3,var4,var5,str1,str2,str3]', '[Ts1,Ts2,Ts3,Vbat,V3,Tel,L1,L2,L3,Vps,V1,V2,V3,V5p,V5n,GPSstat,Status,OCXO]', '[degC,degC,degC,V,V,degC,A,A,A,V,V,V,V,V,V,None,None,None]', '[1,1,1,10,100,1,10,10,10,10,10,10,10,100,100,1,1,1]', headpackcode, struct.calcsize(headpackcode))
+                    dataToFile(self.outputdir,statusname, date, data_head, headheader)
                 except:
                     log.msg('GSMP20 - Protocol: Error while packing binary data')
-                    print data
-                evt32 = {'id': 32, 'value': telec}
-                evt30 = {'id': 30, 'value': tsen1}
-                evt31 = {'id': 31, 'value': tsen2}
-                evt36 = {'id': 36, 'value': tsen3}
-                evt60 = {'id': 60, 'value': Vbat}
+                #evt32 = {'id': 32, 'value': telec}
+                #evt30 = {'id': 30, 'value': tsen1}
+                #evt31 = {'id': 31, 'value': tsen2}
+                #evt36 = {'id': 36, 'value': tsen3}
+                #evt60 = {'id': 60, 'value': Vbat}
                 # Dispatch this data ?
             except:
                 log.msg('GSMP20 - Protocol: Error with binary save routine')
                 pass
 
-
-
-        evt1 = {'id': 1, 'value': timestamp}
-        evt3 = {'id': 3, 'value': outtime}
-        evt20 = {'id': 20, 'value': intensity1}
-        evt21 = {'id': 21, 'value': intensity2}
-        evt22 = {'id': 22, 'value': intensity3}
-        evt23 = {'id': 23, 'value': grad1}
-        evt24 = {'id': 24, 'value': grad2}
-        evt25 = {'id': 25, 'value': grad3}
-        evt99 = {'id': 99, 'value': 'eol'}
-
-        return evt1,evt3,evt20,evt21,evt22,evt23,evt24,evt25,evt99
          
     def lineReceived(self, line):
         dispatch_url =  "http://example.com/"+self.hostname+"/sug#"+self.sensor+"-value"
         try:
             #print line
             evt1,evt3,evt20,evt21,evt22,evt23,evt24,evt25,evt99 = self.processData(line)
-        except ValueError:
-            log.err('GSMP20 - Protocol: Unable to parse data %s' % line)
-        except:
-            pass
-
-        try:
+            #except ValueError:
+            #log.err('GSMP20 - Protocol: Unable to parse data %s' % line)
             ## publish event to all clients subscribed to topic
             ##
             self.wsMcuFactory.dispatch(dispatch_url, evt1)
@@ -279,5 +281,5 @@ class GSMP20Protocol(LineReceiver):
             self.wsMcuFactory.dispatch(dispatch_url, evt25)
             self.wsMcuFactory.dispatch(dispatch_url, evt99)
         except:
-            log.err('GSMP20 - Protocol: wsMcuFactory error while dispatching data.')
+            pass
 

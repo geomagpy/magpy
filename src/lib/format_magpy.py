@@ -662,6 +662,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     oldtype = kwargs.get('oldtype')
+    debug = kwargs.get('debug')
 
     getfile = True
 
@@ -689,6 +690,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
         header = header.replace(', ',',')
         header = header.replace('deg C','deg')
         h_elem = header.strip().split()
+
+        if debug:
+            print 'readPYBIN- debug header type (len should be 9): ', h_elem, len(h_elem)
+         
         if not h_elem[1] == 'MagPyBin':
             print 'readPYBIN: No MagPyBin format - aborting'
             return
@@ -723,6 +728,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 loggerlib.error("readPYBIN: Could not extract lists from header - check format - aborting...")
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
+                if debug:
+                    print 'readPYBIN- header list error:', len(keylist), len(elemlist), len(unitlist), len(multilist)
                 loggerlib.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
                 return stream
         elif len(h_elem) == 10:
@@ -738,6 +745,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
         else:
             loggerlib.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
             return stream
+
+        if debug:
+            print 'readPYBIN- checking code'
             
         packstr = '<'+h_elem[-2]+'B'
         lengthcode = struct.calcsize(packstr)
@@ -753,6 +763,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
             else:
                 length = lengthcode
 
+        if debug:
+            print 'readPYBIN- unpack info:', packstr, lengthcode, lengthgiven
+
         line = fh.read(length)
         stream.header['SensorID'] = h_elem[2]
         stream.header['SensorElements'] = ','.join(elemlist)
@@ -764,14 +777,21 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         array = [[] for key in KEYLIST]
         if nospecial:
+            if debug:
+                print 'readPYBIN- debug found line'
+
             for idx, elem in enumerate(keylist):
                 stream.header['col-'+elem] = elemlist[idx]
                 stream.header['unit-col-'+elem] = unitlist[idx]
                 # Header info
                 pass
             while not line == "":
+                if debug:
+                    print 'readPYBIN- debug found line'
                 try:
                     data= struct.unpack(packstr, line)
+                    if debug:
+                        print 'readPYBIN- debug unpacked line: ', data
                 except:
                     print "readPYBIN: struct error", filename, packstr, struct.calcsize(packstr)
                 try:                    
