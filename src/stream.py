@@ -8320,6 +8320,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for file in iglob(pathname):
             stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
             stp = _read(file, dataformat, headonly, **kwargs)
+            print stp.ndarray
             if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
                 st.extend(stp.container,stp.header,stp.ndarray)
             #del stp

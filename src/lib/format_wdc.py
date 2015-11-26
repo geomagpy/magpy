@@ -17,10 +17,12 @@ def isWDC(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp[10:12] == "  ":
-        return False
-    if not len(temp.strip()) == 120: # strip is important to remove eventual \r\n sequences or \n
-        return False
+    if not temp[10:12] == "  " : # Minute format
+        if not temp[27:34] == '       ': # Hour format
+            return False
+    if not len(temp.strip()) == 120: # Minute format
+        if not len(temp) == 402: # Hour format, strip is important to remove eventual \r\n sequences or \n
+            return False
     return True
 
 
@@ -31,6 +33,9 @@ def readWDC(filename, headonly=False, **kwargs):
     WIK1209F01  20 4355059506150605058505950585053504750395034503850385043504850515049505150545056505750575057506050575052
     WIK1209F02  20 4355056505950565055505750515049504150395036503750405041504550565059506250605058506750565053505250495052
     WIK1209F03  20 4355047505050535054505550525045503950315021502050315053505250605064506750685071506550615067505950625052
+    Minute looks like:
+     42070 15865151125Z21WIC 0P       243.29243.29 243.3243.26243.24243.24243.29243.27243.27 243.3243.33243.34243.22243.18243.17243.18243.11243.15243.11243.04243.11243.12243.12243.17243.17243.21243.15243.14243.05243.12243.18243.15243.11243.13243.13243.16243.08 243.1243.09243.08243.09243.11243.09243.15243.13243.17243.09243.12243.21243.14243.15243.19243.15243.11243.06243.06243.07243.07243.04242.97243.16
+     42070 15865151125Z22WIC 0P       243.04243.01243.06242.99242.94 243.0243.01243.01242.93 243.0242.97243.03242.96242.92242.95243.03243.08242.98242.93242.84242.89242.87242.84242.78242.81242.84242.79242.78242.77242.78242.76242.73242.76242.82242.81242.89242.93242.94242.86242.96242.94242.98242.96242.95242.94242.98242.94242.89242.84 242.9 243.0243.02 243.0243.01242.98242.99242.93242.86242.88242.85242.92
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -46,8 +51,12 @@ def readWDC(filename, headonly=False, **kwargs):
         headers = stream.header
 
     # read file and split text into channels
-    li,ld,lh,lx,ly,lz,lf = [],[],[],[],[],[],[]
+    li,ld,lh,lx,ly,lz,lf,lt = [],[],[],[],[],[],[],[]
+    array = [[] for key in KEYLIST]
+    tind,xind,yind,zind,find = KEYLIST.index('time'), KEYLIST.index('x'), KEYLIST.index('y'), KEYLIST.index('z'), KEYLIST.index('f')
     code = ''
+    itest = 0
+    nanval = float(NaN)
     for line in fh:
         if line.isspace():
             # blank line
@@ -55,7 +64,7 @@ def readWDC(filename, headonly=False, **kwargs):
         elif headonly:
             # skip data for option headonly
             continue
-        elif len(line.strip())==120: # hour file  
+        elif len(line.strip()) == 120: # hour file  
             # skip data for option headonly
             code = line[:3]
             ar = line[3:5]
@@ -117,13 +126,78 @@ def readWDC(filename, headonly=False, **kwargs):
                         lf.append([time,f])
                 except:
                     pass
-        elif len(line)==400: # minute file
+        elif len(line) == 402: # minute file
             # skip data for option headonly
-            continue
+            stream = DataStream([],{},[[] for key in KEYLIST])
+            minute = True
+            headers['DataAcquisitionLatitude'] = float(line[:6])/1000.
+            headers['DataAcquisitionLongitude'] = float(line[6:12])/1000.
+            ar = line[12:14]
+            mo = line[14:16]
+            day = line[16:18]
+            var = line[18:19].lower()
+            if itest == 0:
+                firstvar = var
+            hr = line[19:21]
+            code = line[21:24]
+            headers['StationIAGACode'] = code
+            yestr = line[25:26]
+            if int(yestr) in [5,6,7,8,9]:
+                ye = '1'+yestr
+            elif int(yestr) in [0,1,2,3]:
+                ye = '2'+yestr
+            year = ye+ar
+            datestr = year+'-'+mo+'-'+day
+            
+            for i in range(0, 60*6, 6):
+                if var == firstvar:
+                    timestr = hr+':%02d:00' % (i/6)
+                    array[tind].append(date2num(datetime.strptime(datestr+'T'+timestr, "%Y-%m-%dT%H:%M:%S")))
+                val = float(line[34+i:40+i])
+                if var in ['x','i']:
+                    if val >= 999999.:
+                        array[xind].append(nanval)
+                    else:
+                        array[xind].append(val)
+                if var in ['y','d']:
+                    if val >= 999999.:
+                        array[yind].append(nanval)
+                    else:
+                        array[yind].append(val)
+                if var == 'z':
+                    if val >= 999999.:
+                        array[zind].append(nanval)
+                    else:
+                        array[zind].append(val)
+                if var == 'f':
+                    if val >= 999999.:
+                        array[find].append(nanval)
+                    else:
+                        array[find].append(val)
+                #if var == 'h':
+                    #if val >= 999999.:
+                    #    array[xind].append(nanval) # ??
+                    #else:
+                    #    array[xind].append(val)
+            lasttimestr = timestr
         else:
             print "Can not open WDC format"
             pass
+        itest += 1
     fh.close()
+
+    if minute:
+        headers['col-x'] = 'x'
+        headers['unit-col-x'] = 'nT'
+        headers['col-y'] = 'y'
+        headers['unit-col-y'] = 'nT'
+        headers['col-z'] = 'z'
+        headers['unit-col-z'] = 'nT'
+        headers['col-f'] = 'f'
+        headers['unit-col-f'] = 'nT'
+        array = np.asarray([np.asarray(el) for el in array])
+        stream = DataStream([LineStruct()], headers, np.asarray(array))
+        return stream
 
     if len(lx) > 0:
         for el in lx:
@@ -484,21 +558,17 @@ def writeWDC(datastream, filename, **kwargs):
         #except IOError:
         #    pass
         success = True
-    elif minute:
-        pass
-    else:
-        logging.warning("Could not save WDC data. Please provide hour or minute data")
 
     # 3.)
-    if minute:
+    elif minute:
         '''
 COLUMNS   FORMAT   DESCRIPTION
 
-1-6       I6       Observatory's North Polar distance.  
+1-6       I6       Observatory's North Polar distance (header['DataAcquisitionLatitude']).  
                    the north geographic pole in thousandths 
                    of a degree. Decimal point is implied between positions 3 
                    and 4.
-7-12      I6       Observatory's Geographic longitude. 
+7-12      I6       Observatory's Geographic longitude (header['DataAcquisitionLongitude']). 
                    of a degree. Decimal point is implied between positions 9 
                    and 10.
 13-14     I2       Year. Last 2 digits, 1996 = 96. See also column 26.
@@ -506,14 +576,14 @@ COLUMNS   FORMAT   DESCRIPTION
 17-18     I2       Day of month (01-31)
 19        Al       Element (D,I,H,X,Y,Z, or F)
 20-21     I2       Hour of day (00-23)
-22-24     A3       Observatory 3-letter code.
+22-24     A3       Observatory 3-letter code (header['StationIAGAcode']).
 25        A1       Arbitrary.
 26        I1       Century digit.
                    Year = 2014, Century digit = 0.
                    Year = 1889, Century digit = 8.
                    Year = 1996, Century digit = 9 or 'SPACE' for backwards
                    compatibility.
-27        A1       Preliminary or Definitive data.
+27        A1       Preliminary or Definitive data (given by stream header['DataRating']).
                    Preliminary = P , Definitive = D
 28-34     A7       Blanks
 35-394    60I6     60 6-digit 1-minute values for the given element for that
@@ -527,7 +597,6 @@ COLUMNS   FORMAT   DESCRIPTION
         '''
 
 	# http://www.wdc.bgs.ac.uk/catalog/format.html
-	data_predef = 'P' # P for preliminary, D for definitive. TODO: change this later
         min_dict, hour_dict, day_dict = {}, {}, {}
 	write_KEYLIST = ['x','y','z','f']
         for key in write_KEYLIST:
@@ -607,22 +676,41 @@ COLUMNS   FORMAT   DESCRIPTION
         month = datetime.strftime(timestamp, "%m")
 
         header = datastream.header
+        try:
+            predef = header.get('DataPublicationLevel'," ")
+            if str(predef) == '2' or predef[0].upper == 'P': # Preliminary data
+                data_predef = 'P'
+            elif str(predef) in ['1','3']: # Raw (1) or quasi-definitive (3) data
+                loggerlib.warning("format_WDC: DataPublicationLevel as 1 or 3 are not supported by WDC. Assuming P (preliminary).")
+                data_predef = 'P'
+            elif str(predef) == '4' or predef[0].upper == 'D': # Definitive data
+                data_predef = 'D'
+            elif predef == ' ':
+                loggerlib.warning("format_WDC: No DataPublicationLevel defined in header! Assuming P (preliminary).")
+                data_predef = 'P'
+	except:
+	    data_predef = 'P'
 	try:
             iagacode = header.get('StationIAGAcode'," ").upper()
+            if iagacode == ' ':
+                loggerlib.warning("format_WDC: No StationIAGAcode defined in header!")
+                iagacode = 'XXX'
 	except:
 	    iagacode = 'WIC'
 	try:
 	    station_lat = header.get('DataAcquisitionLatitude'," ")
             if station_lat == ' ':
-                station_lat = 47.93
+                loggerlib.warning("format_WDC: No DataAcquisitionLatitude defined in header!")
+                station_lat = 00.00
 	except:
-	    station_lat = 47.93
+	    station_lat = 00.00 # 47.93
 	try:
 	    station_long = header.get('DataAcquisitionLongitude'," ")
             if station_long == ' ':
-                station_long = 15.865
+                loggerlib.warning("format_WDC: No DataAcquisitionLongitude defined in header!")
+                station_long = 00.00
 	except:
-	    station_long = 15.865
+	    station_long = 00.00 # 15.865
 	northpolardistance = int(round((90-float(station_lat))*1000))
 	longitude = int(round(float(station_long) * 1000))
 
@@ -644,7 +732,7 @@ COLUMNS   FORMAT   DESCRIPTION
 		    hour = str(hour_).zfill(2)
 		    dom = datetime.strftime(day,"%d")
 	            pre_date = ar + month + datetime.strftime(day,'%d')
-	            pre_rest = key.upper() + hour + iagacode + ' ' + century + data_predef + '       '
+	            pre_rest = key.upper() + hour + iagacode + ' ' + century + data_predef + 7*' '
 		    preamble = pre_geopos + pre_date + pre_rest
 
 		    # Get data + calculate mean:
@@ -680,11 +768,15 @@ COLUMNS   FORMAT   DESCRIPTION
 				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
 			data = '999999'*60
 		        hourly_mean = '999999'
-		    line = preamble + data + hourly_mean + '\n'
+		    line = preamble + data + hourly_mean + '\r\n'
 		    myFile.write(line)
             day = day + timedelta(days=1)
 
         success = True
+
+    else:
+        logging.warning("Could not save WDC data. Please provide hour or minute data")
+
     return success
 
 
