@@ -450,7 +450,6 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             if len(y) == 0:
                 loggerplot.error("plotStreams: Cannot plot stream of zero length!")
 
-
             # eventually remove flagged:
             dropflagged = False
             if dropflagged:
@@ -483,10 +482,12 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 
             #print len(t), len(y), np.asarray(y), np.asarray(t)
 
-
             if len(y) == 0:
                 loggerplot.error("plotStreams: Cannot plot stream without data - Filling with 9999999!")
-                y = np.asarray([9999999 for row in stream])
+                if len(stream.ndarray[0]) > 0:
+                    y = np.asarray([9999999 for row in stream.ndarray[0]])
+                else:
+                    y = np.asarray([9999999 for row in stream])
 
 
             data_dict['key'] = key
@@ -2170,7 +2171,6 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
             a = ax
         else:
             ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
-
 
         # PLOT DATA:
         # --> If bars are in the data (for e.g. k-index):

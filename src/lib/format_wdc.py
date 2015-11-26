@@ -21,7 +21,7 @@ def isWDC(filename):
         if not temp[27:34] == '       ': # Hour format
             return False
     if not len(temp.strip()) == 120: # Minute format
-        if not len(temp) == 402: # Hour format, strip is important to remove eventual \r\n sequences or \n
+        if not len(temp) in [401,402]: # Hour format, strip is important to remove eventual \r\n sequences or \n
             return False
     return True
 
@@ -56,6 +56,7 @@ def readWDC(filename, headonly=False, **kwargs):
     tind,xind,yind,zind,find = KEYLIST.index('time'), KEYLIST.index('x'), KEYLIST.index('y'), KEYLIST.index('z'), KEYLIST.index('f')
     code = ''
     itest = 0
+    minute = False
     nanval = float(NaN)
     for line in fh:
         if line.isspace():
@@ -126,7 +127,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         lf.append([time,f])
                 except:
                     pass
-        elif len(line) == 402: # minute file
+        elif len(line) in [401,402]: # minute file
             # skip data for option headonly
             stream = DataStream([],{},[[] for key in KEYLIST])
             minute = True
@@ -158,21 +159,30 @@ def readWDC(filename, headonly=False, **kwargs):
                     if val >= 999999.:
                         array[xind].append(nanval)
                     else:
+                        headers['col-x'] = 'x'
+                        headers['unit-col-x'] = 'nT'
                         array[xind].append(val)
                 if var in ['y','d']:
                     if val >= 999999.:
                         array[yind].append(nanval)
                     else:
+                        headers['col-y'] = 'y'
+                        headers['unit-col-y'] = 'nT'
                         array[yind].append(val)
                 if var == 'z':
                     if val >= 999999.:
                         array[zind].append(nanval)
                     else:
+                        headers['col-z'] = 'z'
+                        headers['unit-col-z'] = 'nT'
                         array[zind].append(val)
                 if var == 'f':
                     if val >= 999999.:
                         array[find].append(nanval)
                     else:
+                        print val
+                        headers['col-f'] = 'f'
+                        headers['unit-col-f'] = 'nT'
                         array[find].append(val)
                 #if var == 'h':
                     #if val >= 999999.:
@@ -187,14 +197,6 @@ def readWDC(filename, headonly=False, **kwargs):
     fh.close()
 
     if minute:
-        headers['col-x'] = 'x'
-        headers['unit-col-x'] = 'nT'
-        headers['col-y'] = 'y'
-        headers['unit-col-y'] = 'nT'
-        headers['col-z'] = 'z'
-        headers['unit-col-z'] = 'nT'
-        headers['col-f'] = 'f'
-        headers['unit-col-f'] = 'nT'
         array = np.asarray([np.asarray(el) for el in array])
         stream = DataStream([LineStruct()], headers, np.asarray(array))
         return stream
