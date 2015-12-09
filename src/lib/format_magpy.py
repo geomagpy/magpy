@@ -953,7 +953,11 @@ def writePYCDF(datastream, filename, **kwargs):
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
         elif mode == 'append':
-            mycdf = cdf.CDF(filename, filename) # append????
+            #print filename
+            exst = read(path_or_url=filename+'.cdf')
+            datastream = joinStreams(exst,datastream,extend=True)
+            os.remove(filename+'.cdf')
+            mycdf = cdf.CDF(filename, '')
         else: # overwrite mode
             #print filename
             os.remove(filename+'.cdf')
@@ -1038,7 +1042,10 @@ def writePYCDF(datastream, filename, **kwargs):
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
                 #print "Last time saved", col[-1]
             elif key == 'sectime':
-                mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
+                try: #col = np.asarray([np.nan if el is '-' else el for el in col])
+                    mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
+                except:
+                    pass
         elif len(col) > 0:
             #print "writing", np.asarray(col)
             if not key in NUMKEYLIST:

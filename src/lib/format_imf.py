@@ -2,7 +2,13 @@
 MagPy
 Intermagnet input filter
 Written by Roman Leonhardt December 2012
-- contains test, read and write functions for IMF 1.22,1.23
+- contains test, read and write functions for 
+	IMF 1.22,1.23
+	IAF
+	ImagCDF
+	IYFV 	(yearly means)
+	DKA  	(k values)d
+	BLV	(baseline data)	
 """
 
 from stream import *
@@ -83,6 +89,58 @@ def isBLV(filename):
     else:
         return False
     return True
+
+
+def isIYFV(filename):
+    """
+    Checks whether a file is ASCII IYFV 1.01 yearly mean format.
+
+    _YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
+    """
+    try:
+        temp = open(filename, 'rt').readline()
+    except:
+        return False
+    searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
+    for elem in searchstr:
+        if temp.find(elem) > 0:
+            return True
+    return False
+
+
+def isDKA(filename):
+    """
+    Checks whether a file is ASCII DKA k value format.
+
+                               AAA
+                  Geographical latitude:    43.250 N
+                  Geographical longitude:   76.920 E
+
+            K-index values for 2010     (K9-limit =  300 nT)
+    """
+    ok = False
+    try:
+        fh = open(filename, 'rt')
+        temp1 = fh.readline()
+        temp2 = fh.readline()
+        temp3 = fh.readline()
+        temp4 = fh.readline()
+        temp5 = fh.readline()
+        temp6 = fh.readline()
+    except:
+        return False
+    searchstr = ['latitude', 'LATITUDE']
+    for elem in searchstr:
+        if temp2.find(elem) > 0:
+            ok = True
+    if not ok:
+        return False
+    searchstr = ['K-index values', 'K-INDEX VALUES']
+    for elem in searchstr:
+        if temp5.find(elem) > 0:
+            return True
+    return False
+
 
 def readIAF(filename, headonly=False, **kwargs):
     """
@@ -1644,3 +1702,452 @@ def writeBLV(datastream, filename, **kwargs):
 
     myFile.close()
     return True
+
+
+def readIYFV(filename, headonly=False, **kwargs):
+    """
+    DESCRIPTION:
+        Reads annual mean values. Elements given in column ELE are imported.
+        Other components are calculated and checked against file content.
+    PARAMETER:
+
+                      ANNUAL MEAN VALUES
+
+                      ALMA-ATA, AAA, KAZAKHSTAN
+
+  COLATITUDE: 46.75   LONGITUDE: 76.92 E   ELEVATION: 1300 m
+
+  YEAR        D        I       H      X      Y      Z      F   * ELE Note
+           deg min  deg min    nT     nT     nT     nT     nT         
+
+ 2005.500   4 46.6  62 40.9  25057  24970   2087  48507  54597 A XYZF   1
+ 2006.500   4 47.5  62 42.9  25044  24957   2092  48552  54631 A XYZF   1
+ 2007.500   4 47.8  62 45.8  25017  24930   2092  48603  54664 A XYZF   1
+
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+
+    endtime = kwargs.get('endtime')
+
+    getfile = True
+
+    stream = DataStream()
+    headers = {}
+    data = []
+    key = None
+
+    array = [[] for key in KEYLIST]
+
+    fh = open(filename, 'rt')
+    ok = True
+    cnt = 0
+    paracnt = 999998
+    roworder=['d','i','h','x','y','z','f']
+    jumpx,jumpy,jumpz,jumpf=0,0,0,0
+    tsel = 'A' # Use only all days rows
+    tprev = tsel # For jump treatment
+    lc = KEYLIST.index('var5')  ## store the line number of each loaded line here
+                                ## this is used by writeIYFV to add at the correct position
+    if ok:
+        for line in fh:
+            cnt = cnt+1 
+            if line.isspace():
+                # blank line
+                pass
+            elif line.find('ANNUAL') > 0 or line.find('annual') > 0: 
+                pass
+            elif cnt == 3:
+                # station info
+                block = line.split()
+                print block
+                headers['StationName'] = block[0]
+                headers['StationID'] = block[1]
+                headers['StationCountry'] = block[2]
+            elif line.find('COLATITUDE') > 0: 
+                loc = line.split()
+                headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
+                headers['DataAcquisitionLongitude'] = float(loc[3])
+                headers['DataElevation'] = float(loc[3])
+            elif line.find('COLATITUDE') > 0: 
+                loc = line.split()
+                headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
+                headers['DataAcquisitionLongitude'] = float(loc[3])
+                headers['DataElevation'] = float(loc[3])
+            elif line.find(' YEAR ') > 0:
+                paracnt = cnt
+                para = line.split()
+                para = [elem.lower() for elem in para[1:8]]
+            elif cnt == paracnt+1:
+                units = line.split()
+                tmp = ['deg','deg']
+                tmp.extend(units[4:10])
+                units = tmp
+            elif line.startswith(' 1') or line.startswith(' 2'): # Upcoming year 3k problem ;)
+                if not headonly:
+                    # get data
+                    data = line.split()
+                    test = True
+                    if test:
+                        #try:
+                        if not len(data) >= 12:
+                            print len(data)
+                        ye = data[0].split('.')
+                        dat = ye[0]+'-06-01'
+                        row = []
+                        ti = date2num(datetime.strptime(dat,"%Y-%m-%d"))
+                        row.append(float(data[1])+float(data[2])/60.0)
+                        row.append(float(data[3])+float(data[4])/60.0)
+                        row.append(float(data[5]))
+                        row.append(float(data[6]))
+                        row.append(float(data[7]))
+                        row.append(float(data[8]))
+                        row.append(float(data[9]))
+                        t =  data[10]
+                        ele =  data[11]
+                        headers['DataComponents'] = ele
+                        # transfer 
+                        if len(data) == 13:
+                            note =  data[12]
+                        if t == tsel: 
+                            array[0].append(ti)
+                            array[lc].append(cnt)
+                            for comp in ele.lower():
+                                if comp in ['x','h','i']:
+                                    headers['col-x'] = comp
+                                    headers['unit-col-x'] = units[para.index(comp)]
+                                    array[1].append(row[para.index(comp)]-jumpx)
+                                elif comp in ['y','d']:
+                                    headers['col-y'] = comp
+                                    headers['unit-col-y'] = units[para.index(comp)]
+                                    array[2].append(row[para.index(comp)]-jumpy)
+                                elif comp in ['i','z']:
+                                    headers['col-z'] = comp
+                                    headers['unit-col-z'] = units[para.index(comp)]
+                                    array[3].append(row[para.index(comp)]-jumpz)
+                                elif comp in ['f']:
+                                    headers['col-f'] = comp
+                                    headers['unit-col-f'] = units[para.index(comp)]
+                                    array[4].append(row[para.index(comp)]-jumpf)
+                            #if ele.startswith('XYZ'):
+                            checklist = coordinatetransform(array[1][-1],array[2][-1],array[3][-1],ele[:3].lower())
+                            if np.max(np.array(row) - np.array(checklist)) > 0.5:
+                                print "readIYFV: verify conversions between components !"
+                                print "readIYFV: found:", np.array(row)
+                                print "readIYFV: expected:", np.array(checklist)
+
+                        elif t == 'J' and tprev == tsel:
+                            for comp in ele.lower():
+                                print comp
+                                if comp in ['x','h','i']:
+                                    jumpx = jumpx + row[para.index(comp)]
+                                elif comp in ['y','d']:
+                                    jumpy = jumpy + row[para.index(comp)]
+                                elif comp in ['i','z']:
+                                    jumpz = jumpz + row[para.index(comp)]
+                                elif comp in ['f']:
+                                    jumpf = jumpf + row[para.index(comp)]
+
+                        tprev = tsel
+    fh.close()
+
+
+    array = [np.asarray(ar) for ar in array]
+    stream = DataStream([LineStruct()], headers, np.asarray(array))
+    
+    # Eventually add trim
+    return stream    
+
+def writeIYFV(datastream,filename, **kwargs):
+    """
+    DESCRIPTION:
+        IYFV requires a datastream containing one year of data (if not kind='Q' or 'D' are given).
+        Method calculates mean values and adds them to an eventually existing yearly mean file.
+        Please note: jumps (J) need to be defined manually within the ASCII mean file.
+    PARAMETERS:
+        datastream:	(DataStream) containing the header info and one year of data.
+                                     DataComponents should be provided in header.
+                                     If data
+
+        kind:		(string) One of Q,D,A -> default is A
+        comment:	(string) a comment related to the datastream
+    
+    """
+
+    kind = kwargs.get('kind')
+    comment = kwargs.get('comment')
+
+    if not kind in ['A','Q','D','q','d']:
+        kind = 'A'
+    else:
+        kind = kind.upper()
+    if comment:
+        print (" writeIYFV: Comments not yet supported")
+        #identify next note and add comment at the send of the file
+        pass
+    else:
+        note = 0
+
+    # check datastream
+    if not datastream.length()[0] > 1:
+        print (" writeIYFV: Datastream does not contain data")
+        return False
+    if not len(datastream.ndarray[1]) > 1:
+        print (" writeIYFV: Datastream does not contain data")
+        return False
+    # check time range
+    tmin, tmax = datastream._find_t_limits()
+    tmin = date2num(tmin)
+    tmax = date2num(tmax)
+    meant = mean([tmin,tmax])
+    if tmax-tmin < 365*0.9: # 90% of one year
+        print (" writeIYFV: Datastream does not cover at least 90% of one year")
+        return False
+    # if timerange covers more than one year ??????
+    # should be automatically called with coverage='year' and filenamebegins='yearmean', 
+    # filenameends=Obscode
+
+    header = datastream.header
+    comp = header.get('DataComponents','')
+    comp = comp.lower()
+    print ("writeIYFV: components found: ", comp)
+    if not comp in ['hdz','xyz','idf','hez', 'hdzf','xyzf','idff','hezf', 'hdzg','xyzg','idfg','hezg']:
+        print (" writeIYFV: valid DataComponents could not be read from header - assuming xyz data")
+        comp = 'xyz'
+    elif comp.startswith('hdz'):
+        datastream = datastream.hdz2xyz()
+    elif comp.startswith('idf'):
+        datastream = datastream.idf2xyz()
+    elif comp.startswith('hez'):
+        alpha = header.get('DataSensorAzimuth','')
+        if not is_number(alpha):
+            print (" writeIYFV: hez provided but no DataSensorAzimuth (usually the declination while sensor installation - aborting")
+            return False         
+        datastream = datastream.rotation(alpha=alpha)
+
+    # Obtain means   ( drop nans ):
+    meanx = datastream.mean('x',percentage=90)    
+    meany = datastream.mean('y',percentage=90)    
+    meanz = datastream.mean('z',percentage=90)
+    if isnan(meanx) or isnan(meany) or isnan(meanz):
+        print (" writeIYFV: found more then 10% of NaN values - setting minimum requirement to 40% data recovery and change kind to I (incomplete)")       
+        meanx = datastream.mean('x',percentage=40)    
+        meany = datastream.mean('y',percentage=40)    
+        meanz = datastream.mean('z',percentage=40)
+        kind = 'I'
+        if isnan(meanx) or isnan(meany) or isnan(meanz):
+            print (" writeIYFV: less then 40% of data - skipping")
+            return False       
+    meanyear = int(datetime.strftime(num2date(meant),"%Y"))
+    # create datalist
+    datalist = [meanyear]
+    reslist = coordinatetransform(meanx,meany,meanz,'xyz')
+    datalist.extend(reslist)
+
+    #print ( "writeIYFV:", datalist )
+    #print ( "writeIYFV: kind", kind )
+    #print ( "writeIYFV: comment", comment )
+    #kind = 'Q'
+    #meanyear = '2011'
+
+    #_YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
+    decsep= str(datalist[1]).split('.')
+    incsep= str(datalist[2]).split('.')
+    newline = " {0}.500 {1:>3} {2:4.1f} {3:>3} {4:4.1f} {5:>6} {6:>6} {7:>6} {8:>6} {9:>6} {10:>1} {11:>4} {12:>3}\r\n".format(meanyear,decsep[0],float('0.'+str(decsep[1]))*60.,incsep[0],float('0.'+str(incsep[1]))*60.,int(datalist[3]),int(datalist[4]),int(datalist[5]),int(datalist[6]),int(datalist[7]), kind, comp.upper(), int(note))
+
+    # create dummy header (check for existing values) and add data
+    # inform observer to modify/check head
+    def createhead(filename, locationname,coordlist,newline):
+        """
+        internal method to create header info for yearmean file
+        """
+        if not len(coordlist) == 3:
+            print ("writeIYFV: Coordinates missing")
+            if len(coordlist) == 2:
+                coordlist.append(np.nan)
+            else:
+                return False
+        
+        empty = "\r\n"
+        content = []
+        content.append("{:^70}\r\n".format("ANNUAL MEAN VALUES"))
+        content.append(empty)
+        content.append("{:^70}\r\n".format(locationname))
+        content.append(empty)
+        content.append("  COLATITUDE: {a:.2f}   LONGITUDE: {b:.2f} E   ELEVATION: {c:.0f} m\r\n".format(a=coordlist[0],b=coordlist[1],c=coordlist[2]))
+        content.append(empty)
+        content.append("  YEAR        D        I       H      X      Y      Z      F   * ELE Note\r\n")
+        content.append("           deg min  deg min    nT     nT     nT     nT     nT\r\n")
+        content.append(empty)
+        content.append(newline)
+        content.append(empty)
+        content.append("* A = All days\r\n")
+        content.append("* Q = Quiet days\r\n")
+        content.append("* D = Disturbed days\r\n")
+        content.append("* I = Incomplete\r\n")
+        content.append("* J = Jump:         jump value = old site value - new site value\r\n")
+
+        f = open(filename, "w")
+        contents = "".join(content)
+        f.write(contents)
+        f.close()            
+        """
+                      ANNUAL MEAN VALUES
+
+                      ALMA-ATA, AAA, KAZAKHSTAN
+
+  COLATITUDE: 46.75   LONGITUDE: 76.92 E   ELEVATION: 1300 m
+
+  YEAR        D        I       H      X      Y      Z      F   * ELE Note
+           deg min  deg min    nT     nT     nT     nT     nT         
+
+* A = All days
+* Q = Quet days
+* D = Disturbed days
+* I = Incomplete
+* J = Jump:         jump value = old site value - new site value
+        """
+
+    def addline(filename, newline, kind, year):
+        """
+        internal method to insert new yearly means in a file
+        """
+        content = []
+        fh = open(filename, 'r')
+        for line in fh:
+            content.append(line)
+        fh.close()
+
+        yearlst = []
+        foundcomm = False
+        
+        for idx,elem in enumerate(content):
+            ellst = elem.split()
+            if len(ellst)>11:
+                if ellst[10] == kind:
+                    # get years
+                    yearlst.append([idx, int(ellst[0].split('.')[0])])
+            if elem.startswith('*') and not foundcomm: # begin of comment section
+                foundcomm = True
+                commidx = idx
+
+        if not foundcomm: # No comment section - append at the end of file
+            commidx = idx
+
+        if not len(yearlst) > 0: # e.g. kind not yet existing
+            # add line just above footer
+            content.insert(commidx, '')
+            content.insert(commidx, newline)
+        else:
+            years = [el[1] for el in yearlst]
+            indicies = [el[0] for el in yearlst]
+            if year in years:
+                idx= indicies[years.index(year)]
+                content[idx] = newline                     
+            elif int(year) > np.max(years):
+                idx= indicies[years.index(max(years))]
+                content.insert(idx+1, newline)
+            elif int(year) < np.min(years):
+                idx= indicies[years.index(min(years))]
+                content.insert(idx, newline)
+            elif int(year) > np.min(years) and int(year) < np.max(years):
+                for i,y in enumerate(years):
+                    if int(y) > int(year):
+                        break
+                idx = indicies[i]
+                content.insert(idx, newline)
+
+        f = open(filename, "w")
+        contents = "".join(content)
+        f.write(contents)
+        f.close()            
+
+    if os.path.isfile(filename):
+        addline(filename, newline, kind, meanyear)
+    else:
+        name = header.get('StationName',' ')
+        co = header.get('StationIAGAcode',' ')
+        coun = header.get('StationCountry',' ')
+        locationname = "{a:>34}, {b}, {c:<23}".format(a=name[:35],b=co,c=coun[:25])
+        lat = header.get('DataAcquisitionLatitude',np.nan)
+        lon = header.get('DataAcquisitionLongitude',np.nan)
+        elev = header.get('DataElevation',np.nan)
+        coordlist = [float(lat), float(lon), float(elev)]
+        createhead(filename, locationname, coordlist, newline)
+
+    return True
+
+def readDKA(filename, headonly=False, **kwargs):
+    """
+                               AAA
+                  Geographical latitude:    43.250 N
+                  Geographical longitude:   76.920 E
+
+            K-index values for 2010     (K9-limit =  300 nT)
+
+  DA-MON-YR  DAY #    1    2    3    4      5    6    7    8       SK
+
+  01-JAN-10   001     0    1    0    0      0    1    1    2        5
+  02-JAN-10   002     0    1    2    1      1    1    0    0        6
+  03-JAN-10   003     0    0    1    2      2    2    0    1        8
+  04-JAN-10   004     1    1    1    1      1    0    1    1        7
+    """
+
+    getfile = True
+
+    stream = DataStream()
+    headers = {}
+    data = []
+    key = None
+
+    array = [[] for key in KEYLIST]
+
+    fh = open(filename, 'rt')
+    ok = True
+    cnt = 0
+    datacoming = 0
+    kcol = KEYLIST.index('var1')  
+
+    if ok:
+        for line in fh:
+            cnt = cnt+1
+            block = line.split()
+            if line.isspace():
+                # blank line
+                pass
+            elif cnt == 1:
+                # station info
+                headers['StationID'] = block[0]
+                headers['StationIAGAcode'] = block[0]
+            elif line.find('latitude') > 0 or line.find('LATITUDE') > 0: 
+                headers['DataAcquisitionLatitude'] = float(block[-2])
+            elif line.find('longitude') > 0 or line.find('LONGITUDE') > 0: 
+                headers['DataAcquisitionLongitude'] = float(block[-2])
+            elif line.find('K9-limit') > 0:
+                headers['StationK9'] = float(block[-2])
+            elif line.find('DA-MON-YR') > 0: 
+                datacoming = cnt
+            elif cnt > datacoming:
+                if len(block) > 9: 
+                    for i in range(8):
+                        ti = datetime.strptime(block[0],"%d-%b-%y") + timedelta(minutes=90) + timedelta(minutes=180*i)
+                        val = float(block[2+i])
+                        array[0].append(date2num(ti))
+                        if val < 990:
+                            array[kcol].append(val)
+                        else:
+                            array[kcol].append(np.nan)
+
+    fh.close()
+    headers['col-var1'] = 'K'
+    headers['unit-col-var1'] = ''
+
+    array = [np.asarray(ar) for ar in array]
+    stream = DataStream([LineStruct()], headers, np.asarray(array))
+    
+    # Eventually add trim
+    return stream    
+
+
+def writeDKA(datastream, filename, **kwargs):
+    pass

@@ -44,20 +44,25 @@ def readWDC(filename, headonly=False, **kwargs):
     fh = open(filename, 'rt')
 
     stream = DataStream()
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     if stream.header is None:
         headers = {}
     else:
         headers = stream.header
 
+
     # read file and split text into channels
     li,ld,lh,lx,ly,lz,lf,lt = [],[],[],[],[],[],[],[]
     array = [[] for key in KEYLIST]
     tind,xind,yind,zind,find = KEYLIST.index('time'), KEYLIST.index('x'), KEYLIST.index('y'), KEYLIST.index('z'), KEYLIST.index('f')
+    str1ind = KEYLIST.index('str1')
     code = ''
     itest = 0
     minute = False
+    complist = ['','','','']
     nanval = float(NaN)
+    oldformat = False
+    kind = '' # To store Q, D in all data format (Quiet, Disturbed)
     for line in fh:
         if line.isspace():
             # blank line
@@ -71,8 +76,24 @@ def readWDC(filename, headonly=False, **kwargs):
             ar = line[3:5]
             mo = line[5:7]
             co = line[7:8].lower()
+            if itest == 0:
+                firstco = co
             day = line[8:10]
-            year = line[14:16]+ar # use test for old format with quiet and disturbed days
+            try:
+                cent = int(line[14:16])
+                if not cent > 10:
+                    x=1/0
+            except:
+                oldformat = True
+                kind = line[14:16] # use test for old format with quiet and disturbed days
+                cent = '19'
+                # eventually use kind to load only quiet days/disturbed days from old WDC data
+            year = str(cent)+ar # use test for old format with quiet and disturbed days
+            #year = line[14:16]+ar # use test for old format with quiet and disturbed days
+            #if int(year) < 1000: #old format
+            #    year= '19'+ar
+            #print co
+            day = str(int(day)).zfill(2)  
             #print code, year, mo, day, co
             cf= lambda s,p: [ s[i:i+p] for i in range(0,len(s),p) ]
             dailymean = line[116:120]
@@ -82,49 +103,65 @@ def readWDC(filename, headonly=False, **kwargs):
                 try:
                     hour = "%i" % i
                     date = year + '-' + mo + '-' + day + 'T' + hour + ':30:00'
-                    time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                    #print date
+                    if co == firstco:
+                        time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                        array[tind].append(time)
+                        array[str1ind].append(kind)                        
                     if co=='i':
                         if not elem == "9999":
                             x = float(base) + float(elem)/600
                         else:
-                            x = float(NaN)                                
-                        li.append([time,x])
+                            x = float(NaN)
+                        complist[0] = co
+                        array[xind].append(x)
+                        headers['col-x'] = 'i'
+                        headers['unit-col-x'] = 'deg'
                     if co=='d':
                         if not elem == "9999":
                             y = float(base) + float(elem)/600
                         else:
-                            y = float(NaN)                                
-                        ld.append([time,y])
-                    if co=='h':
+                            y = float(NaN)
+                        complist[1] = co
+                        array[yind].append(y)
+                        headers['col-y'] = 'd'
+                        headers['unit-col-y'] = 'deg'
+                    if co in ['x','h']:
                         if not elem == "9999":
                             x = float(base)*100 + float(elem)
                         else:
                             x = float(NaN)                                
-                        lh.append([time,x])
-                    if co=='x':
-                        if not elem == "9999":
-                            x = float(base)*100 + float(elem)
-                        else:
-                            x = float(NaN)                                
-                        lx.append([time,x])
+                        complist[0] = co
+                        array[xind].append(x)
+                        headers['col-x'] = co
+                        headers['unit-col-x'] = 'nT'
                     if co=='y':
                         if not elem == "9999":
                             y = float(base)*100 + float(elem)
                         else:
                             y = float(NaN)                                
-                        ly.append([time,y])
+                        complist[1] = co
+                        array[yind].append(y)
+                        headers['col-y'] = 'y'
+                        headers['unit-col-y'] = 'nT'
                     if co=='z':
                         if not elem == "9999":
                             z = float(base)*100 + float(elem)
                         else:
                             z = float(NaN)                                
-                        lz.append([time,z])
+                        complist[2] = co
+                        array[zind].append(z)
+                        headers['col-z'] = 'z'
+                        headers['unit-col-z'] = 'nT'
                     if co=='f':
                         if not elem == "9999":
                             f = float(base)*100 + float(elem)
                         else:
-                            f = float(NaN)                                
-                        lf.append([time,f])
+                            f = float(NaN)
+                        complist[3] = co
+                        array[find].append(f)
+                        headers['col-f'] = 'f'
+                        headers['unit-col-f'] = 'nT'
                 except:
                     pass
         elif len(line) in [401,402]: # minute file
@@ -141,7 +178,7 @@ def readWDC(filename, headonly=False, **kwargs):
                 firstvar = var
             hr = line[19:21]
             code = line[21:24]
-            headers['StationIAGACode'] = code
+            #headers['StationIAGAcode'] = code
             yestr = line[25:26]
             if int(yestr) in [5,6,7,8,9]:
                 ye = '1'+yestr
@@ -155,21 +192,32 @@ def readWDC(filename, headonly=False, **kwargs):
                     timestr = hr+':%02d:00' % (i/6)
                     array[tind].append(date2num(datetime.strptime(datestr+'T'+timestr, "%Y-%m-%dT%H:%M:%S")))
                 val = float(line[34+i:40+i])
-                if var in ['x','i']:
+                if var in ['x','i','h']:
+                    complist[0] = var
+                    headers['col-x'] = var
                     if val >= 999999.:
                         array[xind].append(nanval)
                     else:
-                        headers['col-x'] = 'x'
-                        headers['unit-col-x'] = 'nT'
+                        # if val == i !!! check float(base) + float(elem)/600
+                        if var == 'i':
+                            headers['unit-col-x'] = 'deg'
+                        else:
+                            headers['unit-col-x'] = 'nT'
                         array[xind].append(val)
-                if var in ['y','d']:
+                if var in ['y','d','e']:
+                    complist[1] = var
                     if val >= 999999.:
                         array[yind].append(nanval)
                     else:
-                        headers['col-y'] = 'y'
-                        headers['unit-col-y'] = 'nT'
+                        # if val == d !!! check float(base) + float(elem)/600
+                        headers['col-y'] = var
+                        if var == 'd':
+                            headers['unit-col-y'] = 'deg'
+                        else:
+                            headers['unit-col-y'] = 'nT'
                         array[yind].append(val)
                 if var == 'z':
+                    complist[2] = var
                     if val >= 999999.:
                         array[zind].append(nanval)
                     else:
@@ -177,10 +225,10 @@ def readWDC(filename, headonly=False, **kwargs):
                         headers['unit-col-z'] = 'nT'
                         array[zind].append(val)
                 if var == 'f':
+                    complist[3] = var
                     if val >= 999999.:
                         array[find].append(nanval)
                     else:
-                        print val
                         headers['col-f'] = 'f'
                         headers['unit-col-f'] = 'nT'
                         array[find].append(val)
@@ -197,85 +245,17 @@ def readWDC(filename, headonly=False, **kwargs):
         itest += 1
     fh.close()
 
-    if minute:
-        array = np.asarray([np.asarray(el) for el in array])
-        stream = DataStream([LineStruct()], headers, np.asarray(array))
-        return stream
-
-    if len(lx) > 0:
-        for el in lx:
-            for ele in ly:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-            for ele in lz:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-            for ele in lf:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-        for elem in lx:
-            row = LineStruct()
-            row.time = elem[0]
-            row.x = elem[1]
-            row.y = elem[2]
-            row.z = elem[3]
-            row.f = elem[4]
-            row.typ = "xyzf"
-            stream.add(row)
-    elif len(li) > 0:
-        for el in li:
-            for ele in ld:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-            for ele in lz:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-            for ele in lf:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-        for elem in li:
-            row = LineStruct()
-            row.time = elem[0]
-            row.x = elem[1]
-            row.y = elem[2]
-            row.z = elem[3]
-            row.f = elem[4]
-            stream.add(row)
-        stream = stream._convertstream('idf2xyz')
-    elif len(lh) > 0:
-        for el in lh:
-            for ele in ld:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-            for ele in lz:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-            for ele in lf:
-                if ele[0] == el[0]:
-                    el.append(ele[1])
-        for elem in lh:
-            row = LineStruct()
-            row.time = elem[0]
-            row.x = elem[1]
-            row.y = elem[2]
-            row.z = elem[3]
-            row.f = elem[4]
-            stream.add(row)
-        stream = stream._convertstream('hdz2xyz')
-
-    # header info
-    headers['col-x'] = 'x'
-    headers['unit-col-x'] = 'nT'
-    headers['col-y'] = 'y'
-    headers['unit-col-y'] = 'nT'
-    headers['col-z'] = 'z'
-    headers['unit-col-z'] = 'nT'
-    headers['col-f'] = 'f'
-    headers['unit-col-f'] = 'nT'
+    #    if minute:
+    headers['DataComponents'] = "".join(complist).upper()
     headers['StationIAGAcode'] = code
     headers['StationID'] = code
-    
-    return DataStream(stream, headers)  
+    array = np.asarray([np.asarray(el) for el in array])
+    if oldformat:
+        print ("readWDC: found old WDC format - assuming 20th century")
+
+    stream = DataStream([LineStruct()], headers, np.asarray(array))
+
+    return stream
 
 
 def writeWDC(datastream, filename, **kwargs):

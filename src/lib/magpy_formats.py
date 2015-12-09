@@ -162,6 +162,12 @@ def isFormat(filename, format_type):
     elif (format_type == "IAF"): # Intermagnet Archive Format
         if (isIAF(filename)):
             return True
+    elif (format_type == "IYFV"): # Intermagnet Yearly mean Format
+        if (isIYFV(filename)):
+            return True
+    elif (format_type == "DKA"): # Intermagnet K-value Format
+        if (isDKA(filename)):
+            return True
     elif (format_type == "IMAGCDF"): # Intermagnet CDF Format
         if (isIMAGCDF(filename)):
             return True
@@ -219,6 +225,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIMAGCDF(filename, headonly, **kwargs)
     elif (format_type == "BLV"): # Intermagnet IBFV2.00
         return readBLV(filename, headonly, **kwargs)
+    elif (format_type == "IYFV"): # Intermagnet IYVF1.01
+        return readIYFV(filename, headonly, **kwargs)
+    elif (format_type == "DKA"): # Intermagnet DKA
+        return readDKA(filename, headonly, **kwargs)
     elif (format_type == "DIDD"):
         return readDIDD(filename, headonly, **kwargs)
     elif (format_type == "GDASA1"):
@@ -312,6 +322,10 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeIMAGCDF(datastream, filename, **kwargs)
     elif (format_type == "BLV"):
         return writeBLV(datastream, filename, **kwargs)
+    elif (format_type == "IYFV"):
+        return writeIYFV(datastream, filename, **kwargs)
+    elif (format_type == "DKA"):
+        return writeDKA(datastream, filename, **kwargs)
     elif (format_type == "DIDD"):
         return writeDIDD(datastream, filename, **kwargs)
     elif (format_type == "PYSTR"):

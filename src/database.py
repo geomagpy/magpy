@@ -2504,7 +2504,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                 ls[idx] = np.asarray(elem)
 
             for key in keys:
-                print "Reformating key", key
+                #print "Reformating key", key
                 index = KEYLIST.index(key)
                 col = np.asarray(ls[index])
                 if not False in checkEqual3(col):

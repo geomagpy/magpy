@@ -111,8 +111,15 @@ def readIAGA(filename, headonly=False, **kwargs):
                     if not val == '': 
                         stream.header['DataSamplingFilter'] = val
                 if key.find('Data Type') > -1:
-                    if not val == '': 
-                        stream.header['DataType'] = val
+                    if not val == '':
+                        if val[0] in ['d','D']: 
+                            stream.header['DataPublicationLevel'] = '4'
+                        elif val[0] in ['q','Q']: 
+                            stream.header['DataPublicationLevel'] = '3'
+                        elif val[0] in ['p','P']: 
+                            stream.header['DataPublicationLevel'] = '2'
+                        else: 
+                            stream.header['DataPublicationLevel'] = '1'
                 if key.find('Publication Date') > -1:
                     if not val == '': 
                         stream.header['DataPublicationDate'] = val
@@ -123,40 +130,43 @@ def readIAGA(filename, headonly=False, **kwargs):
                 for it, elem in enumerate(colsstr):
                     if it > 2:
                         varstr += elem[-1]
-                        if elem[-1] == 'H':
-                            stream.header["col-x"] = 'H'
-                            stream.header["col-y"] = 'D'
-                            stream.header["col-z"] = 'Z'
-                            stream.header['DataType'] = 'HDZ'    
-                        elif elem[-1] == 'X':
-                            stream.header["col-x"] = 'X'
-                            stream.header["col-y"] = 'Y'
-                            stream.header["col-z"] = 'Z'
-                            stream.header['DataType'] = 'HDZ'       
-                        elif elem[-1] == 'I':
-                            stream.header["col-x"] = 'I'
-                            stream.header["col-y"] = 'D'
-                            #stream.header["col-z"] = 'Z'
-                            stream.header['DataType'] = 'IDF'    
-                        #colname = "col-%s" % elem[-1]
-                        #colname = colname.lower()
-                        #stream.header[colname] = elem[-1].lower()
-                        if elem[-1].lower() in ['x','y','z','f']:
-                            stream.header['unit-'+colname] = 'nT' 
-                    else:
-                        colname = "col-%s" % elem
-                        colname = colname.lower()
-                        stream.header[colname] = elem.lower()
-                        if elem.lower() in ['x','y','z','f']:
-                            stream.header['unit-'+colname] = 'nT'
-                #if (stream.header['col-x']=='x'):
-                #    stream.header['DataType'] = 'XYZ'    
-                #elif (stream.header['col-h']=='h'):
-                #    stream.header['DataType'] = 'HDZ'    
-                #elif (stream.header['col-i']=='i'):
-                #    stream.header['DataType'] = 'IDF'    
-                #else:
-                #    raise ValueError
+                varstr = varstr[:4]
+
+                stream.header["unit-col-x"] = 'nT'
+                stream.header["unit-col-y"] = 'nT'
+                stream.header["unit-col-z"] = 'nT'
+                stream.header["unit-col-f"] = 'nT'
+                stream.header["col-f"] = 'f'
+                if varstr in ['dhzf','dhzg']:
+                    stream.header["col-x"] = 'H'
+                    stream.header["col-y"] = 'D'
+                    stream.header["col-z"] = 'Z'
+                    stream.header["unit-col-y"] = 'deg'
+                    stream.header['DataComponents'] = 'HDZF'    
+                elif varstr in ['ehzf','ehzg']:
+                    stream.header["col-x"] = 'H'
+                    stream.header["col-y"] = 'E'
+                    stream.header["col-z"] = 'Z'
+                    stream.header['DataComponents'] = 'HEZF'    
+                elif varstr in ['dhif','dhig']:
+                    stream.header["col-x"] = 'I'
+                    stream.header["col-y"] = 'D'
+                    stream.header["col-z"] = 'F'
+                    stream.header["unit-col-x"] = 'deg'
+                    stream.header["unit-col-y"] = 'deg'
+                    stream.header['DataComponents'] = 'IDFF'    
+                elif varstr in ['hdzf','hdzg']:
+                    stream.header["col-x"] = 'H'
+                    stream.header["col-y"] = 'D'
+                    stream.header["unit-col-y"] = 'deg'
+                    stream.header["col-z"] = 'Z'
+                    stream.header['DataComponents'] = 'HDZF'
+                else:
+                    stream.header["col-x"] = 'X'
+                    stream.header["col-y"] = 'Y'
+                    stream.header["col-z"] = 'Z'
+                    stream.header['DataComponents'] = 'XYZF'    
+
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -175,26 +185,48 @@ def readIAGA(filename, headonly=False, **kwargs):
                         
                 # Baue zweidimensionales Array auf
                 array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) ) 
-                if varstr[:4] == 'dhzf':  
+                if float(row[3]) >= 88888.0:
+                    row[3] = np.nan
+                if float(row[4]) >= 88888.0:
+                    row[4] = np.nan
+                if float(row[5]) >= 88888.0:
+                    row[5] = np.nan
+                if varstr in ['dhzf','dhzg']:
+                    array[1].append( float(row[4]) )      
+                    array[2].append( float(row[3])/60.0 )      
+                    array[3].append( float(row[5]) )
+                elif varstr in ['ehzf','ehzg']:
                     array[1].append( float(row[4]) )      
                     array[2].append( float(row[3]) )      
                     array[3].append( float(row[5]) )
+                elif varstr in ['dhif','dhig']:
+                    array[1].append( float(row[5])/60.0 )      
+                    array[2].append( float(row[3])/60.0 )      
+                    array[3].append( float(row[6]) )
+                elif varstr in ['hdzf','hdzg']:
+                    array[1].append( float(row[3]) )      
+                    array[2].append( float(row[4])/60.0 )      
+                    array[3].append( float(row[5]) )      
                 else:
                     array[1].append( float(row[3]) )      
                     array[2].append( float(row[4]) )      
                     array[3].append( float(row[5]) )      
                 try:
-                    if not float(row[6]) == 88888:
-                        if stream.header['col-f']=='f':
+                    if float(row[6]) < 88888:
+                        if varstr[-1]=='f':
                             array[4].append(float(elem[6]))
-                        elif stream.header['col-g']=='g':
-                            array[4].append(np.sqrt(row[3]**2+row[4]**2+row[5]**2) + float(row[6]))
+                        elif varstr[-1]=='g' and varstr=='xyzg':
+                            array[4].append(np.sqrt(row[3]**2+row[4]**2+row[5]**2) - float(row[6]))
+                        elif varstr[-1]=='g' and varstr in ['hdzg','dhzg','ehzg']:
+                            array[4].append(np.sqrt(row[3]**2+row[5]**2) - float(row[6]))
+                        elif varstr[-1]=='g' and varstr in ['dhig']:
+                            array[4].append(float(row[6]))
                         else:
                             raise ValueError
                     else:
                         array[4].append(float('nan'))
                 except:
-                    if not float(row[6]) == 88888:
+                    if not float(row[6]) >= 88888:
                         array[4].append(float(row[6]))
                     else:
                         array[4].append(float('nan'))
@@ -250,6 +282,7 @@ def writeIAGA(datastream, filename, **kwargs):
     """
     
     mode = kwargs.get('mode')
+    useg = kwargs.get('useg')
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -268,7 +301,42 @@ def writeIAGA(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
+   
     header = datastream.header
+
+    datacomp = header.get('DataComponents'," ")
+    if datacomp in ['hez','HEZ','hezf','HEZF','hezg','HEZG']:
+        datacomp = 'EHZ'
+    elif datacomp in ['hdz','HDZ','hdzf','HDZF','hdzg','HDZG']:
+        datacomp = 'DHZ'
+    elif datacomp in ['idf','IDF','idff','IDFF','idfg','IDFG']:
+        datacomp = 'DHI'
+    elif datacomp in ['xyz','XYZ','xyzf','XYZF','xyzg','XYZG']:
+        datacomp = 'XYZ'
+    else:
+        datacomp = 'XYZ'
+
+    find = KEYLIST.index('f')
+    if len(datastream.ndarray[find]) > 0:
+        if not useg:
+            datacomp = datacomp+'F'
+        else:
+            datacomp = datacomp+'G'
+    else:
+        datacomp = datacomp+'F'
+
+    publevel = str(header.get('DataPublicationLevel'," "))
+    if publevel == '1':
+        publ = 'V' 
+    elif publevel == '2':
+        publ = 'P' 
+    elif publevel == '3':
+        publ = 'Q' 
+    elif publevel == '4':
+        publ = 'D' 
+    else:
+        publ = 'V' 
+  
     line = []
     if not mode == 'append':
         if header.get('Elevation') > 0:
@@ -280,12 +348,12 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',str(header.get('DataAcquisitionLatitude'," "))[:44]))
         line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',str(header.get('DataAcquisitionLongitude'," "))[:44]))
         line.append(' Elevation %-12s %-44s |\n' % (' ',str(header.get('DataElevation'," "))[:44]))
-        line.append(' Reported %-13s %-44s |\n' % (' ',header.get('DataComponents'," ")))
+        line.append(' Reported %-13s %-44s |\n' % (' ',datacomp))
         line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('DataSensorOrientation'," ")[:44]))
         line.append(' Digital Sampling %-5s %-44s |\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(str(header.get('DataSamplingRate'," "))+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
-        line.append(' Data Type %-12s %-44s |\n' % (' ',header.get('DataType'," ")[:44]))
-        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (header.get('col-x',"x").upper(),header.get('col-y',"y").upper(),header.get('col-z',"z").upper(),header.get('col-f',"f").upper()))
+        line.append(' Data Type %-12s %-44s |\n' % (' ',publ[:44]))
+        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (datacomp[0],datacomp[1],datacomp[2],datacomp[3]))
     try:
         myFile.writelines(line) # Write header sequence of strings to a file
     except IOError:
@@ -299,10 +367,30 @@ def writeIAGA(datastream, filename, **kwargs):
 
         fulllength = datastream.length()[0]
 
+        # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
+        datacomp = 'EHZ'
+        datacomp = 'DHZ'
+        datacomp = 'DHI'
+        datacomp = 'XYZ'
+        xmult = 1.0
+        ymult = 1.0
+        zmult = 1.0
         xind = KEYLIST.index('x')
         yind = KEYLIST.index('y')
         zind = KEYLIST.index('z')
         find = KEYLIST.index('f')
+        if datacomp.startswith('EHZ'):
+            xind = KEYLIST.index('y')
+            yind = KEYLIST.index('x')
+        elif datacomp.startswith('DHZ'):
+            xind = KEYLIST.index('y')
+            yind = KEYLIST.index('x')
+            xmult = 60.0
+        elif datacomp.startswith('DHI'):
+            xind = KEYLIST.index('y')
+            yind = KEYLIST.index('x')
+            xmult = 60.0
+            zmult = 60.0
         for i in range(fulllength):
             if not ndtype:
                 elem = datastream[i]
@@ -312,11 +400,14 @@ def writeIAGA(datastream, filename, **kwargs):
                 fval = elem.f
                 timeval = elem.time
             else:
-                xval = datastream.ndarray[xind][i]
+                xval = datastream.ndarray[xind][i]*xmult
                 yval = datastream.ndarray[yind][i]
-                zval = datastream.ndarray[zind][i]
+                zval = datastream.ndarray[zind][i]*zmult
                 if len(datastream.ndarray[find]) > 0:
-                    fval = datastream.ndarray[find][i]
+                    if not useg:
+                        fval = datastream.ndarray[find][i]
+                    else:
+                        fval = np.sqrt(xval**2+yval**2+zval**2)-datastream.ndarray[find][i]
                 else:
                     fval = 88888.0
                 timeval = datastream.ndarray[0][i]
@@ -342,9 +433,9 @@ def writeIAGA(datastream, filename, **kwargs):
             else:
                 row += '%10.2f' % zval
             if isnan(fval):
-                row += '  %.2f' % 88888.0
+                row += '%10.2f' % 88888.0
             else:
-                row += '  %.2f' % fval
+                row += '%10.2f' % fval
             line.append(row + '\n')
         try:
             myFile.writelines( line )
