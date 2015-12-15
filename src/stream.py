@@ -875,8 +875,9 @@ CALLED BY:
                 if len(el) == len(ind):
                     self.ndarray[i] = el[ind]
                 else:
+                    print self.ndarray[i]
                     print "Sorting: key %s has the wrong length - dropping this row" % KEYLIST[i]
-                    print KEYLIST[i], len(self.ndarray[0]), len(self.ndarray[i])
+                    print "len(t-axis)=%d len(%s)=%d" % (len(self.ndarray[0]), KEYLIST[i], len(self.ndarray[i]))
                     self.ndarray[i] = []
 
             self.ndarray = self.fillempty(self.ndarray,keylst)

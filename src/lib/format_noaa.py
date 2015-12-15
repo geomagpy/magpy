@@ -330,7 +330,7 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                         array[indy].append(nanval)
                     elif datatype == 'mag':
                         array[indx].append(nanval)
-                        array[indx].append(nanval)
+                        array[indy].append(nanval)
                         array[indz].append(nanval)
                         array[indf].append(nanval)
                         array[indt1].append(nanval)
