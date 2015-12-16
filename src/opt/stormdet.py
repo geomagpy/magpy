@@ -359,10 +359,10 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
         # --------------------------------------------
         if dv_max >= 25.:
 
-            t_lo = num2date(t_max) - timedelta(minutes=timestep)
-            t_hi = num2date(t_max) + timedelta(minutes=lastcompare)
-            dACE_lo = dACE.trim(starttime=t_lo-timedelta(minutes=60), endtime=t_lo, newway=True)
-            dACE_hi = dACE.trim(starttime=t_hi, endtime=t_hi+timedelta(minutes=60), newway=True)
+            t_lo = num2date(t_max) - timedelta(minutes=(timestep+20))
+            t_hi = num2date(t_max) + timedelta(minutes=(lastcompare+20))
+            dACE_lo = dACE.trim(starttime=t_lo, endtime=num2date(t_max), newway=True)
+            dACE_hi = dACE.trim(starttime=num2date(t_max), endtime=t_hi, newway=True)
 
             std_lo = dACE_lo.mean('var4')
             std_hi = dACE_hi.mean('var4')

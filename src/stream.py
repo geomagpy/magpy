@@ -32,7 +32,7 @@ try:
     import logging
     import sys, re
     import thread, time, string, os, shutil
-    import copy
+    import copy as cp
     import fnmatch
     import urllib2
     from tempfile import NamedTemporaryFile
@@ -7356,33 +7356,36 @@ CALLED BY:
             self.container = [LineStruct()]
 
         #-ndarrray---------------------------------------
-        self.ndarray = list(self.ndarray) # Converting array to list - better for append and  other item function (because its not type sensitive)
+        if not newway:
+            newarray = list(self.ndarray) # Converting array to list - better for append and  other item function (because its not type sensitive)
+        else:
+            newarray = cp.deepcopy(list(self.ndarray))
         if starttime:
             starttime = self._testtime(starttime)
-            if self.ndarray[0].size > 0:   # time column present
-                idx = (np.abs(self.ndarray[0].astype(float)-date2num(starttime))).argmin()
-                for i in range(len(self.ndarray)):
-                    if len(self.ndarray[i]) > idx:
-                        self.ndarray[i] =  self.ndarray[i][idx:]
+            if newarray[0].size > 0:   # time column present
+                idx = (np.abs(newarray[0].astype(float)-date2num(starttime))).argmin()
+                for i in range(len(newarray)):
+                    if len(newarray[i]) > idx:
+                        newarray[i] =  newarray[i][idx:]
         if endtime:
             endtime = self._testtime(endtime)
-            if self.ndarray[0].size > 0:   # time column present
-                idx = 1 + (np.abs(self.ndarray[0].astype(float)-date2num(endtime))).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
+            if newarray[0].size > 0:   # time column present
+                idx = 1 + (np.abs(newarray[0].astype(float)-date2num(endtime))).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
                 #idx = 1+ (np.abs(self.ndarray[0]-date2num(endtime))).argmin() # get the nearest index to endtime
-                if idx >= len(self.ndarray[0]): ## prevent too large idx values
-                    idx = len(self.ndarray[0]) - 1
+                if idx >= len(newarray[0]): ## prevent too large idx values
+                    idx = len(newarray[0]) - 1
                 while True:
-                    if not float(self.ndarray[0][idx]) < date2num(endtime): # Make sure that last value is smaller than endtime
+                    if not float(newarray[0][idx]) < date2num(endtime) and idx != 0: # Make sure that last value is smaller than endtime
                         idx -= 1
                     else:
                         break
 
-                self.ndarray = list(self.ndarray)
-                for i in range(len(self.ndarray)):
-                    length = len(self.ndarray[i])
+                #self.ndarray = list(self.ndarray)
+                for i in range(len(newarray)):
+                    length = len(newarray[i])
                     if length >= idx:                        
-                        self.ndarray[i] = self.ndarray[i][:idx+1]
-        self.ndarray = np.asarray(self.ndarray)
+                        newarray[i] = newarray[i][:idx+1]
+        newarray = np.asarray(newarray)
         #-ndarrray---------------------------------------
 
 
@@ -7436,7 +7439,10 @@ CALLED BY:
                             break
                 self.container = self.container[:edval]
 
-        return DataStream(self.container,self.header,self.ndarray)
+        if ndtype:
+            return DataStream(self.container,self.header,newarray)
+        else:
+            return DataStream(self.container,self.header,self.ndarray)
 
 
 
