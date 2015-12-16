@@ -228,6 +228,8 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
         print "Available:", variables
         variables = variables[:9]
         print "Plotting:", variables
+    else:
+        print "Plotting:", variables
     
     # Check lists for variables have correct length:
     num_of_var = len(variables)

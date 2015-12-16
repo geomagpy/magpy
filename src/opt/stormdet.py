@@ -52,14 +52,8 @@ EXAMPLE SCRIPT:
 '''
 
 import sys, os
-try:
-    from magpy.stream import *  
-    from magpy.mpplot import *
-except:
-    sys.path.append('/home/rachel/Software/MagPyDev/magpy/trunk/src')
-    from stream import *  
-    from mpplot import *
-import pywt, math
+from stream import *  
+from mpplot import *
 
 #--------------------------------------------------------------------
 # VARIABLES
@@ -426,6 +420,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                 t_val, idx = find_nearest(t_5m,t_max)
                 start, end = (num2date(t_val), 
 			num2date(t_val)+timedelta(minutes=10))
+                # TODO: Figure out why this function still decimates ACE_5m
                 ACE_flux = ACE_5m.trim(starttime=start,endtime=end, newway=True)
                 flux_val = ACE_flux.mean(key_e,percentage=20)
                 if isnan(flux_val):
@@ -986,7 +981,8 @@ def _calcDVals(stream, key, m, n):
     mean_lo, mean_hi = np.zeros(len(y)), np.zeros(len(y))
     std_lo, std_hi = np.zeros(len(y)), np.zeros(len(y))
 
-    dstream = DataStream([],{})
+    array = [[] for key in KEYLIST]
+    headers = {}
 
     for i in range(1,len(y)-1):
         # DEFINE ARRAYS ABOVE AND BELOW POINT:
@@ -1014,19 +1010,21 @@ def _calcDVals(stream, key, m, n):
 
         # ASSIGN VALUES WITH DIFFERENCES:
         # -------------------------------
-	# TODO: update this to write ndarrays.
-        row = LineStruct()
-        row.time = t[i]
-        row.x = y[i]
-        row.dx = hi_mean - lo_mean
-        row.var1 = lo_mean
-        row.var2 = hi_mean
-        row.var3 = lo_std
-        row.var4 = hi_std
+        array[KEYLIST.index('time')].append(float(t[i]))
+        array[KEYLIST.index('x')].append(float(y[i]))
+        array[KEYLIST.index('dx')].append(float(hi_mean - lo_mean))
+        array[KEYLIST.index('var1')].append(float(lo_mean))
+        array[KEYLIST.index('var2')].append(float(hi_mean))
+        array[KEYLIST.index('var3')].append(float(lo_std))
+        array[KEYLIST.index('var4')].append(float(hi_std))
 
-        dstream.add(row)
+    headers['col-x'] = 'X'
+    headers['col-dx'] = 'dX'
 
-    return dstream
+    for key in ['time','x','dx','var1','var2','var3','var4']:
+        array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
+
+    return DataStream([LineStruct()], headers, np.asarray(array))
 
 
 def _calcProbWithSat(ssctime, sat_dict, dh_prob, dh_weight, satprob_weight, estt_weight, verbose=False):
