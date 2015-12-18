@@ -640,7 +640,7 @@ CALLED BY:
                         setattr(li, key, elkey)
                 co.add(li)
 
-        return DataStream(co,co.header,np.asarray(array))
+        return DataStream(co.container,co.header,np.asarray(array))
             
 
     def __str__(self):
@@ -6204,6 +6204,10 @@ CALLED BY:
         if len(cutstream.ndarray[0]) > 0:
             st,ls = cutstream.findtime(starttime)
             ed,le = cutstream.findtime(endtime)
+            if starttime < num2date(cutstream.ndarray[0][0]):
+                st = 0
+            if endtime > num2date(cutstream.ndarray[0][-1]):
+                ed = len(cutstream.ndarray[0])
             dropind = [i for i in range(st,ed)]
             for index,key in enumerate(KEYLIST):
                 if len(cutstream.ndarray[index])>0:
@@ -7359,7 +7363,8 @@ CALLED BY:
         if not newway:
             newarray = list(self.ndarray) # Converting array to list - better for append and  other item function (because its not type sensitive)
         else:
-            newarray = cp.deepcopy(list(self.ndarray))
+            newstream = self.copy()
+            newarray = list(newstream.ndarray)
         if starttime:
             starttime = self._testtime(starttime)
             if newarray[0].size > 0:   # time column present
