@@ -30,7 +30,7 @@ writeresultpath = os.path.join(basepath,'Daten','Magnetism','DI-WIK','data')
 send_notification_to = ['roman.leonhardt@zamg.ac.at','barbara.leichter@zamg.ac.at','andrea.draxler@gmx.at']
 #send_notification_to = ['roman.leonhardt@zamg.ac.at']
 
-# ToDo: add counter for logfile length and only send mail if new data was added or errors are happening 
+# ToDo: add counter for logfile length and only send mail if new data was added or errors are happening
 start = datetime.utcnow()-timedelta(days=365)
 
 print "Analyzing absolute data for Lemi"

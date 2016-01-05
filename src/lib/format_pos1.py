@@ -79,26 +79,26 @@ def readPOS1(filename, headonly=False, **kwargs):
         stream.header['unit-col-df'] = 'nT'
         stream.header['col-var1'] = 'ErrorCode'
         stream.header['unit-col-var1'] = ''
- 
-	line = fh.read(45)
-	while line != "":
+
+        line = fh.read(45)
+        while line != "":
             data= struct.unpack("6hLLLh6hL",line.strip())
 
             row = LineStruct()
-   
+
             time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
             row.time = date2num(time)
             row.f = float(data[7])/1000.
             row.df = float(data[8])/1000.
             row.var1 = int(data[9])
 
-            stream.add(row)    
+            stream.add(row)
 
-    	    line = fh.read(45)
+            line = fh.read(45)
 
     fh.close()
 
-    return stream   
+    return stream
 
 def readPOS1TXT(filename, headonly=False, **kwargs):
     # Reading POS-1 text format data.
@@ -131,20 +131,20 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
 
     if getfile:
 
-	line = fh.readline()
+        line = fh.readline()
         loggerlib.info('readPOS1TXT: Reading %s' % (filename))
 
-	while line != "":
+        while line != "":
             data = line.split()
             row = LineStruct()
-   
+
             time = datetime.strptime(data[0], "%Y-%m-%dT%H:%M:%S.%f")
             row.time = date2num(time)
             row.f = float(data[1])/1000.
             row.df = float(data[3])/1000.
-            stream.add(row)    
+            stream.add(row)
 
-    	    line = fh.readline()
+            line = fh.readline()
 
         #print "Finished file reading of %s" % filename
 
@@ -152,4 +152,3 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
 
 
     return DataStream(stream, headers)
-

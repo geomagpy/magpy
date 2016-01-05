@@ -1,42 +1,42 @@
 '''
-Path:			magpy.lib.magpy_formats
-Part of package:	stream (read/write)
-Type:			Input tester, call to read library
+Path:                   magpy.lib.magpy_formats
+Part of package:        stream (read/write)
+Type:                   Input tester, call to read library
 
 PURPOSE:
-	Tests which format a file has using the read library.
+        Tests which format a file has using the read library.
 
 CONTAINS:
-        isFormat:	(Func) Runs through datatypes in library to find fitting type.
-	readFormat:	(Func) When format is found, reads data file into DataStream.
-	writeFormat:	(Func) Writes DataStream object to given format.
+        isFormat:       (Func) Runs through datatypes in library to find fitting type.
+        readFormat:     (Func) When format is found, reads data file into DataStream.
+        writeFormat:    (Func) Writes DataStream object to given format.
 
 DEPENDENCIES:
-	magpy.lib...
-		.format_gsm19
-		.format_didd
-		.format_gdas
-		.format_lemi
-		.format_pos1
-		.format_env05
-		.format_cr800
-		.format_iono
-		.format_iaga02
-		.format_wdc
-		.format_magpy
-		.format_noaa
-		.format_latex
-		.format_wik
-		.format_wic
-		.format_sfs
-		.format_bdv
-		.format_dtu
-		.format_gfz
-		.format_imf
+        magpy.lib...
+                .format_gsm19
+                .format_didd
+                .format_gdas
+                .format_lemi
+                .format_pos1
+                .format_env05
+                .format_cr800
+                .format_iono
+                .format_iaga02
+                .format_wdc
+                .format_magpy
+                .format_noaa
+                .format_latex
+                .format_wik
+                .format_wic
+                .format_sfs
+                .format_bdv
+                .format_dtu
+                .format_gfz
+                .format_imf
 
 CALLED BY:
-	magpy.stream.read()
-	magpy.stream.write()
+        magpy.stream.read()
+        magpy.stream.write()
 '''
 
 from stream import *
@@ -86,7 +86,7 @@ def isFormat(filename, format_type):
     elif (format_type == "OPT"):
         if (isOPT(filename)):
             return True
-    elif (format_type == "PMAG1"): # Data from the ELSEC820 System 
+    elif (format_type == "PMAG1"): # Data from the ELSEC820 System
         if (isPMAG1(filename)):
             return True
     elif (format_type == "PMAG2"): # Data from the ELSEC820 System via Cobenzl RCS
@@ -350,6 +350,3 @@ def writeFormat(datastream, filename, format_type, **kwargs):
     else:
         print "magpy-formats: Writing not succesful - format not recognized"
         logging.warning("magpy-formats: Writing not succesful - format not recognized")
-
-
-

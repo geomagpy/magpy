@@ -1,6 +1,6 @@
 """
 MagPy
-MagPy input/output filters 
+MagPy input/output filters
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
@@ -11,38 +11,38 @@ import gc
 
 
 # K0 (Browsing - not for Serious Science) ACE-EPAM data from the OMNI database:
-k0_epm_KEYDICT = {#'H_lo',			# H (0.48-0.97 MeV)	(UNUSED)
-		'Ion_very_lo': 'var1',		# Ion (47-65 keV) 1/(cm2 s ster MeV)
-		'Ion_lo': 'var2',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
-		'Ion_mid': 'var3',		# Ion (310-580 keV) 1/(cm2 s ster MeV)
-		'Ion_hi': 'var5',		# Ion (1060-1910 keV) 1/(cm2 s ster MeV)
-		'Electron_lo': 'z',		# Electron (38-53 keV) 1/(cm2 s ster MeV)
-		'Electron_hi': 'f'		# Electron (175-315 keV) 1/(cm2 s ster MeV)
-		   }
+k0_epm_KEYDICT = {#'H_lo',                      # H (0.48-0.97 MeV)     (UNUSED)
+                'Ion_very_lo': 'var1',          # Ion (47-65 keV) 1/(cm2 s ster MeV)
+                'Ion_lo': 'var2',               # Ion (310-580 keV) 1/(cm2 s ster MeV)
+                'Ion_mid': 'var3',              # Ion (310-580 keV) 1/(cm2 s ster MeV)
+                'Ion_hi': 'var5',               # Ion (1060-1910 keV) 1/(cm2 s ster MeV)
+                'Electron_lo': 'z',             # Electron (38-53 keV) 1/(cm2 s ster MeV)
+                'Electron_hi': 'f'              # Electron (175-315 keV) 1/(cm2 s ster MeV)
+                   }
 # H1 (Level 2 final 5min data) ACE-EPAM data from the OMNI database:
 h1_epm_KEYDICT = {
-		'P1': 'var1',			# Ion (47-65 keV) 1/(cm2 s ster MeV)
-		'P3': 'var2',			# Ion (115-195 keV) 1/(cm2 s ster MeV)
-		'P5': 'var3',			# Ion (310-580 keV) 1/(cm2 s ster MeV)
-		'P7': 'var5',			# Ion (1060-1910 keV) 1/(cm2 s ster MeV)
-		'DE1': 'z',			# Electron (38-53 keV) 1/(cm2 s ster MeV)
-		'DE4': 'f'			# Electron (175-315 keV) 1/(cm2 s ster MeV)
-		# (... Many, MANY other unused keys.)
-		   }
+                'P1': 'var1',                   # Ion (47-65 keV) 1/(cm2 s ster MeV)
+                'P3': 'var2',                   # Ion (115-195 keV) 1/(cm2 s ster MeV)
+                'P5': 'var3',                   # Ion (310-580 keV) 1/(cm2 s ster MeV)
+                'P7': 'var5',                   # Ion (1060-1910 keV) 1/(cm2 s ster MeV)
+                'DE1': 'z',                     # Electron (38-53 keV) 1/(cm2 s ster MeV)
+                'DE4': 'f'                      # Electron (175-315 keV) 1/(cm2 s ster MeV)
+                # (... Many, MANY other unused keys.)
+                   }
 # H0 (Level 2 final 64s data) ACE-SWEPAM data from the OMNI database:
 h0_swe_KEYDICT = {
-		'Np': 'var1',			# H_Density #/cc
-		'Vp': 'var2',			# SW_H_Speed km/s
-		'Tpr': 'var3',			# H_Temp_radial Kelvin
-		# (... Many other keys unused.)
-		   }
+                'Np': 'var1',                   # H_Density #/cc
+                'Vp': 'var2',                   # SW_H_Speed km/s
+                'Tpr': 'var3',                  # H_Temp_radial Kelvin
+                # (... Many other keys unused.)
+                   }
 # H0 (Level 2 final 16s data) ACE-MAG data from the OMNI database:
 h0_mfi_KEYDICT = {
-		'Magnitude': 'f',		# B-field total magnitude (Bt)
-		'BGSM': ['x','y','z'],		# B-field in GSM coordinates (Bx, By, Bz)
-		#'BGSEc': ['x','y','z'],	# B-field in GSE coordinates
-		# (... Many other keys unused.)
-		   }
+                'Magnitude': 'f',               # B-field total magnitude (Bt)
+                'BGSM': ['x','y','z'],          # B-field in GSM coordinates (Bx, By, Bz)
+                #'BGSEc': ['x','y','z'],        # B-field in GSE coordinates
+                # (... Many other keys unused.)
+                   }
 
 def isPYCDF(filename):
     """
@@ -112,9 +112,9 @@ def readPYASCII(filename, headonly=False, **kwargs):
     """
     Reading basic ASCII format data.
     Should look like:
-	 # MagPy ASCII
-	Time-days,Time,Temp[deg],Voltage[V]
-	734928.0416666666,2013-03-01T01:00:00.000000,14061.940719529965,6.8539941994665305,11.869002442573095
+         # MagPy ASCII
+        Time-days,Time,Temp[deg],Voltage[V]
+        734928.0416666666,2013-03-01T01:00:00.000000,14061.940719529965,6.8539941994665305,11.869002442573095
 
     """
     stream = DataStream([],{})
@@ -151,12 +151,12 @@ def readPYASCII(filename, headonly=False, **kwargs):
         elif elem[0].startswith(' # MagPy ASCII'):
             # blank header
             pass
-        elif elem[0].startswith('Time'): # extract column info and keys            
+        elif elem[0].startswith('Time'): # extract column info and keys
             for i in range(len(elem)):
                 #print elem[i]
                 if not elem[i].startswith('Time'):
                     try:  # neglecte columns without units (e.g. text)
-                         headval = elem[i].split('[')                
+                         headval = elem[i].split('[')
                          colval = headval[0]
                          unitval = headval[1].strip(']')
                          exec('headers["col-'+NUMKEYLIST[len(keylst)]+'"] = colval')
@@ -207,7 +207,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))    
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
 
 
@@ -245,7 +245,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
             pass
         elif elem[0]=='Epoch[]' or elem[0]=='-[]' or elem[0]=='time[]':
             for i in range(len(elem)):
-                headval = elem[i].split('[')                
+                headval = elem[i].split('[')
                 colval = headval[0]
                 unitval = headval[1].strip(']')
                 exec('headers["col-'+KEYLIST[i]+'"] = colval')
@@ -298,7 +298,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
             array[idx] = np.asarray([])
 
     print "lib format-magpy", [len(el) for el in array]
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))    
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
 
 def readPYCDF(filename, headonly=False, **kwargs):
@@ -339,7 +339,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
-        getfile = True 
+        getfile = True
     logbaddata = False
 
     # Get format type:
@@ -363,7 +363,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 OMNIACE = True
         except:
             pass
-        
+
         if headskip:
             for key in cdf_file.attrs:
                 if not key == 'DataAbsFunctionObject':
@@ -375,7 +375,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
 
         #if headonly:
         #    cdf_file.close()
-        #    return DataStream(stream, stream.header)    
+        #    return DataStream(stream, stream.header)
 
         loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
 
@@ -398,7 +398,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         else:
                             ind = KEYLIST.index('sectime')
                         try:
-                            array[ind] = np.asarray(date2num(cdf_file[key][...]))                        
+                            array[ind] = np.asarray(date2num(cdf_file[key][...]))
                         except:
                             array[ind] = np.asarray([])
                             pass ### catches exceptions if sectime is nan
@@ -434,9 +434,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if len(x) == 1:
                     # This is the case if identical data is found
                     try:
-                        length = len(cdf_file['Epoch'][...])         
+                        length = len(cdf_file['Epoch'][...])
                     except:
-                        length = len(cdf_file['time'][...])         
+                        length = len(cdf_file['time'][...])
                     x = [x[0]] * length
                 if len(x) > 0:
                     if not oldtype:
@@ -462,9 +462,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if len(y) == 1:
                     # This is the case if identical data is found
                     try:
-                        length = len(cdf_file['Epoch'][...])         
+                        length = len(cdf_file['Epoch'][...])
                     except:
-                        length = len(cdf_file['time'][...])         
+                        length = len(cdf_file['time'][...])
                     y = [y[0]] * length
                 if len(y) > 0:
                     if not oldtype:
@@ -488,9 +488,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if len(z) == 1:
                     # This is the case if identical data is found
                     try:
-                        length = len(cdf_file['Epoch'][...])         
+                        length = len(cdf_file['Epoch'][...])
                     except:
-                        length = len(cdf_file['time'][...])         
+                        length = len(cdf_file['time'][...])
                     z = [z[0]] * length
                 if len(z) > 0:
                     if not oldtype:
@@ -514,9 +514,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if len(f) == 1:
                     # This is the case if identical data is found
                     try:
-                        length = len(cdf_file['Epoch'][...])         
+                        length = len(cdf_file['Epoch'][...])
                     except:
-                        length = len(cdf_file['time'][...])         
+                        length = len(cdf_file['time'][...])
                     f = [f[0]] * length
                 if len(f) > 0:
                     if not oldtype:
@@ -537,7 +537,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         pass
             elif key.endswith('scv'): # solely found in juergs files - now define magpy header info
                 try:
-                    # Please note: using only the last value to identify scalevalue 
+                    # Please note: using only the last value to identify scalevalue
                     # - a change of scale values should leed to a different cdf archive !!
                     stream.header['DataScaleX'] = cdf_file['HNscv'][...][-1]
                     stream.header['DataScaleY'] = cdf_file['HEscv'][...][-1]
@@ -553,7 +553,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 #    f = flag[i]
                 #    if f != 0:
                 #        data[i] = float('nan')
-                if key == 'BGSM':  
+                if key == 'BGSM':
                     skey_x = h0_mfi_KEYDICT[key][0]
                     skey_y = h0_mfi_KEYDICT[key][1]
                     skey_z = h0_mfi_KEYDICT[key][2]
@@ -630,9 +630,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     if len(arkey) == 1:
                         # This is the case if identical data is found
                         try:
-                            length = len(cdf_file['Epoch'][...])         
+                            length = len(cdf_file['Epoch'][...])
                         except:
-                            length = len(cdf_file['time'][...])         
+                            length = len(cdf_file['time'][...])
                         arkey = [arkey[0]] * length
                     if len(arkey) > 0:
                         if not oldtype:
@@ -657,9 +657,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
         del cdf_file
 
     if not oldtype:
-        return DataStream([LineStruct()], stream.header,np.asarray(array))   
+        return DataStream([LineStruct()], stream.header,np.asarray(array))
     else:
-        return DataStream(stream, stream.header,stream.ndarray)   
+        return DataStream(stream, stream.header,stream.ndarray)
 
 def readPYBIN(filename, headonly=False, **kwargs):
     """
@@ -667,9 +667,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
     Binary formatted data consists of an ascii header line and a binary body containing data
     The header line contains the following space separated inputs:
         1. Format specification: preset to 'MagPyBin' -> used to identify file type in MagPy
-        2. SensorID: required 
-        3. MagPy-Keys: list defining the related magpy keys under which data is stored e.g. ['x','y','z','t1','var5'] - check KEYLIST for available keys  
-        4. ListSpecification: list defining the variables stored under the keys e.g. ['H','D','Z','DewPoint','Kp']  
+        2. SensorID: required
+        3. MagPy-Keys: list defining the related magpy keys under which data is stored e.g. ['x','y','z','t1','var5'] - check KEYLIST for available keys
+        4. ListSpecification: list defining the variables stored under the keys e.g. ['H','D','Z','DewPoint','Kp']
         5. UnitSpecification: list defining units e.g. ['nT','deg','nT','deg C','']
         6. Multiplier: list defining multipiers used before packing of columns - value divided by multipl. returns correct units in 5 e.g. [100,100,100,1000,1]
         7. Packingcode: defined by pythons struct.pack always starts with 6hL e.g. 6hLLLLLL
@@ -700,7 +700,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
-        getfile = True 
+        getfile = True
     logbaddata = False
 
     if getfile:
@@ -715,13 +715,13 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         if debug:
             print 'readPYBIN- debug header type (len should be 9): ', h_elem, len(h_elem)
-         
+
         if not h_elem[1] == 'MagPyBin':
             print 'readPYBIN: No MagPyBin format - aborting'
             return
         #print "Length ", len(h_elem), h_elem[2]
 
-        #Test whether element 3,4,5 (and 6) are lists of equal length 
+        #Test whether element 3,4,5 (and 6) are lists of equal length
         if len(h_elem) == 8:
             #print "Very old import format"
             nospecial = True
@@ -756,9 +756,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 return stream
         elif len(h_elem) == 10:
             #print "Special format"
-	    loggerlib.debug("readPYBIN: Special format detected. May not be able to read file.")
+            loggerlib.debug("readPYBIN: Special format detected. May not be able to read file.")
             nospecial = False
-	    if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
+            if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
                 keylist = h_elem[3].strip('[').strip(']').split(',')
                 elemlist = h_elem[4].strip('[').strip(']').split(',')
                 unitlist = h_elem[5].strip('[').strip(']').split(',')
@@ -770,7 +770,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         if debug:
             print 'readPYBIN- checking code'
-            
+
         packstr = '<'+h_elem[-2]+'B'
         lengthcode = struct.calcsize(packstr)
         lengthgiven = int(h_elem[-1])+1
@@ -816,7 +816,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                         print 'readPYBIN- debug unpacked line: ', data
                 except:
                     print "readPYBIN: struct error", filename, packstr, struct.calcsize(packstr)
-                try:                    
+                try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:
                         array[0].append(date2num(stream._testtime(time)))
@@ -868,12 +868,12 @@ def readPYBIN(filename, headonly=False, **kwargs):
             stream.container = [LineStruct()]
             # if unequal lengths are found, then usually txt and bin files are loaded together
 
-    return stream 
+    return stream
 
 
 def writePYSTR(datastream, filename, **kwargs):
     """
-    Function to write structural ASCII data 
+    Function to write structural ASCII data
     """
 
     mode = kwargs.get('mode')
@@ -928,7 +928,7 @@ def writePYSTR(datastream, filename, **kwargs):
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
                                 valid_chars='-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-                                el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])  
+                                el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])
                             except:
                                 pass
                         row.append(el[i])
@@ -1011,7 +1011,7 @@ def writePYCDF(datastream, filename, **kwargs):
         keylst.append('typ')
     tmpkeylst = ['time']
     tmpkeylst.extend(keylst)
-    keylst = tmpkeylst 
+    keylst = tmpkeylst
 
     headdict = datastream.header
     head, line = [],[]
@@ -1026,7 +1026,7 @@ def writePYCDF(datastream, filename, **kwargs):
                     print "Found DataAbsFunctionObject - pickle and dump "
                     pfunc = pickle.dumps(headdict[key])
                     mycdf.attrs[key] = pfunc
-                 
+
     mycdf.attrs['DataFormat'] = 'MagPyCDF'
 
     #def checkEqualIvo(lst):
@@ -1066,8 +1066,8 @@ def writePYCDF(datastream, filename, **kwargs):
         if not False in checkEqual3(col) and len(col) > 0:
             print "Found identical values only: %s" % key
             col = col[:1]
-            #if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders 
-            #- better not!!! 2015-10-14 --- if two files are loaded, one with flags, one without, then column lengths will not fit 
+            #if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
+            #- better not!!! 2015-10-14 --- if two files are loaded, one with flags, one without, then column lengths will not fit
             #    col = col[:1]
             #else:
             #    col = np.asarray([])
@@ -1107,14 +1107,14 @@ def writePYCDF(datastream, filename, **kwargs):
                         mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
                     except:
                         pass
-                    
+
     mycdf.close()
     return True
 
 
 def writePYASCII(datastream, filename, **kwargs):
     """
-    Function to write basic ASCII data 
+    Function to write basic ASCII data
     """
 
     mode = kwargs.get('mode')
@@ -1166,7 +1166,7 @@ def writePYASCII(datastream, filename, **kwargs):
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
                                 valid_chars='-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-                                el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])  
+                                el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])
                             except:
                                 pass
                         row.append(el[i])
@@ -1187,4 +1187,3 @@ def writePYASCII(datastream, filename, **kwargs):
             wtr.writerow( row )
     myFile.close()
     return True
-

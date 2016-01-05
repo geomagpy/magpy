@@ -38,18 +38,18 @@ def readBDV1(filename, headonly=False, **kwargs):
     Looks like:
     BDV G-das instrument datas Time H D Z T F 0.1 nT 0.1 deg.C date:22:04:2012
     00:00:00  3  1222  187  200  485562
-    00:00:01  3  1220  189  200 
-    00:00:02  3  1222  188  200 
-    00:00:03  3  1221  188  200 
-    00:00:04  3  1221  189  200 
-    00:00:05  3  1221  188  200 
-    00:00:06  3  1222  187  200 
-    00:00:07  4  1222  189  200 
-    00:00:08  3  1221  187  200 
-    00:00:09  3  1222  189  200 
+    00:00:01  3  1220  189  200
+    00:00:02  3  1222  188  200
+    00:00:03  3  1221  188  200
+    00:00:04  3  1221  189  200
+    00:00:05  3  1221  188  200
+    00:00:06  3  1222  187  200
+    00:00:07  4  1222  189  200
+    00:00:08  3  1221  187  200
+    00:00:09  3  1222  189  200
     00:00:10  3  1221  190  200  485562
-    00:00:11  3  1220  188  200 
-    00:00:12  3  1220  189  200 
+    00:00:11  3  1220  188  200
+    00:00:12  3  1220  189  200
     """
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -106,7 +106,7 @@ def readBDV1(filename, headonly=False, **kwargs):
                         if not elem == 't':
                             headers['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
                         else:
-                            headers['unit-' + colname] = 'C'                        
+                            headers['unit-' + colname] = 'C'
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -129,13 +129,11 @@ def readBDV1(filename, headonly=False, **kwargs):
                         row.f = float(elem[5])/10.0
                 except:
                     pass
-                stream.add(row)         
+                stream.add(row)
 
         fh.close()
     else:
         headers = stream.header
         stream =[]
 
-    return DataStream(stream, headers)    
-
-
+    return DataStream(stream, headers)

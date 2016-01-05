@@ -2,13 +2,13 @@
 MagPy
 Intermagnet input filter
 Written by Roman Leonhardt December 2012
-- contains test, read and write functions for 
-	IMF 1.22,1.23
-	IAF
-	ImagCDF
-	IYFV 	(yearly means)
-	DKA  	(k values)d
-	BLV	(baseline data)	
+- contains test, read and write functions for
+        IMF 1.22,1.23
+        IAF
+        ImagCDF
+        IYFV    (yearly means)
+        DKA     (k values)d
+        BLV     (baseline data)
 """
 
 from stream import *
@@ -22,7 +22,7 @@ def isIMF(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not 63 <= len(temp) <= 65:  # Range which regards any variety of return 
+    if not 63 <= len(temp) <= 65:  # Range which regards any variety of return
         return False
     if temp[3] == ' ' and temp[11] == ' ' and temp[29] == ' ' and temp[45] == ' ' and temp[46] == 'R':
         pass
@@ -63,7 +63,7 @@ def isIAF(filename):
     try:
         date = str(data[1])
         if not len(date) == 7:
-            return False         
+            return False
     except:
         return False
     try:
@@ -82,7 +82,7 @@ def isBLV(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not 63 <= len(temp) <= 65:  # Range which regards any variety of return 
+    if not 63 <= len(temp) <= 65:  # Range which regards any variety of return
         return False
     if temp[3] == ' ' and temp[11] == ' ' and temp[29] == ' ' and temp[45] == ' ' and temp[46] == 'R':
         pass
@@ -199,10 +199,10 @@ def readIAF(filename, headonly=False, **kwargs):
                 headers['DataComponents'] = head[5].lower()
                 for c in head[5].lower():
                     if c == 'g':
-                        headers['col-df'] = 'dF'                   
+                        headers['col-df'] = 'dF'
                         headers['unit-col-df'] = 'nT'
                     else:
-                        headers['col-'+c] = c                   
+                        headers['col-'+c] = c
                         headers['unit-col-'+c] = 'nT'
                 keystr = ','.join([c for c in head[5].lower()])
                 if len(keystr) < 6:
@@ -317,14 +317,14 @@ def readIAF(filename, headonly=False, **kwargs):
         ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
         headers['DataSamplingRate'] = '60 sec'
 
-    return DataStream([LineStruct()], headers, ndarray)    
+    return DataStream([LineStruct()], headers, ndarray)
 
 
 def writeIAF(datastream, filename, **kwargs):
     """
     Writing Intermagnet archive format (2.1)
     """
-    
+
     kvals = kwargs.get('kvals')
     mode = kwargs.get('mode')
 
@@ -389,7 +389,7 @@ def writeIAF(datastream, filename, **kwargs):
     t0 = int(datastream.ndarray[0][1])
     output = ''
     kstr=[]
-    for i in range(tdiff):  
+    for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
         # get all indicies
         temp = DataStream([LineStruct],datastream.header,dayar)
@@ -487,7 +487,7 @@ def writeIAF(datastream, filename, **kwargs):
         else:
             dfhou = np.asarray([888888]*24).astype(int)
         head.extend(dfhou)
-        
+
         # add daily means
         packcode += '4l'
         # -- drop all values above 88888
@@ -542,13 +542,13 @@ def writeIAF(datastream, filename, **kwargs):
         reserved = [0,0,0,0]
         head.extend(reserved)
 
-        #print head      
+        #print head
         #print [num2date(elem) for elem in temp.ndarray[0]]
         line = struct.pack(packcode,*head)
         output = output + line
 
     path = os.path.split(filename)
-    filename = os.path.join(path[0],path[1].upper())    
+    filename = os.path.join(path[0],path[1].upper())
 
     if len(kstr) > 0:
         station=datastream.header['StationIAGAcode']
@@ -578,7 +578,7 @@ def writeIAF(datastream, filename, **kwargs):
                 for elem in head:
                     myfile.write(elem+'\r\n')
                 #print elem
-        # write data            
+        # write data
         with open(kfile, "a") as myfile:
             for elem in kstr:
                 myfile.write(elem+'\r\n')
@@ -625,7 +625,7 @@ def writeIAF(datastream, filename, **kwargs):
                 contact.append("               {0}".format(datastream.header[c]))
             except:
                 pass
-        
+
         # 1. Check completeness of essential header information
         station=datastream.header['StationIAGAcode']
         stationname = datastream.header['StationName']
@@ -636,7 +636,7 @@ def writeIAF(datastream, filename, **kwargs):
         rfile = os.path.join(path[0],"README."+station.upper())
         head = []
         print "Writing README file:", rfile
-        
+
         if not os.path.isfile(rfile):
             emptyline = ''
             head.append("{0:^66}".format(station.upper()))
@@ -681,7 +681,7 @@ def writeIAF(datastream, filename, **kwargs):
             myfile.close()
 
     return True
-    
+
 
 def readIMAGCDF(filename, headonly=False, **kwargs):
     """
@@ -706,10 +706,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     #  #################################
     if 'FormatDescription' in attrslist:
         form = cdfdat.attrs['FormatDescription']
-        headers['DataFormat'] = str(cdfdat.attrs['FormatDescription'])     
+        headers['DataFormat'] = str(cdfdat.attrs['FormatDescription'])
     if 'FormatVersion' in attrslist:
         vers = cdfdat.attrs['FormatVersion']
-        headers['DataFormat'] = str(form) + '; ' + str(vers)       
+        headers['DataFormat'] = str(form) + '; ' + str(vers)
     if 'Title' in attrslist:
         pass
     if 'IagaCode' in attrslist:
@@ -827,7 +827,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     # 3. Create equal length array reducing all data to primary Times and filling nans for non-exist
     # (4. eventually completely drop time cols and just store start date and sampling period in header)
     # Deal with scalar data (independent or whatever
-    
+
     for elem in newdatalist:
         if elem[0] == 'time':
             ar = date2num(cdfdat[elem[1]][...])
@@ -839,10 +839,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             if elem[0] in NUMKEYLIST:
                 ar[ar > 88880] = float(nan)
                 ind = KEYLIST.index(elem[0])
-                headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()                
+                headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()
                 headers['unit-col-'+elem[0]] = cdfdat[elem[1]].attrs['UNITS']
                 array[ind] = ar
-                arraylist.append(ar)  
+                arraylist.append(ar)
 
     ndarray = np.array(array)
 
@@ -853,7 +853,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     #t2 = datetime.utcnow()
     #print "Duration for conventional stream assignment:", t2-t1
 
-    return DataStream(stream,headers,ndarray)   
+    return DataStream(stream,headers,ndarray)
 
 
 def writeIMAGCDF(datastream, filename, **kwargs):
@@ -888,7 +888,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     keylst = datastream._get_key_headers()
     tmpkeylst = ['time']
     tmpkeylst.extend(keylst)
-    keylst = tmpkeylst 
+    keylst = tmpkeylst
 
     headers = datastream.header
     head, line = [],[]
@@ -942,7 +942,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             mycdf.attrs['ReferenceLinks'] = headers[key]
     if not 'StationIagaCode' in headers and 'StationID' in headers:
             mycdf.attrs['IagaCode'] = headers['StationID']
-    
+
     def checkEqualIvo(lst):
         # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
         return not lst or lst.count(lst[0]) == len(lst)
@@ -960,19 +960,19 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             col = datastream.ndarray[ind]
         else:
             col = datastream._get_column(key)
-        
+
         if not False in checkEqual3(col):
             print "Found identical values only:", key
             col = col[:1]
         if key == 'time':
             key = 'GeomagneticVectorTimes'
-            try: ## requires spacepy >= 1.5 
+            try: ## requires spacepy >= 1.5
                 mycdf[key] = np.asarray([cdf.datetime_to_tt2000(num2date(elem).replace(tzinfo=None)) for elem in col])
             except:
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
         elif len(col) > 0:
             comps = datastream.header.get('DataComponents','')
-            cdfkey = 'GeomagneticField'+key.upper() 
+            cdfkey = 'GeomagneticField'+key.upper()
             keyup = key.upper()
             if not comps == '':
                 try:
@@ -987,13 +987,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     cdfkey = 'GeomagneticField'+compsupper
                     keyup = compsupper
                 except:
-                    cdfkey = 'GeomagneticField'+key.upper() 
+                    cdfkey = 'GeomagneticField'+key.upper()
                     keyup = key.upper()
             print len(col), keyup, key
             nonetest = [elem for elem in col if not elem == None]
             if len(nonetest) > 0:
                 mycdf[cdfkey] = col
-                
+
                 mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                 mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time series"
                 mycdf[cdfkey].attrs['LABLAXIS'] = keyup
@@ -1028,7 +1028,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         mycdf[cdfkey].attrs['UNITS'] = unit
                     except:
                         pass
-        success = True            
+        success = True
     mycdf.close()
     return success
 
@@ -1125,14 +1125,14 @@ def readIMF(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    return DataStream(stream, headers)    
+    return DataStream(stream, headers)
 
 
 def writeIMF(datastream, filename, **kwargs):
     """
     Writing Intermagnet format data.
     """
-    
+
     mode = kwargs.get('mode')
     version = kwargs.get('version')
     gin = kwargs.get('gin')
@@ -1178,7 +1178,7 @@ def writeIMF(datastream, filename, **kwargs):
         colat = 90 - float(header['DataAcquisitionLatitude'])
         longi = float(header['DataAcquisitionLongitude'])
     except:
-        print ("format-imf: No location specified. Setting 99,999 ...")        
+        print ("format-imf: No location specified. Setting 99,999 ...")
         colat = 99.9
         longi = 999.9
         #return False
@@ -1238,7 +1238,7 @@ def writeIMF(datastream, filename, **kwargs):
             pass
         if i == 0:
             #print blockline
-            myFile.writelines( blockline )           
+            myFile.writelines( blockline )
             if not minute == 0:
                 j = 0
                 while j < minute:
@@ -1251,15 +1251,15 @@ def writeIMF(datastream, filename, **kwargs):
         if not isnan(elemx):
             x = elemx*10
         else:
-            x = 999999 
+            x = 999999
         if not isnan(elemy):
             y = elemy*10
         else:
-            y = 999999 
+            y = 999999
         if not isnan(elemz):
             z = elemz*10
         else:
-            z = 999999 
+            z = 999999
         if not isnan(elemf):
             f = elemf*10
         else:
@@ -1272,7 +1272,7 @@ def writeIMF(datastream, filename, **kwargs):
                     #print minuteprev+1, dataline
                 else: # even
                     dataline = '9999999 9999999 9999999 999999'
-                minuteprev = minuteprev + 1 
+                minuteprev = minuteprev + 1
         minuteprev = minute
         if minute % 2: # uneven
             if len(dataline) < 10: # if record starts with uneven minute then
@@ -1293,7 +1293,7 @@ def writeIMF(datastream, filename, **kwargs):
             else: # even
                 dataline = '9999999 9999999 9999999 999999'
             minute = minute + 1
- 
+
     myFile.close()
 
     return True
@@ -1394,7 +1394,7 @@ def readBLV(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    return DataStream(stream, headers)    
+    return DataStream(stream, headers)
 
 
 def writeBLV(datastream, filename, **kwargs):
@@ -1403,19 +1403,19 @@ def writeBLV(datastream, filename, **kwargs):
         Writing Intermagnet - baseline data.
         uses baseline function
     PARAMETERS:
-        datastream	: (DataStream) basevalue data stream
-        filename	: (string) path
+        datastream      : (DataStream) basevalue data stream
+        filename        : (string) path
 
       Optional:
-        deltaF		: (float) average field difference in nT between DI pier and F 
+        deltaF          : (float) average field difference in nT between DI pier and F
                           measurement position. If provided, this value is assumed to
                           represent the adopted value for all days: If not, then the baseline
                           function is assumed to be used.
-        diff		: (ndarray) array containing dayly averages of delta F values between
+        diff            : (ndarray) array containing dayly averages of delta F values between
                           variometer and F measurement
     """
 
-    baselinefunction = kwargs.get('baselinefunction')   
+    baselinefunction = kwargs.get('baselinefunction')
     fitfunc = kwargs.get('fitfunc')
     fitdegree = kwargs.get('fitdegree')
     knotstep = kwargs.get('knotstep')
@@ -1481,7 +1481,7 @@ def writeBLV(datastream, filename, **kwargs):
         print "writeBLV: Format not recognized - should be MagPyDI"
         print "writeBLV: is not yet assigned during database access"
         #return False
-     
+
     indf = KEYLIST.index('df')
     if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:
         keys = ['dx','dy','dz','df']
@@ -1519,7 +1519,7 @@ def writeBLV(datastream, filename, **kwargs):
 
     #print "1", row1.time, row2.time
 
-    # 5. Extract the data for one year and calculate means 
+    # 5. Extract the data for one year and calculate means
     backupabsstream = datastream.copy()
     if not len(datastream.ndarray[0]) > 0:
         backupabsstream = backupabsstream.linestruct2ndarray()
@@ -1548,7 +1548,7 @@ def writeBLV(datastream, filename, **kwargs):
     print "TODO: cycle through parameter baseparam here"
     print " baseparam contains time ranges their valid baseline function parameters"
     print " -> necessary for discontiuous fits"
-    print " join the independent year stream, and create datelist for marking jumps with d" 
+    print " join the independent year stream, and create datelist for marking jumps with d"
     ##### ###########################################################################
 
     # 6. calculate baseline function
@@ -1563,7 +1563,7 @@ def writeBLV(datastream, filename, **kwargs):
             yar[idx] = np.asarray([0]*len(datelist))
         else:
             yar[idx] = np.asarray(yar[idx])
-   
+
 
     yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar))
     yearstream = yearstream.func2stream(basefunction,mode='addbaseline',keys=keys)
@@ -1584,7 +1584,7 @@ def writeBLV(datastream, filename, **kwargs):
         idc = header['StationID']
     except:
         print "formatBLV: No station code specified. Aborting ..."
-        logging.error("formatBLV: No station code specified. Aborting ...")        
+        logging.error("formatBLV: No station code specified. Aborting ...")
         return False
     headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
     myFile.writelines( headerline+'\r\n' )
@@ -1607,7 +1607,7 @@ def writeBLV(datastream, filename, **kwargs):
                     y = 99999.00
                 if isnan(z):
                     z = 99999.00
-                if isnan(df) or ftype.startswith('Fext'): 
+                if isnan(df) or ftype.startswith('Fext'):
                     df = 99999.00
                 line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
                 myFile.writelines( line )
@@ -1693,12 +1693,12 @@ def writeBLV(datastream, filename, **kwargs):
     funcline4 = '%s and %s\r\n' % (str(num2date(dummystream.header['DataAbsMinTime']).replace(tzinfo=None)),str(num2date(dummystream.header['DataAbsMaxTime']).replace(tzinfo=None)))
     # get some data:
     infolist = [] # contains all provided information for comment section
-    db = False 
+    db = False
     if not db:
         infolist.append(datastream[-1].str2)
         infolist.append(datastream[-1].str3)
         infolist.append(datastream[-1].str4)
-        # 
+        #
     funcline5 = 'Measurements conducted primarily with:\r\n'
     funcline6 = 'DI: %s\r\n' % infolist[0]
     funcline7 = 'Scalar: %s\r\n' % infolist[1]
@@ -1734,7 +1734,7 @@ def readIYFV(filename, headonly=False, **kwargs):
   COLATITUDE: 46.75   LONGITUDE: 76.92 E   ELEVATION: 1300 m
 
   YEAR        D        I       H      X      Y      Z      F   * ELE Note
-           deg min  deg min    nT     nT     nT     nT     nT         
+           deg min  deg min    nT     nT     nT     nT     nT
 
  2005.500   4 46.6  62 40.9  25057  24970   2087  48507  54597 A XYZF   1
  2006.500   4 47.5  62 42.9  25044  24957   2092  48552  54631 A XYZF   1
@@ -1767,11 +1767,11 @@ def readIYFV(filename, headonly=False, **kwargs):
                                 ## this is used by writeIYFV to add at the correct position
     if ok:
         for line in fh:
-            cnt = cnt+1 
+            cnt = cnt+1
             if line.isspace():
                 # blank line
                 pass
-            elif line.find('ANNUAL') > 0 or line.find('annual') > 0: 
+            elif line.find('ANNUAL') > 0 or line.find('annual') > 0:
                 pass
             elif cnt == 3:
                 # station info
@@ -1780,12 +1780,12 @@ def readIYFV(filename, headonly=False, **kwargs):
                 headers['StationName'] = block[0]
                 headers['StationID'] = block[1]
                 headers['StationCountry'] = block[2]
-            elif line.find('COLATITUDE') > 0: 
+            elif line.find('COLATITUDE') > 0:
                 loc = line.split()
                 headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
                 headers['DataAcquisitionLongitude'] = float(loc[3])
                 headers['DataElevation'] = float(loc[3])
-            elif line.find('COLATITUDE') > 0: 
+            elif line.find('COLATITUDE') > 0:
                 loc = line.split()
                 headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
                 headers['DataAcquisitionLongitude'] = float(loc[3])
@@ -1822,10 +1822,10 @@ def readIYFV(filename, headonly=False, **kwargs):
                         t =  data[10]
                         ele =  data[11]
                         headers['DataComponents'] = ele
-                        # transfer 
+                        # transfer
                         if len(data) == 13:
                             note =  data[12]
-                        if t == tsel: 
+                        if t == tsel:
                             array[0].append(ti)
                             array[lc].append(cnt)
                             for comp in ele.lower():
@@ -1870,9 +1870,9 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))
-    
+
     # Eventually add trim
-    return stream    
+    return stream
 
 def writeIYFV(datastream,filename, **kwargs):
     """
@@ -1881,13 +1881,13 @@ def writeIYFV(datastream,filename, **kwargs):
         Method calculates mean values and adds them to an eventually existing yearly mean file.
         Please note: jumps (J) need to be defined manually within the ASCII mean file.
     PARAMETERS:
-        datastream:	(DataStream) containing the header info and one year of data.
+        datastream:     (DataStream) containing the header info and one year of data.
                                      DataComponents should be provided in header.
                                      If data
 
-        kind:		(string) One of Q,D,A -> default is A
-        comment:	(string) a comment related to the datastream
-    
+        kind:           (string) One of Q,D,A -> default is A
+        comment:        (string) a comment related to the datastream
+
     """
 
     kind = kwargs.get('kind')
@@ -1920,7 +1920,7 @@ def writeIYFV(datastream,filename, **kwargs):
         print (" writeIYFV: Datastream does not cover at least 90% of one year")
         return False
     # if timerange covers more than one year ??????
-    # should be automatically called with coverage='year' and filenamebegins='yearmean', 
+    # should be automatically called with coverage='year' and filenamebegins='yearmean',
     # filenameends=Obscode
 
     header = datastream.header
@@ -1938,22 +1938,22 @@ def writeIYFV(datastream,filename, **kwargs):
         alpha = header.get('DataSensorAzimuth','')
         if not is_number(alpha):
             print (" writeIYFV: hez provided but no DataSensorAzimuth (usually the declination while sensor installation - aborting")
-            return False         
+            return False
         datastream = datastream.rotation(alpha=alpha)
 
     # Obtain means   ( drop nans ):
-    meanx = datastream.mean('x',percentage=90)    
-    meany = datastream.mean('y',percentage=90)    
+    meanx = datastream.mean('x',percentage=90)
+    meany = datastream.mean('y',percentage=90)
     meanz = datastream.mean('z',percentage=90)
     if isnan(meanx) or isnan(meany) or isnan(meanz):
-        print (" writeIYFV: found more then 10% of NaN values - setting minimum requirement to 40% data recovery and change kind to I (incomplete)")       
-        meanx = datastream.mean('x',percentage=40)    
-        meany = datastream.mean('y',percentage=40)    
+        print (" writeIYFV: found more then 10% of NaN values - setting minimum requirement to 40% data recovery and change kind to I (incomplete)")
+        meanx = datastream.mean('x',percentage=40)
+        meany = datastream.mean('y',percentage=40)
         meanz = datastream.mean('z',percentage=40)
         kind = 'I'
         if isnan(meanx) or isnan(meany) or isnan(meanz):
             print (" writeIYFV: less then 40% of data - skipping")
-            return False       
+            return False
     meanyear = int(datetime.strftime(num2date(meant),"%Y"))
     # create datalist
     datalist = [meanyear]
@@ -1983,7 +1983,7 @@ def writeIYFV(datastream,filename, **kwargs):
                 coordlist.append(np.nan)
             else:
                 return False
-        
+
         empty = "\r\n"
         content = []
         content.append("{:^70}\r\n".format("ANNUAL MEAN VALUES"))
@@ -2006,7 +2006,7 @@ def writeIYFV(datastream,filename, **kwargs):
         f = open(filename, "w")
         contents = "".join(content)
         f.write(contents)
-        f.close()            
+        f.close()
         """
                       ANNUAL MEAN VALUES
 
@@ -2015,7 +2015,7 @@ def writeIYFV(datastream,filename, **kwargs):
   COLATITUDE: 46.75   LONGITUDE: 76.92 E   ELEVATION: 1300 m
 
   YEAR        D        I       H      X      Y      Z      F   * ELE Note
-           deg min  deg min    nT     nT     nT     nT     nT         
+           deg min  deg min    nT     nT     nT     nT     nT
 
 * A = All days
 * Q = Quet days
@@ -2036,7 +2036,7 @@ def writeIYFV(datastream,filename, **kwargs):
 
         yearlst = []
         foundcomm = False
-        
+
         for idx,elem in enumerate(content):
             ellst = elem.split()
             if len(ellst)>11:
@@ -2059,7 +2059,7 @@ def writeIYFV(datastream,filename, **kwargs):
             indicies = [el[0] for el in yearlst]
             if year in years:
                 idx= indicies[years.index(year)]
-                content[idx] = newline                     
+                content[idx] = newline
             elif int(year) > np.max(years):
                 idx= indicies[years.index(max(years))]
                 content.insert(idx+1, newline)
@@ -2076,7 +2076,7 @@ def writeIYFV(datastream,filename, **kwargs):
         f = open(filename, "w")
         contents = "".join(content)
         f.write(contents)
-        f.close()            
+        f.close()
 
     if os.path.isfile(filename):
         addline(filename, newline, kind, meanyear)
@@ -2122,7 +2122,7 @@ def readDKA(filename, headonly=False, **kwargs):
     ok = True
     cnt = 0
     datacoming = 0
-    kcol = KEYLIST.index('var1')  
+    kcol = KEYLIST.index('var1')
 
     if ok:
         for line in fh:
@@ -2135,16 +2135,16 @@ def readDKA(filename, headonly=False, **kwargs):
                 # station info
                 headers['StationID'] = block[0]
                 headers['StationIAGAcode'] = block[0]
-            elif line.find('latitude') > 0 or line.find('LATITUDE') > 0: 
+            elif line.find('latitude') > 0 or line.find('LATITUDE') > 0:
                 headers['DataAcquisitionLatitude'] = float(block[-2])
-            elif line.find('longitude') > 0 or line.find('LONGITUDE') > 0: 
+            elif line.find('longitude') > 0 or line.find('LONGITUDE') > 0:
                 headers['DataAcquisitionLongitude'] = float(block[-2])
             elif line.find('K9-limit') > 0:
                 headers['StationK9'] = float(block[-2])
-            elif line.find('DA-MON-YR') > 0: 
+            elif line.find('DA-MON-YR') > 0:
                 datacoming = cnt
             elif cnt > datacoming:
-                if len(block) > 9: 
+                if len(block) > 9:
                     for i in range(8):
                         ti = datetime.strptime(block[0],"%d-%b-%y") + timedelta(minutes=90) + timedelta(minutes=180*i)
                         val = float(block[2+i])
@@ -2160,9 +2160,9 @@ def readDKA(filename, headonly=False, **kwargs):
 
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))
-    
+
     # Eventually add trim
-    return stream    
+    return stream
 
 
 def writeDKA(datastream, filename, **kwargs):

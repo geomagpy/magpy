@@ -78,59 +78,59 @@ def readIAGA(filename, headonly=False, **kwargs):
                 key = infoline[:23].strip()
                 val = infoline[23:].strip()
                 if key.find('Source') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['StationInstitution'] = val
                 if key.find('Station') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['StationName'] = val
                 if key.find('IAGA') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['StationIAGAcode'] = val
                 if key.find('Latitude') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataAcquisitionLatitude'] = val
                 if key.find('Longitude') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataAcquisitionLongitude'] = val
                 if key.find('Elevation') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataElevation'] = val
                 if key.find('Format') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataFormat'] = val
                 if key.find('Reported') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataComponents'] = val
                 if key.find('Orientation') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataSensorOrientation'] = val
                 if key.find('Digital') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataDigitalSampling'] = val
                 if key.find('Interval') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataSamplingFilter'] = val
                 if key.startswith(' #'):
                     if key.find('# V-Instrument') > -1:
-                        if not val == '': 
+                        if not val == '':
                             stream.header['SensorID'] = val
                     elif key.find('# PublicationDate') > -1:
-                        if not val == '': 
+                        if not val == '':
                             stream.header['DataPublicationDate'] = val
                     else:
-                        print ("formatIAGA: did not import optional header info {a}".format(a=key)) 
+                        print ("formatIAGA: did not import optional header info {a}".format(a=key))
                 if key.find('Data Type') > -1:
                     if not val == '':
-                        if val[0] in ['d','D']: 
+                        if val[0] in ['d','D']:
                             stream.header['DataPublicationLevel'] = '4'
-                        elif val[0] in ['q','Q']: 
+                        elif val[0] in ['q','Q']:
                             stream.header['DataPublicationLevel'] = '3'
-                        elif val[0] in ['p','P']: 
+                        elif val[0] in ['p','P']:
                             stream.header['DataPublicationLevel'] = '2'
-                        else: 
+                        else:
                             stream.header['DataPublicationLevel'] = '1'
                 if key.find('Publication Date') > -1:
-                    if not val == '': 
+                    if not val == '':
                         stream.header['DataPublicationDate'] = val
             elif line.startswith('DATE'):
                 # data header
@@ -151,19 +151,19 @@ def readIAGA(filename, headonly=False, **kwargs):
                     stream.header["col-y"] = 'D'
                     stream.header["col-z"] = 'Z'
                     stream.header["unit-col-y"] = 'deg'
-                    stream.header['DataComponents'] = 'HDZF'    
+                    stream.header['DataComponents'] = 'HDZF'
                 elif varstr in ['ehzf','ehzg']:
                     stream.header["col-x"] = 'H'
                     stream.header["col-y"] = 'E'
                     stream.header["col-z"] = 'Z'
-                    stream.header['DataComponents'] = 'HEZF'    
+                    stream.header['DataComponents'] = 'HEZF'
                 elif varstr in ['dhif','dhig']:
                     stream.header["col-x"] = 'I'
                     stream.header["col-y"] = 'D'
                     stream.header["col-z"] = 'F'
                     stream.header["unit-col-x"] = 'deg'
                     stream.header["unit-col-y"] = 'deg'
-                    stream.header['DataComponents'] = 'IDFF'    
+                    stream.header['DataComponents'] = 'IDFF'
                 elif varstr in ['hdzf','hdzg']:
                     stream.header["col-x"] = 'H'
                     stream.header["col-y"] = 'D'
@@ -174,7 +174,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                     stream.header["col-x"] = 'X'
                     stream.header["col-y"] = 'Y'
                     stream.header["col-z"] = 'Z'
-                    stream.header['DataComponents'] = 'XYZF'    
+                    stream.header['DataComponents'] = 'XYZF'
 
             elif headonly:
                 # skip data for option headonly
@@ -191,9 +191,9 @@ def readIAGA(filename, headonly=False, **kwargs):
                     # nur nicht-leere Spalten hinzufuegen
                     if string.strip(val)!="":
                         row.append(string.strip(val))
-                        
+
                 # Baue zweidimensionales Array auf
-                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) ) 
+                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
                 if float(row[3]) >= 88888.0:
                     row[3] = np.nan
                 if float(row[4]) >= 88888.0:
@@ -201,25 +201,25 @@ def readIAGA(filename, headonly=False, **kwargs):
                 if float(row[5]) >= 88888.0:
                     row[5] = np.nan
                 if varstr in ['dhzf','dhzg']:
-                    array[1].append( float(row[4]) )      
-                    array[2].append( float(row[3])/60.0 )      
+                    array[1].append( float(row[4]) )
+                    array[2].append( float(row[3])/60.0 )
                     array[3].append( float(row[5]) )
                 elif varstr in ['ehzf','ehzg']:
-                    array[1].append( float(row[4]) )      
-                    array[2].append( float(row[3]) )      
+                    array[1].append( float(row[4]) )
+                    array[2].append( float(row[3]) )
                     array[3].append( float(row[5]) )
                 elif varstr in ['dhif','dhig']:
-                    array[1].append( float(row[5])/60.0 )      
-                    array[2].append( float(row[3])/60.0 )      
+                    array[1].append( float(row[5])/60.0 )
+                    array[2].append( float(row[3])/60.0 )
                     array[3].append( float(row[6]) )
                 elif varstr in ['hdzf','hdzg']:
-                    array[1].append( float(row[3]) )      
-                    array[2].append( float(row[4])/60.0 )      
-                    array[3].append( float(row[5]) )      
+                    array[1].append( float(row[3]) )
+                    array[2].append( float(row[4])/60.0 )
+                    array[3].append( float(row[5]) )
                 else:
-                    array[1].append( float(row[3]) )      
-                    array[2].append( float(row[4]) )      
-                    array[3].append( float(row[5]) )      
+                    array[1].append( float(row[3]) )
+                    array[2].append( float(row[4]) )
+                    array[3].append( float(row[5]) )
                 try:
                     if float(row[6]) < 88888:
                         if varstr[-1]=='f':
@@ -282,14 +282,14 @@ def readIAGA(filename, headonly=False, **kwargs):
 
     #print "Finished file reading of %s" % filename
 
-    return DataStream(stream,stream.header,np.asarray(array))    
+    return DataStream(stream,stream.header,np.asarray(array))
 
 
 def writeIAGA(datastream, filename, **kwargs):
     """
     Writing IAGA2002 format data.
     """
-    
+
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
@@ -310,7 +310,7 @@ def writeIAGA(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
-   
+
     header = datastream.header
 
     datacomp = header.get('DataComponents'," ")
@@ -350,14 +350,14 @@ def writeIAGA(datastream, filename, **kwargs):
 
     publevel = str(header.get('DataPublicationLevel'," "))
     if publevel == '2':
-        publ = 'P' 
+        publ = 'P'
     elif publevel == '3':
-        publ = 'Q' 
+        publ = 'Q'
     elif publevel == '4':
-        publ = 'D' 
+        publ = 'D'
     else:
-        publ = 'V' 
-  
+        publ = 'V'
+
     line = []
     if not mode == 'append':
         if header.get('Elevation') > 0:
@@ -418,7 +418,7 @@ def writeIAGA(datastream, filename, **kwargs):
         xmult = 1.0
         ymult = 1.0
         zmult = 1.0
-        
+
         xind = order[0]+1
         yind = order[1]+1
         zind = order[2]+1
@@ -486,5 +486,3 @@ def writeIAGA(datastream, filename, **kwargs):
         pass
 
     return True
-
-

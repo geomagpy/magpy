@@ -19,7 +19,7 @@ from matplotlib.figure import Figure
 
 import wx.lib.masked as masked
 
-# Subclasses for Menu pages and their controls     
+# Subclasses for Menu pages and their controls
 
 class StreamPage(wx.Panel):
     def __init__(self, *args, **kwds):
@@ -27,7 +27,7 @@ class StreamPage(wx.Panel):
         self.comp = ['xyz', 'hdz', 'idf']
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.lineLabel1 = wx.StaticText(self, label="__________________")
@@ -60,7 +60,7 @@ class StreamPage(wx.Panel):
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
         self.annotateCheckBox = wx.CheckBox(self,label="annotate")
         self.confinexCheckBox = wx.CheckBox(self,
-            label="confine time")        
+            label="confine time")
         self.DrawButton = wx.Button(self,-1,"ReDraw",size=(130,30))
         self.compRadioBox.Disable()
 
@@ -113,7 +113,7 @@ class StreamPage(wx.Panel):
 
         # modify look: ReDraw connected to radio and check boxes with dates
         # buttons automatically redraw the graph
-        
+
         #checklist = ['self.'+elem+'CheckBox, noOptions' for elem in KEYLIST]
         #elemlist.extend(checklist)
         #elemlist.append('self.DrawButton, dict(flag=wx.ALIGN_CENTER)')
@@ -129,4 +129,3 @@ class StreamPage(wx.Panel):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-

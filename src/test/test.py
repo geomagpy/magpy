@@ -31,5 +31,3 @@ stWDC.plot(['x','y','z','f'])
 
 # read an example cdf
 x=1/0
-
-

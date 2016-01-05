@@ -26,15 +26,15 @@ class PortCommunicationPage(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.selectPortButton = wx.Button(self,-1,"Select MARTAS")
         self.portnameTextCtrl = wx.TextCtrl(self, value="coming soon")
         self.portnameTextCtrl.Disable()
         self.sliderLabel = wx.StaticText(self, label="Update frequency:")
-        self.frequSlider = wx.Slider(self, -1, 10, 1, 20, (-1, -1), (100, -1), 
-		wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
+        self.frequSlider = wx.Slider(self, -1, 10, 1, 20, (-1, -1), (100, -1),
+                wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
         self.startMonitorButton = wx.Button(self,-1,"Start Monitor")
         self.stopMonitorButton = wx.Button(self,-1,"Stop Monitor")
         self.startMonitorButton.Disable()
@@ -82,7 +82,7 @@ class PortCommunicationPage(wx.Panel):
         # To be defined
         clientname = 'europa'
         clientip = '192.168.178.21'
-        martaspath = '/home/cobs/MARTAS' 
+        martaspath = '/home/cobs/MARTAS'
 
         # To be defined in options
         destpath = "/tmp"
@@ -95,7 +95,7 @@ class PortCommunicationPage(wx.Panel):
         dest = 'file'
         # For Testing purposes - Print received data to screen:
         printdata = True
-        # Please make sure that the db and scp connection data is stored 
+        # Please make sure that the db and scp connection data is stored
         # within the credential file -otherwise provide this data directly
         martasname = 'europa'
 
@@ -117,7 +117,7 @@ class PortCommunicationPage(wx.Panel):
         # ----------------------------------------------------------
         # 2. connect to database and check availability and version
         # ----------------------------------------------------------
-        # The following should only be required in case of db 
+        # The following should only be required in case of db
         if dest == 'db':
             try:
                 db = MySQLdb.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
@@ -146,7 +146,7 @@ class PortCommunicationPage(wx.Panel):
         destsensfile = os.path.join(destpath,'MartasSensors',clientname+'_sensors.txt')
         destowfile = os.path.join(destpath,'MartasSensors',clientname+'_owlist.csv')
         print "Getting sensor information from ", clientname
-       
+
         try:
             scptransfer(scpuser+'@'+clientip+':'+sensfile,destsensfile,scppasswd)
         except:
@@ -206,4 +206,3 @@ class PortCommunicationPage(wx.Panel):
         p1.join()
         # Start visualization as process two
         # google search, how to access an gradually filling array
-

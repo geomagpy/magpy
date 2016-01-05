@@ -63,7 +63,7 @@ def readRADON(filename, headonly=False, **kwargs):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
-        getfile = True 
+        getfile = True
 
     # read file and split text into channels
     stream = DataStream()
@@ -72,7 +72,7 @@ def readRADON(filename, headonly=False, **kwargs):
     if stream.header is None:
         headers = {}
     else:
-        headers = stream.header    
+        headers = stream.header
 
     if getfile:
         try:
@@ -92,15 +92,15 @@ def readRADON(filename, headonly=False, **kwargs):
                     row.var1 = float(line[1])
                     stream.add(row)
             stream.header['col-x'] = 'Counts'
-            stream.header['col-t1'] = 'Temp'                       
-            stream.header['unit-col-t1'] = 'deg'                       
-            stream.header['col-var1'] = 'Voltage'                       
-            stream.header['unit-col-var1'] = 'V'                       
+            stream.header['col-t1'] = 'Temp'
+            stream.header['unit-col-t1'] = 'deg'
+            stream.header['col-var1'] = 'Voltage'
+            stream.header['unit-col-var1'] = 'V'
         except:
             headers = stream.header
             stream =[]
 
-    return DataStream(stream, headers) 
+    return DataStream(stream, headers)
 
 
 def readCR800(filename, headonly=False, **kwargs):
@@ -118,8 +118,8 @@ def readCR800(filename, headonly=False, **kwargs):
     if stream.header is None:
         headers = {}
     else:
-        headers = stream.header    
-    
+        headers = stream.header
+
     try:
         CSVReader = csv.reader(open(filename, 'rb'), delimiter=' ', quotechar='|')
         for line in CSVReader:
@@ -141,12 +141,12 @@ def readCR800(filename, headonly=False, **kwargs):
                 #row.y = float(elem[7])
                 #row.z = float(elem[8])
                 #stream.add(row)
-                pass        
+                pass
     except:
         headers = stream.header
         stream =[]
 
-    return DataStream(stream, headers) 
+    return DataStream(stream, headers)
 
 
 
@@ -155,4 +155,3 @@ def writeCR800(filename, headonly=False, **kwargs):
     Writing CR800 format data.
     """
     return False
-   

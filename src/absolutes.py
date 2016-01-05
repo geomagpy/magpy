@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-MagPy-absolutes: 
+MagPy-absolutes:
 Analysis of DI data.
-Uses mainly two classes 
+Uses mainly two classes
 - DILineStruct (can contain multiple DI measurements; used for storage, database com and autodif)
 - AbsStruct (contains a single measurement, is extended by variation and scalar data, used for calculation)
 Calculation returns a data stream with absolute and baseline values for any selected variometer
@@ -18,7 +18,7 @@ Systematische Tests:
 8.  (11/2013, OK) Systematischer Test der Winkelabhaengigkeit (AutoDiff - Bestimme Tagesvariation in Abhaengigkeit von verschiedenen Winkeln)
 9.  (11/2013, not necessary: raw data is always available and the file wold not contain any additional info - use database if comments are required) Laden und Speichern von DIListStructs
 10. (11/2013, OK) Datenbankspeicherung
-11. Create a direct DataBase input formular in php (and magpy-gui?? -> better refer to php there) 
+11. Create a direct DataBase input formular in php (and magpy-gui?? -> better refer to php there)
 11. (12/2013, not necessary) Laden von mehreren Files gleichzeitig (mit DILineStruct) - not really necessary
 12. Basislinien-Stabilitaet (Berechnung der Zuverlaessigkeit der Basislinien-Extrapolation)
 13. Write the documentation with citations of the underlying procedures
@@ -101,13 +101,13 @@ class DILineStruct(object):
 
 
     def getAbsDIStruct(self):
-	"""
-	DEFINITION:
+        """
+        DEFINITION:
             convert the DILineStruct to the AbsDataStruct used for calculations
 
         EXAMPLE:
             >>> abslinestruct.getAbsDIStruct()
-	"""
+        """
         try:
             mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
             if isnan(mu1):
@@ -167,7 +167,7 @@ class DILineStruct(object):
                 tmplist.append(row)
 
         #print tmplist
-            
+
         # sortlist
         for idx,elem in enumerate(tmplist):
             if idx < 4:
@@ -212,7 +212,7 @@ class DILineStruct(object):
         ## Eventually append f values
 
         for elem in sortlist:
-            stream.add(elem)        
+            stream.add(elem)
         return stream
 
 
@@ -230,7 +230,7 @@ class AbsoluteData(object):
     Supporting internal methods are:
     - self._calcdec() -- calculates dec
     - self._calcinc() -- calculates inc
-    
+
     """
     def __init__(self, container=None, header=None):
         if container is None:
@@ -268,7 +268,7 @@ class AbsoluteData(object):
         Sorting data according to time (maybe generalize that to some key)
         """
         liste = sorted(self.container, key=lambda tmp: tmp.time)
-        return AbsoluteData(liste, self.header)        
+        return AbsoluteData(liste, self.header)
 
     def _corrangle(self,angle):
         if angle > 360:
@@ -313,13 +313,13 @@ class AbsoluteData(object):
 
         PARAMETERS:
         kwargs:
-            - funckeys 		(KEYLIST) (default = 'x','y','z','f') 
-            - offset 		(float) provide an offset for keys
+            - funckeys          (KEYLIST) (default = 'x','y','z','f')
+            - offset            (float) provide an offset for keys
 
         USED BY:
 
         RETURNS:
- 	    stream with function values added
+            stream with function values added
 
         EXAMPLE:
             >>> abstream._calcdec()
@@ -357,27 +357,27 @@ class AbsoluteData(object):
         """
         DEFINITION:
             Calculates declination values from input.
-            Returns results in terms of linestruct 
+            Returns results in terms of linestruct
 
         PARAMETERS:
         kwargs:
-            - annualmeans:	(list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
-            - xstart:		(float) strength of the north component in nT
-            - ystart: 		(float) default 0.0 - strength of the east component in nT
-                       - if variometer is hdf oriented then xstart != 0, ystart = 0 
-                       - if baselinecorrected data is used (or dIdD) use xstart = 0, ystart = 0 
-            - deltaD: 		(float) - default 0.0 - eventual correction factor for declination in degree
-            - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
-            - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
-            - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
-            - debugmode:	(bool) activate additional debug output
+            - annualmeans:      (list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
+            - xstart:           (float) strength of the north component in nT
+            - ystart:           (float) default 0.0 - strength of the east component in nT
+                       - if variometer is hdf oriented then xstart != 0, ystart = 0
+                       - if baselinecorrected data is used (or dIdD) use xstart = 0, ystart = 0
+            - deltaD:           (float) - default 0.0 - eventual correction factor for declination in degree
+            - usestep:          (int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
+            - iterator:         (int) switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - scalevalue:       (list of floats) scalevalues for each component (e.g. default = [1,1,1])
+            - debugmode:        (bool) activate additional debug output
 
         USED BY:
 
         RETURNS:
-            - line: 		(LineStruct)  containing time, y = dec, typ = 'idff', 
-					var1 = s0d, var2 = deH, var3 = epZD, t2 = mirediff,
-					str1 = person, str2 = di_inst, str3 = f_inst
+            - line:             (LineStruct)  containing time, y = dec, typ = 'idff',
+                                        var1 = s0d, var2 = deH, var3 = epZD, t2 = mirediff,
+                                        str1 = person, str2 = di_inst, str3 = f_inst
 
         EXAMPLE:
             >>> abstream._calcdec()
@@ -405,7 +405,7 @@ class AbsoluteData(object):
             xstart = annualmeans[0]
         if not ystart:
             ystart = annualmeans[1]
-        if not usestep: 
+        if not usestep:
             usestep = 0
         if not iterator:
             iterator = 0
@@ -471,7 +471,7 @@ class AbsoluteData(object):
             meanx = np.mean(xcol)
         if len(ycol) > 0:
             meany = np.mean(ycol)
-            
+
         nr_lines = len(poslst)
         dl1,dl2,dl2tmp,variocorr, variohlst = [],[],[],[],[] # temporary lists
 
@@ -559,7 +559,7 @@ class AbsoluteData(object):
         loggerabs.debug("_calcdec:  Mean Dec: %f, %f" % (decmean, mirediff))
 
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
-        
+
         #Initialize HC if no input in this column = 0
         try:
             if (poslst[8].hc == 0 or poslst[8].hc == 180):
@@ -606,7 +606,7 @@ class AbsoluteData(object):
             s0d = float('nan')
             deH = float('nan')
             epZD = float('nan')
-        
+
         resultline = LineStruct()
         resultline.time = poslst[0].time
         resultline.y = dec
@@ -635,35 +635,35 @@ class AbsoluteData(object):
         """
         DEFINITION:
             Calculates inclination values from input.
-            Need input of a LineStruct Object containing the results of _calcdec 
+            Need input of a LineStruct Object containing the results of _calcdec
 
         PARAMETERS:
         variable:
-            - line		(LineStruct) a line containing results from _calcdec()
+            - line              (LineStruct) a line containing results from _calcdec()
         kwargs:
-            - annualmeans:	(list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
-            - incstart		(float) - default 45.0 - inclination value in deg
-            - deltaI: 		(float) - default 0.0 - eventual correction factor for inclination in degree
-            - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
-            - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
-            - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
-            - debugmode:	(bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
-  
+            - annualmeans:      (list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
+            - incstart          (float) - default 45.0 - inclination value in deg
+            - deltaI:           (float) - default 0.0 - eventual correction factor for inclination in degree
+            - usestep:          (int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
+            - iterator:         (int) switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - scalevalue:       (list of floats) scalevalues for each component (e.g. default = [1,1,1])
+            - debugmode:        (bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
+
         USED BY:
 
         REQUIRES:
             a LineStruct element as returned by _calcdec
 
         RETURNS:
-            - line,xstart,ystart: 	(LineStruct, float, float) last two for optimzing calcdec in an iterative process
+            - line,xstart,ystart:       (LineStruct, float, float) last two for optimzing calcdec in an iterative process
                                         LineStruct is extended by x = inc, typ = 'idff', z=fstart, f=fstart,
-					var4 = s0i, var5 = epzi, dx = basex, dy = basey,
-					dz = basez, df = deltaf, t2 = calcscaleval
+                                        var4 = s0i, var5 = epzi, dx = basex, dy = basey,
+                                        dz = basez, df = deltaf, t2 = calcscaleval
 
         EXAMPLE:
             >>> abstream._calcinc()
         """
-        
+
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
         deltaI = kwargs.get('deltaI')
@@ -683,7 +683,7 @@ class AbsoluteData(object):
             iterator = 0
         if not debugmode:
             debugmode = False
-        if not usestep: 
+        if not usestep:
             usestep = 0
 
         scale_x = scalevalue[0]
@@ -693,7 +693,7 @@ class AbsoluteData(object):
         # Initialize variometer and scalar instruments .... maybe better not here
         variotype = 'None'
         scalartype = 'None'
-        str4 = 'None'  # Hold a value regarding the used F: Fabs (in absolute file), 
+        str4 = 'None'  # Hold a value regarding the used F: Fabs (in absolute file),
                        # Fext (from file), Fannual (from provided annual means), or None
 
         S0I1 = 0.
@@ -717,8 +717,8 @@ class AbsoluteData(object):
             if len(mflst) > 0 and not isnan(elem.f):
                 flist.append(elem.f)
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
-                    variox.append(scale_x*elem.varx) 
-                    varioy.append(scale_y*elem.vary) 
+                    variox.append(scale_x*elem.varx)
+                    varioy.append(scale_y*elem.vary)
                     varioz.append(scale_z*elem.varz)
                 if not isnan(elem.varf):
                     fvlist.append(elem.varf)
@@ -726,8 +726,8 @@ class AbsoluteData(object):
             elif len(mflst) == 0 and len(mfvlst) > 0:
                 #print "Fs:", elem.varf
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
-                    variox.append(scale_x*elem.varx) 
-                    varioy.append(scale_y*elem.vary) 
+                    variox.append(scale_x*elem.varx)
+                    varioy.append(scale_y*elem.vary)
                     varioz.append(scale_z*elem.varz)
                 if not isnan(elem.varf):
                     fvlist.append(elem.varf)
@@ -747,15 +747,15 @@ class AbsoluteData(object):
             #print "Primary F values contained in absolute file"
             str4 = "Fabs"
             meanf = np.mean(flist)
-            loggerabs.debug("_calcinc: Using F from Absolute files") 
+            loggerabs.debug("_calcinc: Using F from Absolute files")
         elif len(mfvlst)>0:
             #print "Primary F values contained in separate file"
             str4 = "Fext"
             meanf = np.mean(fvlist)
-            loggerabs.debug("_calcinc: Using F from provided scalar path") 
+            loggerabs.debug("_calcinc: Using F from provided scalar path")
         else:
             #print "No primary F values contained - using eventually provided annual means instead"
-            loggerabs.warning("_calcinc: No F measurements found - using annual means ...") 
+            loggerabs.warning("_calcinc: No F measurements found - using annual means ...")
             meanf = np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
             if not meanf == 0:
                 str4 = "Fannual"
@@ -768,7 +768,7 @@ class AbsoluteData(object):
         # Getting variometer data for F values
         #      proper correction requires scalar values
         # ###################################
-        
+
         if len(variox) == 0:
             #if iterator == 0:
             #    loggerabs.warning("_calcinc: %s : no variometervalues found" % num2date(self[0].time).replace(tzinfo=None))
@@ -817,7 +817,7 @@ class AbsoluteData(object):
         # Therefore we use an arbitrary start value -- Testing of the validity of this approach needs to be conducted
         if nr_lines < 16: # only declination measurements available so far
             return linestruct, 20000.0, 0.0
-        
+
         # - Now cycle through inclination steps and apply residuum correction
         for k in range((nr_lines-1)/2,nr_lines):
             val = poslst[k].vc
@@ -849,8 +849,8 @@ class AbsoluteData(object):
             else:
                 quad = poslst[k].vc + 360.0 - (poslst[k].hc + mirediff)
             # The signums are essential for the collimation angle calculation
-            # ToDo: check regarding correctness for different location/angles 
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+            # ToDo: check regarding correctness for different location/angles
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             #signum1 = np.sign(np.tan(quad*np.pi/180))
             signum1 = np.sign(-np.cos(quad*np.pi/180.0))
             signum2 = np.sign(np.sin(quad*np.pi/180.0))
@@ -908,12 +908,12 @@ class AbsoluteData(object):
                 calcscaleval = 999.0
                 for n in range((nr_lines-1)/2,nr_lines-1):
                     rotation = np.abs(scaleangle - poslst[n].vc)
-                    if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value 
+                    if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value
                         #=(-SIN(B37*PI()/200)*(F20-F19)/K35+COS(B37*PI()/200)*(H20-H19)/K35)*200/PI()
                         if mean(ppmval) == 0:
                             fieldchange = float('nan')
                         else:
-                            fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/mean(ppmval) + np.cos(np.mean(I0list))*(poslst[n].varz-poslst[k].varz)/mean(ppmval))*180/np.pi 
+                            fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/mean(ppmval) + np.cos(np.mean(I0list))*(poslst[n].varz-poslst[k].varz)/mean(ppmval))*180/np.pi
                         deltaB = rotation+fieldchange
                         deltaR = np.abs(poslst[n].res-poslst[k].res)
                         minimum = rotation
@@ -939,7 +939,7 @@ class AbsoluteData(object):
             i1list.append(i1mean)
 
         # Unlike the excel MagPy first uses all individual components and averages afterwards. The Sum
-        # for collimation angle needs to be divided by two 
+        # for collimation angle needs to be divided by two
 
         S0I1 = S0I1/2.
         S0I2 = S0I2/2.
@@ -969,7 +969,7 @@ class AbsoluteData(object):
         # Note: these averages are used for determining collimation angels si0 and epzi
 
         meanf =  mean(ppmval)
-        tmpH = self._h(meanf, inc)  
+        tmpH = self._h(meanf, inc)
         tmpZ = self._z(meanf, inc)
 
         #print "Averages", tmpH, tmpZ, meanf
@@ -987,7 +987,7 @@ class AbsoluteData(object):
         # ###################################################
 
         if not meanf == 0:
-            s0i = -S0I1/4 * meanf -  (S0I2*np.sin(inc*np.pi/180) - S0I3*np.cos(inc*np.pi/180))/4 
+            s0i = -S0I1/4 * meanf -  (S0I2*np.sin(inc*np.pi/180) - S0I3*np.cos(inc*np.pi/180))/4
             epzi = (EZI1/4 - ( EZI2*np.sin(inc*np.pi/180) - EZI3*np.cos(inc*np.pi/180) )/(4*meanf))* (meanf*np.sin(inc*np.pi/180))
         else:
             loggerabs.warning("_calcinc: %s : no intensity measurement available - you might provide annual means"  % num2date(self[0].time).replace(tzinfo=None))
@@ -997,7 +997,7 @@ class AbsoluteData(object):
             ystart = 0.0
 
         # ###################################################
-        # #####      Calculating offsets (Base values in Excel sheet) 
+        # #####      Calculating offsets (Base values in Excel sheet)
         # ###################################################
 
         # By default:
@@ -1035,10 +1035,10 @@ class AbsoluteData(object):
             variotype = 'None'
             hstart = tmpH
             zstart = tmpZ
-            xstart = tmpH * np.cos ( linestruct.y *np.pi/(180.0) ) 
+            xstart = tmpH * np.cos ( linestruct.y *np.pi/(180.0) )
             ystart = tmpH * np.sin ( linestruct.y *np.pi/(180.0) )
             fstart = np.sqrt(hstart**2 + zstart**2)
-        
+
         # Directional base values -- would avoid them
         basex = h_adder
         #basey = 0.0 # defined in calcdec
@@ -1077,7 +1077,7 @@ class AbsoluteData(object):
         #linestruct.dy = basey   # if not used, then the declination value will be returned
         linestruct.dz = basez
         linestruct.df = deltaF
-        linestruct.typ = 'idff'         
+        linestruct.typ = 'idff'
         linestruct.t2 = calcscaleval
         linestruct.var4 = s0i  # replaces Mirediff from _calcdec
         linestruct.var5 = epzi
@@ -1090,10 +1090,10 @@ class AbsoluteData(object):
         """
         DEFINITION:
             Calculates DI values by calling calcdec and calcinc methods.
-            Uses an iterative approach of dec and inc calculation, adopted from the DTU sheet. 
+            Uses an iterative approach of dec and inc calculation, adopted from the DTU sheet.
             Differences:
                 - Variometer correction and residual correction are performed at each individual step
-                   and not average and rounded for repeated measurements before (should be better 
+                   and not average and rounded for repeated measurements before (should be better
                    and correct especially for residual correction)
                 - Scale values are provided in deg/unit and not gon/unit
             Provide variometer and scalar values for optimal results.
@@ -1108,17 +1108,17 @@ class AbsoluteData(object):
 
         PARAMETERS:
         variable:
-            - line		(LineStruct) a line containing results from _calcdec()
+            - line              (LineStruct) a line containing results from _calcdec()
         kwargs:
-            - annualmeans:	(list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
-            - incstart		(float) - default 45.0 - inclination value in deg
-            - deltaI: 		(float) - default 0.0 - eventual correction factor for inclination in degree
-            - usestep:		(int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
-            - iterator:		(int) switch of loggerabs (e.g. vario not present) in case of iterative approach
-            - scalevalue:	(list of floats) scalevalues for each component (e.g. default = [1,1,1]) 
-            - debugmode:	(bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
+            - annualmeans:      (list of floats) a list providing Observatory specific annual mean values in x,y,z nT (e.g. [20000,1000,43000])
+            - incstart          (float) - default 45.0 - inclination value in deg
+            - deltaI:           (float) - default 0.0 - eventual correction factor for inclination in degree
+            - usestep:          (int) use first, second or both of successive measurements (e.g. autodif requires usestep=2)
+            - iterator:         (int) switch of loggerabs (e.g. vario not present) in case of iterative approach
+            - scalevalue:       (list of floats) scalevalues for each component (e.g. default = [1,1,1])
+            - debugmode:        (bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
             - printresults      (bool) - if True print results to screen
-  
+
         USED BY:
 
         REQUIRES:
@@ -1160,7 +1160,7 @@ class AbsoluteData(object):
             deltaD = 0.0
         if not scalevalue:
             scalevalue = [1.0,1.0,1.0]
-        if not usestep: 
+        if not usestep:
             usestep = 0
         if not annualmeans:
             annualmeans = [0.0,0.0,0.0]
@@ -1179,7 +1179,7 @@ class AbsoluteData(object):
         #print self
         #print "-----------------------------------------"
         #print "Lines in file:", len(self)
- 
+
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
             #print "STarting with", xstart, ystart
@@ -1205,7 +1205,7 @@ class AbsoluteData(object):
                 inc = incstart
             outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
-            
+
             if debugmode:
                 print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
@@ -1216,7 +1216,7 @@ class AbsoluteData(object):
                  #print testval
                  if testval > 10000000:
                      exec('outline.'+key+' = 999999.99')
-        
+
         #test whether outline is a linestruct object - if not use an empty object
         try:
             test = outline.x
@@ -1252,7 +1252,7 @@ def _logfile_len(fname, logfilter):
         if logfilter in line:
             cnt = cnt +1
     return cnt
- 
+
 
 def deg2degminsec(value):
     """
@@ -1280,7 +1280,7 @@ def deg2degminsec(value):
         minutes = 0
 
     return str(degree)+":"+str(minutes)+":"+str(seconds)
-    
+
 
 def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
@@ -1306,11 +1306,11 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pass
     elif "://" in path_or_url:
         # some URL
-        #proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )           
+        #proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )
         #opener = urllib2.build_opener(proxy_handler,urllib2.HTTPBasicAuthHandler(),urllib2.HTTPHandler, urllib2.HTTPSHandler,urllib2.FTPHandler)
         # install this opener
-        #urllib2.install_opener(opener)       
-  
+        #urllib2.install_opener(opener)
+
         # extract extension if any
         suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
         name = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
@@ -1376,25 +1376,25 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
     return stream
 
 
-def absoluteAnalysis(absdata, variodata, scalardata, **kwargs): 
+def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     """
     DEFINITION:
         Analyze absolute data from files or database and create datastream
 
     PARAMETERS:
     Variables:
-        - header_dict:  (dict) dictionary with header information 
+        - header_dict:  (dict) dictionary with header information
     Kwargs:
         - starttime:    (string/datetime) define begin
         - endtime:      (string/datetime) define end
         - abstype:      (string) default manual, can be autodif
-        - db:   	(mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by MySQLdb.connect().
         - dbadd:        (bool) if True DI-raw data will be added to the database
         - alpha:        (float) orientation angle 1 in deg (if z is vertical, alpha is the horizontal rotation angle)
-        - beta:         (float) orientation angle 2 in deg 
+        - beta:         (float) orientation angle 2 in deg
         - deltaF:       (float) difference between scalar measurement point and pier (TODO: check the sign)
-        - deltaD:	(float) = kwargs.get('deltaD')
-        - deltaI: 	(float) = kwargs.get('deltaI')
+        - deltaD:       (float) = kwargs.get('deltaD')
+        - deltaI:       (float) = kwargs.get('deltaI')
         - diid:         (string) identifier (id) of di files (e.g. A2_WIC.txt)
         - outputformat: (string) one of 'idf', 'xyz', 'hdf'
         - usestep:      (int) which step to use for analysis, usually both, in autodif only 2
@@ -1414,20 +1414,20 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     PERFORMED TESTS:
         (OK)1. Read data from database and files
-        (OK)2. Read data from autodif and manual analysis 
-        (OK)3. Put data to database (dbadd) 
+        (OK)2. Read data from autodif and manual analysis
+        (OK)3. Put data to database (dbadd)
         (OK)4. Check parameter for all possibilities: a) no db, b) db, c) db and override by input
         (OK)5. Archiving function
-        6. Appropriate information on failed analyses -> add test for expected values 
+        6. Appropriate information on failed analyses -> add test for expected values
         (OK)7. is the usestep variable correctly applied for autodif and normal?
         (OK)8. overwrite of existing database lines?
         (OK)9. Order of saving data when analyzing older data sets - requires reload and delete
         10. Test memory capabilities for large data sets (~ 6month with two varios, one scalar, no vario and scalar data)
         (OK)11. Check URL/FTP read, single file and directory read
-        
-        Bugs: 
+
+        Bugs:
         when importing db2diline from database, the DILineStruct, defined in absolutes is missing.... why???????? see Test4 in FullAbsoluteAnalysis -- order of import is very important
-      
+
     """
     db = kwargs.get('db')
     dbadd = kwargs.get('dbadd')
@@ -1465,7 +1465,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             return
     if not expT:
         expT = 1
-    #if not alpha: 
+    #if not alpha:
     #    alpha=0.0
     #if not beta:
     #    beta=0.0
@@ -1498,7 +1498,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 import magpy.database as dbase
                 #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
         except:
-            print "absoluteAnalysis:  import failed - skipping eventually selected option dbadd"        
+            print "absoluteAnalysis:  import failed - skipping eventually selected option dbadd"
             dbadd = False
         cursor = db.cursor()
         # Check whether absdata exists as table
@@ -1529,7 +1529,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #print "Found string"
             #filelist.append(absdata)
             if "://" in absdata:
-                print "Found URL code - requires name of data set with date" 
+                print "Found URL code - requires name of data set with date"
                 filelist.append(absdata)
                 movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
             elif os.path.isfile(absdata):
@@ -1550,7 +1550,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 listlen = len(absdata)
                 for elem in absdata:
                     if "://" in absdata:
-                        print "Found URL code - requires name of data set with date" 
+                        print "Found URL code - requires name of data set with date"
                         filelist.append(elem)
                         movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
                     elif os.path.isfile(elem):
@@ -1587,10 +1587,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
         # Please Note for pier information always the existing pier in the file is used
 
-    # 2.2 Cycle through datetimelist 
+    # 2.2 Cycle through datetimelist
     # --------------------
     # read varios, scalar and all absfiles of one day
-    # analyze data for each day and append results to a resultstream    
+    # analyze data for each day and append results to a resultstream
     # XXX possible issues: an absolute measurement which is performed in two day (e.g. across midnight)
     # TODO Add possibilty to get vario and scalar data from database
     resultstream = DataStream()
@@ -1618,7 +1618,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variostr = variostr.remove_flagged()
                 print "Flagged records of variodata have been removed"
             except:
-                print "Flagging of variodata failed"                
+                print "Flagging of variodata failed"
             try:
                 print "Now getting header information"
                 variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
@@ -1627,7 +1627,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 variostr = dbase.applyDeltas(db,variostr)
             except:
-                print "Applying delta values failed" 
+                print "Applying delta values failed"
         except:
             print "absoluteAnalysis: reading variometer data failed"
             variostr = DataStream()
@@ -1647,7 +1647,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         else:
             print "absoluteAnalysis: no variometer data available"
             variofound = False
-            
+
         # b) Load Scalardata
         if not deltaF:
             deltaF = 0.0
@@ -1675,19 +1675,19 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             except:
                 print "Failed to obtain header information from data base"
             #try:  # Get header info from database
-            #    #print "Eventually move column to f line" 
+            #    #print "Eventually move column to f line"
             #    #scalarstr = dbase.applyDeltas(db,scalarstr)
             #except:
-            #    print "Applying delta values failed" 
+            #    print "Applying delta values failed"
             try:
-                print "Applying delta values from database", scalarstr.header['SensorID'] 
+                print "Applying delta values from database", scalarstr.header['SensorID']
                 scalarstr = dbase.applyDeltas(db,scalarstr)
                 if not deltaF == 0:
                     print (" ------------  IMPORTANT ----------------")
                     print (" you provided an additional delta F value")
                     print (" which will be used for offset correction.")
             except:
-                print "Applying delta values failed" 
+                print "Applying delta values failed"
         except:
             print "absoluteAnalysis: reading scalar data from file failed"
             scalarstr = DataStream()
@@ -1740,10 +1740,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                                 abslist.append(a)
                             if db and dbadd:
                                 dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
-                        #print "absoluteAnalysis: Successful analyse of %s" % elem 
+                        #print "absoluteAnalysis: Successful analyse of %s" % elem
                         successlist.append(elem)
                     except:
-                        print "absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem 
+                        print "absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem
                         failinglist.append(elem)
                         # TODO Drop that line from filelist
                         pass
@@ -1762,8 +1762,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 abslist = dbase.db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
             except:
-                print "absoluteAnalysis: Problems when reading from database" 
-               
+                print "absoluteAnalysis: Problems when reading from database"
+
 
         for absst in abslist:
             print "-----------------"
@@ -1833,7 +1833,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # 3. Format output
     # ####################################
 
-    # 3.0 Convert result to ndarray and dx,dy,dz to XYZ in nT 
+    # 3.0 Convert result to ndarray and dx,dy,dz to XYZ in nT
     #     --- This is important for baseline correction as all variometer provided components in nT
 
     # cleanup resultsstream:
@@ -1844,11 +1844,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
             resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
 
-    # Add deltaF to resultsstream vor all Fext:  if nan then df == deltaF else df = df+deltaF, 
+    # Add deltaF to resultsstream vor all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
     posdf = KEYLIST.index('df')
     #print resultstream.ndarray
-    
+
     for idx,elem in enumerate(resultstream.ndarray[posF]):
         #print elem
         #if not deltaF:
@@ -1874,7 +1874,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     #print "outfile"
     #print resultstream.ndarray
 
-    # 3.1 Header information 
+    # 3.1 Header information
     # --------------------
     resultstream.header['StationID'] = stationid
     resultstream.header['DataPier'] = pier
@@ -1914,7 +1914,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if outputformat == 'xyz':
         #for elem in st:
         result = result.idf2xyz()
-        result.typ = 'xyzf'         
+        result.typ = 'xyzf'
         resultstream.header['col-x'] = 'x'
         resultstream.header['unit-col-x'] = 'nT'
         resultstream.header['col-y'] = 'y'
@@ -1926,7 +1926,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         result = result.idf2xyz()
         #for elem in st:
         result = result.xyz2hdz()
-        result.typ = 'hdzf'         
+        result.typ = 'hdzf'
         resultstream.header['col-x'] = 'h'
         resultstream.header['unit-col-x'] = 'nT'
         resultstream.header['col-y'] = 'd'
@@ -1949,13 +1949,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     print "------------------------------------------------------"
 
 
-    # 3.2 Eventually archive the data 
+    # 3.2 Eventually archive the data
     # --------------------
     # XXX possible issues: direct ftp reading or url reading
     if movetoarchive:
         if readfile:
             for fi in archivelist:
-                if not "://" in fi: 
+                if not "://" in fi:
                     src = fi
                     fname = os.path.split(src)[1]
                     dst = os.path.join(movetoarchive,fname)
@@ -2023,7 +2023,7 @@ def getAbsFilesFTP(**kwargs):
         absidentifier = '*AbsoluteMeas.txt'
 
     filelist = []
-    
+
     loggerabs.info(" -- Starting downloading Absolute files from %s" % ftppath)
 
     # -- Checking whether new data is available
@@ -2036,7 +2036,7 @@ def getAbsFilesFTP(**kwargs):
 
     # -- Download files to Analysis folder
     for f in ftplist:
-        loggerabs.info(" ---- Now getting %s" % f) 
+        loggerabs.info(" ---- Now getting %s" % f)
         ftpget (localpath=analysispath, ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
 
     loggerabs.info(" -- Download procedure finished at %s" % ftppath)

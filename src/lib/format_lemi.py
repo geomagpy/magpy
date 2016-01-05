@@ -1,24 +1,24 @@
 '''
-Path:			magpy.lib.format_lemi
-Part of package:	stream (read/write)
-Type:			Input filter, part of read library
+Path:                   magpy.lib.format_lemi
+Part of package:        stream (read/write)
+Type:                   Input filter, part of read library
 
 PURPOSE:
-	Auxiliary input filter for Lemi data.
+        Auxiliary input filter for Lemi data.
 
 CONTAINS:
-        isLEMIBIN:	(Func) Checks if file is LEMI format binary file.
-	readLEMIBIN:	(Func) Reads current LEMI data format binary files.
-        isLEMIBIN1:	(Func) Checks if file is LEMI format data file.
-	readLEMIBIN1:	(Func) Reads outdated LEMI data format binary files.
-        isLEMIHF:	(Func) Checks if file is LEMI format data file.
-	readLEMIHF:	(Func) Reads outdated LEMI data format text files.
+        isLEMIBIN:      (Func) Checks if file is LEMI format binary file.
+        readLEMIBIN:    (Func) Reads current LEMI data format binary files.
+        isLEMIBIN1:     (Func) Checks if file is LEMI format data file.
+        readLEMIBIN1:   (Func) Reads outdated LEMI data format binary files.
+        isLEMIHF:       (Func) Checks if file is LEMI format data file.
+        readLEMIHF:     (Func) Reads outdated LEMI data format text files.
 
 DEPENDENCIES:
-	None.
+        None.
 
 CALLED BY:
-	magpy.lib.magpy_formats
+        magpy.lib.magpy_formats
 '''
 
 from stream import *
@@ -156,7 +156,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
                 #row.x = float(elem[6])
                 #row.y = float(elem[7])
                 #row.z = float(elem[8])
-                #stream.add(row)         
+                #stream.add(row)
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
@@ -181,11 +181,11 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     Function for reading current data format of LEMI data.
 
     KWARGS:
-        tenHz:		(bool) to use 10Hz data
-        timeshift:	(float) providing a time shift, which is added to PC time column (usually NTP)
+        tenHz:          (bool) to use 10Hz data
+        timeshift:      (float) providing a time shift, which is added to PC time column (usually NTP)
 
     COMPLETE DATA STRUCTURE:'<4cb6B8hb30f3BcBcc5hL'
-     --TAG:            data[0:4]		# L025
+     --TAG:            data[0:4]                # L025
      --TIME (LEMI):    2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10])
      --T (sensor):     data[11]/100.
      --T (electr.):    data[12]/100.
@@ -202,10 +202,10 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
      --DATA8:          data[41]*1000.,data[42]*1000.,data[43]*1000.
      --DATA9:          data[44]*1000.,data[45]*1000.,data[46]*1000.
      --DATA10:         data[47]*1000.,data[48]*1000.,data[49]*1000.
-     --MODE:           data[50]		# Mode: 1, 2 or 3
-     --FLASH % FREE:   data[51]	
-     --BATTERY (V):    data[52]	
-     --GPS STATUS:     data[53]		# A (active) or P (passive)
+     --MODE:           data[50]         # Mode: 1, 2 or 3
+     --FLASH % FREE:   data[51]
+     --BATTERY (V):    data[52]
+     --GPS STATUS:     data[53]         # A (active) or P (passive)
      --(EMPTY)         data[54]
      --TIME (PC):      2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61]
     '''
@@ -218,7 +218,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     timeshift = kwargs.get('timeshift')
     gpstime = kwargs.get('gpstime')
 
-    #print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)" 
+    #print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)"
     timediff = []
 
     ## Moved the following into acquisition
@@ -226,7 +226,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         timeshift = 0.0 # milliseconds and time delay (PC-GPS) are already considered in acquisition
 
     if not gpstime:
-        gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column 
+        gpstime = False # if true then PC time will be saved to the sectime column and gps time will occupy the time column
 
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
@@ -235,7 +235,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         # current format
         sensorid = temp.split()[1]
         dataheader = True
-	lemiformat = "current"
+        lemiformat = "current"
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
         stime = True
@@ -244,13 +244,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         data = struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
         if data[55] == 'L':
             dataheader = False
-	    lemiformat = "out-dated"
+            lemiformat = "out-dated"
             packcode = '<4cb6B8hb30f3BcB'
             linelength = 153
             stime = False
         elif data[0] == 'L' and data[55] != 'L':
             dataheader = False
-	    lemiformat = "current (without header)"
+            lemiformat = "current (without header)"
             packcode = '<4cb6B8hb30f3BcB6hL'
             linelength = 169
             stime = True
@@ -274,7 +274,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
-        getfile = True 
+        getfile = True
 
     if getfile:
         loggerlib.info("read: %s Format: Binary LEMI format (%s)." % (filename,lemiformat))
@@ -300,9 +300,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
         timediff = []
 
-	line = fh.read(linelength)
+        line = fh.read(linelength)
 
-	while line != '':
+        while line != '':
             try:
                 data= struct.unpack(packcode,line)
             except Exception as e:
@@ -322,17 +322,17 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             gpsstate = data[53]
 
             if gpsstate == 'A':
-                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time 
-                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)			# PC time
-                timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
+                time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time
+                sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)                 # PC time
+                timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds
             else:
                 try:
-                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)			# PC time
+                    time = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)                        # PC time
                 except:
                     loggerlib.error("readLEMIBIN: Error reading line. Aborting read. (See docs.)")
                 try:
-                    sectime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time 
-                    timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds 
+                    sectime = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time
+                    timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds
                 except:
                     loggerlib.warning("readLEMIBIN: Could not read secondary time column.")
 #--------------------TODO--------------------------------------------
@@ -365,20 +365,20 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                 sectim = date2num(sectime+timedelta(microseconds=(100000.*i)))
                 array[secpos].append(sectim)
 
-    	    line = fh.read(linelength)
+            line = fh.read(linelength)
 
     fh.close()
     gpstime = True
     if gpstime and len(timediff) > 0:
         loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): %f sec +- %f" % (np.mean(timediff), np.std(timediff)))
-        print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff) 
+        print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff)
 
     for idx,ar in enumerate(array):
         if len(ar) > 0:
             array[idx] = np.asarray(array[idx]).astype(object)
 
     return DataStream([LineStruct()], stream.header, np.asarray(array))
-   
+
 
 
 def readLEMIBIN1(filename, headonly=False, **kwargs):
@@ -412,7 +412,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
-        getfile = True 
+        getfile = True
 
     if getfile:
         loggerlib.info('readLEMIBIN1: Reading %s' % (filename))
@@ -423,47 +423,46 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
         headers['col-z'] = 'z'
         headers['unit-col-z'] = 'nT'
 
-	line = fh.read(32)
-	while line != '':
-    	    data= struct.unpack("<4cb6B11Bcbbhhhb", line)
-    	    bfx = data[-4]/400.
-    	    bfy = data[-3]/400.
-    	    bfz = data[-2]/400.
+        line = fh.read(32)
+        while line != '':
+            data= struct.unpack("<4cb6B11Bcbbhhhb", line)
+            bfx = data[-4]/400.
+            bfy = data[-3]/400.
+            bfz = data[-2]/400.
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
             headers['SensorID'] = line[0:4]
-    	    newtime = []
-    	    for i in range (5,11):
-        	newtime.append(h2d(data[i]))
-    	    currsec = newtime[-1]
-    	    newtime.append(0.0)
-    	    for i in range (0,30):
-        	row = LineStruct()
-        	line = fh.read(16)
-        	data= struct.unpack('<3f2h', line)
-        	microsec = i/10.
-        	if microsec >= 2:
-            	    secadd = 2.
-        	elif microsec >= 1:
-            	    secadd = 1.
-        	else:
-            	    secadd = 0.
-       		newtime[-1] = microsec-secadd
-  	      	newtime[-2] = currsec+secadd
-        	time = datetime(2000+newtime[0],newtime[1],newtime[2],newtime[3],newtime[4],int(newtime[5]),int(newtime[6]*1000000))
+            newtime = []
+            for i in range (5,11):
+                newtime.append(h2d(data[i]))
+            currsec = newtime[-1]
+            newtime.append(0.0)
+            for i in range (0,30):
+                row = LineStruct()
+                line = fh.read(16)
+                data= struct.unpack('<3f2h', line)
+                microsec = i/10.
+                if microsec >= 2:
+                    secadd = 2.
+                elif microsec >= 1:
+                    secadd = 1.
+                else:
+                    secadd = 0.
+                newtime[-1] = microsec-secadd
+                newtime[-2] = currsec+secadd
+                time = datetime(2000+newtime[0],newtime[1],newtime[2],newtime[3],newtime[4],int(newtime[5]),int(newtime[6]*1000000))
                 row.time = date2num(time)
                 row.x = (data[0])*1000.
                 row.y = (data[1])*1000.
                 row.z = (data[2])*1000.
                 row.t1 = data[3]/100.
                 row.t2 = data[4]/100.
-                stream.add(row)         
-    	    line = fh.read(32)
+                stream.add(row)
+            line = fh.read(32)
 
     fh.close()
 
     #print "Finished file reading of %s" % filename
 
-    return DataStream(stream, headers) 
-
+    return DataStream(stream, headers)

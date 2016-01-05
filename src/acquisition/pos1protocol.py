@@ -1,28 +1,28 @@
 '''
-Path:			magpy.acquisition.pos1protocol
-Part of package:	acquisition
-Type:			Acquisition protocol, part of data acquisition library
+Path:                   magpy.acquisition.pos1protocol
+Part of package:        acquisition
+Type:                   Acquisition protocol, part of data acquisition library
 
 PURPOSE:
-	This contains everything needed to get a Russian POS-1 magnetometer
-	up and running and saving + sending data.
+        This contains everything needed to get a Russian POS-1 magnetometer
+        up and running and saving + sending data.
 
 CONTAINS:
-	*Pos1Protocol:	(Class - twisted.protocols.basic.LineReceiver)
-			Class for handling data acquisition of POS-1 magnetometer.
-			Includes internal class functions: processPos1Data
-	_timeToArray:	(Func) ... utility function for Pos1Protocol.
-	_dataToFile:	(Func) ... utility function for Pos1Protocol.
-	startPOS1:	(Func) Starts POS-1 magnetometer and acquisition.
-			Note: REQUIRED for data acquisition.
-	_hexifyCommand:	(Func) ... utility function for startPOS1.
-	_serReadline:	(Func) ... utility function for startPOS1.
+        *Pos1Protocol:  (Class - twisted.protocols.basic.LineReceiver)
+                        Class for handling data acquisition of POS-1 magnetometer.
+                        Includes internal class functions: processPos1Data
+        _timeToArray:   (Func) ... utility function for Pos1Protocol.
+        _dataToFile:    (Func) ... utility function for Pos1Protocol.
+        startPOS1:      (Func) Starts POS-1 magnetometer and acquisition.
+                        Note: REQUIRED for data acquisition.
+        _hexifyCommand: (Func) ... utility function for startPOS1.
+        _serReadline:   (Func) ... utility function for startPOS1.
 
 DEPENDENCIES:
-	twisted, autobahn
+        twisted, autobahn
 
 CALLED BY:
-	magpy.bin.acquisition
+        magpy.bin.acquisition
 '''
 
 import sys, time, os, socket
@@ -52,24 +52,24 @@ def startPOS1(port,commands):
 
     PARAMETERS:
     Variables:
-        - port: 	(str) Port of POS-1 magnetometer, e.g. '/dev/ttyS1'
-	- commands:	(list) List of commands to send to POS-1.
-			Standard for startup:
-    			commands = ['mode text','time ' + timestr,'date ' + datestr,'auto 5']
+        - port:         (str) Port of POS-1 magnetometer, e.g. '/dev/ttyS1'
+        - commands:     (list) List of commands to send to POS-1.
+                        Standard for startup:
+                        commands = ['mode text','time ' + timestr,'date ' + datestr,'auto 5']
 
     RETURNS:
         - None
 
     EXAMPLE:
-        >>> 
+        >>>
 
     APPLICATION:
-        >>> 
+        >>>
 
     COMMAND DICTIONARY:
-	Note: these commands must usually be entered in the order shown here.
-	For responses to be read out, "mode text" must be called as the first command.
-	command_dict = {
+        Note: these commands must usually be entered in the order shown here.
+        For responses to be read out, "mode text" must be called as the first command.
+        command_dict = {
     'ENQ': 'gives information about the connected equipment',
     'NAK': 'the previous answer is repeated',
     'about': 'brief information about the manufacturer is given',
@@ -83,12 +83,12 @@ def startPOS1(port,commands):
     'range CENTER': 'defines the centre of the working range',
     'run': 'starts measurement of a magnetic field',
     'auto PRM': 'set the automatic measurement mode, PRM is period (1-86400)',
-    	}
+        }
 
     ERROR DICTIONARIES:
     An error code is always made up of two digits. Errors1 describes
     the first digit, Errors2 the second digit.
-	Errors1 = {
+        Errors1 = {
     '1': 'out of range',
     '2': 'No signal',
     '3': 'No signal & out of range',
@@ -97,9 +97,9 @@ def startPOS1(port,commands):
     '6': 'Low power & no signal',
     '7': 'Low power & no signal & out of range',
     '8': 'No errors'
-	}
+        }
 
-	Errors2 = {
+        Errors2 = {
     '0': 'No warnings',
     '1': 'Diapason error',
     '2': 'Short time',
@@ -108,7 +108,7 @@ def startPOS1(port,commands):
     '5': 'Low S/N & diapason error',
     '6': 'Low S/N & short time',
     '7': 'Low S/N & short time & diapason error'
-	}
+        }
     '''
 
     # Specify parameters:
@@ -123,7 +123,7 @@ def startPOS1(port,commands):
     try:
         pos_ser = serial.Serial(port, baudrate=9600, parity='N', bytesize=8, stopbits=1)
         print 'Connection to POS-1 made.'
-    except: 
+    except:
         print 'Connection to POS-1 flopped.'
     print ''
 
@@ -141,7 +141,7 @@ def startPOS1(port,commands):
 def _hexifyCommand(command,eol):
     '''
     This function translates the command text string into a hex
-    string that the serial device can read. 'eol' is the 
+    string that the serial device can read. 'eol' is the
     end-of-line character, '\x00' for the POS-1 magnetometer.
     '''
 
@@ -207,7 +207,7 @@ def _dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("OW - Protocol: Error while saving file")        
+        log.err("OW - Protocol: Error while saving file")
 
 
 ## POS1 protocol
@@ -241,7 +241,7 @@ class Pos1Protocol(LineReceiver):
                 commandstr.append(('\\x' + hexch).decode('string_escape'))
 
             command_hex = ''.join(commandstr) + '\x00'
-            self.transport.write(command_hex)  
+            self.transport.write(command_hex)
             # WARNING: something is sent but not recognised as command.
 
     def connectionLost(self):
@@ -307,13 +307,13 @@ class Pos1Protocol(LineReceiver):
         evt99 = {'id': 99, 'value': 'eol'}
 
         return evt1,evt3,evt4,evt10,evt14,evt40,evt99
-         
+
 
     def dataReceived(self, data):
         dispatch_url =  "http://example.com/"+self.hostname+"/pos1#"+self.sensor+"-value"
         #print "Got pos1 data"
         try:
-            #log.msg('Bufferlength:', len(self.buffer))		# debug
+            #log.msg('Bufferlength:', len(self.buffer))         # debug
             if len(self.buffer) == 44:
                 evt1, evt3,evt4, evt10, evt14, evt40, evt99 = self.processPos1Data(self.buffer[:44])
                 self.buffer = ''
@@ -366,5 +366,3 @@ class Pos1Protocol(LineReceiver):
 
         except ValueError:
             log.err('POS1 - Protocol: Unable to parse data %s' % data)
-
-

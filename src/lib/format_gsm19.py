@@ -57,7 +57,7 @@ def int_to_roman(input):
    if type(input) != type(1):
       raise TypeError, "expected integer, got %s" % type(input)
    if not 0 < input < 4000:
-      raise ValueError, "Argument must be between 1 and 3999"   
+      raise ValueError, "Argument must be between 1 and 3999"
    ints = (1000, 900,  500, 400, 100,  90, 50,  40, 10,  9,   5,  4,   1)
    nums = ('M',  'CM', 'D', 'CD','C', 'XC','L','XL','X','IX','V','IV','I')
    result = ""
@@ -72,7 +72,7 @@ def roman_to_int(input):
    """
    Convert a roman numeral to an integer.
 
-   http://code.activestate.com/recipes/81611-roman-numerals/   
+   http://code.activestate.com/recipes/81611-roman-numerals/
 
    >>> r = range(1, 4000)
    >>> nums = [int_to_roman(i) for i in r]
@@ -127,7 +127,7 @@ def roman_to_int(input):
    else:
       raise ValueError, 'input is not a valid roman numeral: %s' % input
 
-    
+
 def isGSM19(filename):
     """
     Checks whether a file is GSM19 format.
@@ -150,7 +150,7 @@ def readGSM19(filename, headonly=False, **kwargs):
     Reading GSM19 format.
     Basis looks like:
 
-    Gem Systems GSM-19W 3101329 v6.0 24 X 2003 
+    Gem Systems GSM-19W 3101329 v6.0 24 X 2003
     ID 1 file 23c-ost .b   09 VII10
     datum  48000.00
 
@@ -164,20 +164,20 @@ def readGSM19(filename, headonly=False, **kwargs):
     115020.0  48487.44 99
 
     WG looks like:
-    /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs                      
+    /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs
     /ID 1 file 24survey.wg  02VIII12
-    /00106 sensor distance cm 
-    /X Y elevation nT nT/m sq cor-nT sat time picket-x picket-y 
+    /00106 sensor distance cm
+    /X Y elevation nT nT/m sq cor-nT sat time picket-x picket-y
     line  000017
-    047.9263435  015.8653717  001089  48382.35  0012.61 99  000000.00 07 115950.0  4.00  39.00 
-    047.9263438  015.8653840  001089  48386.04  0017.18 99  000000.00 07 115951.0 * * 
+    047.9263435  015.8653717  001089  48382.35  0012.61 99  000000.00 07 115950.0  4.00  39.00
+    047.9263438  015.8653840  001089  48386.04  0017.18 99  000000.00 07 115951.0 * *
     or like (if no GPS):
-   /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs                      
+   /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs
    /ID 1 file 07survey.wg  30  I 14
-   /00100 sensor distance cm 
-   /X Y nT nT/m sq cor-nT time picket-x picket-y 
-   0  0  48420.59  0002.90 99 * 110804.0  0  0 
-   0  0  48420.21  0002.58 99 * 110805.0 * * 
+   /00100 sensor distance cm
+   /X Y nT nT/m sq cor-nT time picket-x picket-y
+   0  0  48420.59  0002.90 99 * 110804.0  0  0
+   0  0  48420.21  0002.58 99 * 110805.0 * *
 
 
     """
@@ -189,7 +189,7 @@ def readGSM19(filename, headonly=False, **kwargs):
     creationdate = datetime.fromtimestamp(timestamp)
     daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
     YeT = daytmp[:2]
-    
+
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
@@ -221,7 +221,7 @@ def readGSM19(filename, headonly=False, **kwargs):
             headers['SensorDataLoggerSerNum'] =  head[3]
             headers['SensorGroup'] =  'Magnetism'
             headers['SensorType'] =  'Overhauzer'
-            
+
             headers['SensorDescription'] = 'Gem Systems ' + head[2]+head[4]
             typus = ['b']
             try:
@@ -307,7 +307,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                     array[indvar2].append(float(elem[1]))
                 except:
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
-                    pass                
+                    pass
             elif typus[0] == 'wg':
                 headers['col-var4'] = 'N satelites'
                 headers['col-var1'] = 'Latitude'
@@ -366,7 +366,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
                     pass
             else:
-                if not len(elem) == 3: 
+                if not len(elem) == 3:
                     logging.error("GSM 19 file - %s - type %s not yet supported" % (filename, typus[0]))
 
     if len(array[0]) > 0:

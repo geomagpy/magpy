@@ -1,29 +1,29 @@
 '''
-Filename:		lemiprotocol
-Part of package:	acquisition
-Type:			Part of data acquisition library
+Filename:               lemiprotocol
+Part of package:        acquisition
+Type:                   Part of data acquisition library
 
 PURPOSE:
-	This package will initiate LEMI025 / LEMI036 data acquisition and streaming
-	and saving of data.
+        This package will initiate LEMI025 / LEMI036 data acquisition and streaming
+        and saving of data.
 
 CONTAINS:
-	*LemiProtocol:	(Class - twisted.protocols.basic.LineReceiver)
-			Class for handling data acquisition of LEMI variometers.
-			Includes internal class functions: processLemiData
-	_timeToArray:	(Func) ... utility function for LemiProtocol.
-	h2d:		(Func) ... utility function for LemiProtocol.
-			Convert hexadecimal to decimal.
+        *LemiProtocol:  (Class - twisted.protocols.basic.LineReceiver)
+                        Class for handling data acquisition of LEMI variometers.
+                        Includes internal class functions: processLemiData
+        _timeToArray:   (Func) ... utility function for LemiProtocol.
+        h2d:            (Func) ... utility function for LemiProtocol.
+                        Convert hexadecimal to decimal.
 
 IMPORTANT:
         - According to data sheet: 300 millseconds are subtracted from each gps time step
         provided GPStime = GPStime_sent - timedelta(microseconds=300000)
         - upcoming year 3000 bug
 DEPENDENCIES:
-	twisted, autobahn
+        twisted, autobahn
 
 CALLED BY:
-	magpy.bin.acquisition
+        magpy.bin.acquisition
 '''
 
 import sys, time, os, socket
@@ -56,7 +56,7 @@ class LemiProtocol(LineReceiver):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
         self.buffer = ''
-        self.soltag = soltag 	# Start-of-line-tag
+        self.soltag = soltag    # Start-of-line-tag
         self.hostname = socket.gethostname()
         self.outputdir = outputdir
         self.gpsstate1 = 'A'
@@ -87,7 +87,7 @@ class LemiProtocol(LineReceiver):
         log.msg('LEMI connection lost. Perform steps to restart it!')
 
     def h2d(self,x):
-        '''	
+        '''
         Hexadecimal to decimal (for format LEMIBIN2)
         ... Because the binary for dates is in binary-decimal, not just binary.
         '''
@@ -151,7 +151,7 @@ class LemiProtocol(LineReceiver):
             pass
         except:
             log.err('LEMI - Protocol: Could not write data to file.')
-        
+
         # unpack data and extract time and first field values
         try:
             data_array = struct.unpack("<4cB6B8hb30f3BcB", data)
@@ -189,11 +189,11 @@ class LemiProtocol(LineReceiver):
         if not self.gpsstate1 == self.gpsstate2:
             log.msg('LEMI - Protocol: GPSSTATE changed to %s .'  % gpsstat)
         self.gpsstate2 = self.gpsstate1
- 
+
         #print "GPSSTAT", gpsstat
-        # important !!! change outtime to lemi reading when GPS is running 
+        # important !!! change outtime to lemi reading when GPS is running
         try:
-            if self.gpsstate2 == 'P': 
+            if self.gpsstate2 == 'P':
                 ## passive mode - no GPS connection -> use ntptime as primary with correction
                 evt1 = currenttime-timedelta(seconds=timedelay)
                 evt4 = gps_array
@@ -216,9 +216,9 @@ class LemiProtocol(LineReceiver):
             evt99 = {'id': 99, 'value': 'eol'}
         except:
             log.err('LEMI - Protocol: Error assigning "evt" values.')
- 
+
         return evt1,evt3,evt4,evt11,evt12,evt13,evt31,evt32,evt60,evt99
-         
+
     def dataReceived(self, data):
         #print "Lemi data here!", self.buffer
         dispatch_url =  "http://example.com/"+self.hostname+"/lemi#"+self.sensor+"-value"
@@ -238,7 +238,7 @@ class LemiProtocol(LineReceiver):
             # Process data
             print self.buffer
             self.buffer = ''
-        """            
+        """
 
         try:
             if (self.buffer).startswith(self.soltag) and len(self.buffer) == 153:
@@ -323,7 +323,7 @@ class LemiProtocol(LineReceiver):
                 evt11a = {'id': 11, 'value': evt11[ind]}
                 evt12a = {'id': 12, 'value': evt12[ind]}
                 evt13a = {'id': 13, 'value': evt13[ind]}
-                try:                    
+                try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1a)
                     #self.wsMcuFactory.dispatch(dispatch_url, evt3a)
                     self.wsMcuFactory.dispatch(dispatch_url, evt4a)
@@ -335,5 +335,4 @@ class LemiProtocol(LineReceiver):
                     self.wsMcuFactory.dispatch(dispatch_url, evt60)
                     self.wsMcuFactory.dispatch(dispatch_url, evt99)
                 except:
-                    log.err('LEMI - Protocol: wsMcuFactory error while dispatching data.') 
-
+                    log.err('LEMI - Protocol: wsMcuFactory error while dispatching data.')

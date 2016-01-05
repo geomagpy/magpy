@@ -2,7 +2,7 @@
 """
 DESCRIPTION:
     MagPy credentials functions:
-    Methods for storing and accessing user/password information for data bases and ftp accounts. Sensitive data is encrypted. 
+    Methods for storing and accessing user/password information for data bases and ftp accounts. Sensitive data is encrypted.
     For even better security please change the permission by chmod 600 ~/.magpycred
 
     Credential file looks like:
@@ -39,15 +39,15 @@ EXAMPLE:
     >>> mpcred.cc('mail', 'firstmail', name='moritz',smtp='schiller.ed',passwd='evenmoresecret')
     >>> mpcred.cc('transfer', 'ftp1', name='friedrich',adress='ftp.find.the.fish',passwd='somehowsecret')
     >>> # Using credentials
-    >>> ftpget(ftpname=mpcred.lc(ftp1[name]), etc) 
-    >>> sendmail(mailname=mpcred.lc(firstmail[name]), mailadress=mpcred.lc(firstmail[adress]), mailpasswd=mpcred.lc(firstmail[passwd]), text='Hello World', attach='mycompleteharddisk') 
+    >>> ftpget(ftpname=mpcred.lc(ftp1[name]), etc)
+    >>> sendmail(mailname=mpcred.lc(firstmail[name]), mailadress=mpcred.lc(firstmail[adress]), mailpasswd=mpcred.lc(firstmail[passwd]), text='Hello World', attach='mycompleteharddisk')
 
 """
 
 import base64
 import pickle
 import os
-from os.path import expanduser  
+from os.path import expanduser
 
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
@@ -104,7 +104,7 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
 
     sysuser = getuser()
     home = expanduser('~'+sysuser)
-    # previously used expanduser('~') which does not work for root 
+    # previously used expanduser('~') which does not work for root
     credentials = os.path.join(home,'.magpycred')
 
     try:
@@ -150,23 +150,23 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
             return
         pwd = base64.b64encode(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'address':address, 'port':port }
-        
+
     dictslist.append([name,dictionary])
-    
+
     saveobj(dictslist, credentials)
     print "Credentials: Added entry for ", name
     entries = [n[0] for n in dictslist]
-    print "Credentials: Now containing entries for", entries 
+    print "Credentials: Now containing entries for", entries
 
 
 def lc(dictionary,value):
     """
     Load credentials
     """
-    
+
     sysuser = getuser()
     home = expanduser('~'+sysuser)
-    # previously used expanduser('~') which does not work for root 
+    # previously used expanduser('~') which does not work for root
     credentials = os.path.join(home,'.magpycred')
     print "Accessing credential file:", credentials
 
@@ -182,17 +182,17 @@ def lc(dictionary,value):
                 return base64.b64decode(d[1][value])
             return d[1][value]
 
-    print "Credentials: value/dict not found" 
+    print "Credentials: value/dict not found"
     return
 
 def sc():
     """
     Show credentials
     """
-    
+
     sysuser = getuser()
     home = expanduser('~'+sysuser)
-    # previously used expanduser('~') which does not work for root 
+    # previously used expanduser('~') which does not work for root
     credentials = os.path.join(home,'.magpycred')
     print "Credentials: Overview of existing credentials:"
     try:
@@ -204,14 +204,14 @@ def sc():
     for d in dictslist:
         print d
     return dictslist
-            
+
 def dc(name):
     """
     Drop credentials for 'name'
     """
     sysuser = getuser()
     home = expanduser('~'+sysuser)
-    # previously used expanduser('~') which does not work for root 
+    # previously used expanduser('~') which does not work for root
     credentials = os.path.join(home,'.magpycred')
     try:
         dictslist = loadobj(credentials)
@@ -228,8 +228,7 @@ def dc(name):
         saveobj(newdlist, credentials)
         print "Credentials: Removed entry for ", name
         entries = [n[0] for n in newdlist]
-        print "Credentials: Now containing entries for", entries 
+        print "Credentials: Now containing entries for", entries
     else:
         print "Credentials: Input for %s not found - aborting" % (name)
         return
-

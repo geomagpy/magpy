@@ -1,6 +1,6 @@
 import sys
 from twisted.python import log
-from twisted.internet import reactor 
+from twisted.internet import reactor
 from autobahn.websocket import connectWS
 from autobahn.wamp import WampClientFactory, WampClientProtocol
 # For converting Unicode text
@@ -14,12 +14,12 @@ clientname = 'default'
 def defineclient(cname):
     global clientname
     clientname = cname
-    return    
+    return
 
 class PubSubClient(WampClientProtocol):
     """
     Class for OneWire communication
-    """ 
+    """
     def onSessionOpen(self):
         global clientname
         log.msg("Starting " + clientname + " session")
@@ -50,10 +50,10 @@ class PubSubClient(WampClientProtocol):
                  sensdesc = row[1]
                  module = row[2].lower()
                  param = row[3]
-                 print row, len(param.split(',')) 
+                 print row, len(param.split(','))
                  #self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
-                 # Create Sensor Table if it does not yet exist  # TODO: check the length of param for other then temperatur data 
+                 # Create Sensor Table if it does not yet exist  # TODO: check the length of param for other then temperatur data
                  #createtable = "CREATE TABLE IF NOT EXISTS %s (time  CHAR(40) NOT NULL PRIMARY KEY, f FLOAT, df FLOAT, var2 FLOAT, flag CHAR(100), typ CHAR(100))" % (sensid)
                  #try:
                  #    cursor.execute(createtable)
@@ -66,8 +66,8 @@ class PubSubClient(WampClientProtocol):
                             (sensid, sensdesc, module, param )
         except:
             print "Error: unable to fetch data"
-   
-       
+
+
     def convertUnicode(self, data):
         # From RichieHindle
         if isinstance(data, unicode):
@@ -78,7 +78,7 @@ class PubSubClient(WampClientProtocol):
             return type(data)(map(self.convertUnicode, data))
         else:
             return data
- 
+
     def onEvent(self, topicUri, event):
         eventdict = self.convertUnicode(event)
         time = ''
@@ -109,10 +109,10 @@ class PubSubClient(WampClientProtocol):
 
 
     def checkDB4DataInfo(self,db,cursor,sensorid,pier):
- 
+
         # DATAINFO TABLE
         # Test whether a datainfo table is already existing
-        # if not create one with first number 
+        # if not create one with first number
         checkdatainfoexists = 'SHOW TABLES LIKE "DATAINFO"'
         cursor.execute(checkdatainfoexists)
         rows = cursor.fetchall()

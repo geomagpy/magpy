@@ -45,12 +45,12 @@ marcospath = ''
 
 
 IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
-                10:'f',11:'x',12:'y',13:'z',14:'df',
-                20:'x',21:'y',22:'z',23:'dx',24:'dy',25:'dz',
-                30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',35:'x',36:'x',37:'y',38:'var1',39:'f',
-                40:'var1',           
-                50:'var1',51:'var2',
-                60:'var2',61:'var3',62:'var4'} 
+          10:'f',11:'x',12:'y',13:'z',14:'df',
+          20:'x',21:'y',22:'z',23:'dx',24:'dy',25:'dz',
+          30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',35:'x',36:'x',37:'y',38:'var1',39:'f',
+          40:'var1',
+          50:'var1',51:'var2',
+          60:'var2',61:'var3',62:'var4'}
 
 MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38], 'ult': [1,32,50,51], 'lnm': [1,30,36,37,39], 'pal': [1,11,12,13], 'ard': [1,10,11,12,13,14,30,33,35], 'sug': [1,20,21,22,23,24,25]}
 
@@ -59,7 +59,7 @@ UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V
 NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P'],'sug': ['S1','S2','S3','Grad_S3_S1','Grad_S3_S2','Grad_S2_S1']}
 
 def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None):
-    print "Getting parameters ..." 
+    print "Getting parameters ..."
     global clientname
     clientname = cname
     global clientip
@@ -84,7 +84,7 @@ def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None
         global dbcred
         dbcred = dbc
     print "Parameters transfered"
-    return    
+    return
 
 def timeToArray(timestring):
     # Converts time string of format 2013-12-12T23:12:23.122324
@@ -118,12 +118,12 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.msg('collectors owclient: Error while saving file')        
+        log.msg('collectors owclient: Error while saving file')
 
 class PubSubClient(WampClientProtocol):
     """
     Class for OneWire communication
-    """ 
+    """
     def onSessionOpen(self):
         print "Starting"
         global clientname
@@ -174,9 +174,9 @@ class PubSubClient(WampClientProtocol):
         Subscribing to all Onewire Instruments
         """
         self.prefix(module, "http://example.com/" + client +"/"+module+"#")
-        if output == 'db':        
+        if output == 'db':
             # -------------------------------------------------------
-            # A. Create database input 
+            # A. Create database input
             # -------------------------------------------------------
             # ideal way: upload an already existing file from moon for each sensor
             # check client for existing file:
@@ -202,7 +202,7 @@ class PubSubClient(WampClientProtocol):
                     # if not present then get a file and upload it
                     #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
-                    destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin') 
+                    destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin')
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
                     try:
                         log.msg("collectors owclient: Downloading data: %s" % datafile)
@@ -210,10 +210,10 @@ class PubSubClient(WampClientProtocol):
                         stream = st.read(destfile)
                         log.msg("collectors owclient: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
                         stream.header['StationID'] = self.stationid
-                        stream.header['SensorModule'] = 'OW' 
+                        stream.header['SensorModule'] = 'OW'
                         stream.header['SensorType'] = row[1]
                         if not row[2] == 'typus':
-                            stream.header['SensorGroup'] = row[2] 
+                            stream.header['SensorGroup'] = row[2]
                         if not row[3] == 'location':
                             stream.header['DataLocationReference'] = row[3]
                         if not row[4] == 'info':
@@ -266,7 +266,7 @@ class PubSubClient(WampClientProtocol):
                 log.msg("collectors client: No sensors registered so far - Getting data file from moon and uploading it using stream2db")
                 day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                 for exten in ['bin','asc']:
-                    destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.'+exten) 
+                    destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.'+exten)
                     datafile = os.path.join('/srv/ws/', clientname, sensorid, sensorid+'_'+day+'.'+exten)
                     try:
                         log.msg("collectors client: Downloading data: %s" % datafile)
@@ -305,7 +305,7 @@ class PubSubClient(WampClientProtocol):
     def subscribeInst(self, db, cursor, client, mod, output):
         """
         Main Method for Subscribing:
-        calls subscribeSensor and subscribeOw 
+        calls subscribeSensor and subscribeOw
         """
         sensshort = mod[:3]
         if sensshort in ['GSM','POS','G82']:
@@ -337,8 +337,8 @@ class PubSubClient(WampClientProtocol):
                 self.subscribeOw(client,output,module,o)
         else:
             self.subscribeSensor(client,output,module,sensshort,mod)
-   
-       
+
+
     def convertUnicode(self, data):
         # From RichieHindle
         if isinstance(data, unicode):
@@ -406,7 +406,7 @@ class PubSubClient(WampClientProtocol):
         else:
             """
             Please note:
-            Data is always automatically appended to datainfoid 0001 
+            Data is always automatically appended to datainfoid 0001
             """
             if module == 'ow':
                 # DB request is necessary as sensorid has no revision information
@@ -429,10 +429,10 @@ class PubSubClient(WampClientProtocol):
                 self.typ = 'ow'
             else:
                 datainfoid = sensorid+'_0001'
-            
+
             # define insert from provided param
             parastr = ', '.join(paralst)
-            # separate floats and string        
+            # separate floats and string
             nelst = []
             for elem in line:
                 if isinstance(elem, str):
@@ -468,7 +468,7 @@ class PubSubClient(WampClientProtocol):
         #     filter the dataset
         #     save the subarray
         pass
- 
+
     def onEvent(self, topicUri, event):
         eventdict = self.convertUnicode(event)
         time = ''
@@ -535,4 +535,3 @@ class PubSubClient(WampClientProtocol):
 
         except:
             pass
-

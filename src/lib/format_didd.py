@@ -28,7 +28,7 @@ def readDIDD(filename, headonly=False, **kwargs):
     """
     Reading DIDD format data.
     Looks like:
-    hh mm        X        Y        Z        F 
+    hh mm        X        Y        Z        F
     00 00  20826.8   1206.1  43778.3  48494.8
     00 01  20833.3   1202.2  43779.3  48498.5
     00 02  20832.2   1198.7  43779.9  48498.4
@@ -49,7 +49,7 @@ def readDIDD(filename, headonly=False, **kwargs):
     #for (dirpath, dirnames, filenames) in os.walk(dirname):
     #    flist.extend(filenames)
     #    break
-    
+
     fi = os.path.split(filename)[1]
 
     if fi: # in flist:
@@ -68,7 +68,7 @@ def readDIDD(filename, headonly=False, **kwargs):
             #return stream
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= startdate:          
+            if not datetime.strptime(day,'%Y-%m-%d') >= startdate:
                 getfile = False
         if endtime:
             if not datetime.strptime(day,'%Y-%m-%d') <= enddate:
@@ -81,7 +81,7 @@ def readDIDD(filename, headonly=False, **kwargs):
     if getfile:
         fh = open(filename, 'rt')
         headers = {}
-        
+
         for line in fh:
             if line.isspace():
                 # blank line
@@ -91,12 +91,12 @@ def readDIDD(filename, headonly=False, **kwargs):
                 line = line.replace('%hh %mm','')
                 line = line.replace('hh mm','')
                 colsstr = line.lower().split()
-                
+
                 for idx, elem in enumerate(colsstr):
                     colname = "col-%s" % KEYLIST[idx+1]
                     colname = colname.lower()
                     headers[colname] = elem
-                    unitstr =  'unit-%s' % colname        
+                    unitstr =  'unit-%s' % colname
                     headers[unitstr] = 'nT'
             elif headonly:
                 # skip data for option headonly
@@ -124,11 +124,11 @@ def readDIDD(filename, headonly=False, **kwargs):
                         array[4].append(fval)
                     except:
                         logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
-        array[0] = np.asarray(array[0]) 
-        array[1] = np.asarray(array[1]) 
-        array[2] = np.asarray(array[2]) 
-        array[3] = np.asarray(array[3]) 
-        array[4] = np.asarray(array[4]) 
+        array[0] = np.asarray(array[0])
+        array[1] = np.asarray(array[1])
+        array[2] = np.asarray(array[2])
+        array[3] = np.asarray(array[3])
+        array[4] = np.asarray(array[4])
 
         headers['DataSensorOrientation'] = 'xyz'
         stream.header['SensorElements'] = ','.join(colsstr)
@@ -141,14 +141,14 @@ def readDIDD(filename, headonly=False, **kwargs):
 
     stream = [LineStruct()]
 
-    return DataStream(stream, headers, np.asarray(array))    
+    return DataStream(stream, headers, np.asarray(array))
 
 
 
 def writeDIDD(datastream, filename, **kwargs):
     """
     Looks like:
-    hh mm        X        Y        Z        F 
+    hh mm        X        Y        Z        F
     00 00  20826.8   1206.1  43778.3  48494.8
     00 01  20833.3   1202.2  43779.3  48498.5
     """

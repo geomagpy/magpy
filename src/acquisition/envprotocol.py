@@ -48,7 +48,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("OW - Protocol: Error while saving file")        
+        log.err("OW - Protocol: Error while saving file")
 
 
 ## Environment protocol
@@ -58,7 +58,7 @@ class EnvProtocol(LineReceiver):
     """
     Protocol to read MessPC EnvironmentalSensor 5 data from usb unit
     Each sensor has its own class (that can be improved...)
-    The protocol defines the sensor name in its init section, which 
+    The protocol defines the sensor name in its init section, which
     is used to dipatch url links and define local storage folders
 
     """
@@ -136,7 +136,7 @@ class EnvProtocol(LineReceiver):
         dataToFile(self.outputdir, sensorid, filename, data_bin, header)
 
         # create a dictionary out of the input file
- 
+
         evt0 = {'id': 0, 'value': self.hostname}
         evt1 = {'id': 1, 'value': timestamp}
         evt3 = {'id': 3, 'value': outtime}
@@ -144,7 +144,7 @@ class EnvProtocol(LineReceiver):
         evt33 = {'id': 33, 'value': rh}
         evt34 = {'id': 34, 'value': dew}
         evt99 = {'id': 99, 'value': 'eol'}
- 
+
         return evt0,evt1,evt3,evt30,evt33,evt34,evt99
 
 
@@ -199,4 +199,3 @@ class EnvProtocol(LineReceiver):
         except ValueError:
             log.err('Unable to parse data %s' % line)
             #return
-

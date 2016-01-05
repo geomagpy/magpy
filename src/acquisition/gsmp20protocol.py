@@ -48,7 +48,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("GSMP20 - Protocol: Error while saving file")        
+        log.err("GSMP20 - Protocol: Error while saving file")
 
 
 ## GEM -GSMP-20S3 protocol -- North-South
@@ -71,9 +71,9 @@ class GSMP20NSProtocol(LineReceiver):
         """
         Data looks like--- (with GPS lines every minute):
         -- vertical sensor - Old software
-        3,3,12.00 111 field1 field2 field3  
-        3,3,12.00 111 field1 field2 field3 
-        GPS 16.00 111 field1 field2 field3  
+        3,3,12.00 111 field1 field2 field3
+        3,3,12.00 111 field1 field2 field3
+        GPS 16.00 111 field1 field2 field3
         -- horizontal sensor - New software
         time 111 field1 field2 field3                                            (every sec or faster)
         $$$                                                         (every hour, preceeds status line)
@@ -84,27 +84,27 @@ class GSMP20NSProtocol(LineReceiver):
         Header:
                         10071506 A 13 250 492 496 329 150 1023 39 39 39 30 29 30 YYYyyyEEENNN 148 149 117
 
-			<GPS> day/month/year/hour A - locked, V unlocked
-			<13> Console outside air temperature (13C)
-			<250> Battery voltage (25.0V)
-			<492> +5V supply voltage (4.92V)
-			<496> -5V supply voltage (-4.96)
-			<3.3V> +3.3V supply voltage (3.3V)
-			<15.0> silver box power supply (15.0V)
-			<1023> OCXO internal trimpot adjustment level, automatically adjusted via GPS
-			<39> Sensor 1 temperature in C
-			<39>  Sensor 2 temperature in C
-			<39> Sensor 3 temperature in C
-			<30> Light current sensor 1 (3.0uA)
-			<29> Light current sensor 2 (2.9uA)
-			<30> Light current sensor 3 (3.0uA)
-			<YYY>  Sensor 1, sensor 2 sensor 3 lock status Y- locked, N - unlocked
-			<yyy>  Sensor 1 heater status, sensor 2 heater status, sensor 3 heater status y-on, n-off
-			<EEE> Sensor 1 heater, sensor 2 heater, sensor 3 heater E-enabled, D-disabled (used for over heat protection)
-			<NNN> RF sensor 1, RF sensor 2, RF sensor 3, N -on, F-off
-			<148> Sensor 1 RF dc voltage (14.8V)
-			<149> Sensor 2 RF dc voltage (14.9V)
-			<117> Sensor 3 RF dc voltage (11.7V)
+                        <GPS> day/month/year/hour A - locked, V unlocked
+                        <13> Console outside air temperature (13C)
+                        <250> Battery voltage (25.0V)
+                        <492> +5V supply voltage (4.92V)
+                        <496> -5V supply voltage (-4.96)
+                        <3.3V> +3.3V supply voltage (3.3V)
+                        <15.0> silver box power supply (15.0V)
+                        <1023> OCXO internal trimpot adjustment level, automatically adjusted via GPS
+                        <39> Sensor 1 temperature in C
+                        <39>  Sensor 2 temperature in C
+                        <39> Sensor 3 temperature in C
+                        <30> Light current sensor 1 (3.0uA)
+                        <29> Light current sensor 2 (2.9uA)
+                        <30> Light current sensor 3 (3.0uA)
+                        <YYY>  Sensor 1, sensor 2 sensor 3 lock status Y- locked, N - unlocked
+                        <yyy>  Sensor 1 heater status, sensor 2 heater status, sensor 3 heater status y-on, n-off
+                        <EEE> Sensor 1 heater, sensor 2 heater, sensor 3 heater E-enabled, D-disabled (used for over heat protection)
+                        <NNN> RF sensor 1, RF sensor 2, RF sensor 3, N -on, F-off
+                        <148> Sensor 1 RF dc voltage (14.8V)
+                        <149> Sensor 2 RF dc voltage (14.9V)
+                        <117> Sensor 3 RF dc voltage (11.7V)
 
         """
 
@@ -158,24 +158,24 @@ class GSMP20NSProtocol(LineReceiver):
                 except:
                     gpstimestamp = timestamp
                 headtimestamp = gpstimestamp
-                gpstatus = data_array[1]			# str1
-                telec = int(data_array[2])			# t2
-                Vbat = float(data_array[3])/10.			# f
-                Vsup1 = float(data_array[4])/100.		# var4
-                Vsup2 = float(data_array[5])/100.		# var5
-                Vlow = float(data_array[6])/100.		# t1
-                PowerSup = float(data_array[7])/10.		# df
-                level = data_array[8]				# str3
-                tsens1 = int(data_array[9])			# x
-                tsens2 = int(data_array[10])			# y
-                tsens3 = int(data_array[11])			# z
-                lightcurrent1 = float(data_array[12])/10.	# dx
-                lightcurrent2 = float(data_array[13])/10.	# dy
-                lightcurrent3 = float(data_array[14])/10.	# dz
-                statusstring = data_array[15]			# str2
-                Vsens1 = float(data_array[16])/10.		# var1
-                Vsens2 = float(data_array[17])/10.		# var2
-                Vsens3 = float(data_array[18])/10.		# var3 
+                gpstatus = data_array[1]                        # str1
+                telec = int(data_array[2])                      # t2
+                Vbat = float(data_array[3])/10.                 # f
+                Vsup1 = float(data_array[4])/100.               # var4
+                Vsup2 = float(data_array[5])/100.               # var5
+                Vlow = float(data_array[6])/100.                # t1
+                PowerSup = float(data_array[7])/10.             # df
+                level = data_array[8]                           # str3
+                tsens1 = int(data_array[9])                     # x
+                tsens2 = int(data_array[10])                    # y
+                tsens3 = int(data_array[11])                    # z
+                lightcurrent1 = float(data_array[12])/10.       # dx
+                lightcurrent2 = float(data_array[13])/10.       # dy
+                lightcurrent3 = float(data_array[14])/10.       # dz
+                statusstring = data_array[15]                   # str2
+                Vsens1 = float(data_array[16])/10.              # var1
+                Vsens2 = float(data_array[17])/10.              # var2
+                Vsens3 = float(data_array[18])/10.              # var3
             else:
                 #print "Found other data:", data, len(data_array)
                 pass
@@ -222,24 +222,24 @@ class GSMP20NSProtocol(LineReceiver):
                 # extract time data
                 headarray = timeToArray(headtimestamp)
                 try:
-                    headarray.append(int(tsens1))			# x
-                    headarray.append(int(tsens2))			# y
-                    headarray.append(int(tsens3))			# z
-                    headarray.append(int(Vbat*10.))			# f
-                    headarray.append(int(Vlow*100.))		# t1
-                    headarray.append(int(telec))			# t2
-                    headarray.append(int(lightcurrent1*10.))	# dx
-                    headarray.append(int(lightcurrent2*10.))	# dy
-                    headarray.append(int(lightcurrent3*10.))	# dz
-                    headarray.append(int(PowerSup*10.))		# df
-                    headarray.append(int(Vsens1*10.))		# var1
-                    headarray.append(int(Vsens2*10.))		# var2
-                    headarray.append(int(Vsens3*10.))		# var3 
-                    headarray.append(int(Vsup1*100.))		# var4
-                    headarray.append(int(Vsup2*100.))		# var5
-                    headarray.append(gpstatus)			# str1
-                    headarray.append(statusstring)			# str2
-                    headarray.append(level)				# str3
+                    headarray.append(int(tsens1))               # x
+                    headarray.append(int(tsens2))               # y
+                    headarray.append(int(tsens3))               # z
+                    headarray.append(int(Vbat*10.))             # f
+                    headarray.append(int(Vlow*100.))            # t1
+                    headarray.append(int(telec))                # t2
+                    headarray.append(int(lightcurrent1*10.))    # dx
+                    headarray.append(int(lightcurrent2*10.))    # dy
+                    headarray.append(int(lightcurrent3*10.))    # dz
+                    headarray.append(int(PowerSup*10.))         # df
+                    headarray.append(int(Vsens1*10.))           # var1
+                    headarray.append(int(Vsens2*10.))           # var2
+                    headarray.append(int(Vsens3*10.))           # var3
+                    headarray.append(int(Vsup1*100.))           # var4
+                    headarray.append(int(Vsup2*100.))           # var5
+                    headarray.append(gpstatus)                  # str1
+                    headarray.append(statusstring)              # str2
+                    headarray.append(level)                     # str3
 
                     data_head = struct.pack(headpackcode,*headarray)
                     na = self.sensor
@@ -261,7 +261,7 @@ class GSMP20NSProtocol(LineReceiver):
                 log.msg('GSMP20 - Protocol: Error with binary save routine')
                 pass
 
-         
+
     def lineReceived(self, line):
         dispatch_url =  "http://example.com/"+self.hostname+"/sug#"+self.sensor+"-value"
         try:
@@ -282,4 +282,3 @@ class GSMP20NSProtocol(LineReceiver):
             self.wsMcuFactory.dispatch(dispatch_url, evt99)
         except:
             pass
-

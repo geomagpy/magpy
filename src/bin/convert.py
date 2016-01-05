@@ -2,11 +2,11 @@
 
 """
 Create a simple function which has the following options:
-decode -h  					# help
-decode -r filename/path				# extract file
-decode -r path -s startdate -e enddate		# with dates like "2013-11-22"
-decode -r path -f IAGA				# define outputformat
-decode -r path -w path2write			# define path to write to
+decode -h                                       # help
+decode -r filename/path                         # extract file
+decode -r path -s startdate -e enddate          # with dates like "2013-11-22"
+decode -r path -f IAGA                          # define outputformat
+decode -r path -w path2write                    # define path to write to
 """
 from magpy.stream import *
 import sys, getopt
@@ -29,11 +29,11 @@ def main(argv):
             print 'Usage:'
             print 'convert.py -r <path2read> -w <path2write> -s <startdate> -e <enddate> -f <outputformat>'
             print 'Examples:'
-            print 'Single file:		convert.py -r /my/path/myfile.bin'
-            print 'Mulitple files:	convert.py -r /my/path/*.bin'
-            print 'Time range:		convert.py -r /my/path/* -s 2014-01-01 -e 2014-01-15'
-            print 'Save as IAGA:	convert.py -r /my/path/myfile.bin - f IAGA'
-            print 'Define outputpath:	convert.py -r /my/path/myfile.bin - w /my/other/path/'
+            print 'Single file:         convert.py -r /my/path/myfile.bin'
+            print 'Mulitple files:      convert.py -r /my/path/*.bin'
+            print 'Time range:          convert.py -r /my/path/* -s 2014-01-01 -e 2014-01-15'
+            print 'Save as IAGA:        convert.py -r /my/path/myfile.bin - f IAGA'
+            print 'Define outputpath:   convert.py -r /my/path/myfile.bin - w /my/other/path/'
             sys.exit()
         elif opt in ("-r", "--read"):
             inputpath = arg
@@ -81,7 +81,7 @@ def main(argv):
         data = read(inputpath)
     num = len(data)
     if num == 0:
-        print "Error: Data could not be read" 
+        print "Error: Data could not be read"
     print "Found %s datapoints" % str(len(data))
     print "Writing %s data ..." % format_type
     # Check whether wpath is really a path
@@ -90,5 +90,3 @@ def main(argv):
 
 if __name__ == "__main__":
    main(sys.argv[1:])
-
-

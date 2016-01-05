@@ -1,6 +1,6 @@
 import sys
 from twisted.python import log
-from twisted.internet import reactor 
+from twisted.internet import reactor
 try: # version > 0.8.0
     from autobahn.wamp1.protocol import WampClientFactory, WampClientProtocol
 except:
@@ -15,11 +15,11 @@ clientname = 'default'
 def defineclient(cname):
     global clientname
     clientname = cname
-    return    
+    return
 
 IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
-                10:'f',11:'x',12:'y',13:'z',14:'df',
-                30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',40:'var2'} 
+          10:'f',11:'x',12:'y',13:'z',14:'df',
+          30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',40:'var2'}
 
 def timeToArray(timestring):
     # Converts time string of format 2013-12-12T23:12:23.122324
@@ -54,12 +54,12 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("OW - Protocol: Error while saving file")        
+        log.err("OW - Protocol: Error while saving file")
 
 class PubSubClient(WampClientProtocol):
     """
     Class for communication with moon
-    """ 
+    """
 
     """
     #eventually add an init method - doesnt' work this way
@@ -100,7 +100,7 @@ class PubSubClient(WampClientProtocol):
         if self.short == 'cs':
              sensshort = 'G82'
         else:
-             sensshort = self.short.upper() 
+             sensshort = self.short.upper()
 
         if output == 'db':
             # #####################################
@@ -142,18 +142,18 @@ class PubSubClient(WampClientProtocol):
                      except:
                          module = 'env'
                      param = row[3]
-                     print row, len(param.split(',')) 
+                     print row, len(param.split(','))
 
                      # #####################################
                      # SUBSCRIBEINST: C) For each SensorID create a DATAINFO line and an empty data table
-                     # TODO this requires some knowledge on provided data 
+                     # TODO this requires some knowledge on provided data
                      # #####################################
 
                      self.checkDB4DataInfo(db,cursor,sensid,self.stationid,param)
 
                      # Exception for G823 Caesium mag
                      if module == 'g82':
-                         module = 'cs' 
+                         module = 'cs'
 
                      subscriptionstring = "%s:%s-value" % (module, sensid)
                      self.subscribe(subscriptionstring, self.onEvent)
@@ -166,7 +166,7 @@ class PubSubClient(WampClientProtocol):
         elif output == 'file':
             # #####################################
             # SUBSCRIBEINST: D) subscribe directly
-            # #####################################            
+            # #####################################
             subscriptionstring = "%s:%s-value" % (self.short, self.sensorid)
             self.subscribe(subscriptionstring, self.onEvent)
 
@@ -196,7 +196,7 @@ class PubSubClient(WampClientProtocol):
                     datainfoid = sensorid+'_0001'
                     # define insert from provided param
                     parastr = ', '.join(paralst)
-                    # separate floats and string        
+                    # separate floats and string
                     nelst = []
                     for elem in self.line:
                         if isinstance(elem, str):
@@ -221,7 +221,7 @@ class PubSubClient(WampClientProtocol):
                     packcode = '6hL'+len(paralst)*'L'
                     # provide additionall the real names and the units
                     header = "# MagPyBin %s '%s' '%s' %s %s %s %d" % (self.sensor, paralst, paralst, '[nT]', '[1000]', packcode, struct.calcsize(packcode))
-                    
+
                     # If line element f is existing perform the following check
                     try:
                         value = float(data[0].strip('$'))
@@ -268,12 +268,12 @@ class PubSubClient(WampClientProtocol):
 
 
     def checkDB4DataInfo(self,db,cursor,sensorid,stationid,parameter):
- 
+
         print "Checking DATAINFO"
         print "#################"
         # DATAINFO TABLE
         # Test whether a datainfo table is already existing
-        # if not create one with first number 
+        # if not create one with first number
         checkdatainfoexists = 'SHOW TABLES LIKE "DATAINFO"'
         cursor.execute(checkdatainfoexists)
         rows = cursor.fetchall()
@@ -308,6 +308,5 @@ class PubSubClient(WampClientProtocol):
                 log.msg("Created new data table %s." % datainfoid)
             except:
                 log.msg("Data table exists already.")
-            
-        self.db.commit()
 
+        self.db.commit()
