@@ -38,7 +38,7 @@ def round_sig(x, n):
       else:
          sign = ""
       return sign+"0."+"0"*(expo-1)+fs[0]+fs[1]
-      
+
 def round_sig_error(x, ex, n, paren=False):
    '''Find ex rounded to n sig-figs and make the floating point x
    match the number of decimals.  If [paren], the string is
@@ -102,7 +102,7 @@ def format_table(cols, errors, n, labels=None, headers=None, latex=False):
       format += "%%%ds " % (max(map(len, labels)))
       if latex:
          format += "& "
-   for length in lengths: 
+   for length in lengths:
       format += "%%%ds " % (length)
       if latex:
          format += "& "
@@ -146,4 +146,3 @@ def round_sig_error2(x, ex1, ex2, n):
       return stx,minstex,maxstex
    else:
       return stx,maxstex,minstex
-

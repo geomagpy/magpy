@@ -27,7 +27,7 @@ def isGFZKP(filename):
     if not temp[6:8] == "  ": # strip is important to remove eventual \r\n sequences or \n
         return False
     if not temp[9] in ['o','+','-']: # strip is important to remove eventual \r\n sequences or \n
-        return False    
+        return False
     print 'Found GFZ Kp format'
     return True
 
@@ -45,7 +45,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
-    
+
     fh = open(filename, 'rt')
 
     stream = DataStream()
@@ -80,7 +80,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
         elif headonly:
             # skip data for option headonly
             continue
-        elif len(line) > 6 and getdat: # hour file 
+        elif len(line) > 6 and getdat: # hour file
             # skip data for option headonly
             elements = line.split()
             #try:
@@ -112,7 +112,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
                 array[indvar2].append(cum)
                 array[indvar3].append(num)
                 array[indvar4].append(fum)
-        elif len(line) > 6 and not getdat: # monthly mean 
+        elif len(line) > 6 and not getdat: # monthly mean
             if line.split()[1] == 'Mean':
                 means = line.split()
                 # Not used so far
@@ -138,7 +138,6 @@ def readGFZKP(filename, headonly=False, **kwargs):
     headers['col-var4'] = 'Cp'
     headers['DataSource'] = 'GFZ Potsdam'
     headers['DataReferences'] = 'http://www-app3.gfz-potsdam.de/kp_index/'
-    
-    return DataStream([LineStruct()], headers, np.asarray(array))  
-    #return DataStream(stream, headers, np.asarray(array))  
 
+    return DataStream([LineStruct()], headers, np.asarray(array))
+    #return DataStream(stream, headers, np.asarray(array))

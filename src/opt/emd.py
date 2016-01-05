@@ -27,17 +27,17 @@ def emd(data,max_modes=10):
         count += 1
         # perform a sift
         imf,residue = _do_sift(residue)
-        
+
         # append the imf
         modes.append(imf)
-        
+
         # Save the imf data
 
         # see if achieved max
         if len(modes) == max_modes:
             # we have all we wanted
             break
-            
+
     # append the residue
     modes.append(residue)
 
@@ -57,10 +57,10 @@ Ensemble Empirical Mode Decomposition (EEMD)
     # normalize incomming data
     dstd = data.std()
     y = data/dstd
-    
+
     # allocate for starting value
     all_modes = np.zeros((num_modes+2,num_samples))
-    
+
     # loop over num_ensembles
     for e in range(num_ensembles):
         # perturb starting data
@@ -68,7 +68,7 @@ Ensemble Empirical Mode Decomposition (EEMD)
 
         # save the starting value
         all_modes[0] += x0
-        
+
         # loop over modes
         for m in range(num_modes):
             # do the sifts
@@ -78,16 +78,16 @@ Ensemble Empirical Mode Decomposition (EEMD)
 
             # save the imf
             all_modes[m+1] += imf
-            
+
             # set the residual
             x0 = x0 - imf
 
         # save the final residual
         all_modes[-1] += x0
-                
+
     # average everything out and renormalize
     return all_modes*dstd/np.float64(num_ensembles)
-    
+
 def _done_sifting(d):
     """We are done sifting is there a monotonic function."""
     return np.sum(_localmax(d))+np.sum(_localmax(-d))<=2
@@ -131,7 +131,7 @@ least five sifts."""
         # save the last extrema and ZC
         lastNumExtrema = numExtrema
         lastNumZC = numZC
-        
+
     # FIX THIS
 # while True:
 # imf = _do_one_sift(imf)
@@ -222,7 +222,7 @@ def _analyze_imf(d):
 # % a1=subplot(2,1,1);
 # % plot(xs,d,'b-',xs,upper,'k-',xs,lower,'k-');
 # % axis tight;
-  
+
 # % a2=subplot(2,1,2);
 # % plot(xs,stopScore,'b-',[0 length(d)],[thresh1 thresh1],'k--',[0 length(d)],[thresh2 ...
 # % thresh2],'r--');
@@ -230,7 +230,7 @@ def _analyze_imf(d):
 # % xlabel(sprintf('score = %.3g',s));
 # % linkaxes([a1 a2],'x')
 # % keyboard
-  
+
 # % end
 
 
@@ -242,7 +242,7 @@ def _analyze_imf(d):
 # yi=interp1(x,y,xi,'spline');
 # end
 
-  
+
 
 def _localmax(d):
     """Calculate the local maxima of a vector."""
@@ -251,7 +251,7 @@ def _localmax(d):
     # value -1 denotes that the run its a part of may contain a local max
     diffvec = np.r_[-np.inf,d,-np.inf]
     diffScore=np.diff(np.sign(np.diff(diffvec)))
-                     
+
     # Run length code with help from:
     # http://home.online.no/~pjacklam/matlab/doc/mtt/index.html
     # (this is all painfully complicated, but I did it in order to avoid loops...)
@@ -310,7 +310,7 @@ each mode.
         print "Mean Frequ of mode ", m, np.mean(np.diff(np.unwrap(phase[:,np.r_[0,0:len(modes[0])]]))/(2*np.pi)*samplerate)
 
         #f(m,:) = [nan 0.5*(angle(-h(t+1).*conj(h(t-1)))+pi)/(2*pi) * sr nan];
-    
+
     # calc the freqs (old way)
     #f=np.diff(np.unwrap(phase[:,np.r_[0,0:len(modes[0])]]))/(2*np.pi)*samplerate
 

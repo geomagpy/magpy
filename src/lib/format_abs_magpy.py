@@ -42,12 +42,12 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     Reading MAGPY's Absolute format data.
     Berger  T010B  MireChurch  D  ELSEC820
     Miren:
-    51.183055555555555	51.183055555555555	231.1830555555556	231.1830555555556	51.18333333333333	51.18333333333333	231.18333333333334	231.18333333333334
+    51.183055555555555  51.183055555555555      231.1830555555556       231.1830555555556       51.18333333333333       51.18333333333333       231.18333333333334      231.18333333333334
     Positions:
-    2010-06-11_12:03:00	93.1836111111111	90.	0.
-    2010-06-11_12:03:00	93.1836111111111	90.	0.
-    2010-06-11_12:08:30	273.25916666666666	90.	0.
-    2010-06-11_12:08:30	273.25916666666666	90.	0.
+    2010-06-11_12:03:00 93.1836111111111        90.     0.
+    2010-06-11_12:03:00 93.1836111111111        90.     0.
+    2010-06-11_12:08:30 273.25916666666666      90.     0.
+    2010-06-11_12:08:30 273.25916666666666      90.     0.
     """
     azimuth = kwargs.get('azimuth')
 
@@ -75,7 +75,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             colsstr = line.split()
             person =  colsstr[0]
             di_inst = colsstr[1]
-            # check whether mire is number or String            
+            # check whether mire is number or String
             try:
                 expectedmire = float(colsstr[2])
             except:
@@ -165,14 +165,14 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     Reading MAGPY's Absolute format data.
     Looks like:
     # MagPy Absolutes
-    # 
+    #
     Miren:
-    51.183055555555555	51.183055555555555	231.1830555555556	231.1830555555556	51.18333333333333	51.18333333333333	231.18333333333334	231.18333333333334
+    51.183055555555555  51.183055555555555      231.1830555555556       231.1830555555556       51.18333333333333       51.18333333333333       231.18333333333334      231.18333333333334
     Positions:
-    2010-06-11_12:03:00	93.1836111111111	90.	0.
-    2010-06-11_12:03:00	93.1836111111111	90.	0.
-    2010-06-11_12:08:30	273.25916666666666	90.	0.
-    2010-06-11_12:08:30	273.25916666666666	90.	0.
+    2010-06-11_12:03:00 93.1836111111111        90.     0.
+    2010-06-11_12:03:00 93.1836111111111        90.     0.
+    2010-06-11_12:08:30 273.25916666666666      90.     0.
+    2010-06-11_12:08:30 273.25916666666666      90.     0.
     """
     azimuth = kwargs.get('azimuth')
     output = kwargs.get('output')
@@ -214,9 +214,9 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             if headline[0] == ('# Abs-TheoUnit'):
                 unit = headline[1].strip().replace(' ','_')
                 # Any given unit is transformed to degree
-                # Therefor no further angular corrections are necessary 
+                # Therefor no further angular corrections are necessary
                 if unit=='gon':
-        	    ang_fac = 400./360.
+                    ang_fac = 400./360.
                 elif unit == 'rad':
                     ang_fac = np.pi/180.
                 else:
@@ -229,7 +229,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 try:
                     expectedmire = float(headline[1].strip())/ang_fac
                     # a given azimuth value overrides the file value
-                    if azimuth: 
+                    if azimuth:
                         expectedmire = azimuth
                     dirow.azimuth = expectedmire
                 except:
@@ -268,7 +268,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
         elif numelements == 2:
             # Intensity mesurements
             row = AbsoluteDIStruct()
-            fstr = line.split()            
+            fstr = line.split()
             try:
                 row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
                 dirow.ftime.append(row.time)
@@ -285,7 +285,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             row = AbsoluteDIStruct()
             posstr = line.split()
             # correct sorting for DIline
-	    if count == 8:
+            if count == 8:
                 count = 99
             if count == 10:
                 count = 999
@@ -326,9 +326,9 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.hc = float(posstr[1])/ang_fac
                 row.vc = float(posstr[2])/ang_fac
                 row.res = float(posstr[3].replace(',','.'))
-		dirow.hc[count] = float(posstr[1])/ang_fac
+                dirow.hc[count] = float(posstr[1])/ang_fac
                 dirow.vc[count] = float(posstr[2])/ang_fac
-                dirow.res[count] = float(posstr[3].replace(',','.'))                
+                dirow.res[count] = float(posstr[3].replace(',','.'))
                 #print count, dirow.vc[count], dirow.res[count]
                 row.mu = mu
                 row.md = md
@@ -414,34 +414,34 @@ def readAUTODIF(filename, headonly=False, **kwargs):
     Reading Autodifs's Absolute format data.
     Take care: File contains horizontal/vertical axis - magpy is using the h/v circles (perpendicular to axis)
     Looks like:
-    AUTODIF002	2013-10-17
+    AUTODIF002  2013-10-17
 
-    Measure ID	Date	Time	Laser	Fluxgate	Level	Haxis	Vaxis
+    Measure ID  Date    Time    Laser   Fluxgate        Level   Haxis   Vaxis
 
-    Laser PU	2013-10-17	00:15:59	0.0471	2047	-192	90.5789	94.871
-    Laser PU	2013-10-17	00:16:07	-0.0366	2047	-192	90.5789	94.8727
-    Laser PD	2013-10-17	00:16:56	-0.022	2047	-185	271.3414	274.1147
-    Laser PD	2013-10-17	00:17:04	0.022	2047	-185	271.3414	274.1157
-    Declination 1	2013-10-17	00:17:23	NaN	55	-183	90.0	281.0448
-    Declination 1	2013-10-17	00:17:31	NaN	-1	-183	90.0	281.0304
-    Declination 2	2013-10-17	00:17:54	NaN	128	-183	269.9991	280.0551
-    Declination 2	2013-10-17	00:18:02	NaN	3	-183	269.9991	280.0883
-    Declination 3	2013-10-17	00:18:17	NaN	-19	-192	269.9999	100.7341
-    Declination 3	2013-10-17	00:18:25	NaN	-15	-192	269.9999	100.7352
-    Declination 4	2013-10-17	00:18:49	NaN	193	-194	90.0007	100.9456
-    Declination 4	2013-10-17	00:18:59	NaN	12	-194	90.0007	100.9947
-    Laser PU	2013-10-17	00:19:14	-0.0053	2047	-191	90.5785	94.8723
-    Laser PU	2013-10-17	00:19:22	0.123	2047	-191	90.5785	94.8696
-    Laser PD	2013-10-17	00:19:47	0.0	2047	-185	271.341	274.115
-    Laser PD	2013-10-17	00:19:55	-0.0659	2047	-185	271.341	274.1134
-    Inclination 1	2013-10-17	00:20:16	NaN	400	-179	115.7004	10.7194
-    Inclination 1	2013-10-17	00:20:25	NaN	-8	-179	115.7463	10.7194
-    Inclination 2	2013-10-17	00:20:44	NaN	51	-179	295.8997	10.7175
-    Inclination 2	2013-10-17	00:20:52	NaN	-7	-179	295.8929	10.7175
-    Inclination 3	2013-10-17	00:21:10	1.0	-8	-202	244.4002	190.7183
-    Inclination 3	2013-10-17	00:21:18	NaN	0	-202	244.4015	190.7183
-    Inclination 4	2013-10-17	00:21:37	NaN	-404	-203	64.3002	190.7157
-    Inclination 4	2013-10-17	00:21:49	NaN	-11	-202	64.2543	190.7157
+    Laser PU    2013-10-17      00:15:59        0.0471  2047    -192    90.5789 94.871
+    Laser PU    2013-10-17      00:16:07        -0.0366 2047    -192    90.5789 94.8727
+    Laser PD    2013-10-17      00:16:56        -0.022  2047    -185    271.3414        274.1147
+    Laser PD    2013-10-17      00:17:04        0.022   2047    -185    271.3414        274.1157
+    Declination 1       2013-10-17      00:17:23        NaN     55      -183    90.0    281.0448
+    Declination 1       2013-10-17      00:17:31        NaN     -1      -183    90.0    281.0304
+    Declination 2       2013-10-17      00:17:54        NaN     128     -183    269.9991        280.0551
+    Declination 2       2013-10-17      00:18:02        NaN     3       -183    269.9991        280.0883
+    Declination 3       2013-10-17      00:18:17        NaN     -19     -192    269.9999        100.7341
+    Declination 3       2013-10-17      00:18:25        NaN     -15     -192    269.9999        100.7352
+    Declination 4       2013-10-17      00:18:49        NaN     193     -194    90.0007 100.9456
+    Declination 4       2013-10-17      00:18:59        NaN     12      -194    90.0007 100.9947
+    Laser PU    2013-10-17      00:19:14        -0.0053 2047    -191    90.5785 94.8723
+    Laser PU    2013-10-17      00:19:22        0.123   2047    -191    90.5785 94.8696
+    Laser PD    2013-10-17      00:19:47        0.0     2047    -185    271.341 274.115
+    Laser PD    2013-10-17      00:19:55        -0.0659 2047    -185    271.341 274.1134
+    Inclination 1       2013-10-17      00:20:16        NaN     400     -179    115.7004        10.7194
+    Inclination 1       2013-10-17      00:20:25        NaN     -8      -179    115.7463        10.7194
+    Inclination 2       2013-10-17      00:20:44        NaN     51      -179    295.8997        10.7175
+    Inclination 2       2013-10-17      00:20:52        NaN     -7      -179    295.8929        10.7175
+    Inclination 3       2013-10-17      00:21:10        1.0     -8      -202    244.4002        190.7183
+    Inclination 3       2013-10-17      00:21:18        NaN     0       -202    244.4015        190.7183
+    Inclination 4       2013-10-17      00:21:37        NaN     -404    -203    64.3002 190.7157
+    Inclination 4       2013-10-17      00:21:49        NaN     -11     -202    64.2543 190.7157
     """
     azimuth = kwargs.get('azimuth')
     scaleflux = kwargs.get('scaleflux')
@@ -465,7 +465,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
     abslist = []
     # Check whether header infromation is already present
     headers = {}
-    
+
     count = 0
     inccount = 0
 
@@ -555,6 +555,6 @@ def writeMAGPYNEWABS(filename, headonly=False, **kwargs):
     dbase : provide database access
     any missing header info
     Abs-Unit, Abs-Theo, etc...
-    
+
     """
     pass

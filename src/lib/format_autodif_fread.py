@@ -1,7 +1,7 @@
 """
 MagPy
 Auxiliary input filter - Write AUTODIF read-in data for F (also read)
-Written by Rachel Bailey 
+Written by Rachel Bailey
 - contains test and read function, toDo: write function
 """
 
@@ -67,9 +67,9 @@ def readAUTODIF_FREAD(filename, headonly=False, **kwargs):
 
     if getfile:
 
-	line = fh.readline()
+        line = fh.readline()
 
-	while line != "":
+        while line != "":
             data = line.split()
             row = LineStruct()
 
@@ -81,9 +81,9 @@ def readAUTODIF_FREAD(filename, headonly=False, **kwargs):
             row.df = float(data[1])/1000.
             row.var1 = float(data[2])
 
-            stream.add(row)    
+            stream.add(row)
 
-    	    line = fh.readline()
+            line = fh.readline()
 
         #print "Finished file reading of %s" % filename
 
@@ -94,7 +94,7 @@ def readAUTODIF_FREAD(filename, headonly=False, **kwargs):
 
 def writeAUTODIF_FREAD(datastream, filename, **kwargs):
     """
-    Function to write AUTODIF-format data 
+    Function to write AUTODIF-format data
     """
 
     headdict = datastream.header
@@ -113,4 +113,3 @@ def writeAUTODIF_FREAD(datastream, filename, **kwargs):
         logging.warning('lib - format_autodif write: Data missing/wrong data format.')
 
     myFile.close()
-

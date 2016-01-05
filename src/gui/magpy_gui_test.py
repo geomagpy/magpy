@@ -18,7 +18,7 @@ sys.path.append(magpypath)
 
 #from stream import *
 from gui.magpy_gui import *
-  
+
 app = wx.App(redirect=False)
 frame = MainFrame(None,-1,"")
 frame.Show()

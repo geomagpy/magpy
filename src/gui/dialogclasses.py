@@ -17,20 +17,20 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-# Subclasses for Dialogs called by magpy gui     
+# Subclasses for Dialogs called by magpy gui
 
 class OpenWebAddressDialog(wx.Dialog):
     """
     Dialog for File Menu - Load URL
     """
-    
+
     def __init__(self, parent, title):
-        super(OpenWebAddressDialog, self).__init__(parent=parent, 
+        super(OpenWebAddressDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         # single anaylsis
@@ -70,22 +70,22 @@ class OpenWebAddressDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
 class ExportDataDialog(wx.Dialog):
     """
     Dialog for Exporting data
-    """   
+    """
     def __init__(self, parent, title):
-        super(ExportDataDialog, self).__init__(parent=parent, 
+        super(ExportDataDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         # single anaylsis
@@ -163,8 +163,8 @@ class ExportDataDialog(wx.Dialog):
             self.selectedTextCtrl.SetValue(dialog.GetPath())
         #self.menu_p.rep_page.logMsg('- Directory for file export defined')
         dialog.Destroy()
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -172,14 +172,14 @@ class DatabaseConnectDialog(wx.Dialog):
     """
     Dialog for Database Menu - Connect MySQL
     """
-    
+
     def __init__(self, parent, title):
-        super(DatabaseConnectDialog, self).__init__(parent=parent, 
+        super(DatabaseConnectDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         # single anaylsis
@@ -191,7 +191,7 @@ class DatabaseConnectDialog(wx.Dialog):
         self.passwdLabel = wx.StaticText(self, label="Password")
         self.passwdTextCtrl = wx.TextCtrl(self, value="Secret",style=wx.TE_PASSWORD)
         self.dbLabel = wx.StaticText(self, label="Database")
-        self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")        
+        self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
         self.closeButton = wx.Button(self, label='Cancel')
 
@@ -231,8 +231,8 @@ class DatabaseConnectDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -240,16 +240,16 @@ class DatabaseContentDialog(wx.Dialog):
     """
     Dialog for Database Menu - Connect MySQL
     """
-    
+
     def __init__(self, parent, title, datalst):
-        super(DatabaseContentDialog, self).__init__(parent=parent, 
+        super(DatabaseContentDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         #self.datalst = ['test','jgg']
         self.datalst = datalst
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         self.dataLabel = wx.StaticText(self, label="Data tables:")
@@ -289,8 +289,8 @@ class DatabaseContentDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -298,14 +298,14 @@ class OptionsInitDialog(wx.Dialog):
     """
     Dialog for Database Menu - Connect MySQL
     """
-    
+
     def __init__(self, parent, title):
-        super(OptionsInitDialog, self).__init__(parent=parent, 
+        super(OptionsInitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         # single anaylsis
@@ -317,7 +317,7 @@ class OptionsInitDialog(wx.Dialog):
         self.passwdLabel = wx.StaticText(self, label="Password")
         self.passwdTextCtrl = wx.TextCtrl(self, value="Secret",style=wx.TE_PASSWORD)
         self.dbLabel = wx.StaticText(self, label="Database")
-        self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")        
+        self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")
         self.dirnameLabel = wx.StaticText(self, label="Default directory")
         self.dirnameTextCtrl = wx.TextCtrl(self, value=".")
         self.filenameLabel = wx.StaticText(self, label="Default filename")
@@ -327,7 +327,7 @@ class OptionsInitDialog(wx.Dialog):
         self.compselectLabel = wx.StaticText(self, label="Components")
         self.compselectTextCtrl = wx.TextCtrl(self, value="xyz")
         self.abscompselectLabel = wx.StaticText(self, label="DI Components")
-        self.abscompselectTextCtrl = wx.TextCtrl(self, value="xyz")        
+        self.abscompselectTextCtrl = wx.TextCtrl(self, value="xyz")
 
         self.dipathlistLabel = wx.StaticText(self, label="Default DI path")
         self.divariopathLabel = wx.StaticText(self, label="DI variometer")
@@ -355,7 +355,7 @@ class OptionsInitDialog(wx.Dialog):
         self.dialphaTextCtrl = wx.TextCtrl(self, value="")
         self.dideltaFTextCtrl = wx.TextCtrl(self, value="")
         self.didbaddTextCtrl = wx.TextCtrl(self, value="False")
-  
+
         self.closeButton = wx.Button(self, label='Cancel')
         self.saveButton = wx.Button(self, wx.ID_OK, label='Save')
 
@@ -443,8 +443,8 @@ class OptionsInitDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -454,12 +454,12 @@ class OptionsInitDialog(wx.Dialog):
 
 class StreamExtractValuesDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Extracting defined data
     """
-    
+
     def __init__(self, parent, title, keylst):
-        super(StreamExtractValuesDialog, self).__init__(parent=parent, 
+        super(StreamExtractValuesDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.keylst = keylst
         self.comparelst = ['==','<=','<','>','>=','!=']
@@ -468,10 +468,10 @@ class StreamExtractValuesDialog(wx.Dialog):
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
-        
+
         self.keyLabel = wx.StaticText(self, label="Available keys:")
         self.key1ComboBox = wx.ComboBox(self, choices=self.keylst,
             style=wx.CB_DROPDOWN, value=self.keylst[0])
@@ -488,7 +488,7 @@ class StreamExtractValuesDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=val2)
         self.compare2ComboBox = wx.ComboBox(self, choices=self.comparelst,
             style=wx.CB_DROPDOWN, value=self.comparelst[0])
-        self.value2TextCtrl = wx.TextCtrl(self, value="")        
+        self.value2TextCtrl = wx.TextCtrl(self, value="")
         self.logic3ComboBox = wx.ComboBox(self, choices=self.logic3lst,
             style=wx.CB_DROPDOWN, value=self.logic3lst[0])
         if len(self.keylst) > 2:
@@ -499,7 +499,7 @@ class StreamExtractValuesDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=val3)
         self.compare3ComboBox = wx.ComboBox(self, choices=self.comparelst,
             style=wx.CB_DROPDOWN, value=self.comparelst[0])
-        self.value3TextCtrl = wx.TextCtrl(self, value="")   
+        self.value3TextCtrl = wx.TextCtrl(self, value="")
         self.okButton = wx.Button(self, wx.ID_OK, label='Extract')
         self.closeButton = wx.Button(self, label='Cancel')
 
@@ -548,28 +548,28 @@ class StreamExtractValuesDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
 class StreamSelectKeysDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
     """
-    
+
     def __init__(self, parent, title, keylst, shownkeys):
-        super(StreamSelectKeysDialog, self).__init__(parent=parent, 
+        super(StreamSelectKeysDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.keylst = keylst
         self.shownkeylst = shownkeys
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
-    def createControls(self):        
+    def createControls(self):
         for elem in self.keylst:
             exec('self.'+elem+'CheckBox = wx.CheckBox(self,label="'+elem+'")')
         self.okButton = wx.Button(self, wx.ID_OK, label='Select')
@@ -602,8 +602,8 @@ class StreamSelectKeysDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -613,12 +613,12 @@ class StreamSelectKeysDialog(wx.Dialog):
 
 class AnalysisFitDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
     """
-    
+
     def __init__(self, parent, title, fitfunc, fitknots, fitdegree):
-        super(AnalysisFitDialog, self).__init__(parent=parent, 
+        super(AnalysisFitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.fitfunc = fitfunc
         self.funclist = ['spline','polynomial']
@@ -627,7 +627,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         self.funcLabel = wx.StaticText(self, label="Fit function:")
@@ -672,27 +672,27 @@ class AnalysisFitDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
 class AnalysisOffsetDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
     """
-    
+
     def __init__(self, parent, title, keylst):
-        super(AnalysisOffsetDialog, self).__init__(parent=parent, 
+        super(AnalysisOffsetDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.keylst = keylst
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
-    def createControls(self):        
+    def createControls(self):
         for elem in self.keylst:
             exec('self.'+elem+'Label = wx.StaticText(self,label="'+elem+'")')
             exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="")')
@@ -731,25 +731,25 @@ class AnalysisOffsetDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
 class AnalysisRotationDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
-    """   
+    """
     def __init__(self, parent, title):
-        super(AnalysisRotationDialog, self).__init__(parent=parent, 
+        super(AnalysisRotationDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
-    def createControls(self):        
+    def createControls(self):
         self.alphaLabel = wx.StaticText(self,label="Alpha")
         self.alphaTextCtrl = wx.TextCtrl(self,value="")
         self.betaLabel = wx.StaticText(self,label="Beta")
@@ -789,8 +789,8 @@ class AnalysisRotationDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -801,18 +801,18 @@ class AnalysisRotationDialog(wx.Dialog):
 
 class LoadDIDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
     """
-    
+
     def __init__(self, parent, title):
-        super(LoadDIDialog, self).__init__(parent=parent, 
+        super(LoadDIDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.pathlist = []
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         self.sourceLabel = wx.StaticText(self, label="Choose DI source:")
@@ -861,8 +861,8 @@ class LoadDIDialog(wx.Dialog):
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadDIFiles)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
     def OnLoadDIFiles(self,e):
@@ -876,19 +876,19 @@ class LoadDIDialog(wx.Dialog):
 
 class DefineVarioDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
     """
-    
+
     def __init__(self, parent, title):
-        super(DefineVarioDialog, self).__init__(parent=parent, 
+        super(DefineVarioDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.path = ''
         self.variopath = ''
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         self.sourceLabel = wx.StaticText(self, label="Choose Variometer source:")
@@ -932,8 +932,8 @@ class DefineVarioDialog(wx.Dialog):
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineVario)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
     def OnDefineVario(self,e):
@@ -946,19 +946,19 @@ class DefineVarioDialog(wx.Dialog):
 
 class DefineScalarDialog(wx.Dialog):
     """
-    Dialog for Stream panel 
+    Dialog for Stream panel
     Select shown keys
     """
-    
+
     def __init__(self, parent, title):
-        super(DefineScalarDialog, self).__init__(parent=parent, 
+        super(DefineScalarDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.path = ''
         self.scalarpath = ''
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         self.sourceLabel = wx.StaticText(self, label="Choose Variometer source:")
@@ -1002,8 +1002,8 @@ class DefineScalarDialog(wx.Dialog):
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineScalar)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -1019,14 +1019,14 @@ class DISetParameterDialog(wx.Dialog):
     """
     Dialog for Parameter selection - Di analysis
     """
-    
+
     def __init__(self, parent, title):
-        super(DISetParameterDialog, self).__init__(parent=parent, 
+        super(DISetParameterDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         # single anaylsis
@@ -1038,12 +1038,12 @@ class DISetParameterDialog(wx.Dialog):
         self.pierLabel = wx.StaticText(self, label="Pier")
         self.pierTextCtrl = wx.TextCtrl(self, value="")
         self.alphaLabel = wx.StaticText(self, label="Horizontal rotation")
-        self.alphaTextCtrl = wx.TextCtrl(self, value="0.0")        
+        self.alphaTextCtrl = wx.TextCtrl(self, value="0.0")
         self.deltaFLabel = wx.StaticText(self, label="Delta F")
         self.deltaFTextCtrl = wx.TextCtrl(self, value="0.0")
         self.expDLabel = wx.StaticText(self, label="Expected D")
         self.expDTextCtrl = wx.TextCtrl(self, value="2.0")
-  
+
         self.closeButton = wx.Button(self, label='Cancel')
         self.okButton = wx.Button(self, wx.ID_OK, label='OK')
 
@@ -1086,7 +1086,7 @@ class DISetParameterDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 

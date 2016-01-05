@@ -9,26 +9,26 @@ Information will be stored in three different tables:
 SENSOR, DATAINFO, STATION
 
 SENSOR:
-	SensorID: a combination of name, serialnumber and revision
-	SensorName: a name defined by the observers to refer to the instrument
-	SensorType: type of sensor (e.g. fluxgate, overhauzer, temperature ...)
+        SensorID: a combination of name, serialnumber and revision
+        SensorName: a name defined by the observers to refer to the instrument
+        SensorType: type of sensor (e.g. fluxgate, overhauzer, temperature ...)
         SensorSerialNum: its serial number
-	SensorGroup: Geophysical group (e.g. Magnetism, Gravity, Environment, Meteorology, Seismology, Radiometry, ...) 
-	SensorDataLogger: type of any electronics connected to the sensor 
-	SensorDataLoggerSerNum: its serial number
+        SensorGroup: Geophysical group (e.g. Magnetism, Gravity, Environment, Meteorology, Seismology, Radiometry, ...)
+        SensorDataLogger: type of any electronics connected to the sensor
+        SensorDataLoggerSerNum: its serial number
         SensorDataLoggerRevision: 4 digit revision id '0001'
         SensorDataLoggerRevisionComment: description of revision
-	SensorDescription: Description of the sensor
+        SensorDescription: Description of the sensor
         SensorElements: Measured components e.g. x,y,z,t_sensor,t_electonics
         SensorKeys: the keys to be used for the elements in MagPy e.g. 'x,y,z,t1,t2', should have the same number as Elements (check MagPy Manual for this)
         SensorModule: type of sensor connection
-        SensorDate: Date of Sensor construction/buy  
+        SensorDate: Date of Sensor construction/buy
         SensorRevision: 4 digit number defining a revision ID
         SensorRevisionComment: Comment for current revision - changes to previous number (e.g. calibration)
-        SensorRevisionDate: Date of revision - for 0001 this equals the SensorDate 
+        SensorRevisionDate: Date of revision - for 0001 this equals the SensorDate
 STATION:
         StationID: unique ID of the station e.g. IAGA code
-        StationIAGAcode: 
+        StationIAGAcode:
         StationName: e.g. Cobenzl
         StationStreet: Stations address
         StationCity: Vienna
@@ -39,7 +39,7 @@ STATION:
         StationWebInfo: 'http://www.zamg.ac.at',
         StationDescription: 'Running since 1951.'
 DATAINFO:
-	DataID: 
+        DataID:
 """
 
 INSTDICTLIST = ['didddict', 'lemidict','gsm90dicta','gsm90dictb','cs1dict',
@@ -64,7 +64,7 @@ didddict = { 'SensorID': 'DIDD_3121331_0002',
              'SensorRevision': '0002',
              'SensorRevisionComment': 'refurbished after flooding in 2009',
              'SensorRevisionDate': '2009-05-01',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '0.0',
@@ -86,7 +86,7 @@ didddict = { 'SensorID': 'DIDD_3121331_0002',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '60',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '5',
              'DataSamplingFilter': 'Gauss 45sec',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -183,7 +183,7 @@ gsm90dicta = { 'SensorID': 'GSM90_14245_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'none',
              'SensorRevisionDate': '2011-11-15',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '3.07',
@@ -205,7 +205,7 @@ gsm90dicta = { 'SensorID': 'GSM90_14245_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'f',
              'DataSamplingRate': '1',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '1',
              'DataSamplingFilter': 'None',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -245,7 +245,7 @@ gsm90dictb = { 'SensorID': 'GSM90_31968_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'none',
              'SensorRevisionDate': '2012-02-24',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '4.7',
@@ -267,7 +267,7 @@ gsm90dictb = { 'SensorID': 'GSM90_31968_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '60',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '5',
              'DataSamplingFilter': 'None',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -306,7 +306,7 @@ cs1dict = { 'SensorID': 'G823A_C214_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'none',
              'SensorRevisionDate': '1996-09-30',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '0.0',
@@ -328,7 +328,7 @@ cs1dict = { 'SensorID': 'G823A_C214_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '1',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '10 Hz',
              'DataSamplingFilter': 'Gauss 45sec',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -367,7 +367,7 @@ cs2dict = { 'SensorID': 'G823A_C228_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'none',
              'SensorRevisionDate': '1996-09-30',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '0.0',
@@ -389,7 +389,7 @@ cs2dict = { 'SensorID': 'G823A_C228_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '60',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '5',
              'DataSamplingFilter': 'Gauss 45sec',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -429,7 +429,7 @@ posdicta = { 'SensorID': 'POS1_N432_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'none',
              'SensorRevisionDate': '2012-02-24',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '6.8',
@@ -451,7 +451,7 @@ posdicta = { 'SensorID': 'POS1_N432_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '5',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '5',
              'DataSamplingFilter': 'None',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -492,7 +492,7 @@ fgedict = { 'SensorID': 'FGE_S0252_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'original state',
              'SensorRevisionDate': '2004-02-13',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '0.0',
@@ -514,7 +514,7 @@ fgedict = { 'SensorID': 'FGE_S0252_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '1',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '1',
              'DataSamplingFilter': 'Gauss',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -555,7 +555,7 @@ lemi22dict = { 'SensorID': 'LEMI025_22_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'original state',
              'SensorRevisionDate': '2012-07-11',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '0.0',
@@ -580,7 +580,7 @@ lemi22dict = { 'SensorID': 'LEMI025_22_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '1',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '10 Hz',
              'DataSamplingFilter': 'Gauss',   # should contain window type and width (or describing parameters)
              'DataFlagModification': '2013-02-28 12:00:00',
@@ -619,7 +619,7 @@ lemi36dict = { 'SensorID': 'LEMI036_1_0001',
              'SensorRevision': '0001',
              'SensorRevisionComment': 'original state',
              'SensorRevisionDate': '2012-07-11',
-	     'DataDeltaX': '0.0',
+             'DataDeltaX': '0.0',
              'DataDeltaY': '0.0',
              'DataDeltaZ': '0.0',
              'DataDeltaF': '0.0',
@@ -641,7 +641,7 @@ lemi36dict = { 'SensorID': 'LEMI036_1_0001',
              'DataElevationRef': 'm NN',
              'DataComponents': 'xyzf',
              'DataSamplingRate': '1',
-             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite 
+             'DataType': 'variation', # available types variation, preliminary, quasidefinite, definite
              'DataDigitalSampling': '10 Hz',
              'DataCompensationX': '-20.095',
              'DataCompensationY': '0.0',

@@ -38,25 +38,24 @@ def readENV05(filename, headonly=False, **kwargs):
     if getfile:
 
         line = fh.readline()
-	line = fh.read(29)
-	while line != "":
+        line = fh.read(29)
+        while line != "":
             data= struct.unpack("6hLLLL",line.strip())
 
             row = LineStruct()
-   
+
             time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
             row.time = date2num(time)
-            row.t1 = data[7]/1000.	# Actual T (C)
-            row.t2 = data[8]/1000.	# Dew point T (C)
-            row.var1 = data[9]/1000.	# Humidity (%)
+            row.t1 = data[7]/1000.      # Actual T (C)
+            row.t2 = data[8]/1000.      # Dew point T (C)
+            row.var1 = data[9]/1000.    # Humidity (%)
 
-            stream.add(row)    
+            stream.add(row)
 
-    	    line = fh.read(29)
+            line = fh.read(29)
 
     fh.close()
 
     print "Finished file reading of %s" % filename
 
-    return DataStream(stream, headers)    
-
+    return DataStream(stream, headers)

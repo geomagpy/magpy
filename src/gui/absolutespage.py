@@ -28,7 +28,7 @@ class AbsolutePage(wx.Panel):
         self.dipathlist = []
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.diLabel = wx.StaticText(self, label="DI files:")
@@ -116,5 +116,3 @@ class AbsolutePage(wx.Panel):
         #boxSizer.Add(self.dilogTextCtrl, 0, wx.ALL|wx.CENTER, 5)
         #boxSizer.Add(self.dilogTextCtrl,expandOption, dict(border=5, flag=wx.ALL))
         #self.SetSizerAndFit(boxSizer)
-
-

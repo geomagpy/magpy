@@ -10,7 +10,7 @@ from stream import *
 def isDTU1(filename):
     """
     Checks whether a file is ASCII DTU (type1) format used within the DTU's FGE network
-    Characteristic features are:    
+    Characteristic features are:
     """
     try:
         temp = open(filename, 'rt').readline()
@@ -47,9 +47,9 @@ def readDTU1(filename, headonly=False, **kwargs):
     T1 0 Kelvin/v no temp sensor on pendulum
     T2 320 Kelvin/V electronic temp in Kelvin, sensor: AD592
     DATA:
-    00:00:01   124.04   134.08   -17.68   0.00   291.90   
-    00:00:02   124.00   134.00   -17.68   0.00   291.90   
-    00:00:03   124.08   134.00   -17.64   0.00   291.90   
+    00:00:01   124.04   134.08   -17.68   0.00   291.90
+    00:00:02   124.00   134.00   -17.68   0.00   291.90
+    00:00:03   124.08   134.00   -17.64   0.00   291.90
     """
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -91,22 +91,22 @@ def readDTU1(filename, headonly=False, **kwargs):
             elif line.startswith('FILENAME:'):
                 pass
             elif line.startswith('INST. TYPE:'):
-                tmp =  line.split(':')[1] 
+                tmp =  line.split(':')[1]
                 headers['InstrumentType'] = tmp.lstrip()
             elif line.startswith('INSTRUMENT:'):
-                tmp =  line.split(':')[1] 
+                tmp =  line.split(':')[1]
                 headers['Instrument'] = tmp.lstrip()
             elif line.startswith('FILTER:'):
-                tmp =  line.split(':')[1] 
+                tmp =  line.split(':')[1]
                 headers['Filter'] = tmp.lstrip()
             elif line.startswith('ADC:'):
-                tmp =  line.split(':')[1] 
+                tmp =  line.split(':')[1]
                 headers['ADC'] = tmp.lstrip()
             elif line.startswith('SOFTWARE:'):
-                tmp =  line.split(':')[1] 
+                tmp =  line.split(':')[1]
                 headers['Software'] = tmp.lstrip()
             elif line.startswith('CHANNELS:'):
-                tmp =  line.split(':')[1] 
+                tmp =  line.split(':')[1]
                 headers['Channels'] = tmp.lstrip()
             elif line.startswith('TIME'):
                 pass
@@ -152,12 +152,11 @@ def readDTU1(filename, headonly=False, **kwargs):
                 except:
                     #raise ValueError, "Wrong date format in %s" % filename
                     pass
-                stream.add(row)         
+                stream.add(row)
 
         fh.close()
     else:
         headers = stream.header
         stream =[]
 
-    return DataStream(stream, headers)    
-
+    return DataStream(stream, headers)

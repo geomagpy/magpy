@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 import sys
 sys.path.append('/home/leon/Software/magpy/trunk/src')
 
@@ -34,7 +33,7 @@ send_notification_to = ['roman.leonhardt@zamg.ac.at']
 absindentifier = 'A2_WIC.txt'
 start = datetime.utcnow()-timedelta(days=365)
 
-# ToDo: add counter for logfile length and only send mail if new data was added or errors are happening 
+# ToDo: add counter for logfile length and only send mail if new data was added or errors are happening
 print "Analyzing absolutes data for dIdD"
 # Repeat for DIDD but write new logfile and move succesfully analyzed files from the server to the archive
 absdidd = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=0.0, beta=0.0, deltaF=-170.3, absidentifier=absindentifier, variopath=diddpath, scalarpath=diddpath)
@@ -90,7 +89,7 @@ if linenum > 10:
 absindentifier = 'H1_WIC.txt'
 start = datetime.utcnow()-timedelta(days=365)
 
-# ToDo: add counter for logfile length and only send mail if new data was added or errors are happening 
+# ToDo: add counter for logfile length and only send mail if new data was added or errors are happening
 print "Analyzing absolutes data for dIdD"
 
 absdidd = analyzeAbsFiles(path_or_url=absolutedatalocation, alpha=0.0, beta=0.0, deltaF=-170.3, absidentifier=absindentifier, variopath=diddpath, scalarpath=diddpath)
@@ -118,5 +117,3 @@ if absfge:
 # Calculate differences to easily identify errors in one instrument
 absdiff = subtractStreams(absdidd,absfge,keys=['x','y','z','f']) # Stream_a gets modified - stdiff = st1mod...
 absdiff.plot(['x','y','z','f'],plottitle = "Differences of absolute values", outfile="AutoAnalysisDifferencesH1")
-
-

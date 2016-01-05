@@ -48,7 +48,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("OW - Protocol: Error while saving file")        
+        log.err("OW - Protocol: Error while saving file")
 
 
 ## GEM -GSM90 protocol
@@ -131,7 +131,7 @@ class GSM90Protocol(LineReceiver):
         evt99 = {'id': 99, 'value': 'eol'}
 
         return evt1,evt3,evt10,evt99
-         
+
     def lineReceived(self, line):
         dispatch_url =  "http://example.com/"+self.hostname+"/gsm#"+self.sensor+"-value"
         try:
@@ -153,6 +153,3 @@ class GSM90Protocol(LineReceiver):
             self.wsMcuFactory.dispatch(dispatch_url, evt99)
         except:
             log.err('GSM90 - Protocol: wsMcuFactory error while dispatching data.')
-
-
-

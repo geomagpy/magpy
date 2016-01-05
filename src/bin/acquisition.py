@@ -1,11 +1,11 @@
 """
-Main Acquisition routine of MARTAS: 
+Main Acquisition routine of MARTAS:
 Code from TAVENDO GmbH adepted by Roman Leonhardt and Rachel Bailey to be used in the Conrad Observatory.
 The main part remained unchanged. I added instrument specific parts for serial communictaion.
 The application is mainly based on twisted, autobahn and magpy modules. Please note that autobahn in the past frequently changed its module positions.
 Additional requirements:
 1) please change the user specific part acclording your system and attached instruments
-2) 
+2)
 Usage:
 sudo python acquisition.py
 
@@ -65,21 +65,21 @@ homedir = '/home/leon'
 webport = 8080                  # Web port to use for embedded Web server
 wsurl = "ws://localhost:9100"   # WebSocket port to use for embedded WebSocket $
 # INSTRUMENT PORTS
-owport = 'u' 			# u for usb
-serialport = '/dev/tty' 	# dev/tty for linux like systems
+owport = 'u'                    # u for usb
+serialport = '/dev/tty'         # dev/tty for linux like systems
 # ONEWIRE SPECIFIC
-timeoutow = 30.0		# Defining a measurement frequency in secs (should be >= amount of sensors connected)
- 
+timeoutow = 30.0                # Defining a measurement frequency in secs (should be >= amount of sensors connected)
+
 
 # -------------------------------------------------------------------
 # Read data of sensors attached to PC:
-# 
+#
 # "Sensors.txt" should have the following format:
-# SENSORNAME	SENSORPORT	SENSORBAUDRATE
+# SENSORNAME    SENSORPORT      SENSORBAUDRATE
 # e.g:
-# LEMI036_1_0001	USB0	57600
-# POS1_N432_0001	S0	9600
-# OW			-	-
+# LEMI036_1_0001        USB0    57600
+# POS1_N432_0001        S0      9600
+# OW                    -       -
 #
 # Notes: OneWire devices do not need this data, all others do.
 # -------------------------------------------------------------------
@@ -118,25 +118,25 @@ class WsMcuProtocol(WampServerProtocol):
         ##
         for sensor in sensorlist:
             if sensor[:3].upper() == 'ENV': # Environmental Sensor 5
-        	self.registerForPubSub("http://example.com/"+hostname+"/env#", True)
-       		## register methods for RPC
-		## does not work in python 2.6.5 (fine in 2.7.3)
-       		if sys.version_info >= (2, 7):
-           	    self.registerForRpc(self.factory.envProtocol, "http://example.com/"+hostname+"/env-control#")
-       		    #else:
-       		    #    self.registerMethodForRpc("http://example.com/"+hostname+"/mcu-control#",self.factory.mcuProtocol,McuProtocol.add)
-	    elif sensor[:3].upper() == 'LEM': # Lemi Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/lemi#", True)
-	    elif sensor[:2].upper() == 'OW': # OW Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/ow#", True) 
-	    elif sensor[:3].upper() == 'POS': # POS-1 Overhauzer Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/pos1#", True)
-	    elif sensor[:3].upper() == 'G82': # GSM CS Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/cs#", True) 
-	    elif sensor[:3].upper() == 'GSM': # GEM Overhauzer Sensor (GSM90)
-       		self.registerForPubSub("http://example.com/"+hostname+"/gsm90#", True)
-	    else:
-	        log.msg('Sensor type %s is not supported.' % (sensor))
+                self.registerForPubSub("http://example.com/"+hostname+"/env#", True)
+                ## register methods for RPC
+                ## does not work in python 2.6.5 (fine in 2.7.3)
+                if sys.version_info >= (2, 7):
+                    self.registerForRpc(self.factory.envProtocol, "http://example.com/"+hostname+"/env-control#")
+                    #else:
+                    #    self.registerMethodForRpc("http://example.com/"+hostname+"/mcu-control#",self.factory.mcuProtocol,McuProtocol.add)
+            elif sensor[:3].upper() == 'LEM': # Lemi Sensor
+                self.registerForPubSub("http://example.com/"+hostname+"/lemi#", True)
+            elif sensor[:2].upper() == 'OW': # OW Sensor
+                self.registerForPubSub("http://example.com/"+hostname+"/ow#", True)
+            elif sensor[:3].upper() == 'POS': # POS-1 Overhauzer Sensor
+                self.registerForPubSub("http://example.com/"+hostname+"/pos1#", True)
+            elif sensor[:3].upper() == 'G82': # GSM CS Sensor
+                self.registerForPubSub("http://example.com/"+hostname+"/cs#", True)
+            elif sensor[:3].upper() == 'GSM': # GEM Overhauzer Sensor (GSM90)
+                self.registerForPubSub("http://example.com/"+hostname+"/gsm90#", True)
+            else:
+                log.msg('Sensor type %s is not supported.' % (sensor))
 
 # -------------------------------------------------------------------
 # WS-MCU factory
@@ -150,16 +150,16 @@ class WsMcuFactory(WampServerFactory):
         for sensor in sensorlist:
             if sensor[:3].upper() == 'ENV':
                 self.envProtocol = EnvProtocol(self,sensor.strip(), outputdir)
-	    if sensor[:2].upper() == 'OW':
-	        self.owProtocol = OwProtocol(self,owport,outputdir)
+            if sensor[:2].upper() == 'OW':
+                self.owProtocol = OwProtocol(self,owport,outputdir)
             if sensor[:3].upper() == 'POS':
                 self.pos1Protocol = Pos1Protocol(self,sensor.strip(), outputdir)
             if sensor[:3].upper() == 'LEM':
                 self.lemiProtocol = LemiProtocol(self,sensor.strip(),sensor[0]+sensor[4:7], outputdir)
-	    if sensor[:3].upper() == 'G82':
+            if sensor[:3].upper() == 'G82':
                 self.csProtocol = CsProtocol(self,sensor.strip(), outputdir)
-	    if sensor[:3].upper() == 'GSM':
-       		self.gsm90Protocol = GSM90Protocol(self,sensor.strip(), outputdir)
+            if sensor[:3].upper() == 'GSM':
+                self.gsm90Protocol = GSM90Protocol(self,sensor.strip(), outputdir)
 
 #####################################################################
 # MAIN PROGRAM
@@ -180,38 +180,38 @@ if __name__ == '__main__':
     ##
     wsMcuFactory = WsMcuFactory(wsurl)
     listenWS(wsMcuFactory)
-   
+
     ## create serial port and serial port protocol; modify this according to attached sensors
     ##
     for sensor in sensorlist:
-	port = serialport+portdict[sensor]
-	baudrate = baudratedict[sensor]
+        port = serialport+portdict[sensor]
+        baudrate = baudratedict[sensor]
 
         if sensor[:3].upper() == 'LEM':
-	    protocol = wsMcuFactory.lemiProtocol
+            protocol = wsMcuFactory.lemiProtocol
         if sensor[:3].upper() == 'POS':
-	    protocol = wsMcuFactory.pos1Protocol
+            protocol = wsMcuFactory.pos1Protocol
         if sensor[:3].upper() == 'G82':
-	    protocol = wsMcuFactory.csProtocol
+            protocol = wsMcuFactory.csProtocol
         if sensor[:3].upper() == 'GSM':
-	    protocol = wsMcuFactory.gsm90Protocol
+            protocol = wsMcuFactory.gsm90Protocol
         if sensor[:3].upper() == 'ENV':
-	    protocol = wsMcuFactory.envProtocol
+            protocol = wsMcuFactory.envProtocol
 
         if sensor[:2].upper() == 'OW':
-	    try:
-	        log.msg('OneWire: Initiating sensor...')
+            try:
+                log.msg('OneWire: Initiating sensor...')
                 oprot = task.LoopingCall(wsMcuFactory.owProtocol.owConnected)
                 oprot.start(timeoutow)
             except:
                 log.msg('OneWire: Not available.')
 
         else:
-    	    try:
-        	log.msg('%s: Attempting to open port %s [%d baud]...' % (sensor, port, baudrate))
-        	serialPort = SerialPort(protocol, port, reactor, baudrate = baudrate)
-    	    except:
-        	log.msg('%s: Port %s [%d baud] not available' % (sensor, port, baudrate))
+            try:
+                log.msg('%s: Attempting to open port %s [%d baud]...' % (sensor, port, baudrate))
+                serialPort = SerialPort(protocol, port, reactor, baudrate = baudrate)
+            except:
+                log.msg('%s: Port %s [%d baud] not available' % (sensor, port, baudrate))
 
 
     ## create embedded web server for static files
