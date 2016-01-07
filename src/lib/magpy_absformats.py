@@ -32,3 +32,4 @@ def readAbsFormat(filename, format_type, headonly=False, **kwargs):
         return readAUTODIF(filename, headonly, **kwargs)
     else:
         return AbsoluteData([],{})
+
