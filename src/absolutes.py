@@ -1492,9 +1492,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print "absoluteAnalysis:  You selected a DB. Tyring to import database methods"
         try:
             try:
-                from database import diline2db, db2diline
+                import database as dbase
+                #from database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
             except:
-                from magpy.database import diline2db, db2diline
+                import magpy.database as dbase
+                #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
         except:
             print "absoluteAnalysis:  import failed - skipping eventually selected option dbadd"        
             dbadd = False
@@ -1603,10 +1605,29 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         try:
             variodbtest = variodata.split(',')
             if len(variodbtest) > 1:
-                variostr = readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
+                variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-            print "Length of Variodata:", len(variostr), len(variostr.ndarray[0])
+            print "Length of Variodata:", variostr.length()[0]
+            try:
+                vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
+                variostr = variostr.flag(vaflaglist)
+            except:
+                print "Obtained flagging information for vario data from data base"
+            try:
+                variostr = variostr.remove_flagged()
+                print "Flagged records of variodata have been removed"
+            except:
+                print "Flagging of variodata failed"                
+            try:
+                print "Now getting header information"
+                variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
+            except:
+                print "Failed to obtain header information from data base"
+            try:
+                variostr = dbase.applyDeltas(db,variostr)
+            except:
+                print "Applying delta values failed" 
         except:
             print "absoluteAnalysis: reading variometer data failed"
             variostr = DataStream()
@@ -1628,22 +1649,48 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             variofound = False
             
         # b) Load Scalardata
+        if not deltaF:
+            deltaF = 0.0
         print "-----------------"
         try:
             scalardbtest = scalardata.split(',')
             if len(scalardbtest) > 1:
-                scalarstr = readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
+                scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
-            print "Length of Scalardata:", len(scalarstr), len(scalarstr.ndarray[0])
+            print "Length of Scalardata:", scalarstr.length()[0]
+            try:
+                scflaglist = dbase.db2flaglist(db,scalarstr.header['SensorID'])
+                scalarstr = scalarstr.flag(scflaglist)
+            except:
+                print "Failed to obtain flagging information from data base"
+            try:
+                scalarstr = scalarstr.remove_flagged()
+                print "Flagged records of scalardata have been removed"
+            except:
+                print "Flagging of scalardata failed"
+            try:
+                print "Now getting header information"
+                scalarstr.header = dbase.dbfields2dict(db,scalarstr.header['SensorID']+'_0001')
+            except:
+                print "Failed to obtain header information from data base"
+            #try:  # Get header info from database
+            #    #print "Eventually move column to f line" 
+            #    #scalarstr = dbase.applyDeltas(db,scalarstr)
+            #except:
+            #    print "Applying delta values failed" 
+            try:
+                print "Applying delta values from database", scalarstr.header['SensorID'] 
+                scalarstr = dbase.applyDeltas(db,scalarstr)
+                if not deltaF == 0:
+                    print (" ------------  IMPORTANT ----------------")
+                    print (" you provided an additional delta F value")
+                    print (" which will be used for offset correction.")
+            except:
+                print "Applying delta values failed" 
         except:
             print "absoluteAnalysis: reading scalar data from file failed"
             scalarstr = DataStream()
-        if not deltaF:
-            try:
-                deltaF = float(scalarstr.header['DataDeltaF'])
-            except:
-                deltaF = 0.0
         if (len(scalarstr) > 3 and not np.isnan(scalarstr.mean('time'))) or len(scalarstr.ndarray[0]) > 0: # Because scalarstr can contain ([], 'File not specified')
             scfunc = scalarstr.interpol(['f'])
         else:
@@ -1676,7 +1723,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     if not deltaF:
                         deltaF = 0.0
                     #print stationid, pier, deltaF, alpha, beta
-                    print "Data from %s, pier %s: deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta)
+                    print "Please note that any offsets defined in DataDeltaValues"
+                    print "of the database have been applied already."
+                    print "Data from %s, pier %s: additional deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta)
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     #print "LENGTH:",len(absst)
                     try:
@@ -1684,13 +1733,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             stream = absst[0].getAbsDIStruct()
                             abslist.append(absst)
                             if db and dbadd:
-                                diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
+                                dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
                         else:
                             for a in absst:
                                 stream = a.getAbsDIStruct()
                                 abslist.append(a)
                             if db and dbadd:
-                                diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
+                                dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
                         #print "absoluteAnalysis: Successful analyse of %s" % elem 
                         successlist.append(elem)
                     except:
@@ -1710,7 +1759,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #tablename = 'DIDATA_%s' % stationid
             tablename = absdata
             #print sql, tablename, absdata
-            abslist = db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
+            try:
+                abslist = dbase.db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
+            except:
+                print "absoluteAnalysis: Problems when reading from database" 
+               
 
         for absst in abslist:
             print "-----------------"
@@ -1795,8 +1848,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     posF = KEYLIST.index('str4')
     posdf = KEYLIST.index('df')
     #print resultstream.ndarray
+    
     for idx,elem in enumerate(resultstream.ndarray[posF]):
         #print elem
+        #if not deltaF:
+        #    deltaF = 0.0
         if deltaF and elem.startswith('Fext'):
             try:
                 resultstream.ndarray[posdf][idx] = deltaF
@@ -1811,6 +1867,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 array = [np.nan]*len(resultstream.ndarray[0])
                 array[idx] = deltaF
                 resultstream.ndarray[posdf] = np.asarray(array)
+
     #print "After", resultstream.ndarray[posdf]
     #resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
 

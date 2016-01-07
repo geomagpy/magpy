@@ -15,6 +15,10 @@ CONTAINS:
 	h2d:		(Func) ... utility function for LemiProtocol.
 			Convert hexadecimal to decimal.
 
+IMPORTANT:
+        - According to data sheet: 300 millseconds are subtracted from each gps time step
+        provided GPStime = GPStime_sent - timedelta(microseconds=300000)
+        - upcoming year 3000 bug
 DEPENDENCIES:
 	twisted, autobahn
 
@@ -315,7 +319,7 @@ class LemiProtocol(LineReceiver):
                 #print t1, t2
                 evt1a = {'id': 1, 'value': datetime.strftime(t1,"%Y-%m-%d %H:%M:%S.%f")}
                 #evt3a = {'id': 1, 'value': datetime.strftime(t1,"%H:%M:%S.%f")}
-                evt4a = {'id': 1, 'value': datetime.strftime(t2,"%Y-%m-%d %H:%M:%S.%f")}
+                evt4a = {'id': 4, 'value': datetime.strftime(t2,"%Y-%m-%d %H:%M:%S.%f")}
                 evt11a = {'id': 11, 'value': evt11[ind]}
                 evt12a = {'id': 12, 'value': evt12[ind]}
                 evt13a = {'id': 13, 'value': evt13[ind]}

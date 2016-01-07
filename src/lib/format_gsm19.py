@@ -195,6 +195,17 @@ def readGSM19(filename, headonly=False, **kwargs):
     stream = DataStream()
     # Check whether header information is already present
     headers = {}
+    array = [[] for key in KEYLIST]
+
+    indf = KEYLIST.index('f')
+    inddf = KEYLIST.index('df')
+    indz = KEYLIST.index('z')
+    indvar1 = KEYLIST.index('var1')
+    indvar2 = KEYLIST.index('var2')
+    indvar3 = KEYLIST.index('var3')
+    indvar4 = KEYLIST.index('var4')
+    indvar5 = KEYLIST.index('var5')
+
     data = []
     key = None
     logging.info(' Read: %s Format: GSM19' % (filename))
@@ -218,9 +229,16 @@ def readGSM19(filename, headonly=False, **kwargs):
                 day = dayt[-8:-4]+'-'+dayt[-4:-2]+'-'+dayt[-2:]
             except:
                 logging.warning("No date data!")
+            if line.find(' .b ') > 0 and line.find('v5.0') > 0: # day in this line
+                mo = roman_to_int(head[-2])
+                da = head[-3]
+                ye = head[-1]
+                day = str(YeT)+str(ye)+'-'+str(mo).zfill(2)+'-'+str(da)
+                #print "GSM19", day
             # data header
             pass
         elif line.startswith('ID') or line.startswith('/ID'):
+            print line
             tester = line.split('.')
             typus = tester[1].split()
             #logging.debug(' Read: %s Format: GSM19' % (filename))
@@ -261,7 +279,6 @@ def readGSM19(filename, headonly=False, **kwargs):
             elem = line.split()
             if len(elem) == 3 and typus[0]=='b': # a Baseline file
                 try:
-                    row = LineStruct()
                     hour = elem[0][:2]
                     minute = elem[0][2:4]
                     second = elem[0][4:6]
@@ -269,28 +286,25 @@ def readGSM19(filename, headonly=False, **kwargs):
                     # add day
                     #strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f") # TODO
                     strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
-                    row.time=date2num(strtime)
-                    row.f = float(elem[1])
-                    row.var5 = float(elem[2])
-                    stream.add(row)
+                    array[0].append(date2num(strtime))
+                    array[indf].append(float(elem[1]))
+                    array[indvar5].append(float(elem[2]))
                 except:
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
                     pass
             elif typus[0] == 'g':
                 try:
-                    row = LineStruct()
                     hour = elem[6][:2]
                     minute = elem[6][2:4]
                     second = elem[6][4:]
                     # add day
                     strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
-                    row.time=date2num(strtime)
-                    row.f = float(elem[2])
-                    row.df = float(elem[3])
-                    row.var5 = float(elem[4])
-                    row.var1 = float(elem[0])
-                    row.var2 = float(elem[1])
-                    stream.add(row)
+                    array[0].append(date2num(strtime))
+                    array[indf].append(float(elem[2]))
+                    array[inddf].append(float(elem[3]))
+                    array[indvar5].append(float(elem[4]))
+                    array[indvar1].append(float(elem[0]))
+                    array[indvar2].append(float(elem[1]))
                 except:
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
                     pass                
@@ -306,7 +320,6 @@ def readGSM19(filename, headonly=False, **kwargs):
                     headers['col-z'] = 'f upper'
                     headers['unit-col-z'] = 'nT'
                 try:
-                    row = LineStruct()
                     if elem[0] == '0': # No GPS data -> no altitude
                        hour = elem[6][:2]
                        minute = elem[6][2:4]
@@ -316,17 +329,16 @@ def readGSM19(filename, headonly=False, **kwargs):
                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
                        except:
                             strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
-                       row.time=date2num(strtime)
-                       row.f = float(elem[2])
-                       row.df = float(elem[3])
+                       valf = float(elem[2])
+                       valdf = float(elem[3])
                        if dist:
-                           row.z = row.f-(row.df*dist)
-                       row.var5 = float(elem[4])
-                       row.var1 = float(elem[0])
-                       row.var2 = float(elem[1])
-                       #row.var3 = float(elem[2])
-                       row.var4 = 0
-                       stream.add(row)
+                           array[indz].append(valf-(valdf*dist))
+                       array[0].append(date2num(strtime))
+                       array[indf].append(float(elem[2]))
+                       array[inddf].append(float(elem[3]))
+                       array[indvar5].append(float(elem[4]))
+                       array[indvar1].append(float(elem[0]))
+                       array[indvar2].append(float(elem[1]))
                     else:
                        #print "Test:", elem
                        hour = elem[8][:2]
@@ -337,19 +349,18 @@ def readGSM19(filename, headonly=False, **kwargs):
                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
                        except:
                             strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
-                       row.time=date2num(strtime)
-                       #print row.time
-                       row.f = float(elem[3])
-                       row.df = float(elem[4])
-                       #print row.f
+                       valf = float(elem[3])
+                       valdf = float(elem[4])
                        if dist:
-                           row.z = row.f-(row.df*dist)
-                       row.var5 = float(elem[5])
-                       row.var1 = float(elem[0])
-                       row.var2 = float(elem[1])
-                       row.var3 = float(elem[2])
-                       row.var4 = float(elem[7])
-                       stream.add(row)
+                           array[indz].append(valf-(valdf*dist))
+                       array[0].append(date2num(strtime))
+                       array[indf].append(float(elem[3]))
+                       array[inddf].append(float(elem[4]))
+                       array[indvar5].append(float(elem[5]))
+                       array[indvar1].append(float(elem[0]))
+                       array[indvar2].append(float(elem[1]))
+                       array[indvar3].append(float(elem[2]))
+                       array[indvar4].append(float(elem[7]))
                 except:
                     #print "Error"
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
@@ -358,12 +369,13 @@ def readGSM19(filename, headonly=False, **kwargs):
                 if not len(elem) == 3: 
                     logging.error("GSM 19 file - %s - type %s not yet supported" % (filename, typus[0]))
 
-
-    if len(stream) > 0:
+    if len(array[0]) > 0:
         headers['col-f'] = 'f'
         headers['unit-col-f'] = 'nT'
 
     logging.info("Loaded GSM19 file of type %s, using creationdate of file (%s), %d values" % (typus[0],filename,len(stream)))
     fh.close()
 
-    return DataStream(stream, headers)    
+    array = [np.asarray(el) for el in array]
+
+    return DataStream([LineStruct()], headers, np.asarray(array))

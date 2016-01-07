@@ -810,7 +810,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if key == 'x':
             possvals.extend(['h','i'])
         if key == 'y':
-            possvals.append('d')
+            possvals.extend(['d','e'])
         if key == 'df':
             possvals.append('g')
         for elem in datalist:
@@ -862,25 +862,25 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     """
 
     print "Writing IMAGCDF Format"
-    #print "filename"
     mode = kwargs.get('mode')
-
     if os.path.isfile(filename+'.cdf'):
+        filename = filename+'.cdf'
+    if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = read(path_or_url=filename+'.cdf')
+            exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream)
-            os.remove(filename+'.cdf')
+            os.remove(filename)
             mycdf = cdf.CDF(filename, '')
         elif mode == 'replace': # replace existing inputs
-            exst = read(path_or_url=filename+'.cdf')
+            exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst)
-            os.remove(filename+'.cdf')
+            os.remove(filename)
             mycdf = cdf.CDF(filename, '')
         elif mode == 'append':
             mycdf = cdf.CDF(filename, filename) # append????
         else: # overwrite mode
             #print filename
-            os.remove(filename+'.cdf')
+            os.remove(filename)
             mycdf = cdf.CDF(filename, '')
     else:
         mycdf = cdf.CDF(filename, '')
@@ -893,8 +893,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     headers = datastream.header
     head, line = [],[]
     success = False
-
-    print "Getting Header"
 
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     mycdf.attrs['FormatDescription'] = 'INTERMAGNET CDF format'
@@ -958,7 +956,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     for key in keylst:
         ind = KEYLIST.index(key)
-        if ndarray and len(datastream.ndarray[ind]>0):
+        if ndarray and len(datastream.ndarray[ind])>0:
             col = datastream.ndarray[ind]
         else:
             col = datastream._get_column(key)
@@ -973,15 +971,33 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             except:
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
         elif len(col) > 0:
+            comps = datastream.header.get('DataComponents','')
             cdfkey = 'GeomagneticField'+key.upper() 
+            keyup = key.upper()
+            if not comps == '':
+                try:
+                    if key == 'x':
+                        compsupper = comps[0].upper()
+                    elif key == 'y':
+                        compsupper = comps[1].upper()
+                    elif key == 'z':
+                        compsupper = comps[2].upper()
+                    else:
+                        compsupper = key.upper()
+                    cdfkey = 'GeomagneticField'+compsupper
+                    keyup = compsupper
+                except:
+                    cdfkey = 'GeomagneticField'+key.upper() 
+                    keyup = key.upper()
+            print len(col), keyup, key
             nonetest = [elem for elem in col if not elem == None]
             if len(nonetest) > 0:
                 mycdf[cdfkey] = col
                 
                 mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                 mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time series"
-                mycdf[cdfkey].attrs['LABLAXIS'] = key.upper()
-                if key in ['x','y','z','h']:
+                mycdf[cdfkey].attrs['LABLAXIS'] = keyup
+                if key in ['x','y','z','h','e']:
                     mycdf[cdfkey].attrs['VALIDMIN'] = -88880.0
                     mycdf[cdfkey].attrs['VALIDMAX'] = 88880.0
                 elif key == 'i':

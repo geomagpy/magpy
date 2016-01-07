@@ -803,7 +803,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
                             try:
                                 index = KEYLIST.index(elem)
                                 if not elem.endswith('time'):
-                                    array[index].append(data[idx+7]/float(multilist[idx]))
+                                    if elem in NUMKEYLIST:
+                                        array[index].append(data[idx+7]/float(multilist[idx]))
+                                    else:
+                                        array[index].append(data[idx+7])
                                 else:
                                     try:
                                         sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
@@ -836,7 +839,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print "To be done ..."
             pass
 
-        array = np.asarray([np.asarray(el) for el in array])
+        array = np.asarray([np.asarray(el).astype(object) for el in array])
         stream.ndarray = array
         if len(stream.ndarray[0]) > 0:
             print "readPYBIN: Imported bin as ndarray"
@@ -856,12 +859,18 @@ def writePYSTR(datastream, filename, **kwargs):
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream)
+            try:
+                exst = read(path_or_url=filename)
+                datastream = joinStreams(exst,datastream)
+            except:
+                loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
-            exst = read(path_or_url=filename)
-            datastream = joinStreams(datastream,exst)
+            try:
+                exst = read(path_or_url=filename)
+                datastream = joinStreams(datastream,exst)
+            except:
+                loggerlib.info("writePYSTR: Could not interprete  existing file - replacing" % filename)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
@@ -940,6 +949,8 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mode = kwargs.get('mode')
 
+    #print "fmagpy1", datastream.ndarray
+
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename+'.cdf')
@@ -964,6 +975,8 @@ def writePYCDF(datastream, filename, **kwargs):
             mycdf = cdf.CDF(filename, '')
     else:
         mycdf = cdf.CDF(filename, '')
+
+    #print "fmagpy2", datastream.ndarray
 
     keylst = datastream._get_key_headers()
     #print "writeCDF", keylst
@@ -1007,6 +1020,7 @@ def writePYCDF(datastream, filename, **kwargs):
     except:
         pass
 
+    #print "fmagpy", datastream.ndarray
     #print "writing keys", keylst
     #print "WriteFormat length 1", len(datastream.ndarray[0])
     for key in keylst:
@@ -1035,6 +1049,7 @@ def writePYCDF(datastream, filename, **kwargs):
             #    col = col[:1]
             #else:
             #    col = np.asarray([])
+
         if key.find('time') >= 0:
             if key == 'time':
                 key = 'Epoch'
@@ -1053,7 +1068,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = ['' if el is None else el for el in col]
                 col = np.asarray(col) # to get string conversion
             else:
-                #print col, key
+                print col, key
                 col = np.asarray([np.nan if el is None else el for el in col])
                 #col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)

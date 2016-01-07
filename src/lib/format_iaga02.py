@@ -110,6 +110,15 @@ def readIAGA(filename, headonly=False, **kwargs):
                 if key.find('Interval') > -1:
                     if not val == '': 
                         stream.header['DataSamplingFilter'] = val
+                if key.startswith(' #'):
+                    if key.find('# V-Instrument') > -1:
+                        if not val == '': 
+                            stream.header['SensorID'] = val
+                    elif key.find('# PublicationDate') > -1:
+                        if not val == '': 
+                            stream.header['DataPublicationDate'] = val
+                    else:
+                        print ("formatIAGA: did not import optional header info {a}".format(a=key)) 
                 if key.find('Data Type') > -1:
                     if not val == '':
                         if val[0] in ['d','D']: 
@@ -306,14 +315,28 @@ def writeIAGA(datastream, filename, **kwargs):
 
     datacomp = header.get('DataComponents'," ")
     if datacomp in ['hez','HEZ','hezf','HEZF','hezg','HEZG']:
+        order = [1,0,2]
         datacomp = 'EHZ'
     elif datacomp in ['hdz','HDZ','hdzf','HDZF','hdzg','HDZG']:
+        order = [1,0,2]
         datacomp = 'DHZ'
     elif datacomp in ['idf','IDF','idff','IDFF','idfg','IDFG']:
+        order = [1,3,0]
         datacomp = 'DHI'
     elif datacomp in ['xyz','XYZ','xyzf','XYZF','xyzg','XYZG']:
+        order = [0,1,2]
         datacomp = 'XYZ'
+    elif datacomp in ['ehz','EHZ','ehzf','EHZF','ehzg','EHZG']:
+        order = [0,1,2]
+        datacomp = 'EHZ'
+    elif datacomp in ['dhz','DHZ','dhzf','DHZF','dhzg','DHZG']:
+        order = [0,1,2]
+        datacomp = 'DHZ'
+    elif datacomp in ['dhi','DHI','dhif','DHIF','dhig','DHIG']:
+        order = [0,1,2]
+        datacomp = 'DHI'
     else:
+        order = [0,1,2]
         datacomp = 'XYZ'
 
     find = KEYLIST.index('f')
@@ -326,9 +349,7 @@ def writeIAGA(datastream, filename, **kwargs):
         datacomp = datacomp+'F'
 
     publevel = str(header.get('DataPublicationLevel'," "))
-    if publevel == '1':
-        publ = 'V' 
-    elif publevel == '2':
+    if publevel == '2':
         publ = 'P' 
     elif publevel == '3':
         publ = 'Q' 
@@ -353,7 +374,29 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Digital Sampling %-5s %-44s |\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(str(header.get('DataSamplingRate'," "))+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',publ[:44]))
+        # Optional header part:
+        skipopt = False
+        if not skipopt:
+            if not header.get('SensorID','') == '':
+                line.append(' #{a:<20}  {b:<45s}|\n'.format(a='V-Instrument',b=header.get('SensorID')[:44]))
+            if not header.get('SecondarySensorID','') == '':
+                line.append(' #{a:<20}  {b:<45s}|\n'.format(a='F-Instrument',b=header.get('SecondarySensorID')[:44]))
+            if not header.get('StationMeans','') == '':
+                try:
+                    meanlist = header.get('StationMeans') # Assume something like H:xxxx,D:xxx,Z:xxxx
+                    meanlist = meanlist.split(',')
+                    for me in meanlist:
+                        if me.startswith('H'):
+                            hval = me.split(':')
+                            line.append(' #{a:<20}  {b:<45s}|\n'.format(a='Approx H',b=hval[1]))
+                except:
+                    pass
+            if not header.get('DataPublicationDate','') == '':
+                line.append(' #{a:<20}  {b:<45s}|\n'.format(a='Publication Date',b=str(header.get('DataPublicationDate'))[:44]))
+        line.append(' #{a:<20}  {b:<45s}|\n'.format(a='File created by',b='MagPy '+magpyversion))
         line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (datacomp[0],datacomp[1],datacomp[2],datacomp[3]))
+
+
     try:
         myFile.writelines(line) # Write header sequence of strings to a file
     except IOError:
@@ -368,27 +411,21 @@ def writeIAGA(datastream, filename, **kwargs):
         fulllength = datastream.length()[0]
 
         # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
-        datacomp = 'EHZ'
-        datacomp = 'DHZ'
-        datacomp = 'DHI'
-        datacomp = 'XYZ'
+        #datacomp = 'EHZ'
+        #datacomp = 'DHZ'
+        #datacomp = 'DHI'
+        #datacomp = 'XYZ'
         xmult = 1.0
         ymult = 1.0
         zmult = 1.0
-        xind = KEYLIST.index('x')
-        yind = KEYLIST.index('y')
-        zind = KEYLIST.index('z')
+        
+        xind = order[0]+1
+        yind = order[1]+1
+        zind = order[2]+1
         find = KEYLIST.index('f')
-        if datacomp.startswith('EHZ'):
-            xind = KEYLIST.index('y')
-            yind = KEYLIST.index('x')
-        elif datacomp.startswith('DHZ'):
-            xind = KEYLIST.index('y')
-            yind = KEYLIST.index('x')
+        if datacomp.startswith('DHZ'):
             xmult = 60.0
         elif datacomp.startswith('DHI'):
-            xind = KEYLIST.index('y')
-            yind = KEYLIST.index('x')
             xmult = 60.0
             zmult = 60.0
         for i in range(fulllength):
@@ -402,6 +439,8 @@ def writeIAGA(datastream, filename, **kwargs):
             else:
                 xval = datastream.ndarray[xind][i]*xmult
                 yval = datastream.ndarray[yind][i]
+                if order[1] == '3':
+                    yval = datastream.ndarray[yind][i]*np.cos(datastream.ndarray[zind][i]*np.pi/180.)
                 zval = datastream.ndarray[zind][i]*zmult
                 if len(datastream.ndarray[find]) > 0:
                     if not useg:

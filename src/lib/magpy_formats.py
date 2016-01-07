@@ -20,6 +20,7 @@ DEPENDENCIES:
 		.format_pos1
 		.format_env05
 		.format_cr800
+		.format_iono
 		.format_iaga02
 		.format_wdc
 		.format_magpy
@@ -48,6 +49,7 @@ from lib.format_lemi import *
 from lib.format_pos1 import *
 from lib.format_env05 import *
 from lib.format_cr800 import *
+from lib.format_iono import *
 
 # IMPORT GENERAL PURPOSE FORMATS:
 from lib.format_iaga02 import *
@@ -131,6 +133,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "CR800"): # Data from the CR800 datalogger
         if (isCR800(filename)):
+            return True
+    elif (format_type == "IONO"): # Data from the IM806 Ionometer
+        if (isIONO(filename)):
             return True
     elif (format_type == "RADON"): # Data from the CR800 datalogger
         if (isRADON(filename)):
@@ -275,6 +280,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readLIPPGRAV(filename, headonly, **kwargs)
     elif (format_type == "CR800"):
         return readCR800(filename, headonly, **kwargs)
+    elif (format_type == "IONO"):
+        return readIONO(filename, headonly, **kwargs)
     elif (format_type == "RADON"):
         return readRADON(filename, headonly, **kwargs)
     elif (format_type == "CS"):

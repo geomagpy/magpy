@@ -98,7 +98,7 @@ SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','Sensor
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
 			'StationCity','StationPostalCode','StationCountry','StationWebInfo',
-			'StationEmail','StationDescription','StationK9']
+			'StationEmail','StationDescription','StationK9','StationMeans']
 
 FLAGSKEYLIST = ['FlagID','SensorID','FlagBeginTime','FlagEndTime','FlagComponents','FlagNum','FlagReason','ModificationDate']
 
@@ -146,6 +146,7 @@ STATION:
         StationWebInfo: 'http://www.zamg.ac.at',
         StationDescription: 'Running since 1951.'
         StationK9: k9 limit for location
+        StationMeans: Contains a list with mean values e.g. Year:2015,H:20800nT,Z:43000nT
 DATAINFO:
 	DataID:
 
@@ -391,18 +392,21 @@ def dbgetfloat(db,tablename,sensorid,columnid,revision=None):
         returns deltaF from the DATAINFO table which matches the Sensor
     """
     sql = 'SELECT ' + columnid + ' FROM ' + tablename + ' WHERE SensorID = "' + sensorid + '"';
-    cursor = db.cursor()
-    cursor.execute(sql)
-    row = cursor.fetchone()
-    if not row[0] == None:
-        try:
-            fl = float(row[0])
-            return fl
-        except:
-            print "no float found"
-            return row[0] 
-    else:
-        return 0.0
+    try:
+        cursor = db.cursor()
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        if not row[0] == None:
+            try:
+                fl = float(row[0])
+                return fl
+            except:
+                print "no float found"
+                return row[0] 
+        else:
+            return 0.0
+    except:
+            return 0.0
 
 def dbgetstring(db,tablename,sensorid,columnid,revision=None):
     """
@@ -942,7 +946,7 @@ def dbfields2dict(db,datainfoid):
     cursor = db.cursor()
 
 
-    print "DBfields2dic: Running"
+    #print "DBfields2dict: Running"
     #getids = 'SELECT sensorid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
     getids = 'SELECT sensorid,stationid FROM DATAINFO WHERE DataID = "'+datainfoid+'"'
     cursor.execute(getids)
@@ -1008,7 +1012,7 @@ def dbfields2dict(db,datainfoid):
         loggerdatabase.warning("dbfields2dict: Could not interpret column field in DATAINFO")
 
     # Use ColumnContent info for creating col information
-    print "DBfields2dict: ", cols
+    #print "DBfields2dict: ", cols
     try:
         for ind,el in enumerate(cols):
             if not el=='':
@@ -1352,7 +1356,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     Optional variables:
         - datakeydict:    (dict) provide a dictionary with data table information (see DATAINFO) .
         - tablenum:       (string) provide a table number in format '0001' .
-               If tablenum is specified, the corresponding table is selected and DATAINFO is updated with the provided datakeydict
+               If tablenum is specified, the corresponding table is selected and DATAINFO is updated with the provided datakeydictdbdatainfo
                If tablenum = 'new', a new number is generated e.g. 0006 if no DATAINFO matching the provided info is found 
                If no tablenum is selected all data including all Datainfo is appended to the latest numbe if no DATAINFO matching the provided info is found and no conflict with the existing DATAINFO is found 
         - defaultstation: (string) provide a default station code.
@@ -2887,185 +2891,83 @@ def db2diline(db,**kwargs):
 
     return resultlist
 
-
-def getBaselineProperties(db,datastream,pier=None,distream=None):
+def applyDeltas(db, stream):
     """
-    DEFINITION:
-        method to extract baseline properties from a DB for a given time
-        reads starttime, endtime, and baseline properties (like function, degree, knots etc) from DB
-        if no information is provided then the baseline method has to be used
-        The method creates database inputs for each analyzed segment using the 'replace' mode
-        ideally 
-    REQUIREMENTS:
-        requires a BASELINE table
-    PARAMETERS:
-    Variables:
-        - db:   	(mysql database) defined by MySQLdb.connect().
-        - datastream:   (magpy stream) data stream on which baseline correction is performed 
-    Optional:
-        - pier:     (string) name of the pier: essential to select correct BLV data from DB. 
-        - distream:     (magpy stream) containing BLV data. If provided any existing 
-                                 DB table is updated, if not yet existing it is created 
+    DESCRIPTION:
+       Extract content of DataDeltaDictionary and apply the corrections to stream.
 
-    EXAMPLE:
-        >>> diline2db(db,...)
+    PARAMETER: 
+       db: 		name of the mysql data base
+       stream:		data stream which is corrected
 
-    APPLICATION:
-        Requires an existing mysql database (e.g. mydb)
-        so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+    RETURNS:
+       a data stream with offsets applied
     """
-    stream = DataStream()
-    basecorr = DataStream()
-    streamdat = []
-    flist = []
-
-    if not db:
-        print "No database connected - aborting"
+    dataid = stream.header.get('DataID','')
+    if dataid == '':
+        print ("applyDeltas: No dataid found in streams header - aborting")
         return stream
 
-    cursor = db.cursor ()
-
-    sensid = datastream.header['SensorID']
-
-    if not sensid or len(sensid) < 1:
-        print "No Sensor specified in datastream header - aborting"
+    deltas = stream.header.get('DataDeltaValues','')
+    if deltas == '':
+        print ("applyDeltas: No delta values found - returning unmodified stream")
         return stream
 
-    # Remove flagged data
-    #datastream = datastream.remove_flagged()
-        
-    # Test whether table "Baseline" exists
-    testsql = 'SHOW TABLES LIKE "BASELINE"'
-    cursor.execute(testsql)
-    rows = cursor.fetchall()
-    if len(rows) < 1:
-        print "No Baselinetable existing - creating an empty table in the selected database and aborting then"
-        baseheadstr = 'SensorID CHAR(50) NOT NULL, MinTime DATETIME, MaxTime DATETIME, TmpMaxTime DATETIME, BaseFunction CHAR(50), BaseDegree INT, BaseKnots FLOAT, BaseComment TEXT'
-        createbasetablesql = "CREATE TABLE IF NOT EXISTS BASELINE (%s)" % baseheadstr
-        cursor.execute (createbasetablesql)
-        # TmpMaxTime is used to store current date if MaxTime is Emtpy
-        #basesql = "INSERT INTO BASELINE(%s) VALUES (%s)" % (', '.join(sensorhead), '"'+'", "'.join(sensorvalue)+'"')
-        # Insert code here for creating empty table
-        return
+    try:
+        deltas = deltas.split(',')
+        for el in deltas:
+            dat = el.split('_')
+            print ("Correcting {a} offset: {b}".format(a=dat[0],b=dat[1]))
+            if dat[0] == 'time':
+                stream = stream.offset({'time': dat[1]})
+            if dat[0] in NUMKEYLIST:
+                stream = stream.offset({dat[0]: float(dat[1])})
+        stream.header['DataDeltaValues'] = ''
+    except:
+        print "Could not extract delta values for ", dataid
 
-    # get starttime
-    starttime = datastream._testtime(datastream[0].time)
-    endtime = datastream._testtime(datastream[-1].time)
+    return stream
 
-    # get the appropriate basedatatable database input
-    #absstream = ...
-    # Test whether table "SENSORID_Basedata" exists
-    testsql = 'SHOW TABLES LIKE "BLV_%s_%s"' % (sensid,pier)
-    print testsql
-    # XXX IMPORTANT: Pier is also essential
-    cursor.execute(testsql)
-    rows = cursor.fetchall()
-    if len(rows) < 1:
-        print "No Basedatatable existing - trying to create one from file"
-        if not distream:
-            print "No DI data provided - aborting"
-            return
-        stream2db(db,distream,mode='replace',tablename='BLV_'+sensid+'_'+pier)
+
+def getBaseline(db,sensorid, date=None):
+    """
+    DESCRIPTION:
+       Method to extract a list of baseline fitting data from db.
+
+    PARAMETER: 
+       db: 		name of the mysql data base
+       sensorid: 	identification id of sensor in database
+       date:		if provided only the line matching the given date will be returned
+
+    RETURNS:
+       a list with all selected baseline data
+    """
+
+    if not date:
+        where = 'SensorID LIKE "%'+sensorid+'%"'
+        print where
+        vals = dbselect(db,'*','BASELINE', where)
+        vals = np.asarray(vals).transpose() 
     else:
-        if distream:
-            print "Resetting basedata table from file"
-            stream2db(db,distream,mode='replace',tablename='BLV_'+sensid+'_'+pier)
-            distream = distream.remove_flagged()            
-        else:
-            table = 'BLV_'+sensid+'_'+pier 
-            distream = db2stream(db,tableext=table)
-            distream = distream.remove_flagged()
-            
-    #print sensid
+        tmp = DataStream()
+        where = 'SensorID LIKE "%{a}%" AND "{b}" >= MinTime'.format(a=sensorid,b=datetime.strftime(tmp._testtime(date),"%Y-%m-%d %H:%M:%S"))
+        vals = dbselect(db,'*','BASELINE', where)
+        vals = [elem for elem in vals if elem[2]=='' or tmp._testtime(elem[2]) >= tmp._testtime(date)]
+        vals = np.asarray(vals).transpose() 
 
+    for i,elem in enumerate(vals):
+        if i ==2:
+            for j, el in enumerate(elem):
+                if el == '':
+                    vals[i][j] = datetime.strftime(datetime.utcnow(),"%Y-%m-%d %H:%M:%S")
 
-    # update TmpMaxTime column with current time in empty MaxTime Column
-    currenttime = datetime.strftime(datetime.utcnow(),'%Y-%m-%d %H:%M:%S')
-    copy2tmp = "UPDATE BASELINE SET TmpMaxTime = MaxTime"
-    insertdatesql = "UPDATE BASELINE SET TmpMaxTime = '%s' WHERE TmpMaxTime IS NULL" % (currenttime)
-
-    cursor.execute(copy2tmp)
-    cursor.execute(insertdatesql)
-    #
-    select = 'MinTime, TmpMaxTime, BaseFunction, BaseDegree, BaseKnots'
-    # start before and end within datastream time range
-    where1 = '"%s" < MinTime AND "%s" <= TmpMaxTime AND "%s" > MinTime' % (starttime,endtime,endtime)
-    # start within and end after datastream time range
-    where2 = '"%s" >= MinTime AND "%s" < TmpMaxTime AND "%s" > MaxTime' % (starttime,starttime,endtime)
-    # start and end within datastream time range
-    where3 = '"%s" > MinTime AND "%s" < TmpMaxTime AND "%s" > MinTime AND "%s" < MaxTime' % (starttime,starttime,endtime,endtime)
-    # if where1 to where3 unsuccessfull then use where4
-    where4 = '"%s" <= MinTime AND "%s" >= TmpMaxTime' % (starttime,endtime)
-
-    where = 'SensorID = "%s" AND ((%s) OR (%s) OR (%s) OR (%s))' % (sensid,where1,where2,where3,where4)
-    
-    getbaselineinfo = 'SELECT %s FROM BASELINE WHERE %s' % (select, where)
-    cursor.execute(getbaselineinfo)
-    rows = cursor.fetchall()
-    print rows
-    for line in rows:
-        # Get stream between min and maxtime and do the baseline fit
-        li0 = datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S")
-        li1 = datetime.strptime(line[1],"%Y-%m-%d %H:%M:%S")
-        start = date2num(li0)
-        stop = date2num(li1)
-        datalist = [row for row in datastream if start <= row.time <= stop]
-        #To do: if MinTime << starttime then distart = start - 30 Tage
-        if li0 < starttime-timedelta(days=30):
-            distart = date2num(starttime-timedelta(days=30))
-        else:
-            distart = start
-        #To do: if MaxTime >> endtime then distop = stop + 30 Tage 
-        if li0 > endtime+timedelta(days=30):
-            distop = date2num(endtime+timedelta(days=30))
-        else:
-            distop = stop
-        print start,distart, stop,distop
-        dilist = [row for row in distream if start <= row.time <= stop]
-        part = DataStream(datalist,datastream.header)
-        abspart =  DataStream(dilist,distream.header)
-        fitfunc = line[2]
-        try:
-            fitdegree=float(line[3])
-        except:
-            fitdegree=5
-        try:
-            fitknots=float(line[4])
-        except:
-            fitknots=0.05
-
-        # return baseline function as well
-        fitfunc = 'poly'
-        fitdegree = 4
-        print fitfunc,fitdegree,fitknots
-        basecorr,func = part.baseline(abspart,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=fitknots,plotbaseline=True,returnfunction=True)
-        flist.append(func)
-        dat = [row for row in basecorr]
-        deltaf = abspart.mean('df',meanfunction='median',percentage=1)
-        # Update header information
-        part.header['DataDeltaF'] = deltaf
-        part.header['DataAbsMinTime'] = datetime.strftime(num2date(dat[0].time),"%Y-%m-%d %H:%M:%S")
-        part.header['DataAbsMaxTime'] = datetime.strftime(num2date(dat[-1].time),"%Y-%m-%d %H:%M:%S")
-        part.header['DataAbsKnots'] = str(fitknots)
-        part.header['DataAbsDegree'] = str(fitdegree)
-        part.header['DataAbsFunc'] = fitfunc
-        part.header['DataType'] = 'preliminary'
-        streamdat.extend(dat)
-        print "Stream: ", len(streamdat), len(basecorr)
-        #stream2db(db,DataStream(dat,part.header),mode='replace')
-
-    print flist
-    for elem in flist:
-        for key in KEYLIST:
-            fkey = 'f'+key
-            if fkey in elem[0]:
-                ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
-                #ax.plot_date(denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
-            
-    return DataStream(streamdat,datastream.header)
-    
-    db.commit()
+    # Fallback
+    if not len(vals) > 0:
+        print ("getBaseline: Did not find baseline parameters matching search criteria - returning dummy values for spline fit")
+        now = datetime.strftime(datetime.utcnow(),"%Y-%m-%d %H:%M:%S")
+        past = datetime.strftime(datetime.utcnow()-timedelta(days=365),"%Y-%m-%d %H:%M:%S")
+        vals = [[sensorid],[past],[now],['spline'],[1],[0.1],['Dummy']]
+    return vals
 
 
 def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):

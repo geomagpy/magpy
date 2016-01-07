@@ -20,6 +20,7 @@ try:
 except:
     from magpy.version import __version__
 print "MagPy version", __version__
+magpyversion = __version__
 
 # Standard packages
 # -----------------
@@ -299,6 +300,7 @@ PYMAG_SUPPORTED_FORMATS = [
 		'IWT', 		# Tiltmeter data files at cobs
 		'LIPPGRAV', 	# Lippmann Tiltmeter data files at cobs
 		'CR800',	# Data from the CR800 datalogger
+		'IONO',		# Data from IM806 Ionometer
 		'RADON',	# ?
 		'USBLOG',	# ?
 		'SERSIN',	# ?
@@ -1101,7 +1103,7 @@ CALLED BY:
 
     def _drop_column(self,key):
         """
-        remove a column to a Stream
+        remove a column of a Stream
         """
         ind = KEYLIST.index(key)
 
@@ -1880,25 +1882,25 @@ CALLED BY:
             # time range long enough
             baseendtime = endabs+extradays
             extrapolate = True
-        elif endabs >= date2num(endtime)+extradays:
-            # time range long enough
-            baseendtime = date2num(endtime)+extradays
         else:
             baseendtime = date2num(endtime+timedelta(days=1))
             extrapolate = True
+        if endabs >= date2num(endtime)+extradays:
+            # time range long enough
+            baseendtime = date2num(endtime)+extradays
         # lower
         if fixstart:
             absolutestream = absolutestream.trim(starttime=startabs)
             basestarttime = startabs-extradays
             #print "baseline2", num2date(basestarttime)
             extrapolate = True
-        elif baseendtime - (366.+2*extradays) > startabs: 
-            # time range long enough
-            basestarttime =  baseendtime-(366.+2*extradays)
         else:
             # not long enough
             basestarttime = date2num(starttime)
             extrapolate = True
+        if baseendtime - (366.+2*extradays) > startabs: 
+            # time range long enough
+            basestarttime =  baseendtime-(366.+2*extradays)
 
         baseendtime = num2date(baseendtime).replace(tzinfo=None)
         basestarttime = num2date(basestarttime).replace(tzinfo=None)
@@ -2024,18 +2026,18 @@ CALLED BY:
         tabss,tabse = absdata._find_t_limits()
         # Some checks
         if tabss > te or tabse < ts:
-            print ("writeBC: No DI data for selected stream available -aborting")
+            print ("baselineAdvanced: No DI data for selected stream available -aborting")
             return False
         if tabss > ts:
-            print ("writeBC: DI data does not cover the time range of stream - trimming stream")
+            print ("baselineAdvanced: DI data does not cover the time range of stream - trimming stream")
             data = data.trim(starttime=tabss)
         if tabse < te:
-            print ("writeBC: DI data does not cover the time range of stream - trimming stream")
+            print ("baselineAdvanced: DI data does not cover the time range of stream - trimming stream")
             data = data.trim(endtime=tabse)
         # Getting relevant baseline info 
         sensid = self.header.get('SensorID','')
         if sensid == '':
-            print ("writeBC: No SensorID in header info - provide by option sensorid='XXX'")
+            print ("baselineAdvanced: No SensorID in header info - provide by option sensorid='XXX'")
             return False
         indlist = [ind for ind, elem in enumerate(baselist[0]) if elem == sensid]
         #print "writeBC", indlist
@@ -2043,7 +2045,7 @@ CALLED BY:
         #print "writeBC", senslist
         #print "writeBC", senslist[1]
         if not len(senslist) > 0:
-            print ("writeBC: Did not find any valid baseline parameters for selected sensor")
+            print ("baselineAdvanced: Did not find any valid baseline parameters for selected sensor")
             return False
         # get index of starttime closest before
         beforeinds = [[ind,np.abs(date2num(ts)-elem)] for ind, elem in enumerate(senslist[1]) if elem < date2num(ts)]
@@ -2068,11 +2070,11 @@ CALLED BY:
         else:
             resultlist = vallist
 
-        print "writeBC inds", resultlist
+        print "baselineAdvanced: inds", resultlist
  
         # Select appropriate time ranges from stream
         if not len(resultlist[0]) > 0:
-            print ("writeBC: Did not find any valid baseline parameters for selected sensor")
+            print ("baselineAdvanced: Did not find any valid baseline parameters for selected sensor")
             return False
         streamlist = []
         dictlist = []
@@ -2090,7 +2092,7 @@ CALLED BY:
             dicthead = stream.header
             #dictlist.append(dicthead.copy()) # Note: append just adds a pointer to content - use copy
             #streamlist.append([dicthead.copy(),stream.ndarray])
-            streamlist.append(DataStream([LineStruct()],dicthead.copy(),stream.ndarray))
+            streamlist.append([DataStream([LineStruct()],dicthead.copy(),stream.ndarray),baselinefunc])
 
         #print "Streamlist", streamlist
         #print len(dicthead),dictlist
@@ -2293,6 +2295,33 @@ CALLED BY:
         loggerstream.info('calc_f: --- Calculating f finished at %s ' % str(datetime.now()))
 
         return self
+
+
+    def dailymean(self):
+        """
+    DEFINITION:
+        If an absolutestream is provided, basevalues are taken and averaged
+        An outputstream is generated which containes basevalues in columns
+        x,y,z and uncertainty values in dx,dy,dz
+        if only a single values is available, dx,dy,dz contain the average uncertainties 
+        of the full data set
+        time column contains the average time of the measurement
+
+    PARAMETERS:
+    Variables:
+    Kwargs:
+        - None
+
+    RETURNS:
+        - stream: 	(DataStream object) with daily means and standard deviation 
+
+    EXAMPLE:
+        >>> data = absstream.dailymeans()
+
+    APPLICATION:
+        """
+
+        pass
 
     
     def date_offset(self, offset):
@@ -3851,6 +3880,54 @@ CALLED BY:
         #print self.ndarray[flagind]
 
         return self
+
+    def simplebasevalue2stream(self,basevalue,**kwargs):
+        """
+      DESCRIPTION:
+        simple baselvalue correction using a simple basevalue list 
+
+      PARAMETERS:
+        basevalue 	(list): [baseH,baseD,baseZ]        
+        keys 		(list): default = 'x','y','z'
+
+      APPLICTAION:
+        used by stream.baseline
+
+        """
+        mode = kwargs.get('mode')
+        keys = ['x','y','z']
+
+        # Changed that - 49 sec before, no less then 2 secs
+        if not len(self.ndarray[0]) > 0:
+            print "simplebasevalue2stream: requires ndarray"
+            return self
+        
+        #1. calculate function value for each data time step
+        array = [[] for key in KEYLIST]
+        array[0] = self.ndarray[0]
+        # get x array for baseline
+        #indx = KEYLIST.index('x')
+        for key in KEYLIST:
+            ind = KEYLIST.index(key)
+            if key in keys: # new
+                #print keys.index(key)
+                ar = self.ndarray[ind].astype(float)
+                if key == 'y':
+                    #indx = KEYLIST.index('x')
+                    #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
+                    #print type(self.ndarray[ind]), key, self.ndarray[ind]
+                    array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + basevalue[keys.index(key)]
+                    self.header['col-y'] = 'd'
+                    self.header['unit-col-y'] = 'deg'
+                else:
+                    array[ind] = ar + basevalue[keys.index(key)]
+                    if key == 'x': # remember this for correct y determination
+                        arrayx = array[ind]
+            else: # new
+                if len(self.ndarray[ind]) > 0:
+                    array[ind] = self.ndarray[ind].astype(object)
+
+        return DataStream(self,self.header,np.asarray(array))
 
 
     def func2stream(self,function,**kwargs):
@@ -7455,7 +7532,7 @@ CALLED BY:
         """
         DEFINITION:
             Function to perform a variometercorrection of an absresult stream
-            towrads the given datetime using the given variometer stream.
+            towards the given datetime using the given variometer stream.
             Returns a new absresult object with new datetime and corrected values
         APPLICATION:
             Useful to compare various absolute measurement e.g. form one day and analyse their
@@ -8844,6 +8921,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
     # Defining default comment
     # --------------------------------------
+    headera = stream_a.header
+    headerb = stream_b.header
     try:
         sensidb = headerb['SensorID']
     except:
@@ -8858,9 +8937,6 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     fllst = [] # flaglist
 
     loggerstream.info('mergeStreams: Start mergings at %s.' % str(datetime.now()))
-
-    headera = stream_a.header
-    headerb = stream_b.header
     
     
     # Check stream type and eventually convert them to ndarrays
@@ -8944,6 +9020,10 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     # master header
     # --------------------------------------
     header = sa.header
+    # just add the merged sensorid
+    header['SecondarySensorID'] = sensidb
+
+    print "mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits()
 
     if ndtype:
             array = [[] for key in KEYLIST]
@@ -8960,14 +9040,15 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs 
                 indtia = np.nonzero(np.in1d(timea,tb))[0]
-                #print tb, indtib, indtia, timea,timeb, len(indtib), len(indtia)
+                print "mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia)
+                
                 if len(indtia) == len(indtib):
                     nanind = []
                     for key in keys:
                         keyind = KEYLIST.index(key)
                         #array[keyind] = sa.ndarray[keyind]
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
-                            #print "Found sb values", key
+                            print "Found sb values", key
                             valb = [sb.ndarray[keyind][ind] for ind in indtib]
                         ### Change by leon in 10/2015
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
@@ -8977,8 +9058,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                 array[keyind] = np.asarray([np.nan] *len(timea))
                             else:
                                 array[keyind] = np.asarray([''] *len(timea))
-                            header['col-'+key] = sb.header['col-'+key]
-                            header['unit-col-'+key] = sb.header['unit-col-'+key]
+                            try:
+                                header['col-'+key] = sb.header['col-'+key]
+                                header['unit-col-'+key] = sb.header['unit-col-'+key]
+                            except:
+                                print ("mergeStreams: warning when assigning header values to column %s - missing head" % key)
       
                         for i,ind in enumerate(indtia):
                             if key in NUMKEYLIST:
@@ -9033,8 +9117,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                 array[keyind] = np.asarray([np.nan] *len(timea))
                             else:
                                 array[keyind] = np.asarray([''] *len(timea))
-                            header['col-'+key] = sb.header['col-'+key]
-                            header['unit-col-'+key] = sb.header['unit-col-'+key]
+                            try:
+                                header['col-'+key] = sb.header['col-'+key]
+                                header['unit-col-'+key] = sb.header['unit-col-'+key]
+                            except:
+                                print ("mergeStreams: warning when assigning header values to column %s- missing head" % key)
 
                         for i,ind in enumerate(indtia):
                             if key in NUMKEYLIST:
@@ -9513,12 +9600,16 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             #t1s = datetime.utcnow()
             # Get indicies of stream_b of which times are present in stream_a 
             array = [[] for key in KEYLIST]
-            #indtib = np.nonzero(np.in1d(timeb, timea))[0]
-
-            idxB = np.argsort(timeb)
-            sortedB = timeb[idxB]
-            idxA = np.searchsorted(sortedB, timea)
-            indtib = idxB[idxA]
+            try: # TODO Find a better solution here!
+                # The try clause is not correct as searchsorted just finds 
+                # positions independet of agreement (works well if data is similar) 
+                idxB = np.argsort(timeb)
+                sortedB = timeb[idxB]
+                idxA = np.searchsorted(sortedB, timea)
+                #print timea, timeb,len(idxA), len(idxB)
+                indtib = idxB[idxA]
+            except:
+                indtib = np.nonzero(np.in1d(timeb, timea))[0]
             #print timeb[pos]
             #print timea
             #print indtib
@@ -9528,12 +9619,14 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 # get tb times for all matching indicies
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs 
-                #indtia = np.nonzero(np.in1d(tb, timea))[0]
-                idxA = np.argsort(timea)
-                sortedA = timea[idxA]
-                idxB = np.searchsorted(sortedA, tb)
-                #
-                indtia = idxA[idxB]
+                try:
+                    idxA = np.argsort(timea)
+                    sortedA = timea[idxA]
+                    idxB = np.searchsorted(sortedA, tb)
+                    #
+                    indtia = idxA[idxB]
+                except:
+                    indtia = np.nonzero(np.in1d(tb, timea))[0]
                 #print len(timea),len(timeb),idxA,idxB, indtia, indtib
                 #idxB = np.argsort(tb)
                 #sortedB = tb[idxB]
@@ -9992,13 +10085,16 @@ def stackStreams(streamlist, **kwargs): # TODO
             #    array[idx+dif] = []                        
             for el in elem:
                 if get == 'mean':
-                    val = mean(el)
+                    try:
+                        val = np.nanmean(el) # numpy after 1.11
+                    except:
+                        val = np.mean([e for e in el if not np.isnan(e)])
                     if uncert and idx in [1,2,3,4]:
                         #print idx
-                        val2 = np.std(el)
+                        val2 = np.std([e for e in el if not np.isnan(e)])
                         array[idx+dif].append(val2)                        
                 else:
-                    val = sum(el)
+                    val = sum([e for e in el if not np.isnan(e)])
                 array[idx].append(val)
 
     for idx,elem in enumerate(array):

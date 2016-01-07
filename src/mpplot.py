@@ -762,8 +762,14 @@ class figFlagger():
         if event.key in ['L', 'l']:
             print ' Data:'
             print ' ------------------------------------------'
-            print "Length:", len(data), len(data.ndarray), len(data.ndarray[0])
+            print "Length:", data.length()
             #stream.write("")
+        #if event.key in ['O', 'o']:
+        #    print ' Apply offset:'
+        #    print ' ------------------------------------------'
+        #    print " Selected data point:", len(self.idxarray)
+        #    plt.clf()
+        #    plt.close()
         if event.key in ['H', 'h']:
             print ' Header:'
             print ' ------------------------------------------'
@@ -858,6 +864,7 @@ class figFlagger():
         print "    -- press f for flagging this region"
         print "    --      press 2,3 to change default flag ID"
         print "    -- press l to get some basic data info"
+        #print "    -- press o to apply an offset"
         print "    -- press h to get all meta information"
         print "    -- press c to close the window and allow saving"
 
@@ -964,6 +971,8 @@ def plotFlag(data,variables=None):
 	Several additional keys provide data info.
     RETURNS:
         - stream: 	(Datastream) ndarray stream to be saved
+      optional
+        - variables:	(list of keys)
 
     REQUIRES:
         - class figFlagger
