@@ -587,7 +587,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                         else:
                             flag = stream._get_column('flag')
                             comments = stream._get_column('comment')
-                        flags = array([flag,comments])
+                        flags = array([flag,comments], dtype=object)
 	    	        data_dict['annotate'] = True
                         data_dict['flags'] = flags
                     else:
@@ -601,7 +601,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     else:
                         flag = stream._get_column('flag')
                         comments = stream._get_column('comment')
-                    flags = array([flag,comments])
+                    flags = array([flag,comments], dtype=object)
                     #print "plotStreams1", flags
                     data_dict['annotate'] = True
                     data_dict['flags'] = flags

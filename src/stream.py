@@ -642,7 +642,7 @@ CALLED BY:
                         setattr(li, key, elkey)
                 co.add(li)
 
-        return DataStream(co.container,co.header,np.asarray(array))
+        return DataStream(co.container,co.header,np.asarray(array, dtype=object))
             
 
     def __str__(self):
@@ -3927,6 +3927,7 @@ CALLED BY:
                 if len(self.ndarray[ind]) > 0:
                     array[ind] = self.ndarray[ind].astype(object)
 
+        self.header['DataComponents'] = 'HDZ'
         return DataStream(self,self.header,np.asarray(array))
 
 
@@ -8464,7 +8465,7 @@ def coordinatetransform(u,v,w,kind):
         xtmp = u /np.sqrt((np.tan(dc))**2 + 1)
         y = np.sqrt(u**2 - xtmp**2)
         x = xtmp
-        f = np.sqrt(h**2+w**2)
+        f = np.sqrt(x**2+y**2+w**2)
         i = (180.)/np.pi * np.arctan2(w, u)
         return [v,i,u,x,y,w,f]
     elif kind == 'dhz':

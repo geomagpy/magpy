@@ -1784,7 +1784,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 elif key == hkey.replace('unit-col-',''):
                     unitstr = datastream.header[hkey]            
 
-            print "Checking key", key
+            #print "Checking key", key
             try:
                 sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                 cursor.execute(sql)
@@ -2526,7 +2526,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
             print "No data found"
             pass
 
-    stream.ndarray = np.asarray(ls)
+    stream.ndarray = np.asarray(ls, dtype=object)
 
     cursor.close ()
     return DataStream([LineStruct],stream.header,stream.ndarray)
