@@ -47,9 +47,9 @@ try:
     MATPLOTLIB_VERSION = version
     print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
     import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize 
-    #from matplotlib.colorbar import ColorbarBase 
-    from matplotlib import mlab 
+    from matplotlib.colors import Normalize
+    #from matplotlib.colorbar import ColorbarBase
+    from matplotlib import mlab
     from matplotlib.dates import date2num, num2date
     import matplotlib.cm as cm
     from pylab import *  # do I need that?
@@ -89,7 +89,7 @@ try:
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
         print "trying CDF lib in /usr/local/cdf"
-        import spacepy.pycdf as cdf      
+        import spacepy.pycdf as cdf
         print "... success"
 except:
     logpygen += "Init MagPy: Import failure: Nasa cdf not available\n"
@@ -159,7 +159,7 @@ PYMAG_SUPPORTED_FORMATS = ['IAGA', 'WDC', 'DIDD', 'GSM19', 'LEMIHF', 'LEMIBIN', 
 # -------------------
 #  Main classes -- DataStream, LineStruct and PyMagLog (To be removed)
 # -------------------
-    
+
 class DataStream(object):
     """
     Creates a list object from input files /url data
@@ -172,7 +172,7 @@ class DataStream(object):
     - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
     - stream.differentiate() -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     - stream.fit(keys) -- returns function
-    - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...) 
+    - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...)
     - stream.integrate() -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
     - stream.interpol(keys) -- returns function
     - stream.routlier() -- returns stream (adds flags and comments)
@@ -180,7 +180,7 @@ class DataStream(object):
     - stream.trim() -- returns stream within new time frame
     - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
     - stream.flag_stream(key,flag,comment,startdate) -- returns stream (adds flags and comments)
-    - stream.get_gaps() 
+    - stream.get_gaps()
     - stream.get_sampling_period() -- returns float (with period in days)
 
     - stream.pmplot(keys)
@@ -196,7 +196,7 @@ class DataStream(object):
     - self._aic(signal, k) -- returns float -- determines Akaki Information Criterion for a specific index k
     - self._normalize(column) -- returns list,float,float -- normalizes selected column to range 0,1
     - self._denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
-    
+
     """
     def __init__(self, container=None, header={}):
         if container is None:
@@ -252,7 +252,7 @@ class DataStream(object):
         Sorting data according to time (maybe generalize that to some key)
         """
         liste = sorted(self.container, key=lambda tmp: tmp.time)
-        return DataStream(liste, self.header)        
+        return DataStream(liste, self.header)
 
     def clear_header(self):
         """
@@ -278,7 +278,7 @@ class DataStream(object):
         1) absolute time: as provided by date2num
         2) strings: 2011-11-22 or 2011-11-22T11:11:00
         3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-        
+
         """
         if isinstance(time, float) or isinstance(time, int):
             try:
@@ -358,7 +358,7 @@ class DataStream(object):
                     count = count+1
                 pass
             col.append(eval('elem.'+key))
-            
+
         if count > 0:
             return np.asarray(col)
         else:
@@ -382,7 +382,7 @@ class DataStream(object):
             raise ValueError, "Column length does not fit Datastream"
         for idx, elem in enumerate(self):
             exec('elem.'+key+' = column[idx]')
-            
+
         return self
 
 
@@ -402,7 +402,7 @@ class DataStream(object):
                 exec('elem.'+key+' = float("NaN")')
             else:
                 exec('elem.'+key+' = "-"')
-                   
+
         return self
 
 
@@ -519,9 +519,9 @@ class DataStream(object):
         except:
             if debugmode:
                 loggerstream.debug('_AIC: could not evaluate AIC at index position %i' % (k))
-            pass               
+            pass
         return aicval
-        
+
     def _convertstream(self, coordinate, **kwargs):
         """
         Convert coordinates of x,y,z columns in stream
@@ -530,7 +530,7 @@ class DataStream(object):
         - xyz2idf
         - hdz2xyz
         - idf2xyz
-        
+
         """
         keep_header = kwargs.get('keep_header')
         outstream = DataStream()
@@ -568,7 +568,7 @@ class DataStream(object):
         minval = np.min(column)
         for elem in column:
             normcol.append((elem-minval)/(maxval-minval))
-            
+
         return normcol, minval, maxval
 
 
@@ -585,7 +585,7 @@ class DataStream(object):
                     normcol.append((elem*(endvalue-startvalue)) + startvalue)
         else:
             raise ValueError, "start and endval must be given as absolute times"
-            
+
         return normcol
 
     def _hf(self, p, x):
@@ -627,7 +627,7 @@ class DataStream(object):
         """
         Tests for NAN values in column and usually masks them
         """
-        
+
         try: # Test for the presence of nan values
             val = np.mean(column)
             numdat = True
@@ -677,7 +677,7 @@ class DataStream(object):
         newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
         return DataStream(newst,self.header)
 
-        
+
     def _is_number(self, s):
         """
         Test whether s is a number
@@ -708,17 +708,17 @@ class DataStream(object):
         :type timerange: timedelta object
         :param timerange: defines the length of the time window examined by the aic iteration
                         default: timedelta(hours=1)
-        :type aic2key: string 
+        :type aic2key: string
         :param aic2key: defines the key of the column where to save the aic values (default = var2)
         :type aicmin2key: string
         :param aicmin2key: defines the key of the column where to save the aic minimum val
                         default: key = var1
         :type aicminstack: bool
         :param aicminstack: if true, aicmin values are added to previously present column values
-                        
+
         Example:
-        
-        """ 
+
+        """
         timerange = kwargs.get('timerange')
         aic2key = kwargs.get('aic2key')
         aicmin2key = kwargs.get('aicmin2key')
@@ -797,19 +797,19 @@ class DataStream(object):
         2) No Absolte data for the beginning of the stream:
             -> like 2: Absolute data is extrapolated by duplicating the first entry at "extradays" offset or beginning o stream
             -> and info message is created, if timedifference exceeds the "extraday" arg then a warning will be send
-  
+
         keywords:
-        :type plotbaseline: bool 
-        :param plotbaseline: if true plot a baselineplot 
-        :type extradays: int 
+        :type plotbaseline: bool
+        :param plotbaseline: if true plot a baselineplot
+        :type extradays: int
         :param extradays: days to which the absolutedata is exteded prior and after start and endtime
-        :type plotfilename: string 
+        :type plotfilename: string
         :param plotfilename: if plotbaseline is selected, the outputplot is send to this file
         :type fitfunc: string
         :param fitfunc: see fit
-        :type fitdegree: int 
+        :type fitdegree: int
         :param fitdegree: see fit
-        :type knotstep: int 
+        :type knotstep: int
         :param knotstep: see fit
 
         stabilitytest (bool)
@@ -846,7 +846,7 @@ class DataStream(object):
         # 2) check whether enddate is within abs time range or larger:
         if not absolutestream[0].time-1 < endtime:
             loggerstream.warning("Baseline: Last measurement prior to beginning of absolute measurements ")
-            
+
         # 3) check time ranges of stream and absolute values:
         abst = absolutestream._get_column('time')
         if np.min(abst) > starttime:
@@ -854,13 +854,13 @@ class DataStream(object):
             #absolutestream.add(absolutestream[0])
             #absolutestream[-1].time = starttime
             #absolutestream.sorting()
-            loggerstream.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))         
+            loggerstream.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))
         if np.max(abst) < endtime:
             loggerstream.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
             if num2date(absolutestream[-1].time).replace(tzinfo=None) + timedelta(days=extradays) < num2date(endtime).replace(tzinfo=None):
                 usestepinbetween = True
                 loggerstream.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
-            
+
         endtime = num2date(endtime).replace(tzinfo=None)
         # 5) check whether an abolute measurement larger then 12-31 of the same year as enddate exists
         yearenddate = datetime.strftime(endtime,'%Y')
@@ -879,7 +879,7 @@ class DataStream(object):
 
         # now add the extradays to endtime
         baseendtime = baseendtime + timedelta(days=extradays)
-        
+
         # endtime for baseline calc determined
         if (np.max(abst) - np.min(abst)) < 365+2*extradays:
             loggerstream.info('Baseline: Coverage of absolute values does not reach one year')
@@ -922,7 +922,7 @@ class DataStream(object):
         else:
             return self
 
-    
+
     def date_offset(self, offset, **kwargs):
         """
         Corrects the time column of the selected stream by the offst
@@ -938,7 +938,7 @@ class DataStream(object):
             elem.time = date2num(newtime)
             newstream.add(elem)
 
-        
+
         loggerstream.info('Corrected time column by %s sec' % str(offset.seconds))
 
         return DataStream(newstream,header)
@@ -968,7 +968,7 @@ class DataStream(object):
             elem.df = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.f + offset)
 
         self.header['unit-col-df'] = 'nT'
-        
+
         loggerstream.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
 
         return self
@@ -983,7 +983,7 @@ class DataStream(object):
         keys: (list - default ['x','y','z','f'] provide limited key-list
         put2key
         """
-        
+
         loggerstream.info('--- Calculating derivative started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
@@ -1004,7 +1004,7 @@ class DataStream(object):
             # gradient is shifted towards +x (compensate that by a not really good trick)
             dvaltmp = dval[1:]
             ndval = np.append(dvaltmp,float('NaN'))
-            
+
             self._put_column(ndval, put2keys[i])
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
@@ -1016,22 +1016,22 @@ class DataStream(object):
         maybe combine with extract
 
         Required:
-        :type key: string 
+        :type key: string
         :param key: provide the key to be examined
-        :type values: list 
-        :param values: provide a list of three values 
-        :type values: list 
+        :type values: list
+        :param values: provide a list of three values
+        :type values: list
         :param values: provide a list of three values
         Optional:
-        :type compare: string 
-        :param compare: ">, <, ==, !="         
-        :type stringvalues: list 
-        :param stringvalues: provide a list of exactly the same length as values with the respective comments 
-        :type addcomment: bool 
+        :type compare: string
+        :param compare: ">, <, ==, !="
+        :type stringvalues: list
+        :param stringvalues: provide a list of exactly the same length as values with the respective comments
+        :type addcomment: bool
         :param addcomment: if true add the stringvalues to the comment line of the datastream
-        
-        :type debugmode: bool 
-        :param debugmode: provide more information 
+
+        :type debugmode: bool
+        :param debugmode: provide more information
 
         example:
         compare is string like ">, <, ==, !="
@@ -1043,7 +1043,7 @@ class DataStream(object):
             compare = '=='
         if not compare in ['<','>','<=','>=','==','!=']:
             loggerstream.warning('Eventlogger: wrong value for compare: needs to be among <,>,<=,>=,==,!=')
-            return self                                 
+            return self
         if not stringvalues:
             stringvalues = ['Minor storm onset','Moderate storm onset','Major storm onset']
         else:
@@ -1051,7 +1051,7 @@ class DataStream(object):
         if not len(stringvalues) == len(values):
             loggerstream.warning('Eventlogger: Provided comments do not match amount of values')
             return self
-       
+
         for elem in self:
             #evaluationstring = 'elem.' + key + ' ' + compare + ' ' + str(values[0])
             if eval('elem.'+key+' '+compare+' '+str(values[2])):
@@ -1077,7 +1077,7 @@ class DataStream(object):
                         elem.comment += ', ' + stringvalues[0]
 
         return self
-        
+
 
     def extract(self, key, value, compare=None, debugmode=None):
         """
@@ -1100,7 +1100,7 @@ class DataStream(object):
             too = str(value)
         liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + too)]
 
-        return DataStream(liste,self.header)    
+        return DataStream(liste,self.header)
 
 
     def extrapolate(self, start, end):
@@ -1134,9 +1134,9 @@ class DataStream(object):
         self.add(line)
         self = self.sorting()
 
-        return self       
+        return self
 
-        
+
     def fit(self, keys, **kwargs):
         """
         fitting data:
@@ -1146,7 +1146,7 @@ class DataStream(object):
             - timerange (timedelta obsject) default=timedelta(hours=1)
             - fitdegree (float)  default=5
             - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
-            - flag 
+            - flag
         """
         # Defaults:
         fitfunc = kwargs.get('fitfunc')
@@ -1163,7 +1163,7 @@ class DataStream(object):
             raise ValueError, "Knotstep needs to be smaller than 0.5"
 
         functionkeylist = {}
-        
+
         for key in keys:
             tmpst = self._drop_nans(key)
             t = tmpst._get_column('time')
@@ -1308,7 +1308,7 @@ class DataStream(object):
         resdata = DataStream()
         #uplim = nr_lines
         lowlim = 0
-        i = 0    
+        i = 0
         # open while loop with currentdata
         while ((currtime + trange - tdiff) <= num2date(starray[-1].time).replace(tzinfo=None)+tdiff):
             # a) select lower bound
@@ -1372,11 +1372,11 @@ class DataStream(object):
                 else:
                     loggerstream.warning("FilterFunc: Filter not recognized - aborting filering")
                 resrow.typ = starray[0].typ
-            else: # in case of removed flagged sequences - add time and leave "NaN" value in file 
+            else: # in case of removed flagged sequences - add time and leave "NaN" value in file
                 resrow.time = abscurrtime
 
             resdata.add(resrow)
-            
+
             # e) increase counter
             currtime += filter_width
             if filter_type == "fmi":
@@ -1395,10 +1395,10 @@ class DataStream(object):
         #self.header['DigitalSamplingWidth'] = str(trange.seconds)+' sec'
         self.header['DataSamplingFilter'] = filter_type + str(filter_width.seconds)+' sec'
         #self.header['DataInterval'] = str(filter_width.seconds)+' sec'
-        
+
         loggerstream.info(' --- Finished filtering at %s' % str(datetime.now()))
 
-        return DataStream(resdata,self.header)      
+        return DataStream(resdata,self.header)
 
 
     def find_mean_var(self, key):
@@ -1434,11 +1434,11 @@ class DataStream(object):
         optional:
         enddate: the enddate of a time range to be flagged in a identical way
         """
-        
+
         if not key in KEYLIST:
             raise ValueError, "Wrong Key"
         if not flag in [0,1,2,3,4]:
-            raise ValueError, "Wrong Flag"            
+            raise ValueError, "Wrong Flag"
 
         startdate = self._testtime(startdate)
 
@@ -1462,13 +1462,13 @@ class DataStream(object):
             else:
                 loggerstream.info("Removed data at %s -> (%s)" % (startdate.isoformat(),comment))
         return self
-            
-        
+
+
     def func_add(self,function,**kwargs):
         """
         Add a function to the selected values of the data stream -> e.g. get baseline
         Optional:
-        keys (default = 'x','y','z')        
+        keys (default = 'x','y','z')
         """
         keys = kwargs.get('keys')
         if not keys:
@@ -1495,7 +1495,7 @@ class DataStream(object):
                 pass
 
         return self
-                    
+
 
     def func_subtract(self,function,**kwargs):
         """
@@ -1510,7 +1510,7 @@ class DataStream(object):
 
         if not order:
             order = 0
-        
+
         if not keys:
             keys = ['x','y','z']
 
@@ -1528,7 +1528,7 @@ class DataStream(object):
                             if order == 0:
                                 newval = keyval - function[0][fkey](functime)
                             else:
-                                newval = function[0][fkey](functime) - keyval                              
+                                newval = function[0][fkey](functime) - keyval
                         except:
                             newval = float('nan')
                         exec('elem.'+key+' = newval')
@@ -1552,12 +1552,12 @@ class DataStream(object):
 
         if key in KEYLIST:
             gapvariable = True
-            
+
         if not accuracy:
             accuracy = 1.0/(3600.0*24.0) # one second relative to day
 
         sp = self.get_sampling_period()
-        
+
         loggerstream.info('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
 
         header = self.header
@@ -1586,14 +1586,14 @@ class DataStream(object):
             prevtime = elem.time
 
         loggerstream.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
-                
+
         return DataStream(stream,header)
 
 
     def get_sampling_period(self):
         """
         returns the dominant sampling frequency in unit ! days !
-        
+
         for time savings, this function is only testing the first 1000 elements
         """
         timedifflist = [[0,0]]
@@ -1638,7 +1638,7 @@ class DataStream(object):
         optional:
         keys: (list - default ['x','y','z','f'] provide limited key-list
         """
-        
+
 
         loggerstream.info('--- Integrating started at %s ' % str(datetime.now()))
 
@@ -1664,13 +1664,13 @@ class DataStream(object):
             - timerange (timedelta obsject) default=timedelta(hours=1)
             - fitdegree (float)  default=4
             - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
-            - flag 
+            - flag
         """
         t = self._get_column('time')
         nt,sv,ev = self._normalize(t)
         sp = self.get_sampling_period()
         functionkeylist = {}
-        
+
         for key in keys:
             if not key in KEYLIST[1:16]:
                 raise ValueError, "Column key not valid"
@@ -1687,11 +1687,11 @@ class DataStream(object):
                 exec('functionkeylist["f'+key+'"] = f'+key)
             else:
                 pass
-            
+
         func = [functionkeylist, sv, ev]
 
         return func
-        
+
     def k_fmi(self, **kwargs):
         """
         Calculating k values following the fmi approach:
@@ -1699,7 +1699,7 @@ class DataStream(object):
             - timerange (timedelta obsject) default=timedelta(hours=1)
             - fitdegree (float)  default=4
             - knotstep (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
-            - flag 
+            - flag
         """
         fitfunc = kwargs.get('fitfunc')
         put2key = kwargs.get('put2key')
@@ -1714,7 +1714,7 @@ class DataStream(object):
             m_fmi = 0
         if not put2key:
             put2key = 't2'
-        
+
         stream = DataStream()
         # extract daily streams/24h slices from input
         iprev = 0
@@ -1750,7 +1750,7 @@ class DataStream(object):
             fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
         if samprate == 60:
             fmi1stream = fmistream.filtered(filter_type='linear',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30))
-         
+
         fmi2stream = fmistream.filtered(filter_type='fmi',filter_width=timedelta(minutes=60),filter_offset=timedelta(minutes=30),fmi_initial_data=fmi1stream,m_fmi=m_fmi)
 
         loggerstream.info('--- -- k value: finished initial filtering at %s ' % (str(datetime.now())))
@@ -1778,7 +1778,7 @@ class DataStream(object):
         outstream = mergeStreams(self,fmi4stream,keys=[put2key])
 
         loggerstream.info('--- finished k value calculation: %s ' % (str(datetime.now())))
-        
+
         return DataStream(outstream, self.header)
 
     def mean(self, key, **kwargs):
@@ -1786,11 +1786,11 @@ class DataStream(object):
         Calculates mean values for the specified key, Nan's are regarded for.
         Means are only calculated if more then "amount" in percent are non-nan's
         Returns a float if successful or NaN.
-        :type percentage: int 
-        :param percentage: Define required percentage of non-nan values, if not met that nan will be returned. Default is 95 (%) 
-        :type meanfunction: string 
-        :param meanfunction: accepts 'mean' and 'median'. Default is 'mean' 
-        
+        :type percentage: int
+        :param percentage: Define required percentage of non-nan values, if not met that nan will be returned. Default is 95 (%)
+        :type meanfunction: string
+        :param meanfunction: accepts 'mean' and 'median'. Default is 'mean'
+
         Example:
         meanx = datastream.mean('x',meanfunction='median',percentage=90)
         """
@@ -1839,9 +1839,9 @@ class DataStream(object):
                     newval = [elem + offsets[key] for elem in val]
                     loggerstream.info('Offset function: Corrected column %s by %.3f' % (key, offsets[key]))
                 self = self._put_column(newval, key)
-    
+
         return self
-                            
+
 
     def plot(self, keys, debugmode=None, **kwargs):
         """
@@ -1852,8 +1852,8 @@ class DataStream(object):
         colorlist (list - default []): provide a ordered color list of type ['b','g'],....
         errorbar: (boolean - default False) plot dx,dy,dz,df values if True
         symbol: (string - default '-') symbol for primary plot
-        symbol_func: (string - default '-') symbol of function plot 
-        savefigure: (string - default None) if provided a copy of the plot is saved to savefilename.png 
+        symbol_func: (string - default '-') symbol of function plot
+        savefigure: (string - default None) if provided a copy of the plot is saved to savefilename.png
         outfile: strign to save the figure, if path is not existing it will be created
         fmt: format of outfile
         savedpi: integer resolution
@@ -1861,15 +1861,15 @@ class DataStream(object):
         annote: bool - annotate data using comments
         padding: (integer - default 0) Value to add to the max-min data for adjusting y-scales
                  maybe change that to a relative padding depending on data values
-        :type bgcolor: string 
-        :param bgcolor: Define background color e.g. '0.5' greyscale, 'r' red, etc 
-        :type gridcolor: string 
-        :param gridcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc 
-        :type labelcolor: string 
-        :param labelcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc 
-        :type grid: bool 
-        :param grid: show grid or not, default = True 
-        :type specialdict: dictionary 
+        :type bgcolor: string
+        :param bgcolor: Define background color e.g. '0.5' greyscale, 'r' red, etc
+        :type gridcolor: string
+        :param gridcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc
+        :type labelcolor: string
+        :param labelcolor: Define grid color e.g. '0.5' greyscale, 'r' red, etc
+        :type grid: bool
+        :param grid: show grid or not, default = True
+        :type specialdict: dictionary
         :param specialdict: contains special information for specific plots. key
                       key corresponds to the column
                       input is a list with the following parameters
@@ -1880,7 +1880,7 @@ class DataStream(object):
                       bgcolor
                       grid
                       gridcolor
-                      
+
 
             from magpy_stream import *
             st = read()
@@ -1961,7 +1961,7 @@ class DataStream(object):
                 print "column extracted at %s" % datetime.utcnow()
             if plottype == 'discontinuous':
                 yplt = self._maskNAN(yplt)
-            else: 
+            else:
                 nans, test = self._nan_helper(yplt)
                 newt = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
                 t = newt
@@ -2032,7 +2032,7 @@ class DataStream(object):
                     setp(ax.get_xticklabels(), visible=False)
                 else:
                     ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
-                
+
                 # Create plots
                 ymin = np.min(yplt)-padding
                 ymax = np.max(yplt)+padding
@@ -2054,7 +2054,7 @@ class DataStream(object):
                     ax.plot_date(t,yplt,colorlist[count-1]+symbollist[count-1])
                 if errorbar:
                     yerr = self._get_column('d'+key)
-                    if len(yerr) > 0: 
+                    if len(yerr) > 0:
                         ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
                     else:
                         loggerstream.warning(' -- Errorbars (d%s) not found for key %s' % (key, key))
@@ -2094,7 +2094,7 @@ class DataStream(object):
                     except:
                         if debugmode:
                             loggerstream.debug('PmPlot: shown column beyong flagging range: assuming flag of column 0 (= time)')
-                        
+
                 if function:
                     fkey = 'f'+key
                     if fkey in function[0]:
@@ -2115,16 +2115,16 @@ class DataStream(object):
                 except:
                     yunit = ''
                     pass
-                if not yunit == '': 
+                if not yunit == '':
                     yunit = re.sub('[#$%&~_^\{}]', '', yunit)
                     label = ylabel+' $['+yunit+']$'
                 else:
                     label = ylabel
                 ax.set_ylabel(label, color=labelcolor)
-                
+
                 ax.set_ylim(ymin,ymax)
                 ax.get_yaxis().set_major_formatter(myyfmt)
-                if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993 
+                if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993
                     ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
                 if debugmode:
                     print "Finished plot %d at %s" % (count, datetime.utcnow())
@@ -2137,14 +2137,14 @@ class DataStream(object):
             path = os.path.split(outfile)[0]
             if not os.path.exists(path):
                 os.makedirs(path)
-            if fmt: 
-                fig.savefig(outfile, format=fmt, dpi=savedpi) 
-            else: 
-                fig.savefig(outfile, dpi=savedpi) 
-        elif noshow: 
+            if fmt:
+                fig.savefig(outfile, format=fmt, dpi=savedpi)
+            else:
+                fig.savefig(outfile, dpi=savedpi)
+        elif noshow:
             return fig
-        else: 
-            plt.show() 
+        else:
+            plt.show()
 
 
     def write(self, filepath, **kwargs):
@@ -2171,7 +2171,7 @@ class DataStream(object):
         offsets = kwargs.get('offsets')
         createlatex = kwargs.get('createlatex')
         keys = kwargs.get('keys')
-        
+
         if not format_type:
             format_type = 'PYSTR'
         if not format_type in PYMAG_SUPPORTED_FORMATS:
@@ -2196,7 +2196,7 @@ class DataStream(object):
         if len(self) < 1:
             loggerstream.info('Write: zero length of stream ')
             return
-            
+
         # divide stream in parts according to coverage and save them
         newst = DataStream()
         if coverage == 'month':
@@ -2239,7 +2239,7 @@ class DataStream(object):
             writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys)
 
         return True
-    
+
 
     def remove_flagged(self, **kwargs):
         """
@@ -2249,7 +2249,7 @@ class DataStream(object):
             - keys (string e.g. 'f') default=FLAGKEYLIST
         flag = '000' or '010' etc
         """
-        
+
         # Defaults:
         flaglist = kwargs.get('flaglist')
         keys = kwargs.get('keys')
@@ -2277,7 +2277,7 @@ class DataStream(object):
                     liste.append(elem)
 
         #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
-        return DataStream(liste, self.header)      
+        return DataStream(liste, self.header)
 
 
     def rotation(self,**kwargs):
@@ -2286,8 +2286,8 @@ class DataStream(object):
         alpha is the horizontal rotation in degree,
         beta the vertical
         """
-        
-        
+
+
         unit = kwargs.get('unit')
         alpha = kwargs.get('alpha')
         beta = kwargs.get('beta')
@@ -2364,13 +2364,13 @@ class DataStream(object):
         # f (intensity): pos 0
         # x,y,z (vector): pos 1
         # other (vector): pos 2
-        
+
         loggerstream.info('--- Starting outlier removal at %s ' % (str(datetime.now())))
 
         if len(self) < 1:
             loggerstream.info('--- No data - Stopping outlier removal at %s ' % (str(datetime.now())))
             return self
-        
+
         # Start here with for key in keys:
         for key in keys:
             poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
@@ -2380,7 +2380,7 @@ class DataStream(object):
             et = self._get_max('time')
             at = date2num((num2date(st).replace(tzinfo=None)) + timerange)
             incrt = at-st
-            
+
 
             arraytime = self._get_column('time')
 
@@ -2395,7 +2395,7 @@ class DataStream(object):
 
                 lstpart = self[idxst:idxat]
                 selcol = [eval('row.'+key) for row in lstpart]
-                
+
                 try:
                     q1 = stats.scoreatpercentile(selcol,25)
                     q3 = stats.scoreatpercentile(selcol,75)
@@ -2404,7 +2404,7 @@ class DataStream(object):
                     whisker = threshold*iqd
                 except:
                     try:
-                        md = np.median(selcol) 
+                        md = np.median(selcol)
                         whisker = md*0.005
                     except:
                         loggerstream.warning("Eliminate outliers produced a problem: please check\n")
@@ -2428,38 +2428,38 @@ class DataStream(object):
 
         loggerstream.info('--- Outlier removal finished at %s ' % str(datetime.now()))
 
-        return DataStream(newst, self.header)        
+        return DataStream(newst, self.header)
 
 
     def smooth(self, keys, **kwargs):
         """smooth the data using a window with requested size.
         (taken from Cookbook/Signal Smooth)
         This method is based on the convolution of a scaled window with the signal.
-        The signal is prepared by introducing reflected copies of the signal 
+        The signal is prepared by introducing reflected copies of the signal
         (with the window size) in both ends so that transient parts are minimized
         in the begining and end part of the output signal.
-        
+
         input:
-            x: the input signal 
+            x: the input signal
             window_len: the dimension of the smoothing window; should be an odd integer
             window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
                 flat window will produce a moving average smoothing.
 
         output:
             the smoothed signal
-            
+
         example:
 
         t=linspace(-2,2,0.1)
         x=sin(t)+randn(len(t))*0.1
         y=smooth(x)
-        
-        see also: 
-        
+
+        see also:
+
         numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
         scipy.signal.lfilter
-     
-        TODO: the window parameter could be the window itself if an array instead of a string   
+
+        TODO: the window parameter could be the window itself if an array instead of a string
         """
         # Defaults:
         window_len = kwargs.get('window_len')
@@ -2469,7 +2469,7 @@ class DataStream(object):
         if not window:
             window='hanning'
 
-        
+
         loggerstream.info(' --- Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
 
         for key in keys:
@@ -2499,20 +2499,20 @@ class DataStream(object):
             self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
 
         loggerstream.info(' --- Finished smoothing at %s' % (str(datetime.now())))
-        
+
         return self
 
 
-    def spectrogram(self, keys, per_lap=0.9, wlen=None, log=False, 
-                    outfile=None, fmt=None, axes=None, dbscale=False, 
-                    mult=8.0, cmap=None, zorder=None, title=None, show=True, 
+    def spectrogram(self, keys, per_lap=0.9, wlen=None, log=False,
+                    outfile=None, fmt=None, axes=None, dbscale=False,
+                    mult=8.0, cmap=None, zorder=None, title=None, show=True,
                     sphinx=False, clip=[0.0, 1.0], **kwargs):
         """
         Creates a spectrogram plot of selected keys.
         Parameter description at function obspyspectrogram
 
         keywords:
-        samp_rate_multiplicator: to change the frequency relative to one day (default value is Hz - 24*3600) 
+        samp_rate_multiplicator: to change the frequency relative to one day (default value is Hz - 24*3600)
         samp_rate_multiplicator : sampling rate give as days -> multiplied by x to create Hz, etc: default 24, which means 1/3600 Hz
         """
         samp_rate_multiplicator = kwargs.get('samp_rate_multiplicator')
@@ -2527,9 +2527,9 @@ class DataStream(object):
             val = self._maskNAN(val)
             dt = self.get_sampling_period()*(samp_rate_multiplicator)
             Fs = float(1.0/dt)
-            self.obspyspectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log, 
-                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale, 
-                    mult=mult, cmap=cmap, zorder=zorder, title=title, show=show, 
+            self.obspyspectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log,
+                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale,
+                    mult=mult, cmap=cmap, zorder=zorder, title=title, show=show,
                     sphinx=sphinx, clip=clip)
 
 
@@ -2566,30 +2566,30 @@ class DataStream(object):
         s = s[1:]
         ps = np.real(s*np.conjugate(s))
 
-        if not axes: 
-            fig = plt.figure() 
-            ax = fig.add_subplot(111) 
-        else: 
-            ax = axes 
+        if not axes:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes
 
         ax.loglog(freq,ps,'r-')
 
-        ax.set_xlabel('Frequency [Hz]') 
-        ax.set_ylabel('PSD') 
-        if title: 
+        ax.set_xlabel('Frequency [Hz]')
+        ax.set_ylabel('PSD')
+        if title:
             ax.set_title(title)
 
         if debugmode:
             print "Finished powerspectrum at %s" % datetime.utcnow()
 
-        if outfile: 
-            if fmt: 
-                fig.savefig(outfile, format=fmt) 
-            else: 
-                fig.savefig(outfile) 
-        elif show: 
-            plt.show() 
-        else: 
+        if outfile:
+            if fmt:
+                fig.savefig(outfile, format=fmt)
+            else:
+                fig.savefig(outfile)
+        elif show:
+            plt.show()
+        else:
             return fig
 
         return freq, ps
@@ -2634,7 +2634,7 @@ class DataStream(object):
             if stval < 0:
                 stval = 0
             self.container = self.container[stval:]
-       
+
         # remove data prior to endtime input
         if endtime:
             # check endtime input
@@ -2665,207 +2665,207 @@ class DataStream(object):
         return DataStream(self.container,self.header)
 
 
-    def _nearestPow2(self, x): 
+    def _nearestPow2(self, x):
         """
         Function taken from ObsPy
-        Find power of two nearest to x 
-        >>> _nearestPow2(3) 
-        2.0 
-        >>> _nearestPow2(15) 
-        16.0 
-        :type x: Float 
-        :param x: Number 
-        :rtype: Int 
-        :return: Nearest power of 2 to x 
-        """ 
+        Find power of two nearest to x
+        >>> _nearestPow2(3)
+        2.0
+        >>> _nearestPow2(15)
+        16.0
+        :type x: Float
+        :param x: Number
+        :rtype: Int
+        :return: Nearest power of 2 to x
+        """
 
-        a = pow(2, ceil(np.log2(x))) 
-        b = pow(2, floor(np.log2(x))) 
-        if abs(a - x) < abs(b - x): 
-            return a 
-        else: 
-            return b 
+        a = pow(2, ceil(np.log2(x)))
+        b = pow(2, floor(np.log2(x)))
+        if abs(a - x) < abs(b - x):
+            return a
+        else:
+            return b
 
-    def obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False, 
-                    outfile=None, fmt=None, axes=None, dbscale=False, 
-                    mult=8.0, cmap=None, zorder=None, title=None, show=True, 
-                    sphinx=False, clip=[0.0, 1.0]): 
+    def obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False,
+                    outfile=None, fmt=None, axes=None, dbscale=False,
+                    mult=8.0, cmap=None, zorder=None, title=None, show=True,
+                    sphinx=False, clip=[0.0, 1.0]):
 
         """
         Function taken from ObsPy
-        Computes and plots spectrogram of the input data. 
-        :param data: Input data 
-        :type samp_rate: float 
-        :param samp_rate: Samplerate in Hz 
-        :type per_lap: float 
-        :param per_lap: Percentage of overlap of sliding window, ranging from 0 
-            to 1. High overlaps take a long time to compute. 
-        :type wlen: int or float 
-        :param wlen: Window length for fft in seconds. If this parameter is too 
-            small, the calculation will take forever. 
-        :type log: bool 
-        :param log: Logarithmic frequency axis if True, linear frequency axis 
-            otherwise. 
-        :type outfile: String 
-        :param outfile: String for the filename of output file, if None 
-            interactive plotting is activated. 
-        :type fmt: String 
-        :param fmt: Format of image to save 
-        :type axes: :class:`matplotlib.axes.Axes` 
-        :param axes: Plot into given axes, this deactivates the fmt and 
-            outfile option. 
-        :type dbscale: bool 
-        :param dbscale: If True 10 * log10 of color values is taken, if False the 
-            sqrt is taken. 
-        :type mult: float 
-        :param mult: Pad zeros to lengh mult * wlen. This will make the spectrogram 
-            smoother. Available for matplotlib > 0.99.0. 
-        :type cmap: :class:`matplotlib.colors.Colormap` 
-        :param cmap: Specify a custom colormap instance 
-        :type zorder: float 
-        :param zorder: Specify the zorder of the plot. Only of importance if other 
-            plots in the same axes are executed. 
-        :type title: String 
-        :param title: Set the plot title 
-        :type show: bool 
-        :param show: Do not call `plt.show()` at end of routine. That way, further 
-            modifications can be done to the figure before showing it. 
-        :type sphinx: bool 
-        :param sphinx: Internal flag used for API doc generation, default False 
-        :type clip: [float, float] 
-        :param clip: adjust colormap to clip at lower and/or upper end. The given 
-            percentages of the amplitude range (linear or logarithmic depending 
-            on option `dbscale`) are clipped. 
-        """ 
+        Computes and plots spectrogram of the input data.
+        :param data: Input data
+        :type samp_rate: float
+        :param samp_rate: Samplerate in Hz
+        :type per_lap: float
+        :param per_lap: Percentage of overlap of sliding window, ranging from 0
+            to 1. High overlaps take a long time to compute.
+        :type wlen: int or float
+        :param wlen: Window length for fft in seconds. If this parameter is too
+            small, the calculation will take forever.
+        :type log: bool
+        :param log: Logarithmic frequency axis if True, linear frequency axis
+            otherwise.
+        :type outfile: String
+        :param outfile: String for the filename of output file, if None
+            interactive plotting is activated.
+        :type fmt: String
+        :param fmt: Format of image to save
+        :type axes: :class:`matplotlib.axes.Axes`
+        :param axes: Plot into given axes, this deactivates the fmt and
+            outfile option.
+        :type dbscale: bool
+        :param dbscale: If True 10 * log10 of color values is taken, if False the
+            sqrt is taken.
+        :type mult: float
+        :param mult: Pad zeros to lengh mult * wlen. This will make the spectrogram
+            smoother. Available for matplotlib > 0.99.0.
+        :type cmap: :class:`matplotlib.colors.Colormap`
+        :param cmap: Specify a custom colormap instance
+        :type zorder: float
+        :param zorder: Specify the zorder of the plot. Only of importance if other
+            plots in the same axes are executed.
+        :type title: String
+        :param title: Set the plot title
+        :type show: bool
+        :param show: Do not call `plt.show()` at end of routine. That way, further
+            modifications can be done to the figure before showing it.
+        :type sphinx: bool
+        :param sphinx: Internal flag used for API doc generation, default False
+        :type clip: [float, float]
+        :param clip: adjust colormap to clip at lower and/or upper end. The given
+            percentages of the amplitude range (linear or logarithmic depending
+            on option `dbscale`) are clipped.
+        """
 
         # enforce float for samp_rate
-        samp_rate = float(samp_rate) 
+        samp_rate = float(samp_rate)
 
-        # set wlen from samp_rate if not specified otherwise 
-        if not wlen: 
-            wlen = samp_rate / 100. 
+        # set wlen from samp_rate if not specified otherwise
+        if not wlen:
+            wlen = samp_rate / 100.
 
-        npts = len(data) 
+        npts = len(data)
 
-        # nfft needs to be an integer, otherwise a deprecation will be raised 
-        #XXX add condition for too many windows => calculation takes for ever 
+        # nfft needs to be an integer, otherwise a deprecation will be raised
+        #XXX add condition for too many windows => calculation takes for ever
         nfft = int(self._nearestPow2(wlen * samp_rate))
 
-        if nfft > npts: 
-            nfft = int(self._nearestPow2(npts / 8.0)) 
+        if nfft > npts:
+            nfft = int(self._nearestPow2(npts / 8.0))
 
-        if mult != None: 
-            mult = int(self._nearestPow2(mult)) 
-            mult = mult * nfft 
+        if mult != None:
+            mult = int(self._nearestPow2(mult))
+            mult = mult * nfft
 
-        nlap = int(nfft * float(per_lap)) 
+        nlap = int(nfft * float(per_lap))
 
-        data = data - data.mean() 
-        end = npts / samp_rate 
+        data = data - data.mean()
+        end = npts / samp_rate
 
-        # Here we call not plt.specgram as this already produces a plot 
-        # matplotlib.mlab.specgram should be faster as it computes only the 
-        # arrays 
-        # XXX mlab.specgram uses fft, would be better and faster use rfft 
+        # Here we call not plt.specgram as this already produces a plot
+        # matplotlib.mlab.specgram should be faster as it computes only the
+        # arrays
+        # XXX mlab.specgram uses fft, would be better and faster use rfft
 
-        if MATPLOTLIB_VERSION >= [0, 99, 0]: 
-            specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft, 
-                                                  pad_to=mult, noverlap=nlap) 
-        else: 
-            specgram, freq, time = mlab.specgram(data, Fs=samp_rate, 
-                                                    NFFT=nfft, noverlap=nlap) 
+        if MATPLOTLIB_VERSION >= [0, 99, 0]:
+            specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft,
+                                                  pad_to=mult, noverlap=nlap)
+        else:
+            specgram, freq, time = mlab.specgram(data, Fs=samp_rate,
+                                                    NFFT=nfft, noverlap=nlap)
 
-        # db scale and remove zero/offset for amplitude 
-        if dbscale: 
-            specgram = 10 * np.log10(specgram[1:, :]) 
-        else: 
-            specgram = np.sqrt(specgram[1:, :]) 
+        # db scale and remove zero/offset for amplitude
+        if dbscale:
+            specgram = 10 * np.log10(specgram[1:, :])
+        else:
+            specgram = np.sqrt(specgram[1:, :])
 
-        freq = freq[1:] 
+        freq = freq[1:]
 
-        vmin, vmax = clip 
+        vmin, vmax = clip
 
-        if vmin < 0 or vmax > 1 or vmin >= vmax: 
-            msg = "Invalid parameters for clip option." 
-            raise ValueError(msg) 
+        if vmin < 0 or vmax > 1 or vmin >= vmax:
+            msg = "Invalid parameters for clip option."
+            raise ValueError(msg)
 
-        _range = float(specgram.max() - specgram.min()) 
-        vmin = specgram.min() + vmin * _range 
-        vmax = specgram.min() + vmax * _range 
-        norm = Normalize(vmin, vmax, clip=True) 
+        _range = float(specgram.max() - specgram.min())
+        vmin = specgram.min() + vmin * _range
+        vmax = specgram.min() + vmax * _range
+        norm = Normalize(vmin, vmax, clip=True)
 
-        if not axes: 
-            fig = plt.figure() 
-            ax = fig.add_subplot(111) 
-        else: 
-            ax = axes 
+        if not axes:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+        else:
+            ax = axes
 
-        # calculate half bin width 
-        halfbin_time = (time[1] - time[0]) / 2.0 
-        halfbin_freq = (freq[1] - freq[0]) / 2.0 
+        # calculate half bin width
+        halfbin_time = (time[1] - time[0]) / 2.0
+        halfbin_freq = (freq[1] - freq[0]) / 2.0
 
-        if log: 
-            # pcolor expects one bin more at the right end 
-            freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq])) 
-            time = np.concatenate((time, [time[-1] + 2 * halfbin_time])) 
-            # center bin 
-            time -= halfbin_time 
-            freq -= halfbin_freq 
-            # pcolormesh issue was fixed in matplotlib r5716 (2008-07-07) 
-            # inbetween tags 0.98.2 and 0.98.3 
+        if log:
+            # pcolor expects one bin more at the right end
+            freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
+            time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
+            # center bin
+            time -= halfbin_time
+            freq -= halfbin_freq
+            # pcolormesh issue was fixed in matplotlib r5716 (2008-07-07)
+            # inbetween tags 0.98.2 and 0.98.3
             # see:
-            #  - http://matplotlib.svn.sourceforge.net/viewvc/... 
-            #    matplotlib?revision=5716&view=revision 
-            #  - http://matplotlib.sourceforge.net/_static/CHANGELOG 
+            #  - http://matplotlib.svn.sourceforge.net/viewvc/...
+            #    matplotlib?revision=5716&view=revision
+            #  - http://matplotlib.sourceforge.net/_static/CHANGELOG
 
-            if MATPLOTLIB_VERSION >= [0, 98, 3]: 
-                # Log scaling for frequency values (y-axis) 
-                ax.set_yscale('log') 
-                # Plot times 
-                ax.pcolormesh(time, freq, specgram, cmap=cmap, zorder=zorder, 
-                              norm=norm) 
-            else: 
-                X, Y = np.meshgrid(time, freq) 
-                ax.pcolor(X, Y, specgram, cmap=cmap, zorder=zorder, norm=norm) 
-                ax.semilogy() 
-        else: 
-            # this method is much much faster! 
-            specgram = np.flipud(specgram) 
-            # center bin 
+            if MATPLOTLIB_VERSION >= [0, 98, 3]:
+                # Log scaling for frequency values (y-axis)
+                ax.set_yscale('log')
+                # Plot times
+                ax.pcolormesh(time, freq, specgram, cmap=cmap, zorder=zorder,
+                              norm=norm)
+            else:
+                X, Y = np.meshgrid(time, freq)
+                ax.pcolor(X, Y, specgram, cmap=cmap, zorder=zorder, norm=norm)
+                ax.semilogy()
+        else:
+            # this method is much much faster!
+            specgram = np.flipud(specgram)
+            # center bin
             extent = (time[0] - halfbin_time, time[-1] + halfbin_time,
-                      freq[0] - halfbin_freq, freq[-1] + halfbin_freq) 
-            ax.imshow(specgram, interpolation="nearest", extent=extent, 
-                      cmap=cmap, zorder=zorder) 
+                      freq[0] - halfbin_freq, freq[-1] + halfbin_freq)
+            ax.imshow(specgram, interpolation="nearest", extent=extent,
+                      cmap=cmap, zorder=zorder)
 
-        # set correct way of axis, whitespace before and after with window 
-        # length 
-        ax.axis('tight') 
-        ax.set_xlim(0, end) 
-        ax.grid(False) 
+        # set correct way of axis, whitespace before and after with window
+        # length
+        ax.axis('tight')
+        ax.set_xlim(0, end)
+        ax.grid(False)
 
-        if axes: 
-            return ax 
+        if axes:
+            return ax
 
-        ax.set_xlabel('Time [s]') 
-        ax.set_ylabel('Frequency [Hz]') 
-        if title: 
+        ax.set_xlabel('Time [s]')
+        ax.set_ylabel('Frequency [Hz]')
+        if title:
             ax.set_title(title)
-            
-        if not sphinx: 
-            # ignoring all NumPy warnings during plot 
-            temp = np.geterr() 
-            np.seterr(all='ignore') 
-            plt.draw() 
-            np.seterr(**temp) 
 
-        if outfile: 
-            if fmt: 
-                fig.savefig(outfile, format=fmt) 
-            else: 
-                fig.savefig(outfile) 
-        elif show: 
-            plt.show() 
-        else: 
+        if not sphinx:
+            # ignoring all NumPy warnings during plot
+            temp = np.geterr()
+            np.seterr(all='ignore')
+            plt.draw()
+            np.seterr(**temp)
+
+        if outfile:
+            if fmt:
+                fig.savefig(outfile, format=fmt)
+            else:
+                fig.savefig(outfile)
+        elif show:
+            plt.show()
+        else:
             return fig
 
 
@@ -2950,7 +2950,7 @@ class PyMagLog(object):
         text_subtype = 'plain'
 
         content = '\n'.join(''.join(line) for line in loglist)
-        
+
         try:
             msg = MIMEText(content, text_subtype)
             msg['Subject']= subject
@@ -2979,7 +2979,7 @@ class PyMagLog(object):
         return comlst
 
 
-    
+
 class LineStruct(object):
     def __init__(self, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
         """
@@ -3009,7 +3009,7 @@ class LineStruct(object):
         self.comment = comment
         self.typ = typ
         self.sectime = sectime
-        
+
     def __repr__(self):
         return repr((self.time, self.x, self.y, self.z, self.f, self.dx, self.dy, self.dz, self.df, self.t1, self.t2, self.var1, self.var2, self.var3, self.var4, self.var5, self.str1, self.str2, self.str3, self.str4, self.flag, self.comment, self.typ))
 
@@ -3108,7 +3108,7 @@ class LineStruct(object):
         elif unit == 'rad':
             ang_fac = np.pi/180.
         else:
-            ang_fac = 1.    
+            ang_fac = 1.
         ra = ni.pi*alpha/(180.*ang_fac)
         rb = ni.pi*beta/(180.*ang_fac)
         xs = self.x*np.cos(rb)*np.cos(ra)-self.y*np.sin(ra)+self.z*np.sin(rb)*np.cos(ra)
@@ -3127,12 +3127,12 @@ class LineStruct(object):
 class ColStruct(object):
     def __init__(self,length, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
         """
-        Not used so far. Maybe useful for 
+        Not used so far. Maybe useful for
         Speed optimization:
         Change the whole thing to column operations
 
         - at the end of flag is important to be recognized as string
-        for column initialization use a length parameter and "lenght*[float('nan')]" or "lenght*['-']"to initialize nan-values 
+        for column initialization use a length parameter and "lenght*[float('nan')]" or "lenght*['-']"to initialize nan-values
         """
         self.length = length
         self.time = length*[time]
@@ -3159,7 +3159,7 @@ class ColStruct(object):
         self.comment = length*[comment]
         self.typ = length*[typ]
         self.sectime = length*[sectime]
-        
+
     def __repr__(self):
         return repr((self.time, self.x, self.y, self.z, self.f, self.dx, self.dy, self.dz, self.df, self.t1, self.t2, self.var1, self.var2, self.var3, self.var4, self.var5, self.str1, self.str2, self.str3, self.str4, self.flag, self.comment, self.typ))
 
@@ -3189,7 +3189,7 @@ def send_mail(send_from, send_to, **kwargs):
     """
     Function for sending mails with attachments
     """
-    
+
     assert type(send_to)==list
 
     files = kwargs.get('files')
@@ -3268,7 +3268,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     disableproxy = kwargs.get('disableproxy')
     keylist = kwargs.get('keylist') # for PYBIN
     if disableproxy:
-        proxy_handler = urllib2.ProxyHandler( {} )           
+        proxy_handler = urllib2.ProxyHandler( {} )
         opener = urllib2.build_opener(proxy_handler)
         # install this opener
         urllib2.install_opener(opener)
@@ -3295,7 +3295,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # directory
             string = content.decode('utf-8')
             for line in string.split("\n"):
-                if len(line) > 1: 
+                if len(line) > 1:
                     filename = (line.strip().split()[-1])
                     if debugmode:
                         print filename
@@ -3310,7 +3310,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
                     st.extend(stp.container,stp.header)
                     os.remove(fh.name)
-        else:            
+        else:
             # ToDo !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # check whether content is a single file or e.g. a ftp-directory
             # currently only single files are supported
@@ -3436,7 +3436,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         offset = 0
     if not comment:
         comment = '-'
-   
+
     loggerstream.info('--- Start mergings at %s ' % str(datetime.now()))
 
     headera = stream_a.header
@@ -3503,7 +3503,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
     loggerstream.info('--- Mergings finished at %s ' % str(datetime.now()))
 
-    return DataStream(stream_a, headera)      
+    return DataStream(stream_a, headera)
 
 
 def subtractStreams(stream_a, stream_b, **kwargs):
@@ -3519,7 +3519,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     except:
         loggerstream.error('Stream a empty - aborting merging function')
         return stream_a
-        
+
     keys = kwargs.get('keys')
     getmeans = kwargs.get('getmeans')
     if not keys:
@@ -3565,11 +3565,11 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 break
     else:
         stimeb = stime
-        
+
     if (etime <= stime):
         loggerstream.error('Subtracting streams: stream are not overlapping')
         return stream_a
-    
+
     # Take only the time range of the shorter stream
     # Important for baselines: extend the absfile to start and endtime of the stream to be corrected
     stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
@@ -3618,11 +3618,11 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 fkey = 'f'+key
                 if fkey in function[0]:
                     exec('elem.'+key+' = float(NaN)')
-                
- 
+
+
     loggerstream.info('--- Stream-subtraction finished at %s ' % str(datetime.now()))
 
-    return DataStream(stream_a, headera)      
+    return DataStream(stream_a, headera)
 
 
 def stackStreams(stream_a, stream_b, **kwargs):
@@ -3662,7 +3662,7 @@ def extractDateFromString(datestring):
                 numberstr = '0'
             if len(numberstr) > 4:
                 tmpdaystring = numberstr
-        
+
         if len(tmpdaystring) > 8:
             tmpdaystring = tmpdaystring[:8]
 
@@ -3690,7 +3690,7 @@ def extractDateFromString(datestring):
 
         if not date:
             # No Date found so far - now try last 6 elements of string () e.g. SG gravity files
-            try: 
+            try:
                 tmpdaystring = re.findall(r'\d+',daystring)[0]
                 dateform = '%y%m%d'
                 date = datetime.strptime(tmpdaystring[-6:],dateform)
@@ -3710,7 +3710,7 @@ from lib.magpy_formats import *
 
 if __name__ == '__main__':
     print "Starting a Test run of the MagPy program:"
-    
+
 
     # Environmental Data
     # ------------------
@@ -3791,7 +3791,7 @@ if __name__ == '__main__':
     #st.pmplot(['f'],function=func)
     #st = st.get_gaps(gapvariable=True)
     #st.pmplot(['f','var2'])
-    # 
+    #
     # Merging data streams and filling of missing values
     #
     #st = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*')) #,starttime='2011-3-1')
@@ -3854,7 +3854,7 @@ if __name__ == '__main__':
     #lemi = lemi.rotation(alpha=3.3,beta=0.0)
     #didd = didd.baseline(basdidd,knotstep=0.05,plotbaseline=True)
     #lemi = lemi.baseline(baslemi,knotstep=0.05,plotbaseline=True)
- 
+
     #didd.pmplot(['x','y','z'])
     #lemi.pmplot(['x','y','z'])
     #newst = subtractStreams(didd,lemi,keys=['x','y','z'],getmeans=True)
@@ -3898,7 +3898,7 @@ if __name__ == '__main__':
     #lemi = lemi.baseline(baslemi,knotstep=0.05,plotbaseline=True)
     #lemi.pmplot(['x','y','z'])
 
-    
+
     #st = pmRead(path_or_url=os.path.normpath('e:\leon\Observatory\Messdaten\Data-Magnetism\didd\*'),starttime='2011-9-1',endtime='2011-9-30')
     #st.pmplot(['x','y','z'])
     #newst = subtractStreams(bas,st,keys=['x','y','z'])
@@ -3907,4 +3907,4 @@ if __name__ == '__main__':
     #print len(st)
     #print "Current header information:"
     #print st.header
-    
+

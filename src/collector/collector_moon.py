@@ -55,7 +55,7 @@ if __name__ == '__main__':
     #clientip = '192.168.178.47'
     clientip = '138.22.188.182'
     # Path of MARTAS directory on moon
-    martaspath = '/home/cobs/MARTAS' 
+    martaspath = '/home/cobs/MARTAS'
     # Provide Station code
     stationid = 'MyHome'
     # Select destination (file or db) - Files are saved in .../MARCOS/MoonsFiles/
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     dbname = mpcred.lc('mydb','db')
     scpuser = mpcred.lc('cobs','user')
     scppasswd = mpcred.lc('cobs','passwd')
-    # You can add to the credential file by using: 
+    # You can add to the credential file by using:
     # mpcred.cc('transfer','myshortcut',user='myuser',passwd='mypasswd',address='no-specific')
     # and than read it by scpuser = mpcred.lc('myshortcut','myuser')
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
     sensfile = os.path.join(martaspath,'sensors.txt')
     owfile = os.path.join(martaspath,'owlist.csv')
-    destsensfile = os.path.join(destpath,'MoonsSensors',clientname+'_sensors.txt') 
+    destsensfile = os.path.join(destpath,'MoonsSensors',clientname+'_sensors.txt')
     destowfile = os.path.join(destpath,'MoonsSensors',clientname+'_owlist.csv')
     print "Getting sensor information from ", clientname
     try:
@@ -145,4 +145,3 @@ if __name__ == '__main__':
         log.msg("DB closed")
     except:
         pass
-

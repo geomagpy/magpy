@@ -1,4 +1,3 @@
-
 import sys, time, os, socket
 import serial
 import struct, binascii, re, csv
@@ -18,7 +17,7 @@ call = True
 if call:
     class CallProtocol():
         """
-        Protocol to read one wire data from usb DS unit 
+        Protocol to read one wire data from usb DS unit
         All connected sensors are listed and data is distributed in dependency of sensor id
         Dipatch url links are defined by channel 'ow' and id+'value'
         Save path ? folders ?
@@ -39,11 +38,11 @@ if call:
 
         def lineread(self, ser,eol):
             # FUNCTION 'LINEREAD'
-            # Does the same as readline(), but does not require a standard 
+            # Does the same as readline(), but does not require a standard
             # linebreak character ('\r' in hex) to know when a line ends.
             # Variable 'eol' determines the end-of-line char: '\x00'
             # for the POS-1 magnetometer, '\r' for the envir. sensor.
-            # (Note: required for POS-1 because readline() cannot detect    
+            # (Note: required for POS-1 because readline() cannot detect
             # a linebreak and reads a never-ending line.)
 
             ser_str = ''
@@ -58,7 +57,7 @@ if call:
         def hexify_command(self, command,eol):
             # FUNCTION 'HEXIFY_COMMAND'
             # This function translates the command text string into a hex
-            # string that the serial device can read. 'eol' is the 
+            # string that the serial device can read. 'eol' is the
             # end-of-line character. '\r' for the environmental sensor,
             # '\x00' for the POS-1 magnetometer.
 
@@ -68,7 +67,7 @@ if call:
                 commandstr.append(('\\x' + hexch).decode('string_escape'))
 
             command_hex = (eol) + ''.join(commandstr) + (eol)
-    
+
             return command_hex
 
 
@@ -88,10 +87,10 @@ if call:
 
         def sendCommands(self):
             #print "Connecting ..."
-            try:   
+            try:
                 ser = serial.Serial(self.port, baudrate=self.baudrate , parity='N', bytesize=8, stopbits=1)
                 #print 'Connection made.'
-            except: 
+            except:
                 print 'SerialCall: Connection flopped.'
 
             for item in self.commands:
@@ -99,13 +98,13 @@ if call:
                 success = self.analyzeResponse(answer, actime)
                 time.sleep(2)
                 if not success:
-                    log.msg('SerialCall: Could not interpret response of system when sending %s' % item) 
-            ser.close()    
+                    log.msg('SerialCall: Could not interpret response of system when sending %s' % item)
+            ser.close()
 
 
         def analyzeResponse(self,answer, actime):
             # A loading eventually existing sensor list
-            if len(answer.split(';'))==525:  
+            if len(answer.split(';'))==525:
                 self.writeDisdro(answer, actime)
             elif len(answer.split()) == 4 and answer.split()[0].startswith('\x03'):
                 self.writeAnemometer(answer,actime)
@@ -113,7 +112,7 @@ if call:
                 print "SerialCall: Could no analyze data"
                 return False
             return True
-    
+
 
         def timeToArray(self, timestring):
             # Converts time string of format 2013-12-12T23:12:23.122324
@@ -146,7 +145,7 @@ if call:
                     with open(savefile, "a") as myfile:
                         myfile.write(bindata + "\n")
             except:
-                log.err("SERIAL - datatofile: Error while saving file")        
+                log.err("SERIAL - datatofile: Error while saving file")
 
         def dataToCSV(self, sensorid, filedate, asciidata, header):
                 # File Operations
@@ -166,8 +165,8 @@ if call:
                         writer = csv.writer(csvfile,delimiter=';')
                         writer.writerow(asciilist)
                 #except:
-                #log.err("datatoCSV: Error while saving file")        
-            
+                #log.err("datatoCSV: Error while saving file")
+
         def writeDisdro(self, line, actime):
 
             #t = threading.Timer(1.0, self.readTemperature, [sensor])
@@ -183,25 +182,25 @@ if call:
                 # Extract data
                 sensor = 'LNM'
                 serialnum = data[1]
-                cumulativerain = float(data[15]) 	# x
+                cumulativerain = float(data[15])        # x
                 if cumulativerain > 9000:
                     #send_command(reset)
                     pass
-                visibility = int(data[16])		# y
-                reflectivity = float(data[17])	 	# z
-                intall = float(data[12]	)	 	# var1
-                intfluid = float(data[13])	 	# var2
-                intsolid = float(data[14])	 	# var3
+                visibility = int(data[16])              # y
+                reflectivity = float(data[17])          # z
+                intall = float(data[12] )               # var1
+                intfluid = float(data[13])              # var2
+                intsolid = float(data[14])              # var3
                 quality = int(data[18])
-                haildiameter = float(data[19])		# var4
-                insidetemp = float(data[36])	 	# t2
+                haildiameter = float(data[19])          # var4
+                insidetemp = float(data[36])            # t2
                 lasertemp = float(data[37])
                 lasercurrent = data[38]
-                outsidetemp = float(data[44])		# t1
-                Ptotal= int(data[49])			# f
-                Pslow = int(data[51])		 	# dx
-                Pfast= int(data[53])		 	# dy
-                Psmall= int(data[55])		 	# dz
+                outsidetemp = float(data[44])           # t1
+                Ptotal= int(data[49])                   # f
+                Pslow = int(data[51])                   # dx
+                Pfast= int(data[53])                    # dy
+                Psmall= int(data[55])                   # dz
                 revision = '0001' # Software version 2.42
                 sensorid = sensor + '_' + serialnum + '_' + revision
             except:
@@ -210,7 +209,7 @@ if call:
             dispatch_url =  "http://example.com/"+self.hostname+"/ser#"+sensorid+"-value"
 
             #print sensorid, outsidetemp
-            
+
             try:
                 ##### Write ASCII data file with full outpunt and timestamp
                 # extract time data
@@ -254,7 +253,7 @@ if call:
                 self.wsMcuFactory.dispatch(dispatch_url, evt99)
             except ValueError:
                 log.err('SerialCall - writeDisdro: Unable to parse data at %s' % actualtime)
-                
+
 
         def writeAnemometer(self, line, actime):
 
@@ -266,10 +265,10 @@ if call:
                 answer, tmptime = self.send_command(ser,'12SH',self.eol,hex=False)
                 ser.close()
                 serialnum = answer.replace('!12SH','').strip('\x03').strip('\x02')
-            except: 
+            except:
                 print 'writeAnemometer: Failed to get Serial number.'
 
-            
+
             sensorid = sensor + '_' + serialnum + '_' + revision
             dispatch_url =  "http://example.com/"+self.hostname+"/ser#"+sensorid+"-value"
 
@@ -281,17 +280,17 @@ if call:
             try:
                 data = line.split()
                 # Extract data
-                windspeed = float(data[0].strip('\x03').strip('\x02')) 	# var1
+                windspeed = float(data[0].strip('\x03').strip('\x02'))  # var1
                 winddirection = float(data[1])                          # var2
                 virtualtemperature = float(data[2])                     # t2
-            except: 
+            except:
                 windspeed = float('nan')                          # var1
                 winddirection = float('nan')                      # var2
                 virtualtemperature = float('nan')                 # t2
                 print 'writeAnemometer: Failed to interprete data.'
 
             #print sensorid, windspeed
-  
+
             packcode = '6hLlll'
             header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, '[t2,var1,var2]', '[Tv,V,Dir]', '[deg_C,m_s,deg]', '[10,10,1]', packcode, struct.calcsize(packcode))
 

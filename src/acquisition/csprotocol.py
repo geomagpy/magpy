@@ -48,7 +48,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("OW - Protocol: Error while saving file")        
+        log.err("OW - Protocol: Error while saving file")
 
 
 ## Caesium protocol
@@ -57,7 +57,7 @@ class CsProtocol(LineReceiver):
     """
     Protocol to read GSM CS Sensor data from serial unit
     Each sensor has its own class (that can be improved...)
-    The protocol defines the sensor name in its init section, which 
+    The protocol defines the sensor name in its init section, which
     is used to dipatch url links and define local storage folders
 
     """
@@ -68,7 +68,7 @@ class CsProtocol(LineReceiver):
         self.wsMcuFactory = wsMcuFactory
         self.sensor = sensor
         self.outputdir = outputdir
-	self.hostname = socket.gethostname()
+        self.hostname = socket.gethostname()
 
     def connectionMade(self):
         log.msg('%s connected.' % self.sensor)
@@ -86,13 +86,13 @@ class CsProtocol(LineReceiver):
             currenttime = currenttime.replace(microsecond=0) + timedelta(seconds=1.0)
         filename = datetime.strftime(currenttime, "%Y-%m-%d")
         actualtime = datetime.strftime(currenttime, "%Y-%m-%dT%H:%M:%S.%f")
-	lastActualtime = currenttime
+        lastActualtime = currenttime
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
         timestamp = datetime.strftime(currenttime, "%Y-%m-%d %H:%M:%S.%f")
 
         packcode = '6hLL'
         header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f]', '[f]', '[nT]', '[1000]', packcode, struct.calcsize(packcode))
-        
+
         try:
             value = float(data[0].strip('$'))
             if 10000 < value < 100000:
@@ -115,7 +115,7 @@ class CsProtocol(LineReceiver):
         # File Operations
         dataToFile(self.outputdir, self.sensor, filename, data_bin, header)
 
-        
+
         #return value every second
         if lastActualtime+timedelta(microseconds=999000) <= currenttime:   # Using ms instead of s accounts for only small errors, not all.
             evt1 = {'id': 1, 'value': 0}
@@ -157,4 +157,3 @@ class CsProtocol(LineReceiver):
         except:
             log.err('CS - Protocol: No appropriate data events returned')
             pass
-

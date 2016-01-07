@@ -99,7 +99,7 @@ def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirna
     if not didbadd:
         didbadd = False
     # starttime,endtime
-    #if not db=db # test whether db is connected 
+    #if not db=db # test whether db is connected
 
     home = os.path.expanduser('~')
     initpath = os.path.join(home,'.magpyguiini')
@@ -110,7 +110,7 @@ def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirna
                   'filename': filename, 'dirname':dirname, \
                   'compselect':compselect, 'abscompselect':abscompselect, \
                   'basecompselect':basecompselect, 'resolution':resolution, 'dipathlist':dipathlist, 'divariopath':divariopath, 'discalarpath':discalarpath, 'diexpD':diexpD, 'diexpI':diexpI, 'stationid':stationid, 'diid':diid, 'ditype':ditype, 'diazimuth':diazimuth, 'dipier':dipier, 'dialpha':dialpha, 'dideltaF':dideltaF, 'didbadd':didbadd }
-    
+
     saveobj(dictionary, initpath)
     #print "Initialization: Added data "
 
@@ -129,7 +129,7 @@ def loadini():
     except:
         #print "Init file not found: Could not load data"
         return False
-    
+
     #print "Initialization data loaded"
     return initdata
 
@@ -139,10 +139,10 @@ class RedirectText(object):
     # Used to redirect di results to the multiline textctrl on the DI page
     def __init__(self,aWxTextCtrl):
         self.out=aWxTextCtrl
- 
+
     def write(self,string):
         self.out.WriteText(string)
-   
+
 class PlotPanel(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
@@ -151,7 +151,7 @@ class PlotPanel(wx.Panel):
         self.canvas = FigureCanvas(self,-1,self.figure)
         self.initialPlot()
         self.__do_layout()
-        
+
     def __do_layout(self):
         # Resize graph and toolbar, create toolbar
         self.vbox = wx.BoxSizer(wx.VERTICAL)
@@ -286,33 +286,33 @@ class PlotPanel(wx.Panel):
             for x,y,a in annotesToDraw:
                 self.drawAnnote(self.axis, x, y, a)
 
-        
+
 class MenuPanel(wx.Panel):
     #def __init__(self, parent):
     #    wx.Panel.__init__(self,parent,-1,size=(100,100))
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         # Create pages on MenuPanel
-	nb = wx.Notebook(self,-1)
-	self.str_page = StreamPage(nb)
-	self.ana_page = AnalysisPage(nb)
-	self.abs_page = AbsolutePage(nb)
-	self.rep_page = ReportPage(nb)
-	self.com_page = PortCommunicationPage(nb)
-	nb.AddPage(self.str_page, "Stream")
-	nb.AddPage(self.ana_page, "Analysis")
-	nb.AddPage(self.abs_page, "DI")
-	nb.AddPage(self.rep_page, "Report")
-	nb.AddPage(self.com_page, "Monitor")
+        nb = wx.Notebook(self,-1)
+        self.str_page = StreamPage(nb)
+        self.ana_page = AnalysisPage(nb)
+        self.abs_page = AbsolutePage(nb)
+        self.rep_page = ReportPage(nb)
+        self.com_page = PortCommunicationPage(nb)
+        nb.AddPage(self.str_page, "Stream")
+        nb.AddPage(self.ana_page, "Analysis")
+        nb.AddPage(self.abs_page, "DI")
+        nb.AddPage(self.rep_page, "Report")
+        nb.AddPage(self.com_page, "Monitor")
 
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
 
-                
-class MainFrame(wx.Frame):   
+
+class MainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-	kwds["style"] = wx.DEFAULT_FRAME_STYLE
+        kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         # The Splitted Window
         self.sp = wx.SplitterWindow(self, -1, style=wx.SP_3D|wx.SP_BORDER)
@@ -321,7 +321,7 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.changeStatusbar, 'changeStatusbar')
 
         # The Status Bar
-	self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
+        self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
         #self.changeStatusbar("Ready")
 
         self.stream = DataStream() # used for storing original data
@@ -340,7 +340,7 @@ class MainFrame(wx.Frame):
         if not inipara:
             saveini() # initialize defaultvalues
             inipara = loadini()
- 
+
         # Variable initializations
         self.initParameter(inipara)
 
@@ -396,7 +396,7 @@ class MainFrame(wx.Frame):
         # Menu Bar end
 
 
-	self.__set_properties()
+        self.__set_properties()
 
         # BindingControls on the menu
         self.Bind(wx.EVT_MENU, self.OnOpenDir, self.DirOpen)
@@ -438,7 +438,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
         self.Bind(wx.EVT_BUTTON, self.onDISetParameter, self.menu_p.abs_page.advancedButton)
-        
+
         #self.Bind(wx.EVT_CUSTOM_NAME, self.addMsg)
         # Put something on Report page
         self.menu_p.rep_page.logMsg('Begin logging...')
@@ -461,7 +461,7 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.outlierButton.Disable()
         self.menu_p.ana_page.derivativeButton.Disable()
         self.menu_p.ana_page.rotationButton.Disable()
- 
+
         self.sp.SplitVertically(self.plot_p,self.menu_p,700)
 
     def __set_properties(self):
@@ -547,7 +547,7 @@ class MainFrame(wx.Frame):
         self.shownkeylist = keylist
 
         # check comp
-        try: 
+        try:
             self.compselect = stream[0].typ[:3]
             self.menu_p.str_page.compRadioBox.Enable()
             self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
@@ -589,26 +589,26 @@ class MainFrame(wx.Frame):
     # ################
     # Top menu methods:
 
-    
+
     def OnHelpAbout(self, event):
-        
+
         description = """MagPy is developed for geomagnetic analysis.
-Features include a support of many data formats, visualization, 
-advanced anaylsis routines, url/database accessability, DI analysis, 
+Features include a support of many data formats, visualization,
+advanced anaylsis routines, url/database accessability, DI analysis,
 non-geomagnetic data support and more.
 """
 
-        licence = """MagPy is free software; you can redistribute 
-it and/or modify it under the terms of the GNU General Public License as 
-published by the Free Software Foundation; either version 2 of the License, 
+        licence = """MagPy is free software; you can redistribute
+it and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2 of the License,
 or any later version.
 
-MagPy is distributed in the hope that it will be useful, 
-but WITHOUT ANY WARRANTY; without even the implied warranty of 
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
-See the GNU General Public License for more details. You should have 
-received a copy of the GNU General Public License along with MagPy; 
-if not, write to the Free Software Foundation, Inc., 59 Temple Place, 
+MagPy is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details. You should have
+received a copy of the GNU General Public License along with MagPy;
+if not, write to the Free Software Foundation, Inc., 59 Temple Place,
 Suite 330, Boston, MA  02111-1307  USA"""
 
 
@@ -672,7 +672,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
         self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
         self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-       
+
     def OnOpenDir(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",self.dirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
@@ -713,7 +713,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 stream.extend(tmp.container,tmp.header)
             #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
             #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-            self.filename = ' ,'.join(filelist) 
+            self.filename = ' ,'.join(filelist)
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
             self.menu_p.str_page.fileTextCtrl.Disable()
@@ -733,7 +733,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.menu_p.str_page.startTimePicker.Disable()
                 #self.menu_p.str_page.endTimePicker.Disable()
                 self.menu_p.str_page.openStreamButton.Disable()
-        
+
         self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
         dlg.Destroy()
 
@@ -768,7 +768,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.stream = stream
             self.plotstream = stream
         self.changeStatusbar("Ready")
-        dlg.Destroy()        
+        dlg.Destroy()
 
 
     def OnOpenDB(self, event):
@@ -846,15 +846,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #print "Main : ", dateformat, fileformat, coverage, mode
             try:
                 self.plotstream.write(path,
-	   	    		filenamebegins=filenamebegins,
-	  	  		filenameends=filenameends,
-	    			dateformat=dateformat,
-	    			mode=mode,
-	    			coverage=coverage,
-	    			format_type=fileformat)
+                                filenamebegins=filenamebegins,
+                                filenameends=filenameends,
+                                dateformat=dateformat,
+                                mode=mode,
+                                coverage=coverage,
+                                format_type=fileformat)
             except:
                 self.menu_p.rep_page.logMsg("Writing failed - Permission?")
-        dlg.Destroy()        
+        dlg.Destroy()
 
     def _db_connect(self, host, user, passwd, dbname):
         try:
@@ -895,7 +895,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if self.db == None or self.db == 'None' or not self.db:
             dlg.dbTextCtrl.SetValue('None')
         else:
-            dlg.dbTextCtrl.SetValue(self.dbname)            
+            dlg.dbTextCtrl.SetValue(self.dbname)
         if dlg.ShowModal() == wx.ID_OK:
             host = dlg.hostTextCtrl.GetValue()
             user = dlg.userTextCtrl.GetValue()
@@ -912,10 +912,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.rep_page.logMsg('- MySQL Database access failed.')
                 self.changeStatusbar("Database connection failed")
             """
-        dlg.Destroy()        
+        dlg.Destroy()
 
     def OnFileQuit(self, event):
-	self.Close()
+        self.Close()
 
 
     def OnSave(self, event):
@@ -927,7 +927,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if self.askUserForFilename(defaultFile=self.filename, style=wx.SAVE,
                                    **self.defaultFileDialogOptions()):
             self.OnSave(event)
- 
+
 
     def OnOptionsInit(self, event):
         dlg = OptionsInitDialog(None, title='Options: Parameter specifications')
@@ -960,7 +960,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dialpha=dlg.dialphaTextCtrl.GetValue()
             dideltaF=dlg.dideltaFTextCtrl.GetValue()
             ditype=dlg.ditypeTextCtrl.GetValue()
- 
+
             compselect= 'xyz' # compselect
             abscompselect= 'xyz' #abscompselect
             basecompselect= 'poly' #basecompselect
@@ -969,13 +969,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             inipara = loadini()
             self.initParameter(inipara)
 
-        dlg.Destroy()        
+        dlg.Destroy()
 
 
     def OnOptionsObs(self, event):
         dlg = OptionsObsDialog(None, title='Options: Observatory specifications')
         dlg.ShowModal()
-        dlg.Destroy()        
+        dlg.Destroy()
 
         #dlg = wx.MessageDialog(self, "Coming soon:\n"
         #                "Modify observatory specifications\n",
@@ -986,7 +986,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onOpenAuxButton(self, event):
         if self.askUserForFilename(style=wx.OPEN,
                                    **self.defaultFileDialogOptions()):
-            #dat = read_general(os.path.join(self.dirname, self.filename), 0)            
+            #dat = read_general(os.path.join(self.dirname, self.filename), 0)
             textfile = open(os.path.join(self.dirname, self.filename), 'r')
             self.menu_p.gen_page.AuxDataTextCtrl.SetValue(textfile.read())
             textfile.close()
@@ -1123,7 +1123,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.SetPageValues(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)
 
-        dlg.Destroy()        
+        dlg.Destroy()
         self.changeStatusbar("Ready")
 
     def onActivityButton(self, event):
@@ -1161,7 +1161,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     alpha = float(alphat)
                 except:
                     alpha = 0.0
-                try:      
+                try:
                     beta = float(betat)
                 except:
                     beta = 0.0
@@ -1172,7 +1172,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.SetPageValues(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)
 
-        dlg.Destroy()        
+        dlg.Destroy()
         self.changeStatusbar("Ready")
 
     # ################
@@ -1182,14 +1182,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         stream = DataStream()
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = self.menu_p.str_page.startTimePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks()) 
+        sd = datetime.fromtimestamp(stday.GetTicks())
         enday = self.menu_p.str_page.endDatePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks()) 
+        ed = datetime.fromtimestamp(enday.GetTicks())
         path = self.menu_p.str_page.pathTextCtrl.GetValue()
         files = self.menu_p.str_page.fileTextCtrl.GetValue()
 
         print stday, sttime, sd
-        
+
         if path == "":
             dlg = wx.MessageDialog(self, "Please select a path first!\n"
                         "go to File -> Select Dir\n",
@@ -1208,7 +1208,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
         end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
 
-        
+
         try:
             self.changeStatusbar("Loading data ...")
             if path.endswith('/'):
@@ -1249,10 +1249,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onReDrawButton(self, event):
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = self.menu_p.str_page.startTimePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks()) 
+        sd = datetime.fromtimestamp(stday.GetTicks())
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = self.menu_p.str_page.endTimePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks()) 
+        ed = datetime.fromtimestamp(enday.GetTicks())
 
         if 'AM' or 'PM' in sttime:
             stt = datetime.strptime(sttime,'%I:%M:%S %p')
@@ -1274,7 +1274,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
-            
+
         #st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
         #start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
         #et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
@@ -1302,7 +1302,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.Destroy()
             return
 
-        print "Stream loaded of length ", len(stream) 
+        print "Stream loaded of length ", len(stream)
         self.plotstream = stream
         self.SetPageValues(stream)
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
@@ -1318,7 +1318,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         keylist = self.plotstream._get_key_headers()
         self.keylist = keylist
         shownkeylist = self.shownkeylist
-        if len(self.plotstream) > 0:        
+        if len(self.plotstream) > 0:
             dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist)
             for elem in shownkeylist:
                 exec('dlg.'+elem+'CheckBox.SetValue(True)')
@@ -1346,7 +1346,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
         keylist = self.shownkeylist
-        if len(self.plotstream) > 0:        
+        if len(self.plotstream) > 0:
             dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=keylist)
             if dlg.ShowModal() == wx.ID_OK:
                 key1 = dlg.key1ComboBox.GetValue()
@@ -1372,7 +1372,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             extractedstream = extractedstream.extract(key3,val3,comp3)
                         else:
                             extractedstream3 = self.plotstream.extract(key3,val3,comp3)
-                            # TODO extractedstream = join(extractedstream,extractedstream3)                    
+                            # TODO extractedstream = join(extractedstream,extractedstream3)
                 self.plotstream = extractedstream
                 self.SetPageValues(self.plotstream)
                 self.OnPlot(extractedstream,self.shownkeylist)
@@ -1384,7 +1384,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         open dialog to modify plot options (general (e.g. bgcolor) and  key
         specific (key: symbol color errorbar etc)
-        """        
+        """
         # specify plot options ('o','-' etc
         # show/edit meta info
         pass
@@ -1407,7 +1407,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plotstream = self.plotstream._convertstream(coordinate)
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
-        
+
 
     # ####################
     # Absolute functions
@@ -1425,7 +1425,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dlg.ShowModal() == wx.ID_OK:
             self.menu_p.rep_page.logMsg("- loaded DI data")
             self.menu_p.abs_page.diTextCtrl.SetValue(', '.join(dlg.pathlist))
-            self.dipathlist = dlg.pathlist          
+            self.dipathlist = dlg.pathlist
 
         if len(self.dipathlist) > 0:
             self.menu_p.abs_page.AnalyzeButton.Enable()
@@ -1443,7 +1443,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         dlg = DefineVarioDialog(None, title='Get Variometer path')
         if dlg.ShowModal() == wx.ID_OK:
-            self.menu_p.abs_page.varioTextCtrl.SetValue(dlg.path)            
+            self.menu_p.abs_page.varioTextCtrl.SetValue(dlg.path)
             self.divariopath = os.path.join(dlg.path,'*')
         dlg.Destroy()
 
@@ -1457,7 +1457,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             # send a message box that this data will be erased
         dlg = DefineScalarDialog(None, title='Get path for scalar data')
         if dlg.ShowModal() == wx.ID_OK:
-            self.menu_p.abs_page.scalarTextCtrl.SetValue(dlg.path)            
+            self.menu_p.abs_page.scalarTextCtrl.SetValue(dlg.path)
             self.discalarpath = os.path.join(dlg.path,'*')
         dlg.Destroy()
 
@@ -1472,7 +1472,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
             print "Paths:", self.divariopath,self.discalarpath
-            if not self.diazimuth == '': 
+            if not self.diazimuth == '':
                 absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,alpha=self.dialpha,deltaF=self.dideltaF)
             else:
                 absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid)
@@ -1485,7 +1485,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
             redir=RedirectText(self.menu_p.rep_page.logMsg)
             sys.stdout=redir
-            
+
 
     def onDISetParameter(self,event):
         """
@@ -1514,7 +1514,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
 '''
-# To run:        
+# To run:
 app = wx.App(redirect=False)
 frame = MainFrame(None,-1,"")
 frame.Show()

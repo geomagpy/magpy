@@ -17,7 +17,7 @@ import ftplib
 # ####################
 
 def _checklogfile(logfile):
-    data=[] 
+    data=[]
     try:
        lfile = file(logfile,"r")
        line=lfile.readline()
@@ -60,19 +60,19 @@ def ftpdatatransfer (**kwargs):
 
     if not localpath:
         localpath = ''
-                            
+
     if not localfile:
         filelocal = os.path.join(localpath,filestr)
     else:
         localpath = os.path.split(localfile)[0]
         filestr = os.path.split(localfile)[1]
         filelocal = localfile
-                            
+
     try:
         site = ftplib.FTP()
         site.connect(myproxy, port)
         site.set_debuglevel(1)
-        msg = site.login(login,passwd)        
+        msg = site.login(login,passwd)
         site.cwd(ftppath)
         try:
             site.delete(filestr)
@@ -112,7 +112,7 @@ def _missingvals(myproxy, port, login, passwd, logfile):
         filetosend = loginfo[1]
         nftppath = loginfo[2]
         loggertransfer.info(' -- Uploading previously missing vals: %s' % loginfo[1])
-        ftpdatatransfer (localpath=npath, ftppath=nftppath, filestr=filetosend, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile) 
+        ftpdatatransfer (localpath=npath, ftppath=nftppath, filestr=filetosend, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
 
 # ####################
 # 1. ftp check
@@ -122,7 +122,7 @@ def ftpdirlist (**kwargs):
     Getting directory listing of ftp server
     """
     plog = PyMagLog()
-    
+
     ftppath = kwargs.get('ftppath')
     myproxy = kwargs.get('myproxy')
     port = kwargs.get('port')
@@ -132,7 +132,7 @@ def ftpdirlist (**kwargs):
         site = ftplib.FTP()
         site.connect(myproxy, port)
         site.set_debuglevel(1)
-        msg = site.login(login,passwd)        
+        msg = site.login(login,passwd)
         site.cwd(ftppath)
         try:
             files=site.nlst()
@@ -150,7 +150,7 @@ def ftpdirlist (**kwargs):
     return files
 
 # ####################
-# 2. ftp: remove files 
+# 2. ftp: remove files
 # ####################
 def ftpremove (**kwargs):
     """
@@ -164,7 +164,7 @@ def ftpremove (**kwargs):
     login = kwargs.get('login')
     passwd = kwargs.get('passwd')
     if not port:
-        port = 21        
+        port = 21
     try:
         print "here"
         site = ftplib.FTP()
@@ -172,7 +172,7 @@ def ftpremove (**kwargs):
         site.connect(myproxy, port)
         print "here1"
         site.set_debuglevel(1)
-        msg = site.login(login,passwd)        
+        msg = site.login(login,passwd)
         print "here2"
         site.cwd(ftppath)
         print "now here"
@@ -188,7 +188,7 @@ def ftpremove (**kwargs):
     return
 
 # ####################
-# 3. ftp: download files 
+# 3. ftp: download files
 # ####################
 def ftpget (**kwargs):
     """
@@ -196,7 +196,7 @@ def ftpget (**kwargs):
     """
     plog = PyMagLog()
 
-    
+
     localpath = kwargs.get('localpath')
     ftppath = kwargs.get('ftppath')
     filestr = kwargs.get('filestr')
@@ -208,13 +208,13 @@ def ftpget (**kwargs):
 
     downloadpath = os.path.normpath(os.path.join(localpath,filestr))
     if not os.path.exists(localpath):
-        raise ValueError, 'Local directory is not existing' 
+        raise ValueError, 'Local directory is not existing'
 
     try:
         site = ftplib.FTP()
         site.connect(myproxy, port)
         site.set_debuglevel(1)
-        msg = site.login(login,passwd)        
+        msg = site.login(login,passwd)
         site.cwd(ftppath)
         try:
             # get the remote file to the local directory
@@ -228,4 +228,3 @@ def ftpget (**kwargs):
         plog.addwarn('FTP file download failed')
         pass
     return
-

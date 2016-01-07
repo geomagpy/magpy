@@ -1,4 +1,3 @@
-
 import sys, time, os, socket
 
 from twisted.protocols.basic import LineReceiver
@@ -41,7 +40,7 @@ The ID list for subscriptions:
 10: clientname  -- str(europa)
 11: sensoralias -- str(Western Tunnel))
 12: vdd         -- float
-13: vad         -- float 
+13: vad         -- float
 14: vis         -- float
 15: df          -- float
 16: error code  -- float
@@ -82,7 +81,7 @@ def dataToFile(sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("OW - Protocol: Error while saving file")        
+        log.err("OW - Protocol: Error while saving file")
 
 
 class FileProtocol():
@@ -100,7 +99,7 @@ class FileProtocol():
         else:
             log.msg('File not existing: %s ' % (path_or_url))
             return False
-        
+
 
     def fileConnected(self):
         # include MagPy here: stream = pmread(path_or_url=xxx)
@@ -124,7 +123,7 @@ class GSM90Protocol(LineReceiver):
         self.path_or_url = path_or_url
         log.msg('MagPy Module: File connected')
         return True
-        
+
     def connectionMade(self):
         log.msg('Serial port connected.')
 
@@ -135,7 +134,7 @@ class CsProtocol(LineReceiver):
     """
     Protocol to read GSM CS Sensor data from serial unit
     Each sensor has its own class (that can be improved...)
-    The protocol defines the sensor name in its init section, which 
+    The protocol defines the sensor name in its init section, which
     is used to dipatch url links and define local storage folders
 
     """
@@ -158,7 +157,7 @@ class CsProtocol(LineReceiver):
         outtime = datetime.strftime(currenttime, "%H:%M:%S")
 
         global lastActualtime
-        
+
         try:
             value = float(data[0])
             if 10000 < value < 100000:
@@ -184,7 +183,7 @@ class CsProtocol(LineReceiver):
              databuf.append()
         else:
            # cretae new buffer with first value
-           #call thread with: 
+           #call thread with:
            # pack data to binary
            # if file exists write header containing type id, bytes in line and packing info
            # write the data to file
@@ -196,7 +195,7 @@ class CsProtocol(LineReceiver):
                 myfile.write(str(actualtime) + " " + str(intensity) + "\n")
             except:
                 log.err("CS - Protocol: Error while saving file")
-        
+
         #return value every second
         if lastActualtime+timedelta(microseconds=999000) >= currenttime:   # Using ms instead of s accounts for only small errors, not all.
             evt1 = {'id': 4, 'value': 0}
@@ -229,4 +228,3 @@ class CsProtocol(LineReceiver):
                 #log.msg("Analog value: %s" % str(evt4))
             except:
                 log.err('CS - Protocol: wsMcuFactory error while dispatching data.')
-

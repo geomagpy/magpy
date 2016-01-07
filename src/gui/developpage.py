@@ -18,7 +18,7 @@ from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
 
-# Subclasses for Menu pages and their controls     
+# Subclasses for Menu pages and their controls
 
 class ScreenSelections(object):
     def __init__(self, seldatelist=[], selvallist=[],shflag = False):
@@ -36,7 +36,7 @@ class ScreenSelections(object):
         #panel = wx.Panel(self,-1)
         #self.sp = MenuPanel(panel)
         #self.menu_p.rep_page.logMsg
-               
+
 
 class DataContainer(object):
     def __init__(self, magdatastruct1=[], magdatastruct2=[],struct1res=0,struct2res=0):
@@ -47,10 +47,10 @@ class DataContainer(object):
 
     def test(self):
         print len(self.magdatastruct1)
-    
-class FlagDateDialog(wx.Dialog):   
+
+class FlagDateDialog(wx.Dialog):
     #def __init__(self, parent, title, choices, curflag):
-        #super(FlagDateDialog, self).__init__(parent=parent, 
+        #super(FlagDateDialog, self).__init__(parent=parent,
         #    title=title, size=(250, 400))
     def __init__(self, parent, choices, comment, title ):
         super(FlagDateDialog, self).__init__( parent=parent, choices=[], comment='', title=title )
@@ -58,7 +58,7 @@ class FlagDateDialog(wx.Dialog):
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     #def doLayout(self):
     #    self.logger.SetDimensions(x=10, y=20, width=200, height=300)
     # Widgets
@@ -100,19 +100,19 @@ class FlagDateDialog(wx.Dialog):
     def bindControls(self):
         self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 class OptionsObsDialog(wx.Dialog):
-    
+
     def __init__(self, parent, title):
-        super(OptionsObsDialog, self).__init__(parent=parent, 
+        super(OptionsObsDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
         self.bindControls()
-        
+
     # Widgets
     def createControls(self):
         # single anaylsis
@@ -149,7 +149,7 @@ class OptionsObsDialog(wx.Dialog):
         self.pildfepochTextCtrl = wx.TextCtrl(self, value="--")
         self.pilddirepochLabel = wx.StaticText(self, label="Epoch dV")
         self.pilddirepochTextCtrl = wx.TextCtrl(self, value="--")
-        
+
         self.okButton = wx.Button(self, label='Ok')
         self.closeButton = wx.Button(self, label='Close')
 
@@ -226,8 +226,8 @@ class OptionsObsDialog(wx.Dialog):
     def bindControls(self):
         self.okButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        
-    def OnClose(self, e):        
+
+    def OnClose(self, e):
         self.Destroy()
 
 
@@ -242,7 +242,7 @@ class GeneralPage(wx.Panel):
         #self.comp = ['xyz', 'hdz', 'idf']
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.DrawAuxButton = wx.Button(self,-1,"Draw/Recalc")
@@ -317,7 +317,7 @@ class GeneralPage(wx.Panel):
 
         self.SetSizerAndFit(boxSizer)
 
-         
+
 class GraphPage(wx.Panel):
     #def __init__(self, parent):
         #wx.Panel.__init__(self,parent,-1,size=(100,100))
@@ -332,7 +332,7 @@ class GraphPage(wx.Panel):
         self.comp = ['xyz', 'hdz', 'idf']
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.DrawButton = wx.Button(self,-1,"Draw/Recalc")
@@ -430,7 +430,7 @@ class GraphPage(wx.Panel):
                   emptySpace,
                  (self.showFlaggedCheckBox, noOptions),
                  (self.GetGraphMarksButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,        
+                  emptySpace,
                  (self.curselecteddateLabel, noOptions),
                   emptySpace,
                  (self.curdateTextCtrl, expandOption),
@@ -451,7 +451,7 @@ class GraphPage(wx.Panel):
 
         self.SetSizerAndFit(boxSizer)
 
-        
+
 class ReportPage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
@@ -476,15 +476,15 @@ class PortCommunicationPage(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.selectPortButton = wx.Button(self,-1,"Select MARTAS")
         self.portnameTextCtrl = wx.TextCtrl(self, value="coming soon")
         self.portnameTextCtrl.Disable()
         self.sliderLabel = wx.StaticText(self, label="Update frequency:")
-        self.frequSlider = wx.Slider(self, -1, 10, 1, 20, (-1, -1), (100, -1), 
-		wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
+        self.frequSlider = wx.Slider(self, -1, 10, 1, 20, (-1, -1), (100, -1),
+                wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
         self.startMonitorButton = wx.Button(self,-1,"Start Monitor")
         self.stopMonitorButton = wx.Button(self,-1,"Stop Monitor")
         self.startMonitorButton.Disable()
@@ -521,5 +521,3 @@ class PortCommunicationPage(wx.Panel):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
- 

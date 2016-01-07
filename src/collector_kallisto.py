@@ -1,10 +1,10 @@
-# Twisted Client 
+# Twisted Client
 
 import sys
- 
+
 from twisted.python import log
 from twisted.internet import reactor
- 
+
 from autobahn.websocket import connectWS
 from autobahn.wamp import WampClientFactory, WampClientProtocol
 
@@ -46,10 +46,10 @@ def Dict2SQL(db, dictionary, deleteSensor=None, deleteStation=None):
                       SensorDescription  CHAR(100),
                       SensorElements  CHAR(100),
                       SensorKeys  CHAR(100),
-                      SensorModule  CHAR(10),    
-                      SensorDate  CHAR(10), 
-                      SensorRevision  CHAR(10), 
-                      SensorRevisionComment  CHAR(100), 
+                      SensorModule  CHAR(10),
+                      SensorDate  CHAR(10),
+                      SensorRevision  CHAR(10),
+                      SensorRevisionComment  CHAR(100),
                       SensorRevisionDate  CHAR(100))"""
 
     for key in dictionary:
@@ -67,9 +67,9 @@ def Dict2SQL(db, dictionary, deleteSensor=None, deleteStation=None):
                 stationid = dictionary[key]
                 stationhead.append(key)
             else:
-                if not key == "Station": 
+                if not key == "Station":
                     stationhead.append(key)
-            if not key == "Station": 
+            if not key == "Station":
                 stationvalue.append(dictionary[key].replace('http://',''))
 
     # SENSOR TABLE
@@ -84,14 +84,14 @@ def Dict2SQL(db, dictionary, deleteSensor=None, deleteStation=None):
     stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
     createstationtablesql = "CREATE TABLE IF NOT EXISTS STATIONS (%s)" % stationstr
     stationsql = "INSERT IGNORE INTO STATIONS(%s) VALUES (%s)" % (', '.join(stationhead), '"'+'", "'.join(stationvalue)+'"')
-    
+
     try:
         cursor.execute(createsensortablesql)
         #db.commit()
     except:
         log.msg("Sensortable exists already.")
         #db.rollback()
-    
+
     try:
         cursor.execute(createstationtablesql)
         #db.commit()
@@ -107,7 +107,7 @@ def Dict2SQL(db, dictionary, deleteSensor=None, deleteStation=None):
     db.commit()
     cursor.close()
 
- 
+
 
 if __name__ == '__main__':
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     #Dict2SQL(db, inst.lemidict)
 
     db.close()
- 
+
     x=1/0
     '''
     db = MySQLdb.connect (host = "localhost",
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     cursor.close ()
     db.close ()
 
-    clientname = 'kallisto' 
+    clientname = 'kallisto'
     factory1 = WampClientFactory("ws://138.22.188.183:9100", debugWamp = False)
     gsm.defineclient(clientname)
     factory1.protocol = gsm.PubSubClient

@@ -29,7 +29,7 @@ class AnalysisPage(wx.Panel):
         self.comp = ['xyz', 'hdz', 'idf']
         self.createControls()
         self.doLayout()
-        
+
     # Widgets
     def createControls(self):
         self.head1Label = wx.StaticText(self, label="Information:")
@@ -66,7 +66,7 @@ class AnalysisPage(wx.Panel):
             style=wx.CB_DROPDOWN, value=self.filterlength[0])
         self.filterButton = wx.Button(self,-1,"Filter!",size=(130,30))
 
- 
+
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
@@ -117,7 +117,7 @@ class AnalysisPage(wx.Panel):
                  (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 # end 
+                 # end
                   emptySpace,
                   emptySpace,
                   emptySpace,
@@ -129,6 +129,3 @@ class AnalysisPage(wx.Panel):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-
- 

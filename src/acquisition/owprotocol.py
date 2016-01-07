@@ -1,4 +1,3 @@
-
 # OneWire part
 try:
     import ow
@@ -6,7 +5,7 @@ try:
     owsensorlist = []
 except:
     print "Onewire package not available"
-    onewire = False  
+    onewire = False
 
 import sys, time, os, socket
 import struct, binascii, re, csv
@@ -23,7 +22,7 @@ from twisted.web.static import File
 if onewire:
     class OwProtocol():
         """
-        Protocol to read one wire data from usb DS unit 
+        Protocol to read one wire data from usb DS unit
         All connected sensors are listed and data is distributed in dependency of sensor id
         Dipatch url links are defined by channel 'ow' and id+'value'
         Save path ? folders ?
@@ -60,15 +59,15 @@ if onewire:
                 self.root = ow.Sensor('/').sensorList()
 
                 if not (self.root == owsensorlist):
-                    log.msg('Rereading sensor list')                
+                    log.msg('Rereading sensor list')
                     ow.init(self.source)
                     self.root = ow.Sensor('/').sensorList()
                     owsensorlist = self.root
                     self.connectionMade(self.root)
-                self.reconnectcount = 0 
+                self.reconnectcount = 0
             except:
                 self.reconnectcount = self.reconnectcount + 1
-                log.msg('Reconnection event triggered - Number: %d' % self.reconnectcount)                
+                log.msg('Reconnection event triggered - Number: %d' % self.reconnectcount)
                 time.sleep(2)
                 if self.reconnectcount < 10:
                     self.owConnected()
@@ -88,7 +87,7 @@ if onewire:
             try:
                 owlist = self.loadowlist(owsensorfile)
             except:
-                log.msg('One Wire: Error when getting sensor list')  
+                log.msg('One Wire: Error when getting sensor list')
                 pass
             self.plist = [elem[0] for elem in owlist if elem[2] == 'pressure']
             self.hlist = [elem[0] for elem in owlist if elem[2] == 'humidity']
@@ -110,19 +109,19 @@ if onewire:
                         log.msg('One Wire: added new sensor to owlist: %s' % sensor.id)
                         owlist.append(owrow)
                 except:
-                    log.msg('One Wire: Error when asigning new sensor list')  
+                    log.msg('One Wire: Error when asigning new sensor list')
                     pass
             try:
                 self.saveowlist(owsensorfile,owlist)
             except:
-                log.msg('One Wire: Error when writing sensor list')  
+                log.msg('One Wire: Error when writing sensor list')
                 pass
-                     
+
 
         def oneWireInstruments(self,root):
             try:
                 for sensor in root:
-                    if sensor.type == 'DS18B20':             
+                    if sensor.type == 'DS18B20':
                         #sensor.useCache( False ) # Important for below 15 sec resolution (by default a 15 sec cache is used))
                         self.readTemperature(sensor)
                     #if sensor.type == 'DS2406':
@@ -142,15 +141,15 @@ if onewire:
 
         def alias(self, sensorid):
             #define a alias dictionary
-            sensordict = {"332988040000": "Mobil", "504C88040000": "1. Stock: Treppenhaus", 
-                          "6C2988040000": "1. Stock: Flur", "FD9087040000": "Nordmauer Erdgeschoss", 
+            sensordict = {"332988040000": "Mobil", "504C88040000": "1. Stock: Treppenhaus",
+                          "6C2988040000": "1. Stock: Flur", "FD9087040000": "Nordmauer Erdgeschoss",
                           "090A88040000": "1. Stock: Wohnzimmer", "BB5388040000": "1. Stock: Kueche",
                           "F58788040000": "1. Stock: Schlafzimmer", "BAAE87040000": "Dach: Nico (T)",
                           "E2FE87040000": "1. Stock: Speis",
                           "BED887040000": "Dach: Flur", "2F3488040000": "1. Stock: Bad (T)", "0EB354010000": "Dach: Nico",
                           "3AD754010000": "Dach: Tina", "CBC454010000": "1. Stock: Kinderzimmer",
                           "05CE54010000": "1. Stock: Bad", "B1C687040000": "Vogel",
-                          "DACF54010000": "Aussen Kaefig"}      
+                          "DACF54010000": "Aussen Kaefig"}
             try:
                 return sensordict[sensorid]
             except:
@@ -158,7 +157,7 @@ if onewire:
 
         def mpxa4100(self,vad,temp):
             # Calculates pressure for the MPXA4100A6U
-            # calibration values (take them from an ini file for the requested sensor.id) 
+            # calibration values (take them from an ini file for the requested sensor.id)
             va = 4.7 # Volts taken from data sheet
             pa = 105 # kPa taken from data sheet
             vb = 0.6 # Volts taken from data sheet
@@ -182,7 +181,7 @@ if onewire:
             #print "E", E
             #x = (g/(R*(T + Ch*E + a*(h/2))))*h
             #pm = ph*np.exp(x)
-            #print "Pressure [hPA] sealevel ", pm 
+            #print "Pressure [hPA] sealevel ", pm
 
             return (vad-tp)/mp*10.0
 
@@ -217,8 +216,8 @@ if onewire:
                     with open(savefile, "a") as myfile:
                         myfile.write(bindata + "\n")
             except:
-                log.err("OW - datatofile: Error while saving file")        
-            
+                log.err("OW - datatofile: Error while saving file")
+
         def readTemperature(self, sensor):
 
             #t = threading.Timer(1.0, self.readTemperature, [sensor])
@@ -275,7 +274,7 @@ if onewire:
                 global owsensorlist
                 owsensorlist = []
                 self.owConnected()
-                
+
 
         def readBattery(self,sensor,sensortypus):
             dispatch_url =  "http://example.com/"+self.hostname+"/ow#"+sensor.id+"-value"
@@ -307,7 +306,7 @@ if onewire:
                         #print "Pressure [hPa]: ", self.mpxa4100(vad,temp)
                         humidity = self.mpxa4100(vad,temp)
                 except:
-                    log.err("OW - readBattery: Could not asign value") 
+                    log.err("OW - readBattery: Could not asign value")
 
                 # Appending data to buffer which contains pcdate, pctime and sensordata
                 # extract time data

@@ -16,7 +16,7 @@ def writeLATEX(datastream, filename, **kwargs):
     """
     Writing WDC format data.
     """
-    
+
     mode = kwargs.get('mode')
     keys = kwargs.get('keys')
 
@@ -40,7 +40,7 @@ def writeLATEX(datastream, filename, **kwargs):
     keylst = datastream._get_key_headers()
     if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst:
         print "formatWDC: writing WDC data requires at least x,y,z components"
-        return False 
+        return False
     elif not 'f' in keylst:
         keys = ['x','y','z']
 
@@ -86,7 +86,7 @@ def writeLATEX(datastream, filename, **kwargs):
             datestr = '%H:%M'
             sideheadstr = '%b%d %Y'
         else:
-            logging.error('Could not determine sampling rate for latex output: samplinginterval = %f days' % samplinginterval) 
+            logging.error('Could not determine sampling rate for latex output: samplinginterval = %f days' % samplinginterval)
             return
         numcols = srange+1
 
@@ -101,7 +101,7 @@ def writeLATEX(datastream, filename, **kwargs):
         t.add_header_row(headline)
 
         for key in keys:
-            # exec('...' % key) 
+            # exec('...' % key)
             # here starts the key dependend analysis
             exec('%sarray = np.empty((srange+1,int(np.round(float(datalen)/float(srange))),))' % key)
             exec('%sarray[:] = np.NAN' % key)
@@ -192,9 +192,9 @@ def writeLATEX(datastream, filename, **kwargs):
             if not header.get('unit-col-'+key,'') == '':
                 colhead = colhead+' $['+header.get('unit-col-'+key,'')+']$'
             headline.append(colhead)
-            # Extract data and time columns 
+            # Extract data and time columns
             column = str(iter+2)
-            exec('col'+ column + ' = datastream._get_column(\'' + key + '\')') 
+            exec('col'+ column + ' = datastream._get_column(\'' + key + '\')')
             addcollist.append(eval('col'+ column))
 
         fout = open( filename, "wb" )
@@ -206,4 +206,3 @@ def writeLATEX(datastream, filename, **kwargs):
         fout.close()
 
         return True
-

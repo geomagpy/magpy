@@ -96,7 +96,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
 
     if getfile:
         fh = open(filename, 'rt')
-	logging.info(' Read: %s Format: GDAS ' % (filename))
+        logging.info(' Read: %s Format: GDAS ' % (filename))
         cnt = 0
         tpos = KEYLIST.index('t1')
         for line in fh:
@@ -108,7 +108,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
                 colsstr = line.lower().split()
                 ind = colsstr.index('time')
                 colsstr = colsstr[ind:]
-                
+
                 for it, elem in enumerate(colsstr):
                     if elem == 'time':
                         stream.header['epoch'] = elem
@@ -126,7 +126,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
                             if not elem == 't1':
                                 stream.header['unit-' + colname] = 'nT' # actually is 10*nT but that is corrected during data read
                             else:
-                                stream.header['unit-' + colname] = 'degC'                        
+                                stream.header['unit-' + colname] = 'degC'
                     if sensorid:
                         stream.header['SensorID'] = sensorid
             elif line.startswith('# Cobs'):
@@ -198,17 +198,17 @@ def readGDASA1(filename, headonly=False, **kwargs):
 
         fh.close()
 
-        array[0] = np.asarray(array[0]) 
-        array[1] = np.asarray(array[1]) 
-        array[2] = np.asarray(array[2]) 
-        array[3] = np.asarray(array[3]) 
-        array[tpos] = np.asarray(array[tpos]) 
-        array[4] = np.asarray(array[4]) 
+        array[0] = np.asarray(array[0])
+        array[1] = np.asarray(array[1])
+        array[2] = np.asarray(array[2])
+        array[3] = np.asarray(array[3])
+        array[tpos] = np.asarray(array[tpos])
+        array[4] = np.asarray(array[4])
 
     if linestruct:
         return stream
     else:
-         return DataStream([LineStruct()], stream.header, np.asarray(array))    
+         return DataStream([LineStruct()], stream.header, np.asarray(array))
 
 
 def readGDASB1(filename, headonly=False, **kwargs):
@@ -269,7 +269,7 @@ def readGDASB1(filename, headonly=False, **kwargs):
             if not data[8] == 99999:
                 row.f = float(data[8])/10.0
             if not data[8] == 99999 or not data[4] == 99999:
-                stream.add(row)         
+                stream.add(row)
             line = fh.read(25)
 
         headers['col-x'] = 'x'
@@ -288,6 +288,4 @@ def readGDASB1(filename, headonly=False, **kwargs):
         headers = stream.header
         stream =[]
 
-    return DataStream(stream, headers,np.asarray(array))    
-
-
+    return DataStream(stream, headers,np.asarray(array))

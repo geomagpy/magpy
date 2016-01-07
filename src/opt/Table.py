@@ -22,7 +22,7 @@ except:
 
 class Table:
 
-   def __init__(self, numcols, justs=None, fontsize=None, rotate=False, 
+   def __init__(self, numcols, justs=None, fontsize=None, rotate=False,
          tablewidth=None, tablenum=None, caption=None, label=None):
 
       self.numcols = numcols
@@ -34,7 +34,7 @@ class Table:
          if len(self.justs) != numcols:
             raise ValueError, "Error, justs must have %d elements" % (numcols)
       for iter, just in enumerate(self.justs):
-         if just[0] not in ['c','r','l','p']:   
+         if just[0] not in ['c','r','l','p']:
             raise ValueError, "Error, invalid character for just: %s" % just
          if just[0] == 'p':
             self.justs[iter] = 'p{0.2cm}'
@@ -58,12 +58,12 @@ class Table:
 
    def add_header_row(self, headers, cols=None):
       '''Add a header row to the table.  [headers] should be a list of the
-      strings that will be in the header.  [cols], if specified, should be a 
+      strings that will be in the header.  [cols], if specified, should be a
       list of column indexes.  If [cols] is None, it is assummed the headers
       are in order and there are no multicolumns.  If cols is specified, you
       can indicate the the ith header spans several columns by setting the
       ith value of cols to a 2-tuple of first and last columns for the span.'''
-      
+
       if cols is None:
          if len(headers) != self.numcols:
             raise ValueError, "Error, headers must be a list of length %d" %\
@@ -84,15 +84,15 @@ class Table:
          self.headers.append(headers)
          self.header_ids.append(cols)
       return
-   
+
    def add_data(self, data, label="", sigfigs=2, labeltype='cutin'):
       '''Add a matrix of data.  [data] should be a list with length equal to
-      the number of columns of the table.  Each item of [data] should be a 
+      the number of columns of the table.  Each item of [data] should be a
       list or numpy array.  A list of strings will be inserved as is.  If
       a column is a 1-D array of float type, the number of significant
       figures will be set to [sigfigs].  If a column is 2D with shape
       (N,2), it is treated as a value with uncertainty and the uncertainty
-      will be rounded to [sigfigs] and value will be rounded accordingly, 
+      will be rounded to [sigfigs] and value will be rounded accordingly,
       and both will be printed with parenthetical errors.  If a label is
       given, it will be printed in the table with \cutinhead if labeltype
       is 'cutin' or \sidehead if labeltype is 'side'.'''
@@ -146,13 +146,13 @@ class Table:
       fp.write("\\begin{deluxetable}{%s}\n" % cols)
       if self.fontsize: fp.write("\\tabletypesize{%s}\n" % str(self.fontsize))
       if self.rotate: fp.write("\\rotate\n")
-      if self.tablewidth is not None: 
+      if self.tablewidth is not None:
          fp.write("\\tablewidth{%s}\n" % str(self.tablewidth))
       else:
          fp.write("\\tablewidth{0pc}\n")
       if self.tablenum:  fp.write("\\tablenum{%s}\n" % str(self.tablenum))
       fp.write("\\tablecolumns{%d}\n" % self.numcols)
-      if self.caption:  
+      if self.caption:
          if self.label:
             lab = "\\label{%s}" % (self.label)
             fp.write("\\tablecaption{%s}\n" % (str(self.caption)+lab))
@@ -211,9 +211,8 @@ class Table:
          for row in rows:
             fp.write(" & ".join(row))
             fp.write("\\\\\n")
-      
+
       fp.write("\\enddata\n")
 
    def print_footer(self, fp):
       fp.write("\\end{deluxetable}\n")
-                     

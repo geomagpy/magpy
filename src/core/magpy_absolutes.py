@@ -69,7 +69,7 @@ class AbsoluteData(object):
     Supporting internal methods are:
     - self._calcdec() -- calculates dec
     - self._calcinc() -- calculates inc
-    
+
     """
     def __init__(self, container=None, header=None):
         if container is None:
@@ -107,7 +107,7 @@ class AbsoluteData(object):
         Sorting data according to time (maybe generalize that to some key)
         """
         liste = sorted(self.container, key=lambda tmp: tmp.time)
-        return AbsoluteData(liste, self.header)        
+        return AbsoluteData(liste, self.header)
 
     def _corrangle(self,angle, ang_fac):
         if angle > 360*ang_fac:
@@ -164,7 +164,7 @@ class AbsoluteData(object):
         """
         Add a function to the selected values of the data stream -> e.g. get baseline
         Optional:
-        keys (default = 'x','y','z','f')        
+        keys (default = 'x','y','z','f')
         """
         funckeys = kwargs.get('funckeys')
         offset = kwargs.get('offset')
@@ -197,11 +197,11 @@ class AbsoluteData(object):
     def _calcdec(self, **kwargs):
         """
         Calculates declination values from input.
-        Returns results in terms of linestruct 
+        Returns results in terms of linestruct
         Supports the following optional keywords:
         xstart, ystart - float - default 0.0 - strength of the horizontal component in nT
-                       - if variometer is hdf oriented then xstart != 0, ystart = 0 
-                       - if baselinecorrected data is used (or dIdD) use xstart = 0, ystart = 0 
+                       - if variometer is hdf oriented then xstart != 0, ystart = 0
+                       - if baselinecorrected data is used (or dIdD) use xstart = 0, ystart = 0
         unit - str - default 'deg' - can be either 'deg' or 'gon'
         deltaD - float - default 0.0 - eventual correction factor for declination in angular units (dependent on 'unit')
         usestep - int - use first, second or both of successive measurements
@@ -263,7 +263,7 @@ class AbsoluteData(object):
             meanx = np.mean(xcol)
         if len(ycol) > 0:
             meany = np.mean(ycol)
-            
+
         nr_lines = len(poslst)
         dl1,dl2,dl2tmp,variocorr, variohlst = [],[],[],[],[] # temporary lists
 
@@ -323,7 +323,7 @@ class AbsoluteData(object):
 
         decmean = np.mean(dl2)*180.0/np.pi*ang_fac - 180.0*ang_fac
         #miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
-        
+
         #Initialize HC if no input in this column = 0
         try:
             if (poslst[8].hc == 0 or poslst[8].hc == 180):
@@ -365,11 +365,11 @@ class AbsoluteData(object):
             epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]+2*np.pi)/4*hstart
         else:
             epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]-2*np.pi)/4*hstart
-        
+
         resultline = LineStruct()
         resultline.time = poslst[0].time
         resultline.y = dec
-        resultline.typ = 'idff'         
+        resultline.typ = 'idff'
         resultline.var1 = s0d
         resultline.var2 = deH
         resultline.var3 = epZD
@@ -385,13 +385,13 @@ class AbsoluteData(object):
     def _calcinc(self, linestruct, **kwargs):
         """
         Calculates inclination values from input.
-        Need input of a LineStruct Object containing the results of _calcdec 
+        Need input of a LineStruct Object containing the results of _calcdec
         Supports the following optional keywords:
         incstart - float - default 45.0 - inclination value in 'unit'
         unit - str - default 'deg' - can be either 'deg' or 'gon'
         scalevalue - 3comp list - default [1.0,1.0,1.0] - contains scales for varx,vary,varz to nT (not essential if all are equal)
         """
-        
+
         incstart = kwargs.get('incstart')
         scalevalue = kwargs.get('scalevalue')
         unit = kwargs.get('unit')
@@ -434,16 +434,16 @@ class AbsoluteData(object):
             if len(mflst) > 0 and not isnan(elem.f):
                 flist.append(elem.f)
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
-                    variox.append(scale_x*elem.varx) 
-                    varioy.append(scale_y*elem.vary) 
+                    variox.append(scale_x*elem.varx)
+                    varioy.append(scale_y*elem.vary)
                     varioz.append(scale_z*elem.varz)
                 if not isnan(elem.varf):
                     fvlist.append(elem.varf)
                     dflist.append(elem.f-elem.varf)
             elif len(mflst) == 0 and len(mfvlst) > 0:
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
-                    variox.append(scale_x*elem.varx) 
-                    varioy.append(scale_y*elem.vary) 
+                    variox.append(scale_x*elem.varx)
+                    varioy.append(scale_y*elem.vary)
                     varioz.append(scale_z*elem.varz)
                 if not isnan(elem.varf):
                     fvlist.append(elem.varf)
@@ -454,15 +454,15 @@ class AbsoluteData(object):
 
         if len(mflst)>0:
             meanf = np.mean(flist)
-            loggerabs.info("Using F from Absolute files") 
+            loggerabs.info("Using F from Absolute files")
         elif len(mfvlst)>0:
             meanf = np.mean(fvlist)
-            loggerabs.info("Using F from provided scalar path") 
+            loggerabs.info("Using F from provided scalar path")
         else:
             meanf = 0.
             #return emptyline, 20000.0, 0.0
 
-        
+
 
         if len(variox) == 0:
             if iterator == 0:
@@ -503,7 +503,7 @@ class AbsoluteData(object):
         # Therefore we use an arbitrary start value -- Testing of the validity of this approach needs to be conducted
         if nr_lines < 16: # only declination measurements available so far
             return linestruct, 20000.0, 0.0
-        
+
         for k in range((nr_lines-1)/2,nr_lines):
             val = poslst[k].vc
             try:
@@ -528,8 +528,8 @@ class AbsoluteData(object):
             else:
                 quad = poslst[k].vc + 360.0*ang_fac - (poslst[k].hc + mirediff)
             # The signums are essential for the collimation angle calculation
-            # ToDo: check regarding correctness for different location/angles 
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+            # ToDo: check regarding correctness for different location/angles
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             #signum1 = np.sign(np.tan(quad*np.pi/180/ang_fac))
             signum1 = np.sign(-np.cos(quad*np.pi/180.0/ang_fac))
             signum2 = np.sign(np.sin(quad*np.pi/180.0/ang_fac))
@@ -547,9 +547,9 @@ class AbsoluteData(object):
                 I0 += 2*np.pi
             elif  I0 < 0:
                 I0 = -I0
-                
+
             if k < nr_lines-1:
-                I0list.append(I0)       
+                I0list.append(I0)
                 I0Diff1 += signum2*I0
                 xDiff1 += signum2*poslst[k].varx
                 zDiff1 += signum2*poslst[k].varz
@@ -562,7 +562,7 @@ class AbsoluteData(object):
                 for n in range((nr_lines-1)/2,nr_lines-1):
                     rotation = np.abs(scaleangle - poslst[n].vc)
                     if rotation < minimum:
-                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/ppmval[cnt] + np.cos(np.mean(I0list))*(poslst[n].vary-poslst[k].vary)/ppmval[cnt])*180/np.pi*ang_fac 
+                        fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/ppmval[cnt] + np.cos(np.mean(I0list))*(poslst[n].vary-poslst[k].vary)/ppmval[cnt])*180/np.pi*ang_fac
                         #print fieldchange
                         deltaB = rotation+fieldchange
                         deltaR = np.abs(poslst[n].res-poslst[k].res)
@@ -626,7 +626,7 @@ class AbsoluteData(object):
         if not meanf == 0:
             inc = np.arctan(zstart/hstart)*180.0*ang_fac/np.pi
             # Divided by 4 - need to be corrected if scalevals are used - don't thing so (leon, June 2012)
-            s0i = -I0Diff1/4*fstart - xDiff1*np.sin(inc*np.pi/180) - zDiff1*np.cos(inc*np.pi/180) 
+            s0i = -I0Diff1/4*fstart - xDiff1*np.sin(inc*np.pi/180) - zDiff1*np.cos(inc*np.pi/180)
             epzi = (-I0Diff2/4 - (xDiff2*np.sin(inc*np.pi/180) - zDiff2*np.cos(inc*np.pi/180))/(4*fstart))*zstart;
         else:
             loggerabs.warning("%s : no intensity measurement available - presently using an x value of 20000 nT for Dec"  % num2date(self[0].time).replace(tzinfo=None))
@@ -647,7 +647,7 @@ class AbsoluteData(object):
         linestruct.dy = basey
         linestruct.dz = basez
         linestruct.df = deltaF
-        linestruct.typ = 'idff'         
+        linestruct.typ = 'idff'
         linestruct.t2 = calcscaleval
         linestruct.var4 = s0i  # replaces Mirediff from _calcdec
         linestruct.var5 = epzi
@@ -658,7 +658,7 @@ class AbsoluteData(object):
         """
         Interation of dec and inc calculation
         Need input of a LineStruct Object containing the results of _calcdec
-        Returns a resultsline according to line struct 
+        Returns a resultsline according to line struct
         Supports the following optional keywords:
         incstart - float - default 45.0 - inclination value in 'unit'
         unit - str - default 'deg' - can be either 'deg' or 'gon'
@@ -724,7 +724,7 @@ def _logfile_len(fname, logfilter):
         if logfilter in line:
             cnt = cnt +1
     return cnt
- 
+
 
 def deg2degminsec(value):
     """
@@ -752,7 +752,7 @@ def deg2degminsec(value):
         minutes = 0
 
     return str(degree)+":"+str(minutes)+":"+str(seconds)
-    
+
 
 def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
@@ -777,11 +777,11 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pass
     elif "://" in path_or_url:
         # some URL
-        #proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )           
+        #proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )
         #opener = urllib2.build_opener(proxy_handler,urllib2.HTTPBasicAuthHandler(),urllib2.HTTPHandler, urllib2.HTTPSHandler,urllib2.FTPHandler)
         # install this opener
-        #urllib2.install_opener(opener)       
-  
+        #urllib2.install_opener(opener)
+
         # extract extension if any
         suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
         name = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
@@ -849,13 +849,13 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     archivepath -- archive directory to which tsuccessfully analyzed data is moved to
     access_ftp -- retrives data from an ftp directory first and removes them after successful analysis
     printresults (boolean) -- screen output of calculation results
-    disableproxy (boolean) -- by default system settings are used        
+    disableproxy (boolean) -- by default system settings are used
     -- calcabs calculation parameters:
-            usestep: (int) for selecting whether first (1), second (2) or a mean (0) of both repeated measurements at each "Lage" is used 
+            usestep: (int) for selecting whether first (1), second (2) or a mean (0) of both repeated measurements at each "Lage" is used
     """
 
     plog = PyMagLog()
-    
+
     path_or_url = kwargs.get('path_or_url')
     variopath = kwargs.get('variopath')
     scalarpath = kwargs.get('scalarpath')
@@ -885,7 +885,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     username = kwargs.get('username')
     password = kwargs.get('password')
     disableproxy = kwargs.get('disableproxy')
-    
+
     if not absidentifier:
         absidentifier = 'AbsoluteMeas.txt'
     if not deltaF:
@@ -910,7 +910,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         xstart = 20000.0
     if not ystart:
         ystart = 0.0
-    if not usestep: 
+    if not usestep:
         usestep = 0
     if not outputformat: # accepts idf, hdz and xyz
         outputformat = 'xyz'
@@ -921,7 +921,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         opener = urllib2.build_opener(authhandler)
         urllib2.install_opener(opener)
     if disableproxy:
-        proxy_handler = urllib2.ProxyHandler( {} )           
+        proxy_handler = urllib2.ProxyHandler( {} )
         opener = urllib2.build_opener(proxy_handler)
         # install this opener
         urllib2.install_opener(opener)
@@ -962,7 +962,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 # found single file
                 localfilelist.append(path)
                 pass
-            elif len(datlst[0].split()) > 8: 
+            elif len(datlst[0].split()) > 8:
                 for elem in datlst:
                     try:
                         absfile = elem.split()[-1]
@@ -971,10 +971,10 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                     except:
                         pass
             else:
-                loggerabs.error('--- -- Aborting AbsAnalysis: no apropriate file found')              
+                loggerabs.error('--- -- Aborting AbsAnalysis: no apropriate file found')
         else:
             loggerabs.error('--- -- Aborting AbsAnalysis: could not identify path_or_url')
-            return  
+            return
     else:
         localfilelist.append(path_or_url)
 
@@ -985,7 +985,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         loggerabs.info('--- -- Aborting AbsAnalysis: no data available')
         print "Aborting AbsAnalysis: no data available"
         return
-    
+
     # if time range is given then limit the localfilelist
     elem = localfilelist[0].split('/')
     splitter = '/'
@@ -1000,13 +1000,13 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
 
     if endtime:
         localfilelist = [elem for elem in localfilelist if (datetime.strptime(elem.split(splitter)[-1][:10],"%Y-%m-%d") <= st._testtime(endtime))]
-        
+
     if len(localfilelist) > 0:
         loggerabs.info('--- -- AbsAnalysis: %d DI measurements to be analyzed' % len(localfilelist))
     else:
         loggerabs.error('--- -- Aborting AbsAnalysis: check time range or data source: no DI data present')
         return
- 
+
     # get files from localfilelist and analyze them (localfilelist is not sorted!)
     cnt = 0
 
@@ -1032,7 +1032,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
     print 'Min Time', num2date(mintime)
     print 'Max Time', num2date(maxtime)
 
-    # Test of iterative procedure with variable length  (chnage days=30) 
+    # Test of iterative procedure with variable length  (chnage days=30)
     iterationtime = date2num(num2date(mintime).replace(tzinfo=None)+timedelta(days=30))
     start = mintime
     while start < maxtime:
@@ -1064,7 +1064,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
         # 3.) Analyse streams
         testlst = [elem for elem in abst if elem._get_min('time') >= start and elem._get_max('time') < iterationtime]
         start = iterationtime
-        iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))    
+        iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))
         for stream in testlst:
             #print len(stream)
             lengthoferrorsbefore = _logfile_len('magpy.log','ERROR')
@@ -1074,7 +1074,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
             # ######## Process counter
             print plog.proc_count
             # ######## Process counter
-            
+
             # initialize the move function for each fi
             if not archivepath:
                 movetoarchive = False
@@ -1090,7 +1090,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                         stream = stream._insert_function_values(vafunc)
                         varioinst = os.path.split(variopath)[0]
                     else:
-                        loggerabs.warning('%s : No variometer correction possible' % fi) 
+                        loggerabs.warning('%s : No variometer correction possible' % fi)
                 # Now check for f values in file
                 fcol = stream._get_column('f')
                 if not len(fcol) > 0 and not scalarpath:
@@ -1103,7 +1103,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                         scalarinst = os.path.split(scalarpath)[0]
                     else:
                         loggerabs.warning('%s : Did not find independent scalar values' % fi)
-                        
+
                 # use DataStream and its LineStruct to store results
                 print unit
                 result = stream.calcabsolutes(incstart=incstart,xstart=xstart,ystart=ystart,unit=unit,scalevalue=scalevalue,deltaD=deltaD,deltaI=deltaI,usestep=usestep,printresults=printresults,debugmode=debugmode)
@@ -1116,7 +1116,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
 
                 if lengthoferrorsafter > lengthoferrorsbefore:
                     movetoarchive = False
-                    
+
                 # check for presence of result in summary-file and append / replace existing data (if more non-NAN values are present)
                 nonnan_result, nonnan_line = [],[]
                 for key in KEYLIST:
@@ -1156,7 +1156,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 if outputformat == 'xyz':
                     #for elem in st:
                     result = result.idf2xyz(unit=unit)
-                    result.typ = 'xyzf'         
+                    result.typ = 'xyzf'
                     st.header['col-x'] = 'x'
                     st.header['unit-col-x'] = 'nT'
                     st.header['col-y'] = 'y'
@@ -1168,7 +1168,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                     result = result.idf2xyz(unit=unit)
                     #for elem in st:
                     result = result.xyz2hdz(unit=unit)
-                    result.typ = 'hdzf'         
+                    result.typ = 'hdzf'
                     st.header['col-x'] = 'h'
                     st.header['unit-col-x'] = 'nT'
                     st.header['col-y'] = 'd'
@@ -1190,7 +1190,7 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                 # Get the list index of stream and select the appropriate filename for storage
                 index = abst.index(stream)
                 fi = localfilelist[index]
-                if not "://" in fi: 
+                if not "://" in fi:
                     src = fi
                     fname = os.path.split(src)[1]
                     dst = os.path.join(archivepath,fname)
@@ -1215,12 +1215,12 @@ def analyzeAbsFiles(debugmode=None,**kwargs):
                     if (typus == 'ftp'):
                         ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
         #start = iterationtime
-        #iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))    
+        #iterationtime = date2num(num2date(iterationtime).replace(tzinfo=None)+timedelta(days=30))
 
     st = st.sorting()
-    
+
     loggerabs.info('--- Finished absolute analysis at %s ' % str(datetime.now()))
-                            
+
     return st
 
 
@@ -1260,7 +1260,7 @@ def getAbsFilesFTP(**kwargs):
         absidentifier = '*AbsoluteMeas.txt'
 
     filelist = []
-    
+
     msg = PyMagLog()
     loggerabs.info(" -- Starting downloading Absolute files from %s" % ftppath)
 
@@ -1274,7 +1274,7 @@ def getAbsFilesFTP(**kwargs):
 
     # -- Download files to Analysis folder
     for f in ftplist:
-        loggerabs.info(" ---- Now getting %s" % f) 
+        loggerabs.info(" ---- Now getting %s" % f)
         ftpget (localpath=analysispath, ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
 
     loggerabs.info(" -- Download procedure finished at %s" % ftppath)
@@ -1357,4 +1357,3 @@ if __name__ == '__main__':
     ### ToDo
     # test for input variations (e.g. no f, scalevals, lemi vs didd etc)
     # eventually develop plot routine for absstruct....
-

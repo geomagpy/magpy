@@ -64,9 +64,9 @@ def readOPT(filename, headonly=False, **kwargs):
     """
     Reading PMAG1 format data.
     Looks like:
-    Tag	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20	21	22	23	24	mittel
-    1.	66	66	66	65	64	65	66	66	67	66	65	66	64	64	65	66	67	66	66	67	67	67	68	67	65,97
-    2.	67	66	66	66	66	66	66	67	67	67	66	66	65	65	66	65	65	66	66	68	68	67	66	68	66,29
+    Tag 1       2       3       4       5       6       7       8       9       10      11      12      13      14      15      16      17      18      19      20      21      22      23      24      mittel
+    1.  66      66      66      65      64      65      66      66      67      66      65      66      64      64      65      66      67      66      66      67      67      67      68      67      65,97
+    2.  67      66      66      66      66      66      66      67      67      67      66      66      65      65      66      65      65      66      66      68      68      67      66      68      66,29
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -143,7 +143,7 @@ def readOPT(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    return DataStream(stream, headers)  
+    return DataStream(stream, headers)
 
 
 
@@ -151,13 +151,13 @@ def readPMAG1(filename, headonly=False, **kwargs):
     """
     Reading PMAG1 format data.
     Looks like:
-    00:00:07	48488.3	0713220022
-    00:00:17	48487.7	0713220032
+    00:00:07    48488.3 0713220022
+    00:00:17    48487.7 0713220032
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
-    
+
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
@@ -208,7 +208,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
                     if (23-int(hour) == 0) and not regularfound:
                         subday = -1
                     elif int(hour) == 0:
-                        regularfound = True 
+                        regularfound = True
                     row.time=date2num(strtime + timedelta(days=subday))
                     try:
                         strval = elem[1].replace(',','.')
@@ -223,17 +223,17 @@ def readPMAG1(filename, headonly=False, **kwargs):
                     pass
         fh.close()
 
-    return DataStream(stream, headers)  
+    return DataStream(stream, headers)
 
 
 def readPMAG2(filename, headonly=False, **kwargs):
     """
     Reading PMAG2 format data.
     Looks like:
-    48488.3	0713220022
-    48487.7	0713220032
+    48488.3     0713220022
+    48487.7     0713220032
     """
-    
+
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
@@ -296,6 +296,4 @@ def readPMAG2(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    return DataStream(stream, headers)    
-
-
+    return DataStream(stream, headers)

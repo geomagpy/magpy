@@ -1,5 +1,3 @@
-
-
 import sys, time, os, socket
 import struct, binascii, re, csv
 from datetime import datetime, timedelta
@@ -19,28 +17,28 @@ except:
 iddict = {'f': '10', 'x': '11', 'y': '12', 'z': '13', 'df': '14', 't': '30', 'rh': '33', 'p': '35', 'w': '38'}
 
 """
-0: clientname			-- str (atlas)
-1: timestamp (PC)		-- str (2013-01-23 12:10:32.712475)
-2: date (PC)			-- str (2013-01-23)
-3: outtime (PC)	 		-- str (12:10:32.712475)
-4: timestamp (sensor)		-- str (2013-01-23 12:10:32.712475)
-5: GPS coordinates		-- str (??.??N ??.??E)
-9: Sensor Description		-- str (to be found in the adict)
-10: f				-- float (48633.04) [nT]
-11: x				-- float (20401.3) [nT]
-12: y				-- float (-30.0) [nT]
-13: z				-- float (43229.7) [nT]
-14: df				-- float (0.06) [nT]
-30: T (ambient)			-- float (7.2) [C]
-31: T (sensor)			-- float (10.0) [C]
-32: T (electronics)		-- float (12.5) [C]
-33: rh (relative humidity)	-- float (99.0) [%]
-34: T (dewpoint)		-- float (6.0) [C]
+0: clientname                   -- str (atlas)
+1: timestamp (PC)               -- str (2013-01-23 12:10:32.712475)
+2: date (PC)                    -- str (2013-01-23)
+3: outtime (PC)                 -- str (12:10:32.712475)
+4: timestamp (sensor)           -- str (2013-01-23 12:10:32.712475)
+5: GPS coordinates              -- str (??.??N ??.??E)
+9: Sensor Description           -- str (to be found in the adict)
+10: f                           -- float (48633.04) [nT]
+11: x                           -- float (20401.3) [nT]
+12: y                           -- float (-30.0) [nT]
+13: z                           -- float (43229.7) [nT]
+14: df                          -- float (0.06) [nT]
+30: T (ambient)                 -- float (7.2) [C]
+31: T (sensor)                  -- float (10.0) [C]
+32: T (electronics)             -- float (12.5) [C]
+33: rh (relative humidity)      -- float (99.0) [%]
+34: T (dewpoint)                -- float (6.0) [C]
 38: W (weight)                  -- float (24.0042) [g]
-40: Error code (POS1)		-- float (80) [-]
-60: VDD (support voltage)	-- float (5.02) [V]
-61: VAD (measured voltage)	-- float (2.03) [V]
-62: VIS (measured voltage)	-- float (0.00043) [V]
+40: Error code (POS1)           -- float (80) [-]
+60: VDD (support voltage)       -- float (5.02) [V]
+61: VAD (measured voltage)      -- float (2.03) [V]
+62: VIS (measured voltage)      -- float (0.00043) [V]
 """
 
 def timeToArray(timestring):
@@ -76,7 +74,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.err("Arduino - Protocol: Error while saving file")        
+        log.err("Arduino - Protocol: Error while saving file")
 
 
 ## Arduino protocol
@@ -93,8 +91,8 @@ class ArduinoProtocol(LineReceiver):
         - serial output on ttyACM0 needs to follow the MagPy definition:
             Three data sequences are supported:
             1.) The meta information
-                The meta information line contains all information for a specific sensor. 
-                If more than one sensor is connected, then several meta information 
+                The meta information line contains all information for a specific sensor.
+                If more than one sensor is connected, then several meta information
                 lines should be sent (e.g. M1:..., M2:..., M99:...)
                 Meta lines should be resent once in a while (e.g. every 10-100 data points)
                 Example:
@@ -105,17 +103,17 @@ class ArduinoProtocol(LineReceiver):
                 Key and Variable are separeted by an underscore, unit is provided in brackets.
                 Like the Meta information the header should be sent out once in a while
                 Example:
-                     H1: f_F [nT], t1_Temp [deg C], var1_Quality [None], var2_Pressure [mbar] 
-            3.) The data line: 
-                The data line containes all data from a specific sensor 
+                     H1: f_F [nT], t1_Temp [deg C], var1_Quality [None], var2_Pressure [mbar]
+            3.) The data line:
+                The data line containes all data from a specific sensor
                 Example:
-                     D1: 46543.7898, 6.9, 10, 978.000 
-                
+                     D1: 46543.7898, 6.9, 10, 978.000
+
          - recording starts after meta and header information have been received
 
     MARTAS requirements:
          - add the following line to the sensor.txt
-            ARDUINO		ACM0	9600
+            ARDUINO             ACM0    9600
          - on the MARTAS machine an additional information file will be created
            containing the sensor information for connected ARDUINO boards:
            arduinolist.csv:
@@ -156,7 +154,7 @@ class ArduinoProtocol(LineReceiver):
     def extendarduinolist(self, idnum):
         martasdir = [path for path, dirs, files in os.walk("/home") if path.endswith('MARTAS')][0]
         arduinosensorfile = os.path.join(martasdir,'arduinolist.csv')
-        log.msg('Checking Arduinofile: %s' % arduinosensorfile) 
+        log.msg('Checking Arduinofile: %s' % arduinosensorfile)
         arduinolist = []
         sensorelement = []
         try:
@@ -164,7 +162,7 @@ class ArduinoProtocol(LineReceiver):
             sensorelement = [elem[0] for elem in arduinolist]
             print "Liste", sensorelement
         except:
-            log.msg('Arduino: No Sensor list so far -or- Error while getting sensor list')  
+            log.msg('Arduino: No Sensor list so far -or- Error while getting sensor list')
             pass
         if not self.sensordict[idnum] in sensorelement:
             arduinolist.append([self.sensordict[idnum], self.keydict[idnum]])
@@ -207,7 +205,7 @@ class ArduinoProtocol(LineReceiver):
             pass
 
         header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, str(self.keydict[idnum]).replace("'","").strip(), str(self.vardict[idnum]).replace("'","").strip(), str(self.unitdict[idnum]).replace("'","").strip(), str(multiplier).replace(" ",""), packcode, struct.calcsize(packcode))
-     
+
         if printdata:
             #print header
             print timestamp, values
@@ -220,9 +218,9 @@ class ArduinoProtocol(LineReceiver):
         evt3 = {'id': 3, 'value': outtime}
         for idx,event in enumerate(events):
             execstring = "evt"+event+" = {'id': "+event+", 'value': "+ str(values[idx])+"}"
-            exec(execstring) 
+            exec(execstring)
         evt99 = {'id': 99, 'value': 'eol'}
-        
+
         return eval(self.eventdict[idnum])
 
 
@@ -239,10 +237,10 @@ class ArduinoProtocol(LineReceiver):
             an = elem.strip(']').split('[')
             try:
                 if len(an) < 1:
-                    print "Arduino: error when analyzing header" 
+                    print "Arduino: error when analyzing header"
                     return
             except:
-                print "Arduino: error when analyzing header" 
+                print "Arduino: error when analyzing header"
                 return
             var = an[0].split('_')
             key = var[0].strip().lower()
@@ -280,7 +278,7 @@ class ArduinoProtocol(LineReceiver):
                 el = elem.split(':')
                 metadict[el[0].strip()] = el[1].strip()
         except:
-            log.msg('Could not interpret meta data - skipping') 
+            log.msg('Could not interpret meta data - skipping')
             return
 
         if 'SensorRevsion' in metadict:
@@ -295,7 +293,7 @@ class ArduinoProtocol(LineReceiver):
         self.sensordict[metanum] = self.sensor
         print "Found Sensor %s for ID %d" % (self.sensor, metanum)
 
-        # Write a file to the martas directory: arduino.txt containig the sensorids 
+        # Write a file to the martas directory: arduino.txt containig the sensorids
         # for each connected sensor and its components
         # This can then be used by the collector and the web scripts
 
@@ -328,7 +326,7 @@ class ArduinoProtocol(LineReceiver):
                     dataident = int(dataar[0].strip('D'))
                     data = dataar[1].strip().split(',')
                     eventstring = self.eventdict[dataident]
-                    
+
                     exec(eventstring+" = self.processArduinoData(dataident, data)")
 
                     ## publish event to all clients subscribed to topic
@@ -344,4 +342,3 @@ class ArduinoProtocol(LineReceiver):
         #except ValueError:
         #    log.err('Unable to parse data %s' % line)
         #    #return
-

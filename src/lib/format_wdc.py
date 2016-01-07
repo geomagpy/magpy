@@ -40,7 +40,7 @@ def readWDC(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
-    
+
     fh = open(filename, 'rt')
 
     stream = DataStream()
@@ -70,7 +70,7 @@ def readWDC(filename, headonly=False, **kwargs):
         elif headonly:
             # skip data for option headonly
             continue
-        elif len(line.strip()) == 120: # hour file  
+        elif len(line.strip()) == 120: # hour file
             # skip data for option headonly
             code = line[:3]
             ar = line[3:5]
@@ -93,7 +93,7 @@ def readWDC(filename, headonly=False, **kwargs):
             #if int(year) < 1000: #old format
             #    year= '19'+ar
             #print co
-            day = str(int(day)).zfill(2)  
+            day = str(int(day)).zfill(2)
             #print code, year, mo, day, co
             cf= lambda s,p: [ s[i:i+p] for i in range(0,len(s),p) ]
             dailymean = line[116:120]
@@ -107,7 +107,7 @@ def readWDC(filename, headonly=False, **kwargs):
                     if co == firstco:
                         time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
                         array[tind].append(time)
-                        array[str1ind].append(kind)                        
+                        array[str1ind].append(kind)
                     if co=='i':
                         if not elem == "9999":
                             x = float(base) + float(elem)/600
@@ -130,7 +130,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             x = float(base)*100 + float(elem)
                         else:
-                            x = float(NaN)                                
+                            x = float(NaN)
                         complist[0] = co
                         array[xind].append(x)
                         headers['col-x'] = co
@@ -139,7 +139,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             y = float(base)*100 + float(elem)
                         else:
-                            y = float(NaN)                                
+                            y = float(NaN)
                         complist[1] = co
                         array[yind].append(y)
                         headers['col-y'] = 'y'
@@ -148,7 +148,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             z = float(base)*100 + float(elem)
                         else:
-                            z = float(NaN)                                
+                            z = float(NaN)
                         complist[2] = co
                         array[zind].append(z)
                         headers['col-z'] = 'z'
@@ -186,7 +186,7 @@ def readWDC(filename, headonly=False, **kwargs):
                 ye = '2'+yestr
             year = ye+ar
             datestr = year+'-'+mo+'-'+day
-            
+
             for i in range(0, 60*6, 6):
                 if var == firstvar:
                     timestr = hr+':%02d:00' % (i/6)
@@ -262,14 +262,14 @@ def writeWDC(datastream, filename, **kwargs):
     """
     Writing WDC format data.
     """
-    
+
     mode = kwargs.get('mode')
     #createlatex = kwargs.get('createlatex')
 
     keylst = datastream._get_key_headers()
     if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst or not 'f' in keylst:
         print "formatWDC: writing WDC data requires x,y,z,f components"
-        return False 
+        return False
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -299,7 +299,7 @@ def writeWDC(datastream, filename, **kwargs):
     else:
         print "Wrong sampling interval - please filter the data to minutes or hours"
         return success
-        
+
 
     # 2.) Get Iaga code
     header = datastream.header
@@ -514,12 +514,12 @@ def writeWDC(datastream, filename, **kwargs):
         for comp in ['x','y','z','f']:
             if len(eval(comp+'el'))<1:
                 exec(comp+'dailymean = int(9999)')
-                exec(comp+'base = int(9999)') 
+                exec(comp+'base = int(9999)')
             else:
-                exec(comp+'mean = round(np.mean(' + comp +'el),0)') 
-                exec(comp+'base = ' + comp +'mean - 5000.0') 
-                exec(comp+'base = int(' + comp +'base/100)') 
-                exec(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)') 
+                exec(comp+'mean = round(np.mean(' + comp +'el),0)')
+                exec(comp+'base = ' + comp +'mean - 5000.0')
+                exec(comp+'base = int(' + comp +'base/100)')
+                exec(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)')
             exec('row'+comp+'+= "%4i" % '+comp+'base')
             count = 0
             for i in range(24):
@@ -548,12 +548,12 @@ def writeWDC(datastream, filename, **kwargs):
         '''
 COLUMNS   FORMAT   DESCRIPTION
 
-1-6       I6       Observatory's North Polar distance (header['DataAcquisitionLatitude']).  
-                   the north geographic pole in thousandths 
-                   of a degree. Decimal point is implied between positions 3 
+1-6       I6       Observatory's North Polar distance (header['DataAcquisitionLatitude']).
+                   the north geographic pole in thousandths
+                   of a degree. Decimal point is implied between positions 3
                    and 4.
-7-12      I6       Observatory's Geographic longitude (header['DataAcquisitionLongitude']). 
-                   of a degree. Decimal point is implied between positions 9 
+7-12      I6       Observatory's Geographic longitude (header['DataAcquisitionLongitude']).
+                   of a degree. Decimal point is implied between positions 9
                    and 10.
 13-14     I2       Year. Last 2 digits, 1996 = 96. See also column 26.
 15-16     I2       Month (01-12)
@@ -580,17 +580,17 @@ COLUMNS   FORMAT   DESCRIPTION
                    Two chars 'cr'= 13 and 'nl'= 10.
         '''
 
-	# http://www.wdc.bgs.ac.uk/catalog/format.html
+        # http://www.wdc.bgs.ac.uk/catalog/format.html
         min_dict, hour_dict, day_dict = {}, {}, {}
-	write_KEYLIST = ['x','y','z','f']
+        write_KEYLIST = ['x','y','z','f']
         for key in write_KEYLIST:
             min_dict[key] = ''
         day, hour = '0', '0'
 
-        for day in range(1,32):		# TODO: make this exact for given month
+        for day in range(1,32):         # TODO: make this exact for given month
             day_dict[str(day).zfill(2)] = ''
 
-	# Read data into dictionaries for ease of writing:
+        # Read data into dictionaries for ease of writing:
         ndtype = False
         if len(datastream.ndarray[0]) > 0:
             ndtype = True
@@ -615,8 +615,8 @@ COLUMNS   FORMAT   DESCRIPTION
                 elemz = datastream.ndarray[zind][i]
                 elemf = datastream.ndarray[find][i]
                 timeval = datastream.ndarray[0][i]
-	    timestamp = num2date(timeval).replace(tzinfo=None)
-	    minute = datetime.strftime(timestamp, "%M")
+            timestamp = num2date(timeval).replace(tzinfo=None)
+            minute = datetime.strftime(timestamp, "%M")
             if minute == '00':
                 if len(min_dict['x']) != 360:
                     loggerlib.error('format_wdc: Error in formatting data for %s.' % datetime.strftime(timestamp,'%Y-%m-%d %H:%M'))
@@ -638,22 +638,22 @@ COLUMNS   FORMAT   DESCRIPTION
                     if len(str(value)) > 6:
                         if value >= 10000:
                             value = int(round(value))
-			elif value >= 1000:
+                        elif value >= 1000:
                             value = round(value,1)
-			else:
-			    value = round(value,2)
+                        else:
+                            value = round(value,2)
                     val_f = str(value).rjust(6)
                 else:
                     val_f = '999999'
                 min_dict[key] = min_dict[key] + val_f
 
-	# Save last day of data, which is left out in loop:
-	minutedata = dict(min_dict)
-	hour_dict[hour] = minutedata
-	hourdata = dict(hour_dict)
+        # Save last day of data, which is left out in loop:
+        minutedata = dict(min_dict)
+        hour_dict[hour] = minutedata
+        hourdata = dict(hour_dict)
         day_dict[day] = hourdata
 
-	# Find data for preamble tags at line beginning:
+        # Find data for preamble tags at line beginning:
         ar = year[2:]
         ye = year[:-2]
         century = ye[1:]
@@ -672,88 +672,88 @@ COLUMNS   FORMAT   DESCRIPTION
             elif predef == ' ':
                 loggerlib.warning("format_WDC: No DataPublicationLevel defined in header! Assuming P (preliminary).")
                 data_predef = 'P'
-	except:
-	    data_predef = 'P'
-	try:
+        except:
+            data_predef = 'P'
+        try:
             iagacode = header.get('StationIAGAcode'," ").upper()
             if iagacode == ' ':
                 loggerlib.warning("format_WDC: No StationIAGAcode defined in header!")
                 iagacode = 'XXX'
-	except:
-	    iagacode = 'WIC'
-	try:
-	    station_lat = header.get('DataAcquisitionLatitude'," ")
+        except:
+            iagacode = 'WIC'
+        try:
+            station_lat = header.get('DataAcquisitionLatitude'," ")
             if station_lat == ' ':
                 loggerlib.warning("format_WDC: No DataAcquisitionLatitude defined in header!")
                 station_lat = 00.00
-	except:
-	    station_lat = 00.00 # 47.93
-	try:
-	    station_long = header.get('DataAcquisitionLongitude'," ")
+        except:
+            station_lat = 00.00 # 47.93
+        try:
+            station_long = header.get('DataAcquisitionLongitude'," ")
             if station_long == ' ':
                 loggerlib.warning("format_WDC: No DataAcquisitionLongitude defined in header!")
                 station_long = 00.00
-	except:
-	    station_long = 00.00 # 15.865
-	northpolardistance = int(round((90-float(station_lat))*1000))
-	longitude = int(round(float(station_long) * 1000))
+        except:
+            station_long = 00.00 # 15.865
+        northpolardistance = int(round((90-float(station_lat))*1000))
+        longitude = int(round(float(station_long) * 1000))
 
-	pre_geopos = str(northpolardistance).rjust(6) + str(longitude).rjust(6)
-	day = datetime(int(year),int(month),1)
+        pre_geopos = str(northpolardistance).rjust(6) + str(longitude).rjust(6)
+        day = datetime(int(year),int(month),1)
 
-	# TODO write routine to check for missing data and fill in spaces?
+        # TODO write routine to check for missing data and fill in spaces?
 
-	# Find time range:
-	if int(month) < 12:
-	    nextmonth = datetime(int(year),int(month)+1,1)
-	else:
-	    nextmonth = datetime(int(year)+1,1,1)
+        # Find time range:
+        if int(month) < 12:
+            nextmonth = datetime(int(year),int(month)+1,1)
+        else:
+            nextmonth = datetime(int(year)+1,1,1)
 
-	# Write data in beliebiges Format:
-	while day < nextmonth:
-	    for key in write_KEYLIST:
+        # Write data in beliebiges Format:
+        while day < nextmonth:
+            for key in write_KEYLIST:
                 for hour_ in range(0,24):
-		    hour = str(hour_).zfill(2)
-		    dom = datetime.strftime(day,"%d")
-	            pre_date = ar + month + datetime.strftime(day,'%d')
-	            pre_rest = key.upper() + hour + iagacode + ' ' + century + data_predef + 7*' '
-		    preamble = pre_geopos + pre_date + pre_rest
+                    hour = str(hour_).zfill(2)
+                    dom = datetime.strftime(day,"%d")
+                    pre_date = ar + month + datetime.strftime(day,'%d')
+                    pre_rest = key.upper() + hour + iagacode + ' ' + century + data_predef + 7*' '
+                    preamble = pre_geopos + pre_date + pre_rest
 
-		    # Get data + calculate mean:
+                    # Get data + calculate mean:
                     try:
-		        data = day_dict[dom][hour][key]
-		        total = 0.
-			try:
-		            for i in range(0,60):
-		                total = total + float(data[i*6:(i+1)*6])
-		            hourly_mean = total/60.
-			except:
-			    hourly_mean = 999999
+                        data = day_dict[dom][hour][key]
+                        total = 0.
+                        try:
+                            for i in range(0,60):
+                                total = total + float(data[i*6:(i+1)*6])
+                            hourly_mean = total/60.
+                        except:
+                            hourly_mean = 999999
                         if len(str(hourly_mean)) > 6:
                             if hourly_mean >= 10000:
                                 hourly_mean = int(round(hourly_mean))
-			    elif hourly_mean >= 1000:
+                            elif hourly_mean >= 1000:
                                 hourly_mean = round(hourly_mean,1)
-			    else:
-				hourly_mean = round(hourly_mean,2)
+                            else:
+                                hourly_mean = round(hourly_mean,2)
                         hourly_mean = str(hourly_mean).rjust(6)
-		    except KeyError:
-			loggerlib.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
-				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
-			data = '999999'*60
-		        hourly_mean = '999999'
-		    except TypeError:
-			loggerlib.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
-				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
-			data = '999999'*60
-		        hourly_mean = '999999'
-		    if len(data) != 360:
-			loggerlib.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
-				% (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
-			data = '999999'*60
-		        hourly_mean = '999999'
-		    line = preamble + data + hourly_mean + '\r\n'
-		    myFile.write(line)
+                    except KeyError:
+                        loggerlib.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
+                                % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
+                        data = '999999'*60
+                        hourly_mean = '999999'
+                    except TypeError:
+                        loggerlib.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
+                                % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
+                        data = '999999'*60
+                        hourly_mean = '999999'
+                    if len(data) != 360:
+                        loggerlib.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
+                                % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
+                        data = '999999'*60
+                        hourly_mean = '999999'
+                    line = preamble + data + hourly_mean + '\r\n'
+                    myFile.write(line)
             day = day + timedelta(days=1)
 
         success = True
@@ -762,5 +762,3 @@ COLUMNS   FORMAT   DESCRIPTION
         logging.warning("Could not save WDC data. Please provide hour or minute data")
 
     return success
-
-
