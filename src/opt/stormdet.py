@@ -319,6 +319,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
     # CALCULATE VARIABLES FOR USE IN EVALUATION:
     # ------------------------------------------
     dACE = _calcDVals(ACE_1m, key_s, lastcompare, timestep)
+    plot(dACE)
 
     while True:
 
@@ -331,8 +332,13 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
         # Average value of v at each point according to timerange:
         v_test = dACE._get_column('var2')
 
+        # Check data is not empty:
+        if len(dv_test) == 0:
+            break
+
         # Check for large percentages of nans:
         ar = [elem for elem in dv_test if not isnan(elem)]
+        print len(ar), len(dv_test)
         div = float(len(ar))/float(len(dv_test))*100.0
         if div < 5.:
             if verbose == True:

@@ -415,6 +415,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         if key  == 'time':
                             ind = KEYLIST.index(key)
                             array[ind] = np.asarray(cdf_file[key][...]) + 730120.
+                        elif key == 'Epoch':
+                            ind = KEYLIST.index('time')
+                            array[ind] = np.asarray(date2num(cdf_file[key][...]))
                     else:
                         for elem in cdf_file[key][...]:
                             row = LineStruct()
@@ -555,20 +558,28 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     skey_y = h0_mfi_KEYDICT[key][1]
                     skey_z = h0_mfi_KEYDICT[key][2]
                     splitdata = np.hsplit(data, 3)
-                    stream._put_column(splitdata[0],skey_x)
                     stream.header['col-'+skey_x] = 'Bx'
                     stream.header['unit-col-'+skey_x] = 'nT'
-                    stream._put_column(splitdata[1],skey_y)
                     stream.header['col-'+skey_y] = 'By'
                     stream.header['unit-col-'+skey_y] = 'nT'
-                    stream._put_column(splitdata[2],skey_z)
                     stream.header['col-'+skey_z] = 'Bz'
                     stream.header['unit-col-'+skey_z] = 'nT'
+                    for ikey, skey in enumerate([skey_x, skey_y, skey_z]):
+                        print skey, ikey
+                        if not oldtype:
+                            ind = KEYLIST.index(skey)
+                            array[ind] = np.asarray(splitdata[ikey])
+                        else:
+                            stream._put_column(splitdata[ikey],skey)
                 elif key == 'Magnitude':
                     skey = h0_mfi_KEYDICT[key]
                     stream.header['col-'+skey] = 'Bt'
                     stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                    stream._put_column(data,skey)
+                    if not oldtype:
+                        ind = KEYLIST.index(skey)
+                        array[ind] = np.asarray(data)
+                    else:
+                        stream._put_column(data,skey)
             elif key in h1_epm_KEYDICT and OMNIACE: # EPAM DATA (H1)
                 data = cdf_file[key][...]
                 badval = cdf_file[key].attrs['FILLVAL']
@@ -579,7 +590,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 skey = h1_epm_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                stream._put_column(data,skey)
+                if not oldtype:
+                    ind = KEYLIST.index(skey)
+                    array[ind] = np.asarray(data)
+                else:
+                    stream._put_column(data,skey)
             elif key in k0_epm_KEYDICT and OMNIACE: # EPAM DATA (K0)
                 data = cdf_file[key][...]
                 badval = cdf_file[key].attrs['FILLVAL']
@@ -590,7 +605,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 skey = k0_epm_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                stream._put_column(data,skey)
+                if not oldtype:
+                    ind = KEYLIST.index(skey)
+                    array[ind] = np.asarray(data)
+                else:
+                    stream._put_column(data,skey)
             elif key in h0_swe_KEYDICT and OMNIACE: # SWEPAM DATA
                 data = cdf_file[key][...]
                 badval = cdf_file[key].attrs['FILLVAL']
@@ -601,7 +620,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 skey = h0_swe_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                stream._put_column(data,skey)
+                if not oldtype:
+                    ind = KEYLIST.index(skey)
+                    array[ind] = np.asarray(data)
+                else:
+                    stream._put_column(data,skey)
             else:
                 if key.lower() in KEYLIST:
                     arkey = cdf_file[key][...]

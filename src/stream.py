@@ -9084,11 +9084,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                     array = np.asarray(array)
 
             else:
-                print "mergeStreams: Did not find identical timesteps - linearily interpolating stream b"
-                print "- please note... this needs considerably longer"
-                print "- only data is used which is within 1/2 sampling rate distance of stream_a timesteps" 
-                print "- put in the larger (higher resolution) stream as stream_a"
-                print "- otherwise you might wait endless"
+                print("mergeStreams: Did not find identical timesteps - linearily interpolating stream b...")
+                print("- Please note: this method needs considerably longer.")
+                print("- Only data within 1/2 the sampling rate distance of stream_a timesteps is used.")
+                print("- Put in the larger (higher resolution) stream as stream_a,")
+                print("- otherwise you might wait an endless amount of time.")
                 # interpolate b
                 function = sb.interpol(keys)
                 #print function, len(function), keys, sa.ndarray, sb.ndarray
