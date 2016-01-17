@@ -1398,6 +1398,12 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     datainfohead,datainfovalue=[],[]
     novalues = False
     if datakeydict:
+        sm = ''
+        sm = datakeydict.get('SensorModule')
+        if sm in ['OW','RCS','ow','rcs']:
+            print "dbdatainfo: Skipping SamplingRate for data revision"
+            SKIPKEYS.append('DataSamplingRate')
+
         for key in datakeydict:
             if key in DATAINFOKEYLIST and not key == 'DataMaxTime' and not key == 'DataMinTime': 
                 # MinTime and Maxtime are changing and therefore are excluded from check
