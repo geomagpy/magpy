@@ -187,7 +187,7 @@ if ssh:
         child = pexpect.spawn(COMMAND)
         if timeout:
             child.timeout=timeout
-        child.expect('assword:')
+        child.expect('password:')
         child.sendline(passwd)
         child.expect(pexpect.EOF)
         print child.before

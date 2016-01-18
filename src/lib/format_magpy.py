@@ -565,7 +565,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     stream.header['col-'+skey_z] = 'Bz'
                     stream.header['unit-col-'+skey_z] = 'nT'
                     for ikey, skey in enumerate([skey_x, skey_y, skey_z]):
-                        print skey, ikey
                         if not oldtype:
                             ind = KEYLIST.index(skey)
                             array[ind] = np.asarray(splitdata[ikey])
