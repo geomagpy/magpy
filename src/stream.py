@@ -2167,63 +2167,47 @@ CALLED BY:
         return self
 
 
-    def bindetector(self,key,text=None,**kwargs):
+    def bindetector(self,key,flagid=0,keystoflag='x',sensorid=None,text=None,**kwargs):
         """
         DEFINITION:
-            Function to detect changes between 0 and 1
+            Function to detect changes between 0 and 1 and create a flaglist for zero or one states
         PARAMETERS:
+            key:           (key) key to investigate
+            flagid:        (int) integer between 0 and 4, default is 0
+            keystoflag:	   (list) list of keys to flagged
+            sensorid:	   (string) sensorid for flaglist, default is sensorid of self
             text:          (string) text to be added to comments/stdout,
                                     will be extended by on/off
-            key:           (key) key to investigate
         Kwargs:
-            add:           (BOOL) if true add to comments
             markallon:     (BOOL) add comment to all ons
             markalloff:    (BOOL) add comment to all offs
             onvalue:       (float) critical value to determin on stage (default = 0.99)
         RETURNS:
-            - DataStream object
+            - flaglist
 
         EXAMPLE:
-            >>>  stream = stream._put_column(res, 't2', columnname='Rain',columnunit='mm in 1h')
+            >>>  flaglist = stream.bindetector('z',0,'x',SensorID,'Maintanence switch for rain bucket',markallon=True)
         """
-        add = kwargs.get('add')
         markallon = kwargs.get('markallon')
         markalloff = kwargs.get('markalloff')
         onvalue = kwargs.get('onvalue')
 
         if not text:
             text = ''
+        if not markallon and not markalloff:
+            markallon = True
         if not onvalue:
             onvalue = 0.99
 
-        startstate = eval('self[0].'+key)
-        for elem in self:
-            state = eval('elem.'+key)
-            if state > onvalue:
-                state = 1
-            if markallon:
-                if state == 1:
-                    tex = text+' on'
-                    if add:
-                        elem.comment =  tex
-            elif markalloff:
-                if state == 0:
-                    tex = text+' off'
-                    if add:
-                        elem.comment =  tex
-            elif not state == startstate and (state == 1 or state == 0):
-                time = datetime.strftime(num2date(elem.time), "%Y-%m-%d %H:%M:%S")
-                if state == 0:
-                    tex = text+' off'
-                    if add:
-                        elem.comment =  tex
-                        print time + ': ' + tex
-                else:
-                    tex = text+' on'
-                    if add:
-                        elem.comment =  tex
-                        print time + ': ' + tex
-                startstate = state
+        # get column
+        idx = KEYLIST.index(key)
+        if len(self.ndarray[0]) > 0:
+            startstate = self.ndarray[idx][0]
+            #if markallon:
+            # get all indicies with values above a[a>onvalue]
+            #if markalloff:
+            # get all indicies with values above a[a<onvalue]
+        #get subsequent data and create flaglist
 
         return self
 
