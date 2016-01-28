@@ -193,10 +193,13 @@ class ArduinoProtocol(LineReceiver):
         values = []
         multiplier = []
         for dat in data:
-            values.append(float(dat))
-            datearray.append(int(float(dat)*10000))
-            packcode = packcode + 'l'
-            multiplier.append(10000)
+            try:
+                values.append(float(dat))
+                datearray.append(int(float(dat)*10000))
+                packcode = packcode + 'l'
+                multiplier.append(10000)
+            except:
+                log.msg('Error while appending data to file (non-float?): %s ' % dat )
 
         try:
             data_bin = struct.pack(packcode,*datearray)

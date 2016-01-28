@@ -176,8 +176,8 @@ def readRMRCS(filename, headonly=False, **kwargs):
     # read file and split text into channels
     # --------------------------------------
     stream = DataStream()
-    # Check whether header infromation is already present
     headers = {}
+    array = [[] for key in KEYLIST]
     data = []
     measurement = []
     unit = []
@@ -186,36 +186,31 @@ def readRMRCS(filename, headonly=False, **kwargs):
 
     # try to get day from filename (platform independent)
     # --------------------------------------
-    splitpath = os.path.split(filename)
-    tmpdaystring = splitpath[1].split('.')[0].split('_')
-    tmpdaystring = tmpdaystring[0].replace('-','')
-    daystring = re.findall(r'\d+',tmpdaystring)[0]
-    if len(daystring) >  8:
-        daystring = daystring[-8:]
+    theday = extractDateFromString(filename)
     try:
-        day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
-        # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
-        logging.warning("Could not identify date in filename %s - reading all" % filename)
+        # Date format not recognized. Need to read all files
         getfile = True
-        pass
 
     if getfile:
         for line in fh:
             if line.isspace():
                 # blank line
                 pass
+            elif line.startswith('# RCS Fieldpoint'):
+                # data header
+                fieldpoint = line.replace('# RCS Fieldpoint','').strip()
             elif line.startswith('#'):
                 # data header
                 colsstr = line.split(',')
                 if (len(colsstr) == 3):
-                    # select the lines with three komma separaeted parts -> they describe the data
+                    # select the lines with three komma separeted parts -> they describe the data
                     meastype = colsstr[1].split()
                     unittype = colsstr[2].split()
                     measurement.append(meastype[2])
@@ -230,32 +225,38 @@ def readRMRCS(filename, headonly=False, **kwargs):
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
                 elem = string.split(line[:-1])
-                row = LineStruct()
+
                 try:
-                    row.time = date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S"))
+                    array[0].append(date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S")))
                     add = 2
                 except:
                     try:
-                        row.time = date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S"))
+                        array[0].append(date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S")))
                         add = 3
                     except:
                         raise ValueError, "Can't read date format in RCS file"
                 for i in range(len(unit)):
                     try:
-                        #print eval('elem['+str(i+add)+']')
-                        exec('row.'+KEYLIST[i+1]+' = float(elem['+str(i+add)+'])')
+                        array[i+1].append(float(elem[i+add]))
                     except:
                         pass
-                stream.add(row)
+
+        array = [np.asarray(el) for el in array]
+        headers['SensorID'] = 'RCS{}_20160114_0001'.format(fieldpoint) # 20160114 corresponds to the date at which RCS was activated
+        headers["SensorName"] = 'RCS{}'.format(fieldpoint)
+        headers["SensorSerialNum"] = "20160114"
+        headers["SensorRevision"] = "0001"
+        headers["SensorModule"] = "RCS"
+        headers["SensorGroup"] = "environment"
+        headers["SensorDataLogger"] = "{}".format(fieldpoint)
     else:
         headers = stream.header
         stream =[]
 
     fh.close()
 
-    headers['SensorID'] = 'RCS_Mandl_0001'
 
-    return DataStream(stream, headers)
+    return DataStream([LineStruct()], headers, np.asarray(array))
 
 
 def readLNM(filename, headonly=False, **kwargs):

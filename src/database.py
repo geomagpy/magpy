@@ -1401,7 +1401,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         sm = ''
         sm = datakeydict.get('SensorModule')
         if sm in ['OW','RCS','ow','rcs']:
-            print "dbdatainfo: Skipping SamplingRate for data revision"
+            print ("dbdatainfo: Skipping SamplingRate for data revision")
             SKIPKEYS.append('DataSamplingRate')
 
         for key in datakeydict:
@@ -1469,7 +1469,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             loggerdatabase.warning("dbdatainfo: STATIONS not yet existing ...")
             rows=[1]
         if not len(rows) > 0:
-            print "dbdatainfo: Did not find StationID in STATIONS - adding it"
+            print ("dbdatainfo: Did not find StationID in STATIONS - adding it")
             # Add all Station info to STATIONS
             stationhead, stationvalue = [],[]
             for key in datakeydict:
@@ -1516,7 +1516,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     # check whether input in DATAINFO with sensorid is existing already
     if len(rows) > 0:
-        print "dbdatainfo: Found existing tables"
+        print ("dbdatainfo: Found existing tables")
         # Get maximum number
         for i in range(len(rows)):
             rowval = rows[i][0].replace(sensorid + '_','')
@@ -1525,7 +1525,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                 numlst.append(int(rowval))
                 #print numlst
             except:
-                print "crap"
+                print ("crap")
                 pass
         maxnum = max(numlst)
         loggerdatabase.debug("dbdatainfo: Maxnum: %i" % maxnum)
@@ -1540,7 +1540,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: using searchlist %s"% intensivesearch)
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
-            print "dbdatainfo: data existing - should be updated?"
+            print ("dbdatainfo: DataID existing - updating")
             selectupdate = True
             for i in range(len(intensiverows)):
                 # if more than one record is existing select the latest (highest) number
@@ -1553,7 +1553,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             datainfonum = '{0:04}'.format(intmaxnum)
             #print datainfonum, intmaxnum
         else:
-            print "dbdatainfo: Creating new Datainfo input - new revision number"
+            print ("dbdatainfo: Creating new DataID")
+            print ("dbdatainfo: because - {}".format(intensiverows))
+            print (intensivesearch)
             selectupdate = False
             datainfonum = '{0:04}'.format(maxnum+1)
             #print "dbdatainfo", datainfohead, datainfovalue, datainfonum
@@ -1570,7 +1572,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             #print "Here", datainfohead
             sqllst = [key + " ='" + str(datainfovalue[idx]) +"'" for idx, key in enumerate(datainfohead) if key in SKIPKEYS and not key == 'DataAbsFunctionObject' and not key=='DataID']
             if 'DataAbsFunctionObject' in datainfohead: ### Tested Text and Binary so far. No quotes is OK.
-                print "dbdatainfo: adding DataAbsFunctionObjects to DATAINFO is not yet working"
+                print ("dbdatainfo: adding DataAbsFunctionObjects to DATAINFO is not yet working")
                 #pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataAbsFunctionObject')])
                 #sqllst.append('DataAbsFunctionObject' + '=' + pfunc)
                 # For testing:
@@ -1588,7 +1590,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             cursor.execute(datainfosql)
         datainfoid = sensorid + '_' + datainfonum
     else:
-        print "dbdatainfo: Creating new table"
+        print ("dbdatainfo: Creating new table")
         # return 0001
         datainfoid = sensorid + '_' + datainfonum
         if not 'DataID' in datainfohead:
@@ -1604,12 +1606,12 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         #print datainfosql
         if updatedb:
             try:
-                print "Updating DATAINFO table"
+                print ("Updating DATAINFO table")
                 cursor.execute(datainfosql)
             except MySQLdb.Error, e:
-                print "Failed:", e
+                print ("Failed: {}".format(e))
             except:
-                print "Failed for unknown reason"
+                print ("Failed for unknown reason")
 
 
     db.commit()
@@ -1669,7 +1671,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         return
 
     if not len(datastream.ndarray[0]) > 0:
-        print "writeDB is used for ndarray type - use stream2DB for LineStruct"
+        print ("writeDB is used for ndarray type - use stream2DB for LineStruct")
         return
 
     # ----------------------------------------------
@@ -1677,8 +1679,8 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     # ----------------------------------------------
 
     if tablename:
-        print "writeDB: not bothering with header, sensorid etc"
-        print "         updating DATAINFO only if existing"
+        print ("writeDB: not bothering with header, sensorid etc")
+        print ("         updating DATAINFO only if existing")
         # Just check whether DataID, if not a table, exists and append data
         #return some message on success
     else:
@@ -1801,14 +1803,14 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                     # if table not existing
                     pass
                 elif emsg.find("Unknown column") >= 0:
-                    print "writeDB: key %s not existing - adding it" % key
+                    print ("writeDB: key %s not existing - adding it" % key)
                     # if key not yet existing
                     addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
                     cursor.execute(addsql)
                 else:
-                    print "writeDB: unkown MySQL error when checking for existing tables: %s" %e
+                    print ("writeDB: unkown MySQL error when checking for existing tables: %s" %e)
             except:
-                print "writeDB: unkown error when checking for existing tables"
+                print ("writeDB: unkown error when checking for existing tables")
 
         if not key=='time':
             collst.append(colstr)
@@ -1816,7 +1818,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
 
 
     if count == 0:
-        print "Table not existing - creating it"
+        print ("Table not existing - creating it")
         # Creating table
         createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,', '.join(dataheads))
         cursor.execute(createdatatablesql)
@@ -3086,7 +3088,16 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
 
 def db2flaglist(db,sensorid, begin=None, end=None):
     """
-    Read flagging information for specified sensor from data base and return a flagging list
+    DEFINITION:
+        Read flagging information for specified sensor from data base and return a flagging list
+    PARAMETERS:
+        sensorid:	   (string) sensorid for flaglist, default is sensorid of self
+    RETURNS:
+        flaglist:          flaglist contains start, end , key2flag, flagnumber, comment, sensorid,
+                           ModificationDate
+
+    EXAMPLE:
+       >>>  flaglist = db2flaglist(db,"MySensorID")
     """
 
     if not db:

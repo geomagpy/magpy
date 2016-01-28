@@ -2167,14 +2167,14 @@ CALLED BY:
         return self
 
 
-    def bindetector(self,key,flagid=0,keystoflag='x',sensorid=None,text=None,**kwargs):
+    def bindetector(self,key,flagnum=1,keystoflag=['x'],sensorid=None,text=None,**kwargs):
         """
         DEFINITION:
             Function to detect changes between 0 and 1 and create a flaglist for zero or one states
         PARAMETERS:
             key:           (key) key to investigate
-            flagid:        (int) integer between 0 and 4, default is 0
-            keystoflag:	   (list) list of keys to flagged
+            flagnum:        (int) integer between 0 and 4, default is 0
+            keystoflag:	   (list) list of keys to be flagged
             sensorid:	   (string) sensorid for flaglist, default is sensorid of self
             text:          (string) text to be added to comments/stdout,
                                     will be extended by on/off
@@ -2192,24 +2192,60 @@ CALLED BY:
         markalloff = kwargs.get('markalloff')
         onvalue = kwargs.get('onvalue')
 
-        if not text:
-            text = ''
         if not markallon and not markalloff:
             markallon = True
         if not onvalue:
             onvalue = 0.99
+        if not sensorid:
+            sensorid = self.header.get('SensorID')
 
-        # get column
-        idx = KEYLIST.index(key)
-        if len(self.ndarray[0]) > 0:
-            startstate = self.ndarray[idx][0]
-            #if markallon:
-            # get all indicies with values above a[a>onvalue]
-            #if markalloff:
-            # get all indicies with values above a[a<onvalue]
-        #get subsequent data and create flaglist
+        if not len(self.ndarray[0]) > 0:
+            print ("bindetector: No ndarray data found - aborting") 
+            return self
 
-        return self
+        moddate = datetime.utcnow()
+        ind = KEYLIST.index(key)
+        startstate = self.ndarray[ind][0]
+        flaglist=[]
+        # Find switching states (Joe Kington: http://stackoverflow.com/questions/4494404/find-large-number-of-consecutive-values-fulfilling-condition-in-a-numpy-array)
+        d = np.diff(self.ndarray[ind])
+        idx, = d.nonzero()
+        idx += 1
+
+        if markallon:
+            if not text:
+                text = 'on'
+            if self.ndarray[ind][0]:
+                # If the start of condition is True prepend a 0
+                idx = np.r_[0, idx]
+            if self.ndarray[ind][-1]:
+                # If the end of condition is True, append the length of the array
+                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+            # Reshape the result into two columns
+            idx.shape = (-1,2)
+            for start,stop in idx:
+                stop = stop-1
+                for elem in keystoflag:
+                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flaglist.append(flagline)
+        if markalloff:
+            if not text:
+                text = 'off'
+            if not self.ndarray[ind][0]:
+                # If the start of condition is True prepend a 0
+                idx = np.r_[0, idx]
+            if not self.ndarray[ind][-1]:
+                # If the end of condition is True, append the length of the array
+                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+            # Reshape the result into two columns
+            idx.shape = (-1,2)
+            for start,stop in idx:
+                stop = stop-1
+                for elem in keystoflag:
+                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagid),text,sensorid,moddate]
+                    flaglist.append(flagline)
+
+        return flaglist
 
     def calc_f(self, **kwargs):
         """
@@ -3527,6 +3563,132 @@ CALLED BY:
         self.ndarray[commentnum] = commentarray
         #print "... finished"
         return self
+
+
+    def flag_range(self, **kwargs):
+        """
+    DEFINITION:
+        Flags data within time range or data exceeding a certain threshold 
+        Coding : 0 take, 1 remove, 2 force take, 3 force remove
+
+    PARAMETERS:
+    Variables:
+        - None.
+    Kwargs:
+        - keys:         (list) List of keys to check for criteria. Default = all numerical
+                            please note: for using above and below criteria only one element
+                            need to be provided (e.g. ['x']
+        - keystoflag:   (list) List of keys to flag. Default = all numerical
+        - below:        (float) flag data of key below this numerical value.
+        - above:        (float) flag data of key exceeding this numerical value.
+        - starttime:    (datetime Object)
+        - endtime:      (datetime Object)
+    RETURNS:
+        - stream:       (DataStream Object) Stream with flagged data.
+
+    EXAMPLE:
+
+        >>> stream.flag_range(keys=['x'], above=80)
+
+    APPLICATION:
+        """
+
+        keys = kwargs.get('keys')
+        above = kwargs.get('above')
+        below = kwargs.get('below')
+        starttime = kwargs.get('starttime')
+        endtime = kwargs.get('endtime')
+        text = kwargs.get('text')
+        flagnum = kwargs.get('flagnum')
+        keystoflag = kwargs.get('keystoflag')
+
+
+        sensorid = self.header.get('SensorID')
+        moddate = datetime.utcnow()
+        flaglist=[]
+        if not keystoflag:
+            keystoflag = self._get_key_headers()
+        if not flagnum:
+            flagnum = 1
+
+        if not len(self.ndarray[0]) > 0:
+            print ("flag_range: No data available - aborting")
+            return flaglist
+
+        if not len(keys) == 1:
+            if above or below: 
+                print ("flag_range: for using thresholds above and below only a single key needs to be provided")
+                print ("  -- ignoring given above and below values")
+                below = False
+                above = False
+
+        # test validity of starttime and endtime
+
+        trimmedstream = self.copy()
+        if starttime:
+            trimmedstream = self._select_timerange(starttime=starttime)
+        if endtime:
+            trimmedstream = self._select_timerange(endtime=endtime)
+
+        if not above and not below:
+            print "Got here"
+            # return flags for all data in trimmed stream
+            for elem in keys:
+                flagline = [num2date(trimmedstream[0][0]).replace(tzinfo=None),num2date(trimmedstream[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                flaglist.append(flagline)
+            return flaglist
+        if above:
+            # TODO create True/False list and then follow the bin detector example
+            ind = KEYLIST.index(keys[0])
+            trueindicies = trimmedstream.ndarray[ind] > above
+            
+            d = np.diff(trueindicies)
+            idx, = d.nonzero()
+            idx += 1
+
+            if not text:
+                text = 'exceeding {}'.format(above)
+            if trueindicies[0]:
+                # If the start of condition is True prepend a 0
+                idx = np.r_[0, idx]
+            if trueindicies[-1]:
+                # If the end of condition is True, append the length of the array
+                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+            # Reshape the result into two columns
+            idx.shape = (-1,2)
+
+            for start,stop in idx:
+                stop = stop-1
+                for elem in keystoflag:
+                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flaglist.append(flagline)
+        if below:
+            # TODO create True/False the other way round
+            ind = KEYLIST.index(keys[0])
+            truefalse = trimmedstream.ndarray[ind] < below
+            
+            d = np.diff(truefalse)
+            idx, = d.nonzero()
+            idx += 1
+
+            if not text:
+                text = 'below {}'.format(below)
+            if truefalse[0]:
+                # If the start of condition is True prepend a 0
+                idx = np.r_[0, idx]
+            if truefalse[-1]:
+                # If the end of condition is True, append the length of the array
+                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+            # Reshape the result into two columns
+            idx.shape = (-1,2)
+
+            for start,stop in idx:
+                stop = stop-1
+                for elem in keystoflag:
+                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flaglist.append(flagline)
+
+        return flaglist
 
     def flag_outlier(self, **kwargs):
         """
@@ -7084,7 +7246,7 @@ CALLED BY:
         if len(self.ndarray[0]) > 0:
             ndtype = True
 
-        print ndtype
+
         ind = KEYLIST.index(key)
         if ndtype and len(self.ndarray[ind]) > 0:
             startt = num2date(np.min(self.ndarray[0]))
@@ -10313,6 +10475,15 @@ def extractDateFromString(datestring):
                 date = datetime.strptime(tmpdaystring,dateform)
             except:
                 # log ('dateformat in filename could not be identified')
+                pass
+
+        if not date and len(daystring.split('_')[0]) > 8:
+            try: # first try whether an easy pattern can be found e.g. test12014-11-22_00-00-00
+                daystrpart = daystring.split('_')[0] # e.g. RCS
+                match = re.search(r'\d{4}-\d{2}-\d{2}', daystrpart)
+                date = datetime.strptime(match.group(), '%Y-%m-%d').date()
+                return date
+            except:  
                 pass
 
         if not date:
