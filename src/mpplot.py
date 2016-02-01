@@ -1048,7 +1048,7 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
 
     res = emd.emd(col,max_modes=max_modes)
     if verbose:
-        print "Found the follwing amount of decomposed modes:", len(res)
+        print "Found the following amount of decomposed modes:", len(res)
     separate = int(np.round(len(res)*sratio,0))
     if verbose:
         print "Separating the last N curves as smooth. N =",separate

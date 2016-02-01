@@ -2485,10 +2485,10 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
             getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table + ' WHERE ' + whereclause
         else:
             getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table
-        print getdatasql
+        #print getdatasql
         cursor.execute(getdatasql)
         rows = list(cursor.fetchall())
-        print "Reading rows: ", len(rows)
+        print ("readDB: Read rows: {}".format(len(rows)))
         ls = []
         for i in range(len(KEYLIST)):
             ls.append([])
@@ -2501,7 +2501,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                         try:
                             ls[index].append(date2num(stream._testtime(elem)))
                         except:
-                            print "readDB: could not identify time:", index, elem
+                            print ("readDB: could not identify time: {a}, {b}".format(a=index,b=elem) )
                     else:
                         if keys[i] in NUMKEYLIST:
                             if elem == None or elem == 'null':
@@ -2520,7 +2520,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                 index = KEYLIST.index(key)
                 col = np.asarray(ls[index])
                 if not False in checkEqual3(col):
-                    print "Found identical values only: %s" % key
+                    print ("readDB: Found identical values only:{}".format(key))
                     #try:
                     if str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find('0000000000000000') or str(col[0]).find('xyz'):
                         ls[index] = np.asarray([])
@@ -2531,7 +2531,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
 
             stream.header = dbfields2dict(db,table)
         else:
-            print "No data found"
+            print ("No data found")
             pass
 
     stream.ndarray = np.asarray(ls, dtype=object)
