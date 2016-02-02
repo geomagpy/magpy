@@ -777,6 +777,7 @@ CALLED BY:
     PARAMETERS:
     kwargs:
         - limit:        (int) limit the lenght of the list
+        - numerical:    (bool) if True, select only numerical keys
     RETURNS:
         - keylist:      (list) a list like ['x','y','z']
 
@@ -3584,11 +3585,11 @@ CALLED BY:
         - starttime:    (datetime Object)
         - endtime:      (datetime Object)
     RETURNS:
-        - stream:       (DataStream Object) Stream with flagged data.
+        - flaglist:     (list) flagging information - use stream.flag(flaglist) to add to stream
 
     EXAMPLE:
 
-        >>> stream.flag_range(keys=['x'], above=80)
+        >>> fllist = stream.flag_range(keys=['x'], above=80)
 
     APPLICATION:
         """
@@ -3607,7 +3608,7 @@ CALLED BY:
         moddate = datetime.utcnow()
         flaglist=[]
         if not keystoflag:
-            keystoflag = self._get_key_headers()
+            keystoflag = self._get_key_headers(numerical=True)
         if not flagnum:
             flagnum = 1
 
