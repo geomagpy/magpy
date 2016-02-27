@@ -78,9 +78,9 @@ a Getting started
 =================
 
 Start python.... 
-then import all methods form the stream object
+then import the basic read method form the stream object
 
-    from magpy.stream import *
+    from magpy.stream import read
 
 You should get something like that (if the :
 
@@ -220,7 +220,7 @@ You will find some example plots at the [Conrad Observatory](http://www.conrad-o
 1. Quick (and not dirty)
 ------------------------
 
-
+    import magpy.mpplot as mp
     mp.plot(data)
 
 2. Some options
@@ -233,9 +233,9 @@ Select specific keys:
 3. Multiple streams
 -------------------
 
-These procedures require an additional object
+Provide  a list of stream and an array of keys:
 
-    from magpy.mpplot import *
+    mp.plotStreams([data1,data2],[['x','y','z'],['f']])
 
 4. Tutorial
 -----------
