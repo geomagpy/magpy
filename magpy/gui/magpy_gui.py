@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import wx
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -685,7 +686,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.ana_page.amountTextCtrl.SetValue(str(n))
         self.menu_p.ana_page.samplingrateTextCtrl.SetValue(str(sr))
         self.menu_p.ana_page.keysTextCtrl.SetValue(keystr)
-        print wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple()))
+        print(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
         self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
         self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
         self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
@@ -1206,7 +1207,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         path = self.menu_p.str_page.pathTextCtrl.GetValue()
         files = self.menu_p.str_page.fileTextCtrl.GetValue()
 
-        print stday, sttime, sd
+        print(stday, sttime, sd)
 
         if path == "":
             dlg = wx.MessageDialog(self, "Please select a path first!\n"
@@ -1320,7 +1321,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.Destroy()
             return
 
-        print "Stream loaded of length ", len(stream)
+        print("Stream loaded of length ", len(stream))
         self.plotstream = stream
         self.SetPageValues(stream)
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
@@ -1502,7 +1503,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,diid=self.diid,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,pier=self.dipier,alpha=self.dialpha,deltaF=self.dideltaF, dbadd=self.didbadd)
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
-            print "Paths:", self.divariopath,self.discalarpath
+            print("Paths:", self.divariopath,self.discalarpath)
             if not self.diazimuth == '':
                 absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,alpha=self.dialpha,deltaF=self.dideltaF)
             else:

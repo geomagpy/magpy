@@ -20,7 +20,6 @@ DEPENDENCIES:
 CALLED BY:
         magpy.lib.magpy_formats
 '''
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -372,7 +371,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     gpstime = True
     if gpstime and len(timediff) > 0:
         loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): %f sec +- %f" % (np.mean(timediff), np.std(timediff)))
-        print("Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff))
+        print "Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff)
 
     for idx,ar in enumerate(array):
         if len(ar) > 0:

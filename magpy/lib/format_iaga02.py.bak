@@ -4,7 +4,6 @@ IAGA02 input filter
 Written by Roman Leonhardt June 2012
 - contains test, read and write function
 """
-from __future__ import print_function
 
 try:
     from magpy.stream import *
@@ -362,7 +361,7 @@ def writeIAGA(datastream, filename, **kwargs):
     line = []
     if not mode == 'append':
         if header.get('Elevation') > 0:
-            print(header)
+            print header
         line.append(' Format %-15s IAGA-2002 %-34s |\n' % (' ',' '))
         line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('StationInstitution'," ")[:44]))
         line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('StationName'," ")[:44]))

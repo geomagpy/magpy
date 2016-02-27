@@ -4,7 +4,6 @@ NEIC input filter
 Written by Roman Leonhardt February 2015
 - contains read function to import neic data (usgs wget seismic data)
 """
-from __future__ import print_function
 
 from magpy.stream import *
 import csv
@@ -37,7 +36,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     stream = DataStream([],{},np.asarray(array))
     headers = {}
 
-    print("reading NEIC")
+    print "reading NEIC"
     datalist = []
     pos = KEYLIST.index('str1')
     if getfile:
@@ -45,8 +44,8 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
             neicreader = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in neicreader:
                 if row[0] == 'time':
-                    print("Got Header")
-                    print(len(row))
+                    print "Got Header"
+                    print len(row)
                     for i,key in enumerate(KEYLIST):
                         if i < 5:
                             headers['col-'+key] = row[i]
@@ -63,7 +62,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     for i in range(1,5):
         array[i] = neicar[i].astype(float)
     for i in range(7,10):
-        print(neicar[i])
+        print neicar[i]
     for i in range(11,15):
         array[i-11+pos] = neicar[i]
 
@@ -72,7 +71,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
 
     #    array[i] = np.asarray([float(elem) for elem in neicar[i] if not elem == '' else float(nan)])
     #array[] = neicar[i].astype(float)
-    print(array)
-    print(headers)
+    print array
+    print headers
     return DataStream([LineStruct()], headers, np.asarray(array))
 

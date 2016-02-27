@@ -7,14 +7,10 @@ leonplanets = ['Earth', 'uranus', 'saturn']
 
 if planet == 'zagll1':
     magpypath = '/home/rachel/Software/MagPyDev/magpy/trunk/src/'
-elif planet in leonplanets:
-    magpypath = '/home/leon/Software/magpy-git/src/'
-elif planet == 'Venus':
-    magpypath = '/home/leon/Software/magpy-git/'
 else:
-    magpypath = '/home/leon/Software/magpy-git/src/'
+    magpypath = '/home/leon/Software/magpy-git/'
 
-sys.path.append(magpypath)
+sys.path.insert(1,magpypath)
 
 #from magpy.stream import *
 from magpy.gui.magpy_gui import *

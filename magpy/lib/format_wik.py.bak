@@ -4,7 +4,6 @@ PMAG input filter (specific for WIK - Elsec)
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -103,7 +102,7 @@ def readOPT(filename, headonly=False, **kwargs):
         headers['col-f'] = 'f'
         headers['unit-col-f'] = 'nT'
 
-    print("Basis for component %s: %s" % (comp, offset))
+    print "Basis for component %s: %s" % (comp, offset)
 
     for line in fh:
         if line.isspace():

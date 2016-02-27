@@ -43,6 +43,7 @@ EXAMPLE:
     >>> sendmail(mailname=mpcred.lc(firstmail[name]), mailadress=mpcred.lc(firstmail[adress]), mailpasswd=mpcred.lc(firstmail[passwd]), text='Hello World', attach='mycompleteharddisk')
 
 """
+from __future__ import print_function
 
 import base64
 import pickle
@@ -61,18 +62,18 @@ def getuser():
     sysuser = os.getenv("USER")
     # if sysuser could not be identified try Logname
     if sysuser == None:
-        print "Getuser: Running from crontab -- trying Logname to identify user"
+        print("Getuser: Running from crontab -- trying Logname to identify user")
         try:
             sysuser = os.getenv("LOGNAME").replace("LOGNAME=", "")
         except:
             sysuser = None
         if not sysuser == None:
-            print "Getuser: ... succes - using", sysuser
+            print("Getuser: ... succes - using", sysuser)
     # if sysuser still could not be identified assume that uid 1000 is the defaultuser (on linux)
     if sysuser == None or sysuser == 'None':
-        print "Getuser: Cannot identify user by standard procedures - switching to default uid 1000"
+        print("Getuser: Cannot identify user by standard procedures - switching to default uid 1000")
         sysuser = pwd.getpwuid(1000)[0]
-        print "Getuser: now using", sysuser
+        print("Getuser: now using", sysuser)
     return sysuser
     # path to home directory
     #if os.isatty(sys.stdin.fileno()):
@@ -110,43 +111,43 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
     try:
         dictslist = loadobj(credentials)
     except:
-        print "Credentials: Could not load credentials file - creating it ..."
+        print("Credentials: Could not load credentials file - creating it ...")
         dictslist = []
         pass
 
     foundinput = False
     for d in dictslist:
         if d[0] == name:
-            print "Credentials: %s - Input for %s is already existing - going to overwrite it" % (typus, name)
+            print("Credentials: %s - Input for %s is already existing - going to overwrite it" % (typus, name))
             foundinput = True
 
     if foundinput:
         dictslist = [elem for elem in dictslist if not elem[0] == name]
 
     if not user:
-        print 'Credentials: user missing'
+        print('Credentials: user missing')
         return
     if not passwd:
-        print 'Credentials: no password provided'
+        print('Credentials: no password provided')
         #return
     if typus == 'db':
         if not db:
-            print 'Credentials: database missing'
+            print('Credentials: database missing')
             return
         if not host:
-            print 'Credentials: host missing'
+            print('Credentials: host missing')
             return
         pwd = base64.b64encode(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'db':db, 'host':host}
     if typus == 'mail':
         if not smtp:
-            print 'Credentials: smtp adress missing'
+            print('Credentials: smtp adress missing')
             return
         pwd = base64.b64encode(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'smtp':smtp}
     if typus == 'transfer':
         if not address:
-            print 'Credentials: address missing'
+            print('Credentials: address missing')
             return
         pwd = base64.b64encode(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'address':address, 'port':port }
@@ -154,9 +155,9 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
     dictslist.append([name,dictionary])
 
     saveobj(dictslist, credentials)
-    print "Credentials: Added entry for ", name
+    print("Credentials: Added entry for ", name)
     entries = [n[0] for n in dictslist]
-    print "Credentials: Now containing entries for", entries
+    print("Credentials: Now containing entries for", entries)
 
 
 def lc(dictionary,value):
@@ -168,12 +169,12 @@ def lc(dictionary,value):
     home = expanduser('~'+sysuser)
     # previously used expanduser('~') which does not work for root
     credentials = os.path.join(home,'.magpycred')
-    print "Accessing credential file:", credentials
+    print("Accessing credential file:", credentials)
 
     try:
         dictslist = loadobj(credentials)
     except:
-        print "Credentials: Could not load file"
+        print("Credentials: Could not load file")
         return
 
     for d in dictslist:
@@ -182,7 +183,7 @@ def lc(dictionary,value):
                 return base64.b64decode(d[1][value])
             return d[1][value]
 
-    print "Credentials: value/dict not found"
+    print("Credentials: value/dict not found")
     return
 
 def sc():
@@ -194,15 +195,15 @@ def sc():
     home = expanduser('~'+sysuser)
     # previously used expanduser('~') which does not work for root
     credentials = os.path.join(home,'.magpycred')
-    print "Credentials: Overview of existing credentials:"
+    print("Credentials: Overview of existing credentials:")
     try:
         dictslist = loadobj(credentials)
     except:
-        print "Credentials: Could not load file"
+        print("Credentials: Could not load file")
         return
 
     for d in dictslist:
-        print d
+        print(d)
     return dictslist
 
 def dc(name):
@@ -216,7 +217,7 @@ def dc(name):
     try:
         dictslist = loadobj(credentials)
     except:
-        print "Credentials: Could not load credentials file - aborting ..."
+        print("Credentials: Could not load credentials file - aborting ...")
         return
 
     foundinput = False
@@ -226,9 +227,9 @@ def dc(name):
     if foundinput:
         newdlist = [d for d in dictslist if not d[0] == name]
         saveobj(newdlist, credentials)
-        print "Credentials: Removed entry for ", name
+        print("Credentials: Removed entry for ", name)
         entries = [n[0] for n in newdlist]
-        print "Credentials: Now containing entries for", entries
+        print("Credentials: Now containing entries for", entries)
     else:
-        print "Credentials: Input for %s not found - aborting" % (name)
+        print("Credentials: Input for %s not found - aborting" % (name))
         return

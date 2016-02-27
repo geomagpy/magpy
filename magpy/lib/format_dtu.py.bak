@@ -4,7 +4,6 @@ Auxiliary input filter - WIC/WIK
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -68,7 +67,7 @@ def readDTU1(filename, headonly=False, **kwargs):
     splitpath = os.path.split(filename)
     daystring = splitpath[1].split('.')
     daystring = daystring[0].split('_')
-    print(daystring[1])
+    print daystring[1]
 
     try:
         day = datetime.strftime(datetime.strptime(daystring[1] , "%Y%m%d"),"%Y-%m-%d")

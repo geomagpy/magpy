@@ -4,27 +4,26 @@
 # Part 1: Import routines for packages
 # ----------------------------------------------------------------------------
 
-from __future__ import print_function
 from magpy.stream import *
 from magpy.absolutes import *
 from magpy.transfer import *
 
-print("Loading python's SQL support")
+print "Loading python's SQL support"
 try:
     # Loading MySQL functionality
     import MySQLdb
-    print("... success")
+    print "... success"
 except ImportError:
-    print("Failed to import SQL package 'MySQLdb' - trying alternative pymysql e.g. for MAC users")
+    print "Failed to import SQL package 'MySQLdb' - trying alternative pymysql e.g. for MAC users"
     try:
         # Loading alternative MySQL functionality
         import pymysql
         pymysql.install_as_MySQLdb()
-        print("... success")
+        print "... success"
     except:
-        print("Failed to import alternative SQL package 'pymysql'")
+        print "Failed to import alternative SQL package 'pymysql'"
 except:
-    print("SQL package import failed")
+    print "SQL package import failed"
     pass
 
 
@@ -226,7 +225,7 @@ def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'
     row = cursor.fetchone()
 
     if not row:
-        print("dbgetPier: No data found for your selection")
+        print "dbgetPier: No data found for your selection"
         return 0.0
 
     key = ['pier','epochDir','deltaD','deltaI','epochF','deltaF']
@@ -242,7 +241,7 @@ def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'
                 return pierlist
             else:
                 if not value in ['deltaD','deltaI','deltaF']:
-                    print("dbgetPier: Select a valid value paramater - check help")
+                    print "dbgetPier: Select a valid value paramater - check help"
                     return 0.0
                 if value in ['deltaD','deltaI']:
                     valuetimes = [t[indtdir] for t in pierlist]
@@ -257,7 +256,7 @@ def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'
                     indlv = valuetimes.index(max(valuetimes))
                     return float(pierlist[indlv][ind])
         except:
-            print("no deltas found")
+            print "no deltas found"
             #return row[0]
     else:
         return 0.0
@@ -281,9 +280,9 @@ def dbgetlines(db, tablename, lines):
     headsql = 'SHOW COLUMNS FROM %s' % (tablename)
     try:
         cursor.execute(headsql)
-    except MySQLdb.IntegrityError as message:
+    except MySQLdb.IntegrityError, message:
         return message
-    except MySQLdb.Error as message:
+    except MySQLdb.Error, message:
         return message
     except:
         return 'dbgetlines: unkown error'
@@ -293,14 +292,14 @@ def dbgetlines(db, tablename, lines):
     getsql = 'SELECT * FROM %s ORDER BY time DESC LIMIT %d' % (tablename, lines)
     try:
         cursor.execute(getsql)
-    except MySQLdb.IntegrityError as message:
-        print(message)
+    except MySQLdb.IntegrityError, message:
+        print message
         return stream
-    except MySQLdb.Error as message:
-        print(message)
+    except MySQLdb.Error, message:
+        print message
         return stream
     except:
-        print('dbgetlines: unkown error')
+        print 'dbgetlines: unkown error'
         return stream
     result = cursor.fetchall()
     res = np.transpose(np.asarray(result))
@@ -340,12 +339,12 @@ def dbupdate(db,tablename, keys, values, condition=None):
     """
     try:
         if not len(keys) == len(values):
-            print("dbupdate: amount of keys does not fit provided values")
+            print "dbupdate: amount of keys does not fit provided values"
             return False
     except:
-        print("dbupdate: keys and values must be provided as list e.g. [key1,key2,...]")
+        print "dbupdate: keys and values must be provided as list e.g. [key1,key2,...]"
     if not len(keys) > 0:
-        print("dbupdate: provide at least on key/value pair")
+        print "dbupdate: provide at least on key/value pair"
         return False
 
     if not condition:
@@ -363,12 +362,12 @@ def dbupdate(db,tablename, keys, values, condition=None):
         setstring = setlist[0]
     updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
     cursor = db.cursor()
-    print(updatesql)
+    print updatesql
     try:
         cursor.execute(updatesql)
-    except MySQLdb.IntegrityError as message:
+    except MySQLdb.IntegrityError, message:
         return message
-    except MySQLdb.Error as message:
+    except MySQLdb.Error, message:
         return message
     except:
         return 'dbupdate: unkown error'
@@ -402,7 +401,7 @@ def dbgetfloat(db,tablename,sensorid,columnid,revision=None):
                 fl = float(row[0])
                 return fl
             except:
-                print("no float found")
+                print "no float found"
                 return row[0]
         else:
             return 0.0
@@ -775,23 +774,23 @@ def dbdict2fields(db,header_dict,**kwargs):
         message = ''
         try:
             cursor.execute(sql)
-        except MySQLdb.IntegrityError as message:
+        except MySQLdb.IntegrityError, message:
             return message
-        except MySQLdb.Error as message:
+        except MySQLdb.Error, message:
             return message
         except:
             return 'unkown error'
         return message
 
     def updatetable(table, primarykey, primaryvalue, key, value):
-        if value != header_dict[key]:
+        if value <> header_dict[key]:
             if value is not None and not onlynone:
-                print("Will update value %s with %s" % (str(value),header_dict[key]))
+                print "Will update value %s with %s" % (str(value),header_dict[key])
                 loggerdatabase.warning("dbdict2fields: ID is already existing but field values for field %s are differing: dict (%s); db (%s)" % (key, header_dict[key], str(value)))
                 updatesql = 'UPDATE '+table+' SET '+key+' = "'+header_dict[key]+'" WHERE '+primarykey+' = "'+primaryvalue+'"'
                 executesql(updatesql)
             else:
-                print("value = None: Will update value %s with %s" % (str(value),header_dict[key]))
+                print "value = None: Will update value %s with %s" % (str(value),header_dict[key])
                 updatesql = 'UPDATE '+table+' SET '+key+' = "'+header_dict[key]+'" WHERE '+primarykey+' = "'+primaryvalue+'"'
                 executesql(updatesql)
 
@@ -846,7 +845,7 @@ def dbdict2fields(db,header_dict,**kwargs):
             loggerdatabase.warning("dbdict2fields: !!!!!!!! %s not existing !!!!!!!" % fieldname)
             return
 
-    print(len(stationfieldlst), len(sensorfieldlst), len(datainfofieldlst))
+    print len(stationfieldlst), len(sensorfieldlst), len(datainfofieldlst)
     if mode == 'insert':   #####   Insert ########
         if len(stationfieldlst) > 0:
             insertsql = 'INSERT INTO STATIONS (%s) VALUE (%s)' %  (', '.join(stationfieldlst), '"'+'", "'.join(stationvaluelst)+'"')
@@ -895,7 +894,7 @@ def dbdict2fields(db,header_dict,**kwargs):
                     loggerdatabase.warning("dbdict2fields: insert for DATAINFO of %s failed - %s - try update mode" % (elem,msg))
     elif mode == 'update':   #####   Update ########
         for key in header_dict:
-            print(key)
+            print key
             if key in STATIONSKEYLIST:
                 searchsql = "SELECT %s FROM STATIONS WHERE StationID = '%s'" % (key,header_dict['StationID'])
                 executesql(searchsql)
@@ -975,7 +974,7 @@ def dbfields2dict(db,datainfoid):
                 else:
                     if not row[0] == None:
                         metadatadict[key] = float(row[0])
-            except MySQLdb.Error as e:
+            except MySQLdb.Error, e:
                 loggerdatabase.error("dbfields2dict: mysqlerror while adding key %s, %s" % (key,e))
             except:
                 loggerdatabase.error("dbfields2dict: unkown error while adding key %s" % key)
@@ -1055,7 +1054,7 @@ def dbfields2dict(db,datainfoid):
             cursor.execute(getstat)
             row = cursor.fetchone()
         except:
-            print("dbfields2dict: error when executing %s" % getstat)
+            print "dbfields2dict: error when executing %s" % getstat
             row = [None]
         if isinstance(row[0], basestring):
             metadatadict[key] = row[0]
@@ -1146,7 +1145,7 @@ def dbalter(db):
                 if len(DATAVALUEKEYLIST) == len(DATAINFOKEYLIST):
                     addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' ' + DATAVALUEKEYLIST[ind]
                 else:
-                    print("dbalter: Differences between provided DATAVALUEKEYLIST and DATAINFOKEYLIST")
+                    print "dbalter: Differences between provided DATAVALUEKEYLIST and DATAINFOKEYLIST"
                     addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' CHAR(100)'
                 cursor.execute(addstr)
                 loggerdatabase.debug("Key added: %s" % key)
@@ -1609,7 +1608,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             try:
                 print ("Updating DATAINFO table")
                 cursor.execute(datainfosql)
-            except MySQLdb.Error as e:
+            except MySQLdb.Error, e:
                 print ("Failed: {}".format(e))
             except:
                 print ("Failed for unknown reason")
@@ -1798,7 +1797,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                 cursor.execute(sql)
                 count +=1
-            except MySQLdb.Error as e:
+            except MySQLdb.Error, e:
                 emsg = str(e)
                 if emsg.find("Table") >= 0 and emsg.find("doesn't exist") >= 0:
                     # if table not existing
@@ -1939,7 +1938,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         return
 
     if len(datastream.ndarray[0]) > 0:
-        print("stream2DB: Found ndarray data -- running writeDB")
+        print "stream2DB: Found ndarray data -- running writeDB"
         writeDB(db,datastream,tablename=tablename,mode='replace')
         return
 
@@ -2353,7 +2352,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             insertsql = insertmanysql
             insertsql = insertsql.replace("INSERT","REPLACE")
             cursor.executemany(insertsql,values)
-        except MySQLdb.Error as e:
+        except MySQLdb.Error, e:
             loggerdatabase.error("stream2db: mysqlerror while replacing data: %s" % (e))
         except:
             try:
@@ -2453,19 +2452,19 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
         cursor.execute(getcols)
         rows = cursor.fetchall()
         keys = [el[0] for el in rows]
-    except MySQLdb.Error as e:
+    except MySQLdb.Error, e:
         # Table does not exist - assume sensor id
         getdatainfo = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + table + '"'
         cursor.execute(getdatainfo)
         rows = cursor.fetchall()
         if not len(rows) > 0:
-            print("No data found - aborting")
+            print "No data found - aborting"
             return stream
         rows = sorted(rows)
         #for tab in rows:
         #    revision = tab[0].replace(table,'').strip('_')
         table = rows[0][0]
-        print("Did not find specific DataID - opening table:", table)
+        print "Did not find specific DataID - opening table:", table
         try:
             cursor.execute('SHOW COLUMNS FROM ' + table)
             rows = cursor.fetchall()
@@ -2851,7 +2850,7 @@ def db2diline(db,**kwargs):
     whereclause = ''
     if starttime:
         starttime = stream._testtime(starttime)
-        print(starttime)
+        print starttime
         st = datetime.strftime(starttime, "%Y-%m-%d %H:%M:%S")
         whereclause += "StartTime >= '%s' " % st
     if endtime:
@@ -2933,7 +2932,7 @@ def applyDeltas(db, stream):
                 stream = stream.offset({dat[0]: float(dat[1])})
         stream.header['DataDeltaValues'] = ''
     except:
-        print("Could not extract delta values for ", dataid)
+        print "Could not extract delta values for ", dataid
 
     return stream
 
@@ -2954,7 +2953,7 @@ def getBaseline(db,sensorid, date=None):
 
     if not date:
         where = 'SensorID LIKE "%'+sensorid+'%"'
-        print(where)
+        print where
         vals = dbselect(db,'*','BASELINE', where)
         vals = np.asarray(vals).transpose()
     else:
@@ -3006,13 +3005,13 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         modificationdate = '1971-11-22 11:22:00'
 
     if not db:
-        print("No database connected - aborting")
+        print "No database connected - aborting"
         return
     cursor = db.cursor ()
 
     # Check flaglist:
     if not len(flaglist) > 0:
-        print("No data found in flaglist - aborting")
+        print "No data found in flaglist - aborting"
         return
     lentype = len(flaglist[0])
 
@@ -3076,12 +3075,12 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
             try:
                 cursor.execute(flagsql.replace("INSERT","REPLACE"))
             except:
-                print("Write MySQL: Replace failed")
+                print "Write MySQL: Replace failed"
         else:
             try:
                 cursor.execute(flagsql)
             except:
-                print("Record already existing: use mode 'replace' to override")
+                print "Record already existing: use mode 'replace' to override"
 
     db.commit()
     cursor.close ()
@@ -3102,7 +3101,7 @@ def db2flaglist(db,sensorid, begin=None, end=None):
     """
 
     if not db:
-        print("No database connected - aborting")
+        print "No database connected - aborting"
         return []
     cursor = db.cursor ()
 

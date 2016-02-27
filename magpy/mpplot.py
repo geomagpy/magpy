@@ -38,6 +38,8 @@ DEPENDENCIES:
 CALLED BY:
         External data plotting and analysis scripts only.
 '''
+from __future__ import print_function
+from __future__ import absolute_import
 
 from magpy.stream import *
 '''
@@ -127,7 +129,7 @@ def ploteasy(stream):
         datadate = datetime.strftime(num2date(stream.ndarray[0][0]),'%Y-%m-%d')
 
     plottitle = "%s (%s)" % (sensorid,datadate)
-    print "Plotting keys:", keys
+    print("Plotting keys:", keys)
     plot_new(stream, keys,
                 confinex = True,
                 plottitle = plottitle)
@@ -224,12 +226,12 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
     else:
         variables = [var for var in variables if var in availablekeys]
     if len(variables) > 9:
-        print "More than 9 variables available - plotting only the first nine:",
-        print "Available:", variables
+        print("More than 9 variables available - plotting only the first nine:", end=' ')
+        print("Available:", variables)
         variables = variables[:9]
-        print "Plotting:", variables
+        print("Plotting:", variables)
     else:
-        print "Plotting:", variables
+        print("Plotting:", variables)
 
     # Check lists for variables have correct length:
     num_of_var = len(variables)
@@ -459,9 +461,9 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 flags = stream.ndarray[flagind]
                 ind = KEYLIST.index(key)
                 flagarray =  np.asarray([list(el)[ind] for el in flags])
-                print "Flagarray", flagarray
+                print("Flagarray", flagarray)
                 indicies = np.where(flagarray == '1')
-                print "Indicies", indicies
+                print("Indicies", indicies)
                 #for index in indicies:
                 #    y[index] = NaN
                     #y[index] = float('nan')
@@ -671,10 +673,10 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 def toggle_selector(event):
     print (' Key pressed.')
     if event.key in ['Q', 'q'] and toggle_selector.RS.active:
-        print ' RectangleSelector deactivated.'
+        print(' RectangleSelector deactivated.')
         toggle_selector.RS.set_active(False)
     if event.key in ['A', 'a'] and not toggle_selector.RS.active:
-        print ' RectangleSelector activated.'
+        print(' RectangleSelector activated.')
         toggle_selector.RS.set_active(True)
 
 class figFlagger():
@@ -694,7 +696,7 @@ class figFlagger():
             try:
                 self.data = self.analyzeData(self.orgkeylist)
             except:
-                print "plotFlag: You have to provide variables for this data set"
+                print("plotFlag: You have to provide variables for this data set")
 
 
         keylist = self.data._get_key_headers(numerical=True)
@@ -716,8 +718,8 @@ class figFlagger():
     def analyzeData(self,keylist):
         #keylist = self.data._get_key_headers()
         if not len(self.data.ndarray[0]) > 0:
-            print "No ndarrayfound:"
-            print " -- stream will be converted to ndarray type"
+            print("No ndarrayfound:")
+            print(" -- stream will be converted to ndarray type")
             self.data = self.data.linestruct2ndarray()
 
         if 'x' in keylist and 'y' in keylist and 'z' in keylist:
@@ -739,46 +741,46 @@ class figFlagger():
     def toggle_selector(self, event):
         #print (' Key pressed.')
         if event.key in ['Q', 'q'] and toggle_selector.RS.active:
-            print ' RectangleSelector deactivated.'
+            print(' RectangleSelector deactivated.')
             toggle_selector.RS.set_active(False)
         if event.key in ['A', 'a'] and not toggle_selector.RS.active:
-            print ' RectangleSelector activated.'
+            print(' RectangleSelector activated.')
             toggle_selector.RS.set_active(True)
         if event.key in ['F', 'f']:
-            print ' Flag data:'
-            print ' ------------------------------------------'
-            print " Selected data point:", len(self.idxarray)
+            print(' Flag data:')
+            print(' ------------------------------------------')
+            print(" Selected data point:", len(self.idxarray))
             plt.clf()
             plt.close()
         if event.key in ['2']:
-            print ' Setting default Flag ID to 2.'
-            print ' ------------------------------------------'
-            print " -- keep data in any case - Observators decision"
+            print(' Setting default Flag ID to 2.')
+            print(' ------------------------------------------')
+            print(" -- keep data in any case - Observators decision")
             self.flagid = 2
         if event.key in ['3']:
-            print ' Setting default Flag ID to 3.'
-            print ' ------------------------------------------'
-            print " -- not to be used for definite - Observators decision"
+            print(' Setting default Flag ID to 3.')
+            print(' ------------------------------------------')
+            print(" -- not to be used for definite - Observators decision")
             self.flagid = 3
         if event.key in ['L', 'l']:
-            print ' Data:'
-            print ' ------------------------------------------'
-            print "Length:", data.length()
+            print(' Data:')
+            print(' ------------------------------------------')
+            print("Length:", data.length())
             #stream.write("")
         if event.key in ['O', 'o']:
-            print ' Apply offset:'
-            print ' ------------------------------------------'
-            print " Selected data point:", len(self.idxarray)
+            print(' Apply offset:')
+            print(' ------------------------------------------')
+            print(" Selected data point:", len(self.idxarray))
             self.offset = True
             plt.clf()
             plt.close()
         if event.key in ['H', 'h']:
-            print ' Header:'
-            print ' ------------------------------------------'
-            print data.header
+            print(' Header:')
+            print(' ------------------------------------------')
+            print(data.header)
         if event.key in ['c', 'C']:
-            print ' Close flagging and store data:'
-            print ' ------------------------------------------'
+            print(' Close flagging and store data:')
+            print(' ------------------------------------------')
             self.idxarray = 0
             plt.clf()
             plt.close('all')
@@ -818,7 +820,7 @@ class figFlagger():
 
         self.markpoints(newselectedndarray,keyar)
         self.idxarray.extend(self.idxar)
-        print "Selected %d points to annotate:" % len(self.idxarray)
+        print("Selected %d points to annotate:" % len(self.idxarray))
 
     def markpoints(self, dataarray,keyarray):
         for idx,elem in enumerate(dataarray):
@@ -854,21 +856,21 @@ class figFlagger():
 
     def flag(self, idxarray , flagid, reason, keylist):
 
-        print "Flagging components %s with flagid %d, because of %s" % (','.join(keylist), flagid, reason)
+        print("Flagging components %s with flagid %d, because of %s" % (','.join(keylist), flagid, reason))
         self.data = self.data.flagfast(idxarray, flagid, reason, keylist)
 
 
     def startup(self, fig, data):
-        print "--------------------------------------------"
-        print " you started the build-in flagging function"
-        print "--------------------------------------------"
-        print "    -- use mouse to select rectangular areas"
-        print "    -- press f for flagging this region"
-        print "    --      press 2,3 to change default flag ID"
-        print "    -- press l to get some basic data info"
-        print "    -- press o to apply an offset"
-        print "    -- press h to get all meta information"
-        print "    -- press c to close the window and allow saving"
+        print("--------------------------------------------")
+        print(" you started the build-in flagging function")
+        print("--------------------------------------------")
+        print("    -- use mouse to select rectangular areas")
+        print("    -- press f for flagging this region")
+        print("    --      press 2,3 to change default flag ID")
+        print("    -- press l to get some basic data info")
+        print("    -- press o to apply an offset")
+        print("    -- press h to get all meta information")
+        print("    -- press c to close the window and allow saving")
 
         # Arrays to exchange data
         self.selarray = []
@@ -905,13 +907,13 @@ class figFlagger():
 
 def addFlag(data, flagger, indeciestobeflagged, variables):
         # INPUT section
-        print "Provide flag ID (2 or 3):"
-        print "  -- 2: keep data"
-        print "  -- 3: remove data"
+        print("Provide flag ID (2 or 3):")
+        print("  -- 2: keep data")
+        print("  -- 3: remove data")
         flagid = raw_input(" -- default: %d \n" % flagger.flagid)
-        print flagid
+        print(flagid)
         reason = raw_input("Provide reason: \n")
-        print reason
+        print(reason)
         flagkeys = raw_input("Keys to flag: e.g. x,y,z\n")
         if not flagkeys == '':
             if ',' in flagkeys:
@@ -940,7 +942,7 @@ def addFlag(data, flagger, indeciestobeflagged, variables):
         try:
             sensid = data.header["SensorID"]
         except:
-            print "plotFlag: Flagging requires SensorID - set with stream.header['SensorID'] = 'MyID'"
+            print("plotFlag: Flagging requires SensorID - set with stream.header['SensorID'] = 'MyID'")
             sensid = "Dummy_1234_0001"
 
         flaglst = []
@@ -996,9 +998,9 @@ def plotFlag(data,variables=None):
         indeciestobeflagged, flaglst = addFlag(flagger.data, flagger, indeciestobeflagged, variables)
         flaglist.extend(flaglst)
 
-    print "Returning data ...."
+    print("Returning data ....")
     try:
-        print "  -- original format: %s " % data.header['DataFormat']
+        print("  -- original format: %s " % data.header['DataFormat'])
     except:
         pass
 
@@ -1045,21 +1047,21 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
     # - make axes easier to read
     # - add a amplitude statistic (histogram)
     # - add a haeufigkeit plot perpendicular to the diagrams
-    import opt.emd as emd # XXX: add this into main program when method is finalised
+    import magpy.opt.emd as emd # XXX: add this into main program when method is finalised
 
     loggerplot.info("plotEMD: Starting EMD calculation.")
 
     col = stream._get_column(key)
     timecol = stream._get_column('time')
     if verbose:
-        print "Amount of values and standard deviation:", len(col), np.std(col)
+        print("Amount of values and standard deviation:", len(col), np.std(col))
 
     res = emd.emd(col,max_modes=max_modes)
     if verbose:
-        print "Found the following amount of decomposed modes:", len(res)
+        print("Found the following amount of decomposed modes:", len(res))
     separate = int(np.round(len(res)*sratio,0))
     if verbose:
-        print "Separating the last N curves as smooth. N =",separate
+        print("Separating the last N curves as smooth. N =",separate)
     stdarray = []
     newcurve = [0]*len(res[0])
     noisecurve = [0]*len(res[0])
@@ -1087,15 +1089,15 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
         """
         if i >= 15:
             if verbose:
-                print "Smooth:", i
+                print("Smooth:", i)
             smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
         if 8 <= i < 14:
             if verbose:
-                print "Mid:", i
+                print("Mid:", i)
             midcurve = [x + y for x, y in zip(midcurve, elem)]
         if 2 < i < 8:
             if verbose:
-                print "Noise:", i
+                print("Noise:", i)
             noisecurve = [x + y for x, y in zip(noisecurve, elem)]
 
     plt.show()
@@ -1131,7 +1133,7 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
     plt.show()
 
     if hht:
-        print emd.calc_inst_info(res,stream.samplingrate())
+        print(emd.calc_inst_info(res,stream.samplingrate()))
 
 
 def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
@@ -1360,7 +1362,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
     val_new = np.asarray(val_new)
 
     if debugmode:
-        print "Extracted data for powerspectrum at %s" % datetime.utcnow()
+        print("Extracted data for powerspectrum at %s" % datetime.utcnow())
 
     if not axes:
         fig = plt.figure()
@@ -1375,12 +1377,12 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
     ax.loglog(freqm, asdm,'b-')
 
     if debugmode:
-        print "Maximum frequency:", max(freqm)
+        print("Maximum frequency:", max(freqm))
 
     if freqlevel:
         val, idx = find_nearest(freqm, freqlevel)
         if debugmode:
-            print "Maximum Noise Level at %s Hz: %s" % (val,asdm[idx])
+            print("Maximum Noise Level at %s Hz: %s" % (val,asdm[idx]))
 
     if not marks:
         pass
@@ -1753,7 +1755,7 @@ def obspySpectrogram(data, samp_rate, per_lap=0.9, wlen=None, log=False,
     nfft = int(nearestPow2(wlen * samp_rate))
 
     if nfft > npts:
-        print npts
+        print(npts)
         nfft = int(nearestPow2(npts / 8.0))
 
     if mult != None:
@@ -1771,14 +1773,14 @@ def obspySpectrogram(data, samp_rate, per_lap=0.9, wlen=None, log=False,
     # XXX mlab.specgram uses fft, would be better and faster use rfft
 
     if MATPLOTLIB_VERSION >= [0, 99, 0]:
-        print "1", nfft, nlap
+        print("1", nfft, nlap)
         # TODO: ERROR IS IN HERE
         #nfft = 256
         #nlap = 128
         # Default values don't help...
         specgram, freq, time = mlab.specgram(data, Fs=samp_rate,
                                                     NFFT=nfft, noverlap=nlap)
-        print "2"
+        print("2")
     else:
         specgram, freq, time = mlab.specgram(data, Fs=samp_rate,
                                                     NFFT=nfft, noverlap=nlap)
@@ -2292,9 +2294,9 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                                     d_t.append(float(t[idx]))
                                     d_y.append(y[idx])
                         else:
-                            print "Found problem in flagging information - still to be solved"
-                            print "Flag at count and its index position", cnt0, indexflag
-                            print "Flag and Comment", flags[0][cnt0], flags[1][cnt0]
+                            print("Found problem in flagging information - still to be solved")
+                            print("Flag at count and its index position", cnt0, indexflag)
+                            print("Flag and Comment", flags[0][cnt0], flags[1][cnt0])
                 if len(a_t) > 0:
                     ax.scatter(a_t,a_y,c='r')
                 if len(b_t) > 0:
@@ -2491,47 +2493,47 @@ def _confinex(ax, tmax, tmin, timeunit):
 
 if __name__ == '__main__':
 
-    print
-    print "----------------------------------------------------------"
-    print "TESTING: PLOTTING PACKAGE"
-    print "All plotting methods will be tested. This may take a while."
-    print "A summary will be presented at the end. Any protocols"
-    print "or functions with errors will be listed."
-    print
-    print "NOTE: This test requires graphical user interface"
-    print "confirmation of package integrity for the majority of"
-    print "functions. The plot titles specify what should be present"
-    print "in the plot for it to have plotted successfully."
-    print "    So get comfy and have a good look."
-    print "----------------------------------------------------------"
-    print
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: PLOTTING PACKAGE")
+    print("All plotting methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print()
+    print("NOTE: This test requires graphical user interface")
+    print("confirmation of package integrity for the majority of")
+    print("functions. The plot titles specify what should be present")
+    print("in the plot for it to have plotted successfully.")
+    print("    So get comfy and have a good look.")
+    print("----------------------------------------------------------")
+    print()
 
-    print "Please enter path of a variometer data file for testing:"
-    print "(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)"
+    print("Please enter path of a variometer data file for testing:")
+    print("(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)")
     while True:
         filepath = raw_input("> ")
         if os.path.exists(filepath):
             break
         else:
-            print "Sorry, that file doesn't exist. Try again."
-    print
+            print("Sorry, that file doesn't exist. Try again.")
+    print()
 
     now = datetime.utcnow()
     testrun = 'plottest_'+datetime.strftime(now,'%Y%m%d-%H%M')
     t_start_test = time.time()
     errors = {}
 
-    print datetime.utcnow(), "- Starting plot package test. This run: %s." % testrun
+    print(datetime.utcnow(), "- Starting plot package test. This run: %s." % testrun)
 
     while True:
 
         # Step 1 - Read data
         try:
             teststream = read(filepath,tenHz=True)
-            print datetime.utcnow(), "- Stream read in successfully."
+            print(datetime.utcnow(), "- Stream read in successfully.")
         except Exception as excep:
             errors['read'] = str(excep)
-            print datetime.utcnow(), "--- ERROR reading stream. Aborting test."
+            print(datetime.utcnow(), "--- ERROR reading stream. Aborting test.")
             break
 
         # Step 2 - Pick standard key for all other plots
@@ -2539,29 +2541,29 @@ if __name__ == '__main__':
             keys = teststream._get_key_headers()
             key = [keys[0]]
             key2 = [keys[0], keys[1]]
-            print datetime.utcnow(), "- Using %s key for all subsequent plots." % key[0]
+            print(datetime.utcnow(), "- Using %s key for all subsequent plots." % key[0])
         except Exception as excep:
             errors['_get_key_headers'] = str(excep)
-            print datetime.utcnow(), "--- ERROR getting default keys. Aborting test."
+            print(datetime.utcnow(), "--- ERROR getting default keys. Aborting test.")
             break
 
         # Step 3 - Simple single plot with ploteasy
         try:
             ploteasy(teststream)
-            print datetime.utcnow(), "- Plotted using ploteasy function."
+            print(datetime.utcnow(), "- Plotted using ploteasy function.")
         except Exception as excep:
             errors['ploteasy'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with ploteasy function. Aborting test."
+            print(datetime.utcnow(), "--- ERROR with ploteasy function. Aborting test.")
             break
 
         # Step 4 - Standard plot
         try:
             plot_new(teststream,key,
                         plottitle = "Simple plot of %s" % key[0])
-            print datetime.utcnow(), "- Plotted standard plot."
+            print(datetime.utcnow(), "- Plotted standard plot.")
         except Exception as excep:
             errors['plot-vanilla'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with standard plot. Aborting test."
+            print(datetime.utcnow(), "--- ERROR with standard plot. Aborting test.")
             break
 
         # Step 5 - Multiple streams
@@ -2570,10 +2572,10 @@ if __name__ == '__main__':
         try:
             plotStreams(streamlist, variables,
                         plottitle = "Multiple streams: Three bars, top two should match.")
-            print datetime.utcnow(), "- Plotted multiple streams."
+            print(datetime.utcnow(), "- Plotted multiple streams.")
         except Exception as excep:
             errors['plotStreams-vanilla'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with plotting multiple streams. Aborting test."
+            print(datetime.utcnow(), "--- ERROR with plotting multiple streams. Aborting test.")
             break
 
         # Step 6 - Normalised stream comparison
@@ -2581,10 +2583,10 @@ if __name__ == '__main__':
             plotNormStreams([teststream], key[0],
                         confinex = True,
                         plottitle = "Normalized stream: Stream key should be normalized to zero.")
-            print datetime.utcnow(), "- Plotted normalized streams."
+            print(datetime.utcnow(), "- Plotted normalized streams.")
         except Exception as excep:
             errors['plotNormStreams'] = str(excep)
-            print datetime.utcnow(), "--- ERROR plotting normalized streams."
+            print(datetime.utcnow(), "--- ERROR plotting normalized streams.")
 
         # Step 7 - Flagged plot
         # ...
@@ -2603,10 +2605,10 @@ if __name__ == '__main__':
                         stormphases = True,
                         t_stormphases = t_stormphases,
                         plottitle = "Single plot showing all THREE storm phases, annotated")
-            print datetime.utcnow(), "- Plotted annotated single plot of storm phases."
+            print(datetime.utcnow(), "- Plotted annotated single plot of storm phases.")
         except Exception as excep:
             errors['plot-stormphases'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with storm phases plot."
+            print(datetime.utcnow(), "--- ERROR with storm phases plot.")
 
         # Step 8b - Plot with phases (multiple)
         try:
@@ -2614,10 +2616,10 @@ if __name__ == '__main__':
                         stormphases = True,
                         t_stormphases = t_stormphases,
                         plottitle = "Multiple plot showing all THREE storm phases, annotated")
-            print datetime.utcnow(), "- Plotted annotated multiple plot of storm phases."
+            print(datetime.utcnow(), "- Plotted annotated multiple plot of storm phases.")
         except Exception as excep:
             errors['plotStreams-stormphases'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with storm phases multiple plot."
+            print(datetime.utcnow(), "--- ERROR with storm phases multiple plot.")
 
         # Step 9 - Plot satellite vs. magnetic data
         try:
@@ -2626,10 +2628,10 @@ if __name__ == '__main__':
             plotSatMag(teststream,teststream,['x','y'],
                         specialdict={'mag':[xmin-45,xmax+5],'sat':[ymin-5,ymax+45]},
                         plottitle = "Two variables in same plots with double y axes")
-            print datetime.utcnow(), "- Plotted magnetic/satellite data."
+            print(datetime.utcnow(), "- Plotted magnetic/satellite data.")
         except Exception as excep:
             errors['plotSatMag'] = str(excep)
-            print datetime.utcnow(), "--- ERROR with plotSatMagplot."
+            print(datetime.utcnow(), "--- ERROR with plotSatMagplot.")
 
         # Step 10 - Plot power spectrum
         try:
@@ -2637,19 +2639,19 @@ if __name__ == '__main__':
                         returndata=True,
                         marks={'Look here!':0.0001, '...and here!':0.01},
                         plottitle = "Simple power spectrum plot with two marks")
-            print datetime.utcnow(), "- Plotted power spectrum. Max frequency is at %s." % max(freqm)
+            print(datetime.utcnow(), "- Plotted power spectrum. Max frequency is at %s." % max(freqm))
         except Exception as excep:
             errors['plotPS'] = str(excep)
-            print datetime.utcnow(), "--- ERROR plotting power spectrum."
+            print(datetime.utcnow(), "--- ERROR plotting power spectrum.")
 
         # Step 11 - Plot normal spectrogram
         try:
             plotSpectrogram(teststream,key2,
                         plottitle = "Spectrogram of two keys")
-            print datetime.utcnow(), "- Plotted spectrogram."
+            print(datetime.utcnow(), "- Plotted spectrogram.")
         except Exception as excep:
             errors['plotSpectrogram'] = str(excep)
-            print datetime.utcnow(), "--- ERROR plotting spectrogram."
+            print(datetime.utcnow(), "--- ERROR plotting spectrogram.")
 
         # Step 12 - Plot function
         try:
@@ -2658,7 +2660,7 @@ if __name__ == '__main__':
                         plottitle = "Fit function plotted over original data.")
         except Exception as excep:
             errors['plot(function)'] = str(excep)
-            print datetime.utcnow(), "--- ERROR plotting function."
+            print(datetime.utcnow(), "--- ERROR plotting function.")
 
         # Step 13 - Plot normal stereoplot
         # (This should stay as last step due to coordinate conversion.)
@@ -2666,35 +2668,35 @@ if __name__ == '__main__':
             teststream._convertstream('xyz2idf')
             plotStereoplot(teststream,
                         plottitle="Standard stereoplot")
-            print datetime.utcnow(), "- Plotted stereoplot."
+            print(datetime.utcnow(), "- Plotted stereoplot.")
         except Exception as excep:
             errors['plotStereoplot'] = str(excep)
-            print datetime.utcnow(), "--- ERROR plotting stereoplot."
+            print(datetime.utcnow(), "--- ERROR plotting stereoplot.")
 
         # If end of routine is reached... break.
         break
 
     t_end_test = time.time()
     time_taken = t_end_test - t_start_test
-    print datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken
+    print(datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken)
 
-    print
-    print "----------------------------------------------------------"
+    print()
+    print("----------------------------------------------------------")
     if errors == {}:
-        print "0 errors! Great! :)"
+        print("0 errors! Great! :)")
     else:
-        print len(errors), "errors were found in the following functions:"
-        print str(errors.keys())
-        print
-        print "Would you like to print the exceptions thrown?"
+        print(len(errors), "errors were found in the following functions:")
+        print(str(errors.keys()))
+        print()
+        print("Would you like to print the exceptions thrown?")
         excep_answer = raw_input("(Y/n) > ")
         if excep_answer.lower() == 'y':
             i = 0
             for item in errors:
-                print errors.keys()[i] + " error string:"
-                print "    " + errors[errors.keys()[i]]
+                print(errors.keys()[i] + " error string:")
+                print("    " + errors[errors.keys()[i]])
                 i += 1
-    print
-    print "Good-bye!"
-    print "----------------------------------------------------------"
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
 

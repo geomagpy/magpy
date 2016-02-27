@@ -4,7 +4,6 @@ Input filter for IONOMETER data
 Written by Roman Leonhardt December 2015
 - contains test and read function, no write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 

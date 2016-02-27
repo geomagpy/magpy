@@ -145,7 +145,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
                         try:
                             row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S"))
                         except:
-                            raise ValueError("Wrong date format in %s" % filename)
+                            raise ValueError, "Wrong date format in %s" % filename
                     if float(elem[1]) < 99999.:
                         row.x = float(elem[1])/10.0
                     if float(elem[1]) < 99999.:
@@ -171,7 +171,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
                         try:
                             array[0].append(date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S")))
                         except:
-                            raise ValueError("Wrong date format in %s" % filename)
+                            raise ValueError, "Wrong date format in %s" % filename
                     if float(elem[1]) < 99999.:
                         array[1].append(float(elem[1])/10.0)
                     else:

@@ -7,7 +7,6 @@ Written by Roman Leonhardt October 2012
 - contains test, read and write function for hour data
 ToDo: Filter for minute data
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -29,7 +28,7 @@ def isGFZKP(filename):
         return False
     if not temp[9] in ['o','+','-']: # strip is important to remove eventual \r\n sequences or \n
         return False
-    print('Found GFZ Kp format')
+    print 'Found GFZ Kp format'
     return True
 
 
@@ -121,7 +120,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
                 monthlymeancp = means[3]
             pass
         else:
-            print("Error while reading GFZ Kp format")
+            print "Error while reading GFZ Kp format"
             pass
     fh.close()
 

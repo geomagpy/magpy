@@ -8,6 +8,7 @@
 """
 Empirical Mode Decomposition
 """
+from __future__ import print_function
 
 import numpy as np
 import scipy.interpolate
@@ -19,11 +20,11 @@ def emd(data,max_modes=10):
     modes=[]
     count = 1
 
-    print 'empirical mode decomposition called with ', max_modes
+    print('empirical mode decomposition called with ', max_modes)
     # perform sifts until we have all modes
     residue=data
     while not _done_sifting(residue):
-        print "Running sift", count
+        print("Running sift", count)
         count += 1
         # perform a sift
         imf,residue = _do_sift(residue)
@@ -293,21 +294,21 @@ each mode.
     phase=np.zeros(modes.shape,np.float32)
     f=np.zeros(modes.shape,np.float32)
 
-    print "Mode 1:", len(modes), samplerate
+    print("Mode 1:", len(modes), samplerate)
 
     for m in range(len(modes)):
         h=scipy.signal.hilbert(modes[m])
-        print len(modes[m])
-        print "Mean Amplitude of mode ", m, np.mean(np.abs(h))
-        print "Mean Phase of mode ", m, np.mean(np.angle(h))
+        print(len(modes[m]))
+        print("Mean Amplitude of mode ", m, np.mean(np.abs(h)))
+        print("Mean Phase of mode ", m, np.mean(np.angle(h)))
         phase[m,:]=np.angle(h)
-        print "Frequ", np.diff(np.unwrap(phase[:,np.r_[0,0:len(modes[m])]]))/(2*np.pi)*samplerate
+        print("Frequ", np.diff(np.unwrap(phase[:,np.r_[0,0:len(modes[m])]]))/(2*np.pi)*samplerate)
         amp[m,:]=np.abs(h)
         phase[m,:]=np.angle(h)
         f[m,:] = np.r_[np.nan,
                       0.5*(np.angle(-h[2:]*np.conj(h[0:-2]))+np.pi)/(2*np.pi) * samplerate,
                       np.nan]
-        print "Mean Frequ of mode ", m, np.mean(np.diff(np.unwrap(phase[:,np.r_[0,0:len(modes[0])]]))/(2*np.pi)*samplerate)
+        print("Mean Frequ of mode ", m, np.mean(np.diff(np.unwrap(phase[:,np.r_[0,0:len(modes[0])]]))/(2*np.pi)*samplerate))
 
         #f(m,:) = [nan 0.5*(angle(-h(t+1).*conj(h(t-1)))+pi)/(2*pi) * sr nan];
 

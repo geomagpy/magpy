@@ -8,7 +8,6 @@ ToDo: use longer files (anaylsze full year data if only monthly files are availa
 ToDo: add table footer
 
 """
-from __future__ import print_function
 
 from magpy.stream import *
 from magpy.opt.Table import Table
@@ -40,7 +39,7 @@ def writeLATEX(datastream, filename, **kwargs):
 
     keylst = datastream._get_key_headers()
     if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst:
-        print("formatWDC: writing WDC data requires at least x,y,z components")
+        print "formatWDC: writing WDC data requires at least x,y,z components"
         return False
     elif not 'f' in keylst:
         keys = ['x','y','z']
@@ -51,7 +50,7 @@ def writeLATEX(datastream, filename, **kwargs):
     datalen = datastream.length()[0]
 
     if mode == 'wdc':
-        print("formatLATEX: Writing wdc mode")
+        print "formatLATEX: Writing wdc mode"
         # 1. determine sampling rate
         samplinginterval = datastream.get_sampling_period()
         # get difference between first and last time in days

@@ -6,19 +6,21 @@ a table instance, add columns, set options, then call the pring method.
 
 written by Chris Burn, http://users.obs.carnegiescience.edu/~cburns/site/?p=22
 '''
+from __future__ import print_function
+from __future__ import absolute_import
 
 import numpy
-import sigfig
+from . import sigfig
 import os,string,re,sys
 import types
 
 try:
-    float_types = [types.FloatType, numpy.float16, numpy.float32, numpy.float64]
+    float_types = [float, numpy.float16, numpy.float32, numpy.float64]
 except:
     try:
-        float_types = [types.FloatType, numpy.float32, numpy.float64]
+        float_types = [float, numpy.float32, numpy.float64]
     except:
-        float_types = [types.FloatType, numpy.float32]
+        float_types = [float, numpy.float32]
 
 class Table:
 
@@ -32,10 +34,10 @@ class Table:
       else:
          self.justs = list(justs)
          if len(self.justs) != numcols:
-            raise ValueError, "Error, justs must have %d elements" % (numcols)
+            raise ValueError("Error, justs must have %d elements" % (numcols))
       for iter, just in enumerate(self.justs):
          if just[0] not in ['c','r','l','p']:
-            raise ValueError, "Error, invalid character for just: %s" % just
+            raise ValueError("Error, invalid character for just: %s" % just)
          if just[0] == 'p':
             self.justs[iter] = 'p{0.2cm}'
       self.fontsize = fontsize
@@ -66,21 +68,21 @@ class Table:
 
       if cols is None:
          if len(headers) != self.numcols:
-            raise ValueError, "Error, headers must be a list of length %d" %\
-                  self.numcols
+            raise ValueError("Error, headers must be a list of length %d" %\
+                  self.numcols)
          self.headers.append(headers)
          self.header_ids.append(range(self.numcols))
       else:
          ids = []
          for item in cols:
-            if type(item) is types.IntType:
+            if type(item) is int:
                ids.append(item)
-            elif type(item) is types.TupleType:
+            elif type(item) is tuple:
                ids += range(item[0],item[1]+1)
 
          ids.sort
          if ids != range(self.numcols):
-            raise ValueError, "Error, missing columns in cols"
+            raise ValueError("Error, missing columns in cols")
          self.headers.append(headers)
          self.header_ids.append(cols)
       return
@@ -97,29 +99,27 @@ class Table:
       given, it will be printed in the table with \cutinhead if labeltype
       is 'cutin' or \sidehead if labeltype is 'side'.'''
 
-      if type(data) is not types.ListType:
-         raise ValueError, "data should be a list"
+      if type(data) is not list:
+         raise ValueError("data should be a list")
       if len(data) != self.numcols:
-         raise ValueError, \
-               "Error, length of data mush match number of table columns"
+         raise ValueError("Error, length of data mush match number of table columns")
 
       for datum in data:
-         if type(datum) not in [types.ListType, numpy.ndarray]:
-            raise ValueError, "data must be list of lists and numpy arrays"
+         if type(datum) not in [list, numpy.ndarray]:
+            raise ValueError("data must be list of lists and numpy arrays")
          if len(numpy.shape(datum)) not in [1,2]:
-            raise ValueError, "data items must be 1D or 2D"
+            raise ValueError("data items must be 1D or 2D")
 
       nrows = numpy.shape(data[0])[0]
       for datum in data[1:]:
          if numpy.shape(datum)[0] != nrows:
-            raise ValueError, "each data item must have same first dimension"
+            raise ValueError("each data item must have same first dimension")
       self.nrows.append(nrows)
       if len(numpy.shape(sigfigs)) == 0:
          self.sigfigs.append([sigfigs for i in range(self.numcols)])
       else:
          if len(numpy.shape(sigfigs)) != 1:
-            raise ValueError, \
-               "sigfigs must be scalar or have same length as number of columns"
+            raise ValueError("sigfigs must be scalar or have same length as number of columns")
          self.sigfigs.append(sigfigs)
       self.data_labels.append(label)
       self.data_label_types.append(labeltype)
@@ -200,7 +200,7 @@ class Table:
                   else:
                      rows[-1].append(str(data[k][j]))
                else:
-                  print data[k][j][0]
+                  print(data[k][j][0])
                   if numpy.isnan(data[k][j][0]):
                      val = "\\ldots"
                   else:

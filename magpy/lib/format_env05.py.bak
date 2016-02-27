@@ -4,7 +4,6 @@ Auxiliary input filter - Env05 data
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -57,6 +56,6 @@ def readENV05(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    print("Finished file reading of %s" % filename)
+    print "Finished file reading of %s" % filename
 
     return DataStream(stream, headers)

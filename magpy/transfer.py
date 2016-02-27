@@ -8,7 +8,7 @@ Version 1.0 (from the 23.02.2012)
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .stream import *
+from magpy.stream import *
 import ftplib
 import subprocess
 

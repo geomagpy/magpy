@@ -5,7 +5,6 @@ Written by Roman Leonhardt October 2012
 - contains test, read and write function for hour data
 ToDo: Filter for minute data
 """
-from __future__ import print_function
 
 from magpy.stream import *
 from datetime import timedelta
@@ -241,7 +240,7 @@ def readWDC(filename, headonly=False, **kwargs):
             lasttimestr = timestr
 
         else:
-            print("Can not open WDC format")
+            print "Can not open WDC format"
             pass
         itest += 1
     fh.close()
@@ -269,7 +268,7 @@ def writeWDC(datastream, filename, **kwargs):
 
     keylst = datastream._get_key_headers()
     if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst or not 'f' in keylst:
-        print("formatWDC: writing WDC data requires x,y,z,f components")
+        print "formatWDC: writing WDC data requires x,y,z,f components"
         return False
 
     if os.path.isfile(filename):
@@ -298,7 +297,7 @@ def writeWDC(datastream, filename, **kwargs):
     elif 0.98 < samplinginterval*24*60 < 1.02:
         minute = True
     else:
-        print("Wrong sampling interval - please filter the data to minutes or hours")
+        print "Wrong sampling interval - please filter the data to minutes or hours"
         return success
 
 

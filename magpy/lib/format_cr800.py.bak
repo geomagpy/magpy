@@ -4,7 +4,6 @@ Auxiliary input filter - WIC/WIK
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -137,7 +136,7 @@ def readCR800(filename, headonly=False, **kwargs):
         CSVReader = csv.reader(open(filename, 'rb'), delimiter=' ', quotechar='|')
         for line in CSVReader:
             elem = line.split
-            print(elem, len(elem))
+            print elem, len(elem)
             if line.isspace():
                 # blank line
                 continue

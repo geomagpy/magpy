@@ -8,12 +8,12 @@ epat = re.compile(r'^([^e]+)e(.+)$')
 
 def round_sig(x, n):
    '''round floating point x to n significant figures'''
-   if type(n) is not types.IntType:
-      raise TypeError, "n must be an integer"
+   if type(n) is not int:
+      raise TypeError("n must be an integer")
    try:
       x = float(x)
    except:
-      raise TypeError, "x must be a floating point object"
+      raise TypeError("x must be a floating point object")
    form = "%0." + str(n-1) + "e"
    st = form % x
    num,expo = epat.findall(st)[0]
@@ -66,7 +66,7 @@ def format_table(cols, errors, n, labels=None, headers=None, latex=False):
    an optional list of column headers.  If [latex] is true, format
    the table so that it can be included in a LaTeX table '''
    if len(cols) != len(errors):
-      raise ValueError, "Error:  cols and errors must have same length"
+      raise ValueError("Error:  cols and errors must have same length")
 
    ncols = len(cols)
    nrows = len(cols[0])
@@ -78,14 +78,14 @@ def format_table(cols, errors, n, labels=None, headers=None, latex=False):
          elif len(headers) == ncols+1:
             pass
          else:
-            raise ValueError, "length of headers should be %d" % (ncols+1)
+            raise ValueError("length of headers should be %d" % (ncols+1))
       else:
          if len(headers) != ncols:
-            raise ValueError, "length of headers should be %d" % (ncols)
+            raise ValueError("length of headers should be %d" % (ncols))
 
    if labels is not None:
       if len(labels) != nrows:
-         raise ValueError, "length of labels should be %d" % (nrows)
+         raise ValueError("length of labels should be %d" % (nrows))
 
    strcols = []
    for col,error in zip(cols,errors):

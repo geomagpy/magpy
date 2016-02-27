@@ -5,7 +5,6 @@ Supports USB temperature loggers, RCS files, old Caesium data and SG data
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -240,7 +239,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
                         add = 3
                         gottime = True
                     except:
-                        raise ValueError("Can't read date format in RCS file")
+                        raise ValueError, "Can't read date format in RCS file"
                 if gottime:
                     for i in range(len(unit)):
                         try:
@@ -280,7 +279,7 @@ def readLNM(filename, headonly=False, **kwargs):
     stream = DataStream([],{},np.asarray(array))
 
 
-    print("Found LNM file")
+    print "Found LNM file"
 
     # get day from filename (platform independent)
     theday = extractDateFromString(filename)
@@ -465,7 +464,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
             if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
-        print("Did not recognize the date format")
+        print "Did not recognize the date format"
         # Date format not recognized. Need to read all files
         getfile = True
 
@@ -490,7 +489,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
                     try:
                         columns = [elem for elem in cols if not elem.startswith('He')]
                     except:
-                        print("Found error in header", filename)
+                        print "Found error in header", filename
                         columns = []
                 else:
                     columns = cols
@@ -507,7 +506,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
                     try:
                         colsstr = [elem for i, elem in enumerate(colsstr) if not cols[i].startswith('He')]
                     except:
-                        print("Found error in data sequence", filename)
+                        print "Found error in data sequence", filename
                         #print colsstr
                         break
                 row = LineStruct()
@@ -597,7 +596,7 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
             if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
-        print("Did not recognize the date format")
+        print "Did not recognize the date format"
         # Date format not recognized. Need to read all files
         getfile = True
 
@@ -676,7 +675,7 @@ def readIWT(filename, headonly=False, **kwargs):
             if not theday <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
-        print("Did not recognize the date format")
+        print "Did not recognize the date format"
         # Date format not recognized. Need to read all files
         getfile = True
 

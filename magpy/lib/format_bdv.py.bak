@@ -119,7 +119,7 @@ def readBDV1(filename, headonly=False, **kwargs):
                     try:
                         row.time = date2num(elem[0].isoformat())
                     except:
-                        raise ValueError("Wrong date format in %s" % filename)
+                        raise ValueError, "Wrong date format in %s" % filename
                 row.x = float(elem[1])/10.0
                 row.y = float(elem[2])/10.0
                 row.z = float(elem[3])/10.0

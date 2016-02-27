@@ -38,7 +38,6 @@ CALLED BY:
         magpy.stream.read()
         magpy.stream.write()
 '''
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -355,5 +354,5 @@ def writeFormat(datastream, filename, format_type, **kwargs):
     elif (format_type == "LATEX"):
         return writeLATEX(datastream, filename, **kwargs)
     else:
-        print("magpy-formats: Writing not succesful - format not recognized")
+        print "magpy-formats: Writing not succesful - format not recognized"
         logging.warning("magpy-formats: Writing not succesful - format not recognized")

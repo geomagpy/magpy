@@ -4,7 +4,6 @@ dIdD input filter
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -76,7 +75,7 @@ def readDIDD(filename, headonly=False, **kwargs):
                 getfile = False
         #print daystring, day, startdate, enddate, getfile
     else:
-        print("read DIDD Format: no files found in choosen directory")
+        print "read DIDD Format: no files found in choosen directory"
         return stream
 
     if getfile:
@@ -160,12 +159,12 @@ def writeDIDD(datastream, filename, **kwargs):
         pass
     else:
         if (datastream[-1].time - datastream[0].time) > 1:
-            print("Writing DIDD format requires daily coverage - choose")
+            print "Writing DIDD format requires daily coverage - choose"
             return False
 
     sr = datastream.samplingrate()
     if not sr < 62 or not sr > 58:
-         print("writeDIDD: currently only minute data is supported")
+         print "writeDIDD: currently only minute data is supported"
          return False
 
     headdict = datastream.header

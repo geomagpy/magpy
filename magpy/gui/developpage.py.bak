@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 try:
     from magpy.stream import *
     from magpy.absolutes import *
@@ -47,7 +46,7 @@ class DataContainer(object):
         self.struct2res = struct2res
 
     def test(self):
-        print(len(self.magdatastruct1))
+        print len(self.magdatastruct1)
 
 class FlagDateDialog(wx.Dialog):
     #def __init__(self, parent, title, choices, curflag):

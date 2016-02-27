@@ -50,7 +50,6 @@ EXAMPLE SCRIPT:
                 verbose=True, method='DWT3')
         >>> print(ssc_list)
 '''
-from __future__ import print_function
 
 import sys, os
 from magpy.stream import *
@@ -137,15 +136,15 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
 
     if (satdata_1m and satdata_5m) != None:
         if verbose == True:
-            print("Using ACE data!")
+            print "Using ACE data!"
         useACE = True
     elif (satdata_1m or satdata_5m) != None:
         if verbose == True:
-            print("Can't use ACE for seekStorm if only one data stream is present!")
+            print "Can't use ACE for seekStorm if only one data stream is present!"
         useACE = False
     else:
         if verbose == True:
-            print("No ACE data available. Continuing without.")
+            print "No ACE data available. Continuing without."
         useACE = False
 
     # EVALUATE ACE SATELLITE DATA
@@ -154,10 +153,10 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
         try:
             ACE_detection, ACE_results = checkACE(satdata_1m, ACE_5m=satdata_5m, verbose=verbose)
             if verbose == True:
-                print("ACE data successfully evaluated.")
+                print "ACE data successfully evaluated."
         except:
             if verbose == True:
-                print("ACE evaluation failed. Continuing without.")
+                print "ACE evaluation failed. Continuing without."
             useACE = False
             ACE_detection, ACE_results = False, None
     else:
@@ -166,10 +165,10 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
     if ACE_detection == True:
         for d in ACE_results:
             if verbose == True:
-                print("ACE SSC detected at %s with speed %s and flux %s!" % (d['satssctime'], d['vwind'], d['pflux']))
+                print "ACE SSC detected at %s with speed %s and flux %s!" % (d['satssctime'], d['vwind'], d['pflux'])
     else:
         if verbose == True:
-            print("No ACE storm.")
+            print "No ACE storm."
 
     #day = datetime.strftime(num2date(magdata[10].time),'%Y-%m-%d')
     t_ind = KEYLIST.index('time')
@@ -217,7 +216,7 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
             plot_new(magdata,['x','dx'])
 
     else:
-        print("%s is an invalid evaluation function!" % method)
+        print "%s is an invalid evaluation function!" % method
 
     if not returnsat:
         return detection, ssc_list
@@ -341,7 +340,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
         div = float(len(ar))/float(len(dv_test))*100.0
         if div < 5.:
             if verbose == True:
-                print("Too many nans!")
+                print "Too many nans!"
             break
 
         # Find max in change of mean (if dv_max > 25 --> detection!):
@@ -414,8 +413,8 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
             probf = (v_prob + dv_prob + stlo_prob + sthi_prob)/total_weight
 
             if verbose == True:
-                print(num2date(t_max), v_max, dv_max, std_lo, std_hi)
-                print(num2date(t_max), v_prob, dv_prob, stlo_prob, sthi_prob, '=', probf)
+                print num2date(t_max), v_max, dv_max, std_lo, std_hi
+                print num2date(t_max), v_prob, dv_prob, stlo_prob, sthi_prob, '=', probf
 
             # Detection is likely a storm if total probability is >= 70.
             #if probf >= 70.:
@@ -434,11 +433,11 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                         endtime=(end+timedelta(minutes=20)), newway=True)
                     flux_val = ACE_flux.mean(key_e,percentage=20)
                     if isnan(flux_val):
-                        print("Proton Flux is nan!", flux_val)
+                        print "Proton Flux is nan!", flux_val
                         flux_val = 0.
                         #raise Exception
                 if verbose == True:
-                    print("--> Jump in solar wind speed detected! Proton flux at %s." % flux_val)
+                    print "--> Jump in solar wind speed detected! Proton flux at %s." % flux_val
 
                 # FINAL REQUIREMENT:
                 # ******************
@@ -447,18 +446,18 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                 if flux_val < pflux_bracket[0]:
                     pflux_prob = 0.
                     if verbose == True:
-                        print("That's not really a storm!")
-                        print(ace_ssc)
+                        print "That's not really a storm!"
+                        print ace_ssc
                 elif pflux_bracket[0] <= flux_val < pflux_bracket[1]:
                     pflux_prob = 50.
                     if verbose == True:
-                        print("That's almost a storm!")
-                        print(ace_ssc)
+                        print "That's almost a storm!"
+                        print ace_ssc
                 elif flux_val >= pflux_bracket[1]:
                     pflux_prob = 100.
                     if verbose == True:
-                        print("That's almost a storm!")
-                        print(ace_ssc)
+                        print "That's almost a storm!"
+                        print ace_ssc
                 pflux_prob = pflux_prob * pflux_weight
                 probf = probf * total_weight
                 prob_var = (probf + pflux_prob)/(total_weight + pflux_weight)
@@ -503,9 +502,9 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
             detection, ace_ssc = False, []
 
     if verbose == True:
-        print("ACE storms detected at:")
+        print "ACE storms detected at:"
         for item in ace_ssc:
-            print(item['satssctime'])
+            print item['satssctime']
 
     return detection, ace_ssc
 
@@ -583,7 +582,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
     # SEARCH FOR PEAK:
     # ----------------
     if verbose == True:
-        print("Starting analysis with findSSC().")
+        print "Starting analysis with findSSC()."
     #for row in var_stream:
     for i in range(0,len(var_ar)):
         #var = eval('row.'+var_key)
@@ -609,10 +608,10 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
                 d_amp = x2 - x1
                 ssc_init = num2date(timepin).replace(tzinfo=None)
                 if verbose == True:
-                    print("x1:", x1, ssc_init)
+                    print "x1:", x1, ssc_init
                     #print "x2:", x2, num2date(row.time)
-                    print("x2:", x2, num2date(t_ar[i]))
-                    print("Possible detection with duration %s at %s with %s nT." % (duration, ssc_init, d_amp))
+                    print "x2:", x2, num2date(t_ar[i])
+                    print "Possible detection with duration %s at %s with %s nT." % (duration, ssc_init, d_amp)
 
                 # CRITERION #3: Variation in H must exceed a certain value
                 # ********************************************************
@@ -624,7 +623,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
                         dh_prob = 100.
 
                     if verbose == True:
-                        print("Detection at %s with %s nT!" % (ssc_init,str(d_amp)))
+                        print "Detection at %s with %s nT!" % (ssc_init,str(d_amp))
 
                     # CRITERION #4: Storm must have been detected in ACE data
                     # *******************************************************
@@ -680,13 +679,13 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
                     elif useACE == True and ACE_results == None:
                         detection == False
                         if verbose == True:
-                            print("No ACE storm. False detection!")
-                            print(ssc_init, d_amp)
+                            print "No ACE storm. False detection!"
+                            print ssc_init, d_amp
                     elif useACE == False:
                         detection = True
                         final_probf = dh_prob
                         if verbose == True:
-                            print("No ACE data. Not sure!")
+                            print "No ACE data. Not sure!"
 
                     if det == True:
                         SSC_dict = {}
@@ -773,8 +772,8 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
     aicme, aicstd = stream.mean(aic_key,percentage=10,std=True)
     me, std = stream.mean(aic_dkey,percentage=10,std=True)
     if verbose == True:
-        print("AIC Means", aicme, aicstd)
-        print("dAIC Means", me, std)
+        print "AIC Means", aicme, aicstd
+        print "dAIC Means", me, std
 
     lowval = std * mlowval
     onsetval = std * monsetval
@@ -788,14 +787,14 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
     while maxfound:
         maxval, mtime = stream._get_max(aic_dkey,returntime=True)
         if verbose == True:
-            print("Max of %s found at %s" % (maxval, mtime))
+            print "Max of %s found at %s" % (maxval, mtime)
 
         # CRITERION #1: Maximum must exceed threshold for a storm
         # *******************************************************
         if maxval > lowval:
             count += 1
             if verbose == True:
-                print("Solution ", count)
+                print "Solution ", count
 
             #remaininglst = [elem for elem in stream if elem.time < mtime - trange/60.0/24.0
                 #or elem.time > mtime + trange/60.0/24.0]
@@ -814,8 +813,8 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
             daicmin, tmin = nst._get_min(aic_dkey, returntime=True)
             daicmax, tmax = nst._get_max(aic_dkey, returntime=True)
             if verbose == True:
-                print("AIC time min:", num2date(tmin))
-                print("AIC time max:", num2date(tmax))
+                print "AIC time min:", num2date(tmin)
+                print "AIC time max:", num2date(tmax)
 
             if tmin > tmax:     # Wrong minimum. Fix!
                 while True:
@@ -824,15 +823,15 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                         # Program is trying to correct a max/min pair at a discontinuity. Doesn't work!
                         # TODO: How to fix this?
                         if verbose == True:
-                            print("An error occurred. Beware. Exiting.")
+                            print "An error occurred. Beware. Exiting."
                         maxfound = False
                         break
                     daicmin, tmin = nst._get_min(aic_dkey, returntime=True)
                     daicmax, tmax = nst._get_max(aic_dkey, returntime=True)
                     if verbose == True:
-                        print("False minimum. Finding a new one...")
-                        print("AIC time min:", num2date(tmin))
-                        print("AIC time max:", num2date(tmax))
+                        print "False minimum. Finding a new one..."
+                        print "AIC time min:", num2date(tmin)
+                        print "AIC time max:", num2date(tmax)
                     if tmax > tmin:
                         break
 
@@ -855,13 +854,13 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                 duration = (num2date(elevatedrange.ndarray[t_ind][-1]).replace(tzinfo=None)-ssc_init).seconds
 
                 if verbose == True:
-                    print("Low value:", lowval)
-                    print("Onset value:", onsetval)
-                    print("Length of onset array:", len(nst))
-                    print("Amplitude:", d_amp)
-                    print("Max and time:", maxval, num2date(tmin))
-                    print("Length of elevated range:", len(elevatedrange.ndarray))
-                    print("Time of SSC:", ssc_init)
+                    print "Low value:", lowval
+                    print "Onset value:", onsetval
+                    print "Length of onset array:", len(nst)
+                    print "Amplitude:", d_amp
+                    print "Max and time:", maxval, num2date(tmin)
+                    print "Length of elevated range:", len(elevatedrange.ndarray)
+                    print "Time of SSC:", ssc_init
 
                 # CRITERION #3: Onset in H component must exceed 10nT
                 # ***************************************************
@@ -905,16 +904,16 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                             '''
                     elif useACE == True and ACE_results == None:
                         if verbose == True:
-                            print("No ACE storm. False detection!")
-                            print(ssc_init, d_amp)
+                            print "No ACE storm. False detection!"
+                            print ssc_init, d_amp
                     elif useACE == False:
                         if verbose == True:
                             #print "Storm onset =", num2date(elevatedrange[0].time), d_amp
-                            print("Storm onset =", num2date(elevatedrange[t_ind][0]), d_amp)
+                            print "Storm onset =", num2date(elevatedrange[t_ind][0]), d_amp
                         detection = True
                         final_probf = dh_prob
                         if verbose == True:
-                            print("No ACE data. Not sure!")
+                            print "No ACE data. Not sure!"
 
                     if det == True:
                         SSC_dict = {}
@@ -927,7 +926,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
 
             else:
                 if verbose == True:
-                    print("Outlier -- no storm onset")
+                    print "Outlier -- no storm onset"
             stream = DataStream(remaininglst,{})
         else:
             maxfound = False
@@ -1062,12 +1061,12 @@ def _calcProbWithSat(ssctime, sat_dict, dh_prob, dh_weight, satprob_weight, estt
     t_arr_high = estssctime + timedelta(minutes=ace_window)
 
     if verbose == True:
-        print("Arrival time low:", (t_arr_low))
-        print("Arrival time high:", (t_arr_high))
+        print "Arrival time low:", (t_arr_low)
+        print "Arrival time high:", (t_arr_high)
     if (ssctime > (t_arr_low) and
         ssctime < (t_arr_high)):
         if verbose == True:
-            print("ACE storm present. Real storm!")
+            print "ACE storm present. Real storm!"
 
         if estssctime >= ssctime:
             diff = (estssctime - ssctime).seconds / 60.
@@ -1104,82 +1103,82 @@ def _calcProbWithSat(ssctime, sat_dict, dh_prob, dh_weight, satprob_weight, estt
 
 if __name__ == '__main__':
 
-    print()
-    print("----------------------------------------------------------")
-    print("TESTING: STORM DETECTOR PACKAGE")
-    print("THIS IS A TEST RUN OF THE MAGPY OPT.STORMDET PACKAGE.")
-    print("All main methods will be tested.")
-    print("A summary will be presented at the end. Any protocols")
-    print("or functions with errors will be listed.")
-    print("----------------------------------------------------------")
-    print()
+    print
+    print "----------------------------------------------------------"
+    print "TESTING: STORM DETECTOR PACKAGE"
+    print "THIS IS A TEST RUN OF THE MAGPY OPT.STORMDET PACKAGE."
+    print "All main methods will be tested."
+    print "A summary will be presented at the end. Any protocols"
+    print "or functions with errors will be listed."
+    print "----------------------------------------------------------"
+    print
 
-    print("Please enter path of a (variometer) data file for testing:")
-    print("!! IMPORTANT: pick a day with a known SSC !!")
-    print("(Examples: 2013-10-02, 2014-02-15, 2014-06-07, 2015-03-17...)")
-    print("(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)")
+    print "Please enter path of a (variometer) data file for testing:"
+    print "!! IMPORTANT: pick a day with a known SSC !!"
+    print "(Examples: 2013-10-02, 2014-02-15, 2014-06-07, 2015-03-17...)"
+    print "(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)"
     while True:
         magdata_path = raw_input("> ")
         if os.path.exists(magdata_path):
             break
         else:
-            print("Sorry, that file doesn't exist. Try again.")
-            print("")
+            print "Sorry, that file doesn't exist. Try again."
+            print ""
 
-    print("")
-    print("Please enter path of ACE SWEPAM data for the same day:")
+    print ""
+    print "Please enter path of ACE SWEPAM data for the same day:"
     while True:
         satdata_1m_path = raw_input("> ")
         if os.path.exists(satdata_1m_path):
             break
         else:
-            print("Sorry, that file doesn't exist. Try again.")
-            print("")
+            print "Sorry, that file doesn't exist. Try again."
+            print ""
 
-    print("")
-    print("Please enter path of ACE EPAM data for the same day:")
+    print ""
+    print "Please enter path of ACE EPAM data for the same day:"
     while True:
         satdata_5m_path = raw_input("> ")
         if os.path.exists(satdata_5m_path):
             break
         else:
-            print("Sorry, that file doesn't exist. Try again.")
-            print("")
+            print "Sorry, that file doesn't exist. Try again."
+            print ""
 
     now = datetime.utcnow()
     testrun = 'stormdettest_'+datetime.strftime(now,'%Y%m%d-%H%M')
     t_start_test = time.time()
     errors = {}
-    print()
-    print(datetime.utcnow(), "- Starting stormdet package test. This run: %s." % testrun)
+    print
+    print datetime.utcnow(), "- Starting stormdet package test. This run: %s." % testrun
 
     while True:
 
         # Step 1 - Read magnetic data
         try:
             magdata = read(magdata_path)
-            print(datetime.utcnow(), "- Magnetic data successfully read.")
+            print datetime.utcnow(), "- Magnetic data successfully read."
         except Exception as excep:
             errors['readmag'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR reading magnetic data. Aborting test.")
+            print datetime.utcnow(), "--- ERROR reading magnetic data. Aborting test."
             break
 
         # Step 2 - Read ACE SWEPAM data
         try:
             satdata_1m = read(satdata_1m_path)
-            print(datetime.utcnow(), "- ACE SWEPAM data successfully read.")
+            print datetime.utcnow(), "- ACE SWEPAM data successfully read."
         except Exception as excep:
             errors['readsat1m'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR reading ACE SWEPAM data. Aborting test.")
+            print datetime.utcnow(), "--- ERROR reading ACE SWEPAM data. Aborting test."
             break
 
         # Step 3 - Read ACE EPAM data
         try:
             satdata_5m = read(satdata_5m_path)
-            print(datetime.utcnow(), "- ACE EPAM data successfully read.")
+            print datetime.utcnow(), "- ACE EPAM data successfully read."
         except Exception as excep:
             errors['readsat5m'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR reading ACE EPAM data. Aborting test.")
+            print datetime.utcnow(), "--- ERROR reading ACE EPAM data. Aborting test."
             break
 
         # Step 4 - Prepare data
@@ -1188,118 +1187,118 @@ if __name__ == '__main__':
             offsets = [21000.,0.,44000.]
             magdata.offset({'x': offsets[0], 'y': offsets[1], 'z': offsets[2]})
             magdata = magdata._convertstream('xyz2hdz')
-            print(datetime.utcnow(), "- Data smoothed, offset and rotated in preparation.")
+            print datetime.utcnow(), "- Data smoothed, offset and rotated in preparation."
         except Exception as excep:
             errors['dataprep'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR preparing data (smooth, offset, _convertstream funcs).")
+            print datetime.utcnow(), "--- ERROR preparing data (smooth, offset, _convertstream funcs)."
 
         # Step 5 - Plot Data (for lols)
         try:
-            print(datetime.utcnow(), "- Plotting x, vwind and pflux. Everything look correct?")
+            print datetime.utcnow(), "- Plotting x, vwind and pflux. Everything look correct?"
             plotStreams([magdata, satdata_1m, satdata_5m], [['x'], ['var2'], ['var1']])
-            print(datetime.utcnow(), "- Plotted data.")
+            print datetime.utcnow(), "- Plotted data."
         except Exception as excep:
             errors['plotting'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR plotting data.")
+            print datetime.utcnow(), "--- ERROR plotting data."
 
         # Step 6 - Use DWT3 method
         try:
             detection_DWT, ssc_list_DWT, sat_ssc_list = seekStorm(magdata, satdata_1m=satdata_1m,
                 satdata_5m=satdata_5m, method='DWT3', returnsat=True)
-            print(datetime.utcnow(), "- Discrete Wavelet Transform (DWT3) method applied to data.")
+            print datetime.utcnow(), "- Discrete Wavelet Transform (DWT3) method applied to data."
         except Exception as excep:
             errors['dwt'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR using DWT method.")
+            print datetime.utcnow(), "--- ERROR using DWT method."
 
         # Step 6 - Use AIC method
         try:
             detection_AIC, ssc_list_AIC = seekStorm(magdata, satdata_1m=satdata_1m, satdata_5m=satdata_5m,
                 method='AIC')
-            print(datetime.utcnow(), "- Akaike Information Criterion (AIC) method applied to data.")
+            print datetime.utcnow(), "- Akaike Information Criterion (AIC) method applied to data."
         except Exception as excep:
             errors['AIC'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR using AIC method.")
+            print datetime.utcnow(), "--- ERROR using AIC method."
 
         # Step 6 - Use FDM method
         try:
             detection_FDM, ssc_list_FDM = seekStorm(magdata, satdata_1m=satdata_1m, satdata_5m=satdata_5m,
                 method='FDM')
-            print(datetime.utcnow(), "- First Derivative method (FDM) applied to data.")
+            print datetime.utcnow(), "- First Derivative method (FDM) applied to data."
         except Exception as excep:
             errors['fdm'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR using FD method.")
+            print datetime.utcnow(), "--- ERROR using FD method."
 
         # If end of routine is reached... break.
         break
 
     t_end_test = time.time()
     time_taken = t_end_test - t_start_test
-    print(datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken)
+    print datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken
 
-    print()
-    print("----------------------------------------------------------")
-    print("RESULTS:")
-    print("--------")
-    print()
-    print("ACE:")
+    print
+    print "----------------------------------------------------------"
+    print "RESULTS:"
+    print "--------"
+    print
+    print "ACE:"
     i = 1
     if detection_DWT:
         for item in sat_ssc_list:
-            print("Detection # %s \n SATSSCTIME: %s \n ESTSSCTIME: %s \n VWIND: %.2f \n PFLUX: %.2f \n PROBF: %.0f" % (i,
-                item['satssctime'], item['estssctime'], item['vwind'], item['pflux'], item['probf']))
+            print "Detection # %s \n SATSSCTIME: %s \n ESTSSCTIME: %s \n VWIND: %.2f \n PFLUX: %.2f \n PROBF: %.0f" % (i,
+                item['satssctime'], item['estssctime'], item['vwind'], item['pflux'], item['probf'])
             i += 1
     else:
-        print("No ACE detections :(")
-    print()
-    print("DWT3:")
+        print "No ACE detections :("
+    print
+    print "DWT3:"
     i = 1
     if detection_DWT:
         for item in ssc_list_DWT:
-            print("Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
-                item['ssctime'], item['amp'], item['duration'], item['probf']))
+            print "Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
+                item['ssctime'], item['amp'], item['duration'], item['probf'])
             i += 1
     else:
-        print("No results from this method :(")
-    print()
-    print("AIC:")
+        print "No results from this method :("
+    print
+    print "AIC:"
     i = 1
     if detection_AIC:
         for item in ssc_list_AIC:
-            print("Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
-                item['ssctime'], item['amp'], item['duration'], item['probf']))
+            print "Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
+                item['ssctime'], item['amp'], item['duration'], item['probf'])
             i += 1
     else:
-        print("No results from this method :(")
-    print()
-    print("FDM:")
+        print "No results from this method :("
+    print
+    print "FDM:"
     i = 1
     if detection_FDM:
         for item in ssc_list_FDM:
-            print("Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
-                item['ssctime'], item['amp'], item['duration'], item['probf']))
+            print "Detection # %s \n SSCTIME: %s \n AMP: %.2f \n DURATION %.2f \n PROBF %.0f" % (i,
+                item['ssctime'], item['amp'], item['duration'], item['probf'])
             i += 1
     else:
-        print(" No results from this method :(")
+        print " No results from this method :("
 
-    print()
-    print("----------------------------------------------------------")
-    print("ERRORS:")
-    print("-------")
+    print
+    print "----------------------------------------------------------"
+    print "ERRORS:"
+    print "-------"
     if errors == {}:
-        print("0 errors! Great! :)")
+        print "0 errors! Great! :)"
     else:
-        print(len(errors), "errors were found in the following functions:")
-        print(str(errors.keys()))
-        print()
-        print("Would you like to print the exceptions thrown?")
+        print len(errors), "errors were found in the following functions:"
+        print str(errors.keys())
+        print
+        print "Would you like to print the exceptions thrown?"
         excep_answer = raw_input("(Y/n) > ")
         if excep_answer.lower() == 'y':
             i = 0
             for item in errors:
-                print(errors.keys()[i] + " error string:")
-                print("    " + errors[errors.keys()[i]])
+                print errors.keys()[i] + " error string:"
+                print "    " + errors[errors.keys()[i]]
                 i += 1
 
-    print()
-    print("Good-bye!")
-    print("----------------------------------------------------------")
+    print
+    print "Good-bye!"
+    print "----------------------------------------------------------"

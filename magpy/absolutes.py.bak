@@ -38,8 +38,6 @@ Written by Roman Leonhardt 2011/2012/2013
 Version 1.0 (from the 23.02.2012)
 
 """
-from __future__ import print_function
-from __future__ import absolute_import
 
 from magpy.stream import *
 from magpy.database import *
@@ -286,14 +284,14 @@ class AbsoluteData(object):
 
     def _get_max(self, key):
         if not key in ABSKEYLIST:
-            raise ValueError("Column key not valid")
+            raise ValueError, "Column key not valid"
         elem = max(self, key=lambda tmp: eval('tmp.'+key))
         return eval('elem.'+key)
 
 
     def _get_min(self, key):
         if not key in ABSKEYLIST:
-            raise ValueError("Column key not valid")
+            raise ValueError, "Column key not valid"
         elem = min(self, key=lambda tmp: eval('tmp.'+key))
         return eval('elem.'+key)
 
@@ -303,7 +301,7 @@ class AbsoluteData(object):
         returns an numpy array of selected columns from Stream
         """
         if not key in ABSKEYLIST:
-            raise ValueError("Column key not valid")
+            raise ValueError, "Column key not valid"
 
         return np.asarray([eval('elem.'+key) for elem in self])
 
@@ -340,7 +338,7 @@ class AbsoluteData(object):
                 functime = (elem.time-function[1])/(function[2]-function[1])
                 for key in funckeys:
                     if not key in KEYLIST[1:15]:
-                        raise ValueError("Column key not valid")
+                        raise ValueError, "Column key not valid"
                     fkey = 'f'+key
                     if fkey in function[0]:
                         try:
@@ -1188,8 +1186,8 @@ class AbsoluteData(object):
             resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
-                print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
-                print("All results: " , resultline)
+                print "Calculated D (%f) - iteration step %d" % (resultline[2],i)
+                print "All results: " , resultline
             # requires succesful declination determination
             if isnan(resultline.y):
                 try:
@@ -1209,7 +1207,7 @@ class AbsoluteData(object):
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
 
             if debugmode:
-                print("Calculated I (%f) - iteration step %d" %(outline[1],i))
+                print "Calculated I (%f) - iteration step %d" %(outline[1],i)
 
         # Temporary cleanup for extraordinary high values (failed calculations) - replace by 999999.99
         for key in FLAGKEYLIST:
@@ -1226,16 +1224,16 @@ class AbsoluteData(object):
             loggerabs.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
 
             if printresults:
-                print('Vector:')
-                print('Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f))
-                print('Collimation and Offset:')
-                print('Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f deg/unit' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2))
+                print 'Vector:'
+                print 'Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f)
+                print 'Collimation and Offset:'
+                print 'Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f deg/unit' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2)
 
         except:
             text = 'calcabsolutes: invalid LineStruct Object returned from calcinc function'
             loggerabs.warning(text)
             if printresults:
-                print(text)
+                print text
             outline = LineStruct()
 
         return outline
@@ -1365,7 +1363,7 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
     # file format should be known by now
-    print("DI format:", format_type)
+    print "DI format:", format_type
 
     stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
 
@@ -1463,7 +1461,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if abstype == 'autodif': # we also check the person given in the file. if this is AutoDIF abstype will be set correctly automatically
         usestep=2
         if not azimuth:
-            print("Azimuth needs ro be provided for AutoDIF measurements")
+            print "Azimuth needs ro be provided for AutoDIF measurements"
             return
     if not expT:
         expT = 1
@@ -1491,20 +1489,20 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     failinglist = []
     successlist = []
     if db:
-        print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
+        print "absoluteAnalysis:  You selected a DB. Tyring to import database methods"
         try:
             try:
-                from . import database as dbase
+                import database as dbase
                 #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
             except:
                 import magpy.database as dbase
                 #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
         except:
-            print("absoluteAnalysis:  import failed - skipping eventually selected option dbadd")
+            print "absoluteAnalysis:  import failed - skipping eventually selected option dbadd"
             dbadd = False
         cursor = db.cursor()
         # Check whether absdata exists as table
-        print("absoluteAnalysis:  Tyring to interprete the didata path as DB Table")
+        print "absoluteAnalysis:  Tyring to interprete the didata path as DB Table"
         cursor.execute("SHOW TABLES LIKE '%s'" % absdata)
         try:
             value = cursor.fetchone()[0]
@@ -1516,13 +1514,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 lst = [elem[0].split()[0] for elem in values]
                 datelist = list(set(lst))
             except:
-                print("absoluteAnalysis: Error while getting Absdata from db")
+                print "absoluteAnalysis: Error while getting Absdata from db"
                 return
             # DI TABLE FOUND
             readfile = False
-            print("absoluteAnalysis:  ... success")
+            print "absoluteAnalysis:  ... success"
         except:
-            print("absoluteAnalysis:  Could not read DB Table with DI values - checking files")
+            print "absoluteAnalysis:  Could not read DB Table with DI values - checking files"
             pass
 
     if readfile:
@@ -1531,17 +1529,17 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #print "Found string"
             #filelist.append(absdata)
             if "://" in absdata:
-                print("Found URL code - requires name of data set with date")
+                print "Found URL code - requires name of data set with date"
                 filelist.append(absdata)
                 movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
             elif os.path.isfile(absdata):
-                print("Found single file")
+                print "Found single file"
                 filelist.append(absdata)
             else:
                 if os.path.exists(absdata):
                     pass
                 else:
-                    print("absolute Analysis: Error - path to absdata not existing: %s" % absdata)
+                    print "absolute Analysis: Error - path to absdata not existing: %s" % absdata
                     sys.exit()
                 for file in os.listdir(absdata):
                     if file.endswith(diid):
@@ -1552,14 +1550,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 listlen = len(absdata)
                 for elem in absdata:
                     if "://" in absdata:
-                        print("Found URL code - requires name of data set with date")
+                        print "Found URL code - requires name of data set with date"
                         filelist.append(elem)
                         movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
                     elif os.path.isfile(elem):
                         #print "Found single file"
                         filelist.append(elem)
             except:
-                print("Could not interpret absdata")
+                print "Could not interpret absdata"
                 return
 
         for elem in filelist:
@@ -1568,7 +1566,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 date = dparser.parse(tail,fuzzy=True)
                 datelist.append(datetime.strftime(date,"%Y-%m-%d"))
             except:
-                print("absoluteAnalysis: Found date problem in file: %s" % tail)
+                print "absoluteAnalysis: Found date problem in file: %s" % tail
                 failinglist.append(elem)
 
         datelist = list(set(datelist))
@@ -1583,7 +1581,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         datetimelist = [elem for elem in datetimelist if elem <= empty._testtime(endtime)]
 
     if not len(datetimelist) > 0:
-        print("absoluteAnalysis: No matching dates found - aborting")
+        print "absoluteAnalysis: No matching dates found - aborting"
         return
 
 
@@ -1599,10 +1597,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     for date in sorted(datetimelist):
         variofound = True
         scalarfound = True
-        print("")
-        print("------------------------------------------------------")
-        print("Starting analysis for ", date)
-        print("------------------------------------------------------")
+        print ""
+        print "------------------------------------------------------"
+        print "Starting analysis for ", date
+        print "------------------------------------------------------"
         # a) Read variodata
         try:
             variodbtest = variodata.split(',')
@@ -1610,28 +1608,28 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-            print("Length of Variodata:", variostr.length()[0])
+            print "Length of Variodata:", variostr.length()[0]
             try:
                 vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
                 variostr = variostr.flag(vaflaglist)
             except:
-                print("Obtained flagging information for vario data from data base")
+                print "Obtained flagging information for vario data from data base"
             try:
                 variostr = variostr.remove_flagged()
-                print("Flagged records of variodata have been removed")
+                print "Flagged records of variodata have been removed"
             except:
-                print("Flagging of variodata failed")
+                print "Flagging of variodata failed"
             try:
-                print("Now getting header information")
+                print "Now getting header information"
                 variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
             except:
-                print("Failed to obtain header information from data base")
+                print "Failed to obtain header information from data base"
             try:
                 variostr = dbase.applyDeltas(db,variostr)
             except:
-                print("Applying delta values failed")
+                print "Applying delta values failed"
         except:
-            print("absoluteAnalysis: reading variometer data failed")
+            print "absoluteAnalysis: reading variometer data failed"
             variostr = DataStream()
         if (len(variostr) > 3 and not np.isnan(variostr.mean('time'))) or len(variostr.ndarray[0]) > 0: # can contain ([], 'File not specified')
             if not alpha:
@@ -1647,56 +1645,56 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             variostr =variostr.rotation(alpha=alpha, beta=beta)
             vafunc = variostr.interpol(['x','y','z'])
         else:
-            print("absoluteAnalysis: no variometer data available")
+            print "absoluteAnalysis: no variometer data available"
             variofound = False
 
         # b) Load Scalardata
         if not deltaF:
             deltaF = 0.0
-        print("-----------------")
+        print "-----------------"
         try:
             scalardbtest = scalardata.split(',')
             if len(scalardbtest) > 1:
                 scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
-            print("Length of Scalardata:", scalarstr.length()[0])
+            print "Length of Scalardata:", scalarstr.length()[0]
             try:
                 scflaglist = dbase.db2flaglist(db,scalarstr.header['SensorID'])
                 scalarstr = scalarstr.flag(scflaglist)
             except:
-                print("Failed to obtain flagging information from data base")
+                print "Failed to obtain flagging information from data base"
             try:
                 scalarstr = scalarstr.remove_flagged()
-                print("Flagged records of scalardata have been removed")
+                print "Flagged records of scalardata have been removed"
             except:
-                print("Flagging of scalardata failed")
+                print "Flagging of scalardata failed"
             try:
-                print("Now getting header information")
+                print "Now getting header information"
                 scalarstr.header = dbase.dbfields2dict(db,scalarstr.header['SensorID']+'_0001')
             except:
-                print("Failed to obtain header information from data base")
+                print "Failed to obtain header information from data base"
             #try:  # Get header info from database
             #    #print "Eventually move column to f line"
             #    #scalarstr = dbase.applyDeltas(db,scalarstr)
             #except:
             #    print "Applying delta values failed"
             try:
-                print("Applying delta values from database", scalarstr.header['SensorID'])
+                print "Applying delta values from database", scalarstr.header['SensorID']
                 scalarstr = dbase.applyDeltas(db,scalarstr)
                 if not deltaF == 0:
                     print (" ------------  IMPORTANT ----------------")
                     print (" you provided an additional delta F value")
                     print (" which will be used for offset correction.")
             except:
-                print("Applying delta values failed")
+                print "Applying delta values failed"
         except:
-            print("absoluteAnalysis: reading scalar data from file failed")
+            print "absoluteAnalysis: reading scalar data from file failed"
             scalarstr = DataStream()
         if (len(scalarstr) > 3 and not np.isnan(scalarstr.mean('time'))) or len(scalarstr.ndarray[0]) > 0: # Because scalarstr can contain ([], 'File not specified')
             scfunc = scalarstr.interpol(['f'])
         else:
-            print("absoluteAnalysis: no external scalar data provided")
+            print "absoluteAnalysis: no external scalar data provided"
             scalarfound = False
 
         # c) get absolute data
@@ -1704,8 +1702,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         if readfile:
             datestr = datetime.strftime(date,"%Y-%m-%d")
             datestr2 = datetime.strftime(date,"%Y%m%d") # autodif
-            print("-----------------")
-            print(datestr, abstype)
+            print "-----------------"
+            print datestr, abstype
             if abstype == 'autodif':
                 difiles = [di for di in filelist if datestr2 in di]
             else:
@@ -1725,9 +1723,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     if not deltaF:
                         deltaF = 0.0
                     #print stationid, pier, deltaF, alpha, beta
-                    print("Please note that any offsets defined in DataDeltaValues")
-                    print("of the database have been applied already.")
-                    print("Data from %s, pier %s: additional deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta))
+                    print "Please note that any offsets defined in DataDeltaValues"
+                    print "of the database have been applied already."
+                    print "Data from %s, pier %s: additional deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta)
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     #print "LENGTH:",len(absst)
                     try:
@@ -1745,7 +1743,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         #print "absoluteAnalysis: Successful analyse of %s" % elem
                         successlist.append(elem)
                     except:
-                        print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
+                        print "absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem
                         failinglist.append(elem)
                         # TODO Drop that line from filelist
                         pass
@@ -1764,12 +1762,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 abslist = dbase.db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
             except:
-                print("absoluteAnalysis: Problems when reading from database")
+                print "absoluteAnalysis: Problems when reading from database"
 
 
         for absst in abslist:
-            print("-----------------")
-            print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
+            print "-----------------"
+            print "Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d"))
             #if readfile:
             try:
                 stream = absst[0].getAbsDIStruct()
@@ -1799,8 +1797,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         deltaI = 0.0
                 #print "here", deltaD, deltaI
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI)
-                print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
-                print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
+                print "%s with delta F of %s nT" % (result.str4,str(deltaF))
+                print "Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI))
                 if not deltaF == 0:
                     result.str4 = result.str4 + "_" + str(deltaF)
             except:
@@ -1812,10 +1810,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]
                         failinglist.append(xl[0])
-                        print("absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test)
+                        print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
                         dataok = False
                     except:
-                        print("absoluteAnalysis: Value error while determining time - failed analysis")
+                        print "absoluteAnalysis: Value error while determining time - failed analysis"
                         dataok = False
             if expI and dataok:
                 if not expI-expT < result.x < expI+expT:
@@ -1823,10 +1821,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]
                         failinglist.append(xl[0])
-                        print("absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test)
+                        print "absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test
                         dataok = False
                     except:
-                        print("absoluteAnalysis: Value error while determining time - failed analysis")
+                        print "absoluteAnalysis: Value error while determining time - failed analysis"
                         dataok = False
             if dataok:
                 resultstream.add(result)
@@ -1940,15 +1938,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     #print "Files for archive:"
     #print "---------------------------"
     archivelist = [x for x in successlist if x not in failinglist]
-    print("------------------------------------------------------")
-    print("Failed files:")
-    print("------------------------------------------------------")
+    print "------------------------------------------------------"
+    print "Failed files:"
+    print "------------------------------------------------------"
     if len(failinglist) > 0:
         for el in failinglist:
-            print(el)
+            print el
     else:
-        print("None")
-    print("------------------------------------------------------")
+        print "None"
+    print "------------------------------------------------------"
 
 
     # 3.2 Eventually archive the data
@@ -1975,7 +1973,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     login = passwdtyp[1].split('//')[1]
                     dst = os.path.join(archivepath,fname)
                     fh = NamedTemporaryFile(suffix=suffix,delete=False)
-                    print("Fi: ", fi)
+                    print "Fi: ", fi
                     fh.write(urllib2.urlopen(fi).read())
                     fh.close()
                     shutil.move(fh.name,dst)
@@ -2076,7 +2074,7 @@ def removeAbsFilesFTP(**kwargs):
     loggerabs.info(" -- Starting removing already successfully analyzed files from %s" % ftppath)
 
     doubles = list(set(ftpfilelist) & set(localfilelist))
-    print(doubles)
+    print doubles
 
     for f in doubles:
         ftpremove (ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd)
@@ -2092,7 +2090,7 @@ def removeAbsFilesFTP(**kwargs):
 
 
 if __name__ == '__main__':
-    print("Starting a test of the Absolutes program:")
+    print "Starting a test of the Absolutes program:"
     #msg = PyMagLog()
     ### TODO: To be implemented
 

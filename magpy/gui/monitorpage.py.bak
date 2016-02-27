@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 try:
     from magpy.stream import *
     from magpy.absolutes import *
@@ -124,12 +123,12 @@ class PortCommunicationPage(wx.Panel):
                 db = MySQLdb.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
                 dbcredlst = [dbhost,dbuser,dbpasswd,dbname]
             except:
-                print("Create a credential file first or provide login info for database directly")
+                print "Create a credential file first or provide login info for database directly"
                 raise
             cursor = db.cursor ()
             cursor.execute ("SELECT VERSION()")
             row = cursor.fetchone ()
-            print("MySQL server version:", row[0])
+            print "MySQL server version:", row[0]
             cursor.close ()
             db.close ()
         else:
@@ -146,21 +145,21 @@ class PortCommunicationPage(wx.Panel):
             os.makedirs(os.path.join(destpath,'MartasSensors'))
         destsensfile = os.path.join(destpath,'MartasSensors',clientname+'_sensors.txt')
         destowfile = os.path.join(destpath,'MartasSensors',clientname+'_owlist.csv')
-        print("Getting sensor information from ", clientname)
+        print "Getting sensor information from ", clientname
 
         try:
             scptransfer(scpuser+'@'+clientip+':'+sensfile,destsensfile,scppasswd)
         except:
-            print("Could not connect to/get sensor info of client %s - aborting" % clientname)
-            print("Please make sure that you connected at least once to the client by ssh")
-            print(" from your defaultuser %s " % defaultuser)
-            print(" This way the essential key data is established.")
+            print "Could not connect to/get sensor info of client %s - aborting" % clientname
+            print "Please make sure that you connected at least once to the client by ssh"
+            print " from your defaultuser %s " % defaultuser
+            print " This way the essential key data is established."
             sys.exit()
-        print("Searching for onewire data from ", clientname)
+        print "Searching for onewire data from ", clientname
         try:
             scptransfer(scpuser+'@'+clientip+':'+owfile,destowfile,scppasswd)
         except:
-            print("No one wire info available on client %s - proceeding" % clientname)
+            print "No one wire info available on client %s - proceeding" % clientname
             pass
 
         s,o = [],[]
@@ -169,7 +168,7 @@ class PortCommunicationPage(wx.Panel):
                 reader = csv.reader(f)
                 s = []
                 for line in reader:
-                    print(line)
+                    print line
                     if len(line) < 2:
                         try:
                             s.append(line[0].split())
@@ -178,16 +177,16 @@ class PortCommunicationPage(wx.Panel):
                             pass
                     else:
                         s.append(line)
-            print(s)
+            print s
         else:
-            print("Apparently no sensors defined on client %s - aborting" % clientname)
+            print "Apparently no sensors defined on client %s - aborting" % clientname
             sys.exit()
 
         if os.path.exists(destowfile):
             with open(destowfile,'rb') as f:
                 reader = csv.reader(f)
                 o = [line for line in reader]
-            print(o)
+            print o
 
         factory = WampClientFactory("ws://"+clientip+":9100", debugWamp = False)
         cl.sendparameter(clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst)

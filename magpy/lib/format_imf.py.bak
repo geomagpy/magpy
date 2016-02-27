@@ -10,7 +10,6 @@ Written by Roman Leonhardt December 2012
         DKA     (k values)d
         BLV     (baseline data)
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -30,7 +29,7 @@ def isIMF(filename):
     else:
         return False
 
-    print("Found IMF data")
+    print "Found IMF data"
     return True
 
 
@@ -332,17 +331,17 @@ def writeIAF(datastream, filename, **kwargs):
     df=False
     # Check whether data is present at all
     if not len(datastream.ndarray[0]) > 0:
-        print("writeIAF: No data found - check ndarray")
+        print "writeIAF: No data found - check ndarray"
         return False
     # Check whether minute file
     sr = datastream.samplingrate()
     if not int(sr) == 60:
-        print("writeIAF: Minute data needs to be provided")
+        print "writeIAF: Minute data needs to be provided"
         return False
     # check whether data covers one month
     tdiff = int(np.round(datastream.ndarray[0][-1]-datastream.ndarray[0][0]))
     if not tdiff >= 28:
-        print("writeIAF: Data needs to cover one month")
+        print "writeIAF: Data needs to cover one month"
         return False
 
     try:
@@ -350,7 +349,7 @@ def writeIAF(datastream, filename, **kwargs):
         if datastream.header['DataComponents'].startswith('HDZ'):
             datastream = datastream.hdz2xyz()
     except:
-        print("writeIAF: HeaderInfo on DataComponents seems to be missing")
+        print "writeIAF: HeaderInfo on DataComponents seems to be missing"
         return False
 
     try:
@@ -408,7 +407,7 @@ def writeIAF(datastream, filename, **kwargs):
                     value = int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header['DataAcquisitionLatitude']) < 90 and float(datastream.header['DataAcquisitionLatitude']) > -90:
-                        print("Latitude and Longitude need to be provided in Degree")
+                        print "Latitude and Longitude need to be provided in Degree"
                         x=1/0
                     value = int(np.round((90-float(datastream.header['DataAcquisitionLatitude']))*1000))
                 elif elem == 'DataAcquisitionLongitude':
@@ -427,19 +426,19 @@ def writeIAF(datastream, filename, **kwargs):
                     value = datastream.header[elem]
                 head.append(value)
             except:
-                print("%s missing in datastream header")
+                print "%s missing in datastream header"
                 if elem == 'DataPublicationDate':
-                    print("  --  appending current date")
+                    print "  --  appending current date"
                     value = datetime.strftime(datetime.utcnow(),'%y%m')
                     head.append(value)
                 else:
-                    print("  --  critical information missing in data header  --")
-                    print("  ---------------------------------------------------")
-                    print(" Please provide: StationIAGAcode, DataAcquisitionLatitude, ")
-                    print(" DataAcquisitionLongitude, DataElevation, DataConversion, ")
-                    print(" DataComponents, StationInstitution, DataQuality, SensorType, ")
-                    print(" StationK9, DataDigitalSampling, DataSensorOrientation")
-                    print(" e.g. data.header['StationK9'] = 750")
+                    print "  --  critical information missing in data header  --"
+                    print "  ---------------------------------------------------"
+                    print " Please provide: StationIAGAcode, DataAcquisitionLatitude, "
+                    print " DataAcquisitionLongitude, DataElevation, DataConversion, "
+                    print " DataComponents, StationInstitution, DataQuality, SensorType, "
+                    print " StationK9, DataDigitalSampling, DataSensorOrientation"
+                    print " e.g. data.header['StationK9'] = 750"
                     return False
 
         # Constructing header Info
@@ -559,7 +558,7 @@ def writeIAF(datastream, filename, **kwargs):
         year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
         kfile = os.path.join(path[0],station.upper()+year+'K.DKA')
-        print("Writing k summary file:", kfile)
+        print "Writing k summary file:", kfile
         head = []
         if not os.path.isfile(kfile):
             head.append("{0:^66}".format(station.upper()))
@@ -585,7 +584,7 @@ def writeIAF(datastream, filename, **kwargs):
                 myfile.write(elem+'\r\n')
                 #print elem
 
-    print("Writing monthly IAF data format:", path[1].upper())
+    print "Writing monthly IAF data format:", path[1].upper()
     if os.path.isfile(filename):
         if mode == 'append':
             with open(filename, "a") as myfile:
@@ -600,7 +599,7 @@ def writeIAF(datastream, filename, **kwargs):
         myfile.write(output)
         myfile.close()
 
-    print("Creating README from header info:", path[1].upper())
+    print "Creating README from header info:", path[1].upper()
     readme = True
     if readme:
         requiredhead = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo', 'StationEmail','StationK9']
@@ -636,7 +635,7 @@ def writeIAF(datastream, filename, **kwargs):
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
         rfile = os.path.join(path[0],"README."+station.upper())
         head = []
-        print("Writing README file:", rfile)
+        print "Writing README file:", rfile
 
         if not os.path.isfile(rfile):
             emptyline = ''
@@ -689,7 +688,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     Reading Intermagnet CDF format (1.1)
     """
 
-    print("FOUND IMAGCDF")
+    print "FOUND IMAGCDF"
 
     cdfdat = cdf.CDF(filename)
     # get Attribute list
@@ -783,16 +782,16 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             st = str(cdfdat.attrs['StartTime'])
             sr = str(cdfdat.attrs['SamplingPeriod'])
         else:
-            print("No Time information available - aborting")
+            print "No Time information available - aborting"
             return
     elif len(tllist) > 1:
         tl = [el[0] for el in tllist]
         if not max(tl) == min(tl):
-            print("Time columns of different length. Choosing longest as basis")
+            print "Time columns of different length. Choosing longest as basis"
             newdatalist.append(max(tllist)[1])
             mutipletimerange = True
         else:
-            print("Equal length time axes found - assuming identical time")
+            print "Equal length time axes found - assuming identical time"
             if 'GeomagneticVectorTimes' in datalist:
                 newdatalist.append(['time','GeomagneticVectorTimes'])
             else:
@@ -823,7 +822,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 pass # for lines which have no Label
 
     if not len(datalist) == len(newdatalist)-1:
-        print("error encountered in key assignment - please check")
+        print "error encountered in key assignment - please check"
 
     # 3. Create equal length array reducing all data to primary Times and filling nans for non-exist
     # (4. eventually completely drop time cols and just store start date and sampling period in header)
@@ -862,7 +861,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     Writing Intermagnet CDF format (1.1)
     """
 
-    print("Writing IMAGCDF Format")
+    print "Writing IMAGCDF Format"
     mode = kwargs.get('mode')
     if os.path.isfile(filename+'.cdf'):
         filename = filename+'.cdf'
@@ -963,7 +962,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             col = datastream._get_column(key)
 
         if not False in checkEqual3(col):
-            print("Found identical values only:", key)
+            print "Found identical values only:", key
             col = col[:1]
         if key == 'time':
             key = 'GeomagneticVectorTimes'
@@ -990,7 +989,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 except:
                     cdfkey = 'GeomagneticField'+key.upper()
                     keyup = key.upper()
-            print(len(col), keyup, key)
+            print len(col), keyup, key
             nonetest = [elem for elem in col if not elem == None]
             if len(nonetest) > 0:
                 mycdf[cdfkey] = col
@@ -1469,18 +1468,18 @@ def writeBLV(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
-    print("writeBLV: file:", filename)
+    print "writeBLV: file:", filename
 
     # 3. check whether datastream corresponds to an absolute file and remove unreasonable inputs
     #     - check whether F measurements were performed at the main pier - delta F's are available
 
     try:
         if not datastream.header['DataFormat'] == 'MagPyDI':
-            print("writeBLV: Format not recognized - needs to be MagPyDI")
+            print "writeBLV: Format not recognized - needs to be MagPyDI"
             return False
     except:
-        print("writeBLV: Format not recognized - should be MagPyDI")
-        print("writeBLV: is not yet assigned during database access")
+        print "writeBLV: Format not recognized - should be MagPyDI"
+        print "writeBLV: is not yet assigned during database access"
         #return False
 
     indf = KEYLIST.index('df')
@@ -1546,10 +1545,10 @@ def writeBLV(datastream, filename, **kwargs):
         meanh = datastream.mean('x')
 
     ##### ###########################################################################
-    print("TODO: cycle through parameter baseparam here")
-    print(" baseparam contains time ranges their valid baseline function parameters")
-    print(" -> necessary for discontiuous fits")
-    print(" join the independent year stream, and create datelist for marking jumps with d")
+    print "TODO: cycle through parameter baseparam here"
+    print " baseparam contains time ranges their valid baseline function parameters"
+    print " -> necessary for discontiuous fits"
+    print " join the independent year stream, and create datelist for marking jumps with d"
     ##### ###########################################################################
 
     # 6. calculate baseline function
@@ -1584,7 +1583,7 @@ def writeBLV(datastream, filename, **kwargs):
     try:
         idc = header['StationID']
     except:
-        print("formatBLV: No station code specified. Aborting ...")
+        print "formatBLV: No station code specified. Aborting ..."
         logging.error("formatBLV: No station code specified. Aborting ...")
         return False
     headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
@@ -1777,7 +1776,7 @@ def readIYFV(filename, headonly=False, **kwargs):
             elif cnt == 3:
                 # station info
                 block = line.split()
-                print(block)
+                print block
                 headers['StationName'] = block[0]
                 headers['StationID'] = block[1]
                 headers['StationCountry'] = block[2]
@@ -1808,7 +1807,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                     if test:
                         #try:
                         if not len(data) >= 12:
-                            print(len(data))
+                            print len(data)
                         ye = data[0].split('.')
                         dat = ye[0]+'-06-01'
                         row = []
@@ -1849,13 +1848,13 @@ def readIYFV(filename, headonly=False, **kwargs):
                             #if ele.startswith('XYZ'):
                             checklist = coordinatetransform(array[1][-1],array[2][-1],array[3][-1],ele[:3].lower())
                             if np.max(np.array(row) - np.array(checklist)) > 0.5:
-                                print("readIYFV: verify conversions between components !")
-                                print("readIYFV: found:", np.array(row))
-                                print("readIYFV: expected:", np.array(checklist))
+                                print "readIYFV: verify conversions between components !"
+                                print "readIYFV: found:", np.array(row)
+                                print "readIYFV: expected:", np.array(checklist)
 
                         elif t == 'J' and tprev == tsel:
                             for comp in ele.lower():
-                                print(comp)
+                                print comp
                                 if comp in ['x','h','i']:
                                     jumpx = jumpx + row[para.index(comp)]
                                 elif comp in ['y','d']:
@@ -1927,7 +1926,7 @@ def writeIYFV(datastream,filename, **kwargs):
     header = datastream.header
     comp = header.get('DataComponents','')
     comp = comp.lower()
-    print(("writeIYFV: components found: ", comp))
+    print ("writeIYFV: components found: ", comp)
     if not comp in ['hdz','xyz','idf','hez', 'hdzf','xyzf','idff','hezf', 'hdzg','xyzg','idfg','hezg']:
         print (" writeIYFV: valid DataComponents could not be read from header - assuming xyz data")
         comp = 'xyz'

@@ -3,13 +3,10 @@
 MagPy - Plot analyzed DI data
 """
 
-import sys
-sys.path.append('/home/leon/Software/magpy/trunk/src')
-
 from magpy.stream import *   
 from magpy.transfer import *
 
-abspath = '/home/leon/Dropbox/Daten/Magnetism/DI-WIC/data/WIC-A2-FGE_S025_01.txt'
+abspath = 'WIC-A2-FGE_S025_01.txt'
 absst = read(path_or_url=abspath)
 #absst = absst.remove_outlier(timerange=timerange,keys=['x','y','z','var1','var2','var3','var4','var5','dx','dy','dz','df'])
 #absst = absst.remove_flagged()

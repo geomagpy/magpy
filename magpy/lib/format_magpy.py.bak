@@ -4,7 +4,6 @@ MagPy input/output filters
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
 
@@ -257,7 +256,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
         else:
             try:
                 if not len(elem) == len(KEYLIST):
-                    print("readPYSTR: Warning file contents does not fit to KEYLIST")
+                    print "readPYSTR: Warning file contents does not fit to KEYLIST"
                 for idx, key in enumerate(KEYLIST):
                     if key.find('time') >= 0:
                         try:
@@ -281,7 +280,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
                             #    elem[idx] = '-'
                             array[idx].append(elem[idx])
             except ValueError:
-                print("readPYSTR: Found value error when reading data")
+                print "readPYSTR: Found value error when reading data"
                 pass
     qFile.close()
 
@@ -298,7 +297,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
         if not False in checkEqual3(array[idx]) and ar[0] == tester:
             array[idx] = np.asarray([])
 
-    print("lib format-magpy", [len(el) for el in array])
+    print "lib format-magpy", [len(el) for el in array]
     return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
 
@@ -370,7 +369,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if not key == 'DataAbsFunctionObject':
                     stream.header[key] = str(cdf_file.attrs[key])
                 else:
-                    print("Found DataAbsFunctionObject - loading and unpickling")
+                    print "Found DataAbsFunctionObject - loading and unpickling"
                     func = pickle.loads(str(cdf_file.attrs[key]))
                     stream.header[key] = func
 
@@ -715,10 +714,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
         h_elem = header.strip().split()
 
         if debug:
-            print('readPYBIN- debug header type (len should be 9): ', h_elem, len(h_elem))
+            print 'readPYBIN- debug header type (len should be 9): ', h_elem, len(h_elem)
 
         if not h_elem[1] == 'MagPyBin':
-            print('readPYBIN: No MagPyBin format - aborting')
+            print 'readPYBIN: No MagPyBin format - aborting'
             return
         #print "Length ", len(h_elem), h_elem[2]
 
@@ -734,7 +733,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 unitlist = h_elem[4].strip('[').strip(']').split(',')
                 multilist = map(float,h_elem[5].strip('[').strip(']').split(','))
             except:
-                print("readPYBIN: Could not extract lists from header - check format - aborting...")
+                print "readPYBIN: Could not extract lists from header - check format - aborting..."
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
                 loggerlib.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
@@ -752,7 +751,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
                 if debug:
-                    print('readPYBIN- header list error:', len(keylist), len(elemlist), len(unitlist), len(multilist))
+                    print 'readPYBIN- header list error:', len(keylist), len(elemlist), len(unitlist), len(multilist)
                 loggerlib.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
                 return stream
         elif len(h_elem) == 10:
@@ -770,7 +769,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             return stream
 
         if debug:
-            print('readPYBIN- checking code')
+            print 'readPYBIN- checking code'
 
         packstr = '<'+h_elem[-2]+'B'
         lengthcode = struct.calcsize(packstr)
@@ -787,7 +786,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 length = lengthcode
 
         if debug:
-            print('readPYBIN- unpack info:', packstr, lengthcode, lengthgiven)
+            print 'readPYBIN- unpack info:', packstr, lengthcode, lengthgiven
 
         line = fh.read(length)
         stream.header['SensorID'] = h_elem[2]
@@ -801,7 +800,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         array = [[] for key in KEYLIST]
         if nospecial:
             if debug:
-                print('readPYBIN- debug found line')
+                print 'readPYBIN- debug found line'
 
             for idx, elem in enumerate(keylist):
                 stream.header['col-'+elem] = elemlist[idx]
@@ -810,13 +809,13 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 pass
             while not line == "":
                 if debug:
-                    print('readPYBIN- debug found line')
+                    print 'readPYBIN- debug found line'
                 try:
                     data= struct.unpack(packstr, line)
                     if debug:
-                        print('readPYBIN- debug unpacked line: ', data)
+                        print 'readPYBIN- debug unpacked line: ', data
                 except:
-                    print("readPYBIN: struct error", filename, packstr, struct.calcsize(packstr))
+                    print "readPYBIN: struct error", filename, packstr, struct.calcsize(packstr)
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:
@@ -859,13 +858,13 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 lastdata = data
                 line = fh.read(length)
         else:
-            print("To be done ...")
+            print "To be done ..."
             pass
 
         array = np.asarray([np.asarray(el).astype(object) for el in array])
         stream.ndarray = array
         if len(stream.ndarray[0]) > 0:
-            print("readPYBIN: Imported bin as ndarray")
+            print "readPYBIN: Imported bin as ndarray"
             stream.container = [LineStruct()]
             # if unequal lengths are found, then usually txt and bin files are loaded together
 
@@ -1020,7 +1019,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 if not key == 'DataAbsFunctionObject':
                     mycdf.attrs[key] = headdict[key]
                 else:
-                    print("Found DataAbsFunctionObject - pickle and dump ")
+                    print "Found DataAbsFunctionObject - pickle and dump "
                     pfunc = pickle.dumps(headdict[key])
                     mycdf.attrs[key] = pfunc
 
@@ -1061,7 +1060,7 @@ def writePYCDF(datastream, filename, **kwargs):
         except:
             pass
         if not False in checkEqual3(col) and len(col) > 0:
-            print("Found identical values only: %s" % key)
+            print "Found identical values only: %s" % key
             col = col[:1]
             #if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
             #- better not!!! 2015-10-14 --- if two files are loaded, one with flags, one without, then column lengths will not fit
@@ -1087,7 +1086,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = ['' if el is None else el for el in col]
                 col = np.asarray(col) # to get string conversion
             else:
-                print(col, key)
+                print col, key
                 col = np.asarray([np.nan if el is None else el for el in col])
                 #col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)
@@ -1123,7 +1122,7 @@ def writePYASCII(datastream, filename, **kwargs):
             datastream = joinStreams(exst,datastream,extend=True)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
-            print("write ascii filename", filename)
+            print "write ascii filename", filename
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst,extend=True)
             myFile= open( filename, "wb" )
