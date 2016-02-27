@@ -62,11 +62,12 @@ from magpy.mpplot import *
 
 # Normal variables:
 # Picked out using SD_VarOptimise on methods tested on all storms (vartests):
-funcvars = {    'AIC':  [4.,    3.,     20],
-                'DWT2': [0.000645, 60], # <-- OFFICIAL 100% VALUES #[0.0045, 45], #
-                'DWT3': [2.4499e-05, 65], #[3.89999e-05, 60] (for 14)
-                'FDM':  [0.0005, 55],
-                'JDM':  [11,    1]      }
+funcvars = {    'AIC':   [4.,    3.,     20],
+                'DWT2':  [0.000645, 60], # <-- OFFICIAL 100% VALUES #[0.0045, 45], #
+                'DWT1':  [2.4499e-05, 65], #[3.89999e-05, 60] (for 14)
+                'MODWT': [0.0012, 65], #[3.89999e-05, 60] (for 14)
+                'FDM':   [0.0005, 55],
+                'JDM':   [11,    1]      }
 
 
 # Minimum for storm detection:
@@ -159,9 +160,9 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
             if verbose == True:
                 print("ACE evaluation failed. Continuing without.")
             useACE = False
-            ACE_detection, ACE_results = False, None
+            ACE_detection, ACE_results = False, []
     else:
-        ACE_detection, ACE_results = False, None
+        ACE_detection, ACE_results = False, []
 
     if ACE_detection == True:
         for d in ACE_results:
@@ -196,15 +197,24 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
 
     # DWT - DISCRETE WAVELET TRANSFORM
     # --------------------------------
-    elif method == 'DWT2' or method == 'DWT3': # using D2 or D3 detail
+    elif method == 'DWT2' or method == 'DWT1': # using D2 or D3 detail
         DWT = magdata.DWT_calc()
         if method == 'DWT2':
             var_key = 'var2'
-        elif method == 'DWT3':
-            var_key = 'var3'
+        elif method == 'DWT1':
+            var_key = 'var1'
         detection, ssc_list = findSSC(DWT, var_key, a, p, useACE=useACE, ACE_results=ACE_results, verbose=verbose)
         if plot_vars == True:
             plotStreams([magdata, DWT],[['x'],['dx','var1','var2','var3']],plottitle=day)
+
+    # MODWT - MAXIMAL OVERLAP DISCRETE WAVELET TRANSFORM
+    # --------------------------------------------------
+    elif method == 'MODWT': # using D2 or D3 detail
+        MODWT = magdata.MODWT_calc(level=1, wavelet='haar')
+        var_key = 'var1'
+        detection, ssc_list = findSSC(MODWT, var_key, a, p, useACE=useACE, ACE_results=ACE_results, verbose=verbose)
+        if plot_vars == True:
+            plotStreams([magdata, DWT],[['x'],['dx','var1']],plottitle=day)
 
     # FDM - FIRST DERIVATION METHOD
     # -----------------------------
@@ -355,7 +365,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                     v_max = v_test[i_max+5+i]
                 else:
                     break
-                logger.info("Too many v_wind NaNs... searching for value...")
+                #logger.info("checkACE: Too many v_wind NaNs... searching for value...")
                 i += 1
         except:
             v_max = v_test[i_max]
@@ -364,6 +374,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
         # --------------------------------------------
         if dv_max >= 25.:
 
+            #logger.info("checkACE: Found a possible detection...")
             t_lo = num2date(t_max) - timedelta(minutes=(timestep+20))
             t_hi = num2date(t_max) + timedelta(minutes=(lastcompare+20))
             dACE_lo = dACE.trim(starttime=t_lo, endtime=num2date(t_max), newway=True)
@@ -434,11 +445,10 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                         endtime=(end+timedelta(minutes=20)), newway=True)
                     flux_val = ACE_flux.mean(key_e,percentage=20)
                     if isnan(flux_val):
-                        print("Proton Flux is nan!", flux_val)
+                        #logger.warning("checkACE: Proton Flux is nan!", flux_val)
                         flux_val = 0.
                         #raise Exception
-                if verbose == True:
-                    print("--> Jump in solar wind speed detected! Proton flux at %s." % flux_val)
+                #logger.info("--> Jump in solar wind speed detected! Proton flux at %s." % flux_val)
 
                 # FINAL REQUIREMENT:
                 # ******************
@@ -463,12 +473,6 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                 probf = probf * total_weight
                 prob_var = (probf + pflux_prob)/(total_weight + pflux_weight)
                 flux_var = flux_val
-                #else:
-                #    prob_var = probf
-                #    flux_Var = None
-                #    if verbose == True:
-                #        print "That's almost a storm!"
-                #        print ace_ssc
 
                 acedict = {}
                 # CALCULATE ESTIMATED ARRIVAL TIME
@@ -489,6 +493,8 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                 detection = True
                 ace_ssc.append(acedict)
 
+            if verbose:
+                print("Removing data from %s to %s." % (num2date(t_max)-timedelta(minutes=15+timestep), num2date(t_max)+timedelta(minutes=15+lastcompare)))
             dACE = dACE.remove(starttime=num2date(t_max)-timedelta(minutes=15+timestep),
                         endtime=num2date(t_max)+timedelta(minutes=15+lastcompare))
 
@@ -510,7 +516,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
     return detection, ace_ssc
 
 
-def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracket=[5.,10.],
+def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=[5.,10.],
         satprob_weight=1., dh_weight=1., estt_weight=2., verbose=False, ):
     '''
     DEFINITION:
@@ -527,7 +533,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
         - p:            (float) Minimum duration peak must exceed a
     Kwargs:
         - useACE:       (bool) If True, ACE results will be implemented in detection as a
-                        further criterium. Require ACE_results != None. Default = False
+                        further criterium. Require ACE_results != []. Default = False
         - ACE_results:  (list[dict]) Results in format returned from checkACE function. Should
                         be a list of SSCs in ACE data. Default = None
         - dh_bracket:   (list) Bracket definining probabilities of detections with dh
@@ -628,7 +634,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
 
                     # CRITERION #4: Storm must have been detected in ACE data
                     # *******************************************************
-                    if useACE == True and ACE_results != None:
+                    if useACE == True and ACE_results != []:
 
                         # CRITERION #5: ACE storm must have occured 45 (+-20) min before detection
                         # ************************************************************************
@@ -637,53 +643,15 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
                                 dh_prob, dh_weight, satprob_weight, estt_weight, verbose=verbose)
                             if det == True:
                                 break
-                            '''
-                            ssc_ACE = sat_ssc['satssctime']
-                            v_arr = sat_ssc['vwind']
-                            t_arr = ssc_ACE + timedelta(minutes=((a_varr*v_arr + b_varr)*60*24))
-                            t_arr_low = t_arr - timedelta(minutes=ace_window)
-                            t_arr_high = t_arr + timedelta(minutes=ace_window)
-                            sat_prob = sat_ssc['probf'] * satprob_weight
-                            if verbose == True:
-                                print "Arrival time low:", (t_arr_low)
-                                print "Arrival time high:", (t_arr_high)
-                            if (ssc_init > (t_arr_low) and
-                                ssc_init < (t_arr_high)):
-                                date = datetime.strftime(ssc_init, '%Y-%m-%d')
-                                if verbose == True:
-                                    print "ACE storm present. Real storm!"
-                                    print ssc_init, d_amp
 
-                                estssctime = aceresults['estssctime']
-                                ssctime = mag_results['ssctime']
-                                if estssctime >= ssctime:
-                                    diff = (estssctime - ssctime).seconds / 60.
-                                else:
-                                    diff = (ssctime - estssctime).seconds / 60.
-                                if diff <= 10.: # minutes
-                                    estt_prob = 100.
-                                elif 10. < diff <= 20.:
-                                    estt_prob = 75.
-                                elif 20. < diff <= 30.:
-                                    estt_prob = 50.
-                                estt_prob = estt_prob * estt_weight
-
-                                total_weight = satprob_weight + dh_weight + estt_weight
-                                item['probf'] = (sat_prob + dh_prob + estt_prob)/total_weight
-
-                                SSC_dict = {}
-                                SSC_dict['ssctime'] = ssc_init
-                                SSC_dict['amp'] = d_amp
-                                SSC_dict['duration'] = duration
-                                SSC_dict['probf'] = (probf + ACE_ssc['probf'])/2.
-                            '''
-                    elif useACE == True and ACE_results == None:
-                        detection == False
+                    elif useACE == True and ACE_results == []:
+                        detection, det = False, False
                         if verbose == True:
                             print("No ACE storm. False detection!")
                             print(ssc_init, d_amp)
+
                     elif useACE == False:
-                        detection = True
+                        detection, det = True, True
                         final_probf = dh_prob
                         if verbose == True:
                             print("No ACE data. Not sure!")
@@ -704,7 +672,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracke
     return detection, SSC_list
 
 
-def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=False, ACE_results=None,
+def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=False, ACE_results=[],
         satprob_weight=1., dh_bracket=[5.,10.], dh_weight=1., estt_weight=2., verbose=False):
     '''
     DEFINITION:
@@ -725,7 +693,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                         and monsetval is greater than minlen, it is an official storm detection
     Kwargs:
         - useACE:       (bool) If True, ACE results will be implemented in detection as a
-                        further criterium. Require ACE_results != None. Default = False
+                        further criterium. Require ACE_results != []. Default = False
         - ACE_results:  (list(dict)) Results in format returned from checkACE function. Should
                         be a list of SSCs in ACE data. Default = None
         - dh_bracket:   (list) Bracket definining probabilities of detections with dh
@@ -874,7 +842,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
 
                     # CRITERION #4: ACE storm must have occured 45 (+-20) min before detection
                     # ************************************************************************
-                    if useACE == True and ACE_results != None:
+                    if useACE == True and ACE_results != []:
                         for sat_ssc in ACE_results:
                             det, final_probf = _calcProbWithSat(ssc_init, sat_ssc,
                                 dh_prob, dh_weight, satprob_weight, estt_weight, verbose=verbose)
@@ -903,13 +871,14 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                                 ssc_list.append(SSC_dict)
                                 break
                             '''
-                    elif useACE == True and ACE_results == None:
+                    elif useACE == True and ACE_results == []:
+                        detection, det = False, False
                         if verbose == True:
                             print("No ACE storm. False detection!")
                             print(ssc_init, d_amp)
                     elif useACE == False:
+                        detection, det = True, True
                         if verbose == True:
-                            #print "Storm onset =", num2date(elevatedrange[0].time), d_amp
                             print("Storm onset =", num2date(elevatedrange[t_ind][0]), d_amp)
                         detection = True
                         final_probf = dh_prob
