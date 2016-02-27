@@ -729,6 +729,7 @@ CALLED BY:
             try:
                 return list(self.ndarray[0]).index(st), LineStruct()
             except:
+                loggerstream.warning("findtime: Didn't find selected time - returning 0")
                 return 0, []
         for index, line in enumerate(self):
             if line.time == st:
@@ -2625,9 +2626,9 @@ CALLED BY:
             # TODO: This is hard-wired for level=3.
             #row.dx, row.var1, row.var2, row.var3 = fin_fns
             array[dx_ind].append(fin_fns[0])
-            array[var1_ind].append(fin_fns[1])
+            array[var1_ind].append(fin_fns[3])
             array[var2_ind].append(fin_fns[2])
-            array[var3_ind].append(fin_fns[3])
+            array[var3_ind].append(fin_fns[1])
 
             #DWT_stream.add(row)
             i += window
@@ -5440,6 +5441,167 @@ CALLED BY:
                 return float("NaN")
 
 
+    def MODWT_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
+                window=5):
+        """
+    DEFINITION:
+        Multiple Overlap Discrete wavelet transform (MODWT) method of analysing a magnetic signal
+        to pick out SSCs. This method was taken from Hafez (2013b): "Geomagnetic Sudden 
+        Commencement Automatic Detection via MODWT"
+        (NOTE: PyWavelets package must be installed for this method. It should be applied
+        to 1s data - otherwise the sample window and detection levels should be changed.)
+
+        METHOD:
+        1. Use the Haar wavelet filter to calculate the 1st and 2nd details
+           of the geomagnetic signal.
+        2. The 1st detail (D1) samples are squared to evaluate the magnitude.
+        3. The sample window (5) is averaged to avoid ripple effects. (This means the
+           returned stream will have ~1/5 the size of the original.)
+
+    PARAMETERS:
+    Variables:
+        - key:          (str) Apply MODWT to this key. Default 'x' due to SSCs dominating
+                        the horizontal component.
+        - wavelet:	(str) Type of filter to use. Default 'db4' (4th-order Daubechies 
+                        wavelet filter) according to Hafez (2013).
+        - level:	(int) Decomposition level. Will calculate details down to this level.
+                        Default 3, also Hafez (2013).
+        - plot:	        (bool) If True, will display a plot of A3, D1, D2 and D3.
+        - outfile:      (str) If given, will plot will be saved to 'outfile' path.
+        - window:       (int) Length of sample window. Default 5, i.e. 5s with second data.
+
+    RETURNS:
+        - MODWT_stream: 	(DataStream object) A stream containing the following:
+                        'x': A_n (approximation function)
+                        'var1': D1 (first detail)
+                        'var2': D2 (second detail)
+                        ...
+                        'var3': D3 (third detail)
+                        ... 
+
+    EXAMPLE:
+        >>> DWT_stream = stream.DWT_calc(plot=True)
+
+    APPLICATION:
+        # Storm detection using detail 3 (D3 = var3):
+        from magpy.stream import *
+        stream = read('LEMI_1s_Data_2014-02-15.cdf')	# 2014-02-15 is a good storm example
+        MODWT_stream = stream.MODWT_calc(plot=True)
+        Da_min = 0.0005 # nT^2 (minimum amplitude of D3 for storm detection)
+        Dp_min = 40 # seconds (minimum period of Da > Da_min for storm detection)
+        detection = False
+        for row in MODWT_stream:
+            if row.var3 >= Da_min and detection == False:
+                timepin = row.time
+                detection = True
+            elif row.var3 < Da_min and detection == True:
+                duration = (num2date(row.time) - num2date(timepin)).seconds
+                if duration >= Dp_min:
+                    print "Storm detected!"
+                    print duration, num2date(timepin)
+                detection = False 
+        """ 
+
+        # Import required package PyWavelets:
+        # http://www.pybytes.com/pywavelets/index.html
+        import pywt
+
+        # 1a. Grab array from stream
+        data = self._get_column(key)
+        t_ind = KEYLIST.index('time')
+
+        #MODWT_stream = DataStream([],{})
+        MODWT_stream = DataStream()
+        headers = MODWT_stream.header
+        array = [[] for key in KEYLIST]
+        x_ind = KEYLIST.index('x')
+        dx_ind = KEYLIST.index('dx')
+        var1_ind = KEYLIST.index('var1')
+        var2_ind = KEYLIST.index('var2')
+        var3_ind = KEYLIST.index('var3')
+        var4_ind = KEYLIST.index('var4')
+        var5_ind = KEYLIST.index('var5')
+        dy_ind = KEYLIST.index('dy')
+        i = 0
+        loggerstream.info("MODWT_calc: Starting Discrete Wavelet Transform of key %s." % key)
+
+        if len(data) % 2 == 1:
+            data = data[0:-1]
+
+        # Results have format:
+        # (cAn, cDn), ..., (cA2, cD2), (cA1, cD1)
+        coeffs = pywt.swt(data, wavelet, level)
+        acoeffs, dcoeffs = [], []
+        for i in xrange(level):
+            (a, d) = coeffs[i]
+            acoeffs.append(a)
+            dcoeffs.append(d)
+
+        for i, item in enumerate(dcoeffs):
+            dcoeffs[i] = [j**2 for j in item]
+        
+        # 1b. Loop for sliding window
+        while True:
+            if i >= (len(data)-window):
+                break
+
+            # Take the values in the middle of the window (not exact but changes are
+            # not extreme over standard 5s window)
+            array[t_ind].append(self.ndarray[t_ind][i+window/2])
+            data_cut = data[i:i+window]
+            array[x_ind].append(sum(data_cut)/float(window))
+
+            a_cut = acoeffs[0][i:i+window]
+            array[dx_ind].append(sum(a_cut)/float(window))
+            for j in xrange(level):
+                d_cut = dcoeffs[-(j+1)][i:i+window]
+                if j <= 5:
+                    key = 'var'+str(j+1)
+                    array[KEYLIST.index(key)].append(sum(d_cut)/float(window))
+                elif 5 < j <= 7:
+                    if j == 6:
+                        key = 'dy'
+                    elif j == 7:
+                        key = 'dz'
+                    array[KEYLIST.index(key)].append(sum(d_cut)/float(window))
+                    
+            i += window
+
+        loggerstream.info("MODWT_calc: Finished MODWT.")
+
+        MODWT_stream.header['col-x'] = 'A3'
+        MODWT_stream.header['unit-col-x'] = 'nT^2'
+        MODWT_stream.header['col-var1'] = 'D1'
+        MODWT_stream.header['unit-col-var1'] = 'nT^2'
+        MODWT_stream.header['col-var2'] = 'D2'
+        MODWT_stream.header['unit-col-var2'] = 'nT^2'
+        MODWT_stream.header['col-var3'] = 'D3'
+        MODWT_stream.header['unit-col-var3'] = 'nT^2'
+        MODWT_stream.header['col-var4'] = 'D4'
+        MODWT_stream.header['unit-col-var4'] = 'nT^2'
+        MODWT_stream.header['col-var5'] = 'D5'
+        MODWT_stream.header['unit-col-var5'] = 'nT^2'
+        MODWT_stream.header['col-dy'] = 'D6'
+        MODWT_stream.header['unit-col-dy'] = 'nT^2'
+
+        # Plot stream:
+        if plot == True:
+            date = datetime.strftime(num2date(self[0].time),'%Y-%m-%d')
+            loggerstream.info('MODWT_calc: Plotting data...')
+            if outfile:
+                MODWT_stream.plot(['x','var1','var2','var3'],
+                                plottitle="MODWT Decomposition of %s (%s)" % (key,date),
+                                outfile=outfile)
+            else:
+                MODWT_stream.plot(['x','var1','var2','var3'],
+                                plottitle="MODWT Decomposition of %s (%s)" % (key,date))
+
+        for key in KEYLIST:
+            array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
+
+        return DataStream([LineStruct()], headers, np.asarray(array))  
+
+
     def multiply(self, factors, square=False):
         """
     DEFINITION:
@@ -6372,7 +6534,7 @@ CALLED BY:
             ax.set_title(title)
 
         if debugmode:
-            print "Finished powerspectrum at %s" % datetime.utcnow()
+            print("Finished powerspectrum at %s" % datetime.utcnow())
 
         if outfile:
             if fmt:
@@ -6423,8 +6585,9 @@ CALLED BY:
         stval = 0
 
         if len(cutstream.ndarray[0]) > 0:
-            st,ls = cutstream.findtime(starttime)
-            ed,le = cutstream.findtime(endtime)
+            timearray = self.ndarray[0]
+            st = (np.abs(timearray.astype(float)-date2num(starttime))).argmin() - 1
+            ed = (np.abs(timearray.astype(float)-date2num(endtime))).argmin() + 1
             if starttime < num2date(cutstream.ndarray[0][0]):
                 st = 0
             if endtime > num2date(cutstream.ndarray[0][-1]):
