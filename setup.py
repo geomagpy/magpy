@@ -8,9 +8,9 @@ exec(open('magpy/version.py').read())
 setup(
     name='GeomagPy',
     version=__version__,
-    author='R. Leonhardt, R. Bailey',
+    author='R. Leonhardt, R. Bailey, M. Miklavec',
     author_email='roman.leonhardt@zamg.ac.at',
-    packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'src.collector', 'src.gui'],
+    packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui'],
     #scripts=['bin/example.py'],
     url='http://pypi.python.org/pypi/GeomagPy/',
     license='LICENSE.txt',
