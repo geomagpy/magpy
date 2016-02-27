@@ -13,7 +13,11 @@ except:
 from wx.lib.pubsub import pub
 
 try:
-    from stream import *
+    import sys
+    sys.path.append('/home/leon/Software/magpy-git/src')
+
+    from stream import read
+    import mpplot as mp
     from absolutes import *
     from transfer import *
     from database import *
@@ -24,7 +28,8 @@ try:
     from gui.developpage import *
     from gui.analysispage import *
 except:
-    from magpy.stream import *
+    from magpy.stream import read
+    import magpy.mpplot as mp
     from magpy.absolutes import *
     from magpy.transfer import *
     from magpy.database import *
@@ -36,6 +41,7 @@ except:
     from magpy.gui.analysispage import *
 
 import glob, os, pickle, base64
+import pylab
 
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
@@ -174,13 +180,21 @@ class PlotPanel(wx.Panel):
             self.axes.clear()
         except:
             pass
-        self.axes = stream.plot(keys,figure=self.figure,**kwargs)
-        t = [elem.time for elem in stream]
-        flag = [elem.flag for elem in stream]
-        k = [eval("elem."+keys[0]) for elem in stream]
+        self.axes = mp.plot(stream,keys,figure=self.figure,**kwargs)
+        if not len(stream.ndarray[0])>0:
+            t = [elem.time for elem in stream]
+            flag = [elem.flag for elem in stream]
+            k = [eval("elem."+keys[0]) for elem in stream]
+        else:
+            t = stream.ndarray[0]
+            flagpos = KEYLIST.index('flag')
+            firstcol = KEYLIST.index(keys[0])
+            flag = stream.ndarray[flagpos]
+            k = stream.ndarray[firstcol]
         #self.axes.af2 = self.AnnoteFinder(t,yplt,flag,self.axes)
-        self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
-        self.figure.canvas.mpl_connect('button_press_event', self.axes.af2)
+        #self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
+        #af2 = self.AnnoteFinder(t,k,flag,self.axes)
+        #self.figure.canvas.mpl_connect('button_press_event', af2)
         self.canvas.draw()
 
     def initialPlot(self):
@@ -421,7 +435,10 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onExtractData, self.menu_p.str_page.extractValuesButton)
         self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
+        self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
+        self.Bind(wx.EVT_BUTTON, self.onRemoveOutlierButton, self.menu_p.str_page.flagOutlierButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagSelectionButton, self.menu_p.str_page.flagSelectionButton)
         #        Analysis Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
@@ -544,6 +561,7 @@ class MainFrame(wx.Frame):
         #    div = float(len(ar))/float(len(stream))*100.0
         #    if div <= 5.:
         #        keylist.remove(key)
+        keylist = [elem for elem in keylist if elem in NUMKEYLIST]
         self.shownkeylist = keylist
 
         # check comp
@@ -581,7 +599,7 @@ class MainFrame(wx.Frame):
         """
         self.changeStatusbar("Plotting...")
         self.plot_p.guiPlot(stream,keylist,resolution=self.resolution,**kwargs)
-        if len(stream) > 0 and len(keylist) > 0:
+        if stream.length()[0] > 1 and len(keylist) > 0:
             self.ExportData.Enable(True)
         self.changeStatusbar("Ready")
 
@@ -648,7 +666,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         Method to update all pages with the streams values
         """
         # Length
-        n = len(stream)
+        n = stream.length()[0]
         # keys
         keys = stream._get_key_headers()
         keystr = ','.join(keys)
@@ -709,8 +727,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 elem = os.path.split(path)
                 self.dirname = elem[0]
                 filelist.append(elem[1])
-                tmp = read(path,tenHz=False,gpstime=True)
-                stream.extend(tmp.container,tmp.header)
+                self.changeStatusbar(path)
+                tmp = read(path)
+                self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
+                stream.extend(tmp.container,tmp.header,tmp.ndarray)
             #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
             #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
             self.filename = ' ,'.join(filelist)
@@ -740,7 +760,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # plot data
         self.stream = stream
         self.plotstream = stream
-        if len(stream) > 0:
+        if stream.length()[0] > 0:
             self.OnInitialPlot(stream)
             self.changeStatusbar("Ready")
         else:
@@ -1035,12 +1055,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         sr = self.menu_p.ana_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
         keys = self.shownkeylist
 
-        timerange = timedelta(seconds=float(sr)*120)
-
         if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+            self.plotstream = self.stream.copy()
 
-        self.plotstream = self.plotstream.remove_outlier(keys=keys, timerange=timerange)
+        self.plotstream = self.plotstream.flag_outlier(keys=keys,stdout=True)
         self.plotstream = self.plotstream.remove_flagged()
 
         self.menu_p.rep_page.logMsg('- removed outliers: check logfile for details')
@@ -1397,6 +1415,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.plotstream = self.stream
             self.OnInitialPlot(self.stream)
 
+    def onAnnotateCheckBox(self,event):
+        """
+        Restore originally loaded data
+        """
+        self.OnPlot(self.plotstream,self.shownkeylist, annotate=True)
+
     def onChangeComp(self, event):
         orgcomp = self.compselect
         self.compselect = self.menu_p.str_page.comp[event.GetInt()]
@@ -1407,6 +1431,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plotstream = self.plotstream._convertstream(coordinate)
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onFlagSelectionButton(self,event):
+        """
+        Restore originally loaded data
+        """
+        self.plotstream, flaglist = mp.plotFlag(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist,annotate=True)
 
 
     # ####################

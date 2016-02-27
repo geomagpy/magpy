@@ -217,6 +217,8 @@ def readRMRCS(filename, headonly=False, **kwargs):
                     unit.append(unittype[2])
                     headers['col-'+KEYLIST[i+1]] = unicode(measurement[i],errors='ignore')
                     headers['unit-col-'+KEYLIST[i+1]] = unicode(unit[i],errors='ignore')
+                    if headers['unit-col-'+KEYLIST[i+1]] == '--':
+                        headers['unit-col-'+KEYLIST[i+1]] = ''
                     i=i+1
             elif headonly:
                 # skip data for option headonly
@@ -225,21 +227,26 @@ def readRMRCS(filename, headonly=False, **kwargs):
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
                 elem = string.split(line[:-1])
+                gottime = False
 
                 try:
                     array[0].append(date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S")))
                     add = 2
+                    gottime = True
                 except:
                     try:
                         array[0].append(date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S")))
                         add = 3
+                        gottime = True
                     except:
                         raise ValueError, "Can't read date format in RCS file"
-                for i in range(len(unit)):
-                    try:
-                        array[i+1].append(float(elem[i+add]))
-                    except:
-                        pass
+                if gottime:
+                    for i in range(len(unit)):
+                        try:
+                            array[i+1].append(float(elem[i+add]))
+                        except:
+                            array[i+1].append(float(nan))
+                            pass
 
         array = [np.asarray(el) for el in array]
         headers['SensorID'] = 'RCS{}_20160114_0001'.format(fieldpoint) # 20160114 corresponds to the date at which RCS was activated

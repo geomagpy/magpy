@@ -971,8 +971,6 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mode = kwargs.get('mode')
 
-    #print "fmagpy1", datastream.ndarray
-
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename+'.cdf')
@@ -997,8 +995,6 @@ def writePYCDF(datastream, filename, **kwargs):
             mycdf = cdf.CDF(filename, '')
     else:
         mycdf = cdf.CDF(filename, '')
-
-    #print "fmagpy2", datastream.ndarray
 
     keylst = datastream._get_key_headers()
     #print "writeCDF", keylst
@@ -1044,7 +1040,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
     #print "fmagpy", datastream.ndarray
     #print "writing keys", keylst
-    #print "WriteFormat length 1", len(datastream.ndarray[0])
+    #print "WriteFormat length 1", datastream.ndarray, datastream.length()
     for key in keylst:
         if ndtype:
             ind = KEYLIST.index(key)

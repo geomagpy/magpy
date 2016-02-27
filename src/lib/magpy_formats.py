@@ -65,6 +65,7 @@ from lib.format_sfs import *
 from lib.format_bdv import *
 from lib.format_dtu import *
 from lib.format_gfz import *
+from lib.format_neic import *
 
 from lib.format_imf import *
 try:
@@ -212,6 +213,9 @@ def isFormat(filename, format_type):
     elif (format_type == "NOAAACE"): # NOAA ACE Satellite data
         if (isNOAAACE(filename)):
             return True
+    elif (format_type == "NEIC"): # NEIC USGS data
+        if (isNEIC(filename)):
+            return True
     else:
         return False
 
@@ -305,6 +309,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGFZKP(filename, headonly, **kwargs)
     elif (format_type == "NOAAACE"):
         return readNOAAACE(filename, headonly, **kwargs)
+    elif (format_type == "NEIC"):
+        return readNEIC(filename, headonly, **kwargs)
     else:
         return DataStream(empty,empty.header)
 

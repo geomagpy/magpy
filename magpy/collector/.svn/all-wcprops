@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/svn/magpy/!svn/ver/352/trunk/src/collector
+END
+lemiclient.py
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/magpy/!svn/ver/291/trunk/src/collector/lemiclient.py
+END
+collector_moon.py
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/magpy/!svn/ver/258/trunk/src/collector/collector_moon.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/magpy/!svn/ver/259/trunk/src/collector/__init__.py
+END
+posclient.py
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/magpy/!svn/ver/291/trunk/src/collector/posclient.py
+END
+subscribe2client.py
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/magpy/!svn/ver/352/trunk/src/collector/subscribe2client.py
+END
+all_instruments.py
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/magpy/!svn/ver/203/trunk/src/collector/all_instruments.py
+END
+csclient.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/magpy/!svn/ver/291/trunk/src/collector/csclient.py
+END

@@ -34,6 +34,8 @@ class StreamPage(wx.Panel):
         self.lineLabel2 = wx.StaticText(self, label="__________________")
         self.lineLabel3 = wx.StaticText(self, label="__________________")
         self.lineLabel4 = wx.StaticText(self, label="__________________")
+        self.lineLabel5 = wx.StaticText(self, label="__________________")
+        self.lineLabel6 = wx.StaticText(self, label="__________________")
         self.pathLabel = wx.StaticText(self, label="Path/Source:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
         self.fileLabel = wx.StaticText(self, label="File/Table:")
@@ -55,6 +57,11 @@ class StreamPage(wx.Panel):
         self.restoreButton = wx.Button(self,-1,"Restore data",size=(130,30))
         self.changePlotButton = wx.Button(self,-1,"General Options",size=(130,30))
         self.errorBarsButton = wx.Button(self,-1,"Error bars",size=(130,30))
+        self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(130,30))
+        self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(130,30))
+        self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(130,30))
+        self.selectionLabel = wx.StaticText(self, label="Opens new window")
+        self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(130,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
@@ -107,6 +114,16 @@ class StreamPage(wx.Panel):
                  '(0,0), noOptions',
                  'self.lineLabel3, noOptions',
                  'self.lineLabel4, noOptions',
+                 'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
+                 'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
+                 'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.selectionLabel, noOptions',
+                 'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
+                 'self.lineLabel5, noOptions',
+                 'self.lineLabel6, noOptions',
                  'self.restoreButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions']
 

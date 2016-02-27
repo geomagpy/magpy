@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 37
+/svn/magpy/!svn/ver/326/trunk/src/gui
+END
+magpy.log
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/magpy/!svn/ver/163/trunk/src/gui/magpy.log
+END
+streampage.py
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/magpy/!svn/ver/291/trunk/src/gui/streampage.py
+END
+magpy.png
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/magpy/!svn/ver/144/trunk/src/gui/magpy.png
+END
+developpage.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/magpy/!svn/ver/291/trunk/src/gui/developpage.py
+END
+dialogclasses.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/magpy/!svn/ver/323/trunk/src/gui/dialogclasses.py
+END
+absolutespage.py
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/magpy/!svn/ver/314/trunk/src/gui/absolutespage.py
+END
+xmagpy
+K 25
+svn:wc:ra_dav:version-url
+V 44
+/svn/magpy/!svn/ver/287/trunk/src/gui/xmagpy
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/magpy/!svn/ver/162/trunk/src/gui/__init__.py
+END
+magpy_gui_test.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/magpy/!svn/ver/203/trunk/src/gui/magpy_gui_test.py
+END
+analysispage.py
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/magpy/!svn/ver/291/trunk/src/gui/analysispage.py
+END
+magpy_gui.py
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/magpy/!svn/ver/324/trunk/src/gui/magpy_gui.py
+END
+monitorpage.py
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/magpy/!svn/ver/326/trunk/src/gui/monitorpage.py
+END
+xmagpy.py
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/magpy/!svn/ver/287/trunk/src/gui/xmagpy.py
+END

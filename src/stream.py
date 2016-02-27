@@ -16,7 +16,7 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 print "Initiating MagPy..."
 
 try:
-    from version import __version__
+    from .version import __version__
 except:
     from magpy.version import __version__
 print "MagPy version", __version__
@@ -296,6 +296,7 @@ PYMAG_SUPPORTED_FORMATS = [
                 'GDASB1',       # ?
                 'RMRCS',        # RCS data output from Richards perl scripts
                 'METEO',        # RCS data output in METEO files
+                'NEIC',        # WGET data from USGS - NEIC
                 'LNM',          # LaserNiederschlagsMonitor files
                 'IWT',          # Tiltmeter data files at cobs
                 'LIPPGRAV',     # Lippmann Tiltmeter data files at cobs
@@ -2756,8 +2757,8 @@ CALLED BY:
 
         if not compare:
             compare = '=='
-        if not compare in [">=", "<=",">", "<", "==", "!="]:
-            loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==" or "!=" ')
+        if not compare in [">=", "<=",">", "<", "==", "!=", 'like']:
+            loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==", "like" or "!=" ')
             return self
 
         ndtype = False
@@ -2782,14 +2783,17 @@ CALLED BY:
                             liste.append(elem)
                     return DataStream(liste,self.header)
             else:
-                print "Found String", ndtype
+                #print "Found String", ndtype
                 too = '"' + str(value) + '"'
                 if ndtype:
-                    print stream.ndarray[ind]
-                    searchclause = 'stream.ndarray[ind] '+ compare + ' ' + too
-                    print searchclause, ind, key
-                    indexar = eval('np.where('+searchclause+')[0]')
-                    print indexar, len(indexar)
+                    if compare == 'like':
+                        indexar = np.asarray([i for i, s in enumerate(stream.ndarray[ind]) if str(value) in s])
+                    else:
+                        #print stream.ndarray[ind]
+                        searchclause = 'stream.ndarray[ind] '+ compare + ' ' + too
+                        #print searchclause, ind, key
+                        indexar = eval('np.where('+searchclause+')[0]')
+                    #print indexar, len(indexar)
         else:
             too = str(value)
             if ndtype:
@@ -3792,8 +3796,10 @@ CALLED BY:
                     q3 = stats.scoreatpercentile(selcol,84)
                     iqd = q3-q1
                     md = np.median(selcol)
+                    if iqd == 0:
+                        iqd = 0.000001
                     whisker = threshold*iqd
-                    #print md, iqd, whisker
+                    #print key, md, iqd, whisker
                 except:
                     try:
                         md = np.median(selcol)
@@ -3807,11 +3813,15 @@ CALLED BY:
                     #print flagpos, elem
                     if not md-whisker < self.ndarray[flagpos][elem] < md+whisker and not np.isnan(self.ndarray[flagpos][elem]):
                         #print "Found:", key, self.ndarray[flagpos][elem]
+                        #if key == 'df':
+                        #    x = 1/0
                         try:
                             if not self.ndarray[flagidx][elem] == '':
-                                #print self.ndarray[flagidx][elem]
+                                #print "Got here", self.ndarray[flagidx][elem]
                                 newflagls = list(self.ndarray[flagidx][elem])
                                 #print newflagls
+                                if newflagls[flagpos] == '-':
+                                    newflagls[flagpos] = 0
                                 if not int(newflagls[flagpos]) > 1:
                                     newflagls[flagpos] = '1'
                                 if markall:
@@ -3819,7 +3829,7 @@ CALLED BY:
                                         if not newflagls[p] > 1:
                                             newflagls[p] = '1'
                                 newflag = ''.join(newflagls)
-                                #print newflag
+                                print newflag
                             else:
                                 x=1/0 # Force except
                         except:
@@ -4307,6 +4317,10 @@ CALLED BY:
         if not gapvariable:
             gapvariable = 'var5'
 
+        if not self.length()[0] > 1:
+            print ("get_gaps: Stream does not contain data - aborting")
+            return self
+
         # Better use get_sampling period as samplingrate is rounded
         #spr = self.get_sampling_period()
         #newsps = newsp*3600.0*24.0
@@ -4351,56 +4365,41 @@ CALLED BY:
             else:
                 diff = sourcetime[1:] - sourcetime[:-1]
                 num_fills = np.round(diff / newsp) - 1
-                projtime = np.linspace(mintime, maxtime, num=expN, endpoint=True)
+                #projtime = np.linspace(mintime, maxtime, num=expN, endpoint=True)
+                #print "Here", len(sourcetime), len(diff), mintime, maxtime, newsp
+                getdiffids = np.where(diff > newsp+accuracy)[0]
                 loggerstream.info("get_gaps: Found gaps - Filling nans to them")
-                for i in np.where(diff > newsp+accuracy)[0]:
-                    print i
+                missingt = []
+                # Get critical differences and number of missing steps 
+                for i in getdiffids:
+                    #print (i,  num_fills[i], diff[i-1], diff[i], diff[i+1], newsp)
+                    #print (i,  sourcetime[i-1], sourcetime[i], sourcetime[i+1])
                     nf = num_fills[i]
-                    nans = [np.nan] * nf
-                    for idx,elem in enumerate(stream.ndarray):
-                        if idx == 0:
-                            stream.ndarray[idx] = np.asarray(projtime)
+                    # if nf is larger than zero then get append the missing time steps to missingt list
+                    if nf > 0:
+                        for n in range(int(nf)): # add n+1 * samplingrate for each missing value
+                            missingt.append(sourcetime[i]+(n+1)*newsp)
+                print ("Filling {} gaps".format(len(missingt)))
+
+                # Cycle through stream and append nans to each column for missing time steps
+                nans = [np.nan] * len(missingt)
+                empts = [''] * len(missingt)
+                for idx,elem in enumerate(stream.ndarray):
+                    if idx == 0:
+                        # append missingt list to array element
+                        elem = list(elem)
+                        elem.extend(missingt)
+                        stream.ndarray[idx] = np.asarray(elem).astype(object)
+                    elif len(elem) > 0:
+                        # append nans list to array element
+                        elem = list(elem)
+                        if KEYLIST[idx] in NUMKEYLIST:
+                            elem.extend(nans)
                         else:
-                            if len(stream.ndarray[idx]) > 0:
-                                elem = list(elem)
-                                elem[i+1+shift:i+1+shift] = nans
-                                stream.ndarray[idx] = np.asarray(elem)
-                    shift = int(shift + nf)
+                            elem.extend(empts)
+                        stream.ndarray[idx] = np.asarray(elem).astype(object)
             return stream.sorting()
 
-            """ # below is slow
-        #print "using accuracy", newsp, accuracy*3600*24
-        if ndtype:
-            timediff = maxtime - mintime
-            N = int(round(timediff/newsp))+1
-            print "getgap", timediff, N
-            # create projected time column
-            projtime = np.linspace(mintime, maxtime, num=N, endpoint=True)
-            #print "getgap", stream.ndarray[0]
-
-            #print "getgap", projtime
-            #print length, N
-            # First drop all existing time steps from projtime
-            indproj = np.nonzero(np.in1d(projtime, sourcetime))[0]
-            projtime = np.delete(projtime, indproj)
-            #print "Non identical time values", len(projtime)
-            # Finally go through the remaining projtimes and test for accuracy
-            remprojtime = np.asarray([t for t in projtime if not np.min(np.abs(sourcetime-t)) < accuracy])
-            #print len(remprojtime)
-
-            print "Test4:", datetime.utcnow()
-
-            # Now append empty values to each ndarray
-            for idx,elem in enumerate(stream.ndarray):
-                if len(stream.ndarray[idx]) > 0:
-                    if idx == 0:
-                        stream.ndarray[idx] = np.append(stream.ndarray[idx],remprojtime)
-                    else:
-                        if KEYLIST[idx] in NUMKEYLIST:
-                            stream.ndarray[idx] = np.append(stream.ndarray[idx],np.asarray([float('nan')]*len(remprojtime)))
-                        else:
-                            stream.ndarray[idx] = np.append(stream.ndarray[idx],np.asarray(['-']*len(remprojtime)))
-            """
         else:
             stream = DataStream()
             for elem in self:
@@ -8044,14 +8043,16 @@ CALLED BY:
                     lst = []
                     # non-destructive
                     #print "write: start and end", starttime, endtime
-                    #print dailystream.length()
+                    #print "write", dailystream.length()
                     #ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
                     #print starttime, endtime, coverage
                     #print "Maxidx", maxidx
                     ndarray=dailystream._select_timerange(starttime=starttime, endtime=endtime, maxidx=maxidx)
+                    #print "write", len(ndarray), len(ndarray[0])
                     if len(ndarray[0]) > 0:
-                        maxidx = len(ndarray[0])*2
+                        #maxidx = len(ndarray[0])*2 ## That does not work for few seconds of first day and full coverage of all other days
                         dailystream.ndarray = np.asarray([array[(len(ndarray[0])-1):] for array in dailystream.ndarray])
+                        #print dailystream.length()
                     #print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
@@ -9212,20 +9213,21 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                             except:
                                 print ("mergeStreams: warning when assigning header values to column %s - missing head" % key)
 
-                        for i,ind in enumerate(indtia):
-                            if key in NUMKEYLIST:
-                                tester = isnan(array[keyind][ind])
-                            else:
-                                tester = False
-                                if array[keyind][ind] == '':
-                                    tester = True
-                            if mode == 'insert' and tester:
-                                array[keyind][ind] = valb[i]
-                            else:
-                                array[keyind][ind] = valb[i]
-                            if flag:
-                                ttt = num2date(array[0][ind])
-                                fllst.append([ttt,ttt,key,flagid,comment])
+                        if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
+                            for i,ind in enumerate(indtia):
+                                if key in NUMKEYLIST:
+                                    tester = isnan(array[keyind][ind])
+                                else:
+                                    tester = False
+                                    if array[keyind][ind] == '':
+                                        tester = True
+                                if mode == 'insert' and tester:
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    array[keyind][ind] = valb[i]
+                                if flag:
+                                    ttt = num2date(array[0][ind])
+                                    fllst.append([ttt,ttt,key,flagid,comment])
 
                     array[0] = np.asarray(sa.ndarray[0])
                     array = np.asarray(array)

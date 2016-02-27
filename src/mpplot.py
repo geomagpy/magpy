@@ -683,6 +683,7 @@ class figFlagger():
 
         self.data = data
 
+        self.offset = False
         self.mainnum = 1
         self.flagid = 3
         self.reason = 'why because'
@@ -764,12 +765,13 @@ class figFlagger():
             print ' ------------------------------------------'
             print "Length:", data.length()
             #stream.write("")
-        #if event.key in ['O', 'o']:
-        #    print ' Apply offset:'
-        #    print ' ------------------------------------------'
-        #    print " Selected data point:", len(self.idxarray)
-        #    plt.clf()
-        #    plt.close()
+        if event.key in ['O', 'o']:
+            print ' Apply offset:'
+            print ' ------------------------------------------'
+            print " Selected data point:", len(self.idxarray)
+            self.offset = True
+            plt.clf()
+            plt.close()
         if event.key in ['H', 'h']:
             print ' Header:'
             print ' ------------------------------------------'
@@ -864,7 +866,7 @@ class figFlagger():
         print "    -- press f for flagging this region"
         print "    --      press 2,3 to change default flag ID"
         print "    -- press l to get some basic data info"
-        #print "    -- press o to apply an offset"
+        print "    -- press o to apply an offset"
         print "    -- press h to get all meta information"
         print "    -- press c to close the window and allow saving"
 
@@ -948,6 +950,12 @@ def addFlag(data, flagger, indeciestobeflagged, variables):
             begintime = num2date(data.ndarray[0][consecutives[0]].astype(float)).replace(tzinfo=None)
             endtime = num2date(data.ndarray[0][consecutives[-1]].astype(float)).replace(tzinfo=None)
             modtime = datetime.utcnow()
+            #if option o:
+            #datastream = datastream._select_timerange(begintime,endtime)
+            #datastream = datastream.offset({key:value})
+            #orgstream = orgstream.extend(datastream)
+            # or  orgstream = datastream.extend(orgstream)
+            #orgstream = orgstream.removeduplicates() ##if only last occurence is used
             for key in keylist:
                 #print begintime, endtime, key, flagid, reason, sensid, modtime
                 if not sensid == '':
@@ -2146,8 +2154,13 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
     fill = ['x']
     '''
 
+    if not figure:
+        fig = plt.figure()
+    else:
+        fig = figure
+
     # CREATE MATPLOTLIB FIGURE OBJECT:
-    fig = plt.figure()
+    #fig = plt.figure()
     plt_fmt = ScalarFormatter(useOffset=False)
     n_subplots = len(data)
 
@@ -2402,8 +2415,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 
     # SAVE OR SHOW:
     # TODO the next two line are used for gui
-    #if figure:
-    #    return ax
+    if figure:
+        return ax
     if outfile:
         path = os.path.split(outfile)[0]
         if not path == '':
