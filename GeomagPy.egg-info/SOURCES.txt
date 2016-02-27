@@ -42,10 +42,13 @@ magpy/gui/absolutespage.py
 magpy/gui/analysispage.py
 magpy/gui/developpage.py
 magpy/gui/dialogclasses.py
+magpy/gui/magpy.png
+magpy/gui/magpy128.xpm
 magpy/gui/magpy_gui.py
 magpy/gui/magpy_gui_test.py
 magpy/gui/monitorpage.py
 magpy/gui/streampage.py
+magpy/gui/xmagpy
 magpy/gui/xmagpy.py
 magpy/lib/__init__.py
 magpy/lib/format_abs_magpy.py
