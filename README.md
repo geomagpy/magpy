@@ -34,24 +34,42 @@ Recommended:
 
 Linux/Unix
 ----------
-Please check the above requirements first!
+debian/ubuntu: full installation with all supported features
 
-1. Manually (replace x.x.x by the current version):
+1. Get python packages and other extensions (for other distros install similar packages):
 
+        sudo apt-get install python-numpy python-scipy python-matplotlib python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb
+        sudo easy_install ffnet
+        sudo easy_install pexpect
 
-        gunzip -c GeomagPy-x.x.x.tar.gz | tar xf -
-        cd GeomagPy-x.x.x
-        python setup.py install
+2. Get CDF and Omni database support:
 
-2. Using setuptools:
+    a) CDF (Nasa): http://cdf.gsfc.nasa.gov/html/sw_and_docs.html (tested with 3.6.1.0, please check validity of belows make command for any future versions)
 
+        tar -zxvf cdf36_1-dist-all.tar.gz
+        cd cdf36*
+        make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
+        sudo make INSTALLDIR=/usr/local/cdf install
+
+    b) SpacePy (Los Alamos): https://sourceforge.net/projects/spacepy/files/spacepy/ (tested with 0.1.5)
+
+        tar -zxvf spacepy-0.1.5.tar.gz
+        cd spacepy*
+        sudo python setup.py install
+
+3. Install MagPy
+
+    a) Using setuptools
 
         sudo easy_install GeomagPy
-
-  * upgrading:
-
-
+          * upgrading:
         sudo easy_install GeomagPy --upgrade
+
+    b) Using github
+
+        git clone git://github.com/GeomagPy/MagPy.git
+        cd MagPy*
+        sudo python setup.py install
 
 
 Windows
@@ -60,11 +78,11 @@ Tested on XP and Win7
 1. Get a current version of Python(x,y) and install it
    - optionally select packages ffnet and netcdf during install - for cdf support
 2. Get a current version of MySQL and install it
-3. Download nasaCDF packagess and install
+3. Download nasaCDF packages and install
 4. get python-spacepy package
 5. download and unpack GeomagPy-x.x.x.tar.gz
 6. open a command window
-7. go to the unpacked directory e.g. cd c:\user\user\Downloads\GeomagPy\
+7. go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
 8. execute "setup.py install"
 
 
