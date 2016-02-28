@@ -25,22 +25,37 @@ magpyversion = __version__
 try:
     import csv
     import pickle
-    import copy_reg
     import types
     import struct
     import logging
     import sys, re
-    import thread, time, string, os, shutil
+    import time, string, os, shutil
     import copy as cp
     import fnmatch
     import urllib2
     from tempfile import NamedTemporaryFile
     import warnings
     from glob import glob, iglob, has_magic
-    from StringIO import StringIO
-    import operator # used for stereoplot legend
     from itertools import groupby
+    import operator # used for stereoplot legend
     from operator import itemgetter
+    # The following packages are not identically available for python3
+    try:                # python2
+        import copy_reg
+    except ImportError: # python3
+        import copyreg
+    try:                # python2
+        import urllib2
+    except ImportError: # python3
+        import urllib.request
+    try:                # python2
+        import thread
+    except ImportError: # python3
+        import _thread
+    try:                # python2
+        from StringIO import StringIO
+    except ImportError: # python 3
+        from io import StringIO
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)
