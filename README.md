@@ -9,8 +9,8 @@ Typical usage often looks like this:
 
     #!/usr/bin/env python
     
-    from magpy.stream import *
-    import magpy.mpplot import mp
+    from magpy.stream import read
+    import magpy.mpplot as mp
     stream = read(path_or_url='filename')
     mp.plot(stream,['x'])
 
