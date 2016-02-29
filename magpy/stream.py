@@ -32,7 +32,6 @@ try:
     import time, string, os, shutil
     import copy as cp
     import fnmatch
-    import urllib2
     from tempfile import NamedTemporaryFile
     import warnings
     from glob import glob, iglob, has_magic
@@ -41,9 +40,9 @@ try:
     from operator import itemgetter
     # The following packages are not identically available for python3
     try:                # python2
-        import copy_reg
+        import copy_reg as copyreg
     except ImportError: # python3
-        import copyreg
+        import copyreg as copyreg
     try:                # python2
         import urllib2
     except ImportError: # python3
@@ -242,7 +241,7 @@ def _unpickle_method(func_name, obj, cls):
            break
     return func.__get__(obj, cls)
 
-copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
+copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 # ----------------------------------------------------------------------------
 # Part 2: Define Dictionaries
@@ -1844,7 +1843,10 @@ CALLED BY:
 
         absolutestream  = absolutedata.copy()
 
+        #print("Baseline", absolutestream.length())
         absolutestream = absolutestream.remove_flagged()
+        #print("Baseline", absolutestream.length())
+        #print("Baseline", absolutestream.ndarray[0])
 
         absndtype = False
         if len(absolutestream.ndarray[0]) > 0:
@@ -1868,6 +1870,7 @@ CALLED BY:
             startabs = absolutestream[0].time
             endabs = absolutestream[-1].time
 
+        #print("Baseline", absolutestream.length(), startabs, endabs)
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
             #loggerstream.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
@@ -1889,7 +1892,7 @@ CALLED BY:
         # ###########
         #  get boundaries
         # ###########
-        #print "Baseline", extradays, num2date(startabs), num2date(endabs)
+        #print("Baseline", extradays, num2date(startabs), num2date(endabs))
         #print "Baseline", starttime, endtime
         extrapolate = False
         # upper
@@ -1920,9 +1923,10 @@ CALLED BY:
 
         baseendtime = num2date(baseendtime).replace(tzinfo=None)
         basestarttime = num2date(basestarttime).replace(tzinfo=None)
+        #print("Baseline", absolutestream.length())
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
-        #print "baseline3", bas._find_t_limits(), basestarttime
+        #print("baseline3", bas._find_t_limits(), basestarttime)
 
         if extrapolate:
             bas = bas.extrapolate(basestarttime,baseendtime)
@@ -2850,7 +2854,7 @@ CALLED BY:
             inddx = KEYLIST.index('dx')
             lastind=len(self.ndarray[0])-1
 
-            #print self.ndarray[inddx][lastind]
+            #print("Extrapolate", self.ndarray,len(self.ndarray[inddx]), self.ndarray[inddx], self.ndarray[inddx][lastind])
             while np.isnan(float(self.ndarray[inddx][lastind])):
                 lastind = lastind-1
             firstind=0

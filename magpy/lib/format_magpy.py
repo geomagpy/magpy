@@ -371,8 +371,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     stream.header[key] = str(cdf_file.attrs[key])
                 else:
                     print("Found DataAbsFunctionObject - loading and unpickling")
-                    func = pickle.loads(str(cdf_file.attrs[key]))
-                    stream.header[key] = func
+                    try:
+                        func = pickle.loads(str(cdf_file.attrs[key]))
+                        stream.header[key] = func
+                    except:
+                        print("Failed to load DataAbsFuncObject - constructed before v0.2.000?")
 
         #if headonly:
         #    cdf_file.close()

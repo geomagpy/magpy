@@ -13,33 +13,17 @@ except:
     pass
 from wx.lib.pubsub import pub
 
-try:
-    import sys
-    sys.path.append('/home/leon/Software/magpy-git/src')
-
-    from magpy.stream import read
-    import mpplot as mp
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-    from version import __version__
-    from magpy.gui.streampage import *
-    from magpy.gui.dialogclasses import *
-    from magpy.gui.absolutespage import *
-    from magpy.gui.developpage import *
-    from magpy.gui.analysispage import *
-except:
-    from magpy.stream import read
-    import magpy.mpplot as mp
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-    from magpy.version import __version__
-    from magpy.gui.streampage import *
-    from magpy.gui.dialogclasses import *
-    from magpy.gui.absolutespage import *
-    from magpy.gui.developpage import *
-    from magpy.gui.analysispage import *
+from magpy.stream import read
+import magpy.mpplot as mp
+from magpy.absolutes import *
+from magpy.transfer import *
+from magpy.database import *
+from magpy.version import __version__
+from magpy.gui.streampage import *
+from magpy.gui.dialogclasses import *
+from magpy.gui.absolutespage import *
+from magpy.gui.developpage import *
+from magpy.gui.analysispage import *
 
 import glob, os, pickle, base64
 import pylab

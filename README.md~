@@ -120,14 +120,7 @@ You should get something like that (if the :
 b Reading and writing data
 ==========================
 
-You will find files `example1.cdf` and `example2.min` in an example directory provided together with mapy. The `cdf` file is stored along with meta information in the NASA's common data format (cdf). Reading this file requires a working installation of Spacepy cdf and a `'success'` information when Loading SpacePy as shown in (a).
-
-If you do not have any geomagnetic data file you can access example data by using the following commands:
-
-    from pkg_resources import resource_filename
-    example1 = resource_filename('magpy', 'examples/example1.cdf')
-    data = read(example1)
-
+You will find a file `example.min` and an `example.cdf` within the example directory. The `cdf` file is stored along with meta information in the NASA's common data format (cdf). Reading this file requires a working installation of Spacepy cdf and a `'success'` information when Loading SpacePy as shown in (a).
 
 1. Reading:
 -----------
