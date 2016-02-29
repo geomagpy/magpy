@@ -1422,8 +1422,9 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
 def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         padding=5,plotfunc=True,confinex=True,labelcolor=labelcolor,savedpi=80,
-        plottitle=None,legend=True,legendlabels=['Magnetic data','Satellite data'],
-        grid=True,specialdict={},annotate=False,returnfig=False):
+        plotcolors=['#000066', '#C0C0C0'], plottitle=None,legend=True,
+        legendlabels=['Magnetic data','Satellite data'], grid=True,specialdict={},
+        annotate=False,returnfig=False):
     """
     DEFINITION:
         Plot satellite and magnetic data on same plot for storm comparison.
@@ -1442,6 +1443,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         - legendlabels: (list[str]) List of labels to plot in legend.
         - outfile:      (str) Filepath to save plot to.
         - padding:      (float) Padding to add to plotted variables
+        - plotcolors:   (list) List of colors for (0) mag data and (1) sat data lines
         - plotfunc:     (bool) If True, fit function will be plotted against sat data.
         - plottitle:    (str) Title to add to plot
         - plottype:     (str) 'discontinuous' (nans will be masked) or 'continuous'.
@@ -1541,7 +1543,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax1.set_ylabel(label_sat,color=labelcolor)
-    axis1 = ax1.plot_date(t_sat, y_sat, fmt='-', color='#C0C0C0',label=legendlabels[1])
+    axis1 = ax1.plot_date(t_sat, y_sat, fmt='-', color=plotcolors[1],label=legendlabels[1])
 
     timeunit = ''
     if confinex:
@@ -1556,7 +1558,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     # NOTE: For mag data to be above sat data in zorder, KEEP THIS AXIS ORDER
     # (twinx() does not play nicely with zorder settings)
     ax2 = ax1.twinx()
-    axis2 = ax2.plot_date(t_mag, y_mag, fmt='-', lw=2, color='b',label=legendlabels[0])
+    axis2 = ax2.plot_date(t_mag, y_mag, fmt='-', lw=2, color=plotcolors[0],label=legendlabels[0])
     ax2.set_ylabel(label_mag,color=labelcolor)
     ax2.yaxis.set_label_position('left')
     ax2.yaxis.set_ticks_position('left')
