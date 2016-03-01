@@ -18,8 +18,8 @@ from magpy.transfer import *
 from magpy.database import *
 from magpy.mpplot import *
 
-import lib
-import opt
-import collector
+import magpy.lib
+import magpy.opt
+import magpy.collector
 
 from .version import __version__
