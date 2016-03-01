@@ -1176,11 +1176,11 @@ if __name__ == '__main__':
         try:
             detection_DWT, ssc_list_DWT, sat_ssc_list = seekStorm(magdata, satdata_1m=satdata_1m,
                 satdata_5m=satdata_5m, method='MODWT', returnsat=True)
-            print(datetime.utcnow(), "- Discrete Wavelet Transform (DWT3) method applied to data.")
+            print(datetime.utcnow(), "- Maximal Overlap Discrete Wavelet Transform (MODWT) method applied to data.")
         except Exception as excep:
-            detection_DWT = False
-            errors['dwt'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR using DWT method.")
+            detection_MODWT = False
+            errors['MODWT'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR using MODWT method.")
 
         # Step 6 - Use AIC method
         try:
@@ -1199,7 +1199,7 @@ if __name__ == '__main__':
             print(datetime.utcnow(), "- First Derivative method (FDM) applied to data.")
         except Exception as excep:
             detection_FDM = False
-            errors['fdm'] = str(excep)
+            errors['FDM'] = str(excep)
             print(datetime.utcnow(), "--- ERROR using FD method.")
 
         # If end of routine is reached... break.
@@ -1216,7 +1216,7 @@ if __name__ == '__main__':
     print()
     print("ACE:")
     i = 1
-    if detection_DWT:
+    if detection_MODWT:
         for item in sat_ssc_list:
             print("Detection # %s \n SATSSCTIME: %s \n ESTSSCTIME: %s \n VWIND: %.2f \n PFLUX: %.2f \n PROBF: %.0f" % (i,
                 item['satssctime'], item['estssctime'], item['vwind'], item['pflux'], item['probf']))
@@ -1224,7 +1224,7 @@ if __name__ == '__main__':
     else:
         print("No ACE detections :(")
     print()
-    print("DWT3:")
+    print("MODWT:")
     i = 1
     if detection_DWT:
         for item in ssc_list_DWT:

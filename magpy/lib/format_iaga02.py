@@ -423,6 +423,8 @@ def writeIAGA(datastream, filename, **kwargs):
         xind = order[0]+1
         yind = order[1]+1
         zind = order[2]+1
+        if len(datastream.ndarray[xind]) == 0 or len(datastream.ndarray[yind]) == 0 or len(datastream.ndarray[zind]) == 0:
+            print("writeIAGA02: WARNING! Data missing in X, Y or Z component! Writing anyway...")
         find = KEYLIST.index('f')
         if datacomp.startswith('DHZ'):
             xmult = 60.0
@@ -438,11 +440,20 @@ def writeIAGA(datastream, filename, **kwargs):
                 fval = elem.f
                 timeval = elem.time
             else:
-                xval = datastream.ndarray[xind][i]*xmult
-                yval = datastream.ndarray[yind][i]
-                if order[1] == '3':
-                    yval = datastream.ndarray[yind][i]*np.cos(datastream.ndarray[zind][i]*np.pi/180.)
-                zval = datastream.ndarray[zind][i]*zmult
+                if len(datastream.ndarray[xind]) > 0:
+                    xval = datastream.ndarray[xind][i]*xmult
+                else:
+                    xval = 88888.0
+                if len(datastream.ndarray[yind]) > 0:
+                    yval = datastream.ndarray[yind][i]
+                    if order[1] == '3':
+                        yval = datastream.ndarray[yind][i]*np.cos(datastream.ndarray[zind][i]*np.pi/180.)
+                else:
+                    yval = 88888.0
+                if len(datastream.ndarray[zind]) > 0:
+                    zval = datastream.ndarray[zind][i]*zmult
+                else:
+                    zval = 88888.0
                 if len(datastream.ndarray[find]) > 0:
                     if not useg:
                         fval = datastream.ndarray[find][i]
