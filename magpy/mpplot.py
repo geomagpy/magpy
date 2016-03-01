@@ -2269,7 +2269,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                         #print "Cons", np.asarray(consecutives)
                         # 3. add annotation arrow for all but 1
                         cnt0 = consecutives[0]
-                        #print consecutives
+                        #print(consecutives)
                         #print cnt0, indexflag, flags[0], flags[0][cnt0], flags[1][cnt0], flags[0][cnt0][indexflag]
                         if len(flags[0][cnt0]) >= indexflag:
                             if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':

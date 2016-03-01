@@ -2,7 +2,8 @@
 """
 MagPy-General: Standard pymag package containing the following classes:
 Written by Roman Leonhardt, Rachel Bailey 2011/2012/2013/2014
-Version 0.1 (from the 23.02.2012)
+Written by Roman Leonhardt, Rachel Bailey, Mojca Miklavec 2015/2016
+Version 0.2 (starting 28.02.2015)
 """
 from __future__ import print_function
 
@@ -4178,6 +4179,7 @@ CALLED BY:
                         self.header['col-y'] = 'd'
                         self.header['unit-col-y'] = 'deg'
                     else:
+                        print("func2stream", function, function[0], function[0]['f'+key],functimearray)
                         array[ind] = ar + function[0]['f'+key](functimearray)
                         if key == 'x': # remember this for correct y determination
                             arrayx = array[ind]
@@ -5874,7 +5876,7 @@ CALLED BY:
             return fig
 
 
-    def offset(self, offsets):
+    def offset(self, offsets, **kwargs):
         """
     DEFINITION:
         Apply constant offsets to elements of the datastream
@@ -5893,13 +5895,68 @@ CALLED BY:
 
     EXAMPLE:
         >>> data.offset({'x':7.5})
+        or
+        >>> data.offset({'x':7.5},starttime='2015-11-21 13:33:00',starttime='2015-11-23 12:22:00')
 
     APPLICATION:
 
         """
+        endtime = kwargs.get('endtime')
+        starttime = kwargs.get('starttime')
+        comment = kwargs.get('comment')
+
         ndtype = False
         if len(self.ndarray[0]) > 0:
             ndtype =True
+            tcol = self.ndarray[0]
+        else:
+            tcol = self._get_column('time')
+
+        if not len(tcol) > 0:
+            loggerstream.error("offset: No data found - aborting")
+            return self
+
+        stidx = 0
+        edidx = len(tcol)
+        if starttime:
+            st = date2num(self._testtime(starttime))
+            # get index number of first element >= starttime in timecol
+            stidxlst = np.where(tcol >= st)[0]
+            if not len(stidxlst) > 0:
+                return self   ## stream ends before starttime
+            stidx = stidxlst[0]
+        if endtime:
+            ed = date2num(self._testtime(endtime))
+            # get index number of last element <= endtime in timecol
+            edidxlst = np.where(tcol <= ed)[0]
+            if not len(edidxlst) > 0:
+                return self   ## stream begins after endtime
+            edidx = (edidxlst[-1]) + 1
+
+        if comment and not comment == '':
+            if len(self.ndarray[0]) > 0:
+                commpos = KEYLIST.index('comment')
+                flagpos = KEYLIST.index('flag')
+                commcol = self.ndarray[commpos]
+            else:
+                commcol = self._get_column('comment')
+            if not len(commcol) == len(tcol):
+                commcol = [''] * len(tcol)
+            if not len(self.ndarray[flagpos]) == len(tcol):
+                fllist = ['0' for el in FLAGKEYLIST]
+                fllist.append('-')
+                fl = ''.join(fllist)
+                self.ndarray[flagpos] = [fl] * len(tcol)
+            for idx,el in enumerate(commcol):
+                if idx >= stidx and idx <= edidx:
+                    if not el == '':
+                        commcol[idx] = comment + ', ' + el
+                    else:
+                        commcol[idx] = comment
+                else:
+                    commcol[idx] = el
+            print("offset", len(commcol), len(tcol))
+            self.ndarray[commpos] = commcol
 
         for key in offsets:
             if key in KEYLIST:
@@ -5908,6 +5965,7 @@ CALLED BY:
                     val = self.ndarray[ind]
                 else:
                     val = self._get_column(key)
+                val = val[stidx:edidx]
                 if key == 'time':
                     secperday = 24*3600
                     try:
@@ -5928,9 +5986,11 @@ CALLED BY:
                     #newval = [elem + offsets[key] for elem in val]
                     loggerstream.info('offset: Corrected column %s by %.3f' % (key, offsets[key]))
                 if ndtype:
-                    self.ndarray[ind] = val
+                    self.ndarray[ind][stidx:edidx] = val
                 else:
-                    self = self._put_column(val, key)
+                    nval = self._get_column(key) # repeated extraction of column - could be optimzed but usage of LineStruct will not be supported in future
+                    nval[stidx:edidx] = val
+                    self = self._put_column(nval, key)
             else:
                 loggerstream.error("offset: Key '%s' not in keylist." % key)
 
