@@ -134,7 +134,7 @@ def isGSM19(filename):
     Checks whether a file is GSM19 format.
     """
     try:
-        temp = open(filename, 'rt')
+        temp = open(filename, 'rt') #, encoding='utf-8', errors='ignore'
     except:
         return False
     li = temp.readline()
