@@ -101,7 +101,8 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
         - method:       (str) Evaluation function. There are three options:
                         'AIC': Akaike Information Criterion (default)
                         'DWT2': Discrete Wavelet Transform (2nd detail) - see Hafez et al. (2013)
-                        'DWT3': Discrete Wavelet Transform (3rd detail)
+                        'DWT1': Discrete Wavelet Transform (3rd detail)
+                        'MODWT': Maximal Overlap Discrete Wavelet Transform
                         'FDM': First Derivative Method
         - variables:    (list) List of variables used in individual functions. Len = 2 (except AIC)
                         Defaults: funcvars = {
@@ -1174,9 +1175,10 @@ if __name__ == '__main__':
         # Step 6 - Use DWT3 method
         try:
             detection_DWT, ssc_list_DWT, sat_ssc_list = seekStorm(magdata, satdata_1m=satdata_1m,
-                satdata_5m=satdata_5m, method='DWT3', returnsat=True)
+                satdata_5m=satdata_5m, method='MODWT', returnsat=True)
             print(datetime.utcnow(), "- Discrete Wavelet Transform (DWT3) method applied to data.")
         except Exception as excep:
+            detection_DWT = False
             errors['dwt'] = str(excep)
             print(datetime.utcnow(), "--- ERROR using DWT method.")
 
@@ -1186,6 +1188,7 @@ if __name__ == '__main__':
                 method='AIC')
             print(datetime.utcnow(), "- Akaike Information Criterion (AIC) method applied to data.")
         except Exception as excep:
+            detection_AIC = False
             errors['AIC'] = str(excep)
             print(datetime.utcnow(), "--- ERROR using AIC method.")
 
@@ -1195,6 +1198,7 @@ if __name__ == '__main__':
                 method='FDM')
             print(datetime.utcnow(), "- First Derivative method (FDM) applied to data.")
         except Exception as excep:
+            detection_FDM = False
             errors['fdm'] = str(excep)
             print(datetime.utcnow(), "--- ERROR using FD method.")
 
