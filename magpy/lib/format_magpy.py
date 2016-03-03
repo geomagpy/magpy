@@ -1090,7 +1090,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = ['' if el is None else el for el in col]
                 col = np.asarray(col) # to get string conversion
             else:
-                print(col, key)
+                #print(col, key)
                 col = np.asarray([np.nan if el is None else el for el in col])
                 #col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)
