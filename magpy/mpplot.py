@@ -1339,12 +1339,17 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
     dt = stream.get_sampling_period()*24*3600
 
-    if not len(stream) > 0:
+    if not stream.length()[0] > 0:
         loggerplot.error("plotPS: Stream of zero length -- aborting.")
         raise Exception("Can't analyse power spectrum of stream of zero length!")
 
-    t = np.asarray(stream._get_column('time'))
-    val = np.asarray(stream._get_column(key))
+    if len(stream.ndarray[0]) > 0:
+        pos = KEYLIST.index(key)
+        t = stream.ndarray[0]
+        val = stream.ndarray[pos]
+    else:
+        t = np.asarray(stream._get_column('time'))
+        val = np.asarray(stream._get_column(key))
     t_min = np.min(t)
     t_new, val_new = [],[]
 
@@ -2300,16 +2305,28 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                             print("Flag at count and its index position", cnt0, indexflag)
                             print("Flag and Comment", flags[0][cnt0], flags[1][cnt0])
                 if len(a_t) > 0:
-                    ax.scatter(a_t,a_y,c='r')
+                    if len(a_t) > 10000:
+                        ax.plot(a_t,a_y,'-',c='r') ## Use lines if a lot of data is marked
+                    else:
+                        ax.scatter(a_t,a_y,c='r')
                 if len(b_t) > 0:
-                    ax.scatter(b_t,b_y,c='orange')
+                    if len(b_t) > 10000:
+                        ax.plot(b_t,b_y,'-',c='orange')
+                    else:
+                        ax.scatter(b_t,b_y,c='orange')
                 if len(c_t) > 0:
                     # TODO Here we have a masked nan warning - too be solved
                     #print np.asarray(c_t)
                     #print np.asarray(c_y)
-                    ax.scatter(c_t,c_y,c='g')
+                    if len(c_t) > 10000:
+                        ax.plot(c_t,c_y,'-',c='g')
+                    else:
+                        ax.scatter(c_t,c_y,c='g')
                 if len(d_t) > 0:
-                    ax.scatter(d_t,d_y,c='b')
+                    if len(d_t) > 10000:
+                        ax.plot(d_t,d_y,'-',c='b')
+                    else:
+                        ax.scatter(d_t,d_y,c='b')
 
         # PLOT A GIVEN FUNCTION:
         if 'function' in data[i]:

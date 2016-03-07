@@ -1614,8 +1614,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
                 variostr = variostr.flag(vaflaglist)
+                print("Obtained flagging information for vario data from data base: {} flags".format(len(vaflaglist)))
             except:
-                print("Obtained flagging information for vario data from data base")
+                print("Could not find flagging data in database")
             try:
                 variostr = variostr.remove_flagged()
                 print("Flagged records of variodata have been removed")

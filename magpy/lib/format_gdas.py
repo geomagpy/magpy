@@ -228,27 +228,23 @@ def readGDASB1(filename, headonly=False, **kwargs):
     # get day from filename (platform independent) -- does not work for temporary files
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    #splitpath = os.path.split(filename)
-    #daystring = splitpath[1].split('.')
+
+    getfile = True
     theday = extractDateFromString(filename)
-    day = datetime.strftime(theday,"%Y-%m-%d")
-    year = datetime.strftime(theday,"%Y")
-    #print day, year
-    #try:
-    #     # remove some common prefixes from filename
-    #    tmpdate = daystring[0][-8:]
-    #    day = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y-%m-%d")
-    #    year = datetime.strftime(datetime.strptime(tmpdate , "%Y%m%d"),"%Y")
-    #except:
-    #    logging.warning("Wrong dateformat in Filename %s" % daystring[0])
-    #    return []
-    # Select only files within eventually defined time range
-    if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
-            getfile = False
-    if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
-            getfile = False
+    try:
+        if starttime:
+            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+                getfile = False
+            #if not theday >= datetime.date(stream._testtime(starttime)):
+            #    getfile = False
+        if endtime:
+            #if not theday <= datetime.date(stream._testtime(endtime)):
+            #    getfile = False
+            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True
 
     if getfile:
         line = fh.read(25)

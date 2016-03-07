@@ -25,6 +25,7 @@ class StreamPage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         self.comp = ['xyz', 'hdz', 'idf']
+        self.symbol = ['line', 'point']
         self.createControls()
         self.doLayout()
 
@@ -60,16 +61,20 @@ class StreamPage(wx.Panel):
         self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(130,30))
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(130,30))
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(130,30))
-        self.selectionLabel = wx.StaticText(self, label="Opens new window")
         self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(130,30))
+        self.flagApplyButton = wx.Button(self,-1,"Load flags",size=(130,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
+        self.symbolRadioBox = wx.RadioBox(self,
+            label="Select symbols",
+            choices=self.symbol, majorDimension=2, style=wx.RA_SPECIFY_COLS)
         self.annotateCheckBox = wx.CheckBox(self,label="annotate")
         self.confinexCheckBox = wx.CheckBox(self,
             label="confine time")
         self.DrawButton = wx.Button(self,-1,"ReDraw",size=(130,30))
         self.compRadioBox.Disable()
+        self.symbolRadioBox.Disable()
 
 
     def doLayout(self):
@@ -107,7 +112,7 @@ class StreamPage(wx.Panel):
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.errorBarsButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.compRadioBox, noOptions',
-                 '(0,0), noOptions',
+                 'self.symbolRadioBox, noOptions',
                  'self.annotateCheckBox, noOptions',
                  '(0,0), noOptions',
                  'self.confinexCheckBox, noOptions',
@@ -115,12 +120,12 @@ class StreamPage(wx.Panel):
                  'self.lineLabel3, noOptions',
                  'self.lineLabel4, noOptions',
                  'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
-                 'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
                  'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.selectionLabel, noOptions',
+                 'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.flagApplyButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
+                 '(0,0), noOptions',
                  '(0,0), noOptions',
                  'self.lineLabel5, noOptions',
                  'self.lineLabel6, noOptions',

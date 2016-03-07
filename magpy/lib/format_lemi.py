@@ -116,6 +116,15 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     data = []
     key = None
 
+
+    xpos = KEYLIST.index('x')
+    ypos = KEYLIST.index('y')
+    zpos = KEYLIST.index('z')
+    t1pos = KEYLIST.index('t1')
+    t2pos = KEYLIST.index('t2')
+    var2pos = KEYLIST.index('var2')
+    var3pos = KEYLIST.index('var3')
+
     # get day from filename (platform independent)
     # --------------------------------------
     splitpath = os.path.split(filename)
@@ -151,19 +160,32 @@ def readLEMIHF(filename, headonly=False, **kwargs):
                 tim = date2num(datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f'))
                 #row.time = tim
                 array[0].append(tim)
-                array[1].append(float(elem[6]))
-                array[2].append(float(elem[7]))
-                array[3].append(float(elem[8]))
-                #row.x = float(elem[6])
-                #row.y = float(elem[7])
-                #row.z = float(elem[8])
-                #stream.add(row)
+                array[xpos].append(float(elem[6]))
+                array[ypos].append(float(elem[7]))
+                array[zpos].append(float(elem[8]))
+                if len(elem) > 8:
+                    try:
+                        array[t1pos].append(float(elem[9]))
+                        array[t2pos].append(float(elem[10]))
+                        array[var2pos].append(float(elem[11]))
+                        array[var3pos].append(float(elem[12]))
+                    except:
+                        pass
         headers['col-x'] = 'x'
         headers['unit-col-x'] = 'nT'
         headers['col-y'] = 'y'
         headers['unit-col-y'] = 'nT'
         headers['col-z'] = 'z'
         headers['unit-col-z'] = 'nT'
+        if len(elem) > 8:
+            headers['col-t1'] = 'Tsens'
+            headers['unit-col-t1'] = 'C'
+            headers['col-t2'] = 'Tel'
+            headers['unit-col-t2'] = 'C'
+            headers['col-var2'] = 'VCC'
+            headers['unit-col-var2'] = 'V'
+            headers['col-var3'] = 'Index'
+            headers['unit-col-var3'] = ''
     else:
         headers = stream.header
         stream =[]
@@ -269,10 +291,10 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         getfile = True
@@ -406,10 +428,10 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

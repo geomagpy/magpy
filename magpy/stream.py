@@ -749,17 +749,51 @@ CALLED BY:
 
 
 
-    def findtime(self,time):
+    def findtime(self,time,**kwargs):
         """
         DEFINITION:
             Find a line within the container which contains the selected time step
+        VARIABLES:
+            startidx    (int) index to start search with (speeding up)
+            endidx      (int) index to end search with (speeding up)
+
         RETURNS:
             The index position of the line and the line itself
         """
+        startidx = kwargs.get('startidx')
+        endidx = kwargs.get('endidx')
+
+        #try:
+        #    from bisect import bisect
+        #except ImportError:
+        #    print("Import error")
+
         st = date2num(self._testtime(time))
         if len(self.ndarray[0]) > 0:
+            if startidx and endidx:
+                ticol = self.ndarray[0][startidx:endidx]
+            elif startidx:
+                ticol = self.ndarray[0][startidx:]
+            elif endidx:
+                ticol = self.ndarray[0][:endidx]
+            else:
+                ticol = self.ndarray[0]
             try:
-                return list(self.ndarray[0]).index(st), LineStruct()
+                #indexes = [i for i,x in enumerate(ticol) if np.allclose(x,st,rtol=1e-14,atol=1e-17)]  # if the two time equal within about 0.7 milliseconds
+                #indexes = [bisect(ticol, st)]   ## SELECTS ONLY INDEX WHERE VALUE SHOULD BE inserted
+                indexes = [i for i,x in enumerate(ticol) if x == st]    ### FASTER
+                #indexes = [ticol.index(st)]
+                #print("findtime", indexes) 
+                if not len(indexes) == 0:
+                    if startidx:
+                        retindex = indexes[0] + startidx
+                    else:
+                        retindex = indexes[0]
+                    #print("Findtime index:",retindex)
+                    return retindex, LineStruct()
+                else:
+                    return 0, []
+                #return list(self.ndarray[0]).index(st), LineStruct()
             except:
                 loggerstream.warning("findtime: Didn't find selected time - returning 0")
                 return 0, []
@@ -1318,8 +1352,8 @@ CALLED BY:
         t_ind = KEYLIST.index('time')
 
         if len(self.ndarray[0]) > 0:
-            result = np.max(self.ndarray[key_ind])
-            ind = np.argmax(self.ndarray[key_ind])
+            result = np.max(self.ndarray[key_ind].astype(float))
+            ind = np.argmax(self.ndarray[key_ind].astype(float))
             tresult = self.ndarray[t_ind][ind]
         else:
             elem = max(self, key=lambda tmp: eval('tmp.'+key))
@@ -1339,8 +1373,8 @@ CALLED BY:
         t_ind = KEYLIST.index('time')
 
         if len(self.ndarray[0]) > 0:
-            result = np.min(self.ndarray[key_ind])
-            ind = np.argmin(self.ndarray[key_ind])
+            result = np.min(self.ndarray[key_ind].astype(float))
+            ind = np.argmin(self.ndarray[key_ind].astype(float))
             tresult = self.ndarray[t_ind][ind]
         else:
             elem = min(self, key=lambda tmp: eval('tmp.'+key))
@@ -1412,6 +1446,12 @@ CALLED BY:
                 self = self.hdz2xyz()
             elif coordinate == 'idf2xyz':
                 self = self.idf2xyz()
+            elif coordinate == 'idf2hdz':
+                self = self.idf2xyz()
+                self = self.xyz2hdz()
+            elif coordinate == 'hdz2idf':
+                self = self.hdz2xyz()
+                self = self.xyz2idf()
             else:
                 print("_convertstream: unkown coordinate transform")
             return self
@@ -1825,11 +1865,17 @@ CALLED BY:
         #if not extradays:
         #    extradays = 15
         if not fitfunc:
-            fitfunc = 'spline'
+            fitfunc = self.header.get('DataAbsFunc')
+            if not fitfunc:
+                fitfunc = 'spline'
         if not fitdegree:
-            fitdegree = 5
+            fitdegree = self.header.get('DataAbsDegree')
+            if not fitdegree:
+                fitdegree = 5
         if not knotstep:
-            knotstep = 0.1
+            knotstep = self.header.get('DataAbsKnots')
+            if not knotstep:
+                knotstep = 0.1
         if not keys:
             keys = ['dx','dy','dz']
 
@@ -1887,7 +1933,7 @@ CALLED BY:
             startabs = absolutestream[0].time
             endabs = absolutestream[-1].time
 
-        #print("Baseline", absolutestream.length(), startabs, endabs)
+        print("Baseline 1", absolutestream.length(), startabs, endabs)
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
             #loggerstream.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
@@ -1909,7 +1955,7 @@ CALLED BY:
         # ###########
         #  get boundaries
         # ###########
-        #print("Baseline", extradays, num2date(startabs), num2date(endabs))
+        #print("Baseline", extradays, num2date(startabs), num2date(endabs), fixend, fixstart)
         #print "Baseline", starttime, endtime
         extrapolate = False
         # upper
@@ -1921,9 +1967,9 @@ CALLED BY:
         else:
             baseendtime = date2num(endtime+timedelta(days=1))
             extrapolate = True
-        if endabs >= date2num(endtime)+extradays:
-            # time range long enough
-            baseendtime = date2num(endtime)+extradays
+        #if endabs >= date2num(endtime)+extradays:
+        #    # time range long enough
+        #    baseendtime = date2num(endtime)+extradays
         # lower
         if fixstart:
             absolutestream = absolutestream.trim(starttime=startabs)
@@ -1932,7 +1978,8 @@ CALLED BY:
             extrapolate = True
         else:
             # not long enough
-            basestarttime = date2num(starttime)
+            #basestarttime = date2num(starttime)
+            basestarttime = startabs-extradays
             extrapolate = True
         if baseendtime - (366.+2*extradays) > startabs:
             # time range long enough
@@ -1940,12 +1987,12 @@ CALLED BY:
 
         baseendtime = num2date(baseendtime).replace(tzinfo=None)
         basestarttime = num2date(basestarttime).replace(tzinfo=None)
-        #print("Baseline", absolutestream.length())
+        print("Baseline 2:", absolutestream.length(), basestarttime, baseendtime)
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
         #print("baseline3", bas._find_t_limits(), basestarttime)
 
-        if extrapolate:
+        if extrapolate and not extradays == 0:
             bas = bas.extrapolate(basestarttime,baseendtime)
 
         #print "baseline4", bas._find_t_limits()
@@ -2028,6 +2075,7 @@ CALLED BY:
             except:
                 print("using the internal plotting routine requires mpplot to be imported as mp")
 
+        print ("Baseline 4:", num2date(func[1]), num2date(startabs), num2date(func[2]), num2date(endabs))
         self.header['DataAbsMinTime'] = func[1] #num2date(func[1]).replace(tzinfo=None)
         self.header['DataAbsMaxTime'] = func[2] #num2date(func[2]).replace(tzinfo=None)
         self.header['DataAbsFunctionObject'] = func
@@ -3744,13 +3792,14 @@ CALLED BY:
     Variables:
         - None.
     Kwargs:
-        - keys:         (list) List of keys to evaluate. Default = all numerical
-        - threshold:    (float) Determines threshold for outliers.
-                        1.5 = standard
-                        5 = keeps storm onsets in
-                        4 = Default as comprimise.
-        - timerange:    (timedelta Object) Time range. Default = timedelta(hours=1)
-        - stdout:        prints removed values to stdout
+        - keys:         	(list) List of keys to evaluate. Default = all numerical
+        - threshold:   		(float) Determines threshold for outliers.
+                        	1.5 = standard
+                        	5 = keeps storm onsets in
+                        	4 = Default as comprimise.
+        - timerange:    	(timedelta Object) Time range. Default = timedelta(hours=1)
+        - stdout:        	prints removed values to stdout
+        - returnflaglist	(bool) if True, a flaglist is returned instead of stream
     RETURNS:
         - stream:       (DataStream Object) Stream with flagged data.
 
@@ -3766,8 +3815,11 @@ CALLED BY:
         keys = kwargs.get('keys')
         markall = kwargs.get('markall')
         stdout = kwargs.get('stdout')
+        returnflaglist = kwargs.get('returnflaglist')
 
         sr = self.samplingrate()
+        flagtimeprev = 0
+        startflagtime = 0
 
         if not timerange:
             sr = self.samplingrate()
@@ -3776,6 +3828,8 @@ CALLED BY:
             keys = self._get_key_headers(numerical=True)
         if not threshold:
             threshold = 5.0
+
+        flaglist = []
 
         # Position of flag in flagstring
         # f (intensity): pos 0
@@ -3881,9 +3935,13 @@ CALLED BY:
 
                         self.ndarray[flagidx][elem] = newflag
                         #print self.ndarray[flagidx][elem]
-                        self.ndarray[commentidx][elem] = "aof - threshold: %s, window: %s sec" % (str(threshold), str(timerange.total_seconds()))
-                        infoline = "remove_outlier: at %s - removed %s (= %f)" % (str(self.ndarray[0][elem]), key, self.ndarray[flagpos][elem])
+                        commline = "aof - threshold: {a}, window: {b} sec".format(a=str(threshold), b=str(timerange.total_seconds()))
+                        self.ndarray[commentidx][elem] = commline
+                        infoline = "flag_outlier: at {a} - removed {b} (= {c})".format(a=str(self.ndarray[0][elem]), b=key, c=self.ndarray[flagpos][elem])
                         loggerstream.info(infoline)
+                        #[starttime,endtime,key,flagid,flagcomment]
+                        flagtime = self.ndarray[0][elem]
+                        flaglist.append([flagtime,flagtime,key,1,commline]) # cycle through list later and combine records
                         if stdout:
                             print(infoline)
                     else:
@@ -3899,7 +3957,26 @@ CALLED BY:
         self.ndarray[flagidx] = np.asarray(self.ndarray[flagidx])
         self.ndarray[commentidx] = np.asarray(self.ndarray[commentidx])
 
-        loggerstream.info('remove_outlier: Outlier removal finished.')
+        loggerstream.info('flag_outlier: Outlier flagging finished.')
+
+        ## METHOD WHICH SORTS/COMBINES THE FLAGLIST
+        #print("flag_outlier",flaglist)
+        newlist = []
+        srday = sr/(3600.*24.)
+        for line in flaglist:
+            ft = line[0]
+            if flagtimeprev == 0:
+                startflagtime = ft
+            if (ft-flagtimeprev)-0.01*srday > srday and not flagtimeprev == 0:
+                newlist.append([startflagtime,flagtimeprev,line[2],line[3],line[4]])
+                startflagtime = ft
+            flagtimeprev = ft
+        if len(flaglist) > 0:
+            newlist.append(flaglist[-1])
+
+        #print("flag_outlier",newlist)
+        if returnflaglist:
+            return newlist
 
         return self
 
@@ -3929,9 +4006,53 @@ CALLED BY:
         st = date2num(st)
         et = date2num(et)
 
-        if len(flaglist) > 0:
+        lenfl = len(flaglist)
+        print ("Flag: Found flaglist of length {}".format(lenfl))
+        flaglist = [line for line in flaglist if date2num(self._testtime(line[1])) >= st]
+        flaglist = [line for line in flaglist if date2num(self._testtime(line[0])) <= et]
+        # Sort flaglist accoring to startdate (used to speed up flagging procedure)
+        flaglist.sort()
+
+        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+        ## (use only last input)
+        #print("1",flaglist)
+        def flagclean(flaglist):
+            ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+            ## (use only last input)
+            indicies = []
+            for line in flaglist:
+                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2]]
+                if len(inds) > 0:
+                    index = inds[-1]
+                    indicies.append(index)
+            uniqueidx = (list(set(indicies)))
+            uniqueidx.sort()
+            #print(uniqueidx)
+            flaglist = [elem for idx, elem in enumerate(flaglist) if idx in uniqueidx]
+
+            return flaglist
+
+        flaglist = flagclean(flaglist)
+
+        lenfl = len(flaglist)
+        print ("Flag: Relevant flags: {}".format(lenfl))
+
+        ## Determinig sampling rate for nearby flagging
+        sr = self.samplingrate()
+        #print("###############################################")
+        #print("2",flaglist)
+        #x=1/0
+        if lenfl > 0:
             #print "flag: going through flaglist", st,et
-            for i in range(len(flaglist)):
+            for i in range(lenfl):
+                if i == int(lenfl/5.):
+                    print("Flag: 20 percent done")
+                if i == int(lenfl/5.*2.):
+                    print("Flag: 40 percent done")
+                if i == int(lenfl/5.*3.):
+                    print("Flag: 60 percent done")
+                if i == int(lenfl/5.*4.):
+                    print("Flag: 80 percent done")
                 fs = date2num(self._testtime(flaglist[i][0]))
                 fe = date2num(self._testtime(flaglist[i][1]))
                 if st < fs and et < fs and st < fe and et < fe:
@@ -3943,13 +4064,13 @@ CALLED BY:
                     flaglist[i][4] = ''.join([e for e in list(flaglist[i][4]) if e in list(valid_chars)])
                     keys = flaglist[i][2].split('_')
                     for key in keys:
-                        self = self.flag_stream(key,int(flaglist[i][3]),flaglist[i][4],flaglist[i][0],flaglist[i][1])
+                        self = self.flag_stream(key,int(flaglist[i][3]),flaglist[i][4],flaglist[i][0],flaglist[i][1],samplingrate = sr)
 
         return self
 
 
 
-    def flag_stream(self, key, flag, comment, startdate, enddate=None):
+    def flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate=0.):
         """
     DEFINITION:
         Add flags to specific times or time ranges (if enddate is provided).
@@ -3963,18 +4084,22 @@ CALLED BY:
         - startdate:    (datetime object) the date of the (first) datapoint to remove
     Kwargs:
         - enddate:      (datetime object) the enddate of a time range to be flagged
+        - samplingrate: (float) in seconds, needs to be provided for effective nearby search
 
     RETURNS:
         - DataStream:   Input stream with flags and comments.
 
     EXAMPLE:
-        >>> data.flag_stream('x',0,'Lawnmower',flag1,flag1_end)
+        >>> data = data.flag_stream('x',0,'Lawnmower',flag1,flag1_end)
 
     APPLICATION:
         """
 
+        sr = samplingrate
 
-        #print "starting flag_stream method"
+        #t1 = datetime.utcnow()
+        #print("starting flag_stream method at",t1)
+
         if not key in KEYLIST:
             loggerstream.error("flag_stream: %s is not a valid key." % key)
         if not flag in [0,1,2,3,4]:
@@ -3989,6 +4114,10 @@ CALLED BY:
         startdate = self._testtime(startdate)
 
         if not enddate:
+            # Set enddate to startdat
+            # Hereby flag nearest might be used later
+            enddate = startdate
+            """
             start = date2num(startdate)
             check_startdate, val = self.findtime(start)
             if check_startdate == 0:
@@ -4007,23 +4136,84 @@ CALLED BY:
                     enddate = num2date(start)
             else:
                 enddate = startdate
+            """
         else:
             enddate = self._testtime(enddate)
+
+        ### ######## IF STARTDATE == ENDDATE 
+        ### MODIFYED TO STARTDATE-Samplingrate/3, ENDDATE + Samplingrate/3
+        ### Taking 1/3 is arbitrary.
+        ### This helps to apply flagging info to any higher resolution record
+        ### which does not contain the exact time stamp.
+        ### You are likely exclude more data then necessary.
+        ### Flag the high resolution data set to avoid that.
+
+        #print("Flag",startdate, enddate)
+        def rangeExtend(startdate,enddate,samplingrate,divisor=3):
+            if startdate == enddate:
+                startdate = startdate-timedelta(seconds=samplingrate/divisor)
+                enddate = enddate+timedelta(seconds=samplingrate/divisor)
+                start = date2num(startdate)
+                end = date2num(enddate)
+                return start,end
+            else:
+                start = date2num(startdate)
+                end = date2num(enddate)
+                return start,end
 
         pos = FLAGKEYLIST.index(key)
         #poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
         #pos = poslst[0]
 
-        # Get start and end indicies:
+        #t1 = datetime.utcnow()
+        #print("Defined start and enddate",t1)
+
+        #print("Flag",startdate, enddate)
         start = date2num(startdate)
-        st, ls = self.findtime(startdate)
         end = date2num(enddate)
-        ed, le = self.findtime(enddate)
-        if ed == len(self.ndarray[0]):
-            ed = ed-1
-        # Create a defaultflag
-        defaultflag = ['-' for el in FLAGKEYLIST]
-        #print "flag", st, ed
+        mint = np.min(self.ndarray[0])
+        maxt = np.max(self.ndarray[0])
+
+        #t1 = datetime.utcnow()
+        #print("Preparations for find neasrest done",t1)
+
+        if start < mint and end < mint:
+            st = 0
+            ed = 0
+        elif start > maxt and end > maxt:
+            st = 0
+            ed = 0
+        else:
+            ### Modified to use nearest value to be flagged if flagtimes
+            ### overlap with streams timerange
+            ### find_nearest is probably very slowly...
+            ### Using startidx values to speed up the process at least for later data
+            # Get start and end indicies:
+            st, ls = self.findtime(startdate)
+            if st == 0:
+                #print("Flag_stream: slowly start",st)
+                if not sr == 0:
+                    # Determine sampling rate if not done yet
+                    start,end = rangeExtend(startdate,enddate,sr)
+                    ls,st = find_nearest(self.ndarray[0],start)
+            sti = st-2
+            if sti < 0:
+                sti = 0
+            ed, le = self.findtime(enddate,startidx=sti)
+            if ed == 0:
+                #print("Flag_stream: slowly end",ed)
+                if not sr == 0:
+                    # Determine sampling rate if not done yet
+                    start,end = rangeExtend(startdate,enddate,sr)
+                    le, ed = find_nearest(self.ndarray[0],end) ### TODO use startundex here as well
+            if ed == len(self.ndarray[0]):
+                ed = ed-1
+            # Create a defaultflag
+            defaultflag = ['-' for el in FLAGKEYLIST]
+            #print("flagging", st, ed)
+
+        #t2 = datetime.utcnow()
+        #print("Identified indicies in ",t2-t1)
 
         if ndtype:
             flagind = KEYLIST.index('flag')
@@ -4036,7 +4226,9 @@ CALLED BY:
                 self.ndarray[commentind] = [''] * len(self.ndarray[0])
                 self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
             # Now either modify existing or add new flag
-            if not st==0 and not ed==0:
+            if st==0 and ed==0:
+                pass
+            else:
                 for i in range(st,ed+1):
                     if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
                         flagls = defaultflag
@@ -4046,7 +4238,7 @@ CALLED BY:
                     if len(flagls) < pos:
                         flagls.extend(['-' for j in range(pos+1-flagls)])
                     flagls[pos] = str(flag)
-                    #print "flag", ''.join(flagls), comment
+                    #print("flag", ''.join(flagls), comment)
                     self.ndarray[flagind][i] = ''.join(flagls)
                     self.ndarray[commentind][i] = comment
                     #print "flag2", self.ndarray[flagind][i], self.ndarray[commentind][i]
@@ -4070,6 +4262,8 @@ CALLED BY:
 
         #print self.ndarray[flagind][np.where(self.ndarray[flagind] != '')]
         #print self.ndarray[flagind]
+        #t1 = datetime.utcnow()
+        #print("Finished flag",t1)
 
         return self
 
@@ -8896,6 +9090,14 @@ def find_nearest(array,value):
     """
     Find the nearest element within an array
     """
+
+    # Eventually faster solution (minimal)
+    #idx = np.searchsorted(array, value, side="left")
+    #if math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]):
+    #    return array[idx-1], idx-1
+    #else:
+    #    return array[idx], idx
+
     idx = (np.abs(array-value)).argmin()
     return array[idx], idx
 
@@ -9137,9 +9339,9 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         st = st.sorting()
     # eventually trim data
     if starttime:
-        st.trim(starttime=starttime)
+        st = st.trim(starttime=starttime)
     if endtime:
-        st.trim(endtime=endtime)
+        st = st.trim(endtime=endtime)
 
     return st
 
@@ -9183,6 +9385,61 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
 
     return stream
+
+def saveflags(mylist=None,path=None):
+    """
+    DEFINITION:
+        Save list e.g. flaglist to file using pickle.
+
+    PARAMETERS:
+    Variables:
+        - path:  (str) Path to data files in form:
+
+    RETURNS:
+        - True if succesful otherwise False
+    EXAMPLE:
+        >>> saveflags(flaglist,'/my/path/myfile.pkl')
+
+    """
+    print("Saving flaglist")
+    if not mylist:
+        print("error 1")
+        return False
+    if not path:
+        path = 'myfile.pkl'
+    try:
+        # TODO: check whether package is already loaded
+        from pickle import dump
+        dump(mylist,open(path,'wb'))
+        print("saveflags: list saved to {}".format(path))
+        return true
+    except:
+        return False
+
+def loadflags(path=None):
+    """
+    DEFINITION:
+        Load list e.g. flaglist from file using pickle.
+
+    PARAMETERS:
+    Variables:
+        - path:  (str) Path to data files in form:
+
+    RETURNS:
+        - list (e.g. flaglist)
+    EXAMPLE:
+        >>> loadflags('/my/path/myfile.pkl')
+    """
+    if not path:
+        return []
+    try:
+        from pickle import load as pklload
+        mylist = pklload(open(path,"rb"))
+        print("loadflags: list {a} successfully loaded, found {b} inputs".format(a=path,b=len(mylist)))
+        return mylist
+    except:
+        return []
+
 
 
 def joinStreams(stream_a,stream_b, **kwargs):
@@ -10675,9 +10932,14 @@ def array2stream(listofarrays, keystring,starttime=None,sr=None):
 
 def extractDateFromString(datestring):
     """
-    Function to extract dates from a string (e.g. a filename within a path)
-    Requires a string
-    returns a datetime object)
+    DESCRIPTION:
+       Method to identify a date within a string (usually the filename).
+       It is used by most file reading procedures
+    RETURNS:
+       A list of datetimeobjects with first and last date (month, year) 
+       or the day (dailyfiles)
+    APPLICATION:
+       datelist = extractDateFromString(filename)
     """
     date = False
     # get day from filename (platform independent)
@@ -10706,6 +10968,8 @@ def extractDateFromString(datestring):
                 numberstr = '0'
             if len(numberstr) > 4:
                 tmpdaystring = numberstr
+            elif len(numberstr) == 4 and int(numberstr) > 1900: # use year at the end of string
+                tmpdaystring = numberstr
 
         if len(tmpdaystring) > 8:
             try: # first try whether an easy pattern can be found e.g. test12014-11-22
@@ -10725,6 +10989,9 @@ def extractDateFromString(datestring):
             try:
                 dateform = '%Y%m'
                 date = datetime.strptime(tmpdaystring,dateform)
+                from calendar import monthrange
+                datelist = [datetime.date(date), datetime.date(date + timedelta(days=monthrange(date.year,date.month)[1]-1))]
+                return datelist
             except:
                 # log ('dateformat in filename could not be identified')
                 pass
@@ -10732,6 +10999,9 @@ def extractDateFromString(datestring):
             try:
                 dateform = '%Y'
                 date = datetime.strptime(tmpdaystring,dateform)
+                date2 = datetime.strptime(str(int(tmpdaystring)+1),dateform)
+                datelist = [datetime.date(date), datetime.date(date2-timedelta(days=1))]
+                return datelist
             except:
                 # log ('dateformat in filename could not be identified')
                 pass
@@ -10741,7 +11011,7 @@ def extractDateFromString(datestring):
                 daystrpart = daystring.split('_')[0] # e.g. RCS
                 match = re.search(r'\d{4}-\d{2}-\d{2}', daystrpart)
                 date = datetime.strptime(match.group(), '%Y-%m-%d').date()
-                return date
+                return [date]
             except:  
                 pass
 
@@ -10755,9 +11025,9 @@ def extractDateFromString(datestring):
                 pass
 
     try:
-        return datetime.date(date)
+        return [datetime.date(date)]
     except:
-        return date
+        return [date]
 
 
 def denormalize(column, startvalue, endvalue):

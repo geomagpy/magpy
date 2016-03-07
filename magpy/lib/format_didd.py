@@ -64,7 +64,7 @@ def readDIDD(filename, headonly=False, **kwargs):
             day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
         except:
             logging.warning("format-DIDD: Unusual dateformat in Filename %s" % daystring[0])
-            day = datetime.strftime(extractDateFromString(filename),"%Y-%m-%d")
+            day = datetime.strftime(extractDateFromString(filename)[0],"%Y-%m-%d")
             pass
             #return stream
         # Select only files within eventually defined time range

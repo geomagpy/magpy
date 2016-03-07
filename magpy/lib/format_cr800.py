@@ -57,10 +57,10 @@ def readRADON(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

@@ -290,16 +290,16 @@ def readPYSTR(filename, headonly=False, **kwargs):
         return lst[1:] == lst[:-1]
 
     for idx,ar in enumerate(array):
-        if KEYLIST[idx] in NUMKEYLIST:
+        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
             tester = float('nan')
         else:
             tester = '-'
-        array[idx] = np.asarray(array[idx])
+        array[idx] = np.asarray(array[idx]).astype(object)
         if not False in checkEqual3(array[idx]) and ar[0] == tester:
             array[idx] = np.asarray([])
 
     print("lib format-magpy", [len(el) for el in array])
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    return DataStream([LineStruct()], headers, np.asarray(array))
 
 
 def readPYCDF(filename, headonly=False, **kwargs):
@@ -333,10 +333,14 @@ def readPYCDF(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
                 getfile = False
+            #if not theday >= datetime.date(stream._testtime(starttime)):
+            #    getfile = False
         if endtime:
-            if not theday <= datetime.date(stream._testtime(endtime)):
+            #if not theday <= datetime.date(stream._testtime(endtime)):
+            #    getfile = False
+            if not theday[0] <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -697,10 +701,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
     theday = extractDateFromString(filename)
     try:
         if starttime:
-            if not theday >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -984,6 +988,7 @@ def writePYCDF(datastream, filename, **kwargs):
         elif mode == 'replace': # replace existing inputs
             #print filename
             exst = read(path_or_url=filename+'.cdf')
+            #print ("writePYCDF", exst.ndarray)
             datastream = joinStreams(datastream,exst,extend=True)
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
@@ -1044,7 +1049,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
     #print "fmagpy", datastream.ndarray
     #print "writing keys", keylst
-    #print "WriteFormat length 1", datastream.ndarray, datastream.length()
+    #print("WriteFormat length 1", datastream.ndarray, datastream.length())
     for key in keylst:
         if ndtype:
             ind = KEYLIST.index(key)

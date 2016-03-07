@@ -54,7 +54,7 @@ def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirna
     if not dirname:
         dirname = '/srv'
     if not resolution:
-        resolution = 10000
+        resolution = 100000000
     if not compselect:
         compselect = 'xyz'
 
@@ -327,6 +327,7 @@ class MainFrame(wx.Frame):
         self.plotstream = DataStream() # used for manipulated data
         self.shownkeylist = []
         self.keylist = []
+        self.symbollist = []
         self.compselect = 'None'
         self.dipathlist = []
         self.divariopath = ''
@@ -422,6 +423,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
         self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
+        self.Bind(wx.EVT_RADIOBOX, self.onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
         self.Bind(wx.EVT_BUTTON, self.onRemoveOutlierButton, self.menu_p.str_page.flagOutlierButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagSelectionButton, self.menu_p.str_page.flagSelectionButton)
         #        Analysis Page
@@ -491,6 +493,7 @@ class MainFrame(wx.Frame):
         self.resolution = dictionary['resolution']
         self.compselect = dictionary['compselect']
 
+        self.symbolselect = 0
         self.abscompselect = dictionary['abscompselect']
         self.bascompselect = dictionary['basecompselect']
 
@@ -538,6 +541,10 @@ class MainFrame(wx.Frame):
             executes guiPlot then
         """
         self.changeStatusbar("Plotting...")
+
+        # Some general Checks on Stream
+        # ##############################
+        # 1. Preslect first nine keys
         keylist = []
         keylist = stream._get_key_headers(limit=9)
         # TODO: remove keys with high percentage of nans
@@ -547,14 +554,31 @@ class MainFrame(wx.Frame):
         #    if div <= 5.:
         #        keylist.remove(key)
         keylist = [elem for elem in keylist if elem in NUMKEYLIST]
+        self.symbollist = ['-'] * len(keylist)
+        # 2. If stream too long then don't allow scatter plots -- too slowly
+        if stream.length()[0] < 2000:
+            self.menu_p.str_page.symbolRadioBox.Enable()
+        else:
+            self.menu_p.str_page.symbolRadioBox.Disable()
+        # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
+        if stream.header.get('DataFormat') == 'MagPyDI':
+            self.menu_p.str_page.symbolRadioBox.Enable()
+            self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
+            self.shownkeylist = keylist
+            keylist = ['x','y','z','dx','dy','dz']
+            self.symbollist = ['o'] * len(keylist)
+            # enable daily average button
+
         self.shownkeylist = keylist
 
-        # check comp
-        try:
-            self.compselect = stream[0].typ[:3]
+        # 4. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
+        typus = stream.header.get('DataComponents')
+        typus = typus.lower()[:3]
+        if typus in ['xyz','hdz','idf']:            
+            self.compselect = typus
             self.menu_p.str_page.compRadioBox.Enable()
             self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
-        except:
+        else:
             if 'x' in keylist and 'y' in keylist and 'z' in keylist:
                 self.compselect = 'xyz'
                 self.menu_p.str_page.compRadioBox.Enable()
@@ -563,8 +587,8 @@ class MainFrame(wx.Frame):
         if len(stream) > self.resolution:
             self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
 
-        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution)
-        if len(stream) > 0 and len(keylist) > 0:
+        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution,symbollist=self.symbollist)
+        if stream.length()[0] > 0 and len(keylist) > 0:
             self.ExportData.Enable(True)
             self.menu_p.ana_page.activityButton.Enable() # enabled at initial plot
             self.menu_p.ana_page.offsetButton.Enable()
@@ -656,14 +680,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         keys = stream._get_key_headers()
         keystr = ','.join(keys)
         # Sampling rate
-        sr = stream.get_sampling_period()*24*3600
-        if (sr < 1):
-            sr = np.round(sr,3)
-        elif (1 <= sr < 10):
-            sr = np.round(sr,1)
-        else:
-            sr = np.round(sr,0)
+        sr = stream.samplingrate()
         # Coverage
+        ind = np.argmin(stream.ndarray[0].astype(float))
         mintime = stream._get_min('time')
         maxtime = stream._get_max('time')
 
@@ -1036,7 +1055,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Method for Outlier
         """
-        self.changeStatusbar("Removing outliers ...")
+        self.changeStatusbar("Flagging outliers ...")
         sr = self.menu_p.ana_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
         keys = self.shownkeylist
 
@@ -1044,9 +1063,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.plotstream = self.stream.copy()
 
         self.plotstream = self.plotstream.flag_outlier(keys=keys,stdout=True)
-        self.plotstream = self.plotstream.remove_flagged()
+        #self.plotstream = self.plotstream.remove_flagged()
 
-        self.menu_p.rep_page.logMsg('- removed outliers: check logfile for details')
+        self.menu_p.rep_page.logMsg('- flagged outliers: check logfile for details')
         self.SetPageValues(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
@@ -1335,8 +1354,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     shownkeylist = self.shownkeylist
                 else:
                     self.shownkeylist = shownkeylist
+                self.symbollist = [self.symbollist[0]]*len(shownkeylist)
                 self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,shownkeylist)
+                self.OnPlot(self.plotstream,shownkeylist,symbollist=self.symbollist)
             dlg.Destroy()
 
 
@@ -1378,7 +1398,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             # TODO extractedstream = join(extractedstream,extractedstream3)
                 self.plotstream = extractedstream
                 self.SetPageValues(self.plotstream)
-                self.OnPlot(extractedstream,self.shownkeylist)
+                self.OnPlot(extractedstream,self.shownkeylist,symbollist=self.symbollist)
         else:
             self.menu_p.rep_page.logMsg("Extract: No data available so far")
         # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
@@ -1404,7 +1424,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Restore originally loaded data
         """
-        self.OnPlot(self.plotstream,self.shownkeylist, annotate=True)
+        mp.plot(self.plotstream,annotate=True)
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=True)
 
     def onChangeComp(self, event):
         orgcomp = self.compselect
@@ -1415,14 +1436,27 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.plotstream = self.stream
         self.plotstream = self.plotstream._convertstream(coordinate)
         self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist)
+
+    def onChangeSymbol(self, event):
+        orgsymbol = self.symbolselect
+        self.symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
+        self.changeStatusbar("Transforming ...")
+        if len(self.plotstream) == 0:
+            self.plotstream = self.stream
+        if self.symbolselect == 'line':
+            self.symbollist = ['-' for elem in self.shownkeylist]
+            self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist)
+        elif self.symbolselect == 'point':
+            self.symbollist = ['o' for elem in self.shownkeylist]
+            self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist)
 
     def onFlagSelectionButton(self,event):
         """
         Restore originally loaded data
         """
         self.plotstream, flaglist = mp.plotFlag(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,annotate=True)
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist,annotate=True)
 
 
     # ####################

@@ -47,7 +47,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     key = None
 
     # get day from filename (platform independent)
-    theday = extractDateFromString(filename)
+    theday = extractDateFromString(filename)[0]
     #print theday
     #splitpath = os.path.split(filename)
     #tmpdaystring = splitpath[1].split('.')[0]
