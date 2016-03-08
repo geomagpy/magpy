@@ -18,12 +18,15 @@ def isWDC(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp[10:12] == "  " : # Minute format
-        if not temp[27:34] == '       ': # Hour format
-            return False
-    if not len(temp.strip()) == 120: # Minute format
-        if not len(temp) in [401,402]: # Hour format, strip is important to remove eventual \r\n sequences or \n
-            return False
+    try:
+        if not temp[10:12] == "  " : # Minute format
+            if not temp[27:34] == '       ': # Hour format
+                return False
+        if not len(temp.strip()) == 120: # Minute format
+            if not len(temp) in [401,402]: # Hour format, strip is important to remove eventual \r\n sequences or \n
+                return False
+    except:
+        return False
     return True
 
 

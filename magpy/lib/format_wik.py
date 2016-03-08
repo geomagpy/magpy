@@ -16,7 +16,10 @@ def isOPT(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('Tag'):
+    try:
+        if not temp.startswith('Tag'):
+            return False
+    except:
         return False
     return True
 
@@ -29,8 +32,11 @@ def isPMAG1(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    tmp = temp.split()
-    if len(tmp) != 3:
+    try:
+        tmp = temp.split()
+        if len(tmp) != 3:
+            return False
+    except:
         return False
     try:
         testdate = datetime.strptime(tmp[0],"%H:%M:%S")
@@ -52,8 +58,11 @@ def isPMAG2(filename):
             temp = fh.readline()
     except:
         return False
-    tmp = temp.split()
-    if len(tmp) != 2:
+    try:
+        tmp = temp.split()
+        if len(tmp) != 2:
+            return False
+    except:
         return False
     try:
         testdate = datetime.strptime(tmp[1],"%m%d%H%M%S")

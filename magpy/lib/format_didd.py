@@ -17,11 +17,13 @@ def isDIDD(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('hh mm'):
-        if not  temp.startswith('%hh %mm'):
-            return False
-    #if not 'F' in temp:
-    #    return False
+    try:
+        if not temp.startswith('hh mm'):
+            if not  temp.startswith('%hh %mm'):
+                return False
+    except:
+        return False
+
     return True
 
 

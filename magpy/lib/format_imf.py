@@ -23,11 +23,14 @@ def isIMF(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not 63 <= len(temp) <= 65:  # Range which regards any variety of return
-        return False
-    if temp[3] == ' ' and temp[11] == ' ' and temp[29] == ' ' and temp[45] == ' ' and temp[46] == 'R':
-        pass
-    else:
+    try:
+        if not 63 <= len(temp) <= 65:  # Range which regards any variety of return
+            return False
+        if temp[3] == ' ' and temp[11] == ' ' and temp[29] == ' ' and temp[45] == ' ' and temp[46] == 'R':
+            pass
+        else:
+            return False
+    except:
         return False
 
     print("Found IMF data")
@@ -83,11 +86,14 @@ def isBLV(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not 63 <= len(temp) <= 65:  # Range which regards any variety of return
-        return False
-    if temp[3] == ' ' and temp[11] == ' ' and temp[29] == ' ' and temp[45] == ' ' and temp[46] == 'R':
-        pass
-    else:
+    try:
+        if not 63 <= len(temp) <= 65:  # Range which regards any variety of return
+            return False
+        if temp[3] == ' ' and temp[11] == ' ' and temp[29] == ' ' and temp[45] == ' ' and temp[46] == 'R':
+            pass
+        else:
+            return False
+    except:
         return False
     return True
 
@@ -102,10 +108,13 @@ def isIYFV(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
-    for elem in searchstr:
-        if temp.find(elem) > 0:
-            return True
+    try:
+        searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
+        for elem in searchstr:
+            if temp.find(elem) > 0:
+                return True
+    except:
+        return False
     return False
 
 
@@ -130,16 +139,19 @@ def isDKA(filename):
         temp6 = fh.readline()
     except:
         return False
-    searchstr = ['latitude', 'LATITUDE']
-    for elem in searchstr:
-        if temp2.find(elem) > 0:
-            ok = True
-    if not ok:
+    try:
+        searchstr = ['latitude', 'LATITUDE']
+        for elem in searchstr:
+            if temp2.find(elem) > 0:
+                ok = True
+        if not ok:
+            return False
+        searchstr = ['K-index values', 'K-INDEX VALUES']
+        for elem in searchstr:
+            if temp5.find(elem) > 0:
+                return True
+    except:
         return False
-    searchstr = ['K-index values', 'K-INDEX VALUES']
-    for elem in searchstr:
-        if temp5.find(elem) > 0:
-            return True
     return False
 
 

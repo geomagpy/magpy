@@ -16,9 +16,12 @@ def isGDASA1(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('# Cobs GDAS'):
-        if not temp.startswith('  Time'):
-            return False
+    try:
+        if not temp.startswith('# Cobs GDAS'):
+            if not temp.startswith('  Time'):
+                return False
+    except:
+        return False
     return True
 
 
@@ -32,13 +35,19 @@ def isGDASB1(filename):
         return False
     # This format falsely identifies some ace data.
     # Temporary fix until a better filter can be created:
-    if 'ace' in temp:
+    try:
+        if 'ace' in temp:
+            return False
+    except:
         return False
     try:
         data= struct.unpack("<BBBBLLLLLc", temp)
     except:
         return False
-    if not data[9]=='x':
+    try:
+        if not data[9]=='x':
+            return False
+    except:
         return False
     return True
 

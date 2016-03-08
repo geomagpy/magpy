@@ -19,10 +19,13 @@ def isUSBLOG(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    sp = temp.split(',')
-    if not len(sp) == 6:
-        return False
-    if not sp[1] == 'Time':
+    try:
+        sp = temp.split(',')
+        if not len(sp) == 6:
+            return False
+        if not sp[1] == 'Time':
+            return False
+    except:
         return False
     return True
 
@@ -35,7 +38,10 @@ def isRMRCS(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('# RCS'):
+    try:
+        if not temp.startswith('# RCS'):
+            return False
+    except:
         return False
     return True
 
@@ -48,8 +54,11 @@ def isIWT(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    comp = temp.split()
-    if not len(comp) == 4:
+    try:
+        comp = temp.split()
+        if not len(comp) == 4:
+            return False
+    except:
         return False
     try:
         test = datetime.strptime(comp[0],"%Y%m%dT%H%M%S.%f")
@@ -67,7 +76,10 @@ def isMETEO(filename):
         temp = fh.readline()
     except:
         return False
-    comp = temp.split()
+    try:
+        comp = temp.split()
+    except:
+        return False
     try:
         if not comp[0] == 'Date':
             return False
@@ -93,7 +105,10 @@ def isLNM(filename):
         temp = fh.readline()
     except:
         return False
-    if not temp.startswith('# LNM '):
+    try:
+        if not temp.startswith('# LNM '):
+            return False
+    except:
         return False
     return True
 
@@ -108,8 +123,11 @@ def isLIPPGRAV(filename):
         temp = fh.readline()
     except:
         return False
-    comp = temp.split()
-    if not len(comp) == 6:
+    try:
+        comp = temp.split()
+        if not len(comp) == 6:
+            return False
+    except:
         return False
     try:
         test = datetime.strptime(comp[0],"%Y%m%d%H%M%S")
@@ -127,7 +145,10 @@ def isGRAVSG(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('[TSF-file]'):
+    try:
+        if not temp.startswith('[TSF-file]'):
+            return False
+    except:
         return False
     return True
 
@@ -141,8 +162,11 @@ def isCS(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    tmp = temp.split()
-    if not len(tmp) in [2,4]:
+    try:
+        tmp = temp.split()
+        if not len(tmp) in [2,4]:
+            return False
+    except:
         return False
     try:
         testdate = datetime.strptime(tmp[0].strip(','),"%H:%M:%S.%f")

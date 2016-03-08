@@ -17,15 +17,18 @@ def isDTU1(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('FILENAME:    '):
-        elem = temp.split()
-        if len(elem) == 6:
-            try:
-                testtime = datetime.strptime(elem[0],"%H:%M:%S")
-            except:
+    try:
+        if not temp.startswith('FILENAME:    '):
+            elem = temp.split()
+            if len(elem) == 6:
+                try:
+                    testtime = datetime.strptime(elem[0],"%H:%M:%S")
+                except:
+                    return False
+            else:
                 return False
-        else:
-            return False
+    except:
+        return False
     return True
 
 

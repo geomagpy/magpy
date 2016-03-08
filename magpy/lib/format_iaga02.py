@@ -6,10 +6,7 @@ Written by Roman Leonhardt June 2012
 """
 from __future__ import print_function
 
-try:
-    from magpy.stream import *
-except:
-    from magpy.stream import *
+from magpy.stream import *
 
 def isIAGA(filename):
     """
@@ -19,9 +16,12 @@ def isIAGA(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith(' Format'):
-        return False
-    if not 'IAGA-2002' in temp:
+    try:
+        if not temp.startswith(' Format'):
+            return False
+        if not 'IAGA-2002' in temp:
+            return False
+    except:
         return False
     return True
 

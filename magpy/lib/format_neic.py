@@ -17,7 +17,10 @@ def isNEIC(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('time,latitude,longitude,depth,mag,magType,nst,'):
+    try:
+        if not temp.startswith('time,latitude,longitude,depth,mag,magType,nst,'):
+            return False
+    except:
         return False
     return True
 

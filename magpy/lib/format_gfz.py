@@ -25,9 +25,12 @@ def isGFZKP(filename):
         testdate = datetime.strptime(temp[:6],"%y%m%d")
     except:
         return False
-    if not temp[6:8] == "  ": # strip is important to remove eventual \r\n sequences or \n
-        return False
-    if not temp[9] in ['o','+','-']: # strip is important to remove eventual \r\n sequences or \n
+    try:
+        if not temp[6:8] == "  ": # strip is important to remove eventual \r\n sequences or \n
+            return False
+        if not temp[9] in ['o','+','-']: # strip is important to remove eventual \r\n sequences or \n
+            return False
+    except:
         return False
     print('Found GFZ Kp format')
     return True

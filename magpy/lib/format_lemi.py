@@ -40,13 +40,16 @@ def isLEMIHF(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    elem = temp.split()
-    if len(elem) == 13:
-        try:
-            testtime = datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2],'%Y-%m-%d')
-        except:
+    try:
+        elem = temp.split()
+        if len(elem) == 13:
+            try:
+                testtime = datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2],'%Y-%m-%d')
+            except:
+                return False
+        else:
             return False
-    else:
+    except:
         return False
 
     #loggerlib.info("format_lemi: Found Lemi 10Hz ascii file %s." % filename)

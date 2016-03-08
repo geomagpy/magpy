@@ -17,7 +17,10 @@ def isPOS1(filename):
         temp = open(filename, 'rb').readline()
     except:
         return False
-    if not 'POS1' in temp:
+    try:
+        if not 'POS1' in temp:
+            return False
+    except:
         return False
 
     loggerlib.info("format_pos1: Found POS-1 Binary file %s" % filename)
@@ -35,7 +38,10 @@ def isPOS1TXT(filename):
         linebit = (temp.split())[2]
     except:
         return False
-    if not linebit == '+-':
+    try:
+        if not linebit == '+-':
+            return False
+    except:
         return False
     loggerlib.info("format_pos1: Found POS-1 Text file %s" % filename)
     return True

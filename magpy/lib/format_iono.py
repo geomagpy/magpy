@@ -16,7 +16,10 @@ def isIONO(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith('Messdaten IM806'):
+    try:
+        if not temp.startswith('Messdaten IM806'):
+            return False
+    except:
         return False
     return True
 

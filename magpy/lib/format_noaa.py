@@ -19,9 +19,12 @@ def isNOAAACE(filename):
         temp3= tempf.readline()
     except:
         return False
-    if not temp1.startswith(':'):
-        return False
-    if not 'NOAA' in temp3:
+    try:
+        if not temp1.startswith(':'):
+            return False
+        if not 'NOAA' in temp3:
+            return False
+    except:
         return False
     loggerlib.info("format_noaa: Found ACE file %s" % filename)
     return True

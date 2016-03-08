@@ -137,7 +137,10 @@ def isGSM19(filename):
         temp = open(filename, 'rt') #, encoding='utf-8', errors='ignore'
     except:
         return False
-    li = temp.readline()
+    try:
+        li = temp.readline()
+    except:
+        return False
     while li.isspace():
         li = temp.readline()
     if not li.startswith('Gem Systems GSM-19'):

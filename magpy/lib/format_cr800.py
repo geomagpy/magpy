@@ -17,7 +17,10 @@ def isCR800(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    elem = temp.split()
+    try:
+        elem = temp.split()
+    except:
+        return False
     try:
         if not elem[2] == "CR800":
             return False
@@ -33,7 +36,10 @@ def isRADON(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    elem = temp.split(',')
+    try:
+        elem = temp.split(',')
+    except:
+        return False
     if not len(elem) == 4:
         return False
     # Date test

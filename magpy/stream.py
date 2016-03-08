@@ -1933,7 +1933,7 @@ CALLED BY:
             startabs = absolutestream[0].time
             endabs = absolutestream[-1].time
 
-        print("Baseline 1", absolutestream.length(), startabs, endabs)
+        print("Baseline 0", absolutestream.length(), num2date(startabs), num2date(endabs))
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
             #loggerstream.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
@@ -1955,8 +1955,7 @@ CALLED BY:
         # ###########
         #  get boundaries
         # ###########
-        #print("Baseline", extradays, num2date(startabs), num2date(endabs), fixend, fixstart)
-        #print "Baseline", starttime, endtime
+        print("Baseline 1", absolutestream.length(), num2date(startabs), num2date(endabs))
         extrapolate = False
         # upper
         if fixend:
@@ -1981,69 +1980,20 @@ CALLED BY:
             #basestarttime = date2num(starttime)
             basestarttime = startabs-extradays
             extrapolate = True
-        if baseendtime - (366.+2*extradays) > startabs:
-            # time range long enough
-            basestarttime =  baseendtime-(366.+2*extradays)
+            if baseendtime - (366.+2*extradays) > startabs:
+                # time range long enough
+                basestarttime =  baseendtime-(366.+2*extradays)
 
         baseendtime = num2date(baseendtime).replace(tzinfo=None)
         basestarttime = num2date(basestarttime).replace(tzinfo=None)
         print("Baseline 2:", absolutestream.length(), basestarttime, baseendtime)
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
-        #print("baseline3", bas._find_t_limits(), basestarttime)
 
         if extrapolate and not extradays == 0:
             bas = bas.extrapolate(basestarttime,baseendtime)
 
-        #print "baseline4", bas._find_t_limits()
-
-        """
-        # 4) get year of last input - remove one day to correctly interprete
-        #           1.1.2000 to 1.1.2001 full year analyses
-        yearenddate = datetime.strftime(endtime-timedelta(days=1),'%Y') # year of last variometer data
-
-        print "BASE here", max(abst), date2num(endtime)
-
-        if absndtype:
-            yearar = np.asarray([elem.year for elem in num2date(absolutestream.ndarray[0])])
-            lst = absolutestream.ndarray[0][yearar > endtime.year]
-            #lst = absolutestream.ndarray[0][num2date(absolutestream.ndarray[0]) > endtime.year]
-        else:
-            lst = [elem for elem in absolutestream if datetime.strftime(num2date(elem.time),'%Y') > yearenddate]
-        if len(lst) > 0:
-            baseendtime = datetime.strptime(yearenddate+'-12-31', '%Y-%m-%d')
-        else:
-            # if not extending to next year check whether absolutes older then last stream value are present
-            # in this case use last absolute value
-            # if not use use the last input
-            maxabstime = num2date(np.max(abst)).replace(tzinfo=None)
-            if maxabstime > endtime:
-                baseendtime = maxabstime
-            else:
-                baseendtime = endtime
-
-        # now add the extradays to endtime
-        baseendtime = baseendtime + timedelta(days=extradays)
-
-        # endtime for baseline calc determined
-        if (np.max(abst) - np.min(abst)) < 365+2*extradays:
-            loggerstream.info('Baseline: Coverage of absolute values does not reach one year')
-            basestarttime = num2date(startabs).replace(tzinfo=None) - timedelta(days=extradays)
-        else:
-            basestarttime = baseendtime-timedelta(days=(365+2*extradays))
-
-        msg = 'Baseline: absolute data taken from %s to %s' % (basestarttime,baseendtime)
-        loggerstream.debug(msg)
-
-        bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
-
-        if usestepinbetween:
-            bas = bas.extrapolate(basestarttime,endtime)
-        bas = bas.extrapolate(basestarttime,baseendtime)
-        """
-        # move the basevalues to x,y,z - so that method func_add will work directly
-
-        #print bas.ndarray
+        print("baseline3", bas._find_t_limits(), basestarttime)
 
         #keys = ['dx','dy','dz']
         try:
@@ -2067,11 +2017,11 @@ CALLED BY:
                 try:
                     import magpy.mpplot as mp
                 except:
-                    print ("TODO: Through import error")
+                    print ("TODO: import error")
                 if plotfilename:
-                    mp.plot(bas,variables=['dx','dy','dz'],padding = [5,0.1,5], symbollist = ['o','o','o'],function=func,plottitle='Absolute data',outfile=plotfilename)
+                    mp.plot(bas,variables=['dx','dy','dz'],padding = [5,0.005,5], symbollist = ['o','o','o'],function=func,plottitle='Absolute data',outfile=plotfilename)
                 else:
-                    mp.plot(bas,variables=['dx','dy','dz'],padding = [5,0.1,5], symbollist = ['o','o','o'],function=func,plottitle='Absolute data')
+                    mp.plot(bas,variables=['dx','dy','dz'],padding = [5,0.005,5], symbollist = ['o','o','o'],function=func,plottitle='Absolute data')
             except:
                 print("using the internal plotting routine requires mpplot to be imported as mp")
 
