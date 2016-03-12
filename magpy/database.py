@@ -39,7 +39,10 @@ dbdelete(db,datainfoid,**kwargs):
 dbdict2fields(db,header_dict,**kwargs):
 dbfields2dict(db,datainfoid):
 dbalter(db):
+dbupadteDataInfo(db, "MyTable_12345_0001", myheader)
+dbupdate(db, table, [key], [value], condition)
 dbselect(db, element, table, condition=None, expert=None):
+dbcoordinates(db, pier, epsgcode='epsg:4326')
 dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
 dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',updatedb=True):
 writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, **kwargs):
@@ -1214,6 +1217,30 @@ def dbselect(db, element, table, condition=None, expert=None):
     return returnlist
 
 
+def dbcoordinates(db, pier, epsgcode='epsg:4326'):
+
+    try:
+        from pyproj import Proj, transform
+    except ImportError:
+        print ("dbcoordinates: You need to install pyproj to use this method")
+        return (0.0 , 0.0)
+
+    startlong = dbselect(db,'PierLong','PIERS','PierID = "A2"')
+    startlat = dbselect(db,'PierLat','PIERS','PierID = "A2"')
+    coordsys = dbselect(db,'PierCoordinateSystem','PIERS','PierID = "A2"')
+    startlong = float(startlong[0].replace(',','.'))
+    startlat = float(startlat[0].replace(',','.'))
+    coordsys = coordsys[0].split(',')[1].lower().replace(' ','')
+
+    # projection 1: GK M34
+    p1 = Proj(init=coordsys)
+    # projection 2: WGS 84
+    p2 = Proj(init='epsg:4326')
+    # transform this point to projection 2 coordinates.
+    lon1, lat1 = transform(p1,p2,startlong,startlat)
+
+    return (lon1,lat1)
+
 
 def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
     """
@@ -1873,6 +1900,48 @@ def dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
 
     db.commit()
     cursor.close ()
+
+
+def dbupdateDataInfo(db, tablename, header):
+    """
+    DEFINITION:
+        Method to update DATAINFO table with header information
+        using data from table tablename
+
+    PARAMETERS:
+        - db:           (mysql database) defined by MySQLdb.connect().
+        - tablename:    (string) name of the table
+    APPLICATION:
+        >>> dbupadteDataInfo(db, "MyTable_12345_0001", myheader)
+    """
+    cursor = db.cursor ()
+
+    # 1. Select all tables matching table name
+    searchtables = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE '%{}%'".format(tablename)
+    cursor.execute(searchtables)
+    try:
+        rows = list(cursor.fetchall()[0])
+    except:
+        print("dbupdateDataInfo: failed")
+        return
+    for tab in rows:
+        # 2. check whether tab exists
+        searchdatainfo = "SELECT DataID FROM DATAINFO WHERE DataID LIKE '%{}%'".format(tab)
+        cursor.execute(searchdatainfo)
+        try:
+            res = list(cursor.fetchall()[0])
+            exist = True
+        except:
+            exist = False
+
+        if exist:
+            updatelst = []
+            for key in header:
+                if key in DATAINFOKEYLIST and not key.startswith('Column'):
+                    dbupdate(db, 'DATAINFO', [key], [header[key]], condition='DataID="{}"'.format(tab))
+        else:
+            print("dbupdateDataInfo: insert for non existing table not yet written - TODO") 
+
 
 
 def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs):
@@ -2984,6 +3053,9 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     DESCRIPTION:
        Function to converts a python list (actually an array)
        within flagging information to a data base table
+       Flag Table looks like:
+          data base format: flagID, sensorID, starttime, endtime, 
+                components, flagNum, flagReason, ModificationDate
 
     PARAMETER:
        db: name of the mysql data base
@@ -2991,14 +3063,15 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
                 [[starttime, endtime, singlecomp, flagNum, flagReason, (SensorID, ModificationDate)],...]
 
     Optional:
-    mode: default inserts information if not existing
-          use 'replace' to replace any existing information (check auto_increment with flag ID !!!!!!!)
-          use 'delete' to remove any preexisting FLAG Table from data base first
-    sensorid: a string with the sensor id, if not provided within the list
-    modificationdate: a string with the flagging modificationdate, if not provided within the list
+       mode: default inserts information if not existing
+             use 'delete' to delete any existing input for the given sensorid
+       sensorid: a string with the sensor id, if not provided within the list
+       modificationdate: a string with the flagging modificationdate, 
+                         if not provided within the list
 
-    Flag Table looks like:
-    data base format: flagID, sensorID, starttime, endtime, components, flagNum, flagReason, ModificationDate
+    APPLICATION:
+       flaglist2db(db, flaglist, sensorid='MySensor')
+
     """
     if not sensorid:
         sensorid = 'defaultsensor'
@@ -3020,13 +3093,39 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         listwithoutcomp = [[elem[0],elem[1],elem[3],elem[4]] for elem in flaglist]
     else:
         listwithoutcomp = [[elem[0],elem[1],elem[3],elem[4],elem[5],elem[6]] for elem in flaglist]
-
+        if sensorid == 'defaultsensor':
+            sensorid = listwithoutcomp[-1][4]
     newlst = []
     for elem in listwithoutcomp:
         elem[0] = datetime.strftime(elem[0],"%Y-%m-%d %H:%M:%S.%f")
         elem[1] = datetime.strftime(elem[1],"%Y-%m-%d %H:%M:%S.%f")
         if elem not in newlst:
             newlst.append(elem)
+
+    # Check whether an identical input already exists in the database
+    existinglst = db2flaglist(db,sensorid)
+
+    newflaglist = []
+    for flag in flaglist:
+        itexists = False
+        ti0 = datetime.strftime(flag[0],"%Y-%m-%d %H:%M:%S.%f")
+        ti1 = datetime.strftime(flag[1],"%Y-%m-%d %H:%M:%S.%f")
+        for exist in existinglst:
+            #print(ti0,exist[0],ti1,exist[1],flag[2],exist[2])
+            if lentype <= 5:
+                if ti1 == exist[0] and ti1 == exist[1] and flag[2] == exist[2]:
+                    itexists = True
+            else:
+                if ti0 == exist[0] and ti1 == exist[1] and flag[2] == exist[2] and flag[5] == exist[5]:
+                    itexists = True
+        if itexists:
+            pass
+        else:
+            newflaglist.append(flag)
+    flaglist = newflaglist
+
+    if len(flaglist) == 0:
+        return
 
     for elem in newlst:
         complst = []
@@ -3046,7 +3145,8 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     # Flagging TABLE
     # Create flagging table
     if mode == 'delete':
-        cursor.execute("DROP TABLE IF EXISTS FLAGS")
+        print("Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+        cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
 
     flagstr = 'FlagID INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, SensorID CHAR(50), FlagBeginTime CHAR(50), FlagEndTime CHAR(50), FlagComponents CHAR(50), FlagNum INT, FlagReason TEXT, ModificationDate CHAR(50)'
 
@@ -3128,5 +3228,22 @@ def db2flaglist(db,sensorid, begin=None, end=None):
             res.append([line[0],line[1],elem,int(line[3]),line[4],line[5],line[6]])
 
     cursor.close ()
-    return res
+
+    def flagclean(flaglist):
+            ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+            ## (use only last input)
+            indicies = []
+            for line in flaglist:
+                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2]]
+                if len(inds) > 0:
+                    index = inds[-1]
+                    indicies.append(index)
+            uniqueidx = (list(set(indicies)))
+            uniqueidx.sort()
+            #print(uniqueidx)
+            flaglist = [elem for idx, elem in enumerate(flaglist) if idx in uniqueidx]
+
+            return flaglist
+
+    return flagclean(res)
 

@@ -14,7 +14,6 @@ from __future__ import print_function
 
 from magpy.stream import *
 
-
 def isIMF(filename):
     """
     Checks whether a file is ASCII IMF 1.22,1.23 minute format.
@@ -404,6 +403,9 @@ def writeIAF(datastream, filename, **kwargs):
     kstr=[]
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
+        if len(dayar[0]) > 1440:
+            print ("format_IMF: found {} datapoints (expected are 1440) - assuming last value(s) to represent next month".format(len(dayar[0])))
+            dayar = np.asarray([elem[:1440] for elem in dayar])
         # get all indicies
         temp = DataStream([LineStruct],datastream.header,dayar)
         temp = temp.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
@@ -459,19 +461,24 @@ def writeIAF(datastream, filename, **kwargs):
         packcode = '4s4l4s4sl4s4sll4s4sll' # fh.read(64)
         head_bin = struct.pack(packcode,*head)
 
+        #print ("0:", len(head))
         # add minute values
         packcode += '1440l' # fh.read(64)
         xvals = np.asarray(dayar[1]*10).astype(int)
+        #print(len(xvals))
         xvals = np.asarray([elem if not isnan(elem) else 999999 for elem in xvals])
         head.extend(xvals)
+        #print ("0a:", len(head))
         packcode += '1440l' # fh.read(64)
         yvals = np.asarray(dayar[2]*10).astype(int)
         yvals = np.asarray([elem if not isnan(elem) else 999999 for elem in yvals])
         head.extend(yvals)
+        #print ("0b:", len(head))
         packcode += '1440l' # fh.read(64)
         zvals = np.asarray(dayar[3]*10).astype(int)
         zvals = np.asarray([elem if not isnan(elem) else 999999 for elem in zvals])
         head.extend(zvals)
+        #print ("0c:", len(head))
         packcode += '1440l' # fh.read(64)
         if df:
             dfvals = np.asarray(dayar[dfpos]*10).astype(int)
@@ -480,6 +487,7 @@ def writeIAF(datastream, filename, **kwargs):
             dfvals = np.asarray([888888]*len(dayar[0])).astype(int)
         head.extend(dfvals)
 
+        print ("1:", len(head))
         # add hourly means
         packcode += '24l'
         xhou = np.asarray(temp.ndarray[1]*10).astype(int)
@@ -500,6 +508,8 @@ def writeIAF(datastream, filename, **kwargs):
         else:
             dfhou = np.asarray([888888]*24).astype(int)
         head.extend(dfhou)
+
+        #print ("2:", len(head))
 
         # add daily means
         packcode += '4l'
@@ -528,6 +538,8 @@ def writeIAF(datastream, filename, **kwargs):
         else:
             head.append(888888)
 
+        #print("3:", len(head))
+
         # add k values
         if kvals:
             dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
@@ -555,7 +567,7 @@ def writeIAF(datastream, filename, **kwargs):
         reserved = [0,0,0,0]
         head.extend(reserved)
 
-        #print head
+        #print(len(ks))
         #print [num2date(elem) for elem in temp.ndarray[0]]
         line = struct.pack(packcode,*head)
         output = output + line
@@ -1777,6 +1789,8 @@ def readIYFV(filename, headonly=False, **kwargs):
     tprev = tsel # For jump treatment
     lc = KEYLIST.index('var5')  ## store the line number of each loaded line here
                                 ## this is used by writeIYFV to add at the correct position
+    newarray = []
+
     if ok:
         for line in fh:
             cnt = cnt+1
@@ -1788,7 +1802,7 @@ def readIYFV(filename, headonly=False, **kwargs):
             elif cnt == 3:
                 # station info
                 block = line.split()
-                print(block)
+                #print(block)
                 headers['StationName'] = block[0]
                 headers['StationID'] = block[1]
                 headers['StationCountry'] = block[2]
@@ -1819,13 +1833,13 @@ def readIYFV(filename, headonly=False, **kwargs):
                     if test:
                         #try:
                         if not len(data) >= 12:
-                            print(len(data))
+                            print("readIYFV: inconsistency of file format - ", len(data))
                         ye = data[0].split('.')
                         dat = ye[0]+'-06-01'
                         row = []
                         ti = date2num(datetime.strptime(dat,"%Y-%m-%d"))
-                        row.append(float(data[1])+float(data[2])/60.0)
-                        row.append(float(data[3])+float(data[4])/60.0)
+                        row.append(dms2d(data[1]+':'+data[2]))
+                        row.append(dms2d(data[3]+':'+data[4]))
                         row.append(float(data[5]))
                         row.append(float(data[6]))
                         row.append(float(data[7]))
@@ -1840,6 +1854,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                         if t == tsel:
                             array[0].append(ti)
                             array[lc].append(cnt)
+                            """
                             for comp in ele.lower():
                                 if comp in ['x','h','i']:
                                     headers['col-x'] = comp
@@ -1857,34 +1872,50 @@ def readIYFV(filename, headonly=False, **kwargs):
                                     headers['col-f'] = comp
                                     headers['unit-col-f'] = units[para.index(comp)]
                                     array[4].append(row[para.index(comp)]-jumpf)
-                            #if ele.startswith('XYZ'):
-                            checklist = coordinatetransform(array[1][-1],array[2][-1],array[3][-1],ele[:3].lower())
-                            if np.max(np.array(row) - np.array(checklist)) > 0.5:
+                            """
+                            headers['col-x'] = 'x'
+                            headers['unit-col-x'] = units[para.index('x')]
+                            headers['col-y'] = 'y'
+                            headers['unit-col-y'] = units[para.index('y')]
+                            headers['col-z'] = 'z'
+                            headers['unit-col-z'] = units[para.index('z')]
+                            headers['col-f'] = 'f'
+                            headers['unit-col-f'] = units[para.index('f')]
+                            array[1].append(row[para.index('x')]-jumpx)
+                            array[2].append(row[para.index('y')]-jumpy)
+                            array[3].append(row[para.index('z')]-jumpz)
+                            array[4].append(row[para.index('f')]-jumpf)
+
+                            checklist = coordinatetransform(array[1][-1],array[2][-1],array[3][-1],'xyz')
+                            diffs = (np.array(row) - np.array(checklist))
+                            for idx,el in enumerate(diffs):
+                                goodval = True
+                                if idx in [0,1]: ## Angular values
+                                    if el > 0.008:
+                                        goodval = False
+                                else:
+                                    if el > 0.8:
+                                        goodval = False
+                            if not goodval:
                                 print("readIYFV: verify conversions between components !")
                                 print("readIYFV: found:", np.array(row))
                                 print("readIYFV: expected:", np.array(checklist))
-
                         elif t == 'J' and tprev == tsel:
-                            for comp in ele.lower():
-                                print(comp)
-                                if comp in ['x','h','i']:
-                                    jumpx = jumpx + row[para.index(comp)]
-                                elif comp in ['y','d']:
-                                    jumpy = jumpy + row[para.index(comp)]
-                                elif comp in ['i','z']:
-                                    jumpz = jumpz + row[para.index(comp)]
-                                elif comp in ['f']:
-                                    jumpf = jumpf + row[para.index(comp)]
-
+                            jumpx = jumpx + row[para.index('x')]
+                            jumpy = jumpy + row[para.index('y')]
+                            jumpz = jumpz + row[para.index('z')]
+                            jumpf = jumpf + row[para.index('f')]
                         tprev = tsel
     fh.close()
-
 
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))
 
-    # Eventually add trim
+    if not ele.lower().startswith('xyz'):
+        stream = stream._convertstream('xyz2'+ele.lower()[:3])
+
     return stream
+
 
 def writeIYFV(datastream,filename, **kwargs):
     """

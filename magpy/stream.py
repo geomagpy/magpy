@@ -411,6 +411,7 @@ class DataStream(object):
     - stream.baseline(self, absolutestream, **kwargs):
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.calc_f(self, **kwargs):
+    - stream.dailymeans(self):
     - stream.date_offset(self, offset):
     - stream.delta_f(self, **kwargs):
     - stream.differentiate(self, **kwargs):
@@ -440,6 +441,7 @@ class DataStream(object):
     - stream.scale_correction(self, keys, scales, **kwargs):
     - stream.smooth(self, keys, **kwargs):
     - stream.steadyrise(self, key, timewindow, **kwargs):
+    - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
     - stream.trim(self, starttime=None, endtime=None, newway=False):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
     - stream.write(self, filepath, **kwargs):
@@ -450,6 +452,7 @@ class DataStream(object):
 
     - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
     - stream.baseline() -- calculates baseline correction for input stream (datastream)
+    - stream.dailymeans() -- for DI stream - obtains variometer corrected means fo basevalues
     - stream.date_offset() -- Corrects the time column of the selected stream by the offst
     - stream.delta_f() -- Calculates the difference of x+y+z to f
     - stream.differentiate() -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
@@ -477,7 +480,9 @@ class DataStream(object):
     - stream.selectkeys(keys) -- ndarray: remove all data except for provided keys (and flag/comment)
     - stream.smooth(key) -- smooth the data using a window with requested size
     - stream.spectrogram() -- Creates a spectrogram plot of selected keys
+    - stream.stream2flaglist() -- make flaglist out of stream
     - stream.trim() -- returns stream within new time frame
+    - stream.variometercorrection() -- Obtain average DI values at certain timestep(s)
     - stream.write() -- Writing Stream to a file
 
     Supporting INTERNAL methods:
@@ -893,6 +898,21 @@ CALLED BY:
             keylist = keylist[:limit]
 
         return keylist
+
+
+    def _get_key_names(self):
+        """
+        DESCRIPTION:
+            get the variable names for each key
+        APPLICATION:
+            keydict = self._get_key_names()
+        """
+        keydict = {}
+        for key in KEYLIST:
+            kname = self.header.get('col-'+key)
+            keydict[kname] = key
+        return keydict
+
 
     def dropempty(self):
         """
@@ -1690,7 +1710,10 @@ CALLED BY:
             ed = len(self.ndarray[0])
 
         for i in range(len(self.ndarray)):
-            ndarray[i] = self.ndarray[i][st:ed]
+            try:
+                ndarray[i] = self.ndarray[i][st:ed+1]   ## This is the correct length
+            except:
+                ndarray[i] = self.ndarray[i][st:ed]  ## This is the fallback if ed exceeds len(ndarray[0]) 
             #ndarray[i] =  np.delete(self.ndarray[i],indicies) # before : very slowly
 
         #t3 = datetime.utcnow()
@@ -1933,7 +1956,6 @@ CALLED BY:
             startabs = absolutestream[0].time
             endabs = absolutestream[-1].time
 
-        print("Baseline 0", absolutestream.length(), num2date(startabs), num2date(endabs))
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
             #loggerstream.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
@@ -1955,7 +1977,6 @@ CALLED BY:
         # ###########
         #  get boundaries
         # ###########
-        print("Baseline 1", absolutestream.length(), num2date(startabs), num2date(endabs))
         extrapolate = False
         # upper
         if fixend:
@@ -1986,14 +2007,11 @@ CALLED BY:
 
         baseendtime = num2date(baseendtime).replace(tzinfo=None)
         basestarttime = num2date(basestarttime).replace(tzinfo=None)
-        print("Baseline 2:", absolutestream.length(), basestarttime, baseendtime)
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
 
         if extrapolate and not extradays == 0:
             bas = bas.extrapolate(basestarttime,baseendtime)
-
-        print("baseline3", bas._find_t_limits(), basestarttime)
 
         #keys = ['dx','dy','dz']
         try:
@@ -2025,7 +2043,6 @@ CALLED BY:
             except:
                 print("using the internal plotting routine requires mpplot to be imported as mp")
 
-        print ("Baseline 4:", num2date(func[1]), num2date(startabs), num2date(func[2]), num2date(endabs))
         self.header['DataAbsMinTime'] = func[1] #num2date(func[1]).replace(tzinfo=None)
         self.header['DataAbsMaxTime'] = func[2] #num2date(func[2]).replace(tzinfo=None)
         self.header['DataAbsFunctionObject'] = func
@@ -2352,10 +2369,19 @@ CALLED BY:
         return self
 
 
-    def dailymean(self):
+    def dailymeans(self, keys=['x','y','z','f'], **kwargs):
         """
     DEFINITION:
-        If an absolutestream is provided, basevalues are taken and averaged
+        Calculates daily means of xyz components and their standard deviations. By default
+        numpy's mean and std methods are applied even if only two data sets are available.
+
+        TODO --- 
+        If less then three data sets are provided, twice the difference between two values
+        is used as an conservative proxy of uncertainty. I only on value is available, then
+        the maximum uncertainty of the collection is assumed. This behavior can be changed
+        by keyword arguments.
+        TODO ---
+ 
         An outputstream is generated which containes basevalues in columns
         x,y,z and uncertainty values in dx,dy,dz
         if only a single values is available, dx,dy,dz contain the average uncertainties
@@ -2364,6 +2390,7 @@ CALLED BY:
 
     PARAMETERS:
     Variables:
+    	- keys: 	(list) provide up to four keys which are used in columns x,y,z	
     Kwargs:
         - None
 
@@ -2371,16 +2398,54 @@ CALLED BY:
         - stream:       (DataStream object) with daily means and standard deviation
 
     EXAMPLE:
-        >>> data = absstream.dailymeans()
+        >>> means = didata.dailymeans(keys=['dx','dy','dz'])
 
     APPLICATION:
+        >>> means = didata.dailymeans(keys=['dx','dy','dz'])
+        >>> mp.plot(means,['x','y','z'],errorbars=True, symbollist=['o','o','o'])
+
         """
 
-        pass
+        keys = keys[:4]
+        poslst,deltaposlst = [],[]
+        deltakeys = ['dx','dy','dz','df']
+
+        for key in keys:
+            poslst.append(KEYLIST.index(key))
+        for idx,pos in enumerate(poslst):
+            deltaposlst.append(KEYLIST.index(deltakeys[idx]))
+
+        if not len(self.ndarray[0]) > 0:
+            return self
+
+        array = [[] for el in KEYLIST]
+        data = self.copy()
+        data = data.removeduplicates()
+        timecol = np.floor(data.ndarray[0])
+        tmpdatelst = np.asarray(list(set(list(timecol))))
+        for day in tmpdatelst:
+            sel = data._select_timerange(starttime=day,endtime=day+1)
+            array[0].append(day+0.5)
+            for idx,pos in enumerate(poslst):
+                array[idx+1].append(np.mean(sel[pos]))
+                data.header['col-'+KEYLIST[idx+1]] = self.header.get('col-'+KEYLIST[pos])
+                data.header['unit-col-'+KEYLIST[idx+1]] = self.header.get('unit-col-'+KEYLIST[pos])
+                diff = pos-idx
+            for idx,dpos in enumerate(deltaposlst):
+                array[dpos].append(np.std(sel[idx+diff]))
+                #data.header['col-'+KEYLIST[dpos]] = 'sigma '+self.header.get('col-'+KEYLIST[idx+diff])
+        data.header['DataFormat'] = 'MagPyDailyMean'
+
+        return DataStream([LineStruct()],data.header,np.asarray(array))
 
 
     def date_offset(self, offset):
         """
+    IMPORTANT:
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        THIS METHOD IS NOT SUPPORTED ANY MORE. PLEASE USE
+        self.offset({'time':timedelta(seconds=1000)}) INSTEAD
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     DEFINITION:
         Corrects the time column of the selected stream by the offst
         offset is a timedelta object (e.g. timedelta(hours=1))
@@ -3218,182 +3283,6 @@ CALLED BY:
 
         return self.filter(**kwargs)
 
-        """
-        # Defaults:
-        filter_type = kwargs.get('filter_type')
-        filter_width = kwargs.get('filter_width')
-        filter_offset = kwargs.get('filter_offset')
-        gauss_win = kwargs.get('gauss_win')
-        fmi_initial_data = kwargs.get('fmi_initial_data')
-        m_fmi = kwargs.get('m_fmi')
-        if not filter_type:
-            filter_type = 'gauss'
-        if not filter_width:
-            filter_width = timedelta(minutes=1)
-        if not filter_offset:
-            filter_offset = 0
-        if not gauss_win:
-            gauss_win = 1.86506
-        if not fmi_initial_data:
-            fmi_initial_data=[]
-        if not m_fmi:
-            m_fmi = 0
-
-        gf_fac = gauss_win
-        resdataout = []
-
-        # check whether data is valid
-        if len(self) < 2:
-            loggerstream.warning('filter: No valid stream provided')
-            return self
-
-        # check whether requested filter_width >= sampling interval within 1 millisecond accuracy
-        si = timedelta(seconds=self.get_sampling_period()*24*3600)
-        if filter_width - si <= timedelta(microseconds=1000):
-            loggerstream.warning('filter: Requested filter_width does not exceed sampling interval - aborting filtering')
-            return self
-
-        loggerstream.info('filter: Start filtering.')
-
-        starray = np.asarray(self)
-        firstday = 0
-        # Calculating absolute increment
-        incr = date2num(datetime.strptime("2010-11-22","%Y-%m-%d")+filter_width)-date2num(datetime.strptime("2010-11-22","%Y-%m-%d"))
-        if filter_offset == 0:
-            offs = 0
-            filter_offset = timedelta(seconds=filter_offset)
-        else:
-            offs = date2num(datetime.strptime("2010-11-22","%Y-%m-%d")+filter_offset)-date2num(datetime.strptime("2010-11-22","%Y-%m-%d"))
-
-        currtime = num2date(np.floor(starray[0].time)).replace(tzinfo=None) + filter_offset
-
-        # 2.) Define the time ranges in dependency of resolution - use non-flagged data here
-        # determine time diff between successive steps for linear means (e.g. 00-59 and not 00 to 60)
-        # and get the trange for filtering
-        # period (see ta(period) uses 2 times the increment
-        per = gf_fac*(filter_width.seconds)
-        trange = self._det_trange(per)
-        if filter_type == "gauss":
-            tau = self._tau(per)
-            trange = timedelta(seconds=(self._det_trange(per)*24*3600))
-            tdiff = timedelta(seconds=0)
-        if filter_type == "linear":
-            trange = filter_width / 2
-            tdiff = timedelta(seconds=self.get_sampling_period()*24*3600)
-        if filter_type == "fmi":
-            trange = filter_width / 2
-            tdiff = timedelta(seconds=self.get_sampling_period()*24*3600)
-            trangestruct = []
-            for elem in fmi_initial_data:
-                row = []
-                row.append(elem.time)
-                n = np.power(fmi_initial_data._get_k_float(elem.dx),3.3)
-                row.append(n)
-                trangestruct.append(row)
-            mint = 99999
-            for i in range (len(trangestruct)):
-                if np.abs(trangestruct[i][0] - date2num(currtime)) < mint:
-                    mint = np.abs(trangestruct[i][0] - date2num(currtime))
-                    ntmp = trangestruct[i][1]/3600
-            trange = trange + timedelta(seconds=(m_fmi+ntmp)*24*3600)
-
-        # 3.) Start the calculation
-        nr_lines=len(starray)
-        resdata = DataStream()
-        #uplim = nr_lines
-        lowlim = 0
-        i = 0
-        # open while loop with currentdata
-        while ((currtime + trange - tdiff) <= num2date(starray[-1].time).replace(tzinfo=None)+tdiff):
-            # a) select lower bound
-            # eventually add a process counter here
-            abscurrtime = date2num(currtime)
-            tmt = date2num(currtime-trange)
-            tpmt = date2num(currtime+trange-trange/30)
-            for i in range(lowlim,nr_lines): # might produce an inaccuracy if new lowlim exceeds previous lowlim in fmi (is accounted for by fmi range recalc at the end) (and saves 20 secs per day analysis time)
-                if starray[i].time >= tmt:
-                    lowlim = i
-                    break
-            # b) select upper bound
-            for i in range(lowlim,nr_lines):
-                if starray[i].time >= tpmt:  #changed upper trange because of hour probs (last val missing)
-                    uplim = i-1
-                    break
-            # c) do calc if data available
-            #print "Bounds: %f - %f" % (lowlim,uplim)
-            #print currtime
-            resrow = LineStruct()
-            resrow.time = abscurrtime
-            if uplim > lowlim:
-                for el in KEYLIST[:16]:
-                    exec('col'+el+'=[]')
-                if filter_type == "gauss":
-                    normvec = []
-                    # -- determine coefficients for gaussian weighting (needs time - is identical for evenly spaced data but only for that)
-                    for k in range(lowlim,uplim):
-                        normvec.append(self._gf(starray[k].time-abscurrtime,tau))
-                    normcoeff = np.sum(normvec)
-                    for k in range(lowlim,uplim):
-                        nor = normvec[k-lowlim]/normcoeff
-                        for el in KEYLIST[:16]:
-                            # nan treatment different to linear case because normvec is already calculated and nan could not be just left out as they are already included in the weighting scheme
-                            # might cause problems in case of inf and leading nan like in aic columns
-                            #if not isnan(eval('starray[k].'+el))  and not isinf(eval('starray[k].'+el)):
-                            exec('col'+el+'.append(starray[k].'+el+'*nor)')
-                    # mask NaNs of the columns
-                    exec('col'+el+' = maskNAN(col'+el+')')
-                    resrow.time = abscurrtime
-                    for el in KEYLIST[1:16]:
-                        exec('resrow.'+el+' = np.sum(col'+el+')')
-                elif filter_type == "linear" or filter_type == "fmi":
-                    for k in range(lowlim,uplim):
-                        for el in KEYLIST[:16]:
-                            if not isnan(eval('starray[k].'+el)) and not isinf(eval('starray[k].'+el)):
-                                exec('col'+el+'.append(starray[k].'+el+')')
-                    resrow.time = abscurrtime
-                    for el in KEYLIST[1:16]:
-                        exec('resrow.'+el+' = np.mean(col'+el+')')
-                    # add maxmin diffs: important for fmi
-                    if starray[k].typ != 'fonly':
-                        if len(colx) >0:
-                            resrow.dx = np.max(colx)-np.min(colx)
-                        if len(coly) >0:
-                            resrow.dy = np.max(coly)-np.min(coly)
-                        if len(colz) >0:
-                            resrow.dz = np.max(colz)-np.min(colz)
-                        if len(colf) >0:
-                            resrow.df = np.max(colf)-np.min(colf)
-                else:
-                    loggerstream.warning("filter: Filter not recognized - aborting filtering.")
-                resrow.typ = starray[0].typ
-            else: # in case of removed flagged sequences - add time and leave "NaN" value in file
-                resrow.time = abscurrtime
-
-            resdata.add(resrow)
-
-            # e) increase counter
-            currtime += filter_width
-            if filter_type == "fmi":
-                trangeprev = trange
-                mint = 99999
-                for i in range (len(trangestruct)):
-                    if np.abs(trangestruct[i][0] - abscurrtime) < mint:
-                        mint = np.abs(trangestruct[i][0] - abscurrtime)
-                        ntmp = trangestruct[i][1]/3600
-                trange = filter_width/2 + timedelta(seconds=((m_fmi+ntmp)*24*3600))
-                # if trange larger then 2 times the prev trange then set lowlim value to 0 (important for a)
-                if trange > trangeprev*2:
-                    lowlim = 0
-
-        # Add filtering information to header:
-        self.header['DataSamplingRate'] = str(filter_width.total_seconds()) + ' sec'
-        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange.total_seconds()) + ' sec'
-        #self.header['DataInterval'] = str(filter_width.seconds)+' sec'
-
-        loggerstream.info('filter: Finished filtering.')
-
-        return DataStream(resdata,self.header)
-        """
 
     def fit(self, keys, **kwargs):
         """
@@ -4018,6 +3907,87 @@ CALLED BY:
 
         return self
 
+    def stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None):
+        """
+        DESCRIPTION:
+            Constructs a flaglist input dependent on the content of stream
+        PARAMETER:
+            comment    (key or string) if key (or comma separted list of keys) are 
+                       found, then the content of this column is used (first input
+            flagnumber (int) integer number between 0 and 4
+            userange   (bool) if False, each stream line results in a flag, 
+                              if True the full time range is marked
+            
+        """
+        ### identify any given gaps and flag time ranges regarding gaps
+        if not comment:
+            print("stream2flag: you need to provide either a key or a text comment. (e.g. 'str1,str2' or 'Flagged'")
+            return []
+        if not flagnumber:
+            flagnumber = 0
+        if not keystoflag:
+            print("stream2flag: you need to provide a list of keys to which you apply the flags (e.g. ['x','z']")
+            return []
+        if not sensorid:
+            print("stream2flag: you need to provide a sensorid")
+            return []
+
+        commentarray = np.asarray([])
+        uselist = False
+
+        if comment in KEYLIST:
+            pos = KEYLIST.index(comment)
+            if userange:
+                comment = self.ndarray[pos][0]
+            else:
+                uselist = True
+                commentarray = self.ndarray[pos]
+        else:
+            lst,poslst = [],[]
+            commentlist = comment.split(',')
+            try:
+                for commkey in commentlist:
+                    if commkey in KEYLIST:
+                        #print(commkey)
+                        pos = KEYLIST.index(commkey)
+                        if userange:
+                            lst.append(str(self.ndarray[pos][0]))
+                        else:
+                            poslst.append(pos)
+                    else:
+                        # Throw exception
+                        x= 1/0
+                if userange:
+                    comment = ' : '.join(lst)
+                else:
+                    uselist = True
+                    resultarray = []
+                    for pos in poslst:
+                        resultarray.append(self.ndarray[pos])
+                    resultarray = np.transpose(np.asarray(resultarray))
+                    commentarray = [' : '.join(lst) for lst in resultarray]
+            except:
+                #comment remains unchanged
+                pass
+
+        now = datetime.utcnow()
+        res = []
+        if userange:
+            st = np.min(self.ndarray[0])
+            et = np.max(self.ndarray[0])
+            st = num2date(float(st)).replace(tzinfo=None)
+            et = num2date(float(et)).replace(tzinfo=None)
+            for key in keystoflag:
+                res.append([st,et,key,flagnumber,comment,sensorid,now])
+        else:
+            for idx,st in enumerate(self.ndarray[0]):
+                for key in keystoflag:
+                    st = num2date(float(st)).replace(tzinfo=None)
+                    if uselist:
+                        res.append([st,st,key,flagnumber,commentarray[idx],sensorid,now])
+                    else:
+                        res.append([st,st,key,flagnumber,comment,sensorid,now])
+        return res
 
 
     def flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate=0.):
@@ -4323,7 +4293,7 @@ CALLED BY:
                         self.header['col-y'] = 'd'
                         self.header['unit-col-y'] = 'deg'
                     else:
-                        print("func2stream", function, function[0], function[0]['f'+key],functimearray)
+                        #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
                         array[ind] = ar + function[0]['f'+key](functimearray)
                         if key == 'x': # remember this for correct y determination
                             arrayx = array[ind]
@@ -5192,14 +5162,26 @@ CALLED BY:
             for j in range(0,8):
                 if debug:
                     print("Loop Test", j, index, num2date(cdlist[index])-timedelta(days=deltaday))
-                threehours = datastream.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), "<")
+                #t7 = datetime.utcnow()
+
+                #threehours = datastream.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), "<")
+
+                et = date2num(num2date(cdlist[index])-timedelta(days=deltaday))
+
                 index = index - 1
                 if index < 0:
                     index = 7
                     deltaday += 1
                 if debug:
                     print("Start", num2date(cdlist[index])-timedelta(days=deltaday))
-                threehours = threehours.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), ">=")
+                #threehours = threehours.extract("time", date2num(num2date(cdlist[index])-timedelta(days=deltaday)), ">=")
+
+                st = date2num(num2date(cdlist[index])-timedelta(days=deltaday))
+                ar = datastream._select_timerange(starttime=st, endtime=et)
+                threehours = DataStream([LineStruct()],{},ar)
+                #t8 = datetime.utcnow()
+                #print("Extracting time needed:", t8-t7)
+
                 if ndtype:
                     len3hours = len(threehours.ndarray[0])
                 else:
@@ -5214,8 +5196,12 @@ CALLED BY:
                     else:
                         colx = threehours._get_column('x')
                     colx = [elem for elem in colx if not isnan(elem)]
-                    xmaxval = max(colx)
-                    xminval = min(colx)
+                    if len(colx) > 0:
+                        xmaxval = max(colx)
+                        xminval = min(colx)
+                    else:
+                        ymaxval = 0.0
+                        yminval = 0.0
                     if checky:
                         if ndtype:
                             coly = threehours.ndarray[indy]
@@ -5368,11 +5354,14 @@ CALLED BY:
         print(" --------------- beginning at last time --------------")
 
         # selecting reduced time range!!!
+        t1 = datetime.utcnow()
         array = fmistream._select_timerange(starttime=currentdate-timedelta(days=2))
         fmitstream = DataStream([LineStruct()],fmistream.header,array)
 
         cdlist = [date2num(currentdate.replace(hour=elem)) for elem in startinghours]
         #print "Daily list", cdlist
+        t2 = datetime.utcnow()
+        print("Step0 needed:", t2-t1)
 
         ta, i = find_nearest(np.asarray(cdlist), date2num(lastdate-timedelta(minutes=90)))
         print("Nearest three hour mark", num2date(ta), i)
@@ -5384,6 +5373,9 @@ CALLED BY:
         # 1. get a backward 24 hour calculation from the last record
         klist = maxmink(fmitstream,cdlist,i,k_scale)
         kstream = klist2stream(klist, kstream)
+
+        t3 = datetime.utcnow()
+        print("Step1 needed:", t3-t2)
 
         # 2. a) now get the hourly means with extended time ranges (sr function)
         hmean = fmimeans(fmitstream,date2num(lastdate),kstream)
@@ -5399,9 +5391,15 @@ CALLED BY:
             redfmi.plot(noshow=True, plottitle="1: reduced")
             fmistream.plot(noshow=True, plottitle="1")
 
+        t4 = datetime.utcnow()
+        print("Step2 needed:", t4-t3)
+
         # 3. recalc k
         klist = maxmink(redfmi,cdlist,i,k_scale)
         kstream = klist2stream(klist, kstream)
+
+        t5 = datetime.utcnow()
+        print("Step3 needed:", t5-t4)
 
         # 4. recalc sr and subtract
         finalhmean = fmimeans(fmitstream,date2num(lastdate),kstream)
@@ -5414,9 +5412,15 @@ CALLED BY:
             firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
             fmitstream.plot(['x','y','z'],plottitle="2")
 
+        t6 = datetime.utcnow()
+        print("Step4 needed:", t6-t5)
+
         # 5. final k
         klist = maxmink(firedfmi,cdlist,i,k_scale)
         kstream = klist2stream(klist, kstream)
+
+        t7 = datetime.utcnow()
+        print("Step5 needed:", t7-t6)
 
         # ############################################
         # ##           Step 3           ##############
@@ -7447,6 +7451,7 @@ CALLED BY:
 
         return self
 
+
     def selectkeys(self, keys, **kwargs):
         """
     DEFINITION:
@@ -7460,6 +7465,7 @@ CALLED BY:
     APPLICATION:
 
         """
+        noflags = kwargs.get('noflags')
 
         if not 'time' in keys:
             ti = ['time']
@@ -7468,12 +7474,13 @@ CALLED BY:
 
         if len(self.ndarray[0]) > 0:
             # Check for flagging and comment column
-            flagidx = KEYLIST.index('flag')
-            commentidx = KEYLIST.index('comment')
-            if len(self.ndarray[flagidx]) > 0:
-                keys.append('flag')
-            if len(self.ndarray[commentidx]) > 0:
-                keys.append('comment')
+            if not noflags:
+                flagidx = KEYLIST.index('flag')
+                commentidx = KEYLIST.index('comment')
+                if len(self.ndarray[flagidx]) > 0:
+                    keys.append('flag')
+                if len(self.ndarray[commentidx]) > 0:
+                    keys.append('comment')
 
             # Remove all missing
             for idx, elem in enumerate(self.ndarray):
@@ -8074,10 +8081,14 @@ CALLED BY:
             return DataStream(self.container,self.header,self.ndarray)
 
 
-
     def variometercorrection(self, variopath, thedate, **kwargs):
         """
         DEFINITION:
+            ##### THS METHOD IS USELESS....
+            ##### Either select a certain time in absolute calculation (TODO)
+            ##### or calculate daily means of basevalues which ar already corrected for
+            ##### variotion --- leon 2016-03 
+
             Function to perform a variometercorrection of an absresult stream
             towards the given datetime using the given variometer stream.
             Returns a new absresult object with new datetime and corrected values
@@ -8086,11 +8097,13 @@ CALLED BY:
             differences after correcting them to a single spot in time.
         PARAMETERS:
          Variables:
-            - variodata: (DataStream) data to be used for reduction
-            - endtime:  (datetime/str) End of period to trim to
+            - variodata:   (DataStream) data to be used for reduction
+            - endtime:     (datetime/str) End of period to trim to
          Kwargs:
-            - funckeys: (list) keys of the variometerfile which are interpolated and used
-            - usetime: (bool) use only the time part of thedate to correct to
+            - funckeys:    (list) keys of the variometerfile which are interpolated and used
+            - nomagorient: (bool) indicates that variometerdata is NOT in magnetic
+                                  coordinates (hez) - Method will then use header info 
+                                  in DataRotationAlpha and Beta
 
         RETURNS:
             - stream:   (DataStream object) absolute stream - corrected
@@ -8102,51 +8115,176 @@ CALLED BY:
         """
         funckeys = kwargs.get('funckeys')
         offset = kwargs.get('offset')
-        usetime = kwargs.get('usetime')
-        if not funckeys:
-            funckeys = ['x','y','z','f']
+        nomagorient = kwargs.get('nomagorient')
         if not offset:
             offset = 0.0
 
         dateform = "%Y-%m-%d"
+
+        def getfuncvals(variofunc,day):
+            # Put the following to a function
+            functime = (date2num(day)-variofunc[1])/(variofunc[2]-variofunc[1])
+            #print(functime, day, date2num(day),variofunc[1],variofunc[2])
+            refval = []
+            for key in funckeys:
+                if key in ['x','y','z']:
+                    refval.append(variofunc[0]['f'+key](functime))
+            return refval
 
         # Return results within a new streamobject containing only
         # the average values and its uncertainties
         resultstream = DataStream()
 
         # Check for ndtype:
-        ndtype = false
+        ndtype = False
         if len(self.ndarray[0]) > 0:
+            timecol = self.ndarray[0]
             ndtype = True
-            indtyp = KEYLIST.index('typ')
-            typus = self.ndarray[inddtyp][0]
+            typus = self.header.get('DataComponents')
+            try:
+                typus = typus.lower()[:3]
+            except:
+                typus = ''
         else:
-            typus = self[0].typ
-        # 1 Convert absresult - idff to xyz
+            timecol = self._get_column('time')
+            try:
+                typus = self[0].typ[:3]
+            except:
+                typus = ''
+        # 1 Convert absresult - idff to xyz    ---- NOT NECESSARY
         # test stream type (xyz, idf or hdz?)
         # TODO add the end check whether streams are modified!!!!!!!!!!
-        print(typus)
-        if typus == 'idff':
-            absstream = self._convertstream('idf2xyz')
+        #print("Variometercorrection", typus)
+        absstream = self.copy()
+        absstream = absstream.removeduplicates()
 
         # 2 Convert datetime to number
         # check whether thedate is a time (then use this time every day)
         # or a full date
-        if usetime:
-            tmpdatelst = [datetime.date(num2date(elem.time)) for elem in absstream]
-            datelist = self.union(tmpdatelst)
-            datelist = [datetime.combine(elem, datetime.time(self._testtime(thedate))) for elem in datelist]
-            print(datelist)
-        else:
+        datelist = []
+        try:
+            # Check whether provided thedate is a date with time
             datelist = [self._testtime(thedate)]
+            print("Variometercorrection: using correction to single provided datetime", datelist[0])
+        except:
+            try:
+                # Check whether provided thedate is only time
+                tmpdatelst = [datetime.date(num2date(elem)) for elem in timecol]
+                tmpdatelst = list(set(tmpdatelst))
+                dummydatedt = self._testtime('2016-11-22T'+thedate)
+                datelist = [datetime.combine(elem, datetime.time(dummydatedt)) for elem in tmpdatelst]
+            except:
+                print("Variometercorrection: Could not interpret the provided date/time - aborting - used dateformat should be either 12:00:00 or 2016-11-22 12:00:00 - provided:", thedate)
+                return self
 
-        # 3 Read and interplolate the variometer data
-        start = datetime.strptime(datetime.strftime(num2date(self[0].time),dateform),dateform)
-        end = datetime.strptime(datetime.strftime(num2date(self[-1].time),dateform),dateform)+timedelta(days=1)
-        print(start, end)
-        variostream = read(variopath,starttime=start, endtime=end)
-        print(len(variostream))
-        function = variostream.interpol(funckeys)
+        if len(datelist) == 1:
+            print("Variometercorrection: Transforming all provided absolute data towards", datelist[0])
+        elif len(datelist) > 1:
+            print("Variometercorrection: Correcting all absolute data of individual days towards time", datetime.strftime(datelist[0],"%H:%M:%S"))
+        else:
+            print("Variometercorrection: No correction date found - aborting")
+            return self
+
+        for day in datelist:
+            print("Variocorrection: dealing with {}".format(day))
+            # 1. Select the appropriate values from self
+            if len(datelist) == 1:
+                usedabsdata = absstream
+                st, et = absstream._find_t_limits()
+            else:
+                st = str(datetime.date(day))
+                et = str(datetime.date(day+timedelta(days=1)))
+                usedndarray = absstream._select_timerange(starttime=st, endtime=et)
+                usedabsdata = DataStream([LineStruct()],self.header,usedndarray)
+            #print(date, num2date(usedabsdata.ndarray[0]))
+            # 2. Read variation data for respective date
+            vario = read(variopath, starttime=st, endtime=et)
+            print("Variocorrection: loaded {} data points".format(vario.length()[0]))
+            #print("Variocorrection: Please note - we are assuming that the provided variometerdata records the field in magnetic coordinates in nT (e.g. HEZ). In case of geographic xyz records one can activate a kwarg: takes provided rotation angle or (if not existing) the declination value of abs data")
+            # 3. Check DataComponents: we need pure variation data
+            comps = vario.header.get('DataComponents')
+            try:
+                comps = comps.lower()[:3]
+            except:
+                comps = ''
+            if comps in ['xyz','idf','hdz']:
+                # Data is already in geographic coordinates
+                # Rotate back
+                if not comps == 'xyz':
+                    vario = vario._convertstream(comps+'2xyz')
+                nomagorient = True
+            else:
+                nomagorient = False
+            # 4. TODO TEST! Eventually rotate the data to hez
+            if nomagorient:
+                rotaangle = vario.header.get('DataRotationAlpha')
+                rotbangle = vario.header.get('DataRotationBeta')
+                #print("Angles", rotaangle, rotbangle)
+                try:
+                    rotaangle = float(rotaangle)
+                    rotbangle = float(rotbangle)
+                except:
+                    pass
+                if rotaangle in [None,np.nan,0.0]:
+                    print("Variocorrection: Did not find DataRotationAlpha in header assuming xyz and rotation by minus declination")
+                    rotaangle = -np.mean(usedabsdata.ndarray[2])
+                else:
+                    try:
+                        rotaangle = float(rotaangle)
+                    except:
+                        rotaangle = 0.
+                if not rotbangle in [None,'Null',np.nan,0.0]:
+                    try:
+                        rotbangle = float(rotbangle)
+                    except:
+                        rotbangle = 0.
+                print("Variocorrection: Rotating data by {a} and {b}".format(a=rotaangle,b=rotbangle))
+                vario = vario.rotation(alpha=rotaangle,beta=rotbangle)
+            if vario.length()[0] > 1 and len(usedabsdata.ndarray[0]) > 0:
+                variost, varioet = vario._find_t_limits()
+                # 4. Interpolating variation data
+                if not funckeys:
+                    funckeys = []
+                    keys = vario._get_key_headers(numerical=True)
+                    for key in keys:
+                        if key in ['x','y','z','f']:
+                            funckeys.append(key)
+                variofunc = vario.interpol(funckeys)
+
+                refvals = getfuncvals(variofunc,day)
+
+                for idx,abstime in enumerate(usedabsdata.ndarray[0]):
+                    variovalsatabstime = getfuncvals(variofunc,num2date(abstime))
+                    diffs= np.asarray(refvals)-np.asarray(variovalsatabstime)
+
+                """
+                    if key == 'y':
+                        #refy = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functime)
+                        pass
+                    elif key in ['x','z']:
+                        pass
+                    else:
+                        pass
+                #refvals = funcattime(variofunc,date)
+                # 5. Get variofunc data for selected date and each usedabsdata
+                #for abstime in usedabsdata.ndarray[0]:
+                #    if variost 
+                #absst, abset = usedabsdata._find_t_limits()
+                """
+                """
+                    if key == 'y':
+                        #indx = KEYLIST.index('x')
+                        #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
+                        #print type(self.ndarray[ind]), key, self.ndarray[ind]
+                        array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functimearray)
+                        self.header['col-y'] = 'd'
+                        self.header['unit-col-y'] = 'deg'
+                    else:
+                        print("func2stream", function, function[0], function[0]['f'+key],functimearray)
+                        array[ind] = ar + function[0]['f'+key](functimearray)
+                        if key == 'x': # remember this for correct y determination
+                            arrayx = array[ind]
+                """
 
         """
         for date in datelist:
@@ -8945,17 +9083,17 @@ class LineStruct(object):
 
 
 # Unused classes
-
+"""
 class ColStruct(object):
     def __init__(self,length, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
-        """
+        #""
         Not used so far. Maybe useful for
         Speed optimization:
         Change the whole thing to column operations
 
         - at the end of flag is important to be recognized as string
         for column initialization use a length parameter and "lenght*[float('nan')]" or "lenght*['-']"to initialize nan-values
-        """
+        #""
         self.length = length
         self.time = length*[time]
         self.x = length*[x]
@@ -8985,6 +9123,7 @@ class ColStruct(object):
     def __repr__(self):
         return repr((self.time, self.x, self.y, self.z, self.f, self.dx, self.dy, self.dz, self.df, self.t1, self.t2, self.var1, self.var2, self.var3, self.var4, self.var5, self.str1, self.str2, self.str3, self.str4, self.flag, self.comment, self.typ, self.sectime))
 
+"""
 
 # -------------------
 #  Global functions of the stream file
@@ -9457,6 +9596,27 @@ def joinStreams(stream_a,stream_b, **kwargs):
 
     return stream.sorting()
 
+
+def appendStreams(streamlist):
+    """
+    DESCRIPTION:
+        Appneds contents of streamlist  and returns a single new stream.
+        Duplicates are removed and the new stream is sorted.
+    """
+    array = [[] for key in KEYLIST]
+    for idx,key in enumerate(KEYLIST):
+        # Get tuple of array
+        arlist = []
+        for stream in streamlist:
+            if len(stream.ndarray[idx]) > 0:
+                array[idx].extend(stream.ndarray[idx])
+    stream = DataStream([LineStruct()],streamlist[0].header,np.asarray(array).astype(object))
+    stream = stream.sorting()
+    stream = stream.removeduplicates()
+
+    return stream
+
+
 def mergeStreams(stream_a, stream_b, **kwargs):
     """
     DEFINITION:
@@ -9652,7 +9812,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs
                 indtia = np.nonzero(np.in1d(timea,tb))[0]
-                print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
+                #print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
 
                 if len(indtia) == len(indtib):
                     nanind = []
@@ -9660,7 +9820,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         keyind = KEYLIST.index(key)
                         #array[keyind] = sa.ndarray[keyind]
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
-                            print("Found sb values", key)
+                            #print("Found sb values", key)
                             valb = [sb.ndarray[keyind][ind] for ind in indtib]
                         ### Change by leon in 10/2015
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
@@ -9873,6 +10033,33 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     loggerstream.info('mergeStreams: Mergings finished at %s ' % str(datetime.now()))
 
     return DataStream(stream_a, headera)
+
+def dms2d(dms):
+        """
+        DESCRIPTION:
+            converts a string with degree:minutes:seconds to degree.decimals
+        VARIBALES:
+            dms (string) like -0:37:23 or 23:23
+        """
+        # 1. get sign
+        sign = dms[0]
+        multi = 1
+        if sign == '-':
+            multi = -1
+            dms = dms[1:]
+
+        dmsar = dms.split(':')
+        if len(dmsar) > 3:
+            print("Could not interpret dms")
+            return 0.0
+        val=[]
+        for i in range(0,3):
+            try:
+                val.append(float(dmsar[i]))
+            except:
+                val.append(0.0)
+        d = multi*(val[0]+val[1]/60.+val[2]/3600.)
+        return d
 
 
 

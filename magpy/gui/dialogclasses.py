@@ -1,15 +1,9 @@
 #!/usr/bin/env python
 
-try:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-except:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
+from magpy.stream import *
+from magpy.absolutes import *
+from magpy.transfer import *
+from magpy.database import *
 
 import wx
 
@@ -559,19 +553,24 @@ class StreamSelectKeysDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, keylst, shownkeys):
+    def __init__(self, parent, title, keylst, shownkeys, namelist):
         super(StreamSelectKeysDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.keylst = keylst
         self.shownkeylst = shownkeys
+        self.namelist = namelist
         self.createControls()
         self.doLayout()
         self.bindControls()
 
     # Widgets
     def createControls(self):
-        for elem in self.keylst:
-            exec('self.'+elem+'CheckBox = wx.CheckBox(self,label="'+elem+'")')
+        for idx,elem in enumerate(self.keylst):
+            if len(self.namelist) == len(self.keylst):
+                colname = self.namelist[idx]
+            else:
+                colname = elem
+            exec('self.'+elem+'CheckBox = wx.CheckBox(self,label="'+colname+'")')
         self.okButton = wx.Button(self, wx.ID_OK, label='Select')
         self.closeButton = wx.Button(self, label='Cancel')
 

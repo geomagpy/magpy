@@ -325,10 +325,12 @@ class MainFrame(wx.Frame):
 
         self.stream = DataStream() # used for storing original data
         self.plotstream = DataStream() # used for manipulated data
+        self.orgheader = {}
         self.shownkeylist = []
         self.keylist = []
         self.symbollist = []
         self.compselect = 'None'
+        self.annotate = True
         self.dipathlist = []
         self.divariopath = ''
         self.discalarpath = ''
@@ -422,6 +424,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
         self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
+        self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.str_page.dailyMeansButton)
+        self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.str_page.applyBCButton)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
         self.Bind(wx.EVT_BUTTON, self.onRemoveOutlierButton, self.menu_p.str_page.flagOutlierButton)
@@ -456,6 +460,9 @@ class MainFrame(wx.Frame):
 
         # Disable yet unavailbale buttons
         # --------------------------
+        self.menu_p.str_page.dailyMeansButton.Disable()
+        self.menu_p.str_page.applyBCButton.Disable()
+
         self.menu_p.abs_page.AnalyzeButton.Disable()
 
         self.menu_p.ana_page.activityButton.Disable() # enabled at initial plot
@@ -511,8 +518,89 @@ class MainFrame(wx.Frame):
         self.dideltaF = dictionary['dideltaF']
         self.didbadd = dictionary['didbadd']
 
+
     # ################
-    # Helper methods:
+    # Updating and reinitiatzation methods:
+
+
+    def UpdateTimeRanges(self,stream):
+            """
+            Updating time ranges on Stream page
+            """
+            mintime = stream._get_min('time')
+            maxtime = stream._get_max('time')
+            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+            #self.menu_p.str_page.startDatePicker.Disable()
+            #self.menu_p.str_page.endDatePicker.Disable()
+            #self.menu_p.str_page.startTimePicker.Disable()
+            #self.menu_p.str_page.endTimePicker.Disable()
+            self.menu_p.str_page.openStreamButton.Disable()
+ 
+    def UpdatePlotCharacteristics(self,stream):
+        """
+        Updating time ranges on Stream page
+        """
+
+        # Some general Checks on Stream
+        # ##############################
+        # 1. Preslect first nine keys and set up default options
+        keylist = []
+        keylist = stream._get_key_headers(limit=9)
+        # TODO: remove keys with high percentage of nans
+        #for key in keylist:
+        #    ar = [eval('elem.'+key) for elem in stream if not isnan(eval('elem.'+key))]
+        #    div = float(len(ar))/float(len(stream))*100.0
+        #    if div <= 5.:
+        #        keylist.remove(key)
+        keylist = [elem for elem in keylist if elem in NUMKEYLIST]
+        self.symbollist = ['-'] * len(keylist)
+        self.menu_p.str_page.compRadioBox.SetStringSelection('line')
+        self.menu_p.str_page.dailyMeansButton.Disable()
+
+
+        # 2. If stream too long then don't allow scatter plots -- too slowly
+        if stream.length()[0] < 2000:
+            self.menu_p.str_page.symbolRadioBox.Enable()
+        else:
+            self.menu_p.str_page.symbolRadioBox.Disable()
+        # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
+        if stream.header.get('DataFormat') == 'MagPyDI':
+            self.menu_p.str_page.symbolRadioBox.Enable()
+            self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
+            self.shownkeylist = keylist
+            keylist = ['x','y','z','dx','dy','dz']
+            self.symbollist = ['o'] * len(keylist)
+            # enable daily average button
+            self.menu_p.str_page.dailyMeansButton.Enable()
+
+        self.shownkeylist = keylist
+
+        # 4. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
+        typus = stream.header.get('DataComponents')
+        try:
+            typus = typus.lower()[:3]
+        except:
+            typus = ''
+        if typus in ['xyz','hdz','idf']:            
+            self.compselect = typus
+            self.menu_p.str_page.compRadioBox.Enable()
+            self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
+        else:
+            if 'x' in keylist and 'y' in keylist and 'z' in keylist:
+                self.compselect = 'xyz'
+                self.menu_p.str_page.compRadioBox.Enable()
+
+        # 5. Baseline correction if Object contained in stream
+        if stream.header.get('DataAbsFunctionObject'):
+            self.menu_p.str_page.applyBCButton.Enable()
+        else:
+            self.menu_p.str_page.applyBCButton.Disable()
+
+        return keylist
+
 
     def defaultFileDialogOptions(self):
         ''' Return a dictionary with file dialog options that can be
@@ -540,54 +628,19 @@ class MainFrame(wx.Frame):
             read stream, extract columns with values and display up to three of them by defailt
             executes guiPlot then
         """
+
+        self.plotstream = stream.copy()
+        self.orgheader = stream.header
+
         self.changeStatusbar("Plotting...")
 
-        # Some general Checks on Stream
-        # ##############################
-        # 1. Preslect first nine keys
-        keylist = []
-        keylist = stream._get_key_headers(limit=9)
-        # TODO: remove keys with high percentage of nans
-        #for key in keylist:
-        #    ar = [eval('elem.'+key) for elem in stream if not isnan(eval('elem.'+key))]
-        #    div = float(len(ar))/float(len(stream))*100.0
-        #    if div <= 5.:
-        #        keylist.remove(key)
-        keylist = [elem for elem in keylist if elem in NUMKEYLIST]
-        self.symbollist = ['-'] * len(keylist)
-        # 2. If stream too long then don't allow scatter plots -- too slowly
-        if stream.length()[0] < 2000:
-            self.menu_p.str_page.symbolRadioBox.Enable()
-        else:
-            self.menu_p.str_page.symbolRadioBox.Disable()
-        # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
-        if stream.header.get('DataFormat') == 'MagPyDI':
-            self.menu_p.str_page.symbolRadioBox.Enable()
-            self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
-            self.shownkeylist = keylist
-            keylist = ['x','y','z','dx','dy','dz']
-            self.symbollist = ['o'] * len(keylist)
-            # enable daily average button
-
-        self.shownkeylist = keylist
-
-        # 4. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
-        typus = stream.header.get('DataComponents')
-        typus = typus.lower()[:3]
-        if typus in ['xyz','hdz','idf']:            
-            self.compselect = typus
-            self.menu_p.str_page.compRadioBox.Enable()
-            self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
-        else:
-            if 'x' in keylist and 'y' in keylist and 'z' in keylist:
-                self.compselect = 'xyz'
-                self.menu_p.str_page.compRadioBox.Enable()
+        keylist = self.UpdatePlotCharacteristics(self.plotstream)        
 
         self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(keylist)))
-        if len(stream) > self.resolution:
-            self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
+        #if len(stream) > self.resolution:
+        #    self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
 
-        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution,symbollist=self.symbollist)
+        self.plot_p.guiPlot(self.plotstream,keylist,symbollist=self.symbollist,annotate=self.annotate)
         if stream.length()[0] > 0 and len(keylist) > 0:
             self.ExportData.Enable(True)
             self.menu_p.ana_page.activityButton.Enable() # enabled at initial plot
@@ -689,7 +742,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.ana_page.amountTextCtrl.SetValue(str(n))
         self.menu_p.ana_page.samplingrateTextCtrl.SetValue(str(sr))
         self.menu_p.ana_page.keysTextCtrl.SetValue(keystr)
-        print(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+        #print(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
         self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
         self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
         self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
@@ -763,7 +816,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         # plot data
         self.stream = stream
-        self.plotstream = stream
         if stream.length()[0] > 0:
             self.OnInitialPlot(stream)
             self.changeStatusbar("Ready")
@@ -1067,7 +1119,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.menu_p.rep_page.logMsg('- flagged outliers: check logfile for details')
         self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
 
     def onDerivativeButton(self, event):
         """
@@ -1084,7 +1136,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.menu_p.rep_page.logMsg('- derivative calculated')
         self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
 
     def onFitButton(self, event):
         """
@@ -1143,7 +1195,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if not len(self.plotstream) == 0 and not len(offsetdict) == 0:
                 self.plotstream = self.plotstream.offset(offsetdict)
                 self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
@@ -1192,7 +1244,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
 
                 self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
@@ -1243,17 +1295,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             else:
                 address = os.path.join(path,files)
                 stream = read(path_or_url=address,starttime=sd, endtime=ed)
-            mintime = stream._get_min('time')
-            maxtime = stream._get_max('time')
-            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-            #self.menu_p.str_page.startDatePicker.Disable()
-            #self.menu_p.str_page.endDatePicker.Disable()
-            #self.menu_p.str_page.startTimePicker.Disable()
-            #self.menu_p.str_page.endTimePicker.Disable()
-            self.menu_p.str_page.openStreamButton.Disable()
+            self.UpdateTimeRanges(stream)
         except:
             dlg = wx.MessageDialog(self, "Could not read file(s)!\n"
                         "check your files and/or selected time range\n",
@@ -1275,8 +1317,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = self.menu_p.str_page.endTimePicker.GetValue()
         ed = datetime.fromtimestamp(enday.GetTicks())
+        print("OnReDraw",sttime)
 
-        if 'AM' or 'PM' in sttime:
+        if 'AM' in sttime or 'PM' in sttime:
             stt = datetime.strptime(sttime,'%I:%M:%S %p')
             ett = datetime.strptime(entime,'%I:%M:%S %p')
         else:
@@ -1325,7 +1368,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             return
 
         print("Stream loaded of length ", len(stream))
-        self.plotstream = stream
+        self.plotstream = stream.copy()
         self.SetPageValues(stream)
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
@@ -1337,11 +1380,27 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         if len(self.plotstream) == 0:
             self.plotstream = self.stream
-        keylist = self.plotstream._get_key_headers()
+        keylist = self.plotstream._get_key_headers(numerical=True)
         self.keylist = keylist
         shownkeylist = self.shownkeylist
+
+        namelist = []
+        unitlist = []
+        for key in keylist:
+            value = self.plotstream.header.get('col-'+key)
+            unit = self.plotstream.header.get('unit-col-'+key)
+            if not value == '':
+                namelist.append(value)
+            else:
+                namelist.append(key)
+            if not unit == '':
+                unitlist.append(unit)
+            else:
+                unitlist.append('')
+        
+        print("onSelectKeys", namelist, unitlist)
         if len(self.plotstream) > 0:
-            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist)
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
             for elem in shownkeylist:
                 exec('dlg.'+elem+'CheckBox.SetValue(True)')
             if dlg.ShowModal() == wx.ID_OK:
@@ -1417,15 +1476,41 @@ Suite 330, Boston, MA  02111-1307  USA"""
         Restore originally loaded data
         """
         if not len(self.stream) == 0:
-            self.plotstream = self.stream
-            self.OnInitialPlot(self.stream)
+            self.plotstream = self.stream.copy()
+            self.plotstream.header = self.orgheader
+            self.UpdateTimeRanges(self.plotstream)
+            self.OnInitialPlot(self.plotstream)
+
+    def onDailyMeansButton(self,event):
+        """
+        Restore originally loaded data
+        """
+        if self.plotstream.header.get('DataFormat') == 'MagPyDI':
+            keys=['dx','dy','dz']
+        else:
+            keys = False
+        self.plotstream = self.plotstream.dailymeans(keys)
+        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)[:3]
+        self.symbollist = self.symbollist[0]*len(self.shownkeylist)
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=self.annotate,errorbars=True)
+
+    def onApplyBCButton(self,event):
+        """
+        Apply baselinecorrection
+        """
+        self.plotstream = self.plotstream.bc()
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=self.annotate)
+
 
     def onAnnotateCheckBox(self,event):
         """
         Restore originally loaded data
         """
+        #### get True or False
+        #self.annotate = self.menu_p.str_page.annote[event.GetInt()]
+        
         mp.plot(self.plotstream,annotate=True)
-        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=True)
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=self.annotate)
 
     def onChangeComp(self, event):
         orgcomp = self.compselect

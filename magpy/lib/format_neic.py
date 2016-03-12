@@ -28,6 +28,8 @@ def isNEIC(filename):
 def readNEIC(filename, headonly=False, **kwargs):
     """
     Reading NEIC format data.
+    obtained by 
+    curl http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv
     Looks like:
 time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,type,horizontalError,depthError,magError,magNst,status,locationSource,magSource
 2016-02-09T12:28:44.800Z,-57.874,-26.0044,69.61,5.2,mb,,82,6.881,0.67,us,us20004z0a,2016-02-09T12:49:19.348Z,"132km NNE of Bristol Island, South Sandwich Islands",earthquake,8.6,6.6,0.061,88,reviewed,us,us
@@ -48,34 +50,51 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
             neicreader = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in neicreader:
                 if row[0] == 'time':
-                    print("Got Header")
-                    print(len(row))
+                    #print("Got Header")
+                    #print(len(row))
+                    dxp = KEYLIST.index('dy')
+                    secp = KEYLIST.index('sectime')
                     for i,key in enumerate(KEYLIST):
                         if i < 5:
                             headers['col-'+key] = row[i]
-                        if i >= pos and i < pos+4:
+                        if i in range(5,8):
+                            headers['col-'+key] = row[i+2]
+                        if i == pos:
                             headers['col-'+key] = row[i-pos+11]
+                        if i in range(pos+2,pos+4):
+                            headers['col-'+key] = row[i-pos+11]
+                        if i in range(dxp,dxp+3):
+                            headers['col-'+key] = row[i-dxp+15]
+                        if i == pos+1:
+                            headers['col-'+key] = row[17]
+                        if i == secp:
+                            headers['col-'+key] = row[12]
                 else:
                     datalist.append(row)
 
     neicarray = np.asarray(datalist)
     neicar = neicarray.transpose()
     timecol = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[0]])
-    
     array[0] = timecol
     for i in range(1,5):
         array[i] = neicar[i].astype(float)
     for i in range(7,10):
-        print(neicar[i])
-    for i in range(11,15):
-        array[i-11+pos] = neicar[i]
+        array[i-2] = neicar[i]
+    for i in range(pos+2,pos+4):
+        array[i] = neicar[i-pos+11]
+    for i in range(dxp,dxp+3):
+        array[i] = neicar[i-dxp+15]
+    array[pos] = neicar[11]
+    # sec time
+    array[secp] = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[12]])
+    # status
+    array[pos+1] = neicar[i-dxp+17]
 
-    ### TODO proper applictaion requires a stream2flaglist method of which stream elements (or its range) can be assigned to flaglist elements (e.g. time -> start and endtime, flagnumber as kwarg, comment either as kwarg or from selected columns (ideal: "Mytext %f, Mysecondtext %str1", where %f, %st1 is replaced by the specific column content)
-    ### Use in combination with extract method
+    ## General Header data
+    headers['DataFormat'] = 'NEICCSV'
+    headers['DataSource'] = 'Earthquake Hazards Program of the USGS'
+    #headers['DataTerms'] = ''
+    headers['DataReferences'] = 'http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv'
 
-    #    array[i] = np.asarray([float(elem) for elem in neicar[i] if not elem == '' else float(nan)])
-    #array[] = neicar[i].astype(float)
-    print(array)
-    print(headers)
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 

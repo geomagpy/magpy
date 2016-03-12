@@ -1,15 +1,9 @@
 #!/usr/bin/env python
 
-try:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-except:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
+from magpy.stream import *
+from magpy.absolutes import *
+from magpy.transfer import *
+from magpy.database import *
 
 import wx
 
@@ -58,6 +52,8 @@ class StreamPage(wx.Panel):
         self.restoreButton = wx.Button(self,-1,"Restore data",size=(130,30))
         self.changePlotButton = wx.Button(self,-1,"General Options",size=(130,30))
         self.errorBarsButton = wx.Button(self,-1,"Error bars",size=(130,30))
+        self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(130,30))
+        self.applyBCButton = wx.Button(self,-1,"Apply BC",size=(130,30))
         self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(130,30))
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(130,30))
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(130,30))
@@ -114,9 +110,9 @@ class StreamPage(wx.Panel):
                  'self.compRadioBox, noOptions',
                  'self.symbolRadioBox, noOptions',
                  'self.annotateCheckBox, noOptions',
-                 '(0,0), noOptions',
+                 'self.dailyMeansButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.confinexCheckBox, noOptions',
-                 '(0,0), noOptions',
+                 'self.applyBCButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.lineLabel3, noOptions',
                  'self.lineLabel4, noOptions',
                  'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
