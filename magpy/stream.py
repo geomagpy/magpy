@@ -9348,7 +9348,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pathname = path_or_url
         for file in iglob(pathname):
             stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
-            stp = _read(file, dataformat, headonly, **kwargs)
+            stp = _read(file, dataformat, headonly, **kwargs) glob
         """
     elif "://" in path_or_url:
         # some URL
@@ -9394,12 +9394,26 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     else:
         # some file name
         pathname = path_or_url
-        for file in iglob(pathname):
-            stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
-            stp = _read(file, dataformat, headonly, **kwargs)
-            #print stp.ndarray
-            if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
-                st.extend(stp.container,stp.header,stp.ndarray)
+        for filename in iglob(pathname):
+            getfile = True
+            theday = extractDateFromString(filename)
+            try:
+                if starttime:
+                    if not theday[-1] >= datetime.date(st._testtime(starttime)):
+                        getfile = False
+                if endtime:
+                    if not theday[0] <= datetime.date(st._testtime(endtime)):
+                        getfile = False
+            except:
+                # Date format not recognised. Read all files
+                loggerstream.warning("read: Unable to detect date string in filename. Reading all files...")
+                getfile = True
+            if getfile:
+                stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
+                stp = _read(filename, dataformat, headonly, **kwargs)
+                #print stp.ndarray
+                if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
+                    st.extend(stp.container,stp.header,stp.ndarray)
             #del stp
         if len(st) == 0:
             # try to give more specific information why the stream is empty
