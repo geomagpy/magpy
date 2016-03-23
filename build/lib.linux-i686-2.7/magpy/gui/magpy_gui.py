@@ -422,7 +422,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onSelectKeys, self.menu_p.str_page.selectKeysButton)
         self.Bind(wx.EVT_BUTTON, self.onExtractData, self.menu_p.str_page.extractValuesButton)
         self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
-        self.Bind(wx.EVT_BUTTON, self.onChangeHeaderData, self.menu_p.str_page.changeHeaderButton)
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
         self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
         self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.str_page.dailyMeansButton)
@@ -1472,14 +1471,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # show/edit meta info
         pass
 
-    def onChangeHeaderData(self,event):
-        """
-        open dialog to modify plot options (general (e.g. bgcolor) and  key
-        specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        pass
-
     def onRestoreData(self,event):
         """
         Restore originally loaded data
@@ -1549,30 +1540,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Restore originally loaded data
         """
-        flaglist = []
-        flagdata = self.plotstream.copy()
-
-        variables = self.shownkeylist
-        self.plot_p.figure.clear()
-        flagger = mp.figFlagger(flagdata,variables,figure=True)
-        self.plot_p.figure = flagger.figure
-        self.plot_p.axes = flagger.axes
-        self.plot_p.canvas.draw()
-        indeciestobeflagged = flagger.idxarray
-        while indeciestobeflagged > 0:
-            indeciestobeflagged, flaglst = mp.addFlag(flagger.data, flagger, indeciestobeflagged, variables)
-            flaglist.extend(flaglst)
-
-        print("Returning data ....")
-        try:
-            print("  -- original format: %s " % data.header['DataFormat'])
-        except:
-            pass
-
-        orgkeys = flagger.orgkeylist
-        flagdata = flagger.data.selectkeys(orgkeys)
-
-        self.OnPlot(flagdata,self.shownkeylist,symbollist=self.symbollist,annotate=True)
+        self.plotstream, flaglist = mp.plotFlag(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist,annotate=True)
 
 
     # ####################

@@ -307,30 +307,6 @@ class AbsoluteData(object):
 
         return np.asarray([eval('elem.'+key) for elem in self])
 
-    def _check_coverage(self,datastream, keys=['x','y','z']):
-        """
-        DEFINITION:
-            check whether variometer/scalar data is available for each time step
-            of DI data (within 2* samplingrate diff 
-        """
-        # 1. Drop all data without value
-        samprate = datastream.samplingrate()
-        for key in keys:
-            datastream = datastream._drop_nans(key)
-        if not datastream.length()[0] > 1:
-            return False        
-        # 2. Get time column
-        timea = np.asarray(datastream._get_column('time'))
-        # 3. Get time column of DI data
-        timeb = np.asarray([el.time for el in self])
-        # 4. search
-        #print(len(timea), len(timeb), samprate)
-        #print(timea, timeb)
-        indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs(timea-float(el)))/(samprate/24./3600.)*2 <= 1.]
-        if not len(indtia) == len(timeb):
-            return False
-
-        return True
 
     def _insert_function_values(self, function,**kwargs):
         """
@@ -419,7 +395,6 @@ class AbsoluteData(object):
         iterator = kwargs.get('iterator')
         debugmode = kwargs.get('debugmode')
         annualmeans = kwargs.get('annualmeans')
-        meantime = kwargs.get('meantime')
 
         ang_fac = 1
         if not deltaD:
@@ -438,10 +413,6 @@ class AbsoluteData(object):
             iterator = 0
         if not debugmode:
             debugmode = False
-        if not meantime:
-            # If meantime is False, then the calculation will be transformed to t0
-            # which is the time of the first measurement (conform with spreedsheet)
-            determinationindex = 0
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
@@ -462,6 +433,11 @@ class AbsoluteData(object):
         expmire = [float(elem) for elem in expmire]
         expmire = np.mean([elem for elem in expmire if not isnan(elem)])
         poslst = [elem for elem in self if not isnan(elem.hc) and not isnan(elem.vc)]
+
+        try:
+            temperature = self[0].t
+        except:
+            pass
 
         try:
             if len(poslst) < 1:
@@ -486,14 +462,13 @@ class AbsoluteData(object):
         # -- Get mean values for x and y
         # ------------------------------
         meanx, meany = 0.0,0.0
-        xcol, ycol, tlist = [],[],[]
+        xcol, ycol = [],[]
         for idx, elem in enumerate(poslst):
             if idx < 9:
                 if not isnan(elem.varx):
                     xcol.append(elem.varx)
                 if not isnan(elem.vary):
                     ycol.append(elem.vary)
-            tlist.append(elem.time)
         if len(xcol) > 0:
             meanx = np.mean(xcol)
         if len(ycol) > 0:
@@ -502,26 +477,12 @@ class AbsoluteData(object):
         nr_lines = len(poslst)
         dl1,dl2,dl2tmp,variocorr, variohlst = [],[],[],[],[] # temporary lists
 
-
         # -- check, whether inclination and declination values are present:
         # ------------------------------
         if nr_lines < 9:
             linecount = nr_lines
         else:
             linecount = (nr_lines-1)/2
-
-        # -- Determine poslst index closest to mean time
-        # ----------------------------------------------
-        # Usage of meantime deviates from spreedsheet tool
-        if meantime:
-            avtime = np.mean(np.asarray(tlist))
-            postime = np.asarray([el.time for el in poslst][:linecount])
-            # get the index of postime with least difference to average time
-            mindiff = np.abs(postime-avtime)
-            determinationindex = np.where(mindiff < np.min(mindiff)+0.000001)[0]
-            #print("determinationindex", determinationindex[-1])
-            #print ("Time", num2date(poslst[determinationindex].time))
-
 
         # -- cylce through declinations measurements:
         # ------------------------------
@@ -627,11 +588,12 @@ class AbsoluteData(object):
         loggerabs.debug("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
 
         #print decmean, mirediff, variocorr[0], deltaD
-        dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
+
+        dec = self._corrangle(decmean + mirediff + variocorr[0]*180.0/np.pi + deltaD)
 
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
 
-        loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
+        loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[0], deltaD, ang_fac, hstart))
 
         #print "HStart for collimation D", hstart, dec
         if not hstart == 0:
@@ -648,18 +610,14 @@ class AbsoluteData(object):
             epZD = float('nan')
 
         resultline = LineStruct()
-        try:
-            resultline.time = avtime # if meantime == True
-        except:
-            resultline.time = poslst[determinationindex].time
+        resultline.time = poslst[0].time
         resultline.y = dec
         resultline.dy = dec_baseval
         resultline.typ = 'idff'
         resultline.var1 = s0d
         resultline.var2 = deH
         resultline.var3 = epZD
-        resultline.var5 = determinationindex
-        resultline.t1 = poslst[determinationindex].temp
+        resultline.t1 = poslst[0].temp
         resultline.t2 = mirediff
         # general info:
         resultline.str1 = poslst[0].person
@@ -730,8 +688,6 @@ class AbsoluteData(object):
         if not usestep:
             usestep = 0
 
-        determinationindex = int(linestruct.var5)
-
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
         scale_z = scalevalue[2]
@@ -761,7 +717,6 @@ class AbsoluteData(object):
         variox, varioy, varioz, flist, fvlist, dflist  = [],[],[],[],[],[]
         for elem in self:
             if len(mflst) > 0 and not isnan(elem.f):
-                # F values provided in DI file
                 flist.append(elem.f)
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
                     variox.append(scale_x*elem.varx)
@@ -771,7 +726,6 @@ class AbsoluteData(object):
                     fvlist.append(elem.varf)
                     dflist.append(elem.f-elem.varf)
             elif len(mflst) == 0 and len(mfvlst) > 0:
-                # F values taken from separate scalar data
                 #print "Fs:", elem.varf
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
                     variox.append(scale_x*elem.varx)
@@ -789,12 +743,7 @@ class AbsoluteData(object):
         #     1. check Absolute file - no delta F -> use delta F from abs file
         #     2. check Scalar path
         #     3. check provided annual means
-        #     4. TODO basevalue is calculated at time t0 
-        #        -> According to Juerges excel sheet only D is determined at t0
-        #        -> I and F are averages within time range of DI meas
         # ###################################
-
-        nr_lines = len(poslst)
 
         if len(mflst)>0:
             #print "Primary F values contained in absolute file"
@@ -814,6 +763,9 @@ class AbsoluteData(object):
                 str4 = "Fannual"
             #return emptyline, 20000.0, 0.0
 
+        #print "Mean F and incstart", meanf, incstart
+
+
         # ###################################
         # Getting variometer data for F values
         #      proper correction requires scalar values
@@ -832,7 +784,6 @@ class AbsoluteData(object):
             meanvarioz = np.mean(varioz)
 
         # print "Test variometer means for F", meanvariox, meanvarioy, meanvarioz
-        #print("len(variox)", len(variox) , mean(variox), mean(variox[stli:nr_lines]))
         # TEST OK
 
         """
@@ -852,8 +803,9 @@ class AbsoluteData(object):
 
         # -- Start with the inclination calculation
         # --------------------------------------------------------------
+        nr_lines = len(poslst)
         #I0Diff1,I0Diff2,xDiff1,zDiff1,xDiff2,zDiff2= 0,0,0,0,0,0
-        I0list, ppmval,testlst,tlist = [],[],[],[]
+        I0list, ppmval,testlst = [],[],[]
         xvals, yvals, zvals =  [],[],[]
         cnt = 0
         mirediff = linestruct.t2
@@ -886,7 +838,6 @@ class AbsoluteData(object):
                     ppmval.append(meanf)
                 else:
                     ppmval.append(ppmtmp)
-                tlist.append(poslst[k].time)
             except:
                 ppmval.append(meanf)
             if not ppmval[cnt] == 0:
@@ -1015,25 +966,15 @@ class AbsoluteData(object):
         # determine best F
         # Please note: excel sheet averages all Variometer corrected values:
         # ppmval list consists of: 1) ppm values corrected for variation if values contained in abs file
-        #                          2) ppm values corrected for variation if values contained in external file
+        #                          2) ppm values corrected for variation if values contained in abs file
         #                          3) F from provided annual means
         # Note: these averages are used for determining collimation angels si0 and epzi
 
-        #meanf = ppmval[determinationindex]
-        #print("MeanF", meanf)
-        sp = int((nr_lines-1)/2.0)
-        ep = (nr_lines-1)
-        meanf =  mean(ppmval[sp:ep])
-        #print ("MeanF", meanf)
+        meanf =  mean(ppmval)
         tmpH = self._h(meanf, inc)
         tmpZ = self._z(meanf, inc)
 
-        #print ("Averages1", tmpH, tmpZ, meanf)
-        #print ("Averages2", len(ppmval), len(xvals), len(yvals), len(zvals))
-        #print ("Averages3", ppmval)
-        #print ("Averages4", xvals)
-        #print ("Averages5", yvals)
-        #print ("Averages6", zvals)
+        #print "Averages", tmpH, tmpZ, meanf
 
         #if not meanf == 0.0:
         #    inc = np.arctan(tmpZ/tmpH)*180.0/np.pi
@@ -1063,9 +1004,6 @@ class AbsoluteData(object):
 
         # By default:
         # Running calc according to script: => offsets are detemined for the average I measurement part
-        # Please note: as offsets are calculated from the averages of all measurements
-        #              the final result is not representative for t0
-        #              but actually for average time of measurements....
 
         # =RUNDEN(WURZEL(K37^2-(MITTELWERT(G15:G18))^2)-MITTELWERT(F15:F18);1)
         if len(xvals) > 0:
@@ -1074,9 +1012,9 @@ class AbsoluteData(object):
                 h_adder = float('nan')
                 z_adder = float('nan')
             else:
-                h_adder = np.sqrt(tmpH**2 - (np.mean(yvals))**2) - mean(xvals)
+                h_adder = np.sqrt(tmpH**2 - mean(yvals)**2) - mean(xvals)
                 z_adder = tmpZ-mean(zvals)
-            #print("offsets", tmpH, mean(yvals), mean(xvals), h_adder, z_adder)
+            #print "offsets", h_adder, z_adder
         else:
             #print "No variometer data - using estimated H and Z"
             h_adder = tmpH
@@ -1085,15 +1023,14 @@ class AbsoluteData(object):
         # ###################################################
         # #####      Recalculating field values at time k=0
         # ###################################################
-        #print ("Time", determinationindex, scale_x, h_adder, scale_y)
 
-        if not np.isnan(poslst[determinationindex].varx) and not np.isnan(h_adder):
-            hstart = np.sqrt((scale_x*poslst[determinationindex].varx + h_adder)**2 + (scale_y*poslst[determinationindex].vary)**2)
+        if not np.isnan(poslst[0].varx) and not np.isnan(h_adder):
+            hstart = np.sqrt((scale_x*poslst[0].varx + h_adder)**2 + (scale_y*poslst[0].vary)**2)
             xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0) )
             ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0) )
-            zstart = scale_z*poslst[determinationindex].varz + z_adder
+            zstart = scale_z*poslst[0].varz + z_adder
             fstart = np.sqrt(hstart**2 + zstart**2)
-            #print ("Difference:", fstart, self[determinationindex].varf, meanf)
+            #print "Final Test:", xstart, ystart, zstart, hstart, fstart
             inc = np.arctan(zstart/hstart)*180.0/np.pi
             #print testinc, inc
         else:
@@ -1134,15 +1071,11 @@ class AbsoluteData(object):
         #print "Basevalues", basex1,basey1,basez1, basex2,basey2,basez2
         #baseh = np.sqrt(basex**2+basey**2)
 
-        # reformat time
-        #linestruct.time = poslst[determinationindex].time
         # Putting data to linestruct:
         linestruct.x = inc
         linestruct.z = fstart
         linestruct.f = fstart #np.array([basex,basey,basez])
         linestruct.dx = basex
-        if np.isnan(basex):
-            linestruct.dy = np.nan
         #linestruct.dy = basey   # if not used, then the declination value will be returned
         linestruct.dz = basez
         linestruct.df = deltaF
@@ -1187,8 +1120,6 @@ class AbsoluteData(object):
             - scalevalue:       (list of floats) scalevalues for each component (e.g. default = [1,1,1])
             - debugmode:        (bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
             - printresults      (bool) - if True print results to screen
-            - meantime          (bool) if true, values are recalculated to nearest 
-                                       horizontal measurement to average time
 
         USED BY:
 
@@ -1222,7 +1153,6 @@ class AbsoluteData(object):
         hbasis = kwargs.get('hbasis')
         deltaD = kwargs.get('deltaD')
         deltaI = kwargs.get('deltaI')
-        meantime = kwargs.get('meantime')
         usestep = kwargs.get('usestep')
         printresults = kwargs.get('printresults')
 
@@ -1255,7 +1185,7 @@ class AbsoluteData(object):
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
             #print "STarting with", xstart, ystart
-            resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,debugmode=debugmode)
+            resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
                 print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
@@ -1296,7 +1226,7 @@ class AbsoluteData(object):
             loggerabs.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
 
             if printresults:
-                print('Vector at: {}'.format(str(num2date(outline.time))))
+                print('Vector:')
                 print('Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f))
                 print('Collimation and Offset:')
                 print('Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f deg/unit' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2))
@@ -1503,8 +1433,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     """
     db = kwargs.get('db')
     dbadd = kwargs.get('dbadd')
-    skipvariodb = kwargs.get('skipvariodb')
-    skipscalardb = kwargs.get('skipscalardb')
     alpha = kwargs.get('alpha')
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
@@ -1518,13 +1446,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     outputformat = kwargs.get('outputformat')
     usestep = kwargs.get('usestep')
     annualmeans = kwargs.get('annualmeans')
-    scalevalue = kwargs.get('scalevalue')
     azimuth = kwargs.get('azimuth') # 267.4242 # A16 to refelctor
     abstype = kwargs.get('abstype')
     expT = kwargs.get('expT')
     expI = kwargs.get('expI')
     expD = kwargs.get('expD')
-    meantime = kwargs.get('meantime')
     movetoarchive = kwargs.get('movetoarchive')
 
     if not outputformat:
@@ -1685,28 +1611,26 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             else:
                 variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
             print("Length of Variodata:", variostr.length()[0])
-            if db and not skipvariodb:
-                try:
-                    vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
-                    variostr = variostr.flag(vaflaglist)
-                    print("Obtained flagging information for vario data from data base: {} flags".format(len(vaflaglist)))
-                except:
-                    print("Could not find flagging data in database")
-                try:
-                    print("Now getting header information")
-                    variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
-                except:
-                    print("Failed to obtain header information from data base")
-                try:
-                    print("Applying delta values from db")
-                    variostr = dbase.applyDeltas(db,variostr)
-                except:
-                    print("Applying delta values failed")
+            try:
+                vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
+                variostr = variostr.flag(vaflaglist)
+                print("Obtained flagging information for vario data from data base: {} flags".format(len(vaflaglist)))
+            except:
+                print("Could not find flagging data in database")
             try:
                 variostr = variostr.remove_flagged()
                 print("Flagged records of variodata have been removed")
             except:
                 print("Flagging of variodata failed")
+            try:
+                print("Now getting header information")
+                variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
+            except:
+                print("Failed to obtain header information from data base")
+            try:
+                variostr = dbase.applyDeltas(db,variostr)
+            except:
+                print("Applying delta values failed")
         except:
             print("absoluteAnalysis: reading variometer data failed")
             variostr = DataStream()
@@ -1738,31 +1662,35 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             else:
                 scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
             print("Length of Scalardata:", scalarstr.length()[0])
-            if db and not skipscalardb:
-                try:
-                    scflaglist = dbase.db2flaglist(db,scalarstr.header['SensorID'])
-                    scalarstr = scalarstr.flag(scflaglist)
-                except:
-                    print("Failed to obtain flagging information from data base")
-                try:
-                    print("Now getting header information")
-                    scalarstr.header = dbase.dbfields2dict(db,scalarstr.header['SensorID']+'_0001')
-                except:
-                    print("Failed to obtain header information from data base")
-                try:
-                    print("Applying delta values from database", scalarstr.header['SensorID'])
-                    scalarstr = dbase.applyDeltas(db,scalarstr)
-                    if not deltaF == 0:
-                        print (" ------------  IMPORTANT ----------------")
-                        print (" deltaF from DB and the provided delta F {b}".format(b=deltaF))
-                        print (" will be applied.")
-                except:
-                    print("Applying delta values failed")
+            try:
+                scflaglist = dbase.db2flaglist(db,scalarstr.header['SensorID'])
+                scalarstr = scalarstr.flag(scflaglist)
+            except:
+                print("Failed to obtain flagging information from data base")
             try:
                 scalarstr = scalarstr.remove_flagged()
                 print("Flagged records of scalardata have been removed")
             except:
                 print("Flagging of scalardata failed")
+            try:
+                print("Now getting header information")
+                scalarstr.header = dbase.dbfields2dict(db,scalarstr.header['SensorID']+'_0001')
+            except:
+                print("Failed to obtain header information from data base")
+            #try:  # Get header info from database
+            #    #print "Eventually move column to f line"
+            #    #scalarstr = dbase.applyDeltas(db,scalarstr)
+            #except:
+            #    print "Applying delta values failed"
+            try:
+                print("Applying delta values from database", scalarstr.header['SensorID'])
+                scalarstr = dbase.applyDeltas(db,scalarstr)
+                if not deltaF == 0:
+                    print (" ------------  IMPORTANT ----------------")
+                    print (" you provided an additional delta F value")
+                    print (" which will be used for offset correction.")
+            except:
+                print("Applying delta values failed")
         except:
             print("absoluteAnalysis: reading scalar data from file failed")
             scalarstr = DataStream()
@@ -1853,19 +1781,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 usestep = 2
             #print "USESTEP:", usestep
             if variofound:
-                valuetest = stream._check_coverage(variostr)
-                if valuetest:
-                    stream = stream._insert_function_values(vafunc)
-                else:
-                    print ("Warning! Variation data missing at DI time range")
-                #stream = stream._insert_function_values(vafunc)
+                stream = stream._insert_function_values(vafunc)
             if scalarfound:
-                # TODO Check offset values
-                valuetest = stream._check_coverage(scalarstr,keys=['f'])
-                if valuetest:
-                    stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
-                else:
-                    print ("Warning! Scalar data missing at DI time range")
+                stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
             try:
                 # get delta D and delta I values here
                 if not deltaD:
@@ -1880,8 +1798,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         #get from dict
                     except:
                         deltaI = 0.0
-                #print("here", deltaD, deltaI, scalevalue)
-                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue)
+                #print "here", deltaD, deltaI
+                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI)
                 print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
                 print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
                 if not deltaF == 0:
@@ -1890,7 +1808,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 result = LineStruct()
             dataok = True
             if expD:
-                if not float(expD)-float(expT) < result.y < float(expD)+float(expT):
+                if not expD-expT < result.y < expD+expT:
                     try:
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]
@@ -1901,7 +1819,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         print("absoluteAnalysis: Value error while determining time - failed analysis")
                         dataok = False
             if expI and dataok:
-                if not float(expI)-float(expT) < result.x < float(expI)+float(expT):
+                if not expI-expT < result.x < expI+expT:
                     try:
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]

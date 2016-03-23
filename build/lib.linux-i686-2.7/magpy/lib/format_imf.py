@@ -886,10 +886,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     Writing Intermagnet CDF format (1.1)
     """
 
-    print("Writing IMAGCDF Format", filename)
+    print("Writing IMAGCDF Format")
     mode = kwargs.get('mode')
-    skipcompression = kwargs.get('skipcompression')
-
     if os.path.isfile(filename+'.cdf'):
         filename = filename+'.cdf'
     if os.path.isfile(filename):
@@ -999,11 +997,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
         elif len(col) > 0:
             comps = datastream.header.get('DataComponents','')
+            cdfkey = 'GeomagneticField'+key.upper()
             keyup = key.upper()
-            if key in ['t1','t2']:
-                cdfkey = key.upper().replace('T','Temperature')
-            else:
-                cdfkey = 'GeomagneticField'+key.upper()
             if not comps == '':
                 try:
                     if key == 'x':
@@ -1027,7 +1022,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                 mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time series"
                 mycdf[cdfkey].attrs['LABLAXIS'] = keyup
-                if key in ['x','y','z','h','e','t1','t2']:
+                if key in ['x','y','z','h','e']:
                     mycdf[cdfkey].attrs['VALIDMIN'] = -88880.0
                     mycdf[cdfkey].attrs['VALIDMAX'] = 88880.0
                 elif key == 'i':
@@ -1050,7 +1045,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 if keydic == ('unit-col-'+key):
                     try:
                         if 'unit-col-'+key == 'deg C':
-                            mycdf[cdfkey].attrs['FIELDNAM'] = "Temperature "+key.upper()
                             unit = 'Celsius'
                         elif 'unit-col-'+key == 'deg':
                             unit = 'Degrees of arc'
@@ -1061,7 +1055,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         pass
         success = True
 
-    if not skipcompression:
+    compress = True
+    if compress:
         mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
     mycdf.close()
     return success

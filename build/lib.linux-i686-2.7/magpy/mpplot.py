@@ -681,7 +681,7 @@ def toggle_selector(event):
 
 class figFlagger():
 
-    def __init__(self, data = None, variables=None, figure=False):
+    def __init__(self, data = None, variables=None):
 
         self.data = data
 
@@ -690,8 +690,6 @@ class figFlagger():
         self.flagid = 3
         self.reason = 'why because'
         self.idxarray = []
-        self.figure = False
-        self.axes = False
 
         self.orgkeylist = self.data._get_key_headers()
         if not variables: #or variables == ['x','y','z','f'] or variables == ['x','y','z']:
@@ -715,12 +713,7 @@ class figFlagger():
 
         radio, hzfunc = self.startup(self.fig, self.data)
         radio.on_clicked(hzfunc)
-
-        if figure:
-            self.figure = self.fig
-            self.axes = self.fig.axes
-        else:
-            plt.show()
+        plt.show()
 
     def analyzeData(self,keylist):
         #keylist = self.data._get_key_headers()
@@ -980,7 +973,7 @@ def addFlag(data, flagger, indeciestobeflagged, variables):
         #flagger.flag(data)
         return flagger.idxarray, flaglst
 
-def plotFlag(data,variables=None,figure=False):
+def plotFlag(data,variables=None):
     '''
     DEFINITION:
         Creates a plot for flagging.
@@ -999,7 +992,7 @@ def plotFlag(data,variables=None,figure=False):
     flaglist = []
     flagdata = data.copy()
 
-    flagger = figFlagger(flagdata,variables,figure)
+    flagger = figFlagger(flagdata,variables)
     indeciestobeflagged = flagger.idxarray
     while indeciestobeflagged > 0:
         indeciestobeflagged, flaglst = addFlag(flagger.data, flagger, indeciestobeflagged, variables)
@@ -1015,10 +1008,10 @@ def plotFlag(data,variables=None,figure=False):
     flagdata = flagger.data.selectkeys(orgkeys)
     return flagdata, flaglist
 
-#####################################################################
-#         End   Flagging                                            #
-#####################################################################
 
+#####################################################################
+#               Flagging                                            #
+#####################################################################
 
 def plotEMD(stream,key,verbose=False,plottitle=None,
         outfile=None,sratio=0.25,max_modes=20,hht=True):

@@ -4720,64 +4720,12 @@ CALLED BY:
         return stream.sorting()
 
 
-    def get_rotationangle(self, xcompensation=0,keys=['x','y','z'],**kwargs):
-        """
-        DESCRIPTION:
-            "Estimating" the rotation angle towards a magnetic coordinate system 
-            assuming z to be vertical down. Please note: You need to provide a
-            complete horizontal vector including either the x compensation field
-            or if not available an annual estimate of the vector. This method can be used
-            to determine reorientation characteristics in order to accurately apply
-            HDZ optimzed basevalue calculations.
-        RETURNS:
-            rotangle   (float) The estimated rotation angle in degree
-        """
-        annualmeans = kwargs.get('annualmeans')
-
-        #1. get vector from data
-        # x = y*tan(dec)
-        if not keys:
-            keys = ['x','y','z']
-
-        if not len(keys) == 3:
-            loggerstream.error('get_rotation: provided keylist need to have three components.')
-            return stream #self
-
-        loggerstream.info('get_rotation: Determining rotation angle towards a magnetic coordinate system assuming z to be vertical down.')
-
-        ind1 = KEYLIST.index(keys[0])
-        ind2 = KEYLIST.index(keys[1])
-        ind3 = KEYLIST.index(keys[2])
-
-        if len(self.ndarray[0]) > 0:
-            if len(self.ndarray[ind1]) > 0 and len(self.ndarray[ind2]) > 0 and len(self.ndarray[ind3]) > 0:
-                # get mean disregarding nans
-                xl = [el for el in self.ndarray[ind1] if not np.isnan(el)]
-                yl = [el for el in self.ndarray[ind2] if not np.isnan(el)]
-                if annualmeans:
-                    meanx = annualmeans[0]
-                else:
-                    meanx = np.mean(xl)+xcompensation
-                meany = np.mean(yl)
-                # get rotation angle so that meany == 0
-                #zeroy = meanx*np.sin(ra)+meany*np.cos(ra)
-                #-meany/meanx = np.tan(ra)
-                rotangle = np.arctan2(-meany,meanx) * (180.) / np.pi
-
-        loggerstream.info('getrotation: Rotation angle determined: {} deg'.format(rotangle))
-
-        return rotangle
-
-
     def get_sampling_period(self):
         """
         returns the dominant sampling frequency in unit ! days !
 
         for time savings, this function only tests the first 1000 elements
         """
-
-        # For proper applictation - duplicates are removed 
-        self = self.removeduplicates()
 
         if len(self.ndarray[0]) > 0:
             timecol = self.ndarray[0].astype(float)
@@ -4851,9 +4799,6 @@ CALLED BY:
         if not digits:
             digits = 1
 
-        if not self.length()[0] > 1:
-            return 0.0
-
         sr = self.get_sampling_period()*24*3600
         unit = ' sec'
 
@@ -4898,12 +4843,11 @@ CALLED BY:
 
     def integrate(self, **kwargs):
         """
-        DESCRIPTION:
-            Method to integrate selected columns respect to time.
-            -- Using scipy.integrate.cumtrapz
-        VARIABLES:
-            optional:
-            keys: (list - default ['x','y','z','f'] provide limited key-list
+        Method to integrate selected columns respect to time.
+        -- Using scipy.integrate.cumtrapz
+
+        optional:
+        keys: (list - default ['x','y','z','f'] provide limited key-list
         """
 
 
@@ -7197,9 +7141,7 @@ CALLED BY:
             arraytime = self.ndarray[0]
             flagind = KEYLIST.index('flag')
             commentind = KEYLIST.index('comment')
-            print ("Found ndarray - using flag_outlier instead")
-            return self.flag_outlier(**kwargs)
-
+            print ("Use flag_outlier instead")
         elif len(self) > 1:
             arraytime = self._get_column('time')
         else:
@@ -8616,7 +8558,6 @@ CALLED BY:
         kind = kwargs.get('kind')
         comment = kwargs.get('comment')
         useg = kwargs.get('useg')
-        skipcompression = kwargs.get('skipcompression')
         success = True
 
         t1 = datetime.utcnow()
@@ -8679,7 +8620,7 @@ CALLED BY:
             filenamebegins = ''
         if not filenameends and not filenameends == '':
             # Extension for cdf files is automatically attached
-            if format_type in ['PYCDF','IMAGCDF']:
+            if format_type == 'PYCDF':
                 filenameends = ''
             else:
                 filenameends = '.txt'

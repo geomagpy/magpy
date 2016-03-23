@@ -978,7 +978,6 @@ def writePYCDF(datastream, filename, **kwargs):
         return False
 
     mode = kwargs.get('mode')
-    skipcompression = kwargs.get('skipcompression')
 
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
@@ -1121,9 +1120,6 @@ def writePYCDF(datastream, filename, **kwargs):
                         mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
                     except:
                         pass
-
-    if not skipcompression:
-        mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
 
     mycdf.close()
     return True

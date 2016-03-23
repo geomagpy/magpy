@@ -47,15 +47,13 @@ class StreamPage(wx.Panel):
 
         self.openStreamButton = wx.Button(self,-1,"Open stream",size=(130,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
-        self.addOptionsLabel = wx.StaticText(self, label="Additional options:")
-        self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(130,30))
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(130,30))
         self.restoreButton = wx.Button(self,-1,"Restore data",size=(130,30))
-        self.changePlotButton = wx.Button(self,-1,"Plot Options",size=(130,30))
-        self.changeHeaderButton = wx.Button(self,-1,"Meta Data",size=(130,30))
+        self.changePlotButton = wx.Button(self,-1,"General Options",size=(130,30))
+        self.errorBarsButton = wx.Button(self,-1,"Error bars",size=(130,30))
         self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(130,30))
-        self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(130,30))
+        self.applyBCButton = wx.Button(self,-1,"Apply BC",size=(130,30))
         self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(130,30))
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(130,30))
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(130,30))
@@ -68,7 +66,6 @@ class StreamPage(wx.Panel):
             label="Select symbols",
             choices=self.symbol, majorDimension=2, style=wx.RA_SPECIFY_COLS)
         self.annotateCheckBox = wx.CheckBox(self,label="annotate")
-        self.errorBarsCheckBox = wx.CheckBox(self,label="error bars")
         self.confinexCheckBox = wx.CheckBox(self,
             label="confine time")
         self.DrawButton = wx.Button(self,-1,"ReDraw",size=(130,30))
@@ -109,19 +106,15 @@ class StreamPage(wx.Panel):
                  'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.changePlotButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.changeHeaderButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.errorBarsButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.compRadioBox, noOptions',
                  'self.symbolRadioBox, noOptions',
                  'self.annotateCheckBox, noOptions',
-                 'self.applyBCButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.confinexCheckBox, noOptions',
                  'self.dailyMeansButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.errorBarsCheckBox, noOptions',
-                 '(0,0), noOptions',
+                 'self.confinexCheckBox, noOptions',
+                 'self.applyBCButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.lineLabel3, noOptions',
                  'self.lineLabel4, noOptions',
-                 'self.flagOptionsLabel, noOptions',
-                 '(0,0), noOptions',
                  'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
@@ -132,8 +125,6 @@ class StreamPage(wx.Panel):
                  '(0,0), noOptions',
                  'self.lineLabel5, noOptions',
                  'self.lineLabel6, noOptions',
-                 'self.addOptionsLabel, noOptions',
-                 '(0,0), noOptions',
                  'self.restoreButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions']
 
