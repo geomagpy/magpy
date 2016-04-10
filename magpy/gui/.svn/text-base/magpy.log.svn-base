@@ -1,8 +1,0 @@
-2013-12-06 10:07:07,080 INFO    - lib    format_magpy: Found PYCDF file /srv/data/saturn/wik/LEMI-WIK/definite/CDF/LEMI_2010-11.cdf
-2013-12-06 10:07:07,109 INFO    - root    Read: /srv/data/saturn/wik/LEMI-WIK/definite/CDF/LEMI_2010-11.cdf Format: MagPyCDF 
-2013-12-06 10:07:12,266 INFO    - stream plot: Start plotting.
-2013-12-06 10:07:12,964 INFO    - stream plot: Finished plot 1 at 2013-12-06 09:07:12.964521
-2013-12-06 10:07:13,347 INFO    - stream plot: Finished plot 2 at 2013-12-06 09:07:13.347504
-2013-12-06 10:07:13,725 INFO    - stream plot: Finished plot 3 at 2013-12-06 09:07:13.725456
-2013-12-06 10:07:14,258 INFO    - stream plot: Finished plot 4 at 2013-12-06 09:07:14.258735
-2013-12-06 10:07:14,752 INFO    - stream plot: Finished plot 5 at 2013-12-06 09:07:14.752615

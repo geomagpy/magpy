@@ -968,10 +968,10 @@ CALLED BY:
                 if len(el) == len(ind):
                     self.ndarray[i] = el[ind]
                 else:
-                    print(self.ndarray[i])
-                    print("Sorting: key %s has the wrong length - dropping this row" % KEYLIST[i])
-                    print("len(t-axis)=%d len(%s)=%d" % (len(self.ndarray[0]), KEYLIST[i], len(self.ndarray[i])))
-                    self.ndarray[i] = []
+                    print("Sorting: key %s has the wrong length - replacing row with NaNs" % KEYLIST[i])
+                    loggerstream.warning("Sorting: key %s has the wrong length - replacing row with NaNs" % KEYLIST[i])
+                    loggerstream.warning("len(t-axis)=%d len(%s)=%d" % (len(self.ndarray[0]), KEYLIST[i], len(self.ndarray[i])))
+                    self.ndarray[i] = np.empty(len(self.ndarray[0])) * np.nan
 
             self.ndarray = self.fillempty(self.ndarray,keylst)
             for idx,el in enumerate(self.ndarray):
@@ -11161,7 +11161,7 @@ def compareStreams(stream_a, stream_b):
     samplingrate_b = stream_b.get_sampling_period()
 
     if samplingrate_a != samplingrate_b:
-        loggingstream.error('CompareStreams: Cannot compare streams with different sampling rates!')
+        loggerstream.error('CompareStreams: Cannot compare streams with different sampling rates!')
         return stream_a
 
     # Do the timelines overlap?
