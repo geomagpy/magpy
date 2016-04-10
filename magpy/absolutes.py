@@ -804,6 +804,8 @@ class AbsoluteData(object):
         elif len(mfvlst)>0:
             #print "Primary F values contained in separate file"
             str4 = "Fext"
+            #if len(fvlist) > 16: ## Select values during inclination measurement to be coherent with excel sheet
+            #    fvlist=fvlist[8:16]
             meanf = np.mean(fvlist)
             loggerabs.debug("_calcinc: Using F from provided scalar path")
         else:
@@ -813,6 +815,9 @@ class AbsoluteData(object):
             if not meanf == 0:
                 str4 = "Fannual"
             #return emptyline, 20000.0, 0.0
+
+
+        #print("Running inc - meanF:", meanf)
 
         # ###################################
         # Getting variometer data for F values
@@ -1019,12 +1024,12 @@ class AbsoluteData(object):
         #                          3) F from provided annual means
         # Note: these averages are used for determining collimation angels si0 and epzi
 
-        #meanf = ppmval[determinationindex]
-        #print("MeanF", meanf)
-        sp = int((nr_lines-1)/2.0)
-        ep = (nr_lines-1)
-        meanf =  mean(ppmval[sp:ep])
-        #print ("MeanF", meanf)
+        if len(ppmval) > 8:
+            ppmval = ppmval[:8]
+
+        #avcorrf =  mean(ppmval) ## or meanf????
+        meanf =  mean(ppmval) ## or meanf????
+        #print ("MeanF", avcorrf, ppmval, len(ppmval))
         tmpH = self._h(meanf, inc)
         tmpZ = self._z(meanf, inc)
 
@@ -1048,8 +1053,12 @@ class AbsoluteData(object):
         # ###################################################
 
         if not meanf == 0:
-            s0i = -S0I1/4 * meanf -  (S0I2*np.sin(inc*np.pi/180) - S0I3*np.cos(inc*np.pi/180))/4
-            epzi = (EZI1/4 - ( EZI2*np.sin(inc*np.pi/180) - EZI3*np.cos(inc*np.pi/180) )/(4*meanf))* (meanf*np.sin(inc*np.pi/180))
+            ### Please Note: There is an observable difference in the first term of s0i calculation in
+            ### comparison to Juergs excel sheet
+            ### the reason is unclear S0I1 is perfectly OK and meanf as well
+            ### S0I1 however is usually very small wherefore rounding effects play an important role 
+            s0i = -S0I1/4.*meanf -  (S0I2*np.sin(inc*np.pi/180.) - S0I3*np.cos(inc*np.pi/180.))/4.
+            epzi = (EZI1/4. - ( EZI2*np.sin(inc*np.pi/180.) - EZI3*np.cos(inc*np.pi/180.) )/(4.*meanf))* (meanf*np.sin(inc*np.pi/180.))
         else:
             loggerabs.warning("_calcinc: %s : no intensity measurement available - you might provide annual means"  % num2date(self[0].time).replace(tzinfo=None))
             s0i, epzi = float('nan'),float('nan')
@@ -1109,6 +1118,7 @@ class AbsoluteData(object):
         #basey = 0.0 # defined in calcdec
         basez = z_adder
 
+        #print ("Bases:",basex,basez)
         def coordinate(vec):
             #vec = [64.2787283564,3.76836507656,48459.6180931]
             dc = vec[1]*np.pi/(180.)

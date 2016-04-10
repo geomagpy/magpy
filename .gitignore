@@ -1,2 +1,7 @@
 *.pyc
 *.py~
+*.py.bak
+*.py.old
+*.md~
+build
+dist/*.egg

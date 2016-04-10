@@ -4166,8 +4166,10 @@ CALLED BY:
 
         if not key in KEYLIST:
             loggerstream.error("flag_stream: %s is not a valid key." % key)
+            return self
         if not flag in [0,1,2,3,4]:
             loggerstream.error("flag_stream: %s is not a valid flag." % flag)
+            return self
 
         ndtype = False
         if len(self.ndarray[0]) > 0:
@@ -8808,9 +8810,10 @@ CALLED BY:
                 if format_type == 'IMF':
                     filename = filename.upper()
                 if len(lst) > 0 or ndtype:
-                    loggerstream.info('write: writing %s' % filename)
-                    #print "Here", len(newst.ndarray[0])
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg)
+                    if len(newst.ndarray[0]) > 0 or len(newst) > 1:
+                        loggerstream.info('write: writing %s' % filename)
+                        #print("Here", num2date(newst.ndarray[0][0]), len(newst.ndarray[0]))
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg)
                 starttime = endtime
                 endtime = endtime + coverage
 
@@ -9951,6 +9954,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     # --------------------------------------
     sa = stream_a.copy()
     sb = stream_b.copy()
+    sa = sa.removeduplicates()
+    sb = sb.removeduplicates()
 
     # Sampling rates
     # --------------------------------------
@@ -10012,7 +10017,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     # just add the merged sensorid
     header['SecondarySensorID'] = sensidb
 
-    print("mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits())
+    #print("mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits())
 
     if ndtype:
             array = [[] for key in KEYLIST]
@@ -10029,7 +10034,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs
                 indtia = np.nonzero(np.in1d(timea,tb))[0]
-                #print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
+                print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
 
                 if len(indtia) == len(indtib):
                     nanind = []
