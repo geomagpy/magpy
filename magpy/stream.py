@@ -8138,7 +8138,8 @@ CALLED BY:
     def trim(self, starttime=None, endtime=None, newway=False):
         """
     DEFINITION:
-        Removing dates outside of range between start- and endtime
+        Removing dates outside of range between start- and endtime.
+        Returned stream has range starttime <= range < endtime.
 
     PARAMETERS:
     Variables:
