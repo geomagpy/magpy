@@ -359,6 +359,18 @@ def writeIAGA(datastream, filename, **kwargs):
     else:
         publ = 'V'
 
+    proj = header.get('DataLocationReference','')
+    longi = header.get('DataAcquisitionLongitude',' ')
+    lati = header.get('DataAcquisitionLatitude',' ')
+    if not longi=='' or lati=='':
+        if proj == '':
+            pass
+        else:
+            if proj.find('EPSG:') > 0:
+                epsg = int(proj.split('EPSG:')[1].strip())
+                if not epsg==4326:
+                    longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
+
     line = []
     if not mode == 'append':
         if header.get('Elevation') > 0:
@@ -367,11 +379,11 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('StationInstitution'," ")[:44]))
         line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('StationName'," ")[:44]))
         line.append(' IAGA Code %-12s %-44s |\n' % (' ',header.get('StationIAGAcode'," ")[:44]))
-        line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',str(header.get('DataAcquisitionLatitude'," "))[:44]))
-        line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',str(header.get('DataAcquisitionLongitude'," "))[:44]))
+        line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',str(lati)[:44]))
+        line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',str(longi)[:44]))
         line.append(' Elevation %-12s %-44s |\n' % (' ',str(header.get('DataElevation'," "))[:44]))
         line.append(' Reported %-13s %-44s |\n' % (' ',datacomp))
-        line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('DataSensorOrientation'," ")[:44]))
+        line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('DataSensorOrientation'," ").upper()[:44]))
         line.append(' Digital Sampling %-5s %-44s |\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(str(header.get('DataSamplingRate'," "))+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',publ[:44]))

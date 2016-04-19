@@ -55,6 +55,7 @@ db2diline(db,**kwargs):
 getBaselineProperties(db,datastream,pier=None,distream=None):
 flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
 db2flaglist(db,sensorid, begin=None, end=None):
+string2dict(string): 
 
 """
 # ----------------------------------------------------------------------------
@@ -72,8 +73,7 @@ db2flaglist(db,sensorid, begin=None, end=None):
 DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits','DataFormat',
                    'DataMinTime','DataMaxTime',
                    'DataSamplingFilter','DataDigitalSampling','DataComponents','DataSamplingRate',
-                   'DataType','DataDeltaX','DataDeltaY','DataDeltaZ','DataDeltaF','DataDeltaT1',
-                   'DataDeltaT2','DataDeltaVar1','DataDeltaVar2','DataDeltaVar3','DataDeltaVar4',
+                   'DataType',
                    'DataDeltaReferencePier','DataDeltaReferenceEpoch','DataScaleX',
                    'DataScaleY','DataScaleZ','DataScaleUsed','DataCompensationX',
                    'DataCompensationY','DataCompensationZ','DataSensorOrientation',
@@ -89,8 +89,7 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
 DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                     'CHAR(50)','CHAR(50)',
                     'CHAR(100)','CHAR(100)','CHAR(10)','CHAR(100)',
-                    'CHAR(100)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)', 'DECIMAL(20,9)',
-                    'DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)','DECIMAL(20,9)',
+                    'CHAR(100)',
                     'CHAR(20)','CHAR(50)','DECIMAL(20,9)',
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(2)','DECIMAL(20,9)',
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(10)',
@@ -100,7 +99,7 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                     'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
                     'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)',
                     'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
-                    'CHAR(50)','TEXT','DECIMAL(20,9)','DECIMAL(20,9)','TEXT','TEXT']
+                    'CHAR(50)','TEXT','TEXT','TEXT','TEXT','TEXT']
 
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
@@ -3264,4 +3263,31 @@ def db2flaglist(db,sensorid, begin=None, end=None):
             return flaglist
 
     return flagclean(res)
+
+
+def string2dict(string):
+    """
+    DESCRIPTION:
+       converts string of type 2015_value,2014_value (as used in mysql db to dictionary)
+    APLLICATION:
+
+    USED BY:
+       absolutes package to extract epoch rotation angles from database
+    """
+    ### assert basestring...
+
+    mydict = {}
+    try:
+        if not string == '':
+            try:
+                elements = string.split(',')
+            except:
+                return {}
+            for el in elements:
+                dat = el.split('_')
+                mydict[dat[0]] = dat[1]
+    except:
+        return mydict
+    return mydict
+
 

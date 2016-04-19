@@ -1515,7 +1515,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     dbadd = kwargs.get('dbadd')
     skipvariodb = kwargs.get('skipvariodb')
     skipscalardb = kwargs.get('skipscalardb')
+    magrotation = kwargs.get('magrotation') ### if true then compensation fields are applied
     alpha = kwargs.get('alpha')
+    offset = kwargs.get('offset')
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     beta = kwargs.get('beta')
@@ -1551,12 +1553,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             return
     if not expT:
         expT = 1
-    #if not alpha:
-    #    alpha=0.0
-    #if not beta:
-    #    beta=0.0
-    #if not deltaF:
-    #    deltaF=0.0
+    if not deltaF:
+        deltaF=0.0
     if not stationid:
         stationid=''
     if not pier:
@@ -1577,12 +1575,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if db:
         print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
         try:
-            try:
-                from . import database as dbase
-                #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
-            except:
-                import magpy.database as dbase
-                #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist
+            import magpy.database as dbase
+            #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist, string2dict
         except:
             print("absoluteAnalysis:  import failed - skipping eventually selected option dbadd")
             dbadd = False
@@ -1689,6 +1683,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print("------------------------------------------------------")
         # a) Read variodata
         try:
+            valalpha = ''
+            valbeta = ''
             variodbtest = variodata.split(',')
             if len(variodbtest) > 1:
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
@@ -1712,6 +1708,57 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     variostr = dbase.applyDeltas(db,variostr)
                 except:
                     print("Applying delta values failed")
+            if db and magrotation:
+                try:   # Compensation values are essential for correct rotation estimates
+                    if not offset:  # if offset is provided then it overrides DB contents
+                        print("Compensation values from db:")
+                        offdict = {}
+                        xcomp = variostr.header.get('DataCompensationX','0')
+                        ycomp = variostr.header.get('DataCompensationY','0')
+                        zcomp = variostr.header.get('DataCompensationZ','0')
+                        if not float(xcomp)==0.:
+                            offdict['x'] = -1*float(xcomp)*1000.
+                        if not float(ycomp)==0.:
+                            offdict['y'] = -1*float(ycomp)*1000.
+                        if not float(zcomp)==0.:
+                            offdict['z'] = -1*float(zcomp)*1000.
+                        print (' -- applying compensation fields',offdict, len(offdict))
+                        variostr = variostr.offset(offdict)
+                except:
+                    print("Applying compensation values failed")
+                try:
+                    print("Rotation parameters from db:")
+                    if not alpha:
+                        rotstring = variostr.header.get('DataRotationAlpha','')
+                        rotdict = dbase.string2dict(rotstring)
+                        #print ("Dealing with year", date.year)
+                        valalpha = rotdict.get(str(date.year),'')
+                        #print (valalpha)
+                        if valalpha == '':
+                            maxkey = max(int(k) for k, v in rotdict.iteritems())
+                            valalpha = rotdict[str(maxkey)]
+                        valalpha = float(valalpha)
+                        if not float(valalpha)==0.:
+                            print(" -- rotating with alpha: {a} degree (year {b})".format(a=valalpha,b=date.year))
+                            variostr=variostr.rotation(alpha=float(valalpha))
+                    else:
+                        print ("-- alpha provided manually")
+                    if not beta:
+                        rotstring = variostr.header.get('DataRotationBeta','')
+                        rotdict = dbase.string2dict(rotstring)
+                        valbeta = rotdict.get(str(date.year),'')
+                        if valbeta == '':
+                            maxkey = max(int(k) for k, v in rotdict.iteritems())
+                            beta = rotdict[str(maxkey)]
+                        valbeta = float(valbeta)
+                        if not float(valbeta)==0.:
+                            print("-- rotating with beta: {a} degree (year {b})".format(a=valbeta,b=date.year))
+                            variostr=variostr.rotation(beta=float(valbeta))
+                    else:
+                        print ("-- beta provided manually")
+                except:
+                    print("Applying rotation parameters failed")
+              
             try:
                 variostr = variostr.remove_flagged()
                 print("Flagged records of variodata have been removed")
@@ -1721,25 +1768,29 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             print("absoluteAnalysis: reading variometer data failed")
             variostr = DataStream()
         if (len(variostr) > 3 and not np.isnan(variostr.mean('time'))) or len(variostr.ndarray[0]) > 0: # can contain ([], 'File not specified')
+            if offset:
+                variostr = variostr.offset(offset)
             if not alpha:
-                try:
-                    alpha = float(variostr.header['DataRotationAlpha'])
-                except:
-                    alpha = 0.0
+                valalpha = 0.0
+            else:
+                valalpha = float(alpha)
+                print ("Rotating vector with manually provided alpha", valalpha) 
             if not beta:
-                try:
-                    beta = float(variostr.header['DataRotationBeta'])
-                except:
-                    beta = 0.0
-            variostr =variostr.rotation(alpha=alpha, beta=beta)
+                valbeta = 0.0
+            else:
+                valbeta = float(beta)
+                print ("Rotating vector with manually provided beta", valbeta) 
+            variostr =variostr.rotation(alpha=valalpha, beta=valbeta)
+            #alpha = None
+            #beta = None
             vafunc = variostr.interpol(['x','y','z'])
         else:
             print("absoluteAnalysis: no variometer data available")
             variofound = False
 
         # b) Load Scalardata
-        if not deltaF:
-            deltaF = 0.0
+        #if not deltaF:
+        #    deltaF = 0.0
         print("-----------------")
         try:
             scalardbtest = scalardata.split(',')
@@ -1801,16 +1852,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         stationid = tmpname[-1]
                     if not pier or pier == '':
                         pier = tmpname[-2]
-                    if not alpha:
-                        alpha = 0.0
-                    if not beta:
-                        beta = 0.0
                     if not deltaF:
                         deltaF = 0.0
                     #print stationid, pier, deltaF, alpha, beta
-                    print("Please note that any offsets defined in DataDeltaValues")
-                    print("of the database have been applied already.")
-                    print("Data from %s, pier %s: additional deltaF=%.2f, rotation by %.3f and %.3f" % (stationid, pier, deltaF, alpha, beta))
+                    #if deltaF != 0 or alpha != 0 or beta != 0:
+                    #    print("Please note that any offsets defined in DataDeltaValues")
+                    #    print("of the database have been applied already.")
+                    #    print("Data from %s, pier %s: manually defined are deltaF=%.2f" % (stationid, pier, deltaF))
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     #print "LENGTH:",len(absst)
                     try:
@@ -1896,6 +1944,29 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
                 if not deltaF == 0:
                     result.str4 = result.str4 + "_" + str(deltaF)
+                #print("absolutes", valalpha, alpha,result.str4)
+                if valalpha != 0 or alpha:
+                    #print ("absolute alpha", valalpha,alpha)
+                    alphavaluetobeadded = 0
+                    if not valalpha == 0:
+                        alphavaluetobeadded = valalpha
+                    elif not alpha == None:
+                        alphavaluetobeadded = alpha
+                    if not result.str4 == '':
+                        result.str4 = result.str4 + ","    
+                    result.str4 += "alpha_" + str(alphavaluetobeadded)
+                #print("absolutes", result.str4, valbeta, beta)
+                if valbeta != 0 or beta:
+                    #print ("absolute beta", valbeta,beta)
+                    betavaluetobeadded = 0
+                    if not valbeta == 0:
+                        betavaluetobeadded = valbeta
+                    elif not beta == 0:
+                        betavaluetobeadded = beta
+                    if not result.str4 == '':
+                        result.str4 = result.str4 + ","    
+                    result.str4 += "beta_" + str(betavaluetobeadded)
+                #print("absolutes", result.str4)
             except:
                 result = LineStruct()
             dataok = True
@@ -1939,7 +2010,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
             resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
 
-    # Add deltaF to resultsstream vor all Fext:  if nan then df == deltaF else df = df+deltaF,
+    # Add deltaF to resultsstream for all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
     posdf = KEYLIST.index('df')
     #print resultstream.ndarray
@@ -1948,14 +2019,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         #print elem
         #if not deltaF:
         #    deltaF = 0.0
-        if deltaF and elem.startswith('Fext'):
+        if not deltaF == 0 and elem.startswith('Fext'):
             try:
                 resultstream.ndarray[posdf][idx] = deltaF
             except:
                 array = [np.nan]*len(resultstream.ndarray[0])
                 array[idx] = deltaF
                 resultstream.ndarray[posdf] = np.asarray(array)
-        elif deltaF and elem.startswith('Fabs'):
+        elif not deltaF == 0 and elem.startswith('Fabs'):
             try:
                 resultstream.ndarray[posdf][idx] = float(resultstream.ndarray[posdf][idx])+float(deltaF)
             except:
