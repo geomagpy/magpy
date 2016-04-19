@@ -257,7 +257,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
         else:
             try:
                 if not len(elem) == len(KEYLIST):
-                    print("readPYSTR: Warning file contents does not fit to KEYLIST")
+                    print("readPYSTR: Warning file contents do not fit to KEYLIST - content {a}, KEYLIST {b}".format(a=len(elem), b=len(KEYLIST)))
                 for idx, key in enumerate(KEYLIST):
                     if key.find('time') >= 0:
                         try:
@@ -931,7 +931,10 @@ def writePYSTR(datastream, filename, **kwargs):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
                         #print el[i]
-                        row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        if not np.isnan(float(el[i])):   ## if secondary time steps are empty
+                            row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        else:
+                            row.append(float(el[i]))
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
@@ -1123,7 +1126,11 @@ def writePYCDF(datastream, filename, **kwargs):
                         pass
 
     if not skipcompression:
-        mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
+        try:
+            mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
+        except:
+            print("format_magypy: compression of CDF failed - storing uncompressed data")
+            pass
 
     mycdf.close()
     return True

@@ -55,7 +55,9 @@ def writeLATEX(datastream, filename, **kwargs):
         # 1. determine sampling rate
         samplinginterval = datastream.get_sampling_period()
         # get difference between first and last time in days
-        deltat = datastream[-1].time - datastream[0].time
+        ts,te = datastream._find_t_limits()
+        deltat = date2num(te)-date2num(ts)
+        #deltat = datastream[-1].time - datastream[0].time
         if 0.8 < samplinginterval/30.0 < 1.2:
             srange = 12
             sint = 'month'
@@ -101,7 +103,23 @@ def writeLATEX(datastream, filename, **kwargs):
         t = Table(numcols+1, justs=justs, caption=caption, label=label, tablewidth=tablewidth, tablenum=tablenum, fontsize=fontsize, rotate=True)
         t.add_header_row(headline)
 
+        aarray = [[] for key in KEYLIST]
+        barray = [[] for key in KEYLIST]
         for key in keys:
+            pos = KEYLIST.index(key)
+            aarray[pos] = np.empty((srange+1,int(np.round(float(datalen)/float(srange))),))
+            aarray[pos][:] = np.nan
+            aarray[pos] = aarray[pos].tolist()
+            #aarray = list(aarray)
+
+            bar = datastream.ndarray[pos]
+            bar = bar[~np.isnan(bar)]
+            mbar = np.floor(np.min(bar)/100.)*100.
+
+            if np.max(bar) - mbar < 1000:
+                sigfigs = 3
+
+            """
             # exec('...' % key)
             # here starts the key dependend analysis
             exec('%sarray = np.empty((srange+1,int(np.round(float(datalen)/float(srange))),))' % key)
@@ -117,6 +135,7 @@ def writeLATEX(datastream, filename, **kwargs):
             exec('m%s = np.floor(np.min(%sar)/100)*100' % (key,key))
             if np.max(eval(key+'ar')) - eval('m'+key) < 1000:
                 sigfigs = 3
+            """
 
             #for elem in datastream:
             for i in range(datalen):
@@ -128,20 +147,27 @@ def writeLATEX(datastream, filename, **kwargs):
                     elemf = elem.f
                     timeval = elem.time
                 else:
+                    elem = datastream.ndarray[pos][i]
+                    """
                     elemx = datastream.ndarray[1][i]
                     elemy = datastream.ndarray[2][i]
                     elemz = datastream.ndarray[3][i]
                     elemf = datastream.ndarray[4][i]
+                    """
                     timeval = datastream.ndarray[0][i]
                 dateobj = num2date(timeval).replace(tzinfo=None)
                 currx = eval('dateobj.'+sint) + 1
                 curry = eval('dateobj.'+sintprev)-1
                 datecnt = datetime.strftime(num2date(timeval).replace(tzinfo=None),datestr)
-                exec('%sarray[0][curry] = datecnt' % key)
-                exec('%sarray[currx][curry] = elem%s-m%s' % (key,key,key))
+                aarray[pos][0][curry] = datecnt
+                aarray[pos][currx][curry] = elem-mbar
+                
+                #exec('%sarray[0][curry] = datecnt' % key)
+                #exec('%sarray[currx][curry] = elem%s-m%s' % (key,key,key))
 
             mecol = []
-            addcollist = eval(key+'array')
+            #addcollist = eval(key+'array')
+            addcollist = aarray[pos]
             tmpar = np.array(addcollist)
             tmpar = np.transpose(tmpar)
             for i in range(len(tmpar)):
@@ -160,7 +186,7 @@ def writeLATEX(datastream, filename, **kwargs):
             addcollist.append(mecol)
             numcols = numcols+1
 
-            label = datetime.strftime(num2date(elem.time).replace(tzinfo=None),sideheadstr) + ', Field component: ' + key + ', Base: ' + str(eval('m'+key)) + ', Unit: ' + 'nT'
+            label = datetime.strftime(num2date(timeval).replace(tzinfo=None),sideheadstr) + ', Field component: ' + key.upper() + ', Base: ' + str(mbar) + ', Unit: ' + datastream.header.get('unit-col-'+key,'')
             t.add_data(addcollist, label=label, labeltype='side', sigfigs=0)
 
         t.print_table(fout)
