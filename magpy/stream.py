@@ -1656,7 +1656,7 @@ CALLED BY:
         return DataStream(newst,self.header,np.asarray(array))
 
 
-    def _select_timerange(self,starttime=None, endtime=None, maxidx=-1):
+    def _select_timerange(self, starttime=None, endtime=None, maxidx=-1):
         """
       DESCRIPTION
         Non-destructive method to select a certain time range from a stream.
@@ -1673,8 +1673,8 @@ CALLED BY:
         #t1 = datetime.utcnow()
 
         #ndarray = self.ndarray
-        startindicies = []
-        endindicies = []
+        startindices = []
+        endindices = []
         if starttime:
             starttime = self._testtime(starttime)
             if self.ndarray[0].size > 0:   # time column present
@@ -1685,7 +1685,7 @@ CALLED BY:
                 # Trim should start at point >= starttime, so check:
                 if self.ndarray[0][idx] < date2num(starttime):
                     idx += 1
-                startindicies = range(0,idx)
+                startindices = range(0,idx)
         if endtime:
             endtime = self._testtime(endtime)
             if self.ndarray[0].size > 0:   # time column present
@@ -1700,32 +1700,27 @@ CALLED BY:
                     idx = len(self.ndarray[0]) # - 1
                 try: # using try so that this test is passed in case of idx == len(self.ndarray)
                     if not self.ndarray[0][idx] <= date2num(endtime): # Make sure that last value is smaller than endtime
-                        #idx -= 1
                         idx -= 1
                 except:
                     pass
-                endindicies = range(idx,len(self.ndarray[0]))
+                endindices = range(idx,len(self.ndarray[0]))
 
-        indicies = startindicies + endindicies
+        indices = startindices + endindices
 
         #t2 = datetime.utcnow()
         #print "_select_timerange - getting t range needed:", t2-t1
 
-        if len(startindicies) > 0:
-            st = startindicies[-1]+1
+        if len(startindices) > 0:
+            st = startindices[-1]+1
         else:
             st = 0
-        if len(endindicies) > 0:
-            ed = endindicies[0]
+        if len(endindices) > 0:
+            ed = endindices[0]
         else:
             ed = len(self.ndarray[0])
 
         for i in range(len(self.ndarray)):
-            try:
-                ndarray[i] = self.ndarray[i][st:ed+1]   ## This is the correct length
-            except:
-                ndarray[i] = self.ndarray[i][st:ed]  ## This is the fallback if ed exceeds len(ndarray[0]) 
-            #ndarray[i] =  np.delete(self.ndarray[i],indicies) # before : very slowly
+            ndarray[i] = self.ndarray[i][st:ed]   ## This is the correct length
 
         #t3 = datetime.utcnow()
         #print "_select_timerange - deleting :", t3-t2
