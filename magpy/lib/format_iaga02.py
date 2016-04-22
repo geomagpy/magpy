@@ -240,13 +240,14 @@ def readIAGA(filename, headonly=False, **kwargs):
                         array[4].append(float(row[6]))
                     else:
                         array[4].append(float('nan'))
-                data.append(row)
+                #data.append(row)
 
     fh.close()
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
     #print np.asarray(array)
 
+    """
     for elem in data:
         # Time conv:
         row = LineStruct()
@@ -279,11 +280,11 @@ def readIAGA(filename, headonly=False, **kwargs):
             if not float(elem[6]) == 88888:
                 row.f = float(elem[6])
         stream.add(row)
-
+    """
 
     #print "Finished file reading of %s" % filename
 
-    return DataStream(stream,stream.header,np.asarray(array))
+    return DataStream([LineStruct()],stream.header,np.asarray(array))
 
 
 def writeIAGA(datastream, filename, **kwargs):
@@ -310,7 +311,6 @@ def writeIAGA(datastream, filename, **kwargs):
             myFile= open( filename, "wb" )
     else:
         myFile= open( filename, "wb" )
-
 
     header = datastream.header
 

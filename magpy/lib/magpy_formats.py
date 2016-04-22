@@ -33,6 +33,7 @@ DEPENDENCIES:
                 .format_dtu
                 .format_gfz
                 .format_imf
+                .format_rcs
 
 CALLED BY:
         magpy.stream.read()
@@ -67,12 +68,19 @@ from magpy.lib.format_bdv import *
 from magpy.lib.format_dtu import *
 from magpy.lib.format_gfz import *
 from magpy.lib.format_neic import *
+from magpy.lib.format_rcs import *
 
 from magpy.lib.format_imf import *
 try:
     from magpy.lib.format_autodif_fread import *
 except:
     logging.warning("magpy-formats: Format package autodif-F not available")
+
+reqIAFheader = {'StationInstitution':'word', 'StationName':'word', 'StationIAGAcode':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataFormat':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataSamplingFilter':'word', 'Data Type':'word', 'DataPublicationLevel':'word', 'DataConversion':'word', 'StationK9':'word', 'DataQuality':'word', 'SensorType':'word', 'StationStreet':'word', 'StationCity':'word', 'StationPostalCode':'word', 'StationCountry':'word', 'StationWebInfo':'word', 'StationEmail':'word'}
+
+reqIAGAheader = {'StationInstitution':'word', 'StationName':'word', 'StationIAGAcode':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataFormat':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataSamplingFilter':'word', 'Data Type':'word', 'DataPublicationLevel':'word'}
+
+reqIMAGCDFheader = {'StationInstitution':'word', 'DataPublicationLevel':'number', 'DataStandardLevel':'word', 'StationIAGAcode':'word', 'StationName':'word', 'StationInstitution':'word', 'DataReferences':'word', 'DataTerms':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataComponents':'word', 'DataSensorOrientation':'word'}
 
 
 def isFormat(filename, format_type):
@@ -117,6 +125,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
+            return True
+    elif (format_type == "RCS"): # Direct data from the Conrad Observatory RCS System
+        if (isRCS(filename)):
             return True
     elif (format_type == "METEO"): # Conrad Observatory RCS System - METEO files
         if (isMETEO(filename)):
@@ -247,6 +258,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGDASB1(filename, headonly, **kwargs)
     elif (format_type == "RMRCS"):
         return readRMRCS(filename, headonly, **kwargs)
+    elif (format_type == "RCS"):
+        return readRCS(filename, headonly, **kwargs)
     elif (format_type == "METEO"):
         return readMETEO(filename, headonly, **kwargs)
     elif (format_type == "LNM"):

@@ -111,7 +111,8 @@ def readWDC(filename, headonly=False, **kwargs):
                     if co == firstco:
                         time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
                         array[tind].append(time)
-                        array[str1ind].append(kind)
+                        if not kind == '':
+                            array[str1ind].append(kind)
                     if co=='i':
                         if not elem == "9999":
                             x = float(base) + float(elem)/600
@@ -257,7 +258,7 @@ def readWDC(filename, headonly=False, **kwargs):
     if oldformat:
         print ("readWDC: found old WDC format - assuming 20th century")
 
-    stream = DataStream([LineStruct()], headers, np.asarray(array))
+    stream = DataStream([LineStruct()], headers, array)
 
     return stream
 

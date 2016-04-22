@@ -4,4 +4,6 @@
 *.py.old
 *.md~
 build
+dist
 dist/*.egg
+GeomagPy.egg-info

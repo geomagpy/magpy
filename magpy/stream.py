@@ -324,6 +324,7 @@ PYMAG_SUPPORTED_FORMATS = [
                 'GDASA1',       # ?
                 'GDASB1',       # ?
                 'RMRCS',        # RCS data output from Richards perl scripts
+                'RCS',        # RCS data output from Richards perl scripts
                 'METEO',        # RCS data output in METEO files
                 'NEIC',        # WGET data from USGS - NEIC
                 'LNM',          # LaserNiederschlagsMonitor files
@@ -1414,6 +1415,22 @@ CALLED BY:
         else:
             return result
 
+    def amplitude(self,key):
+        """
+        DESCRIPTION:
+             calculates maximum-minimum difference of the keys timeseries
+        REQUIRES:
+             _get_column()
+        RETURNS:
+             float: difference between maximum and minimim value in time range
+        APPLICATION
+             amp = stream.amplitude('x')
+        """
+        ts = self._get_column(key).astype(float)
+        ts = ts[~np.isnan(ts)]
+        maxts = np.max(ts)
+        mints = np.min(ts)
+        return maxts-mints
 
     def _gf(self, t, tau):
         """
