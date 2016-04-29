@@ -1339,10 +1339,13 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
     loggerplot.info("plotPS: Starting powerspectrum calculation.")
 
-    if noshow:
+    if noshow == True:
         show = False
-    else:
+    elif noshow == False:
         show = True
+    else:
+        loggerplot.error("plotPS: Incorrect value ({:s}) for variable noshow.".format(noshow))
+        raise ValueError("Incorrect value ({:s}) for variable noshow.".format(noshow))
 
     dt = stream.get_sampling_period()*24*3600
 
@@ -1425,11 +1428,14 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
         else:
             fig.savefig(outfile)
     elif returndata:
+        plt.close()
         return freqm, asdm
     elif show:
-        plt.draw()      # show() should only ever be called once. Use draw() in between!
+        plt.show()      # show() should only ever be called once. Use draw() in between!
     else:
         return fig
+    
+    plt.close()
 
 
 def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
