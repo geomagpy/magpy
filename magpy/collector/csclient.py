@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 from twisted.python import log
 from twisted.internet import reactor
@@ -108,8 +109,8 @@ class PubSubClient(WampClientProtocol):
             # #####################################
             sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorID LIKE 'G82%'"
 
-            print "Testing SQL1", sql
-            print "------------"
+            print("Testing SQL1", sql)
+            print("------------")
 
             try:
                 # Execute the SQL command
@@ -142,7 +143,7 @@ class PubSubClient(WampClientProtocol):
                      except:
                          module = 'env'
                      param = row[3]
-                     print row, len(param.split(','))
+                     print(row, len(param.split(',')))
 
                      # #####################################
                      # SUBSCRIBEINST: C) For each SensorID create a DATAINFO line and an empty data table
@@ -158,8 +159,8 @@ class PubSubClient(WampClientProtocol):
                      subscriptionstring = "%s:%s-value" % (module, sensid)
                      self.subscribe(subscriptionstring, self.onEvent)
                      # Now print fetched result
-                     print "sensid=%s,sensdesc=%s,module=%s,param=%s, subscript to %s" % \
-                                (sensid, sensdesc, module, param, subscriptionstring )
+                     print("sensid=%s,sensdesc=%s,module=%s,param=%s, subscript to %s" % \
+                                (sensid, sensdesc, module, param, subscriptionstring ))
             except:
                 log.msg("client: Unable to subscribe to data stream")
 
@@ -269,8 +270,8 @@ class PubSubClient(WampClientProtocol):
 
     def checkDB4DataInfo(self,db,cursor,sensorid,stationid,parameter):
 
-        print "Checking DATAINFO"
-        print "#################"
+        print("Checking DATAINFO")
+        print("#################")
         # DATAINFO TABLE
         # Test whether a datainfo table is already existing
         # if not create one with first number

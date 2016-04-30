@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 import struct, binascii, re, csv
 from datetime import datetime, timedelta
@@ -129,7 +130,7 @@ class ArduinoProtocol(LineReceiver):
         self.board = sensor
         self.hostname = socket.gethostname()
         self.outputdir = outputdir
-        print "Running on board", self.board
+        print("Running on board", self.board)
         self.sensor = ''
         self.sensordict = {}
         self.eventstring = ''
@@ -160,7 +161,7 @@ class ArduinoProtocol(LineReceiver):
         try:
             arduinolist = self.loadarduinolist(arduinosensorfile)
             sensorelement = [elem[0] for elem in arduinolist]
-            print "Liste", sensorelement
+            print("Liste", sensorelement)
         except:
             log.msg('Arduino: No Sensor list so far -or- Error while getting sensor list')
             pass
@@ -211,7 +212,7 @@ class ArduinoProtocol(LineReceiver):
 
         if printdata:
             #print header
-            print timestamp, values
+            print(timestamp, values)
 
         # File Operations
         dataToFile(self.outputdir, sensorid, filename, data_bin, header)
@@ -228,7 +229,7 @@ class ArduinoProtocol(LineReceiver):
 
 
     def analyzeHeader(self, line):
-        print "Getting Header"
+        print("Getting Header")
         eventlist = []
         head = line.strip().split(':')
         headernum = int(head[0].strip('H'))
@@ -240,10 +241,10 @@ class ArduinoProtocol(LineReceiver):
             an = elem.strip(']').split('[')
             try:
                 if len(an) < 1:
-                    print "Arduino: error when analyzing header"
+                    print("Arduino: error when analyzing header")
                     return
             except:
-                print "Arduino: error when analyzing header"
+                print("Arduino: error when analyzing header")
                 return
             var = an[0].split('_')
             key = var[0].strip().lower()
@@ -261,14 +262,14 @@ class ArduinoProtocol(LineReceiver):
 
         if len(eventstring) > 0:
             self.eventdict[headernum] = 'evt0,evt1,evt3,'+eventstring+',evt99'
-            print "Found components %s for ID %d" % (eventstring, headernum)
+            print("Found components %s for ID %d" % (eventstring, headernum))
             self.vardict[headernum] = varlist
             self.unitdict[headernum] = unitlist
             self.keydict[headernum] = keylist
 
 
     def getMeta(self, line):
-        print "Getting Metadata - does not support more than 99 sensors!"
+        print("Getting Metadata - does not support more than 99 sensors!")
         sensrev = '0001'
         sensid = '12345'
         try:
@@ -289,12 +290,12 @@ class ArduinoProtocol(LineReceiver):
         if 'SensorID' in metadict:
             sensid = metadict['SensorID']
         if not 'SensorName' in metadict:
-            print "No Sensorname provided - aborting"
+            print("No Sensorname provided - aborting")
             return
 
         self.sensor = metadict['SensorName']+'_'+sensid+'_'+sensrev
         self.sensordict[metanum] = self.sensor
-        print "Found Sensor %s for ID %d" % (self.sensor, metanum)
+        print("Found Sensor %s for ID %d" % (self.sensor, metanum))
 
         # Write a file to the martas directory: arduino.txt containig the sensorids
         # for each connected sensor and its components
