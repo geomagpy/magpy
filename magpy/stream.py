@@ -1662,7 +1662,12 @@ CALLED BY:
         array = [np.asarray([]) for elem in KEYLIST]
         if len(self.ndarray[0]) > 0 and key in NUMKEYLIST:
             ind = KEYLIST.index(key)
-            indicieslst = [i for i,el in enumerate(self.ndarray[ind].astype(float)) if np.isnan(el) or np.isinf(el)]
+            #indicieslst = [i for i,el in enumerate(self.ndarray[ind].astype(float)) if np.isnan(el) or np.isinf(el)]
+            ar = np.asarray(self.ndarray[ind]).astype(float)
+            indicieslst = []
+            for i,el in enumerate(ar):
+                if np.isnan(el) or np.isinf(el):
+                    indicieslst.append(i)
             for index,key in enumerate(NUMKEYLIST):
                 if len(self.ndarray[index])>0:
                     array[index] = np.delete(self.ndarray[index], indicieslst)
@@ -1682,7 +1687,6 @@ CALLED BY:
         Used by write
         """
         ndarray = [[] for key in KEYLIST]
-
 
         # Use a different technique
         # copy all data to array and then delete everything below and above
@@ -1716,8 +1720,24 @@ CALLED BY:
                 if idx >= len(self.ndarray[0]): ## prevent too large idx values
                     idx = len(self.ndarray[0]) # - 1
                 try: # using try so that this test is passed in case of idx == len(self.ndarray)
-                    if not self.ndarray[0][idx] <= date2num(endtime): # Make sure that last value is smaller than endtime
+                    endnum = date2num(endtime)
+                    #print ("Value now", idx, self.ndarray[0][idx], date2num(endtime))
+                    if self.ndarray[0][idx] > endnum and self.ndarray[0][idx-1] < endnum:
+                        # case 1: value at idx is larger, value at idx-1 is smaller -> use idx
+                        pass
+                    elif self.ndarray[0][idx] == endnum:
+                        # case 2: value at idx is endnum -> use idx
+                        pass
+                    elif not self.ndarray[0][idx] <= endnum:
+                        # case 3: value at idx-1 equals endnum -> use idx-1
                         idx -= 1
+                    #print ("Value now b", idx, self.ndarray[0][idx], date2num(endtime))
+                    #if not self.ndarray[0][idx] <= date2num(endtime):
+                    #    # Make sure that last value is either identical to endtime (if existing or one index larger)
+                    #    # This is important as from this index on, data is removed
+                    #    idx -= 1
+                    #    print ("Value now", idx, self.ndarray[0][idx], date2num(endtime))
+                    #    print ("Value now", idx, self.ndarray[0][idx+1], date2num(endtime))
                 except:
                     pass
                 endindices = range(idx,len(self.ndarray[0]))
@@ -2039,7 +2059,7 @@ CALLED BY:
         #keys = ['dx','dy','dz']
         try:
             print ("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
-            #print bas.length(), keys
+            print ("Baseline", bas.length(), keys)
             #for elem in bas.ndarray:
             #    print elem
             func = bas.fit(keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
@@ -2305,9 +2325,9 @@ CALLED BY:
             absstream = self.dict2stream()
             #print("BC", absstream.length())
             parameter = absinfo.split('_')
-            #print("BC", parameter)
+            #print("BC:", parameter)
             funckeys = parameter[6:]
-            #print("BC", keys)
+            #print("BC:", funckeys, absstream._get_column('dx'))
             #print("BC", num2date(float(parameter[0])))
             func = self.baseline(absstream, startabs=float(parameter[0]), endabs=float(parameter[1]), extradays=int(parameter[2]), fitfunc=parameter[3], fitdegree=int(parameter[4]), knotstep=float(parameter[5]), keys=funckeys)
             #print(func)
@@ -3089,10 +3109,10 @@ CALLED BY:
 
         ltime = date2num(end + timedelta(days=1))
         ftime = date2num(start - timedelta(days=1))
+        array = [[] for key in KEYLIST]
 
         ndtype = False
         if len(self.ndarray[0]) > 0:
-            array = [[] for key in KEYLIST]
             ndtype = True
             firsttime = np.min(self.ndarray[0])
             lasttime = np.max(self.ndarray[0])
@@ -3122,7 +3142,7 @@ CALLED BY:
                         #array[idx] = np.append(self.ndarray[idx],self.ndarray[idx][firstind])
                         #array[idx] = np.append(self.ndarray[idx],self.ndarray[idx][lastind])
             indar = np.argsort(array[0])
-            array = [el[indar].astype(object) for el in array if len(el)>0]
+            array = [el[indar].astype(object) if len(el)>0 else np.asarray([]) for el in array]
         else:
             firstelem = self[0]
             lastelem = self[-1]

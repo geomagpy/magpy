@@ -623,6 +623,13 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
         # Date format not recognized. Need to read all files
         getfile = True
 
+    array = [[] for key in KEYLIST]
+    posx = KEYLIST.index('x')
+    posy = KEYLIST.index('y')
+    post1 = KEYLIST.index('t1')
+    posvar1 = KEYLIST.index('var1')
+    posvar2 = KEYLIST.index('var2')
+
     fh = open(filename, 'rt')
 
     if getfile:
@@ -637,13 +644,12 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
                 row = LineStruct()
                 try:
                     date = colsstr[0]+'-'+colsstr[1]
-                    row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S"))
-                    row.x = float(colsstr[1])
-                    row.y = float(colsstr[2])
-                    row.t1 = float(colsstr[3])
-                    row.var1 = float(colsstr[4])
-                    row.var2 = float(colsstr[5])
-                    stream.add(row)
+                    array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S")))
+                    array[posx].append(float(colsstr[1]))
+                    array[posy].append(float(colsstr[2]))
+                    array[post1].append(float(colsstr[3]))
+                    array[posvar1].append(float(colsstr[4]))
+                    array[posvar2].append(float(colsstr[5]))
                 except:
                     pass
 
@@ -662,7 +668,10 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
         headers['SensorType'] = 'Tiltmeter'
         headers['SensorID'] = 'Lippmann_Tilt'
 
-    return DataStream(stream, headers)
+        for idx,el in enumerate(array):
+            array[idx] = np.asarray(el)
+
+    return DataStream([LineStruct()], headers, np.asarray(array))
 
 def readIWT(filename, headonly=False, **kwargs):
     """
