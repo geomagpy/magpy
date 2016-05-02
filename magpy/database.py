@@ -105,7 +105,11 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
                   'SensorDataLoggerSerNum','SensorDataLoggerRevision','SensorDataLoggerRevisionComment',
                   'SensorDescription','SensorElements','SensorKeys','SensorModule','SensorDate',
-                  'SensorRevision','SensorRevisionComment','SensorRevisionDate']
+                  'SensorRevision','SensorRevisionComment','SensorRevisionDate','SensorDynamicRange',
+                  'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation', 
+                  'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
+                  'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
+                  'SensorResolution']
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
                    'StationCity','StationPostalCode','StationCountry','StationWebInfo',
@@ -144,6 +148,20 @@ SENSOR:
         SensorRevision: 4 digit number defining a revision ID
         SensorRevisionComment: Comment for current revision - changes to previous number (e.g. calibration)
         SensorRevisionDate: Date of revision - for 0001 this equals the SensorDate
+        SensorDynamicRange: 
+        SensorTimestepAccuracy:
+        SensorGroupDelay:
+        SensorPassband:
+        SensorAttenuation:
+        SensorRMSNoise:
+        SensorSpectralNoise:
+        SensorAbsoluteError:
+        SensorOrthogonality:
+        SensorVerticallity:
+        SensorTCoeff:
+        SensorElectronicsTCoeff:
+        SensorAnalogSampling:
+        SensorResolution:
 STATION:
         StationID: unique ID of the station e.g. IAGA code
         StationIAGAcode:

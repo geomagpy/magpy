@@ -2460,6 +2460,7 @@ CALLED BY:
                 # If the end of condition is True, append the length of the array
                 idx = np.r_[idx, self.ndarray[ind].size] # Edit
             # Reshape the result into two columns
+            #print("Bindetector", idx, idx.size)
             idx.shape = (-1,2)
             for start,stop in idx:
                 stop = stop-1

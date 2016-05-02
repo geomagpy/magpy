@@ -1005,20 +1005,22 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     #pubdate = cdf.lib.datetime_to_tt2000(datastream._testtime(headers.get('DataPublicationDate','')))
     if not headers.get('DataPublicationDate','') == '':
         try:
-            pubdate = cdf.lib.datetime_to_tt2000(datastream._testtime(headers.get('DataPublicationDate','')))
-            #mycdf.new('PublicationDate', type=cdf.const.CDF_TIME_TT2000)
-            mycdf.attrs['PublicationDate'] = pubdate
+            pubdate = datastream._testtime(headers.get('DataPublicationDate',''))
+            pubdate = cdf.lib.datetime_to_tt2000(pubdate)
+            patt = mycdf.attrs
+            patt.new('PublicationDate',pubdate,type=cdf.const.CDF_TIME_TT2000)
         except:
             try:
-                pubdate = datetime.strftime(datastream._testtime(headers.get('DataPublicationDate','')),"%Y-%m-%dT%H:%M:%S.%f")
+                pubdate = datastream._testtime(headers.get('DataPublicationDate','')) ## Epoch
+                mycdf.attrs['PublicationDate'] = pubdate
             except:
                 pubdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%dT%H:%M:%S.%f")
-            mycdf.attrs['PublicationDate'] = pubdate
+                mycdf.attrs['PublicationDate'] = pubdate
     else:
         try:
             pubdate = cdf.datetime_to_tt2000(datetime.utcnow())
         except:
-            pubdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%dT%H:%M:%S.%f")
+            pubdate = datetime.utcnow()
         mycdf.attrs['PublicationDate'] = pubdate
 
     if not headers.get('DataSource','')  == '':
