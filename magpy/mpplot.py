@@ -1353,28 +1353,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
         loggerplot.error("plotPS: Stream of zero length -- aborting.")
         raise Exception("Can't analyse power spectrum of stream of zero length!")
 
-    if len(stream.ndarray[0]) > 0:
-        pos = KEYLIST.index(key)
-        t = stream.ndarray[0]
-        val = stream.ndarray[pos]
-    else:
-        t = np.asarray(stream._get_column('time'))
-        val = np.asarray(stream._get_column(key))
-    t_min = np.min(t)
-    t_new, val_new = [],[]
-
-    nfft = int(nearestPow2(len(t)))
-
-    if nfft > len(t):
-        nfft = int(nearestPow2(len(t) / 2.0))
-
-    for idx, elem in enumerate(val):
-        if not isnan(elem):
-            t_new.append((t[idx]-t_min)*24*3600)
-            val_new.append(elem)
-
-    t_new = np.asarray(t_new)
-    val_new = np.asarray(val_new)
+    t_new, val_new, nfft = _extract_data_for_PSD(stream, key)
 
     if debugmode:
         print("Extracted data for powerspectrum at %s" % datetime.utcnow())
@@ -2514,6 +2493,38 @@ def _confinex(ax, tmax, tmin, timeunit):
     else:
         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
         timeunit = '[Year]'
+        
+
+def _extract_data_for_PSD(stream, key):
+    """
+    Prepares data for power spectral density evaluation.
+    """
+    
+    if len(stream.ndarray[0]) > 0:
+        pos = KEYLIST.index(key)
+        t = stream.ndarray[0]
+        val = stream.ndarray[pos]
+    else:
+        t = np.asarray(stream._get_column('time'))
+        val = np.asarray(stream._get_column(key))
+    t_min = np.min(t)
+    t_new, val_new = [],[]
+
+    nfft = int(nearestPow2(len(t)))
+
+    if nfft > len(t):
+        nfft = int(nearestPow2(len(t) / 2.0))
+
+    for idx, elem in enumerate(val):
+        if not isnan(elem):
+            t_new.append((t[idx]-t_min)*24*3600)
+            val_new.append(elem)
+
+    t_new = np.asarray(t_new)
+    val_new = np.asarray(val_new)
+    
+    return t_new, val_new, nfft
+
 
 #####################################################################
 #                                                                   #
