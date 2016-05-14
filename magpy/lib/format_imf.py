@@ -980,7 +980,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if key == 'StationName' or key == 'ObservatoryName':
             mycdf.attrs['ObservatoryName'] = headers[key]
         if key == 'DataElevation' or key == 'Elevation':
-            mycdf.attrs['Elevation'] = headers[key]
+            patt = mycdf.attrs
+            patt.new('Elevation',float(headers[key]),type=cdf.const.CDF_DOUBLE)
+            #mycdf.attrs['Elevation'] = headers[key]
         if key == 'StationInstitution' or key == 'Institution':
             mycdf.attrs['Institution'] = headers[key]
         if key == 'DataSensorOrientation' or key == 'VectorSensOrient':
@@ -1047,6 +1049,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         mycdf.attrs['StandardName'] = headers.get('DataStandardName','')
     else:
         try:
+            print ("writeIMAGCDF: Asigning StandardName")
             samprate = float(str(headers.get('DataSamplingRate',0)).replace('sec','').strip())
             if int(samprate) == 1:
                 stdadd = 'INTERMAGNET_1-Second'
@@ -1057,23 +1060,37 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 mycdf.attrs['StandardName'] = stdadd
             elif int(headers.get('DataPublicationLevel',0)) == 4:
                 mycdf.attrs['StandardName'] = stdadd
+            else:
+                print ("writeIMAGCDF: Current publication level does not support a StandardName - setting level none")
+                mycdf.attrs['StandardLevel'] = 'None'
         except:
             print ("writeIMAGCDF: Asigning StandardName Failed")
 
     proj = headers.get('DataLocationReference','')
     longi = headers.get('DataAcquisitionLongitude','')
     lati = headers.get('DataAcquisitionLatitude','')
+    try:
+        longi = "{:.3f}".format(float(longi))
+        lati = "{:.3f}".format(float(lati))
+    except:
+        print("writeIMAGCDF: could not convert lat long to floats")
     if not longi=='' or lati=='':
         if proj == '':
-            mycdf.attrs['Latitude'] = lati
-            mycdf.attrs['Longitude'] = longi
+            patt = mycdf.attrs
+            patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
+            patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
+            #mycdf.attrs['Latitude'] = lati
+            #mycdf.attrs['Longitude'] = longi
         else:
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
                     longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
-            mycdf.attrs['Latitude'] = lati
-            mycdf.attrs['Longitude'] = longi
+            patt = mycdf.attrs
+            patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
+            patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
+            #mycdf.attrs['Latitude'] = lati
+            #mycdf.attrs['Longitude'] = longi
 
     if not 'StationIagaCode' in headers and 'StationID' in headers:
         mycdf.attrs['IagaCode'] = headers.get('StationID','')
@@ -1088,6 +1105,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ndarray = False
     if len(datastream.ndarray[0]>0):
         ndarray = True
+
+    print ("writeIMAGCDF:", keylst)
+    print ("Select appropriate Components and keys and define vector and scalar")
+
+    ## Analyze F and dF columns:
+    useScalarTimes=True
+    ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
 
     for key in keylst:
         if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2']:
@@ -1106,6 +1130,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
                     mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col]))
                     print("Successfully used tt2000")
+                    if useScalarTimes:
+                        key = 'GeomagneticScalarTimes'
+                        mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
+                        mycdf[key] = mycdf['GeomagneticVectorTimes']
                 except:
                     mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
             elif len(col) > 0:
@@ -1123,6 +1151,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             compsupper = comps[1].upper()
                         elif key == 'z':
                             compsupper = comps[2].upper()
+                        elif key == 'df':
+                            compsupper = 'G'
                         else:
                             compsupper = key.upper()
                         cdfkey = 'GeomagneticField'+compsupper
@@ -1134,7 +1164,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 nonetest = [elem for elem in col if not elem == None]
                 if len(nonetest) > 0:
                     mycdf[cdfkey] = col
-
                     mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                     mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time_series"
                     mycdf[cdfkey].attrs['LABLAXIS'] = keyup
@@ -1149,9 +1178,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         mycdf[cdfkey].attrs['VALIDMIN'] = -360.0
                         mycdf[cdfkey].attrs['VALIDMAX'] = 360.0
                     elif key in ['f','s']:
+                        if useScalarTimes:
+                            mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticScalarTimes"
                         mycdf[cdfkey].attrs['VALIDMIN'] = 0.0
                         mycdf[cdfkey].attrs['VALIDMAX'] = 88880.0
-
 
                 for keydic in headers:
                     if keydic == ('col-'+key):

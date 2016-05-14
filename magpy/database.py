@@ -109,7 +109,7 @@ SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','Sensor
                   'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation', 
                   'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
                   'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
-                  'SensorResolution']
+                  'SensorResolution','SensorTime']
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
                    'StationCity','StationPostalCode','StationCountry','StationWebInfo',

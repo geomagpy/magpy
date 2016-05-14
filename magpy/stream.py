@@ -8692,7 +8692,9 @@ CALLED BY:
                 filenameends = fed
 
         if format_type == 'IMAGCDF':
-            begin = (self.header.get('StationID','XYZ')).lower()
+            begin = (self.header.get('StationIAGAcode','')).lower()
+            if begin == '':
+                begin = (self.header.get('StationID','XYZ')).lower()
             publevel = str(self.header.get('DataPublicationLevel',0))
             samprate = float(str(self.header.get('DataSamplingRate','0')).replace('sec','').strip())
             if coverage == 'year':
@@ -9694,7 +9696,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                 if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
                     st.extend(stp.container,stp.header,stp.ndarray)
             #del stp
-        if len(st) == 0:
+        if st.length()[0] == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
                 loggerstream.error("read: Check file/pathname - No file matching pattern: %s" % pathname)
@@ -9710,7 +9712,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 loggerstream.error("read: Cannot open file/files: %s" % pathname)
-                raise Exception("Stream is empty!")
+                #raise Exception("Stream is empty!")
+                print("read: Cannot open file/files: {}".format(pathname))
 
     if headonly and (starttime or endtime):
         msg = "read: Keyword headonly cannot be combined with starttime or endtime."
@@ -9839,9 +9842,13 @@ def joinStreams(stream_a,stream_b, **kwargs):
         ndtype = True
         if not len(stream_b.ndarray[0]) > 0:
             stream_b = stream_b.linestruct2ndarray()
+            if not len(stream_b.ndarray[0]) > 0:
+                return stream_a
     elif len(stream_b.ndarray[0]) > 0:
         ndtype = True
         stream_a = stream_a.linestruct2ndarray()
+        if not len(stream_a.ndarray[0]) > 0:
+            return stream_b
     else:
         ndtype = True
         stream_a = stream_a.linestruct2ndarray()

@@ -289,14 +289,15 @@ def readPYSTR(filename, headonly=False, **kwargs):
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 
-    for idx,ar in enumerate(array):
-        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
-            tester = float('nan')
-        else:
-            tester = '-'
-        array[idx] = np.asarray(array[idx]).astype(object)
-        if not False in checkEqual3(array[idx]) and ar[0] == tester:
-            array[idx] = np.asarray([])
+    if len(array[0]) > 0:
+        for idx,ar in enumerate(array):
+            if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
+                tester = float('nan')
+            else:
+                tester = '-'
+            array[idx] = np.asarray(array[idx]).astype(object)
+            if not False in checkEqual3(array[idx]) and ar[0] == tester:
+                array[idx] = np.asarray([])
 
     #print("lib format-magpy", [len(el) for el in array])
     return DataStream([LineStruct()], headers, np.asarray(array))
@@ -900,7 +901,7 @@ def writePYSTR(datastream, filename, **kwargs):
                 exst = read(path_or_url=filename)
                 datastream = joinStreams(datastream,exst)
             except:
-                loggerlib.info("writePYSTR: Could not interprete  existing file - replacing" % filename)
+                loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
