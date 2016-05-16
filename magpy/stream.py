@@ -705,8 +705,19 @@ CALLED BY:
         array = [[] for key in KEYLIST]
         self.container.extend(datlst)
         self.header = header
+        # Some initial check if any data set except timecolumn is contained
+        datalength = len(ndarray)
+        try:
+            test = [[elem for elem in col if not np.isnan(elem)] for col in ndarray]
+        except:
+            test = [[elem for elem in col if not elem in ['','-']] for col in ndarray]
+        emptycnt = [len(el) for el in test if len(el) > 0]
+
         if self.ndarray.size == 0:
             self.ndarray = ndarray
+        elif len(emptycnt) == 1:
+            print("Tyring to extend with empty data set")
+            #self.ndarray = np.asarray((list(self.ndarray)).extend(list(ndarray)))
         else:
             for idx,elem in enumerate(self.ndarray):
                 if len(ndarray[idx]) > 0:
@@ -715,14 +726,13 @@ CALLED BY:
                     elif len(self.ndarray[0]) > 0: # only time axis present so far but no data within this elem
                         fill = ['-']
                         key = KEYLIST[idx]
-                        if key in NUMKEYLIST:
+                        if key in NUMKEYLIST or key=='sectime':
                             fill = [float('nan')]
                         nullvals = np.asarray(fill * len(self.ndarray[0]))
                         #print nullvals
                         array[idx] = np.append(nullvals, ndarray[idx],1).astype(object)
                     else:
                         array[idx] = ndarray[idx].astype(object)
-            #self.ndarray = np.asarray((list(self.ndarray)).extend(list(ndarray)))
             self.ndarray = np.asarray(array)
 
     def union(self,column):
@@ -4733,7 +4743,7 @@ CALLED BY:
                     elif len(elem) > 0:
                         # append nans list to array element
                         elem = list(elem)
-                        if KEYLIST[idx] in NUMKEYLIST:
+                        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'sectime':
                             elem.extend(nans)
                         else:
                             elem.extend(empts)
@@ -8886,7 +8896,7 @@ CALLED BY:
                 if len(lst) > 0 or ndtype:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         loggerstream.info('write: writing %s' % filename)
-                        #print("Here", num2date(newst.ndarray[0][0]), len(newst.ndarray[0]))
+                        #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
                         success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg,skipcompression=skipcompression)
                 starttime = endtime
                 endtime = endtime + coverage
@@ -8941,7 +8951,7 @@ CALLED BY:
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'nT'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = 'XYZ'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('IDF','XYZ')
 
         return self
 
@@ -8987,7 +8997,7 @@ CALLED BY:
         self.header['unit-col-x'] = 'deg'
         self.header['unit-col-y'] = 'deg'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = 'IDF'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('XYZ','IDF')
         return self
 
     def xyz2hdz(self,**kwargs):
@@ -9028,7 +9038,7 @@ CALLED BY:
         self.header['col-y'] = 'D'
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'deg'
-        self.header['DataComponents'] = 'HDZ'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('XYZ','HDZ')
         return self
 
     def hdz2xyz(self,**kwargs):
@@ -9076,7 +9086,7 @@ CALLED BY:
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'nT'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = 'XYZ'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('HDZ','XYZ')
 
         return DataStream(self,self.header,self.ndarray)
 
@@ -9692,7 +9702,6 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             if getfile:
                 stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
                 stp = _read(filename, dataformat, headonly, **kwargs)
-                #print stp.ndarray
                 if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
                     st.extend(stp.container,stp.header,stp.ndarray)
             #del stp
@@ -9900,7 +9909,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
 def appendStreams(streamlist):
     """
     DESCRIPTION:
-        Appneds contents of streamlist  and returns a single new stream.
+        Appends contents of streamlist  and returns a single new stream.
         Duplicates are removed and the new stream is sorted.
     """
     array = [[] for key in KEYLIST]
@@ -9911,10 +9920,12 @@ def appendStreams(streamlist):
             if len(stream.ndarray[idx]) > 0:
                 array[idx].extend(stream.ndarray[idx])
     stream = DataStream([LineStruct()],streamlist[0].header,np.asarray(array).astype(object))
-    stream = stream.removeduplicates()
-    stream = stream.sorting()
-
-    return stream
+    if len(stream.ndarray[0]) > 0:
+        stream = stream.removeduplicates()
+        stream = stream.sorting()
+        return stream        
+    else:
+        return DataStream([LineStruct()],streamlist[0].header,np.asarray([np.asarray([]) for key in KEYLIST]))
 
 
 def mergeStreams(stream_a, stream_b, **kwargs):

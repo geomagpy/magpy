@@ -1086,6 +1086,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
                     longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
+                    longi = "{:.3f}".format(float(longi))
+                    lati = "{:.3f}".format(float(lati))
             patt = mycdf.attrs
             patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
             patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
@@ -1228,6 +1230,9 @@ def readIMF(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
+    headers={}
+    array = [[] for elem in KEYLIST]
+
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
@@ -1284,36 +1289,48 @@ def readIMF(filename, headonly=False, **kwargs):
                 data = line.split()
                 for i in range(2):
                     try:
-                        row = LineStruct()
+                        #row = LineStruct()
                         time = datehh+':'+str(minute+i)
-                        row.time=date2num(datetime.strptime(time,"%b%d%y_%H:%M"))
+                        #row.time=date2num(datetime.strptime(time,"%b%d%y_%H:%M"))
+                        array[0].append(date2num(datetime.strptime(time,"%b%d%y_%H:%M")))
+
                         index = int(4*i)
                         if not int(data[0+index]) > 999990:
-                            row.x = float(data[0+index])/10
+                            #row.x = float(data[0+index])/10
+                            array[1].append(float(data[0+index])/10)
                         else:
-                            row.x = float(nan)
+                            #row.x = float(nan)
+                            array[1].append(np.nan)
                         if not int(data[1+index]) > 999990:
-                            row.y = float(data[1+index])/10
+                            #row.y = float(data[1+index])/10
+                            array[2].append(float(data[1+index])/10)
                         else:
-                            row.y = float(nan)
+                            #row.y = float(nan)
+                            array[2].append(np.nan)
                         if not int(data[2+index]) > 999990:
-                            row.z = float(data[2+index])/10
+                            #row.z = float(data[2+index])/10
+                            array[3].append(float(data[2+index])/10)
                         else:
-                            row.z = float(nan)
+                            #row.z = float(nan)
+                            array[3].append(np.nan)
                         if not int(data[3+index]) > 999990:
-                            row.f = float(data[3+index])/10
+                            #row.f = float(data[3+index])/10
+                            array[4].append(float(data[3+index])/10)
                         else:
-                            row.f = float(nan)
-                        row.typ = block[4].lower()
-                        stream.add(row)
+                            #row.f = float(nan)
+                            array[4].append(np.nan)
+                        #typus = block[4].lower()
+                        #stream.add(row)
                     except:
                         logging.error('format_imf: problem with dataformat - check block header')
-                        return DataStream(stream, headers)
+                        return DataStream([LineStruct()], headers, np.asarray([np.asarray(el) for el in array]))
                 minute = minute + 2
 
     fh.close()
 
-    return DataStream(stream, headers)
+    array = np.asarray([np.asarray(el) for el in array])
+    stream = [LineStruct()]
+    return DataStream(stream, headers, array)
 
 
 def writeIMF(datastream, filename, **kwargs):

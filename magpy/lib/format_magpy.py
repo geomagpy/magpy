@@ -931,6 +931,10 @@ def writePYSTR(datastream, filename, **kwargs):
             for idx,el in enumerate(datastream.ndarray):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
+                        # check whether floats are present - secondary time column 
+                        # might be filled with string '-' placeholder
+                        if not datastream._is_number(el[i]):
+                            el[i] = np.nan
                         #print el[i]
                         if not np.isnan(float(el[i])):   ## if secondary time steps are empty
                             row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
