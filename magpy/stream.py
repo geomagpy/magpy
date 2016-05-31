@@ -3529,6 +3529,7 @@ CALLED BY:
         if len(self.ndarray[0]) > 0:
             ndtype=True
 
+        tok = True
         for key in keys:
             tmpst = self._drop_nans(key)
             if ndtype:
@@ -3536,6 +3537,7 @@ CALLED BY:
             else:
                 t = tmpst._get_column('time')
             if len(t) < 1:
+                tok = False
                 break
 
             nt,sv,ev = self._normalize(t)
@@ -3610,8 +3612,10 @@ CALLED BY:
             exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
             exec('functionkeylist["f'+key+'"] = f'+key)
 
-        func = [functionkeylist, sv, ev]
-
+        if tok:
+            func = [functionkeylist, sv, ev]
+        else:
+            func = [functionkeylist, 0, 0]
         return func
 
 
@@ -5686,26 +5690,27 @@ CALLED BY:
             if not lenhmean == 0: # Length 0 if not enough data for full extended mean value calc
                 func = hmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
                 #hmean.plot(function=func,noshow=True)
-                if plot:
-                    fmistream.plot(noshow=True)
-                # 2. b) subtract sr from original record
-                redfmi = fmitstream.func2stream(func,mode='sub')
-                # 3. recalc k
-                klist = maxmink(redfmi,cdlist,0,k_scale)
-                kstream = klist2stream(klist, kstream)
-                #print klist
-                # 4. recalc sr and subtract
-                finalhmean = fmimeans(fmitstream,startday+daynum,kstream)
-                finalfunc = finalhmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
-                firedfmi = fmistream.func2stream(finalfunc,mode='sub')
-                if plot:
-                    finalhmean.plot(['x','y','z'],noshow=True, function=finalfunc, plottitle="2")
-                    firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
-                    fmitstream.plot(['x','y','z'], plottitle="2: fmistream")
-                # 5. final k
-                klist = maxmink(firedfmi,cdlist,0,k_scale)
-                kstream = klist2stream(klist, kstream)
-                #print "Final", klist
+                if not func[0] == {}:
+                    if plot:
+                        fmistream.plot(noshow=True)
+                    # 2. b) subtract sr from original record
+                    redfmi = fmitstream.func2stream(func,mode='sub')
+                    # 3. recalc k
+                    klist = maxmink(redfmi,cdlist,0,k_scale)
+                    kstream = klist2stream(klist, kstream)
+                    #print klist
+                    # 4. recalc sr and subtract
+                    finalhmean = fmimeans(fmitstream,startday+daynum,kstream)
+                    finalfunc = finalhmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
+                    firedfmi = fmistream.func2stream(finalfunc,mode='sub')
+                    if plot:
+                        finalhmean.plot(['x','y','z'],noshow=True, function=finalfunc, plottitle="2")
+                        firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
+                        fmitstream.plot(['x','y','z'], plottitle="2: fmistream")
+                    # 5. final k
+                    klist = maxmink(firedfmi,cdlist,0,k_scale)
+                    kstream = klist2stream(klist, kstream)
+                    #print "Final", klist
 
         #print kstream.ndarray, klist
 
@@ -10108,7 +10113,53 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     # just add the merged sensorid
     header['SecondarySensorID'] = sensidb
 
+    ## Speed up of unequal timesteps - limit search range
+    #   - search range small (fracratio high) if t_limits are similar and data is periodic
+    #   - search range large  (fracratio small) if t_limits are similar and data is periodic
+    #   - fracratio = 1 means that the full stream_b data set is searched
+    #   - fracratio = 20 means that +-5percent of stream_b are searched arround expected index
     #print("mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits())
+
+    fracratio = 2  # modify if start and endtime are different
+    speedup = True
+    if speedup and ndtype:
+        ast, aet = sa._find_t_limits()
+        bst, bet = sb._find_t_limits()
+        uncert = (date2num(aet)-date2num(ast))*0.01
+        #print ("Merge speedup", uncert, ast, aet, bst, bet)
+        if not bst < ast+timedelta(minutes=uncert*24*60):
+            print ("Merge: Starttime of stream_b too large")
+            for indx,key in enumerate(KEYLIST):
+                if key == 'time':
+                   sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
+                elif key == 'sectime' or key in NUMKEYLIST:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
+                else:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx],1)
+        if not bet > aet-timedelta(minutes=uncert*24*60):
+            print ("Merge: Endtime of stream_b too small") ### Move that to merge??
+            for indx,key in enumerate(KEYLIST):
+                if key == 'time':
+                   sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
+                elif key == 'sectime' or key in NUMKEYLIST:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
+                else:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']),1)
+        #st,et = sb._find_t_limits()
+        #print ("Merge", st, et, sb.length())
+        sb = sb.get_gaps()
+        fracratio = 40  # modify if start and endtime are different
+
+        timeb = sb.ndarray[0]
+        timeb = maskNAN(timeb)
+
+    abratio = len(timea)/float(len(timeb))
+    dcnt = int(len(timeb)/fracratio)
+    #print ("Merge:", abratio, dcnt, len(timeb))
 
     if ndtype:
             array = [[] for key in KEYLIST]
@@ -10125,7 +10176,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs
                 indtia = np.nonzero(np.in1d(timea,tb))[0]
-                print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
+                #print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
 
                 if len(indtia) == len(indtib):
                     nanind = []
@@ -10175,11 +10226,34 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 print("- Put in the larger (higher resolution) stream as stream_a,")
                 print("- otherwise you might wait an endless amount of time.")
                 # interpolate b
+                print("  a) starting interpolation of stream_b")
+                mst = datetime.utcnow()
                 function = sb.interpol(keys)
-                #print function, len(function), keys, sa.ndarray, sb.ndarray
+                met = datetime.utcnow()
+                print("     -> needed {}".format(met-mst))
                 # Get a list of indicies for which timeb values are
                 #   in the vicintiy of a (within half of samplingrate)
-                indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
+                dti = (minsamprate/24./3600.)
+                print("  b) getting indicies of stream_a with stream_b values in the vicinity")
+                mst = datetime.utcnow()
+                #indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/dti <= 1.]  # This selcetion requires most of the time
+                indtia = []  ### New and faster way by limiting the search range in stream_b by a factor of 10 
+                check = [int(len(timea)*(100-el)/100.) for el in range(99,1,-10)]
+                lentimeb = len(timeb)
+                for idx, el in enumerate(timea):
+                    cst = int(idx/abratio-dcnt)
+                    if cst<=0:
+                        cst = 0
+                    cet = int(idx/abratio+dcnt)
+                    if cet>=lentimeb:
+                        cet=lentimeb
+                    if np.min(np.abs(timeb[cst:cet]-el)/(dti)) <= 0.5:
+                        indtia.append(idx)
+                    if idx in check:
+                        print ("     -> finished {} percent".format(idx/float(len(timea))*100.))
+                indtia = np.asarray(indtia)
+                met = datetime.utcnow()
+                print("     -> needed {}".format(met-mst))
                 # limit time range to valued covered by the interpolation function
                 #print len(indtia), len(timeb), np.asarray(indtia)
                 indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]
@@ -10187,6 +10261,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 #print "Timediff %s" % str(t2temp-t1temp)
                 #print len(indtia), len(timeb), np.asarray(indtia)
                 #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
+                print("  c) extracting interpolated values of stream_b")
+                mst = datetime.utcnow()
                 if len(function) > 0:
                     for key in keys:
                         keyind = KEYLIST.index(key)
@@ -10223,6 +10299,9 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                             if flag:
                                 ttt = num2date(array[0][ind])
                                 fllst.append([ttt,ttt,key,flagid,comment])
+
+                        met = datetime.utcnow()
+                        print("     -> needed {} for {}".format(met-mst,key))
 
                     array[0] = np.asarray(sa.ndarray[0])
                     array = np.asarray(array)
