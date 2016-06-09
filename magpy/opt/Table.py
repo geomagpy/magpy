@@ -25,7 +25,7 @@ except:
 class Table:
 
    def __init__(self, numcols, justs=None, fontsize=None, rotate=False,
-         tablewidth=None, tablenum=None, caption=None, label=None):
+         tablewidth=None, tablenum=None, caption=None, label=None, notes=None):
 
       self.numcols = numcols
       self.justs = justs
@@ -46,6 +46,7 @@ class Table:
       self.tablenum = None
       self.caption = caption
       self.label = label
+      self.notes = notes
       self.col_justs = []
       self.headers = []
       self.header_ids = []
@@ -215,4 +216,6 @@ class Table:
       fp.write("\\enddata\n")
 
    def print_footer(self, fp):
+      if self.notes:
+          fp.write("\\tablecomments{%s}\n" % (str(self.notes)))
       fp.write("\\end{deluxetable}\n")

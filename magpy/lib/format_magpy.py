@@ -122,11 +122,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
 
     array = [[] for key in KEYLIST]
 
-    # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     loggerlib.info('readPYASCII: Reading %s' % (filename))
     qFile= file( filename, "rb" )
@@ -324,7 +320,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
 "timefge", "Fsc", "HNflag", "HEflag", "Zflag", "Fscflag", "FscQP", \
 "T1flag", "T2flag", "Timeerr", "Timeerrtrig"]
 
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headskip = False
     if stream.header == None:
         stream.header.clear()
@@ -698,6 +694,12 @@ def readPYBIN(filename, headonly=False, **kwargs):
     getfile = True
 
     stream = DataStream([],{},[[] for key in KEYLIST])
+
+    headskip = False
+    if stream.header == None:
+        stream.header.clear()
+    else:
+        headskip = True
 
     theday = extractDateFromString(filename)
     try:

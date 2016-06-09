@@ -118,12 +118,13 @@ except ImportError as e:
 # NetCDF
 # ------
 try:
-    print("Loading Netcdf4 support ...")
+    #print("Loading Netcdf4 support ...")
     from netCDF4 import Dataset
 except ImportError as e:
-    logpygen += "MagPy initiation ImportError: NetCDF not available.\n"
-    logpygen += "... if you want to use NetCDF format support please install a current version.\n"
-    badimports.append(e)
+    #logpygen += "MagPy initiation ImportError: NetCDF not available.\n"
+    #logpygen += "... if you want to use NetCDF format support please install a current version.\n"
+    #badimports.append(e)
+    pass
 
 # NASACDF - SpacePy
 # -----------------
@@ -141,25 +142,25 @@ try:
         print("trying CDF lib in %s" % nasacdfdir)
         try:
             import spacepy.pycdf as cdf
+            print("... success")
         except KeyError as e:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("Unexpected error")
+            print("Could not import spacepy: Trying alternative...")
             pass
-        print("... success")
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
         print("trying CDF lib in /usr/local/cdf")
         try:
             import spacepy.pycdf as cdf
+            print("... success")
         except KeyError as e:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
             print("Unexpected error")
             pass
-        print("... success")
 except ImportError as e:
     logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
     logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
@@ -436,6 +437,7 @@ class DataStream(object):
     - stream.mean(self, key, **kwargs):
     - stream.multiply(self, factors):
     - stream.offset(self, offsets):
+    - stream.randomdrop(self, percentage=None, fixed_indicies=None):
     - stream.remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
     - stream.resample(self, keys, **kwargs):
@@ -2740,6 +2742,64 @@ CALLED BY:
         return self
 
 
+    def f_from_df(self, **kwargs):
+        """
+        DESCRIPTION:
+            Calculates the f from the difference of x+y+z and df 
+
+        PARAMETER:
+            keywords:
+            :type offset: float
+            :param offset: constant offset to f values
+            :type digits: int
+            :param digits: number of digits to be rounded (should equal the input precision)
+        """
+
+        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
+
+        offset = kwargs.get('offset')
+        digits = kwargs.get('digits')
+        if not offset:
+            offset = 0.
+        if not digits:
+            digits = 8
+
+        loggerstream.info('--- Calculating f started at %s ' % str(datetime.now()))
+
+        try:
+            syst = self.header['DataComponents']
+        except:
+            syst = None
+
+
+        ind = KEYLIST.index("df")
+        indx = KEYLIST.index("x")
+        indy = KEYLIST.index("y")
+        indz = KEYLIST.index("z")
+        indf = KEYLIST.index("f")
+        if len(self.ndarray[0])>0 and len(self.ndarray[indx])>0 and len(self.ndarray[indy])>0 and len(self.ndarray[indz])>0 and len(self.ndarray[ind])>0:
+            # requires x,y,z and f
+            arx = self.ndarray[indx]**2
+            ary = self.ndarray[indy]**2
+            arz = self.ndarray[indz]**2
+            if syst in ['HDZ','hdz','HDZF','hdzf','HDZS','hdzs','HDZG','hdzg']:
+                print("deltaF: found HDZ orientation")
+                ary = np.asarray([0]*len(self.ndarray[indy]))
+            sumar = list(arx+ary+arz)
+            sqr = np.sqrt(np.asarray(sumar))
+            self.ndarray[indf] = sqr - (self.ndarray[ind] + offset)
+        else:
+            for elem in self:
+                elem.f = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.df + offset)
+
+        self.header['col-f'] = 'f'
+        self.header['unit-col-f'] = 'nT'
+
+        loggerstream.info('--- Calculating f finished at %s ' % str(datetime.now()))
+
+        return self
+
+
     def differentiate(self, **kwargs):
         """
     DEFINITION:
@@ -3093,7 +3153,8 @@ CALLED BY:
             too = str(value)
             if ndtype:
                 searchclause = 'stream.ndarray[ind].astype(float) '+ compare + ' ' + too
-                indexar = eval('np.where('+searchclause+')[0]')
+                with np.errstate(invalid='ignore'):
+                    indexar = eval('np.where('+searchclause+')[0]')
 
         if ndtype:
             for ind,el in enumerate(stream.ndarray):
@@ -7017,6 +7078,64 @@ CALLED BY:
             return fig
 
 
+    def randomdrop(self,percentage=None,fixed_indicies=None):
+                """
+                DESCRIPTION:
+                    Method to randomly drop one line from data. If percentage is 
+                    given, then lines according to this percentage are dropped.
+                    This corresponds to a jackknife and d-jackknife respectively.
+                PARAMETER:
+                    percentage     (float)  provide a percentage value to be dropped (1-99)
+                    fixed_indicies (list)   e.g. [0,1] provide a list of indicies
+                                            which will not be dropped
+                RETURNS:
+                    DataStream
+                APPLICATION:
+                    >>> newstream = stream.randomdrop(percentage=10,fixed_indicies=[0,len(means.ndarray[0])-1])
+                """
+                import random
+                def makeDrippingBucket(lst):
+                    bucket = lst
+                    if len(bucket) == 0:
+                        return []
+                    else:
+                        random_index = random.randrange(0,len(bucket))
+                        del bucket[random_index]
+                        return bucket
+
+                if len(self.ndarray[0]) < 1:
+                    return self
+                if percentage:
+                    if percentage > 99:
+                        percentage = 99
+                    if percentage < 1:
+                        percentage = 1
+                ns = self.copy()
+                if fixed_indicies:
+                    # TODO assert list
+                    pass
+                if not percentage:
+                    newlen = len(ns.ndarray[0]) -1
+                else:
+                    newlen = int(np.round(len(ns.ndarray[0])-len(ns.ndarray[0])*percentage/100.,0))
+                # Index list of stream
+                indexlst = [idx for idx, el in enumerate(ns.ndarray[0])]
+                #print len(indexlst), newlen
+                while len(indexlst) > newlen:
+                    indexlst = makeDrippingBucket(indexlst)
+                    if fixed_indicies:
+                        for el in fixed_indicies:
+                            if not el in indexlst:
+                                indexlst.append(el)
+                #print "Here", len(indexlst)
+                for idx,ar in enumerate(ns.ndarray):
+                    if len(ar) > 0:
+                        #print ar, indexlst
+                        newar = ar[indexlst]
+                        ns.ndarray[idx] = newar
+                return ns
+
+
     def remove(self, starttime=None, endtime=None):
         """
     DEFINITION:
@@ -10172,7 +10291,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
             if len(indtib) > int(0.5*len(timeb)):
                 print("mergeStreams: Found identical timesteps - using simple merge")
                 # get tb times for all matching indicies
-                #print "merge", indtib, len(indtib), len(timea), len(timeb), np.argsort(timea), np.argsort(timeb)
+                #print("merge", indtib, len(indtib), len(timea), len(timeb), np.argsort(timea), np.argsort(timeb))
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs
                 indtia = np.nonzero(np.in1d(timea,tb))[0]
@@ -10819,7 +10938,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     indtia = idxA[idxB]
                 except:
                     indtia = np.nonzero(np.in1d(tb, timea))[0]
-                #print len(timea),len(timeb),idxA,idxB, indtia, indtib
+                #print ("subtractStreams", len(timea),len(timeb),idxA,idxB, indtia, indtib)
+                #print (np.nonzero(np.in1d(timea,tb))[0])
                 #idxB = np.argsort(tb)
                 #sortedB = tb[idxB]
                 #idxA = np.searchsorted(sortedB, timea)

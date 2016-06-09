@@ -84,7 +84,7 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
                    'DataRating','DataComments','DataSource','DataAbsFunctionObject',
                    'DataDeltaValues', 'DataTerms', 'DataReferences',
                    'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
-                   'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta','DataAbsInfo','DataBaseValues']
+                   'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta','DataAbsInfo','DataBaseValues','DataArchive']
 
 DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                     'CHAR(50)','CHAR(50)',
@@ -99,7 +99,7 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                     'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
                     'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)',
                     'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
-                    'CHAR(50)','TEXT','TEXT','TEXT','TEXT','TEXT']
+                    'CHAR(50)','TEXT','TEXT','TEXT','TEXT','TEXT','CHAR(50)']
 
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
@@ -126,9 +126,6 @@ IPKEYLIST = ['IpName','IP','IpSensors','IpDuty','IpType','IpAccess','IpLocation'
 PIERLIST = ['PierID','PierName','PierAlternativeName','PierType','PierConstruction','StationID','PierLong','PierLat','PierAltitude','PierCoordinateSystem','PierReference','DeltaDictionary','AzimuthDictionary','DeltaComment']
 
 """
-Standard tables:
-TODO:  add StationK9, DataPublicationDate, DataSource (e.g. WDC...), DataDeltaValues (array with KEYLIST and deltas), DataTerms, DataReferences, DataPublicationLevel, DataPublicationDate
-DataStandardLevel, DataStandardName, DataStandardVersion, DataPartialStandDesc
 
 SENSOR:
         SensorID: a combination of name, serialnumber and revision
