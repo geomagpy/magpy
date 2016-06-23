@@ -522,7 +522,6 @@ class AbsoluteData(object):
             #print("determinationindex", determinationindex[-1])
             #print ("Time", num2date(poslst[determinationindex].time))
 
-
         # -- cylce through declinations measurements:
         # ------------------------------
         for k in range(linecount):
@@ -624,9 +623,9 @@ class AbsoluteData(object):
             if iterator == 0:
                 loggerabs.error('_calcdec: %s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
-        loggerabs.debug("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
+        #print("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
 
-        #print decmean, mirediff, variocorr[0], deltaD
+        #print ("Hallo", decmean, mirediff, variocorr[0], deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
 
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
@@ -1264,7 +1263,7 @@ class AbsoluteData(object):
 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
-            #print "STarting with", xstart, ystart
+            #print ("STarting with", xstart, ystart)
             resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,debugmode=debugmode)
             # Calculate inclination value
             if debugmode:
@@ -1928,14 +1927,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 # get delta D and delta I values here
                 if not deltaD:
                     try:
-                        deltaD = 0.0
-                        #get from dict
+                        val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
+                        deltaD = float(val.split('_')[2])
                     except:
                         deltaD = 0.0
                 if not deltaI:
                     try:
-                        deltaI = 0.0
-                        #get from dict
+                        val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
+                        deltaI = float(val.split('_')[3])
                     except:
                         deltaI = 0.0
                 #print("here", deltaD, deltaI, scalevalue)

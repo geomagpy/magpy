@@ -84,7 +84,7 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
                    'DataRating','DataComments','DataSource','DataAbsFunctionObject',
                    'DataDeltaValues', 'DataTerms', 'DataReferences',
                    'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
-                   'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta','DataAbsInfo','DataBaseValues']
+                   'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta','DataAbsInfo','DataBaseValues','DataArchive']
 
 DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                     'CHAR(50)','CHAR(50)',
@@ -99,13 +99,17 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                     'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
                     'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)',
                     'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
-                    'CHAR(50)','TEXT','TEXT','TEXT','TEXT','TEXT']
+                    'CHAR(50)','TEXT','TEXT','TEXT','TEXT','TEXT','CHAR(50)']
 
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
                   'SensorDataLoggerSerNum','SensorDataLoggerRevision','SensorDataLoggerRevisionComment',
                   'SensorDescription','SensorElements','SensorKeys','SensorModule','SensorDate',
-                  'SensorRevision','SensorRevisionComment','SensorRevisionDate']
+                  'SensorRevision','SensorRevisionComment','SensorRevisionDate','SensorDynamicRange',
+                  'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation', 
+                  'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
+                  'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
+                  'SensorResolution','SensorTime']
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
                    'StationCity','StationPostalCode','StationCountry','StationWebInfo',
@@ -122,9 +126,6 @@ IPKEYLIST = ['IpName','IP','IpSensors','IpDuty','IpType','IpAccess','IpLocation'
 PIERLIST = ['PierID','PierName','PierAlternativeName','PierType','PierConstruction','StationID','PierLong','PierLat','PierAltitude','PierCoordinateSystem','PierReference','DeltaDictionary','AzimuthDictionary','DeltaComment']
 
 """
-Standard tables:
-TODO:  add StationK9, DataPublicationDate, DataSource (e.g. WDC...), DataDeltaValues (array with KEYLIST and deltas), DataTerms, DataReferences, DataPublicationLevel, DataPublicationDate
-DataStandardLevel, DataStandardName, DataStandardVersion, DataPartialStandDesc
 
 SENSOR:
         SensorID: a combination of name, serialnumber and revision
@@ -144,6 +145,20 @@ SENSOR:
         SensorRevision: 4 digit number defining a revision ID
         SensorRevisionComment: Comment for current revision - changes to previous number (e.g. calibration)
         SensorRevisionDate: Date of revision - for 0001 this equals the SensorDate
+        SensorDynamicRange: 
+        SensorTimestepAccuracy:
+        SensorGroupDelay:
+        SensorPassband:
+        SensorAttenuation:
+        SensorRMSNoise:
+        SensorSpectralNoise:
+        SensorAbsoluteError:
+        SensorOrthogonality:
+        SensorVerticallity:
+        SensorTCoeff:
+        SensorElectronicsTCoeff:
+        SensorAnalogSampling:
+        SensorResolution:
 STATION:
         StationID: unique ID of the station e.g. IAGA code
         StationIAGAcode:
@@ -1777,7 +1792,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     array = [[] for key in KEYLIST]
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
-        if not False in checkEqual3(col) and len(col) > 0:
+        if len(col) > 0 and not False in checkEqual3(col):
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
             else: # add as usual

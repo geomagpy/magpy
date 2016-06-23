@@ -72,6 +72,7 @@ magpy/lib/format_magpy.py
 magpy/lib/format_neic.py
 magpy/lib/format_noaa.py
 magpy/lib/format_pos1.py
+magpy/lib/format_rcs.py
 magpy/lib/format_sfs.py
 magpy/lib/format_wdc.py
 magpy/lib/format_wic.py

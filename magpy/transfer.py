@@ -233,7 +233,7 @@ if ssh:
 # ####################
 # Upload data to Edinburgh GIN
 # ####################
-def ginupload(filename, user, password, url,**kwargs):
+def ginupload(filename=None, user=None, password=None, url=None,**kwargs):
     """
     DEFINITION:
         Method to upload data to the Intermagnet GINs using curl

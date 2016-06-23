@@ -122,11 +122,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
 
     array = [[] for key in KEYLIST]
 
-    # Check whether header infromation is already present
-    if stream.header == None:
-        headers = {}
-    else:
-        headers = stream.header
+    headers = {}
 
     loggerlib.info('readPYASCII: Reading %s' % (filename))
     qFile= file( filename, "rb" )
@@ -289,14 +285,15 @@ def readPYSTR(filename, headonly=False, **kwargs):
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 
-    for idx,ar in enumerate(array):
-        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
-            tester = float('nan')
-        else:
-            tester = '-'
-        array[idx] = np.asarray(array[idx]).astype(object)
-        if not False in checkEqual3(array[idx]) and ar[0] == tester:
-            array[idx] = np.asarray([])
+    if len(array[0]) > 0:
+        for idx,ar in enumerate(array):
+            if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
+                tester = float('nan')
+            else:
+                tester = '-'
+            array[idx] = np.asarray(array[idx]).astype(object)
+            if not False in checkEqual3(array[idx]) and ar[0] == tester:
+                array[idx] = np.asarray([])
 
     #print("lib format-magpy", [len(el) for el in array])
     return DataStream([LineStruct()], headers, np.asarray(array))
@@ -323,7 +320,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
 "timefge", "Fsc", "HNflag", "HEflag", "Zflag", "Fscflag", "FscQP", \
 "T1flag", "T2flag", "Timeerr", "Timeerrtrig"]
 
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headskip = False
     if stream.header == None:
         stream.header.clear()
@@ -698,6 +695,12 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
     stream = DataStream([],{},[[] for key in KEYLIST])
 
+    headskip = False
+    if stream.header == None:
+        stream.header.clear()
+    else:
+        headskip = True
+
     theday = extractDateFromString(filename)
     try:
         if starttime:
@@ -900,7 +903,7 @@ def writePYSTR(datastream, filename, **kwargs):
                 exst = read(path_or_url=filename)
                 datastream = joinStreams(datastream,exst)
             except:
-                loggerlib.info("writePYSTR: Could not interprete  existing file - replacing" % filename)
+                loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
@@ -930,6 +933,10 @@ def writePYSTR(datastream, filename, **kwargs):
             for idx,el in enumerate(datastream.ndarray):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
+                        # check whether floats are present - secondary time column 
+                        # might be filled with string '-' placeholder
+                        if not datastream._is_number(el[i]):
+                            el[i] = np.nan
                         #print el[i]
                         if not np.isnan(float(el[i])):   ## if secondary time steps are empty
                             row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
@@ -1129,7 +1136,8 @@ def writePYCDF(datastream, filename, **kwargs):
         try:
             mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
         except:
-            print("format_magypy: compression of CDF failed - storing uncompressed data")
+            print("format_magypy: compression of CDF failed - Trying to store uncompressed data")
+            print("format_magypy: please use option skipcompression=True if unreadable")
             pass
 
     mycdf.close()
