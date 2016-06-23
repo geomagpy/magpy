@@ -1792,7 +1792,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     array = [[] for key in KEYLIST]
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
-        if not False in checkEqual3(col) and len(col) > 0:
+        if len(col) > 0 and not False in checkEqual3(col):
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
             else: # add as usual

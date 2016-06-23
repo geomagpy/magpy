@@ -4799,10 +4799,12 @@ CALLED BY:
                 # Cycle through stream and append nans to each column for missing time steps
                 nans = [np.nan] * len(missingt)
                 empts = [''] * len(missingt)
+                gaps = [0.0] * len(missingt)
                 for idx,elem in enumerate(stream.ndarray):
                     if idx == 0:
                         # append missingt list to array element
                         elem = list(elem)
+                        lenelem = len(elem)
                         elem.extend(missingt)
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
                     elif len(elem) > 0:
@@ -4812,6 +4814,11 @@ CALLED BY:
                             elem.extend(nans)
                         else:
                             elem.extend(empts)
+                        stream.ndarray[idx] = np.asarray(elem).astype(object)
+                    elif KEYLIST[idx] == gapvariable:
+                        # append nans list to array element
+                        elem = [1.0]*lenelem
+                        elem.extend(gaps)
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
             return stream.sorting()
 
@@ -9934,7 +9941,7 @@ def saveflags(mylist=None,path=None):
     except:
         return False
 
-def loadflags(path=None):
+def loadflags(path=None,sensorid=None):
     """
     DEFINITION:
         Load list e.g. flaglist from file using pickle.
@@ -9954,6 +9961,10 @@ def loadflags(path=None):
         from pickle import load as pklload
         mylist = pklload(open(path,"rb"))
         print("loadflags: list {a} successfully loaded, found {b} inputs".format(a=path,b=len(mylist)))
+        if sensorid:
+            print(" - extracting data for sensor {}".format(sensorid))
+            mylist = [el for el in mylist if el[5] == sensorid]
+            print(" -> remaining flags: {b}".format(b=len(mylist)))
         return mylist
     except:
         return []

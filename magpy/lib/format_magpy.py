@@ -1136,7 +1136,8 @@ def writePYCDF(datastream, filename, **kwargs):
         try:
             mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
         except:
-            print("format_magypy: compression of CDF failed - storing uncompressed data")
+            print("format_magypy: compression of CDF failed - Trying to store uncompressed data")
+            print("format_magypy: please use option skipcompression=True if unreadable")
             pass
 
     mycdf.close()
