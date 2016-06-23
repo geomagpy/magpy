@@ -290,9 +290,12 @@ def readIAF(filename, headonly=False, **kwargs):
     y[y > 88880] = float(nan)
     z = np.asarray(z)/10.
     z[z > 88880] = float(nan)
+    #print ("readIAF", np.asarray(f))
     f = np.asarray(f)/10.
+    #print ("readIAF", np.asarray(f))
     f[f > 88880] = float(nan)
-    f[f < -44440] = float(nan)
+    with np.errstate(invalid='ignore'):
+        f[f < -44440] = float(nan)
     xho = np.asarray(xho)/10.
     xho[xho > 88880] = float(nan)
     yho = np.asarray(yho)/10.
@@ -301,7 +304,8 @@ def readIAF(filename, headonly=False, **kwargs):
     zho[zho > 88880] = float(nan)
     fho = np.asarray(fho)/10.
     fho[fho > 88880] = float(nan)
-    fho[fho < -44440] = float(nan)
+    with np.errstate(invalid='ignore'):
+        fho[fho < -44440] = float(nan)
     xd = np.asarray(xd)/10.
     xd[xd > 88880] = float(nan)
     yd = np.asarray(yd)/10.
@@ -310,7 +314,8 @@ def readIAF(filename, headonly=False, **kwargs):
     zd[zd > 88880] = float(nan)
     fd = np.asarray(fd)/10.
     fd[fd > 88880] = float(nan)
-    fd[fd < -44440] = float(nan)
+    with np.errstate(invalid='ignore'):
+        fd[fd < -44440] = float(nan)
     k = np.asarray(k).astype(float)
     k[k > 880] = float(nan)
     ir = np.asarray(ir)
@@ -343,7 +348,11 @@ def readIAF(filename, headonly=False, **kwargs):
         ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
         headers['DataSamplingRate'] = '60 sec'
 
-    return DataStream([LineStruct()], headers, ndarray)
+    stream = DataStream([LineStruct()], headers, ndarray)
+    #if 'df' in keystr:
+    #    stream = stream.f_from_df()
+
+    return stream
 
 
 def writeIAF(datastream, filename, **kwargs):
@@ -372,18 +381,15 @@ def writeIAF(datastream, filename, **kwargs):
 
     try:
         # Convert data to XYZ if HDZ
-        print ("Data contains: {}".format(datastream.header.get('DataComponents','')))
+        if not datastream.header.get('DataComponents','').startswith('XYZ'):
+            print ("Data contains: {}".format(datastream.header.get('DataComponents','')))
         if datastream.header['DataComponents'].startswith('HDZ'):
             datastream = datastream.hdz2xyz()
     except:
         print("writeIAF: HeaderInfo on DataComponents seems to be missing")
         return False
 
-    try:
-        # Preserve sampling filter of original data
-        dsf = datastream.header['DataSamplingFilter']
-    except:
-        dsf = ''
+    dsf = datastream.header.get('DataSamplingFilter','')
 
     # Check whether f is contained (or delta f)
     # if f calc delta f
@@ -398,16 +404,16 @@ def writeIAF(datastream, filename, **kwargs):
         else:
             datastream = datastream.delta_f()
             df=True
-            if datastream.header['DataComponents'] in ['HDZ','XYZ']:
+            if datastream.header.get('DataComponents','') in ['HDZ','XYZ']:
                 datastream.header['DataComponents'] += 'G'
-            if datastream.header['DataSensorOrientation'] in ['HDZ','XYZ']:
-                datastream.header['DataSensorOrientation'] += 'F'
+            if datastream.header.get('DataSensorOrientation','') in ['HDZ','XYZ','hdz','xyz']:
+                datastream.header['DataSensorOrientation'] += datastream.header.get('DataSensorOrientation','').upper() + 'F'
     else:
         df=True
-        if datastream.header['DataComponents'] in ['HDZ','XYZ']:
+        if datastream.header.get('DataComponents','') in ['HDZ','XYZ']:
             datastream.header['DataComponents'] += 'G'
-        if datastream.header['DataSensorOrientation'] in ['HDZ','XYZ']:
-            datastream.header['DataSensorOrientation'] += 'F'
+        if datastream.header.get('DataSensorOrientation','') in ['HDZ','XYZ','hdz','xyz']:
+            datastream.header['DataSensorOrientation'] = datastream.header.get('DataSensorOrientation','').upper() + 'F'
 
     # Eventually converting Locations data
     proj = datastream.header.get('DataLocationReference','')
@@ -432,116 +438,154 @@ def writeIAF(datastream, filename, **kwargs):
     t0 = int(datastream.ndarray[0][1])
     output = ''
     kstr=[]
+
+    tmpstream = datastream.copy()
+    hourvals = tmpstream.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
+    hourvals = hourvals.get_gaps()
+
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
-        if len(dayar[0]) > 1440:
+        if not len(dayar[0]) == 1440:
             print ("format_IMF: found {} datapoints (expected are 1440) - assuming last value(s) to represent next month".format(len(dayar[0])))
             dayar = np.asarray([elem[:1440] for elem in dayar])
         # get all indicies
-        minutest = DataStream([LineStruct],datastream.header,dayar)
-        temp = minutest.copy() ### Necessary so that dayar is not modified by the filtering process
-        temp = temp.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
+        #minutest = DataStream([LineStruct],datastream.header,dayar)
+        #temp = minutest.copy() ### Necessary so that dayar is not modified by the filtering process
+        #temp = temp.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
+        tempvals = hourvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
+        temp = DataStream([LineStruct],datastream.header,tempvals)
 
         head = []
         reqinfotmp = requiredinfo
+        misslist = []
         for elem in requiredinfo:
             try:
                 if elem == 'StationIAGAcode':
-                    value = datastream.header['StationIAGAcode']
-                    value = value[:3]
+                    value = datastream.header.get('StationIAGAcode','')
+                    if value == '':
+                        misslist.append(elem)
                     #print value
                 elif elem == 'StartDate':
                     value = int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
-                    if not float(datastream.header['DataAcquisitionLatitude']) < 90 and float(datastream.header['DataAcquisitionLatitude']) > -90:
+                    if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
                         print("Latitude and Longitude need to be provided in Degree")
                         x=1/0
-                    value = int(np.round((90-float(datastream.header['DataAcquisitionLatitude']))*1000))
+                    value = int(np.round((90-float(datastream.header.get('DataAcquisitionLatitude',0)))*1000))
+                    if value == 0:
+                        misslist.append(elem)
                 elif elem == 'DataAcquisitionLongitude':
-                    value = int(np.round(float(datastream.header['DataAcquisitionLongitude'])*1000))
+                    value = int(np.round(float(datastream.header.get('DataAcquisitionLongitude',0))*1000))
+                    if value == 0:
+                        misslist.append(elem)
                 elif elem == 'DataElevation':
-                    value = int(np.round(float(datastream.header['DataElevation'])))
+                    value = int(np.round(float(datastream.header.get('DataElevation',0))))
                     datastream.header['DataElevation'] = value
+                    if value == 0:
+                        misslist.append(elem)
                 elif elem == 'DataConversion':
-                    value = int(np.round(float(datastream.header['DataConversion'])))
+                    value = int(np.round(float(datastream.header.get('DataConversion',0))))
+                    if value == 0:
+                        misslist.append(elem)
                 elif elem == 'DataPublicationDate':
-                    print (datastream.header['DataPublicationDate'])
-                    value = datetime.strftime(datastream._testtime(datastream.header['DataPublicationDate']),'%y%m')
+                    da = datastream.header.get('DataPublicationDate','')
+                    try:
+                        value = datetime.strftime(datastream._testtime(da),'%y%m')
+                    except:
+                        print("writeIAF: DataPublicationDate --  appending current date")
+                        value = datetime.strftime(datetime.utcnow(),'%y%m')
                 elif elem == 'FormatVersion':
                     value = 3
                 elif elem == 'StationK9':
-                    value = int(np.round(float(datastream.header['StationK9'])))
+                    value = int(np.round(float(datastream.header.get('StationK9',0))))
+                    if value == 0:
+                        misslist.append(elem)
                 elif elem == 'DataDigitalSampling':
                     try:
-                        value = int(datastream.header['DataDigitalSampling'])
+                        value = int(datastream.header.get('DataDigitalSampling',0))
+                        if value == 0:
+                            misslist.append(elem)
                     except:
-                        value = 1234
+                        value = datastream.header.get('DataDigitalSampling','')
+                        print ("writeIAF: DataDigitialSampling info needs to be integer")
+                        print ("          - extracting integers from provided string")
+                        valtmp = re.findall(r'\d+', value)
+                        value = int(valtmp[-1])
+                        print ("          extracted: {}".format(value))
                 elif elem == 'Reserved':
                     value = 0
                 else:
-                    value = datastream.header[elem]
-                head.append(value)
-                reqinfotmp = [el for el in reqinfotmp if not el==elem]
-            except:
-                if elem == 'DataPublicationDate':
-                    print("DataPublicationDate --  appending current date")
-                    value = datetime.strftime(datetime.utcnow(),'%y%m')
+                    value = datastream.header.get(elem,'')
+                if len(misslist) == 0:
+                    if not datastream._is_number(value):
+                        if len(value) < 4:
+                            value = value.ljust(4)
+                        elif len(value) > 4:
+                            value = value[:4]
                     head.append(value)
+                    reqinfotmp = [el for el in reqinfotmp if not el==elem]
                 else:
-                    print("Check {}: eventually missing in datastream header".format(reqinfotmp))
+                    print("Check header: below mentioned content appears to be missing in header")
                     print("  --  critical information missing in data header  --")
                     print("  ---------------------------------------------------")
-                    print(" Please provide: StationIAGAcode, DataAcquisitionLatitude, ")
-                    print(" DataAcquisitionLongitude, DataElevation, DataConversion, ")
-                    print(" DataComponents, StationInstitution, DataQuality, SensorType, ")
-                    print(" StationK9, DataDigitalSampling, DataSensorOrientation")
+                    print(" Please provide: {} ".format(misslist))
                     print(" e.g. data.header['StationK9'] = 750")
                     return False
+            except:
+                print("Check header content: could not interprete header information")
+                print("  --  critical information missing in data header: {}  --".format(misslist))
+                print("  ---------------------------------------------------")
+                print(" Please provide: StationIAGAcode, DataAcquisitionLatitude, ")
+                print(" DataAcquisitionLongitude, DataElevation, DataConversion, ")
+                print(" DataComponents, StationInstitution, DataQuality, SensorType, ")
+                print(" StationK9, DataDigitalSampling, DataSensorOrientation")
+                print(" e.g. data.header['StationK9'] = 750")
+                return False
 
         # Constructing header Info
-        packcode = '4s4l4s4sl4s4sll4s4sll' # fh.read(64)
+        packcode = '<4s4l4s4sl4s4sll4s4sll' # fh.read(64)
         head_bin = struct.pack(packcode,*head)
-
-        #print ("0:", len(head))
         # add minute values
         packcode += '1440l' # fh.read(64)
-        xvals = np.asarray([elem if not isnan(elem) else 99999.9 for elem in dayar[1]])
+        xvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[1]])
         xvals = np.asarray(xvals*10).astype(int)
         head.extend(xvals)
         #print ("0a:", len(head))
         packcode += '1440l' # fh.read(64)
-        yvals = np.asarray([elem if not isnan(elem) else 99999.9 for elem in dayar[2]])
+        yvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[2]])
         yvals = np.asarray(yvals*10).astype(int)
         head.extend(yvals)
         packcode += '1440l' # fh.read(64)
-        zvals = np.asarray([elem if not isnan(elem) else 99999.9 for elem in dayar[3]])
+        zvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[3]])
         zvals = np.asarray(zvals*10).astype(int)
         head.extend(zvals)
         #print ("0c:", len(head))
         packcode += '1440l' # fh.read(64)
         if df:
-            dfvals = np.asarray([elem if not isnan(elem) else 99999.9 for elem in dayar[dfpos]])
-            dfvals = np.asarray(dfvals*10).astype(int)
+            dfvals = np.asarray([np.round(elem*10.,0) if not isnan(elem) else 999999 for elem in dayar[dfpos]])
+            #print ("dfmin",dfvals)
+            #dfvals = np.asarray(dfvals*10.).astype(int)
+            dfvals = dfvals.astype(int)
         else:
             dfvals = np.asarray([888888]*len(dayar[0])).astype(int)
         head.extend(dfvals)
 
         # add hourly means
         packcode += '24l'
-        xhou = np.asarray([elem if not isnan(elem) else 99999.9 for elem in temp.ndarray[1]])
+        xhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[1]])
         xhou = np.asarray(xhou*10).astype(int)
         head.extend(xhou)
         packcode += '24l'
-        yhou = np.asarray([elem if not isnan(elem) else 99999.9 for elem in temp.ndarray[2]])
+        yhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[2]])
         yhou = np.asarray(yhou*10).astype(int)
         head.extend(yhou)
         packcode += '24l'
-        zhou = np.asarray([elem if not isnan(elem) else 99999.9 for elem in temp.ndarray[3]])
+        zhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[3]])
         zhou = np.asarray(zhou*10).astype(int)
         head.extend(zhou)
         packcode += '24l'
         if df:
-            dfhou = np.asarray([elem if not isnan(elem) else 99999.9 for elem in temp.ndarray[dfpos]])
+            dfhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[dfpos]])
             dfhou = np.asarray(dfhou*10).astype(int)
         else:
             dfhou = np.asarray([888888]*24).astype(int)
@@ -556,21 +600,21 @@ def writeIAF(datastream, filename, **kwargs):
         yvalid = np.asarray([elem for elem in yvals if elem < 888880])
         zvalid = np.asarray([elem for elem in zvals if elem < 888880])
         if len(xvalid)>0.9*len(xvals):
-            head.append(int(np.mean(xvalid)))
+            head.append(int(np.round(np.mean(xvalid),0)))
         else:
             head.append(999999)
         if len(xvalid)>0.9*len(xvals):
-            head.append(int(np.mean(yvalid)))
+            head.append(int(np.round(np.mean(yvalid),0)))
         else:
             head.append(999999)
         if len(xvalid)>0.9*len(xvals):
-            head.append(int(np.mean(zvalid)))
+            head.append(int(np.round(np.mean(zvalid),0)))
         else:
             head.append(999999)
         if df:
-            dfvalid = np.asarray([elem for elem in dfvals if elem < 88888])
+            dfvalid = np.asarray([elem for elem in dfvals if elem < 888880])
             if len(dfvalid)>0.9*len(dfvals):
-                head.append(int(np.mean(dfvalid)))
+                head.append(int(np.round(np.mean(dfvalid),0)))
             else:
                 head.append(999999)
         else:
@@ -702,6 +746,7 @@ def writeIAF(datastream, filename, **kwargs):
         head = []
         print("Writing README file:", rfile)
 
+        dummy = "please insert manually"
         if not os.path.isfile(rfile):
             emptyline = ''
             head.append("{0:^66}".format(station.upper()))
@@ -722,11 +767,11 @@ def writeIAF(datastream, filename, **kwargs):
             head.append("ABSOLUTE")
             head.append("INSTRUMENTS  : please insert manually")
             head.append("RECORDING")
-            head.append("VARIOMETER   : please insert manually")
-            head.append("ORIENTATION  : {0}".format(datastream.header['DataSensorOrientation']))
+            head.append("VARIOMETER   : {}".format(datastream.header.get('SensorName',dummy)))
+            head.append("ORIENTATION  : {}".format(datastream.header['DataSensorOrientation']))
             head.append("{0:<50}".format(emptyline))
-            head.append("DYNAMIC RANGE: please insert manually")
-            head.append("RESOLUTION   : please insert manually")
+            head.append("DYNAMIC RANGE: {}".format(datastream.header.get('SensorDynamicRange',dummy)))
+            head.append("RESOLUTION   : {}".format(datastream.header.get('SensorResolution',dummy)))
             head.append("SAMPLING RATE: please insert manually")
             head.append("FILTER       : {0}".format(dsf))
             # Provide method with head of kvals
@@ -832,6 +877,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     mutipletimerange = False
     newdatalist = []
     tllist = []
+    indexarray = np.asarray([])
     for elem in datalist:
         if elem.endswith('Times'):
             #print "Found Time Column"
@@ -853,7 +899,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         tl = [el[0] for el in tllist]
         if not max(tl) == min(tl):
             print("Time columns of different length. Choosing longest as basis")
-            newdatalist.append(max(tllist)[1])
+            newdatalist.append(['time',max(tllist)[1]])
+            try:
+                indexarray = np.nonzero(np.in1d(date2num(cdfdat[max(tllist)[1]][...]),date2num(cdfdat[min(tllist)[1]][...])))[0]
+            except:
+                indexarray = np.asarray([])
             mutipletimerange = True
         else:
             print("Equal length time axes found - assuming identical time")
@@ -894,23 +944,34 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     # Deal with scalar data (independent or whatever
 
     for elem in newdatalist:
+        #print ("Here", elem)
         if elem[0] == 'time':
             try:
                 ar = date2num(cdfdat[elem[1]][...])
             except:
                 ar = date2num(np.asarray([cdf.lib.tt2000_to_datetime(el) for el in cdfdat[elem[1]][...]]))
+            arlen= len(ar)
             arraylist.append(ar)
             ind = KEYLIST.index('time')
             array[ind] = ar
         else:
             ar = cdfdat[elem[1]][...]
             if elem[0] in NUMKEYLIST:
-                ar[ar > 88880] = float(nan)
+                with np.errstate(invalid='ignore'):
+                    ar[ar > 88880] = float(nan)
                 ind = KEYLIST.index(elem[0])
                 headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()
                 headers['unit-col-'+elem[0]] = cdfdat[elem[1]].attrs['UNITS']
-                array[ind] = ar
-                arraylist.append(ar)
+                if len(indexarray) > 0 and elem[0] in ['f','df']:  ## this is not really good - point to depend_0
+                    newar = np.asarray([np.nan]*arlen)
+                    #print (len(newar),len(ar),len(indexarray))
+                    newar[indexarray] = ar
+                    #print (len(newar))
+                    array[ind] = newar
+                    arraylist.append(newar)
+                else:
+                    array[ind] = ar
+                    arraylist.append(ar)
 
     ndarray = np.array(array)
 
@@ -966,6 +1027,15 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     head, line = [],[]
     success = False
 
+    # check DataComponents for correctness
+    dcomps = headers.get('DataComponents','')
+    dkeys = datastream._get_key_headers()
+    if 'f' in dkeys and len(dcomps) == 3:
+        dcomps = dcomps+'F'
+    if 'df' in dkeys and len(dcomps) == 3:
+        dcomps = dcomps+'G'
+    headers['DataComponents'] = dcomps
+
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     mycdf.attrs['FormatDescription'] = 'INTERMAGNET CDF format'
     mycdf.attrs['FormatVersion'] = '1.1'
@@ -980,7 +1050,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if key == 'StationName' or key == 'ObservatoryName':
             mycdf.attrs['ObservatoryName'] = headers[key]
         if key == 'DataElevation' or key == 'Elevation':
-            mycdf.attrs['Elevation'] = headers[key]
+            patt = mycdf.attrs
+            patt.new('Elevation',float(headers[key]),type=cdf.const.CDF_DOUBLE)
+            #mycdf.attrs['Elevation'] = headers[key]
         if key == 'StationInstitution' or key == 'Institution':
             mycdf.attrs['Institution'] = headers[key]
         if key == 'DataSensorOrientation' or key == 'VectorSensOrient':
@@ -1005,20 +1077,22 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     #pubdate = cdf.lib.datetime_to_tt2000(datastream._testtime(headers.get('DataPublicationDate','')))
     if not headers.get('DataPublicationDate','') == '':
         try:
-            pubdate = cdf.lib.datetime_to_tt2000(datastream._testtime(headers.get('DataPublicationDate','')))
-            #mycdf.new('PublicationDate', type=cdf.const.CDF_TIME_TT2000)
-            mycdf.attrs['PublicationDate'] = pubdate
+            pubdate = datastream._testtime(headers.get('DataPublicationDate',''))
+            pubdate = cdf.lib.datetime_to_tt2000(pubdate)
+            patt = mycdf.attrs
+            patt.new('PublicationDate',pubdate,type=cdf.const.CDF_TIME_TT2000)
         except:
             try:
-                pubdate = datetime.strftime(datastream._testtime(headers.get('DataPublicationDate','')),"%Y-%m-%dT%H:%M:%S.%f")
+                pubdate = datastream._testtime(headers.get('DataPublicationDate','')) ## Epoch
+                mycdf.attrs['PublicationDate'] = pubdate
             except:
                 pubdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%dT%H:%M:%S.%f")
-            mycdf.attrs['PublicationDate'] = pubdate
+                mycdf.attrs['PublicationDate'] = pubdate
     else:
         try:
             pubdate = cdf.datetime_to_tt2000(datetime.utcnow())
         except:
-            pubdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%dT%H:%M:%S.%f")
+            pubdate = datetime.utcnow()
         mycdf.attrs['PublicationDate'] = pubdate
 
     if not headers.get('DataSource','')  == '':
@@ -1045,6 +1119,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         mycdf.attrs['StandardName'] = headers.get('DataStandardName','')
     else:
         try:
+            print ("writeIMAGCDF: Asigning StandardName")
             samprate = float(str(headers.get('DataSamplingRate',0)).replace('sec','').strip())
             if int(samprate) == 1:
                 stdadd = 'INTERMAGNET_1-Second'
@@ -1055,23 +1130,39 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 mycdf.attrs['StandardName'] = stdadd
             elif int(headers.get('DataPublicationLevel',0)) == 4:
                 mycdf.attrs['StandardName'] = stdadd
+            else:
+                print ("writeIMAGCDF: Current publication level does not support a StandardName - setting level none")
+                mycdf.attrs['StandardLevel'] = 'None'
         except:
             print ("writeIMAGCDF: Asigning StandardName Failed")
 
     proj = headers.get('DataLocationReference','')
     longi = headers.get('DataAcquisitionLongitude','')
     lati = headers.get('DataAcquisitionLatitude','')
+    try:
+        longi = "{:.3f}".format(float(longi))
+        lati = "{:.3f}".format(float(lati))
+    except:
+        print("writeIMAGCDF: could not convert lat long to floats")
     if not longi=='' or lati=='':
         if proj == '':
-            mycdf.attrs['Latitude'] = lati
-            mycdf.attrs['Longitude'] = longi
+            patt = mycdf.attrs
+            patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
+            patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
+            #mycdf.attrs['Latitude'] = lati
+            #mycdf.attrs['Longitude'] = longi
         else:
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
                     longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
-            mycdf.attrs['Latitude'] = lati
-            mycdf.attrs['Longitude'] = longi
+                    longi = "{:.3f}".format(float(longi))
+                    lati = "{:.3f}".format(float(lati))
+            patt = mycdf.attrs
+            patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
+            patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
+            #mycdf.attrs['Latitude'] = lati
+            #mycdf.attrs['Longitude'] = longi
 
     if not 'StationIagaCode' in headers and 'StationID' in headers:
         mycdf.attrs['IagaCode'] = headers.get('StationID','')
@@ -1087,6 +1178,38 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if len(datastream.ndarray[0]>0):
         ndarray = True
 
+    print ("writeIMAGCDF:", keylst)
+    print ("Select appropriate Components and keys and define vector and scalar")
+
+    naninds = np.asarray([])
+    ## Analyze F and dF columns:
+    if 'f' in keylst or 'df' in keylst:
+        if 'f' in keylst:
+            print ("Found F ...")
+            pos = KEYLIST.index('f')
+            col = datastream.ndarray[pos]
+        if 'df' in keylst:
+            print ("Found dF ...")
+            pos = KEYLIST.index('df')
+            col = datastream.ndarray[pos]
+        col = col.astype(float)
+        
+        nonancol = col[~np.isnan(col)]
+            
+        #print ("IMAG", len(nonancol),datastream.length()[0])
+        if len(nonancol) < datastream.length()[0]/2.:
+            #shorten col
+            print ("writeIMF - reducing f column resolution:", len(nonancol), len(col))
+            naninds = np.where(np.isnan(col))[0]
+            #print (naninds, len(naninds))
+            useScalarTimes=True
+            #[inds]=np.take(col_mean,inds[1])
+        else:
+            #keep column and (later) leave time       
+            useScalarTimes=True  # change to False in order to use a single col
+
+    ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
+
     for key in keylst:
         if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2']:
             ind = KEYLIST.index(key)
@@ -1094,6 +1217,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 col = datastream.ndarray[ind]
             else:
                 col = datastream._get_column(key)
+            col = col.astype(float)
 
             if not False in checkEqual3(col):
                 print("Found identical values only:", key)
@@ -1104,16 +1228,25 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
                     mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col]))
                     print("Successfully used tt2000")
+                    if useScalarTimes:
+                        key = 'GeomagneticScalarTimes'
+                        mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
+                        if len(naninds) > 0:
+                            print ("{}: removing nan values from scalar times".format(datetime.utcnow()))
+                            mycdf[key] = np.delete(mycdf['GeomagneticVectorTimes'], naninds)
+                            print ("{}: done".format(datetime.utcnow()))
+                        else:
+                            mycdf[key] = mycdf['GeomagneticVectorTimes']
                 except:
                     mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col])
             elif len(col) > 0:
+                #if len(col) > 1000000:
+                #    print ("Starting with {}".format(key))
                 comps = datastream.header.get('DataComponents','')
                 keyup = key.upper()
                 if key in ['t1','t2']:
                     cdfkey = key.upper().replace('T','Temperature')
-                else:
-                    cdfkey = 'GeomagneticField'+key.upper()
-                if not comps == '':
+                elif not comps == '':
                     try:
                         if key == 'x':
                             compsupper = comps[0].upper()
@@ -1121,6 +1254,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             compsupper = comps[1].upper()
                         elif key == 'z':
                             compsupper = comps[2].upper()
+                        elif key == 'df':
+                            compsupper = 'G'
                         else:
                             compsupper = key.upper()
                         cdfkey = 'GeomagneticField'+compsupper
@@ -1128,11 +1263,15 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     except:
                         cdfkey = 'GeomagneticField'+key.upper()
                         keyup = key.upper()
+                else:
+                    cdfkey = 'GeomagneticField'+key.upper()
                 #print(len(col), keyup, key)
+                #print("1", datetime.utcnow())
                 nonetest = [elem for elem in col if not elem == None]
+                #nonetest = col[col != np.array(None)]
+                #print("2", datetime.utcnow())
                 if len(nonetest) > 0:
                     mycdf[cdfkey] = col
-
                     mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                     mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time_series"
                     mycdf[cdfkey].attrs['LABLAXIS'] = keyup
@@ -1147,9 +1286,17 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         mycdf[cdfkey].attrs['VALIDMIN'] = -360.0
                         mycdf[cdfkey].attrs['VALIDMAX'] = 360.0
                     elif key in ['f','s']:
+                        if useScalarTimes:
+                            if len(naninds) > 0:
+                                mycdf[cdfkey] = col[~np.isnan(col)]
+                            mycdf[cdfkey].attrs['DEPEND_0'] = "GeomagneticScalarTimes"
+                        #else:
+                        #    mycdf[cdfkey] = col
                         mycdf[cdfkey].attrs['VALIDMIN'] = 0.0
                         mycdf[cdfkey].attrs['VALIDMAX'] = 88880.0
-
+                #if len(col) > 1000000:
+                #    print ("Finished column {}".format(key))
+                #print("3", datetime.utcnow())
 
                 for keydic in headers:
                     if keydic == ('col-'+key):
@@ -1195,6 +1342,9 @@ def readIMF(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+
+    headers={}
+    array = [[] for elem in KEYLIST]
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -1252,36 +1402,48 @@ def readIMF(filename, headonly=False, **kwargs):
                 data = line.split()
                 for i in range(2):
                     try:
-                        row = LineStruct()
+                        #row = LineStruct()
                         time = datehh+':'+str(minute+i)
-                        row.time=date2num(datetime.strptime(time,"%b%d%y_%H:%M"))
+                        #row.time=date2num(datetime.strptime(time,"%b%d%y_%H:%M"))
+                        array[0].append(date2num(datetime.strptime(time,"%b%d%y_%H:%M")))
+
                         index = int(4*i)
                         if not int(data[0+index]) > 999990:
-                            row.x = float(data[0+index])/10
+                            #row.x = float(data[0+index])/10
+                            array[1].append(float(data[0+index])/10)
                         else:
-                            row.x = float(nan)
+                            #row.x = float(nan)
+                            array[1].append(np.nan)
                         if not int(data[1+index]) > 999990:
-                            row.y = float(data[1+index])/10
+                            #row.y = float(data[1+index])/10
+                            array[2].append(float(data[1+index])/10)
                         else:
-                            row.y = float(nan)
+                            #row.y = float(nan)
+                            array[2].append(np.nan)
                         if not int(data[2+index]) > 999990:
-                            row.z = float(data[2+index])/10
+                            #row.z = float(data[2+index])/10
+                            array[3].append(float(data[2+index])/10)
                         else:
-                            row.z = float(nan)
+                            #row.z = float(nan)
+                            array[3].append(np.nan)
                         if not int(data[3+index]) > 999990:
-                            row.f = float(data[3+index])/10
+                            #row.f = float(data[3+index])/10
+                            array[4].append(float(data[3+index])/10)
                         else:
-                            row.f = float(nan)
-                        row.typ = block[4].lower()
-                        stream.add(row)
+                            #row.f = float(nan)
+                            array[4].append(np.nan)
+                        #typus = block[4].lower()
+                        #stream.add(row)
                     except:
                         logging.error('format_imf: problem with dataformat - check block header')
-                        return DataStream(stream, headers)
+                        return DataStream([LineStruct()], headers, np.asarray([np.asarray(el) for el in array]))
                 minute = minute + 2
 
     fh.close()
 
-    return DataStream(stream, headers)
+    array = np.asarray([np.asarray(el) for el in array])
+    stream = [LineStruct()]
+    return DataStream(stream, headers, array)
 
 
 def writeIMF(datastream, filename, **kwargs):
@@ -1763,6 +1925,9 @@ def writeBLV(datastream, filename, **kwargs):
 
     # 8. Basevalues
     if len(datastream.ndarray[0]) > 0:
+        print ("writeBLV:", datastream.ndarray[indFtype])
+        print ("writeBLV:", datastream.ndarray)
+        print ("writeBLV:", datastream.length())
         for idx, elem in enumerate(datastream.ndarray[0]):
             if t2 >= elem >= t1:
                 day = datetime.strftime(num2date(elem),'%j')

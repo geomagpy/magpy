@@ -1339,10 +1339,13 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
     loggerplot.info("plotPS: Starting powerspectrum calculation.")
 
-    if noshow:
+    if noshow == True:
         show = False
-    else:
+    elif noshow == False:
         show = True
+    else:
+        loggerplot.error("plotPS: Incorrect value ({:s}) for variable noshow.".format(noshow))
+        raise ValueError("Incorrect value ({:s}) for variable noshow.".format(noshow))
 
     dt = stream.get_sampling_period()*24*3600
 
@@ -1350,28 +1353,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
         loggerplot.error("plotPS: Stream of zero length -- aborting.")
         raise Exception("Can't analyse power spectrum of stream of zero length!")
 
-    if len(stream.ndarray[0]) > 0:
-        pos = KEYLIST.index(key)
-        t = stream.ndarray[0]
-        val = stream.ndarray[pos]
-    else:
-        t = np.asarray(stream._get_column('time'))
-        val = np.asarray(stream._get_column(key))
-    t_min = np.min(t)
-    t_new, val_new = [],[]
-
-    nfft = int(nearestPow2(len(t)))
-
-    if nfft > len(t):
-        nfft = int(nearestPow2(len(t) / 2.0))
-
-    for idx, elem in enumerate(val):
-        if not isnan(elem):
-            t_new.append((t[idx]-t_min)*24*3600)
-            val_new.append(elem)
-
-    t_new = np.asarray(t_new)
-    val_new = np.asarray(val_new)
+    t_new, val_new, nfft = _extract_data_for_PSD(stream, key)
 
     if debugmode:
         print("Extracted data for powerspectrum at %s" % datetime.utcnow())
@@ -1425,11 +1407,14 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
         else:
             fig.savefig(outfile)
     elif returndata:
+        plt.close()
         return freqm, asdm
     elif show:
-        plt.draw()      # show() should only ever be called once. Use draw() in between!
+        plt.show()      # show() should only ever be called once. Use draw() in between!
     else:
         return fig
+    
+    plt.close()
 
 
 def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
@@ -2508,6 +2493,38 @@ def _confinex(ax, tmax, tmin, timeunit):
     else:
         ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
         timeunit = '[Year]'
+        
+
+def _extract_data_for_PSD(stream, key):
+    """
+    Prepares data for power spectral density evaluation.
+    """
+    
+    if len(stream.ndarray[0]) > 0:
+        pos = KEYLIST.index(key)
+        t = stream.ndarray[0]
+        val = stream.ndarray[pos]
+    else:
+        t = np.asarray(stream._get_column('time'))
+        val = np.asarray(stream._get_column(key))
+    t_min = np.min(t)
+    t_new, val_new = [],[]
+
+    nfft = int(nearestPow2(len(t)))
+
+    if nfft > len(t):
+        nfft = int(nearestPow2(len(t) / 2.0))
+
+    for idx, elem in enumerate(val):
+        if not isnan(elem):
+            t_new.append((t[idx]-t_min)*24*3600)
+            val_new.append(elem)
+
+    t_new = np.asarray(t_new)
+    val_new = np.asarray(val_new)
+    
+    return t_new, val_new, nfft
+
 
 #####################################################################
 #                                                                   #

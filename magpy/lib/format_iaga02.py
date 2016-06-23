@@ -87,6 +87,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                 if key.find('IAGA') > -1:
                     if not val == '':
                         stream.header['StationIAGAcode'] = val
+                        stream.header['StationID'] = val
                 if key.find('Latitude') > -1:
                     if not val == '':
                         stream.header['DataAcquisitionLatitude'] = val
@@ -245,46 +246,11 @@ def readIAGA(filename, headonly=False, **kwargs):
     fh.close()
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
-    #print np.asarray(array)
 
-    """
-    for elem in data:
-        # Time conv:
-        row = LineStruct()
-        row.time=date2num(datetime.strptime(elem[0]+'-'+elem[1],"%Y-%m-%d-%H:%M:%S.%f"))
-        xval = float(elem[3])
-        yval = float(elem[4])
-        zval = float(elem[5])
-        try:
-            if (stream.header['col-x']=='x'):
-                row.x = xval
-                row.y = yval
-                row.z = zval
-            elif (stream.header['col-h']=='h'):
-                row.x, row.y, row.z = hdz2xyz(xval,yval,zval)
-            elif (stream.header['col-i']=='i'):
-                row.x, row.y, row.z = idf2xyz(xval,yval,zval)
-            else:
-                raise ValueError
-            if not float(elem[6]) == 88888:
-                if stream.header['col-f']=='f':
-                    row.f = float(elem[6])
-                elif stream.header['col-g']=='g':
-                    row.f = np.sqrt(row.x**2+row.y**2+row.z**2) + float(elem[6])
-                else:
-                    raise ValueError
-        except:
-            row.x = xval
-            row.y = yval
-            row.z = zval
-            if not float(elem[6]) == 88888:
-                row.f = float(elem[6])
-        stream.add(row)
-    """
+    stream = DataStream([LineStruct()],stream.header,np.asarray(array))
+    sr = stream.samplingrate()
 
-    #print "Finished file reading of %s" % filename
-
-    return DataStream([LineStruct()],stream.header,np.asarray(array))
+    return stream
 
 
 def writeIAGA(datastream, filename, **kwargs):

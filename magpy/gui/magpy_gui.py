@@ -1644,7 +1644,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid)
             # only if more than one point is selected
             self.changeStatusbar("Ready")
-            if len(absstream) > 1:
+            if absstream.length()[0] > 1:
                 self.stream = absstream
                 self.plotstream = absstream
                 self.OnInitialPlot(self.stream)

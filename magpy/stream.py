@@ -118,12 +118,13 @@ except ImportError as e:
 # NetCDF
 # ------
 try:
-    print("Loading Netcdf4 support ...")
+    #print("Loading Netcdf4 support ...")
     from netCDF4 import Dataset
 except ImportError as e:
-    logpygen += "MagPy initiation ImportError: NetCDF not available.\n"
-    logpygen += "... if you want to use NetCDF format support please install a current version.\n"
-    badimports.append(e)
+    #logpygen += "MagPy initiation ImportError: NetCDF not available.\n"
+    #logpygen += "... if you want to use NetCDF format support please install a current version.\n"
+    #badimports.append(e)
+    pass
 
 # NASACDF - SpacePy
 # -----------------
@@ -141,25 +142,25 @@ try:
         print("trying CDF lib in %s" % nasacdfdir)
         try:
             import spacepy.pycdf as cdf
+            print("... success")
         except KeyError as e:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("Unexpected error")
+            print("Could not import spacepy: Trying alternative...")
             pass
-        print("... success")
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
         print("trying CDF lib in /usr/local/cdf")
         try:
             import spacepy.pycdf as cdf
+            print("... success")
         except KeyError as e:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
             print("Unexpected error")
             pass
-        print("... success")
 except ImportError as e:
     logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
     logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
@@ -436,6 +437,7 @@ class DataStream(object):
     - stream.mean(self, key, **kwargs):
     - stream.multiply(self, factors):
     - stream.offset(self, offsets):
+    - stream.randomdrop(self, percentage=None, fixed_indicies=None):
     - stream.remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
     - stream.resample(self, keys, **kwargs):
@@ -705,8 +707,19 @@ CALLED BY:
         array = [[] for key in KEYLIST]
         self.container.extend(datlst)
         self.header = header
+        # Some initial check if any data set except timecolumn is contained
+        datalength = len(ndarray)
+        try:
+            test = [[elem for elem in col if not np.isnan(elem)] for col in ndarray]
+        except:
+            test = [[elem for elem in col if not elem in ['','-']] for col in ndarray]
+        emptycnt = [len(el) for el in test if len(el) > 0]
+
         if self.ndarray.size == 0:
             self.ndarray = ndarray
+        elif len(emptycnt) == 1:
+            print("Tyring to extend with empty data set")
+            #self.ndarray = np.asarray((list(self.ndarray)).extend(list(ndarray)))
         else:
             for idx,elem in enumerate(self.ndarray):
                 if len(ndarray[idx]) > 0:
@@ -715,14 +728,13 @@ CALLED BY:
                     elif len(self.ndarray[0]) > 0: # only time axis present so far but no data within this elem
                         fill = ['-']
                         key = KEYLIST[idx]
-                        if key in NUMKEYLIST:
+                        if key in NUMKEYLIST or key=='sectime':
                             fill = [float('nan')]
                         nullvals = np.asarray(fill * len(self.ndarray[0]))
                         #print nullvals
                         array[idx] = np.append(nullvals, ndarray[idx],1).astype(object)
                     else:
                         array[idx] = ndarray[idx].astype(object)
-            #self.ndarray = np.asarray((list(self.ndarray)).extend(list(ndarray)))
             self.ndarray = np.asarray(array)
 
     def union(self,column):
@@ -2460,6 +2472,7 @@ CALLED BY:
                 # If the end of condition is True, append the length of the array
                 idx = np.r_[idx, self.ndarray[ind].size] # Edit
             # Reshape the result into two columns
+            #print("Bindetector", idx, idx.size)
             idx.shape = (-1,2)
             for start,stop in idx:
                 stop = stop-1
@@ -2725,6 +2738,64 @@ CALLED BY:
         self.header['unit-col-df'] = 'nT'
 
         loggerstream.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
+
+        return self
+
+
+    def f_from_df(self, **kwargs):
+        """
+        DESCRIPTION:
+            Calculates the f from the difference of x+y+z and df 
+
+        PARAMETER:
+            keywords:
+            :type offset: float
+            :param offset: constant offset to f values
+            :type digits: int
+            :param digits: number of digits to be rounded (should equal the input precision)
+        """
+
+        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
+
+        offset = kwargs.get('offset')
+        digits = kwargs.get('digits')
+        if not offset:
+            offset = 0.
+        if not digits:
+            digits = 8
+
+        loggerstream.info('--- Calculating f started at %s ' % str(datetime.now()))
+
+        try:
+            syst = self.header['DataComponents']
+        except:
+            syst = None
+
+
+        ind = KEYLIST.index("df")
+        indx = KEYLIST.index("x")
+        indy = KEYLIST.index("y")
+        indz = KEYLIST.index("z")
+        indf = KEYLIST.index("f")
+        if len(self.ndarray[0])>0 and len(self.ndarray[indx])>0 and len(self.ndarray[indy])>0 and len(self.ndarray[indz])>0 and len(self.ndarray[ind])>0:
+            # requires x,y,z and f
+            arx = self.ndarray[indx]**2
+            ary = self.ndarray[indy]**2
+            arz = self.ndarray[indz]**2
+            if syst in ['HDZ','hdz','HDZF','hdzf','HDZS','hdzs','HDZG','hdzg']:
+                print("deltaF: found HDZ orientation")
+                ary = np.asarray([0]*len(self.ndarray[indy]))
+            sumar = list(arx+ary+arz)
+            sqr = np.sqrt(np.asarray(sumar))
+            self.ndarray[indf] = sqr - (self.ndarray[ind] + offset)
+        else:
+            for elem in self:
+                elem.f = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.df + offset)
+
+        self.header['col-f'] = 'f'
+        self.header['unit-col-f'] = 'nT'
+
+        loggerstream.info('--- Calculating f finished at %s ' % str(datetime.now()))
 
         return self
 
@@ -3082,7 +3153,8 @@ CALLED BY:
             too = str(value)
             if ndtype:
                 searchclause = 'stream.ndarray[ind].astype(float) '+ compare + ' ' + too
-                indexar = eval('np.where('+searchclause+')[0]')
+                with np.errstate(invalid='ignore'):
+                    indexar = eval('np.where('+searchclause+')[0]')
 
         if ndtype:
             for ind,el in enumerate(stream.ndarray):
@@ -3518,6 +3590,7 @@ CALLED BY:
         if len(self.ndarray[0]) > 0:
             ndtype=True
 
+        tok = True
         for key in keys:
             tmpst = self._drop_nans(key)
             if ndtype:
@@ -3525,6 +3598,7 @@ CALLED BY:
             else:
                 t = tmpst._get_column('time')
             if len(t) < 1:
+                tok = False
                 break
 
             nt,sv,ev = self._normalize(t)
@@ -3599,8 +3673,10 @@ CALLED BY:
             exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
             exec('functionkeylist["f'+key+'"] = f'+key)
 
-        func = [functionkeylist, sv, ev]
-
+        if tok:
+            func = [functionkeylist, sv, ev]
+        else:
+            func = [functionkeylist, 0, 0]
         return func
 
 
@@ -4723,19 +4799,26 @@ CALLED BY:
                 # Cycle through stream and append nans to each column for missing time steps
                 nans = [np.nan] * len(missingt)
                 empts = [''] * len(missingt)
+                gaps = [0.0] * len(missingt)
                 for idx,elem in enumerate(stream.ndarray):
                     if idx == 0:
                         # append missingt list to array element
                         elem = list(elem)
+                        lenelem = len(elem)
                         elem.extend(missingt)
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
                     elif len(elem) > 0:
                         # append nans list to array element
                         elem = list(elem)
-                        if KEYLIST[idx] in NUMKEYLIST:
+                        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'sectime':
                             elem.extend(nans)
                         else:
                             elem.extend(empts)
+                        stream.ndarray[idx] = np.asarray(elem).astype(object)
+                    elif KEYLIST[idx] == gapvariable:
+                        # append nans list to array element
+                        elem = [1.0]*lenelem
+                        elem.extend(gaps)
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
             return stream.sorting()
 
@@ -5675,26 +5758,27 @@ CALLED BY:
             if not lenhmean == 0: # Length 0 if not enough data for full extended mean value calc
                 func = hmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
                 #hmean.plot(function=func,noshow=True)
-                if plot:
-                    fmistream.plot(noshow=True)
-                # 2. b) subtract sr from original record
-                redfmi = fmitstream.func2stream(func,mode='sub')
-                # 3. recalc k
-                klist = maxmink(redfmi,cdlist,0,k_scale)
-                kstream = klist2stream(klist, kstream)
-                #print klist
-                # 4. recalc sr and subtract
-                finalhmean = fmimeans(fmitstream,startday+daynum,kstream)
-                finalfunc = finalhmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
-                firedfmi = fmistream.func2stream(finalfunc,mode='sub')
-                if plot:
-                    finalhmean.plot(['x','y','z'],noshow=True, function=finalfunc, plottitle="2")
-                    firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
-                    fmitstream.plot(['x','y','z'], plottitle="2: fmistream")
-                # 5. final k
-                klist = maxmink(firedfmi,cdlist,0,k_scale)
-                kstream = klist2stream(klist, kstream)
-                #print "Final", klist
+                if not func[0] == {}:
+                    if plot:
+                        fmistream.plot(noshow=True)
+                    # 2. b) subtract sr from original record
+                    redfmi = fmitstream.func2stream(func,mode='sub')
+                    # 3. recalc k
+                    klist = maxmink(redfmi,cdlist,0,k_scale)
+                    kstream = klist2stream(klist, kstream)
+                    #print klist
+                    # 4. recalc sr and subtract
+                    finalhmean = fmimeans(fmitstream,startday+daynum,kstream)
+                    finalfunc = finalhmean.fit(['x','y','z'],fitfunc='harmonic',fitdegree=5)
+                    firedfmi = fmistream.func2stream(finalfunc,mode='sub')
+                    if plot:
+                        finalhmean.plot(['x','y','z'],noshow=True, function=finalfunc, plottitle="2")
+                        firedfmi.plot(['x','y','z'],noshow=True, plottitle="2: reduced")
+                        fmitstream.plot(['x','y','z'], plottitle="2: fmistream")
+                    # 5. final k
+                    klist = maxmink(firedfmi,cdlist,0,k_scale)
+                    kstream = klist2stream(klist, kstream)
+                    #print "Final", klist
 
         #print kstream.ndarray, klist
 
@@ -6999,6 +7083,64 @@ CALLED BY:
             plt.show()
         else:
             return fig
+
+
+    def randomdrop(self,percentage=None,fixed_indicies=None):
+                """
+                DESCRIPTION:
+                    Method to randomly drop one line from data. If percentage is 
+                    given, then lines according to this percentage are dropped.
+                    This corresponds to a jackknife and d-jackknife respectively.
+                PARAMETER:
+                    percentage     (float)  provide a percentage value to be dropped (1-99)
+                    fixed_indicies (list)   e.g. [0,1] provide a list of indicies
+                                            which will not be dropped
+                RETURNS:
+                    DataStream
+                APPLICATION:
+                    >>> newstream = stream.randomdrop(percentage=10,fixed_indicies=[0,len(means.ndarray[0])-1])
+                """
+                import random
+                def makeDrippingBucket(lst):
+                    bucket = lst
+                    if len(bucket) == 0:
+                        return []
+                    else:
+                        random_index = random.randrange(0,len(bucket))
+                        del bucket[random_index]
+                        return bucket
+
+                if len(self.ndarray[0]) < 1:
+                    return self
+                if percentage:
+                    if percentage > 99:
+                        percentage = 99
+                    if percentage < 1:
+                        percentage = 1
+                ns = self.copy()
+                if fixed_indicies:
+                    # TODO assert list
+                    pass
+                if not percentage:
+                    newlen = len(ns.ndarray[0]) -1
+                else:
+                    newlen = int(np.round(len(ns.ndarray[0])-len(ns.ndarray[0])*percentage/100.,0))
+                # Index list of stream
+                indexlst = [idx for idx, el in enumerate(ns.ndarray[0])]
+                #print len(indexlst), newlen
+                while len(indexlst) > newlen:
+                    indexlst = makeDrippingBucket(indexlst)
+                    if fixed_indicies:
+                        for el in fixed_indicies:
+                            if not el in indexlst:
+                                indexlst.append(el)
+                #print "Here", len(indexlst)
+                for idx,ar in enumerate(ns.ndarray):
+                    if len(ar) > 0:
+                        #print ar, indexlst
+                        newar = ar[indexlst]
+                        ns.ndarray[idx] = newar
+                return ns
 
 
     def remove(self, starttime=None, endtime=None):
@@ -8691,7 +8833,9 @@ CALLED BY:
                 filenameends = fed
 
         if format_type == 'IMAGCDF':
-            begin = (self.header.get('StationID','XYZ')).lower()
+            begin = (self.header.get('StationIAGAcode','')).lower()
+            if begin == '':
+                begin = (self.header.get('StationID','XYZ')).lower()
             publevel = str(self.header.get('DataPublicationLevel',0))
             samprate = float(str(self.header.get('DataSamplingRate','0')).replace('sec','').strip())
             if coverage == 'year':
@@ -8883,7 +9027,7 @@ CALLED BY:
                 if len(lst) > 0 or ndtype:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         loggerstream.info('write: writing %s' % filename)
-                        #print("Here", num2date(newst.ndarray[0][0]), len(newst.ndarray[0]))
+                        #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
                         success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg,skipcompression=skipcompression)
                 starttime = endtime
                 endtime = endtime + coverage
@@ -8938,7 +9082,7 @@ CALLED BY:
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'nT'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = 'XYZ'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('IDF','XYZ')
 
         return self
 
@@ -8984,7 +9128,7 @@ CALLED BY:
         self.header['unit-col-x'] = 'deg'
         self.header['unit-col-y'] = 'deg'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = 'IDF'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('XYZ','IDF')
         return self
 
     def xyz2hdz(self,**kwargs):
@@ -9025,7 +9169,7 @@ CALLED BY:
         self.header['col-y'] = 'D'
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'deg'
-        self.header['DataComponents'] = 'HDZ'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('XYZ','HDZ')
         return self
 
     def hdz2xyz(self,**kwargs):
@@ -9073,7 +9217,7 @@ CALLED BY:
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'nT'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = 'XYZ'
+        self.header['DataComponents'] = self.header['DataComponents'].replace('HDZ','XYZ')
 
         return DataStream(self,self.header,self.ndarray)
 
@@ -9689,11 +9833,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             if getfile:
                 stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
                 stp = _read(filename, dataformat, headonly, **kwargs)
-                #print stp.ndarray
                 if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
                     st.extend(stp.container,stp.header,stp.ndarray)
             #del stp
-        if len(st) == 0:
+        if st.length()[0] == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
                 loggerstream.error("read: Check file/pathname - No file matching pattern: %s" % pathname)
@@ -9709,7 +9852,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 loggerstream.error("read: Cannot open file/files: %s" % pathname)
-                raise Exception("Stream is empty!")
+                #raise Exception("Stream is empty!")
+                print("read: Cannot open file/files: {}".format(pathname))
 
     if headonly and (starttime or endtime):
         msg = "read: Keyword headonly cannot be combined with starttime or endtime."
@@ -9797,7 +9941,7 @@ def saveflags(mylist=None,path=None):
     except:
         return False
 
-def loadflags(path=None):
+def loadflags(path=None,sensorid=None):
     """
     DEFINITION:
         Load list e.g. flaglist from file using pickle.
@@ -9817,6 +9961,10 @@ def loadflags(path=None):
         from pickle import load as pklload
         mylist = pklload(open(path,"rb"))
         print("loadflags: list {a} successfully loaded, found {b} inputs".format(a=path,b=len(mylist)))
+        if sensorid:
+            print(" - extracting data for sensor {}".format(sensorid))
+            mylist = [el for el in mylist if el[5] == sensorid]
+            print(" -> remaining flags: {b}".format(b=len(mylist)))
         return mylist
     except:
         return []
@@ -9838,9 +9986,13 @@ def joinStreams(stream_a,stream_b, **kwargs):
         ndtype = True
         if not len(stream_b.ndarray[0]) > 0:
             stream_b = stream_b.linestruct2ndarray()
+            if not len(stream_b.ndarray[0]) > 0:
+                return stream_a
     elif len(stream_b.ndarray[0]) > 0:
         ndtype = True
         stream_a = stream_a.linestruct2ndarray()
+        if not len(stream_a.ndarray[0]) > 0:
+            return stream_b
     else:
         ndtype = True
         stream_a = stream_a.linestruct2ndarray()
@@ -9892,7 +10044,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
 def appendStreams(streamlist):
     """
     DESCRIPTION:
-        Appneds contents of streamlist  and returns a single new stream.
+        Appends contents of streamlist  and returns a single new stream.
         Duplicates are removed and the new stream is sorted.
     """
     array = [[] for key in KEYLIST]
@@ -9903,10 +10055,12 @@ def appendStreams(streamlist):
             if len(stream.ndarray[idx]) > 0:
                 array[idx].extend(stream.ndarray[idx])
     stream = DataStream([LineStruct()],streamlist[0].header,np.asarray(array).astype(object))
-    stream = stream.removeduplicates()
-    stream = stream.sorting()
-
-    return stream
+    if len(stream.ndarray[0]) > 0:
+        stream = stream.removeduplicates()
+        stream = stream.sorting()
+        return stream        
+    else:
+        return DataStream([LineStruct()],streamlist[0].header,np.asarray([np.asarray([]) for key in KEYLIST]))
 
 
 def mergeStreams(stream_a, stream_b, **kwargs):
@@ -10089,7 +10243,53 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     # just add the merged sensorid
     header['SecondarySensorID'] = sensidb
 
+    ## Speed up of unequal timesteps - limit search range
+    #   - search range small (fracratio high) if t_limits are similar and data is periodic
+    #   - search range large  (fracratio small) if t_limits are similar and data is periodic
+    #   - fracratio = 1 means that the full stream_b data set is searched
+    #   - fracratio = 20 means that +-5percent of stream_b are searched arround expected index
     #print("mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits())
+
+    fracratio = 2  # modify if start and endtime are different
+    speedup = True
+    if speedup and ndtype:
+        ast, aet = sa._find_t_limits()
+        bst, bet = sb._find_t_limits()
+        uncert = (date2num(aet)-date2num(ast))*0.01
+        #print ("Merge speedup", uncert, ast, aet, bst, bet)
+        if not bst < ast+timedelta(minutes=uncert*24*60):
+            print ("Merge: Starttime of stream_b too large")
+            for indx,key in enumerate(KEYLIST):
+                if key == 'time':
+                   sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
+                elif key == 'sectime' or key in NUMKEYLIST:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
+                else:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx],1)
+        if not bet > aet-timedelta(minutes=uncert*24*60):
+            print ("Merge: Endtime of stream_b too small") ### Move that to merge??
+            for indx,key in enumerate(KEYLIST):
+                if key == 'time':
+                   sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
+                elif key == 'sectime' or key in NUMKEYLIST:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
+                else:
+                    if not len(sb.ndarray[indx]) == 0:
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']),1)
+        #st,et = sb._find_t_limits()
+        #print ("Merge", st, et, sb.length())
+        sb = sb.get_gaps()
+        fracratio = 40  # modify if start and endtime are different
+
+        timeb = sb.ndarray[0]
+        timeb = maskNAN(timeb)
+
+    abratio = len(timea)/float(len(timeb))
+    dcnt = int(len(timeb)/fracratio)
+    #print ("Merge:", abratio, dcnt, len(timeb))
 
     if ndtype:
             array = [[] for key in KEYLIST]
@@ -10102,11 +10302,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
             if len(indtib) > int(0.5*len(timeb)):
                 print("mergeStreams: Found identical timesteps - using simple merge")
                 # get tb times for all matching indicies
-                #print "merge", indtib, len(indtib), len(timea), len(timeb), np.argsort(timea), np.argsort(timeb)
+                #print("merge", indtib, len(indtib), len(timea), len(timeb), np.argsort(timea), np.argsort(timeb))
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs
                 indtia = np.nonzero(np.in1d(timea,tb))[0]
-                print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
+                #print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
 
                 if len(indtia) == len(indtib):
                     nanind = []
@@ -10156,11 +10356,34 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 print("- Put in the larger (higher resolution) stream as stream_a,")
                 print("- otherwise you might wait an endless amount of time.")
                 # interpolate b
+                print("  a) starting interpolation of stream_b")
+                mst = datetime.utcnow()
                 function = sb.interpol(keys)
-                #print function, len(function), keys, sa.ndarray, sb.ndarray
+                met = datetime.utcnow()
+                print("     -> needed {}".format(met-mst))
                 # Get a list of indicies for which timeb values are
                 #   in the vicintiy of a (within half of samplingrate)
-                indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
+                dti = (minsamprate/24./3600.)
+                print("  b) getting indicies of stream_a with stream_b values in the vicinity")
+                mst = datetime.utcnow()
+                #indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/dti <= 1.]  # This selcetion requires most of the time
+                indtia = []  ### New and faster way by limiting the search range in stream_b by a factor of 10 
+                check = [int(len(timea)*(100-el)/100.) for el in range(99,1,-10)]
+                lentimeb = len(timeb)
+                for idx, el in enumerate(timea):
+                    cst = int(idx/abratio-dcnt)
+                    if cst<=0:
+                        cst = 0
+                    cet = int(idx/abratio+dcnt)
+                    if cet>=lentimeb:
+                        cet=lentimeb
+                    if np.min(np.abs(timeb[cst:cet]-el)/(dti)) <= 0.5:
+                        indtia.append(idx)
+                    if idx in check:
+                        print ("     -> finished {} percent".format(idx/float(len(timea))*100.))
+                indtia = np.asarray(indtia)
+                met = datetime.utcnow()
+                print("     -> needed {}".format(met-mst))
                 # limit time range to valued covered by the interpolation function
                 #print len(indtia), len(timeb), np.asarray(indtia)
                 indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]
@@ -10168,6 +10391,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 #print "Timediff %s" % str(t2temp-t1temp)
                 #print len(indtia), len(timeb), np.asarray(indtia)
                 #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
+                print("  c) extracting interpolated values of stream_b")
+                mst = datetime.utcnow()
                 if len(function) > 0:
                     for key in keys:
                         keyind = KEYLIST.index(key)
@@ -10204,6 +10429,9 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                             if flag:
                                 ttt = num2date(array[0][ind])
                                 fllst.append([ttt,ttt,key,flagid,comment])
+
+                        met = datetime.utcnow()
+                        print("     -> needed {} for {}".format(met-mst,key))
 
                     array[0] = np.asarray(sa.ndarray[0])
                     array = np.asarray(array)
@@ -10721,7 +10949,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     indtia = idxA[idxB]
                 except:
                     indtia = np.nonzero(np.in1d(tb, timea))[0]
-                #print len(timea),len(timeb),idxA,idxB, indtia, indtib
+                #print ("subtractStreams", len(timea),len(timeb),idxA,idxB, indtia, indtib)
+                #print (np.nonzero(np.in1d(timea,tb))[0])
                 #idxB = np.argsort(tb)
                 #sortedB = tb[idxB]
                 #idxA = np.searchsorted(sortedB, timea)

@@ -321,10 +321,7 @@ def readLNM(filename, headonly=False, **kwargs):
     # Check whether header infromation is already present
 
     if getfile:
-        if stream.header is None:
-            headers = {}
-        else:
-            headers = stream.header
+        headers = {}
         # Get the indicies to be used for the array
         indx = KEYLIST.index('x')
         indy = KEYLIST.index('y')
