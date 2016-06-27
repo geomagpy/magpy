@@ -567,6 +567,8 @@ class StreamSelectKeysDialog(wx.Dialog):
     def createControls(self):
         for idx,elem in enumerate(self.keylst):
             if len(self.namelist) == len(self.keylst):
+                if self.namelist[idx] == None:
+                    self.namelist[idx] = 'None'
                 colname = self.namelist[idx]
             else:
                 colname = elem
@@ -605,6 +607,180 @@ class StreamSelectKeysDialog(wx.Dialog):
     def OnClose(self, e):
         self.Destroy()
 
+
+class StreamFlagOutlierDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Parameter selection of outlier flagging routine
+    USED BY:
+        Stream Method: onFlagOutlier()
+    """
+    def __init__(self, parent, title, threshold, timerange):
+        super(StreamFlagOutlierDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.threshold=str(threshold)
+        self.timerange=str(timerange)
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.ThresholdText = wx.StaticText(self,label="Threshold")
+        self.TimerangeText = wx.StaticText(self,label="Window width")
+        self.UnitText = wx.StaticText(self,label="seconds")
+        self.ThresholdTextCtrl = wx.TextCtrl(self, value=self.threshold)
+        self.TimerangeTextCtrl = wx.TextCtrl(self, value=self.timerange)
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=4, cols=3, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.ThresholdText, noOptions))
+        contlst.append((self.TimerangeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.ThresholdTextCtrl, expandOption))
+        contlst.append((self.TimerangeTextCtrl, expandOption))
+        contlst.append((self.UnitText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+class StreamHeaderDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+
+    def __init__(self, parent, title, header):
+        super(StreamHeaderDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.header = header
+        self.createControls()
+        self.cnts=[0,0,0,0,0]
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        colcnt, datacnt, sensorcnt, stationcnt, othercnt = 0,0,0,0,0
+        for key in self.header:
+            if key.find('-') > 0:
+                # Column contents:
+                tmplst = key.split('-')
+                tmplst[-1] = KEYLIST.index(tmplst[-1])
+                if tmplst[0] == 'unit':
+                    label = tmplst[1].replace('col','Column') + str(tmplst[-1])+'_unit'
+                else:
+                    label = tmplst[0].replace('col','Column') + str(tmplst[-1])
+                key=key.replace('-','')
+                colcnt += 1
+            else:
+                label = key
+                if key.startswith('Data'):
+                    datacnt += 1
+                elif key.startswith('Sensor'):
+                    sensorcnt += 1
+                elif key.startswith('Station'):
+                    stationcnt += 1
+                else:
+                    othercnt += 1
+            exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
+        print ("Counts:", colcnt, datacnt, sensorcnt, stationcnt, othercnt) ## use these cnt for layout
+        self.cnts = [colcnt, datacnt, sensorcnt, stationcnt, othercnt]
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Update')
+        self.closeButton = wx.Button(self, label='Cancel')
+        self.getMetaFromDBButton = wx.Button(self, label='Meta form DB')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=5, cols=(np.max(self.cnts)), vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        headarray = [[],[],[],[],[]]
+        for idx,elem in enumerate(['Data','Sensor','Station','col']):
+            headline = []
+            for key in self.header:
+                if key.startswith('elem'):
+                    headline.append(key)
+                elif elem == 'col' and key.find('-'):
+                    headline.append(key)
+            headarray[idx] = headline
+        print ("Array", headarray)
+
+
+        # fill all lines with empty fields to max(cnt)
+        # transpose this array
+        print (self.header)
+        print (sorted(self.header))
+        contlst = []
+        for elem in self.header:
+            if elem.find('-') > 0:
+                elem=elem.replace('-','')
+            contlst.append(eval('(self.'+elem+'Text, expandOption)'))
+
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.getMetaFromDBButton.Bind(wx.EVT_BUTTON, self.OnMetaFromDB)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+    def OnMetaFromDB(self):
+        self.Destroy()
 
 # ###################################################
 #    Analysis page

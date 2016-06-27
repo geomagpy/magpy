@@ -2635,6 +2635,7 @@ CALLED BY:
                 #data.header['col-'+KEYLIST[dpos]] = 'sigma '+self.header.get('col-'+KEYLIST[idx+diff])
         data.header['DataFormat'] = 'MagPyDailyMean'
 
+        array = [np.asarray(el) for el in array]
         return DataStream([LineStruct()],data.header,np.asarray(array))
 
 

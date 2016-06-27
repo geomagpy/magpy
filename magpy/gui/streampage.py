@@ -25,10 +25,10 @@ class StreamPage(wx.Panel):
 
     # Widgets
     def createControls(self):
-        self.lineLabel1 = wx.StaticText(self, label="__________________")
-        self.lineLabel2 = wx.StaticText(self, label="__________________")
-        self.lineLabel3 = wx.StaticText(self, label="__________________")
-        self.lineLabel4 = wx.StaticText(self, label="__________________")
+        self.lineLabel1 = wx.StaticText(self, label="  ")
+        self.lineLabel2 = wx.StaticText(self, label="  ")
+        self.lineLabel3 = wx.StaticText(self, label="  ")
+        self.lineLabel4 = wx.StaticText(self, label="  ")
         self.lineLabel5 = wx.StaticText(self, label="__________________")
         self.lineLabel6 = wx.StaticText(self, label="__________________")
         self.pathLabel = wx.StaticText(self, label="Path/Source:")
@@ -39,28 +39,25 @@ class StreamPage(wx.Panel):
         self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-11-22","%Y-%m-%d").timetuple())))
         # the following line produces error in my win xp installation
         self.startTimePicker = wx.TextCtrl(self, value="00:00:00")
-        #self.startTimePicker = masked.TimeCtrl(self, fmt24hr=True, id=-1, name='startTimePicker', style=0,useFixedWidthFont=True, pos = (250,70))
         self.enddateLabel = wx.StaticText(self, label="End date:")
         self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.now().timetuple())))
         self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
-        #self.endTimePicker = masked.timectrl.TimeCtrl(self,fmt24hr=True, id=-1, name='endTimePicker',style=0,useFixedWidthFont=True,value=datetime.now().strftime('%X'), pos = (250,70))
-
-        self.openStreamButton = wx.Button(self,-1,"Open stream",size=(130,30))
+        self.trimStreamButton = wx.Button(self,-1,"Trim timerange",size=(160,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
         self.addOptionsLabel = wx.StaticText(self, label="Additional options:")
         self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
-        self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(130,30))
-        self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(130,30))
-        self.restoreButton = wx.Button(self,-1,"Restore data",size=(130,30))
-        self.changePlotButton = wx.Button(self,-1,"Plot Options",size=(130,30))
-        self.changeHeaderButton = wx.Button(self,-1,"Meta Data",size=(130,30))
-        self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(130,30))
-        self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(130,30))
-        self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(130,30))
-        self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(130,30))
-        self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(130,30))
-        self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(130,30))
-        self.flagApplyButton = wx.Button(self,-1,"Load flags",size=(130,30))
+        self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(160,30))
+        self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(160,30))
+        self.restoreButton = wx.Button(self,-1,"Restore data",size=(160,30))
+        self.changePlotButton = wx.Button(self,-1,"Plot Options",size=(160,30))
+        self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(160,30))
+        self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
+        self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
+        self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
+        self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
+        self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
+        self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
+        self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
@@ -71,7 +68,6 @@ class StreamPage(wx.Panel):
         self.errorBarsCheckBox = wx.CheckBox(self,label="error bars")
         self.confinexCheckBox = wx.CheckBox(self,
             label="confine time")
-        self.DrawButton = wx.Button(self,-1,"ReDraw",size=(130,30))
         self.compRadioBox.Disable()
         self.symbolRadioBox.Disable()
 
@@ -100,8 +96,8 @@ class StreamPage(wx.Panel):
                  '(0,0), noOptions',
                  'self.endDatePicker, expandOption',
                  'self.endTimePicker, expandOption',
-                 'self.openStreamButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.DrawButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.trimStreamButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.restoreButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.lineLabel1, noOptions',
                  'self.lineLabel2, noOptions',
                  'self.plotOptionsLabel, noOptions',
@@ -109,7 +105,7 @@ class StreamPage(wx.Panel):
                  'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.changePlotButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.changeHeaderButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
                  'self.compRadioBox, noOptions',
                  'self.symbolRadioBox, noOptions',
                  'self.annotateCheckBox, noOptions',
@@ -125,16 +121,14 @@ class StreamPage(wx.Panel):
                  'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagApplyButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
+                 'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
                  '(0,0), noOptions',
                  'self.lineLabel5, noOptions',
                  'self.lineLabel6, noOptions',
                  'self.addOptionsLabel, noOptions',
-                 '(0,0), noOptions',
-                 'self.restoreButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions']
 
 

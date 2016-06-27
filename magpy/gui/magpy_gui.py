@@ -9,17 +9,22 @@ from matplotlib.figure import Figure
 
 try: # Necessary for wx2.8.11.0
     from wx.lib.pubsub import setupkwargs
+    # later versions: wxPython-phoenix
+    # sudo pip3 install -U --pre -f http://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix
+    # does not work so far! leon 2016-06-24
 except:
     pass
 from wx.lib.pubsub import pub
 
 from magpy.stream import read
 import magpy.mpplot as mp
+#import magpy.absolutes import as di
 from magpy.absolutes import *
 from magpy.transfer import *
 from magpy.database import *
 from magpy.version import __version__
 from magpy.gui.streampage import *
+from magpy.gui.metapage import *
 from magpy.gui.dialogclasses import *
 from magpy.gui.absolutespage import *
 from magpy.gui.developpage import *
@@ -35,6 +40,20 @@ def saveobj(obj, filename):
 def loadobj(filename):
     with open(filename, 'rb') as f:
         return pickle.load(f)
+
+def pydate2wxdate(date):
+     assert isinstance(date, (datetime, datetime.date))
+     tt = date.timetuple()
+     dmy = (tt[2], tt[1]-1, tt[0])
+     return wx.DateTimeFromDMY(*dmy)
+ 
+def wxdate2pydate(date):
+     assert isinstance(date, wx.DateTime)
+     if date.IsValid():
+          ymd = map(int, date.FormatISODate().split('-'))
+          return datetime.date(*ymd)
+     else:
+          return None
 
 def saveini(dbname=None, user=None, passwd=None, host=None, filename=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None, diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None, dialpha = None, dideltaF = None, didbadd = None):
     """
@@ -135,9 +154,14 @@ class RedirectText(object):
         self.out.WriteText(string)
 
 class PlotPanel(wx.Panel):
+    """
+    DESCRIPTION
+        comtains all methods for the left plot panel
+    """
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         self.figure = plt.figure()
+        self.plt = plt
         scsetmp = ScreenSelections()
         self.canvas = FigureCanvas(self,-1,self.figure)
         self.initialPlot()
@@ -287,18 +311,23 @@ class PlotPanel(wx.Panel):
 
 
 class MenuPanel(wx.Panel):
-    #def __init__(self, parent):
-    #    wx.Panel.__init__(self,parent,-1,size=(100,100))
+    """
+    DESCRIPTION
+        comtains all methods for the right menu panel and their insets
+        All methods are listed in the MainFrame class
+    """
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         # Create pages on MenuPanel
         nb = wx.Notebook(self,-1)
         self.str_page = StreamPage(nb)
+        self.met_page = MetaPage(nb)
         self.ana_page = AnalysisPage(nb)
         self.abs_page = AbsolutePage(nb)
         self.rep_page = ReportPage(nb)
         self.com_page = PortCommunicationPage(nb)
         nb.AddPage(self.str_page, "Stream")
+        nb.AddPage(self.met_page, "Meta")
         nb.AddPage(self.ana_page, "Analysis")
         nb.AddPage(self.abs_page, "DI")
         nb.AddPage(self.rep_page, "Report")
@@ -321,20 +350,22 @@ class MainFrame(wx.Frame):
 
         # The Status Bar
         self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
-        #self.changeStatusbar("Ready")
 
+        self.streamlist = []
+        self.headerlist = []
+        self.currentstreamindex = 0
         self.stream = DataStream() # used for storing original data
         self.plotstream = DataStream() # used for manipulated data
         self.orgheader = {}
         self.shownkeylist = []
         self.keylist = []
-        self.symbollist = []
+        self.flaglist = []
         self.compselect = 'None'
-        self.annotate = True
         self.dipathlist = []
         self.divariopath = ''
         self.discalarpath = ''
 
+        self.InitPlotParameter()
 
         # Try to load ini-file
         # located within home directory
@@ -348,6 +379,7 @@ class MainFrame(wx.Frame):
 
         # Menu Bar
         # --------------
+        # Existing shortcuts: o,d,u,s,e,q,c,b,l,a,r,m,i  (a,b,c,d,e,f,(gh),i,(jk),l,m,(n),o
         self.MainMenu = wx.MenuBar()
         # ## File Menu
         self.FileMenu = wx.Menu()
@@ -370,24 +402,29 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.FileMenu, "&File")
         # ## Database Menu
         self.DatabaseMenu = wx.Menu()
-        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+M", "Connect Database", wx.ITEM_NORMAL)
+        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+C", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
-        self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
+        self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "&Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2DI)
-        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
+        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+V", "Variometer data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2Vario)
-        self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scalar data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
+        self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scala&r data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2Scalar)
         self.MainMenu.Append(self.DIMenu, "D&I")
+        # ## Stream Operations
+        self.StreamOperationsMenu = wx.Menu()
+        self.StreamList = wx.MenuItem(self.StreamOperationsMenu, 601, "Select active Strea&m...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
+        self.StreamOperationsMenu.AppendItem(self.StreamList)
+        self.MainMenu.Append(self.StreamOperationsMenu, "Stream O&perations")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Initialisation/Calculation parameter\tCtrl+I", "Modify initialisation/calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
         self.OptionsMenu.AppendItem(self.OptionsInitItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 402, "&Observatory specifications\tCtrl+O", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
+        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 402, "Observator&y specifications\tCtrl+Y", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
         self.OptionsMenu.AppendItem(self.OptionsObsItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
@@ -408,6 +445,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
+        self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamList)
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
         self.Bind(wx.EVT_MENU, self.onDefineVario, self.DIPath2Vario)
         self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
@@ -417,24 +455,45 @@ class MainFrame(wx.Frame):
         # BindingControls on the notebooks
         #       Stream Page
         # ------------------------
-        self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
-        self.Bind(wx.EVT_BUTTON, self.onReDrawButton, self.menu_p.str_page.DrawButton)
+        #self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
+        self.Bind(wx.EVT_BUTTON, self.onTrimStreamButton, self.menu_p.str_page.trimStreamButton)
         self.Bind(wx.EVT_BUTTON, self.onSelectKeys, self.menu_p.str_page.selectKeysButton)
         self.Bind(wx.EVT_BUTTON, self.onExtractData, self.menu_p.str_page.extractValuesButton)
         self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
-        self.Bind(wx.EVT_BUTTON, self.onChangeHeaderData, self.menu_p.str_page.changeHeaderButton)
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
         self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
+        self.Bind(wx.EVT_CHECKBOX, self.onErrorBarCheckBox, self.menu_p.str_page.errorBarsCheckBox)
+        self.Bind(wx.EVT_CHECKBOX, self.onConfinexCheckBox, self.menu_p.str_page.confinexCheckBox)
         self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.str_page.dailyMeansButton)
         self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.str_page.applyBCButton)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
-        self.Bind(wx.EVT_BUTTON, self.onRemoveOutlierButton, self.menu_p.str_page.flagOutlierButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.str_page.flagOutlierButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagSelectionButton, self.menu_p.str_page.flagSelectionButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.str_page.flagRangeButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.str_page.flagLoadButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.str_page.flagSaveButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.str_page.flagDropButton)
+        #        Meta Page
+        # --------------------------
+        #self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.met_page.filterButton)
+        # Contains General info on top - previously on analysis page
+        # add sensor id, sensor name to general info
+        # add button with GetFromDB, WriteToDB (only active when DB connected) - WriteToDB only specific dataID or all sensorsID 
+        # provide text boxes with data, sensor and station related info
+        #     Edit/Review Data related meta data
+        #     button
+        #     textbox with existing Meta
+        #     Edit/Review Sensor related meta data
+        #     ....
+        #     .... and so on
+        self.Bind(wx.EVT_BUTTON, self.onMetaDataButton, self.menu_p.met_page.MetaDataButton)
+        self.Bind(wx.EVT_BUTTON, self.onMetaSensorButton, self.menu_p.met_page.MetaSensorButton)
+        self.Bind(wx.EVT_BUTTON, self.onMetaStationButton, self.menu_p.met_page.MetaStationButton)
         #        Analysis Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
-        self.Bind(wx.EVT_BUTTON, self.onRemoveOutlierButton, self.menu_p.ana_page.outlierButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.ana_page.outlierButton)
         self.Bind(wx.EVT_BUTTON, self.onDerivativeButton, self.menu_p.ana_page.derivativeButton)
         self.Bind(wx.EVT_BUTTON, self.onFitButton, self.menu_p.ana_page.fitButton)
         self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
@@ -461,24 +520,13 @@ class MainFrame(wx.Frame):
 
         # Disable yet unavailbale buttons
         # --------------------------
-        self.menu_p.str_page.dailyMeansButton.Disable()
-        self.menu_p.str_page.applyBCButton.Disable()
+        self.DeactivateAllControls()
 
-        self.menu_p.abs_page.AnalyzeButton.Disable()
-
-        self.menu_p.ana_page.activityButton.Disable() # enabled at initial plot
-        self.menu_p.ana_page.offsetButton.Disable()
-        self.menu_p.ana_page.fitButton.Disable()
-        self.menu_p.ana_page.filterButton.Disable()
-        self.menu_p.ana_page.outlierButton.Disable()
-        self.menu_p.ana_page.derivativeButton.Disable()
-        self.menu_p.ana_page.rotationButton.Disable()
-
-        self.sp.SplitVertically(self.plot_p,self.menu_p,700)
+        self.sp.SplitVertically(self.plot_p,self.menu_p,900)
 
     def __set_properties(self):
         self.SetTitle("MagPy")
-        self.SetSize((1100, 700))
+        self.SetSize((1300, 800))
         self.SetFocus()
         self.StatusBar.SetStatusWidths([-1, -1])
         # statusbar fields
@@ -488,6 +536,38 @@ class MainFrame(wx.Frame):
         self.menu_p.SetMinSize((100, 100))
         self.plot_p.SetMinSize((100, 100))
 
+
+    def InitPlotParameter(self):
+        # Kwargs for plotting
+        self.annotate = True
+        self.menu_p.str_page.annotateCheckBox.SetValue(True)
+        self.errorbars = False
+        self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
+        self.confinex = False
+        self.menu_p.str_page.confinexCheckBox.SetValue(False)
+        self.fullday = False
+        self.includeid = False
+        self.grid = True
+        self.padding = None
+        self.specialdict={}
+        self.colorlist = ['b','g','m','c','y','k','b','g','m','c','y','k']
+        self.symbollist=None
+        self.stormphases=None
+        self.t_stormphases={}
+        self.function=None
+        self.plottype='discontinuous'
+        self.labels=False
+        self.resolution=None
+        """
+        self.bartrange = 0
+        self.bgcolor='white'
+        self.function = {}
+        self.gridcolor = '#316931'
+        self.labelcolor = '0.2'
+        self.opacity = 0.0
+        self.legendposition = 'upper left'
+        self.plottitle = None
+        """
 
     def initParameter(self, dictionary):
         # Variable initializations
@@ -523,6 +603,271 @@ class MainFrame(wx.Frame):
     # ################
     # Updating and reinitiatzation methods:
 
+    def DeactivateAllControls(self):
+        """
+        DESCRIPTION
+            To be used at start and when an empty stream is loaded
+            Deactivates all control elements
+        """
+        # Stream
+        self.menu_p.str_page.pathTextCtrl.Disable()        # remain disabled
+        self.menu_p.str_page.fileTextCtrl.Disable()        # remain disabled
+        self.menu_p.str_page.startDatePicker.Disable()     # always
+        self.menu_p.str_page.startTimePicker.Disable()     # always
+        self.menu_p.str_page.endDatePicker.Disable()       # always
+        self.menu_p.str_page.endTimePicker.Disable()       # always
+        ## TODO Modify method below - when directory/database is selected, automatically open dialog
+        ## to modify time range and other read options
+        #self.menu_p.str_page.openStreamButton.Disable()
+        self.menu_p.str_page.trimStreamButton.Disable()    # always
+        self.menu_p.str_page.restoreButton.Disable()       # always
+        self.menu_p.str_page.selectKeysButton.Disable()    # always
+        self.menu_p.str_page.extractValuesButton.Disable() # always
+        self.menu_p.str_page.changePlotButton.Disable()    # always
+        self.menu_p.str_page.flagOutlierButton.Disable()   # always
+        self.menu_p.str_page.flagSelectionButton.Disable() # always
+        self.menu_p.str_page.flagRangeButton.Disable()     # always
+        self.menu_p.str_page.flagLoadButton.Disable()      # always
+        self.menu_p.str_page.flagDropButton.Disable()      # activated if annotation are present
+        self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present 
+        self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
+        self.menu_p.str_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
+        self.menu_p.str_page.annotateCheckBox.Disable()    # activated if annotation are present
+        self.menu_p.str_page.errorBarsCheckBox.Disable()   # activated delta columns are present and not DI file
+        self.menu_p.str_page.confinexCheckBox.Disable()    # always
+        self.menu_p.str_page.compRadioBox.Disable()        # activated if xyz,hdz or idf
+        self.menu_p.str_page.symbolRadioBox.Disable()      # activated if less then 2000 points, active if DI data
+
+        # Meta
+        self.menu_p.met_page.getDBButton.Disable()         # activated when DB is connected
+        self.menu_p.met_page.putDBButton.Disable()         # activated when DB is connected
+        self.menu_p.met_page.stationTextCtrl.Disable()     # remain disabled
+        self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
+        self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
+
+        # DI
+        self.menu_p.abs_page.AnalyzeButton.Disable()
+
+        # Analysis
+        self.menu_p.ana_page.activityButton.Disable()      # if xyz, hdz magnetic data
+        self.menu_p.ana_page.offsetButton.Disable()        # always
+        self.menu_p.ana_page.fitButton.Disable()           # always
+        self.menu_p.ana_page.filterButton.Disable()        # always
+        self.menu_p.ana_page.outlierButton.Disable()       # always
+        self.menu_p.ana_page.derivativeButton.Disable()    # always
+        self.menu_p.ana_page.rotationButton.Disable()      # if xyz magnetic data
+
+        # Report
+        ## Add SaveButton
+
+        # Monitor
+
+    def ActivateControls(self,stream):
+        """
+        DESCRIPTION
+            Checks contents of stream and state of program.
+            Activates controls in dependency of the checks
+        """
+        # initially reset all controls
+        self.DeactivateAllControls()
+        if not len(stream.ndarray[0]) > 0:
+            self.changeStatusbar("No data available")
+            return
+
+        # Always part
+        # --------------------------------
+        # Length
+        n = stream.length()[0]
+        keys = stream._get_key_headers()
+        keystr = ','.join(keys)
+        # Sampling rate
+        try:
+            sr = stream.samplingrate()
+        except:
+            print ("Sampling rate determinations failed")
+            sr = 9999
+        # Coverage
+        ind = np.argmin(stream.ndarray[0].astype(float))
+        mintime = stream._get_min('time')
+        maxtime = stream._get_max('time')
+        # Flag column
+        commidx = KEYLIST.index('comment')
+        commcol = stream.ndarray[commidx]
+        commcol = np.asarray([el for el in commcol if not el in ['','-',np.nan]])
+        # Delta
+        deltas = False
+        if 'dx' in keys or 'dy' in keys or 'dz' in keys or 'df' in keys:
+            deltas = True
+        # Essential header info
+        comps = stream.header.get('DataComponents','')[:3]
+        sensorid = stream.header.get('SensorID','')
+        formattype = self.plotstream.header.get('DataFormat','')
+        absinfo = self.plotstream.header.get('DataAbsInfo',None)
+        absinfobool = False
+        if not absinfo:
+            absinfobool = True
+        metadatatext = ''
+        metasensortext = ''
+        metastationtext = ''
+        for key in stream.header:
+            if key.startswith('Data'):
+                 metadatatext += key.replace('Data','')+': \t'+stream.header.get(key,'')+'\n'
+            if key.startswith('Sensor'):
+                 metasensortext += key.replace('Sensor','')+': \t'+stream.header.get(key,'')+'\n'
+            if key.startswith('Station'):
+                 metastationtext += key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
+
+
+        # Activate "always" fields
+        # ----------------------------------------
+        # stream page
+        self.menu_p.str_page.startDatePicker.Enable()     # always
+        self.menu_p.str_page.startTimePicker.Enable()     # always
+        self.menu_p.str_page.endDatePicker.Enable()       # always
+        self.menu_p.str_page.endTimePicker.Enable()       # always
+        self.menu_p.str_page.trimStreamButton.Enable()    # always
+        self.menu_p.str_page.restoreButton.Enable()       # always
+        self.menu_p.str_page.selectKeysButton.Enable()    # always
+        self.menu_p.str_page.extractValuesButton.Enable() # always
+        self.menu_p.str_page.changePlotButton.Enable()    # always
+        self.menu_p.str_page.flagOutlierButton.Enable()   # always
+        self.menu_p.str_page.flagSelectionButton.Enable() # always
+        self.menu_p.str_page.flagRangeButton.Enable()     # always
+        self.menu_p.str_page.flagLoadButton.Enable()      # always
+        self.menu_p.str_page.confinexCheckBox.Enable()    # always
+
+        # Selective fields
+        # ----------------------------------------
+        if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF']:
+            self.menu_p.str_page.compRadioBox.Enable()
+        if len(commcol) > 0:
+            self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
+            self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
+            self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
+        if formattype == 'MagPyDI':
+            self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
+            
+        if absinfobool:
+            self.menu_p.str_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
+        if deltas:
+            self.menu_p.str_page.errorBarsCheckBox.Enable()   # activated delta columns are present and not DI file
+        if n < 2000:
+            self.menu_p.str_page.symbolRadioBox.Enable()      # activated if less then 2000 points, active if DI data
+
+        
+        # Update "information" fields
+        # ----------------------------------------
+        self.menu_p.met_page.amountTextCtrl.SetValue(str(n))
+        self.menu_p.met_page.samplingrateTextCtrl.SetValue(str(sr))
+        self.menu_p.met_page.keysTextCtrl.SetValue(keystr)
+        self.menu_p.met_page.typeTextCtrl.SetValue(formattype)
+        self.menu_p.str_page.startDatePicker.SetValue(pydate2wxdate(num2date(mintime)))
+        self.menu_p.str_page.endDatePicker.SetValue(pydate2wxdate(num2date(maxtime)))
+        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+        self.menu_p.rep_page.logMsg('- found {} data points'.format(len(stream.ndarray[0])))
+        self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
+        self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+
+        self.menu_p.met_page.dataTextCtrl.SetValue(metadatatext)
+        self.menu_p.met_page.sensorTextCtrl.SetValue(metasensortext)
+        self.menu_p.met_page.stationTextCtrl.SetValue(metastationtext)
+
+
+    def InitialRead(self,stream):
+        """
+        DESCRIPTION
+            Backups stream content and adds current strem and header info to streamlist and headerlist.
+            Creates plotstream copy and stores pointer towards lists.
+            Checks whether ndarray is resent and whether data is present at all
+        """
+
+        if not len(stream.ndarray[0]) > 0:
+            stream = stream.linestruct2ndarray()
+        if not len(stream.ndarray[0]) > 0:
+            self.DeactivateAllControls()
+            self.changeStatusbar("No data available")
+            return False
+        self.stream = stream
+
+        self.plotstream = self.stream.copy()
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.stream)
+        self.headerlist.append(self.stream.header)
+        self.currentstreamindex = currentstreamindex
+        return True
+
+    def CheckStreamContent(self, stream):
+        """
+        DESCRIPTION:
+            Check stream content and eventually transform to readable data.
+            Activates/Deactivates certain options and buttons in dependency 
+            on the content of stream and its header.
+        USED BY:
+            Everything before InitialPlot
+        """
+
+        if not len(stream.ndarray[0]) > 0:
+            stream = stream.linestruct2ndarray()
+        if not len(stream.ndarray[0]) > 0:
+            self.DeactivateAllControls()
+            self.changeStatusbar("No data available")
+            return False
+
+        self.stream = stream
+        
+        self.ActivateControls(stream)
+
+        # Check Header contents
+        if not stream.header.get('DataComponents','')[:3] in ['xyz','XYZ','hdz','HDZ','idf','IDF']:
+            print ("DataComponents failure", stream.header.get('DataComponents',''))
+            self.menu_p.str_page.compRadioBox.Disable()
+
+        # Update Text windowsand their contents
+        self.SetPageValues(stream)
+
+        # Avtivate/Deactivate page contents and buttons
+        self.menu_p.str_page.openStreamButton.Disable()
+  
+        self.changeStatusbar("Ready")
+        return True
+
+
+    def ReactivateStreamPage(self):
+            self.menu_p.str_page.fileTextCtrl.Enable()
+            self.menu_p.str_page.pathTextCtrl.Enable()
+            self.menu_p.str_page.startDatePicker.Enable()
+            self.menu_p.str_page.endDatePicker.Enable()
+            self.menu_p.str_page.startTimePicker.Enable()
+            self.menu_p.str_page.endTimePicker.Enable()
+            self.menu_p.str_page.openStreamButton.Enable()
+
+    def SetPageValues(self, stream):
+        """
+        Method to update all pages with the streams values
+        """
+        # Length
+        n = stream.length()[0]
+        # keys
+        keys = stream._get_key_headers()
+        keystr = ','.join(keys)
+        # Sampling rate
+        sr = stream.samplingrate()
+        # Coverage
+        ind = np.argmin(stream.ndarray[0].astype(float))
+        mintime = stream._get_min('time')
+        maxtime = stream._get_max('time')
+
+        self.menu_p.met_page.amountTextCtrl.SetValue(str(n))
+        self.menu_p.met_page.samplingrateTextCtrl.SetValue(str(sr))
+        self.menu_p.met_page.keysTextCtrl.SetValue(keystr)
+        #print(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+        self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
+        self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
+        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+        self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream.ndarray[0]))
+
 
     def UpdateTimeRanges(self,stream):
             """
@@ -542,7 +887,9 @@ class MainFrame(wx.Frame):
  
     def UpdatePlotCharacteristics(self,stream):
         """
-        Updating time ranges on Stream page
+        DESCRIPTION
+            Activates specific menus and buttons in dependeny of data content
+            Updating time ranges on Stream page
         """
 
         # Some general Checks on Stream
@@ -550,7 +897,7 @@ class MainFrame(wx.Frame):
         # 1. Preslect first nine keys and set up default options
         keylist = []
         keylist = stream._get_key_headers(limit=9)
-        # TODO: remove keys with high percentage of nans
+        # TODO: eventually remove keys with high percentage of nans
         #for key in keylist:
         #    ar = [eval('elem.'+key) for elem in stream if not isnan(eval('elem.'+key))]
         #    div = float(len(ar))/float(len(stream))*100.0
@@ -623,15 +970,18 @@ class MainFrame(wx.Frame):
         return userProvidedFilename
 
 
+
     def OnInitialPlot(self, stream):
         """
         DEFINITION:
             read stream, extract columns with values and display up to three of them by defailt
             executes guiPlot then
         """
-
-        self.plotstream = stream.copy()
-        self.orgheader = stream.header
+        #if not len(stream.ndarray[0]) > 0:
+        #    stream = stream.linestruct2ndarray()
+        #self.stream = stream
+        #self.plotstream = stream.copy()
+        #self.orgheader = stream.header
 
         self.changeStatusbar("Plotting...")
 
@@ -655,13 +1005,21 @@ class MainFrame(wx.Frame):
 
         self.changeStatusbar("Ready")
 
-    def OnPlot(self, stream, keylist, **kwargs):
+    def OnPlot(self, stream, keylist, padding=None, specialdict={},errorbars=None,
+        colorlist=None,symbollist=None,annotate=None,stormphases=None,
+        t_stormphases={},includeid=False,function=None,plottype='discontinuous',
+        labels=False,resolution=None, confinex=False):
         """
         DEFINITION:
             read stream and display
         """
         self.changeStatusbar("Plotting...")
-        self.plot_p.guiPlot(stream,keylist,resolution=self.resolution,**kwargs)
+        print ("ConfineX:", confinex, symbollist)
+        self.plot_p.guiPlot(stream,keylist,padding=padding,specialdict=specialdict,errorbars=errorbars,
+                            colorlist=colorlist,symbollist=symbollist,annotate=annotate,
+                            includeid=includeid, function=function,plottype=plottype,                 
+                            labels=labels,resolution=resolution,confinex=confinex)
+        #self.plot_p.guiPlot(stream,keylist,**kwargs)
         if stream.length()[0] > 1 and len(keylist) > 0:
             self.ExportData.Enable(True)
         self.changeStatusbar("Ready")
@@ -709,50 +1067,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         wx.AboutBox(info)
 
-
-
     def OnExit(self, event):
         self.Close()  # Close the main window.
-
-    def ReactivateStreamPage(self):
-            self.menu_p.str_page.fileTextCtrl.Enable()
-            self.menu_p.str_page.pathTextCtrl.Enable()
-            self.menu_p.str_page.startDatePicker.Enable()
-            self.menu_p.str_page.endDatePicker.Enable()
-            self.menu_p.str_page.startTimePicker.Enable()
-            self.menu_p.str_page.endTimePicker.Enable()
-            self.menu_p.str_page.openStreamButton.Enable()
-
-
-    def SetPageValues(self, stream):
-        """
-        Method to update all pages with the streams values
-        """
-        # Length
-        n = stream.length()[0]
-        # keys
-        keys = stream._get_key_headers()
-        keystr = ','.join(keys)
-        # Sampling rate
-        sr = stream.samplingrate()
-        # Coverage
-        ind = np.argmin(stream.ndarray[0].astype(float))
-        mintime = stream._get_min('time')
-        maxtime = stream._get_max('time')
-
-        self.menu_p.ana_page.amountTextCtrl.SetValue(str(n))
-        self.menu_p.ana_page.samplingrateTextCtrl.SetValue(str(sr))
-        self.menu_p.ana_page.keysTextCtrl.SetValue(keystr)
-        #print(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-        self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-        self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
 
     def OnOpenDir(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",self.dirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
-            self.ReactivateStreamPage()
+            #self.ReactivateStreamPage()
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
             self.dirname = dialog.GetPath() # modify self.dirname
             files = sorted(filelist, key=os.path.getmtime)
@@ -770,6 +1091,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.str_page.endTimePicker.SetValue("23:59:59")
             #self.changeStatusbar("Loading data ...")
         dialog.Destroy()
+        # TODO open another dialog with time ranges 
+
 
     def OnOpenFile(self, event):
         self.dirname = ''
@@ -778,7 +1101,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         filelist = []
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
-            self.ReactivateStreamPage()
+            #self.ReactivateStreamPage()
             self.changeStatusbar("Loading data ...")
             pathlist = dlg.GetPaths()
             for path in pathlist:
@@ -796,32 +1119,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
             self.menu_p.str_page.fileTextCtrl.Disable()
             self.menu_p.str_page.pathTextCtrl.Disable()
-            if len(stream) > 0:
-                self.SetPageValues(stream)
-                """
-                mintime = stream._get_min('time')
-                maxtime = stream._get_max('time')
-                self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-                self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-                self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-                self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-                """
-                #self.menu_p.str_page.startDatePicker.Disable()
-                #self.menu_p.str_page.endDatePicker.Disable()
-                #self.menu_p.str_page.startTimePicker.Disable()
-                #self.menu_p.str_page.endTimePicker.Disable()
-                self.menu_p.str_page.openStreamButton.Disable()
 
-        self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
         dlg.Destroy()
 
         # plot data
-        self.stream = stream
-        if stream.length()[0] > 0:
-            self.OnInitialPlot(stream)
-            self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("No data selected")
+        if self.InitialRead(stream):
+            self.ActivateControls(self.plotstream)
+            self.OnInitialPlot(self.plotstream)
 
 
     def OnOpenURL(self, event):
@@ -834,16 +1138,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
                 self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                 stream = read(path_or_url=url)
-                if len(stream) > 0:
-                    self.SetPageValues(stream)
-                    self.menu_p.str_page.openStreamButton.Disable()
+                if self.CheckStreamContent(stream):
                     self.OnInitialPlot(stream)
             else:
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
-        if len(stream) > 0:
-            self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream))
-            self.stream = stream
-            self.plotstream = stream
+
         self.changeStatusbar("Ready")
         dlg.Destroy()
 
@@ -1017,10 +1316,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.dirnameTextCtrl.SetValue(self.dirname)
         #dlg.hostTextCtrl.SetValue(self.compselect)
         #dlg.hostTextCtrl.SetValue(self.host)
-        dlg.diexpDTextCtrl.SetValue(self.diexpD)
-        dlg.diexpITextCtrl.SetValue(self.diexpI)
-        dlg.dialphaTextCtrl.SetValue(self.dialpha)
-        dlg.dideltaFTextCtrl.SetValue(self.dideltaF)
+        dlg.diexpDTextCtrl.SetValue(str(self.diexpD))
+        dlg.diexpITextCtrl.SetValue(str(self.diexpI))
+        dlg.dialphaTextCtrl.SetValue(str(self.dialpha))
+        dlg.dideltaFTextCtrl.SetValue(str(self.dideltaF))
         dlg.ditypeTextCtrl.SetValue(self.ditype)
         if dlg.ShowModal() == wx.ID_OK:
             host = dlg.hostTextCtrl.GetValue()
@@ -1032,10 +1331,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             filename=dlg.filenameTextCtrl.GetValue()
             dirname=dlg.dirnameTextCtrl.GetValue()
             resolution=dlg.resolutionTextCtrl.GetValue()
-            diexpD=dlg.diexpDTextCtrl.GetValue()
-            diexpI=dlg.diexpITextCtrl.GetValue()
-            dialpha=dlg.dialphaTextCtrl.GetValue()
-            dideltaF=dlg.dideltaFTextCtrl.GetValue()
+            diexpD=float(dlg.diexpDTextCtrl.GetValue())
+            diexpI=float(dlg.diexpITextCtrl.GetValue())
+            dialpha=float(dlg.dialphaTextCtrl.GetValue())
+            dideltaF=float(dlg.dideltaFTextCtrl.GetValue())
             ditype=dlg.ditypeTextCtrl.GetValue()
 
             compselect= 'xyz' # compselect
@@ -1088,39 +1387,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
         Method for filtering
         """
         self.changeStatusbar("Filtering...")
-        keystr = self.menu_p.ana_page.keysTextCtrl.GetValue().encode('ascii','ignore')
+        keystr = self.menu_p.met_page.keysTextCtrl.GetValue().encode('ascii','ignore')
         keys = keystr.split(',')
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
 
         filtertype = self.menu_p.ana_page.selectfilterComboBox.GetValue()
         filterlength = self.menu_p.ana_page.selectlengthComboBox.GetValue()
 
-        self.plotstream = self.plotstream.nfilter(keys=keys,filter_type=filtertype,resample=True)
+        self.plotstream = self.plotstream.filter(keys=keys,filter_type=filtertype,resample=True)
 
         self.menu_p.rep_page.logMsg('- filtering applied')
         self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
-
-    def onRemoveOutlierButton(self, event):
-        """
-        Method for Outlier
-        """
-        self.changeStatusbar("Flagging outliers ...")
-        sr = self.menu_p.ana_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
-        keys = self.shownkeylist
-
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream.copy()
-
-        self.plotstream = self.plotstream.flag_outlier(keys=keys,stdout=True)
-        #self.plotstream = self.plotstream.remove_flagged()
-
-        self.menu_p.rep_page.logMsg('- flagged outliers: check logfile for details')
-        self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
 
     def onDerivativeButton(self, event):
         """
@@ -1129,15 +1410,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.changeStatusbar("Calculating derivative ...")
         keys = self.shownkeylist
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
 
         self.menu_p.rep_page.logMsg("- calculating derivative")
         self.plotstream = self.plotstream.differentiate(keys=keys,put2keys=keys)
 
         self.menu_p.rep_page.logMsg('- derivative calculated')
-        self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
+        #self.SetPageValues(self.plotstream)
+        if self.CheckStreamContent(self.plotstream):
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
     def onFitButton(self, event):
         """
@@ -1145,8 +1427,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         self.changeStatusbar("Fitting ...")
         keys = self.shownkeylist
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
         fitknots = str(0.5)
         fitdegree = str(4)
         fitfunc='spline'
@@ -1162,10 +1444,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 degree = 1
             else:
                 degree = int(degree)
-            if len(self.plotstream) > 0:
+            if len(self.plotstream.ndarray[0]) > 0:
                 func = self.plotstream.fit(keys=keys)
-                self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,keys,function=func)
+                if self.CheckStreamContent(self.plotstream):
+                    #self.SetPageValues(self.plotstream)
+                    self.function = func
+                    self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
             else:
                 # Msgbox to load data first
                 pass
@@ -1181,8 +1465,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         self.changeStatusbar("Adding offsets ...")
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
         keys = self.shownkeylist
         offsetdict = {}
 
@@ -1193,10 +1477,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 if not offset == '':
                     offsetdict[key] = float(offset)
 
-            if not len(self.plotstream) == 0 and not len(offsetdict) == 0:
+            if not len(self.plotstream.ndarray[0]) == 0 and not len(offsetdict) == 0:
                 self.plotstream = self.plotstream.offset(offsetdict)
                 self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
+                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
@@ -1207,8 +1491,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         self.changeStatusbar("Getting activity ...")
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
 
         # open a dialog with optins and methods (fmi,cobsindex, stormtracer, etc)
         # return a method and its parameters
@@ -1223,10 +1507,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         self.changeStatusbar("Rotating data ...")
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
 
-        if len(self.plotstream) > 0:
+        if len(self.plotstream.ndarray[0]) > 0:
             # XXX Eventually SetValues from init
             dlg = AnalysisRotationDialog(None, title='Analysis: rotate data')
             if dlg.ShowModal() == wx.ID_OK:
@@ -1245,15 +1529,92 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
 
                 self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,annotate=self.annotate)
+                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
 
+
+    # ------------------------------------------------------------------------------------------
     # ################
-    # Stream functions
+    # Stream page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+    def onErrorBarCheckBox(self,event):
+        """
+        DESCRIPTION
+            Switch display of error bars.
+        RETURNS
+            kwarg for OnPlot method
+        """
+
+        if not self.menu_p.str_page.errorBarsCheckBox.GetValue():
+            self.errorbars=False
+            self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
+        else:
+            self.errorbars=True
+            self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
+        self.ActivateControls(self.plotstream)
+        if self.plotstream.length()[0] > 0:
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+        
+
+    def onConfinexCheckBox(self,event):
+        """
+        DESCRIPTION
+            Switch display of error bars.
+        RETURNS
+            kwarg for OnPlot method
+        """
+        if not self.menu_p.str_page.confinexCheckBox.GetValue():
+            self.confinex=False
+            self.menu_p.str_page.confinexCheckBox.SetValue(False)
+        else:
+            self.confinex=True
+            self.menu_p.str_page.confinexCheckBox.SetValue(True)
+        self.ActivateControls(self.plotstream)
+        if self.plotstream.length()[0] > 0:
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def onTrimStreamButton(self,event):
+        """
+        DESCRIPTION
+        """
+        stday = self.menu_p.str_page.startDatePicker.GetValue()
+        sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
+        sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+        start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+        enday = self.menu_p.str_page.endDatePicker.GetValue()
+        entime = str(self.menu_p.str_page.endTimePicker.GetValue())
+        ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+        end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+
+        try:
+            self.changeStatusbar("Trimming stream ...")
+            newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
+            self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
+            self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
+        except:
+            self.menu_p.rep_page.logMsg('- Trimming failed')
+
+        self.ActivateControls(self.plotstream)
+        if self.plotstream.length()[0] > 0:
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
 
     def onOpenStreamButton(self, event):
+        # TODO Remove this method
         stream = DataStream()
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = self.menu_p.str_page.startTimePicker.GetValue()
@@ -1263,7 +1624,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
         path = self.menu_p.str_page.pathTextCtrl.GetValue()
         files = self.menu_p.str_page.fileTextCtrl.GetValue()
 
-        print(stday, sttime, sd)
 
         if path == "":
             dlg = wx.MessageDialog(self, "Please select a path first!\n"
@@ -1292,7 +1652,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif path.startswith('MySQL'):
                 start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
                 end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
-                stream = db2stream(self.db, None, start, end, files, None)
+                stream = readDB(self.db, files, starttime=sd, endtime=ed)
             else:
                 address = os.path.join(path,files)
                 stream = read(path_or_url=address,starttime=sd, endtime=ed)
@@ -1306,12 +1666,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
             return
 
         self.menu_p.rep_page.logMsg('- Stream loaded of length %i' % len(stream))
-        self.stream = stream
-        #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-        self.OnInitialPlot(stream)
+
+        if self.CheckStreamContent(stream):
+            self.OnInitialPlot(stream)
 
 
     def onReDrawButton(self, event):
+        # TODO Remove this method
+
+        #self.plotstream = self.stream.copy()
+        print("Stream restored of length ", len(self.stream.ndarray[0]))
+        #self.SetPageValues(self.stream)
+        #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+        if self.CheckStreamContent(self.stream):
+            self.stream.header = self.orgheader
+            self.OnInitialPlot(self.stream)
+        """
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = self.menu_p.str_page.startTimePicker.GetValue()
         sd = datetime.fromtimestamp(stday.GetTicks())
@@ -1338,8 +1708,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.Destroy()
             return
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
 
         #st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
         #start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
@@ -1373,14 +1743,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.SetPageValues(stream)
         #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
         self.OnInitialPlot(stream)
-
+        """
 
     def onSelectKeys(self,event):
         """
+        DESCRIPTION
         open dialog to select shown keys (check boxes)
         """
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
         keylist = self.plotstream._get_key_headers(numerical=True)
         self.keylist = keylist
         shownkeylist = self.shownkeylist
@@ -1388,19 +1760,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
         namelist = []
         unitlist = []
         for key in keylist:
-            value = self.plotstream.header.get('col-'+key)
-            unit = self.plotstream.header.get('unit-col-'+key)
-            if not value == '':
-                namelist.append(value)
-            else:
-                namelist.append(key)
-            if not unit == '':
-                unitlist.append(unit)
-            else:
-                unitlist.append('')
+            if not len(self.plotstream.ndarray[KEYLIST.index(key)]) == 0:
+                value = self.plotstream.header.get('col-'+key)
+                unit = self.plotstream.header.get('unit-col-'+key)
+                if not value == '':
+                    namelist.append(value)
+                else:
+                    namelist.append(key)
+                if not unit == '':
+                    unitlist.append(unit)
+                else:
+                    unitlist.append('')
         
-        print("onSelectKeys", namelist, unitlist)
-        if len(self.plotstream) > 0:
+        if len(self.plotstream.ndarray[0]) > 0:
             dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
             for elem in shownkeylist:
                 exec('dlg.'+elem+'CheckBox.SetValue(True)')
@@ -1415,9 +1787,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 else:
                     self.shownkeylist = shownkeylist
                 self.symbollist = [self.symbollist[0]]*len(shownkeylist)
-                self.SetPageValues(self.plotstream)
-                self.OnPlot(self.plotstream,shownkeylist,symbollist=self.symbollist)
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.changeStatusbar("Ready")
             dlg.Destroy()
+        else:
+            self.changeStatusbar("Failure")
 
 
     def onExtractData(self,event):
@@ -1426,10 +1801,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         up to three possibilities
         """
 
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
         keylist = self.shownkeylist
-        if len(self.plotstream) > 0:
+        if len(self.plotstream.ndarray[0]) > 0:
             dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=keylist)
             if dlg.ShowModal() == wx.ID_OK:
                 key1 = dlg.key1ComboBox.GetValue()
@@ -1457,8 +1832,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             extractedstream3 = self.plotstream.extract(key3,val3,comp3)
                             # TODO extractedstream = join(extractedstream,extractedstream3)
                 self.plotstream = extractedstream
-                self.SetPageValues(self.plotstream)
-                self.OnPlot(extractedstream,self.shownkeylist,symbollist=self.symbollist)
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.changeStatusbar("Ready")
         else:
             self.menu_p.rep_page.logMsg("Extract: No data available so far")
         # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
@@ -1472,23 +1848,23 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # show/edit meta info
         pass
 
-    def onChangeHeaderData(self,event):
-        """
-        open dialog to modify plot options (general (e.g. bgcolor) and  key
-        specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        pass
 
     def onRestoreData(self,event):
         """
         Restore originally loaded data
         """
-        if not len(self.stream) == 0:
-            self.plotstream = self.stream.copy()
-            self.plotstream.header = self.orgheader
-            self.UpdateTimeRanges(self.plotstream)
-            self.OnInitialPlot(self.plotstream)
+        self.flaglist = []
+
+        if not len(self.stream.ndarray[0]) > 0:
+            self.DeactivateAllControls()
+            self.changeStatusbar("No data available")
+            return False
+        self.plotstream = self.stream.copy()
+        self.plotstream.header = self.headerlist[self.currentstreamindex]
+
+        self.InitPlotParameter()
+        self.ActivateControls(self.stream)
+        self.OnInitialPlot(self.stream)
 
     def onDailyMeansButton(self,event):
         """
@@ -1501,14 +1877,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plotstream = self.plotstream.dailymeans(keys)
         self.shownkeylist = self.plotstream._get_key_headers(numerical=True)[:3]
         self.symbollist = self.symbollist[0]*len(self.shownkeylist)
-        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=self.annotate,errorbars=True)
+
+        self.ActivateControls(self.plotstream)
+        self.errorbars = True
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
+        self.menu_p.str_page.errorBarsCheckBox.Enable()
+        self.changeStatusbar("Ready")
+
 
     def onApplyBCButton(self,event):
         """
         Apply baselinecorrection
         """
         self.plotstream = self.plotstream.bc()
-        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=self.annotate)
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
 
     def onAnnotateCheckBox(self,event):
@@ -1516,63 +1900,245 @@ Suite 330, Boston, MA  02111-1307  USA"""
         Restore originally loaded data
         """
         #### get True or False
-        #self.annotate = self.menu_p.str_page.annote[event.GetInt()]
-        
-        mp.plot(self.plotstream,annotate=True)
-        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist, annotate=self.annotate)
+        if not self.menu_p.str_page.annotateCheckBox.GetValue():
+            self.annotate=False
+            self.menu_p.str_page.annotateCheckBox.SetValue(False)
+        else:
+            self.annotate=True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+
+        #mp.plot(self.plotstream,annotate=True)
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
     def onChangeComp(self, event):
         orgcomp = self.compselect
         self.compselect = self.menu_p.str_page.comp[event.GetInt()]
         coordinate = orgcomp+'2'+self.compselect
         self.changeStatusbar("Transforming ...")
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
         self.plotstream = self.plotstream._convertstream(coordinate)
-        self.SetPageValues(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist)
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
     def onChangeSymbol(self, event):
         orgsymbol = self.symbolselect
         self.symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
         self.changeStatusbar("Transforming ...")
-        if len(self.plotstream) == 0:
-            self.plotstream = self.stream
+        self.ActivateControls(self.plotstream)
+        #if len(self.plotstream.ndarray[0]) == 0:
+        #    self.plotstream = self.stream.copy()
         if self.symbolselect == 'line':
             self.symbollist = ['-' for elem in self.shownkeylist]
-            self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist)
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
         elif self.symbolselect == 'point':
             self.symbollist = ['o' for elem in self.shownkeylist]
-            self.OnPlot(self.plotstream,self.shownkeylist,symbollist=self.symbollist)
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
     def onFlagSelectionButton(self,event):
         """
-        Restore originally loaded data
+        DESCRIPTION
+            Restore originally loaded data
         """
-        flaglist = []
-        flagdata = self.plotstream.copy()
 
-        variables = self.shownkeylist
-        self.plot_p.figure.clear()
-        flagger = mp.figFlagger(flagdata,variables,figure=True)
-        self.plot_p.figure = flagger.figure
-        self.plot_p.axes = flagger.axes
-        self.plot_p.canvas.draw()
-        indeciestobeflagged = flagger.idxarray
-        while indeciestobeflagged > 0:
-            indeciestobeflagged, flaglst = mp.addFlag(flagger.data, flagger, indeciestobeflagged, variables)
-            flaglist.extend(flaglst)
+        self.changeStatusbar("Opening external data viewer ...")
+        self.plot_p.plt.close()
+        self.plotstream, flaglist = mp.plotFlag(self.plotstream,variables)
+        self.flaglist.extend(flaglist)
 
-        print("Returning data ....")
+        self.changeStatusbar("Updating plot ...")
+        self.menu_p.rep_page.logMsg('- flagged user selection: added {} flags'.format(len(flaglist)))
+        self.ActivateControls(self.plotstream)
+
+        self.annotate = True
+        self.menu_p.str_page.annotateCheckBox.SetValue(True)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+
+
+    def onFlagOutlierButton(self, event):
+        """
+        DESCRIPTION
+            Method for Outlier
+        """
+        self.changeStatusbar("Flagging outliers ...")
+        sr = self.menu_p.met_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
+        keys = self.shownkeylist
+        timerange = float(sr)*600.
+        threshold=5.0
+
+        # Open Dialog and return the parameters threshold, keys, timerange
+        dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange)
+        if dlg.ShowModal() == wx.ID_OK:
+            threshold = dlg.ThresholdTextCtrl.GetValue()
+            timerange = dlg.TimerangeTextCtrl.GetValue()
         try:
-            print("  -- original format: %s " % data.header['DataFormat'])
+            threshold = float(threshold)
+            timerange = float(timerange)
+            timerange = timedelta(seconds=timerange)
+            flaglist = self.plotstream.flag_outlier(stdout=True,returnflaglist=True, keys=keys,threshold=threshold,timerange=timerange)
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag_outlier(stdout=True, keys=keys,threshold=threshold,timerange=timerange)
+            self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(flaglist)))
         except:
-            pass
+            print("flag outliers failed: check parameter")
+            self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
 
-        orgkeys = flagger.orgkeylist
-        flagdata = flagger.data.selectkeys(orgkeys)
+        self.ActivateControls(self.plotstream)
+        self.annotate = True
+        self.menu_p.str_page.annotateCheckBox.SetValue(True)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
-        self.OnPlot(flagdata,self.shownkeylist,symbollist=self.symbollist,annotate=True)
+
+    def onFlagRangeButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to select the range to be flagged
+        """
+
+        pass
+        """
+        - keys:         (list) List of keys to check for criteria. Default = all numerical
+                            please note: for using above and below criteria only one element
+                            need to be provided (e.g. ['x']
+        - keystoflag:   (list) List of keys to flag. Default = all numerical
+        - below:        (float) flag data of key below this numerical value.
+        - above:        (float) flag data of key exceeding this numerical value.
+        - starttime:    (datetime Object)
+        - endtime:      (datetime Object)
+
+        self.changeStatusbar("Flagging range ...")
+        # get starttime
+        sr = self.menu_p.met_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
+        
+        keys = self.shownkeylist
+        keys.append('None')
+        keystoflag = self.shownkeylist
+        above = np.nan
+        below = np.nan
+
+        # Open Dialog and return the parameters threshold, keys, timerange
+        dlg = StreamFlagRangeDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange)
+        if dlg.ShowModal() == wx.ID_OK:
+            threshold = dlg.ThresholdTextCtrl.GetValue()
+            timerange = dlg.TimerangeTextCtrl.GetValue()
+        try:
+            above = float(above)
+            below = float(below)
+
+            flaglist = self.plotstream.flag_range(keys=keys,keystoflag=keystoflag,above=above,below=below,starttime=starttime,endtime=endtime)
+            self.menu_p.rep_page.logMsg('- flagged range: added {} flags'.format(len(flaglist)))
+        except:
+            print("flag range failed: check parameters")
+            self.menu_p.rep_page.logMsg('- flag range failed: check parameters')
+
+        self.ActivateControls(self.plotstream)
+        self.annotate = True
+        self.menu_p.str_page.annotateCheckBox.SetValue(True)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        """
+
+
+    def onFlagLoadButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to load flags either from a DB or from file
+        """
+        pass
+
+
+    def onFlagSaveButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to save flags either to DB or to file
+        """
+        pass
+
+
+    def onFlagDropButton(self,event):
+        """
+        DESCRIPTION
+            Drops all flagged data
+        """
+        self.changeStatusbar("Dropping flagged data ...")
+
+        #self.plotstream = self.plotstream.flag(self.flaglist)
+        self.plotstream = self.plotstream.remove_flagged()
+        #flagidx = KEYLIST.index('flag')
+        #commidx = KEYLIST.index('comment')
+        self.plotstream = self.plotstream._drop_column('flag')
+        self.plotstream = self.plotstream._drop_column('comment')
+
+        self.menu_p.rep_page.logMsg('- flagged data removed')
+
+        self.flaglist = []
+        self.ActivateControls(self.plotstream)
+        self.annotate = False
+        self.menu_p.str_page.annotateCheckBox.SetValue(False)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+
+
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Meta page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+    def onMetaDataButton(self,event):
+        # TODO Move to Meta page
+        """
+        DESCRIPTION
+        open dialog to modify plot options (general (e.g. bgcolor) and  key
+        specific (key: symbol color errorbar etc)
+        """
+        # open dialog with all header info
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamHeaderDialog(None, title='Meta information:',header=self.plotstream.header)
+            if dlg.ShowModal() == wx.ID_OK:
+                pass
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+
+    def onMetaSensorButton(self,event):
+        # TODO Move to Meta page
+        """
+        DESCRIPTION
+        open dialog to modify plot options (general (e.g. bgcolor) and  key
+        specific (key: symbol color errorbar etc)
+        """
+        # open dialog with all header info
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamHeaderDialog(None, title='Meta information:',header=self.plotstream.header)
+            if dlg.ShowModal() == wx.ID_OK:
+                pass
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+
+    def onMetaStationButton(self,event):
+        # TODO Move to Meta page
+        """
+        DESCRIPTION
+        open dialog to modify plot options (general (e.g. bgcolor) and  key
+        specific (key: symbol color errorbar etc)
+        """
+        # open dialog with all header info
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamHeaderDialog(None, title='Meta information:',header=self.plotstream.header)
+            if dlg.ShowModal() == wx.ID_OK:
+                pass
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+    # ####################
+    # Stream Operations functions
+
+    def OnStreamList(self,event):
+        """
+        DESCRIPTION
+        open dialog to select active stream
+        """
+        pass
 
 
     # ####################

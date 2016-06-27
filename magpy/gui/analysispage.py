@@ -32,23 +32,8 @@ class AnalysisPage(wx.Panel):
 
     # Widgets
     def createControls(self):
-        self.head1Label = wx.StaticText(self, label="Information:")
         self.head2Label = wx.StaticText(self, label="Basic methods:")
         self.head3Label = wx.StaticText(self, label="Filtering:")
-        # 1. Section
-        self.samplingrateLabel = wx.StaticText(self, label="Samp. period (sec):")
-        self.samplingrateTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
-        self.amountLabel = wx.StaticText(self, label="N of data point:")
-        self.amountTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
-        self.typeLabel = wx.StaticText(self, label="Datatype:")
-        self.typeTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
-        self.keysLabel = wx.StaticText(self, label="Used keys:")
-        self.keysTextCtrl = wx.TextCtrl(self, value="--",size=(130,30))
-        self.samplingrateTextCtrl.Disable()
-        self.amountTextCtrl.Disable()
-        self.typeTextCtrl.Disable()
-        self.keysTextCtrl.Disable()
-
         # 2. Section
         self.outlierButton = wx.Button(self,-1,"Remove outlier",size=(130,30))
         self.outlieroptionsButton = wx.Button(self,-1,"Analysis Options",size=(130,30))
@@ -81,20 +66,7 @@ class AnalysisPage(wx.Panel):
 
         # Add the controls to the sizers:
         for control, options in \
-                [(self.head1Label, noOptions),
-                  emptySpace,
-                 (self.samplingrateLabel, noOptions),
-                 (self.samplingrateTextCtrl, expandOption),
-                 (self.amountLabel, noOptions),
-                 (self.amountTextCtrl, expandOption),
-                 (self.typeLabel, noOptions),
-                 (self.typeTextCtrl, expandOption),
-                 (self.keysLabel, noOptions),
-                 (self.keysTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
-                 # section 2
-                 (self.head2Label, noOptions),
+                [(self.head2Label, noOptions),
                   emptySpace,
                  (self.outlierButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.outlieroptionsButton, dict(flag=wx.ALIGN_CENTER)),
