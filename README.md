@@ -38,7 +38,7 @@ debian/ubuntu: full installation with all supported features
 
 1. Get python packages and other extensions (for other distros install similar packages):
 
-        sudo apt-get install python-numpy python-scipy python-matplotlib python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb
+        sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb
         sudo easy_install ffnet
         sudo easy_install pexpect
 
