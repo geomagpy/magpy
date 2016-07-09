@@ -28,18 +28,21 @@ class OpenWebAddressDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # single anaylsis
+        #ftp://user:passwd@www.zamg.ac.at//data/magnetism/wic/variation/WIC20160627pmin.min
         # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         self.urlLabel = wx.StaticText(self, label="Insert address (e.g. 'ftp://.../' for all files, or 'ftp://.../data.dat' for a single file)")
-        self.urlTextCtrl = wx.TextCtrl(self, value="ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc")
+        self.urlTextCtrl = wx.TextCtrl(self, value="ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc",size=(500,30))
+        self.addFavsButton = wx.Button(self, label='Add to favorites',size=(160,30))
+        self.getFavsButton = wx.Button(self, label='Get favorites',size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=4, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -49,12 +52,91 @@ class OpenWebAddressDialog(wx.Dialog):
         # Add the controls to the sizers:
         for control, options in \
                 [(self.urlLabel, noOptions),
-                  emptySpace,
+                 (self.getFavsButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.urlTextCtrl, expandOption),
-                  emptySpace,
+                 (self.addFavsButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+class LoadDataDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+
+    def __init__(self, parent, title, mintime, maxtime, extension):
+        super(LoadDataDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.mintime = mintime
+        self.maxtime = maxtime
+        self.extension = extension
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.startdateLabel = wx.StaticText(self, label="Start date:")
+        self.startDatePicker = wx.DatePickerCtrl(self, dt=self.mintime)
+        # the following line produces error in my win xp installation
+        self.startTimePicker = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.enddateLabel = wx.StaticText(self, label="End date:")
+        self.endDatePicker = wx.DatePickerCtrl(self, dt=self.maxtime)
+        self.endTimePicker = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        if self.extension == 'MySQL Database':
+            self.extLabel = wx.StaticText(self, label="DB:")
+        else:
+            self.extLabel = wx.StaticText(self, label="Files (*.min,*,WIC*):")
+        self.fileExt = wx.TextCtrl(self, value=self.extension,size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Load',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        elemlist = ['self.startdateLabel, noOptions',
+                  '(0,0), noOptions',
+                 'self.startDatePicker, expandOption',
+                 'self.startTimePicker, expandOption',
+                 'self.enddateLabel, noOptions',
+                 '(0,0), noOptions',
+                 'self.endDatePicker, expandOption',
+                 'self.endTimePicker, expandOption',
+                 'self.extLabel, noOptions',
+                 'self.fileExt, expandOption',
+                 '(0,0), noOptions',
+                 '(0,0), noOptions',
+                 'self.okButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.closeButton, dict(flag=wx.ALIGN_CENTER)']
+
+        # Add the controls to the sizers:
+        for elem in elemlist:
+            control = elem.split(', ')[0]
+            options = elem.split(', ')[1]
+            gridSizer.Add(eval(control), **eval(options))
 
         for control, options in \
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:
@@ -1264,4 +1346,124 @@ class DISetParameterDialog(wx.Dialog):
 
     def OnClose(self, e):
         self.Destroy()
+
+
+
+# ###################################################
+#    Monitor page
+# ###################################################
+
+
+class AGetMARCOSDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select table for MARCOS monitoring
+    """
+
+    def __init__(self, parent, title, datalst):
+        super(AGetMARCOSDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.datalst = datalst
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.dataLabel = wx.StaticText(self, label="Data tables:")
+        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
+            style=wx.CB_DROPDOWN, value=self.datalst[0])
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.dataLabel, noOptions),
+                 (self.dataComboBox, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+class BGetMARCOSDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select table parameters for MARCOS monitoring
+    """
+
+    def __init__(self, parent, title, datalst):
+        super(BGetMARCOSDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.datalst = datalst
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.dataLabel = wx.StaticText(self, label="Data tables:")
+        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
+            style=wx.CB_DROPDOWN, value=self.datalst[0])
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.dataLabel, noOptions),
+                 (self.dataComboBox, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
 

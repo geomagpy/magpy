@@ -1627,10 +1627,10 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         loggerplot.info("plotSatMag - Plot completed.")
 
 
-def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False,
-        outfile=None, fmt=None, axes=None, dbscale=False,
-        samp_rate_multiplicator=None,mult=8.0, cmap=None,zorder=None,
-        plottitle=None, show=True, sphinx=False, clip=[0.0, 1.0], **kwargs):
+def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
+             window=mlab.window_hanning, noverlap=900,
+             cmap=cm.Accent, xextent=None, pad_to=None, sides='default',
+             scale_by_freq=None, minfreq = None, maxfreq = None, plottitle=False, **kwargs):
     """
     DEFINITION:
         Creates a spectrogram plot of selected keys.
@@ -1669,8 +1669,8 @@ def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False,
         >>>
     """
 
-    if not samp_rate_multiplicator:
-        samp_rate_multiplicator = 24*3600
+    #if not samp_rate_multiplicator:
+    samp_rate_multiplicator = 24*3600
 
     t = stream._get_column('time')
 
@@ -1683,182 +1683,21 @@ def plotSpectrogram(stream, keys, per_lap=0.9, wlen=None, log=False,
         val = maskNAN(val)
         dt = stream.get_sampling_period()*(samp_rate_multiplicator)
         Fs = float(1.0/dt)
-        obspySpectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log,
-                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale,
-                    mult=mult, cmap=cmap, zorder=zorder, title=plottitle, show=show,
-                    sphinx=sphinx, clip=clip)
+        ax1=subplot(211)
+        plt.plot_date(t,val,'-')
+        ax1.set_ylabel('{} [{}]'.format(stream.header.get('col-'+key,''),stream.header.get('unit-col-'+key,'')))
+        ax1.set_xlabel('Time (UTC)')
+        ax2=subplot(212)
+        ax2.set_yscale('log')
+        NFFT = 1024
+        Pxx, freqs, bins, im = magpySpecgram(val, NFFT=NFFT, Fs=Fs, noverlap=noverlap, 
+                                cmap=cmap, minfreq = 0.0001, maxfreq = 3)
 
+        plt.show()
 
-def obspySpectrogram(data, samp_rate, per_lap=0.9, wlen=None, log=False,
-        outfile=None, fmt=None, axes=None, dbscale=False,
-        mult=8.0, cmap=None, zorder=None, title=None, show=True,
-        sphinx=False, clip=[0.0, 1.0]):
     """
-        Function taken from ObsPy
-        Computes and plots spectrogram of the input data.
-        :param data: Input data
-        :type samp_rate: float
-        :param samp_rate: Samplerate in Hz
-        :type per_lap: float
-        :param per_lap: Percentage of overlap of sliding window, ranging from 0
-            to 1. High overlaps take a long time to compute.
-        :type wlen: int or float
-        :param wlen: Window length for fft in seconds. If this parameter is too
-            small, the calculation will take forever.
-        :type log: bool
-        :param log: Logarithmic frequency axis if True, linear frequency axis
-            otherwise.
-        :type outfile: String
-        :param outfile: String for the filename of output file, if None
-            interactive plotting is activated.
-        :type fmt: String
-        :param fmt: Format of image to save
-        :type axes: :class:`matplotlib.axes.Axes`
-        :param axes: Plot into given axes, this deactivates the fmt and
-            outfile option.
-        :type dbscale: bool
-        :param dbscale: If True 10 * log10 of color values is taken, if False the
-            sqrt is taken.
-        :type mult: float
-        :param mult: Pad zeros to lengh mult * wlen. This will make the spectrogram
-            smoother. Available for matplotlib > 0.99.0.
-        :type cmap: :class:`matplotlib.colors.Colormap`
-        :param cmap: Specify a custom colormap instance
-        :type zorder: float
-        :param zorder: Specify the zorder of the plot. Only of importance if other
-            plots in the same axes are executed.
-        :type title: String
-        :param title: Set the plot title
-        :type show: bool
-        :param show: Do not call `plt.show()` at end of routine. That way, further
-            modifications can be done to the figure before showing it.
-        :type sphinx: bool
-        :param sphinx: Internal flag used for API doc generation, default False
-        :type clip: [float, float]
-        :param clip: adjust colormap to clip at lower and/or upper end. The given
-            percentages of the amplitude range (linear or logarithmic depending
-            on option `dbscale`) are clipped.
-    """
-
-    # enforce float for samp_rate
-    samp_rate = float(samp_rate)
-
-    # set wlen from samp_rate if not specified otherwise
-    if not wlen:
-        wlen = samp_rate / 100.
-
-    npts = len(data)
-
-    # nfft needs to be an integer, otherwise a deprecation will be raised
-    #XXX add condition for too many windows => calculation takes for ever
-    nfft = int(nearestPow2(wlen * samp_rate))
-
-    if nfft > npts:
-        print(npts)
-        nfft = int(nearestPow2(npts / 8.0))
-
-    if mult != None:
-        mult = int(nearestPow2(mult))
-        mult = mult * nfft
-
-    nlap = int(nfft * float(per_lap))
-
-    data = data - data.mean()
-    end = npts / samp_rate
-
-    # Here we call not plt.specgram as this already produces a plot
-    # matplotlib.mlab.specgram should be faster as it computes only the
-    # arrays
-    # XXX mlab.specgram uses fft, would be better and faster use rfft
-
-    if MATPLOTLIB_VERSION >= [0, 99, 0]:
-        print("1", nfft, nlap)
-        # TODO: ERROR IS IN HERE
-        #nfft = 256
-        #nlap = 128
-        # Default values don't help...
-        specgram, freq, time = mlab.specgram(data, Fs=samp_rate,
-                                                    NFFT=nfft, noverlap=nlap)
-        print("2")
-    else:
-        specgram, freq, time = mlab.specgram(data, Fs=samp_rate,
-                                                    NFFT=nfft, noverlap=nlap)
-
-    # db scale and remove zero/offset for amplitude
-    if dbscale:
-        specgram = 10 * np.log10(specgram[1:, :])
-    else:
-        specgram = np.sqrt(specgram[1:, :])
-
-    freq = freq[1:]
-
-    vmin, vmax = clip
-
-    if vmin < 0 or vmax > 1 or vmin >= vmax:
-        msg = "Invalid parameters for clip option."
-        raise ValueError(msg)
-
-    _range = float(specgram.max() - specgram.min())
-    vmin = specgram.min() + vmin * _range
-    vmax = specgram.min() + vmax * _range
-    norm = Normalize(vmin, vmax, clip=True)
-
-    if not axes:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    else:
-        ax = axes
-
-    # calculate half bin width
-    halfbin_time = (time[1] - time[0]) / 2.0
-    halfbin_freq = (freq[1] - freq[0]) / 2.0
-
-    if log:
-        # pcolor expects one bin more at the right end
-        freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
-        time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
-        # center bin
-        time -= halfbin_time
-        freq -= halfbin_freq
-        # pcolormesh issue was fixed in matplotlib r5716 (2008-07-07)
-        # inbetween tags 0.98.2 and 0.98.3
-        # see:
-        #  - http://matplotlib.svn.sourceforge.net/viewvc/...
-        #    matplotlib?revision=5716&view=revision
-        #  - http://matplotlib.sourceforge.net/_static/CHANGELOG
-
-        if MATPLOTLIB_VERSION >= [0, 98, 3]:
-            # Log scaling for frequency values (y-axis)
-            ax.set_yscale('log')
-            # Plot times
-            ax.pcolormesh(time, freq, specgram, cmap=cmap, zorder=zorder,
-                              norm=norm)
-        else:
-            X, Y = np.meshgrid(time, freq)
-            ax.pcolor(X, Y, specgram, cmap=cmap, zorder=zorder, norm=norm)
-            ax.semilogy()
-    else:
-        # this method is much much faster!
-        specgram = np.flipud(specgram)
-        # center bin
-        extent = (time[0] - halfbin_time, time[-1] + halfbin_time,
-                  freq[0] - halfbin_freq, freq[-1] + halfbin_freq)
-        ax.imshow(specgram, interpolation="nearest", extent=extent,
-                  cmap=cmap, zorder=zorder)
-
-    # set correct way of axis, whitespace before and after with window
-    # length
-    ax.axis('tight')
-    ax.set_xlim(0, end)
-    ax.grid(False)
-
     if axes:
         return ax
-
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('Frequency [Hz]')
-    if title:
-        ax.set_title(title)
 
     if not sphinx:
         # ignoring all NumPy warnings during plot
@@ -1876,6 +1715,116 @@ def obspySpectrogram(data, samp_rate, per_lap=0.9, wlen=None, log=False,
         plt.show()
     else:
         return fig
+    """
+
+
+def magpySpecgram(x, NFFT=256, Fs=2, Fc=0, detrend=mlab.detrend_none,
+             window=mlab.window_hanning, noverlap=128,
+             cmap=None, xextent=None, pad_to=None, sides='default',
+             scale_by_freq=None, minfreq = None, maxfreq = None, title=False, **kwargs):
+    """
+    DESCRIPTION
+        Compute a spectrogram of data in *x*.  Data are split into
+        *NFFT* length segments and the PSD of each section is
+        computed.  The windowing function *window* is applied to each
+        segment, and the amount of overlap of each segment is
+        specified with *noverlap*.
+        Taken from http://stackoverflow.com/questions/19468923/cutting-of-unused-frequencies-in-specgram-matplotlib
+
+    APPLICATION:
+      specgram(x, NFFT=256, Fs=2, Fc=0, detrend=mlab.detrend_none,
+               window=mlab.window_hanning, noverlap=128,
+               cmap=None, xextent=None, pad_to=None, sides='default',
+               scale_by_freq=None, minfreq = None, maxfreq = None, **kwargs)
+    VARIABLE:
+    %(PSD)s
+
+      *Fc*: integer
+        The center frequency of *x* (defaults to 0), which offsets
+        the y extents of the plot to reflect the frequency range used
+        when a signal is acquired and then filtered and downsampled to
+        baseband.
+
+      *cmap*:
+        A :class:`matplotlib.cm.Colormap` instance; if *None* use
+        default determined by rc
+
+      *xextent*:
+        The image extent along the x-axis. xextent = (xmin,xmax)
+        The default is (0,max(bins)), where bins is the return
+        value from :func:`mlab.specgram`
+
+      *minfreq, maxfreq*
+        Limits y-axis. Both required
+
+      *kwargs*:
+
+        Additional kwargs are passed on to imshow which makes the
+        specgram image
+
+      RETURNS:
+          Return value is (*Pxx*, *freqs*, *bins*, *im*):
+
+          - *bins* are the time points the spectrogram is calculated over
+          - *freqs* is an array of frequencies
+          - *Pxx* is a len(times) x len(freqs) array of power
+          - *im* is a :class:`matplotlib.image.AxesImage` instance
+
+
+    Note: If *x* is real (i.e. non-complex), only the positive
+    spectrum is shown.  If *x* is complex, both positive and
+    negative parts of the spectrum are shown.  This can be
+    overridden using the *sides* keyword argument.
+
+    **Example:**
+
+    .. plot:: mpl_examples/pylab_examples/specgram_demo.py
+
+    """
+
+    #####################################
+    # modified  axes.specgram() to limit
+    # the frequencies plotted
+    #####################################
+
+    # this will fail if there isn't a current axis in the global scope
+    end = len(x) / Fs
+
+    x = x - mean(x)
+
+    ax = gca()
+    Pxx, freqs, bins = mlab.specgram(x, NFFT, Fs, detrend,
+         window, noverlap, pad_to, sides, scale_by_freq)
+
+    # modified here
+    #####################################
+    if minfreq is not None and maxfreq is not None:
+        Pxx = Pxx[(freqs >= minfreq) & (freqs <= maxfreq)]
+        freqs = freqs[(freqs >= minfreq) & (freqs <= maxfreq)]
+    #####################################
+
+    Z = 10. * np.log10(Pxx)
+    Z = np.flipud(Z)
+
+    if xextent is None: xextent = 0, np.amax(bins)
+    xmin, xmax = xextent
+    freqs += Fc
+    extent = xmin, xmax, freqs[0], freqs[-1]
+    im = ax.imshow(Z, cmap, extent=extent, **kwargs)
+    ax.axis('auto')
+
+    # set correct way of axis, whitespace before and after with window
+    # length
+    ax.axis('tight')
+    ax.set_xlim(0, end)
+    ax.grid(False)
+
+    ax.set_xlabel('Time [s]')
+    ax.set_ylabel('Frequency [Hz]')
+    if title:
+        ax.set_title(title)
+
+    return Pxx, freqs, bins, im
 
 
 def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],

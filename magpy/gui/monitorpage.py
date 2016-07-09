@@ -22,7 +22,7 @@ import multiprocessing
 
 
 
-class PortCommunicationPage(wx.Panel):
+class MonitorPage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         self.createControls()
@@ -30,24 +30,46 @@ class PortCommunicationPage(wx.Panel):
 
     # Widgets
     def createControls(self):
-        self.selectPortButton = wx.Button(self,-1,"Select MARTAS")
-        self.portnameTextCtrl = wx.TextCtrl(self, value="coming soon")
-        self.portnameTextCtrl.Disable()
-        self.sliderLabel = wx.StaticText(self, label="Update frequency:")
-        self.frequSlider = wx.Slider(self, -1, 10, 1, 20, (-1, -1), (100, -1),
+        # all buttons open dlg to add parameters (e.g. IP, 
+        self.getMARTASButton = wx.Button(self,-1,"Connect to MARTAS", size=(160,30))
+        self.getMARCOSButton = wx.Button(self,-1,"Connect to MARCOS", size=(160,30))
+        self.getSEEDButton = wx.Button(self,-1,"Connect to miniSeed", size=(160,30))
+        self.martasLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
+        self.marcosLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
+        self.seedLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
+        self.marcosLabel.SetEditable(False)
+        self.martasLabel.SetEditable(False)
+        self.seedLabel.SetEditable(False)
+        # Parameters if connection is established
+        # 
+        self.coverageLabel = wx.StaticText(self, label="Plot coverage (sec):", size=(160,30))
+        self.coverageTextCtrl = wx.TextCtrl(self, value="600", size=(160,30))
+
+        self.sliderLabel = wx.StaticText(self, label="Update period (sec):", size=(160,30))
+        self.frequSlider = wx.Slider(self, -1, 10, 1, 60, (-1, -1), (100, -1),
                 wx.SL_AUTOTICKS | wx.SL_HORIZONTAL | wx.SL_LABELS)
-        self.startMonitorButton = wx.Button(self,-1,"Start Monitor")
-        self.stopMonitorButton = wx.Button(self,-1,"Stop Monitor")
-        self.startMonitorButton.Disable()
-        self.stopMonitorButton.Disable()
+
+        self.startMonitorButton = wx.Button(self,-1,"Start Monitor", size=(160,30))  # if started then everything else will be disabled ..... except save monitor
+        self.stopMonitorButton = wx.Button(self,-1,"Stop Monitor", size=(160,30))
+
+        self.saveMonitorButton = wx.Button(self,-1,"Log data", size=(160,30))  # produces a bin file
+        #self.startMonitorButton.Disable()
+        #self.stopMonitorButton.Disable()
+        # Connection Log
+        # 
+        self.connectionLogLabel = wx.StaticText(self, label="Connection Log:")
+        self.connectionLogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,300),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        
 
 
     def doLayout(self):
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=20, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -56,15 +78,23 @@ class PortCommunicationPage(wx.Panel):
 
         # Add the controls to the sizers:
         for control, options in \
-                [(self.selectPortButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.portnameTextCtrl, expandOption),
+                [(self.getMARTASButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.martasLabel, noOptions),
+                 (self.getMARCOSButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.marcosLabel, noOptions),
+                 (self.getSEEDButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.seedLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                 (self.coverageLabel, noOptions),
+                 (self.coverageTextCtrl, expandOption),
                  (self.sliderLabel, noOptions),
-                 (self.frequSlider, noOptions),
+                 (self.frequSlider, expandOption),
                   emptySpace,
                   emptySpace,
                  (self.startMonitorButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.stopMonitorButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+                 (self.saveMonitorButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace]:
             gridSizer.Add(control, **options)
 
@@ -72,7 +102,19 @@ class PortCommunicationPage(wx.Panel):
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:
             boxSizer.Add(control, **options)
 
-        self.SetSizerAndFit(boxSizer)
+        #self.SetSizerAndFit(boxSizer)
+
+        mainSizer.Add(boxSizer, 1, wx.EXPAND)
+
+        mainSizer.Add(self.connectionLogLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+        mainSizer.Add(self.connectionLogTextCtrl, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+        self.SetSizerAndFit(mainSizer)
+
+    def logMsg(self, message):
+        ''' Private method to append a string to the logger text
+            control. '''
+        #print message
+        self.connectionLogTextCtrl.AppendText('%s\n'%message)
 
     def collector(self):
         """

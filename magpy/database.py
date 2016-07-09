@@ -1236,6 +1236,8 @@ def dbselect(db, element, table, condition=None, expert=None):
     except:
         pass
 
+    db.commit()
+    cursor.close()
     return returnlist
 
 

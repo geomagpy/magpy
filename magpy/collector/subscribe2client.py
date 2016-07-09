@@ -25,18 +25,10 @@ TODO:
 secondary time column in POS1 file was added manually to data base - not available in bin file - please check that
 """
 
-
-try:
-    import magpy.stream as st
-    from magpy.database import stream2db
-    from magpy.opt import cred as mpcred
-    from magpy.transfer import scptransfer
-except:
-    sys.path.append('/home/leon/Software/magpy/trunk/src')
-    import stream as st
-    from magpy.database import stream2db
-    from magpy.opt import cred as mpcred
-    from magpy.transfer import scptransfer
+import magpy.stream as st
+from magpy.database import stream2db
+from magpy.opt import cred as mpcred
+from magpy.transfer import scptransfer
 
 clientname = 'default'
 s = []

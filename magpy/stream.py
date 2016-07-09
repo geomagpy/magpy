@@ -3263,6 +3263,9 @@ CALLED BY:
             in the begining and end part of the output signal.
             This function is approximately twice as fast as the previous version.
             Difference: Gaps of the stream a filled by time steps with NaNs in the data columns
+            By default missing values are interpolated if more than 90 percent of data is present
+            within the window range. This is used to comply with INTERMAGNET rules. Set option
+            conservative to False to avoid this.
 
         PARAMETERS:
         Kwargs:
@@ -3274,6 +3277,7 @@ CALLED BY:
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:     (timedelta) window width of the filter
             - noresample:       (bool) if True the data set is resampled at filter_width positions
+            - conservative:     (bool) if True than no interpolation is performed
             - autofill:         (list) of keys: provide a keylist for which nan values are linearly interpolated before filtering - use with care, might be useful if you have low resolution parameters asociated with main values like (humidity etc)
             - resampleoffset:   (timedelta) if provided the offset will be added to resamples starttime
             - resamplemode:     (string) if 'fast' then fast resampling is used
@@ -3324,6 +3328,7 @@ CALLED BY:
         dontfillgaps = kwargs.get('dontfillgaps')
         fillgaps = kwargs.get('fillgaps')
         debugmode = kwargs.get('debugmode')
+        conservative =  kwargs.get('conservative')
 
         if not keys:
             keys = self._get_key_headers(numerical=True)
@@ -3442,6 +3447,20 @@ CALLED BY:
             #if key in NUMKEYLIST:
             #    nanarray[keyindex] = np.logical_not(np.isnan(v.astype(float)))
 
+            # INTERMAGNET 90 percent rule: interpolate missing values if less than 10 percent are missing
+            if not conservative:
+                try:
+                    spli = np.split(v.astype(float),int(len(v)/window_len))
+                    newar = np.array([])
+                    for ar in spli:
+                        nans, x= nan_helper(ar)
+                        if len(ar[~nans]) >= 0.9*len(ar):
+                            ar[nans]= interp(x(nans), x(~nans), ar[~nans])
+                        newar = np.concatenate((newar,ar))
+                    v = newar
+                except:
+                    print ("Filter: could not split stream in equal parts for interpolation - switching to conservative mode")
+
             if key in autofill:
                 loggerstream.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
                 loggerstream.warning("Filter: I guess you know what you are doing...")
@@ -3468,7 +3487,7 @@ CALLED BY:
                 elif filter_type == 'wiener':
                     res = signal.wiener(v, window_len, noise=0.5)
                 elif filter_type == 'butterworth':
-                    dt = 800/float(len(v))
+                    dt = 800./float(len(v))
                     nyf = 0.5/dt
                     b, a = signal.butter(4, 1.5/nyf)
                     res = signal.filtfilt(b, a, v)
@@ -3476,8 +3495,9 @@ CALLED BY:
                     res = UnivariateSpline(t, v, s=240)
                 elif filter_type == 'flat':
                     w=np.ones(window_len,'d')
-                    y=np.convolve(w/w.sum(),s,mode='valid')
-                    res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
+                    s = np.ma.masked_invalid(s)
+                    y=np.convolve(w/w.sum(),s,mode='valid') #'valid')
+                    res = y[(int(window_len/2)-1):(len(v)+int(window_len/2)-1)]
                 else:
                     w = eval('signal.'+filter_type+'(window_len)')
                     y=np.convolve(w/w.sum(),s,mode='valid')
@@ -3496,6 +3516,8 @@ CALLED BY:
 
         #print "End length:", self.length()
         #print self.ndarray
+        #shortdata = self._select_timerange(starttime="2015-01-01 01:00:00",endtime="2015-01-01 02:00:00")
+        #print ("data after filter", shortdata, len(shortdata[0]))
 
         #print nanarray
 

@@ -29,8 +29,6 @@ class StreamPage(wx.Panel):
         self.lineLabel2 = wx.StaticText(self, label="  ")
         self.lineLabel3 = wx.StaticText(self, label="  ")
         self.lineLabel4 = wx.StaticText(self, label="  ")
-        self.lineLabel5 = wx.StaticText(self, label="__________________")
-        self.lineLabel6 = wx.StaticText(self, label="__________________")
         self.pathLabel = wx.StaticText(self, label="Path/Source:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
         self.fileLabel = wx.StaticText(self, label="File/Table:")
@@ -44,7 +42,6 @@ class StreamPage(wx.Panel):
         self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
         self.trimStreamButton = wx.Button(self,-1,"Trim timerange",size=(160,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
-        self.addOptionsLabel = wx.StaticText(self, label="Additional options:")
         self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(160,30))
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(160,30))
@@ -125,10 +122,6 @@ class StreamPage(wx.Panel):
                  'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
-                 '(0,0), noOptions',
-                 'self.lineLabel5, noOptions',
-                 'self.lineLabel6, noOptions',
-                 'self.addOptionsLabel, noOptions',
                  '(0,0), noOptions']
 
 

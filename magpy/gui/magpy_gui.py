@@ -27,11 +27,19 @@ from magpy.gui.streampage import *
 from magpy.gui.metapage import *
 from magpy.gui.dialogclasses import *
 from magpy.gui.absolutespage import *
-from magpy.gui.developpage import *
+from magpy.gui.reportpage import *
+from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
-
+from magpy.gui.monitorpage import *
+#try:
+#    from magpy.collector import subscribe2client as msubs
+#except:
+#    print ("MARTAS and LogFile options not available - check dependencies")
 import glob, os, pickle, base64
 import pylab
+import thread, time
+import threading
+
 
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
@@ -41,9 +49,9 @@ def loadobj(filename):
     with open(filename, 'rb') as f:
         return pickle.load(f)
 
-def pydate2wxdate(date):
-     assert isinstance(date, (datetime, datetime.date))
-     tt = date.timetuple()
+def pydate2wxdate(datum):
+     assert isinstance(datum, (datetime, datetime.date))
+     tt = datum.timetuple()
      dmy = (tt[2], tt[1]-1, tt[0])
      return wx.DateTimeFromDMY(*dmy)
  
@@ -164,6 +172,9 @@ class PlotPanel(wx.Panel):
         self.plt = plt
         scsetmp = ScreenSelections()
         self.canvas = FigureCanvas(self,-1,self.figure)
+        self.datavars = {} # for monitoring
+        self.array = [[] for key in KEYLIST] # for monitoring
+        self.t1_stop= threading.Event()
         self.initialPlot()
         self.__do_layout()
 
@@ -175,6 +186,181 @@ class PlotPanel(wx.Panel):
         self.vbox.Add(self.toolbar, 0, wx.EXPAND)
         self.SetSizer(self.vbox)
         self.vbox.Fit(self)
+
+
+    def timer(self, arg1, stop_event):
+        while(not stop_event.is_set()):
+            self.update(self.array)
+            print ("Running ...")
+            stop_event.wait(self.datavars[7])
+            pass
+
+
+    def update(self,array):
+        """
+        DESCRIPTION
+            Update array with new data and plot it.
+            If log file is chosen the this method makes use of collector.subscribe method:
+            storeData to save binary file
+        """
+        def list_duplicates(seq):
+            seen = set()
+            seen_add = seen.add
+            return [idx for idx,item in enumerate(seq) if item in seen or seen_add(item)]
+
+        db = self.datavars[8]
+        parameterstring = 'time,'+self.datavars[1]
+        # li should contain a data source of a certain length (can be filled by any reading process)
+        li = sorted(dbselect(db, parameterstring, self.datavars[0], expert='ORDER BY time DESC LIMIT {}'.format(int(self.datavars[2]))))
+        tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S.%f") for elem in li]
+        self.array[0].extend(tmpdt)
+        for idx,para in enumerate(parameterstring.split(',')):
+            if not para.endswith('time'):
+                i = KEYLIST.index(para)
+                self.array[i].extend([float(elem[idx]) for elem in li])
+
+        duplicateindicies = list_duplicates(self.array[0])
+        array = [[] for key in KEYLIST]
+        for idx, elem in enumerate(self.array):
+            if len(elem) > 0:
+                newelem = np.delete(np.asarray(elem), duplicateindicies)
+                array[idx] = list(newelem)
+
+        coverage = int(self.datavars[6])
+
+        array = [ar[-coverage:] if len(ar) > coverage else ar for ar in array ]
+
+        self.monitorPlot(array)
+
+        #if Log2File:
+        #    msubs.output = 'file'
+        #    #sensorid = row[0]
+        #    #module = row[1]
+        #    #line = row[2]
+        #    #msubs.storeData(li,parameterstring.split(','))
+
+
+
+    def startMARCOSMonitor(self,**kwargs):
+        """
+        DEFINITION:
+            embbed matplotlib figure in canvas for mointoring
+
+        PARAMETERS:
+            kwargs:  - all plot args
+        """
+
+        dataid = self.datavars[0]
+        parameter = self.datavars[1]
+        period = self.datavars[2]
+        pad = self.datavars[3]
+        currentdate = self.datavars[4]
+        unitlist = self.datavars[5]
+        coverage = self.datavars[6]  # coverage
+        updatetime = self.datavars[7]
+        db = self.datavars[8]
+
+        # convert parameter list to a dbselect sql format
+        parameterstring = 'time,'+parameter
+        # Test whether data is available at all with selected keys and dataid
+        li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
+        if not len(li) > 0:
+            print("Did not find any data to display - aborting")
+            return
+        else:
+            valkeys = ['time']
+            valkeys = parameterstring.split(',')
+            for i,elem in enumerate(valkeys):
+                idx = KEYLIST.index(elem)
+                if elem == 'time':
+                    self.array[idx] = [datetime.strptime(el[i], "%Y-%m-%d %H:%M:%S.%f") for el in li]
+                else:
+                    self.array[idx] = [float(el[i]) for el in li]
+
+        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
+
+        self.figure.clear()
+        t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
+        t1.start()
+        # Display the plot
+        self.canvas.draw()
+
+    def monitorPlot(self,array,**kwargs):
+        """
+        DEFINITION:
+            embbed matplotlib figure in canvas for mointoring
+
+        PARAMETERS:
+            kwargs:  - all plot args
+        """
+
+        # Read persistent data variables
+        dataid = self.datavars[0]
+        parameter = self.datavars[1]
+        period = self.datavars[2]
+        pad = self.datavars[3]
+        currentdate = self.datavars[4]
+        unitlist = self.datavars[5]
+        coverage = self.datavars[6]  # coverage
+        updatetime = self.datavars[7]
+        db = self.datavars[8]
+
+        # convert parameter list to a dbselect sql format
+        parameterstring = 'time,'+parameter
+
+        self.figure.clear()
+        try:
+            self.axes.clear()
+        except:
+            pass
+        dt = array[0]
+        self.figure.suptitle("Live Data of %s - %s" % (dataid, currentdate))
+        for idx,para in enumerate(parameterstring.split(',')):
+            if not para.endswith('time'):
+                i = KEYLIST.index(para)
+                subind = int("{}1{}".format(len(parameterstring.split(','))-1,idx))
+                #print subind
+                self.axes = self.figure.add_subplot(subind)
+                self.axes.grid(True)
+                rd = array[i]
+                l, = self.axes.plot_date(dt,rd,'b-')
+                #l, = a.plot_date(dt,td,'g-')
+                plt.xlabel("Time")
+                plt.ylabel(r'%s [%s]' % (unitlist[idx-1][0],unitlist[idx-1][1]))
+
+                # Get the minimum and maximum temperatures these are
+                # used for annotations and scaling the plot of data
+                min_val = np.min(rd)
+                max_val = np.max(rd)
+   
+                # Add annotations for minimum and maximum temperatures
+                self.axes.annotate(r'Min: %0.1f' % (min_val),
+                    xy=(dt[rd.index(min_val)], min_val),
+                    xycoords='data', xytext=(20, -20),
+                    textcoords='offset points',
+                    bbox=dict(boxstyle="round", fc="0.8"),
+                    arrowprops=dict(arrowstyle="->",
+                    shrinkA=0, shrinkB=1,
+                    connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+
+                self.axes.annotate(r'Max: %0.1f' % (max_val),
+                    xy=(dt[rd.index(max_val)], max_val),
+                    xycoords='data', xytext=(20, 20),
+                    textcoords='offset points',
+                    bbox=dict(boxstyle="round", fc="0.8"),
+                    arrowprops=dict(arrowstyle="->",
+                    shrinkA=0, shrinkB=1,
+                    connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+
+        # Set the axis limits to make the data more readable
+        #self.axes.axis([0,len(temps), min_t - pad,max_t + pad])
+   
+        self.figure.canvas.draw_idle()
+   
+        # Repack variables that need to be persistent between
+        # executions of this method
+        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
+
 
     def guiPlot(self,stream,keys,**kwargs):
         """
@@ -325,7 +511,7 @@ class MenuPanel(wx.Panel):
         self.ana_page = AnalysisPage(nb)
         self.abs_page = AbsolutePage(nb)
         self.rep_page = ReportPage(nb)
-        self.com_page = PortCommunicationPage(nb)
+        self.com_page = MonitorPage(nb)
         nb.AddPage(self.str_page, "Stream")
         nb.AddPage(self.met_page, "Meta")
         nb.AddPage(self.ana_page, "Analysis")
@@ -506,13 +692,21 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
         self.Bind(wx.EVT_BUTTON, self.onDISetParameter, self.menu_p.abs_page.advancedButton)
-
-        #self.Bind(wx.EVT_CUSTOM_NAME, self.addMsg)
-        # Put something on Report page
+        #        Report Page
+        # --------------------------
+        self.Bind(wx.EVT_BUTTON, self.onSaveLogButton, self.menu_p.rep_page.saveLoggerButton)
         self.menu_p.rep_page.logMsg('Begin logging...')
         # Eventually kill this redirection because it might cause problems from other classes
         #redir=RedirectText(self.menu_p.rep_page.logMsg) # Start redirecting stdout to log window
         #sys.stdout=redir
+        #        Monitor Page
+        # --------------------------
+        self.Bind(wx.EVT_BUTTON, self.onConnectMARCOSButton, self.menu_p.com_page.getMARCOSButton)
+        self.Bind(wx.EVT_BUTTON, self.onConnectMARTASButton, self.menu_p.com_page.getMARTASButton)
+        self.Bind(wx.EVT_BUTTON, self.onConnectSEEDButton, self.menu_p.com_page.getSEEDButton)
+        self.Bind(wx.EVT_BUTTON, self.onStartMonitorButton, self.menu_p.com_page.startMonitorButton)
+        self.Bind(wx.EVT_BUTTON, self.onStopMonitorButton, self.menu_p.com_page.stopMonitorButton)
+        self.Bind(wx.EVT_BUTTON, self.onLogDataButton, self.menu_p.com_page.saveMonitorButton)
 
         # Connect to database
         self._db_connect(self.host, self.user, self.passwd, self.dbname)
@@ -558,6 +752,8 @@ class MainFrame(wx.Frame):
         self.plottype='discontinuous'
         self.labels=False
         self.resolution=None
+        self.monitorSource=None
+
         """
         self.bartrange = 0
         self.bgcolor='white'
@@ -658,9 +854,21 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.rotationButton.Disable()      # if xyz magnetic data
 
         # Report
-        ## Add SaveButton
+        self.menu_p.rep_page.logger.Disable()              # remain disabled
 
         # Monitor
+        self.menu_p.com_page.connectionLogTextCtrl.Disable()  # remain disabled
+        self.menu_p.com_page.startMonitorButton.Disable()  # always
+        self.menu_p.com_page.stopMonitorButton.Disable()   # always
+        self.menu_p.com_page.saveMonitorButton.Disable()   # always
+        self.menu_p.com_page.coverageTextCtrl.Disable()    # always
+        self.menu_p.com_page.frequSlider.Disable()         # always
+        self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.seedLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.marcosLabel.SetValue('not connected')
+        self.menu_p.com_page.martasLabel.SetValue('not connected')
+        self.menu_p.com_page.seedLabel.SetValue('not connected')
 
     def ActivateControls(self,stream):
         """
@@ -766,8 +974,6 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
         self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
         self.menu_p.rep_page.logMsg('- found {} data points'.format(len(stream.ndarray[0])))
-        self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
-        self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
 
         self.menu_p.met_page.dataTextCtrl.SetValue(metadatatext)
         self.menu_p.met_page.sensorTextCtrl.SetValue(metasensortext)
@@ -1071,27 +1277,28 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.Close()  # Close the main window.
 
     def OnOpenDir(self, event):
+        stream = DataStream()
         dialog = wx.DirDialog(None, "Choose a directory:",self.dirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             #self.ReactivateStreamPage()
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
             self.dirname = dialog.GetPath() # modify self.dirname
             files = sorted(filelist, key=os.path.getmtime)
-            oldest = extractDateFromString(files[0])
-            #print files[0], files[-1]
+            oldest = extractDateFromString(files[0])[0]
             old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
-            newest = extractDateFromString(files[-1])
+            newest = extractDateFromString(files[-1])[0]
+            newest = newest+timedelta(days=1)
             new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
-            #print oldest, newest
             self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
             self.menu_p.str_page.fileTextCtrl.SetValue("*")
-            self.menu_p.str_page.startDatePicker.SetValue(old)
-            self.menu_p.str_page.startTimePicker.SetValue("00:00:00")
-            self.menu_p.str_page.endDatePicker.SetValue(new)
-            self.menu_p.str_page.endTimePicker.SetValue("23:59:59")
             #self.changeStatusbar("Loading data ...")
         dialog.Destroy()
-        # TODO open another dialog with time ranges 
+
+        stream = self.openStream(path=self.dirname,mintime=old, maxtime=new, extension='*')
+
+        if self.InitialRead(stream):
+            self.ActivateControls(self.plotstream)
+            self.OnInitialPlot(self.plotstream)
 
 
     def OnOpenFile(self, event):
@@ -1117,8 +1324,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.filename = ' ,'.join(filelist)
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
-            self.menu_p.str_page.fileTextCtrl.Disable()
-            self.menu_p.str_page.pathTextCtrl.Disable()
 
         dlg.Destroy()
 
@@ -1129,19 +1334,25 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def OnOpenURL(self, event):
+        stream = DataStream()
         dlg = OpenWebAddressDialog(None, title='Open URL')
         if dlg.ShowModal() == wx.ID_OK:
-            self.ReactivateStreamPage()
+            #self.ReactivateStreamPage()
             url = dlg.urlTextCtrl.GetValue()
+            self.changeStatusbar("Loading data ...")
             if not url.endswith('/'):
-                self.changeStatusbar("Loading data ...")
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
                 self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                 stream = read(path_or_url=url)
-                if self.CheckStreamContent(stream):
-                    self.OnInitialPlot(stream)
             else:
                 self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
+                maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
+                stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
+
+        if self.InitialRead(stream):
+            self.ActivateControls(self.plotstream)
+            self.OnInitialPlot(self.plotstream)
 
         self.changeStatusbar("Ready")
         dlg.Destroy()
@@ -1152,6 +1363,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # b) disable pathTextCtrl (DB: dbname)
         # c) Open dialog which lets the user select list and time window
         # d) update stream menu
+        stream = DataStream()
         if self.db:
             self.menu_p.rep_page.logMsg('- Accessing database ...')
             cursor = self.db.cursor()
@@ -1172,20 +1384,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 stream = DataStream()
                 mintime = stream._testtime([elem[1] for elem in output if elem[0] == datainfoid][0])
                 lastupload = stream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
-                maxtime = stream._testtime(datetime.strftime(lastupload,'%Y-%m-%d')+' 23:59:59')
-                #maxtime = stream._testtime(datetime.strftime(datetime.utcnow(),'%Y-%m-%d')+' 23:59:59')
-                #maxtime = datestream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
-                self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mintime.timetuple())))
-                self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(maxtime.timetuple())))
-                self.menu_p.str_page.startTimePicker.SetValue(mintime.strftime('%X'))
-                self.menu_p.str_page.endTimePicker.SetValue(maxtime.strftime('%X'))
+                maxtime = stream._testtime(datetime.strftime(lastupload,'%Y-%m-%d'))+timedelta(days=1)
                 self.menu_p.str_page.pathTextCtrl.SetValue('MySQL Database')
                 self.menu_p.str_page.fileTextCtrl.SetValue(datainfoid)
-                self.menu_p.str_page.startDatePicker.Enable()
-                self.menu_p.str_page.endDatePicker.Enable()
-                self.menu_p.str_page.startTimePicker.Enable()
-                self.menu_p.str_page.endTimePicker.Enable()
-                self.menu_p.str_page.openStreamButton.Enable()
             dlg.Destroy()
         else:
             dlg = wx.MessageDialog(self, "Could not access database!\n"
@@ -1193,6 +1394,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         "OpenDB", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
+            return
+
+        path = [self.db,datainfoid]
+        stream = self.openStream(path=path,mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
+
+        if self.InitialRead(stream):
+            self.ActivateControls(self.plotstream)
+            self.OnInitialPlot(self.plotstream)
 
 
     def OnExportData(self, event):
@@ -1612,6 +1821,41 @@ Suite 330, Boston, MA  02111-1307  USA"""
         else:
             self.changeStatusbar("Failure")
 
+
+    def openStream(self,path='',mintime=None,maxtime=None,extension=None):
+        """
+        DESCRIPTION:
+            Opens time range dialog and loads data. Returns stream.
+        USED BY:
+            OnOpenDir and OnOpenDB
+        """
+        dlg = LoadDataDialog(None, title='Select timerange:',mintime=mintime,maxtime=maxtime, extension=extension)
+        if dlg.ShowModal() == wx.ID_OK:
+            stday = dlg.startDatePicker.GetValue()
+            sttime = dlg.startTimePicker.GetValue()
+            enday = dlg.endDatePicker.GetValue()
+            entime = dlg.startTimePicker.GetValue()
+            ext = dlg.fileExt.GetValue()
+
+            sd = datetime.fromtimestamp(stday.GetTicks())
+            ed = datetime.fromtimestamp(enday.GetTicks())
+            st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
+            start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
+            et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
+            end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
+
+        if isinstance(path, basestring):
+            if not path=='':
+                self.menu_p.str_page.fileTextCtrl.SetValue(ext)
+                stream = read(path_or_url=os.path.join(path,ext), starttime=start, endtime=end)
+        else:
+            # assume Database
+            try:
+                stream = readDB(path[0],path[1], starttime=start, endtime=end)
+            except:
+                print ("Reading failed")
+
+        return stream
 
     def onOpenStreamButton(self, event):
         # TODO Remove this method
@@ -2244,6 +2488,160 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         dlg.Destroy()
 
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Report page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+
+    def onSaveLogButton(self, event):
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
+                                       "Log files (*.log)|*.log", 
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        saveFileDialog.GetPath()
+        saveFileDialog.Destroy()
+
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Monitor page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+    def onConnectMARTASButton(self, event):
+        # start a subscribe to client call
+        # continuously collect data to stream and periodically call monitor plots 
+        success = False
+        if success:
+            self.menu_p.com_page.startMonitorButton.Enable()
+            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+            self.menu_p.com_page.frequSlider.Enable()         # always
+
+
+    def onConnectMARCOSButton(self, event):
+        # active if database is connected
+        # open dlg
+        self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
+        output = dbselect(self.db,'DataID,DataMinTime,DataMaxTime','DATAINFO')
+        datainfoidlist = [elem[0] for elem in output]
+        if len(datainfoidlist) < 1:
+            dlg = wx.MessageDialog(self, "No data tables available!\n"
+                            "please check your database\n",
+                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        # select table
+        sr = 1
+        dlg = AGetMARCOSDialog(None, title='Select table',datalst=datainfoidlist)
+        if dlg.ShowModal() == wx.ID_OK:
+            datainfoid = dlg.dataComboBox.GetValue()
+            vals = dbselect(self.db, 'SensorID,DataSamplingRate,ColumnContents,ColumnUnits','DATAINFO', 'DataID = "'+datainfoid+'"')
+            vals = vals[0]
+            sensid= vals[0]
+            sr= float(vals[1].strip('sec'))
+            keys= vals[2].split(',')
+            units= vals[3].split(',')
+        else:
+            dlg.Destroy()
+            return
+        # get all parameters
+
+        pad = 5
+        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+
+        # start monitoring parameters
+        period = float(self.menu_p.com_page.frequSlider.GetValue())
+        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+        coverage = covval/sr
+        limit = period/sr
+        unitlist = []
+        for idx,key in enumerate(keys):
+           if not key == '':
+               unitlist.append([key, units[idx]])
+
+        parameter = ','.join([key for key in keys if not key==''])
+
+        self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db}
+        self.monitorSource='MARCOS'
+
+        success = True
+        if success:
+            self.menu_p.com_page.startMonitorButton.Enable()
+            self.menu_p.com_page.getMARTASButton.Disable()
+            self.menu_p.com_page.getSEEDButton.Disable()
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.dbname))
+            self.menu_p.com_page.logMsg('Begin monitoring...')
+            self.menu_p.com_page.logMsg(' - Selected MARCOS database')
+            self.menu_p.com_page.logMsg(' - Table: {}'.format(datainfoid))
+            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+            self.menu_p.com_page.frequSlider.Enable()         # always
+
+
+    def onConnectSEEDButton(self, event):
+        success = False
+        if success:
+            self.menu_p.com_page.startMonitorButton.Enable()
+            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+            self.menu_p.com_page.frequSlider.Enable()         # always
+
+
+    def onStartMonitorButton(self, event):
+        self.DeactivateAllControls()
+        self.menu_p.com_page.getMARTASButton.Disable()
+        self.menu_p.com_page.getMARCOSButton.Disable()
+        self.menu_p.com_page.getSEEDButton.Disable()
+        self.menu_p.com_page.stopMonitorButton.Enable()
+        self.menu_p.com_page.saveMonitorButton.Enable()
+
+        # start monitoring parameters
+        period = float(self.menu_p.com_page.frequSlider.GetValue())
+        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+        sr = self.plot_p.datavars[7]/self.plot_p.datavars[2]
+        coverage = covval/sr
+        limit = period/sr
+        self.plot_p.datavars[2] = limit
+        self.plot_p.datavars[6] = coverage
+        self.plot_p.datavars[7] = period
+
+        # Obtain the last values from the data base with given dataid and limit
+        # A DB query for 10 min 10Hz data needs approx 0.3 sec
+        if  self.monitorSource=='MARCOS':
+            self.plot_p.t1_stop.clear()
+            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
+            self.plot_p.startMARCOSMonitor()
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.dbname))
+
+
+    def onStopMonitorButton(self, event):
+        if  self.monitorSource=='MARCOS':
+            self.plot_p.t1_stop.set()
+            self.menu_p.com_page.logMsg(' > Read cycle stopped')
+            self.menu_p.com_page.logMsg('MARCOS disconnected')
+
+            # convert array to stream   self.plot_p.array
+        self.menu_p.com_page.stopMonitorButton.Disable()
+        self.menu_p.com_page.saveMonitorButton.Disable()
+        self.ActivateControls(DataStream())
+        self.menu_p.com_page.getMARTASButton.Enable()
+        self.menu_p.com_page.getMARCOSButton.Enable()
+        self.menu_p.com_page.getSEEDButton.Enable()
+        self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.seedLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.marcosLabel.SetValue('not connected')
+        self.menu_p.com_page.martasLabel.SetValue('not connected')
+        self.menu_p.com_page.seedLabel.SetValue('not connected')
+
+
+    def onLogDataButton(self, event):
+        # open dialog with pathname
+        # then use data_2_file method for binary writing
+        pass
 
 '''
 # To run:
