@@ -47,7 +47,9 @@ magpy/gui/magpy.png
 magpy/gui/magpy128.xpm
 magpy/gui/magpy_gui.py
 magpy/gui/magpy_gui_test.py
+magpy/gui/metapage.py
 magpy/gui/monitorpage.py
+magpy/gui/reportpage.py
 magpy/gui/streampage.py
 magpy/gui/xmagpy
 magpy/gui/xmagpy.py

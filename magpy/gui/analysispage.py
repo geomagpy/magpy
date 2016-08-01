@@ -32,24 +32,51 @@ class AnalysisPage(wx.Panel):
 
     # Widgets
     def createControls(self):
-        self.head2Label = wx.StaticText(self, label="Basic methods:")
-        self.head3Label = wx.StaticText(self, label="Filtering:")
-        # 2. Section
-        self.outlierButton = wx.Button(self,-1,"Remove outlier",size=(130,30))
-        self.outlieroptionsButton = wx.Button(self,-1,"Analysis Options",size=(130,30))
-        self.derivativeButton = wx.Button(self,-1,"Derivative",size=(130,30))
-        self.fitButton = wx.Button(self,-1,"Fit",size=(130,30))
-        self.offsetButton = wx.Button(self,-1,"Offsets",size=(130,30))
-        self.rotationButton = wx.Button(self,-1,"Rotation",size=(130,30))
-        self.activityButton = wx.Button(self,-1,"Activity",size=(130,30))
+        # TODO Methods:
+        # filter, derivative, offset, fit, baseline, k_fmi, get_min, get_max, mean, delta_f, rotation, spectrogam, powerspec, smooth
+
+        self.head1Label = wx.StaticText(self, label="Basic methods:")
+        # derivative, fit, rotation
+        self.head2Label = wx.StaticText(self, label="Get values:")
+        # mean, max, min
+        self.head3Label = wx.StaticText(self, label="Manipulation:")
+        # filter, smooth, offset
+        self.head4Label = wx.StaticText(self, label="Geomagnetic methods:")
+        # baseline, k_fmi, delta_f
+        self.head5Label = wx.StaticText(self, label="Multiple streams:")
+        # merge, subtract, stack
+
+        # 1 Line
+        self.derivativeButton = wx.Button(self,-1,"Derivative",size=(160,30))
+        self.rotationButton = wx.Button(self,-1,"Rotation",size=(160,30))
+        self.fitButton = wx.Button(self,-1,"Fit",size=(160,30))
+        # 2 Line
+        self.meanButton = wx.Button(self,-1,"Mean",size=(160,30))
+        self.maxButton = wx.Button(self,-1,"Maxima",size=(160,30))
+        self.minButton = wx.Button(self,-1,"Minima",size=(160,30))
+
+        # 3 Line
+        self.offsetButton = wx.Button(self,-1,"Offsets",size=(160,30))
+        self.filterButton = wx.Button(self,-1,"Filter",size=(160,30))
+        self.smoothButton = wx.Button(self,-1,"Smooth",size=(160,30))
+
+        # 4 Line
+        self.activityButton = wx.Button(self,-1,"Activity",size=(160,30))
+        self.deltafButton = wx.Button(self,-1,"Delta F",size=(160,30))
+        self.baselineButton = wx.Button(self,-1,"Baseline",size=(160,30))
+
+        # 5 Line
+        self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
+        self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
+        self.stackButton = wx.Button(self,-1,"Stack/Average",size=(160,30))
+
         # 3. Section
-        self.selectfilterLabel = wx.StaticText(self, label="Select type:")
-        self.selectfilterComboBox = wx.ComboBox(self, choices=self.filterlist,
-            style=wx.CB_DROPDOWN, value=self.filterlist[14])
-        self.selectlengthLabel = wx.StaticText(self, label="Select length:")
-        self.selectlengthComboBox = wx.ComboBox(self, choices=self.filterlength,
-            style=wx.CB_DROPDOWN, value=self.filterlength[0])
-        self.filterButton = wx.Button(self,-1,"Filter!",size=(130,30))
+        #self.selectfilterLabel = wx.StaticText(self, label="Select type:")
+        #self.selectfilterComboBox = wx.ComboBox(self, choices=self.filterlist,
+        #    style=wx.CB_DROPDOWN, value=self.filterlist[14])
+        #self.selectlengthLabel = wx.StaticText(self, label="Select length:")
+        #self.selectlengthComboBox = wx.ComboBox(self, choices=self.filterlength,
+        #    style=wx.CB_DROPDOWN, value=self.filterlength[0])
 
 
     def doLayout(self):
@@ -64,23 +91,8 @@ class AnalysisPage(wx.Panel):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.head2Label, noOptions),
-                  emptySpace,
-                 (self.outlierButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.outlieroptionsButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.derivativeButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                 (self.fitButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                 (self.offsetButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.rotationButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+        """
                  # section 3
-                 (self.head3Label, noOptions),
-                  emptySpace,
                  (self.selectfilterLabel, noOptions),
                  (self.selectfilterComboBox, expandOption),
                  (self.selectlengthLabel, noOptions),
@@ -90,9 +102,38 @@ class AnalysisPage(wx.Panel):
                   emptySpace,
                   emptySpace,
                  # end
+        """
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.head1Label, noOptions),
                   emptySpace,
+                 (self.derivativeButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.fitButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.rotationButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
+                 (self.head2Label, noOptions),
                   emptySpace,
+                 (self.maxButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.minButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.meanButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.head3Label, noOptions),
+                  emptySpace,
+                 (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.smoothButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.offsetButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.head4Label, noOptions),
+                  emptySpace,
+                 (self.deltafButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.baselineButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.head5Label, noOptions),
+                  emptySpace,
+                 (self.mergeButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.subtractButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.stackButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace]:
             gridSizer.Add(control, **options)
 

@@ -2218,6 +2218,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                         #print(consecutives)
                         #print cnt0, indexflag, flags[0], flags[0][cnt0], flags[1][cnt0], flags[0][cnt0][indexflag]
                         if len(flags[0][cnt0]) >= indexflag:
+                          try:
                             if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
                                 ax.annotate(r'%s' % (flags[1][cnt0]),
                                         xy=(t[cnt0], y[cnt0]),
@@ -2241,6 +2242,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                                 elif flags[0][idx][indexflag] in ['4']:
                                     d_t.append(float(t[idx]))
                                     d_y.append(y[idx])
+                          except:
+                            print ("Error when marking flags - check", flags[0][cnt0], indexflag)
                         else:
                             print("Found problem in flagging information - still to be solved")
                             print("Flag at count and its index position", cnt0, indexflag)

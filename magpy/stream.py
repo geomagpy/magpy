@@ -1466,14 +1466,15 @@ CALLED BY:
         return y - func
 
 
-    def _tau(self, period):
+    def _tau(self, period, fac=0.83255461):
         """
         low pass filter with -3db point at period in sec (e.g. 120 sec)
         1. convert period from seconds to days as used in daytime
         2. return tau (in unit "day")
+        - The value of 0.83255461 is obtained for -3db (see IAGA Guide)
         """
         per = period/(3600*24)
-        return 0.83255461*per/(2*np.pi)
+        return fac*per/(2*np.pi)
 
 
     # ------------------------------------------------------------------------
@@ -3276,13 +3277,17 @@ CALLED BY:
                                 'parzen','triang','gaussian','wiener','spline','butterworth'
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:     (timedelta) window width of the filter
+            - resample_period:  (int) resampling interval in seconds (e.g. 1 for one second data)
+                                 leave blank for standard filters as it will be automatically selected
             - noresample:       (bool) if True the data set is resampled at filter_width positions
+            - missingdata:      (string) define how to deal with missing data
+                                          'conservative' (default): no filtering
+                                          'interpolate': interpolate if less than 10% are missing
+                                          'mean': use mean if less than 10% are missing'
             - conservative:     (bool) if True than no interpolation is performed
             - autofill:         (list) of keys: provide a keylist for which nan values are linearly interpolated before filtering - use with care, might be useful if you have low resolution parameters asociated with main values like (humidity etc)
             - resampleoffset:   (timedelta) if provided the offset will be added to resamples starttime
             - resamplemode:     (string) if 'fast' then fast resampling is used
-            - gaussian_factor:  (float) factor to multiply filterwidth.
-                                1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
             - testplot:         (bool) provides a plot of unfiltered and filtered data for each key if true
             - dontfillgaps:     (bool) if true, get_gaps will not be conducted - much faster but requires the absence of data gaps (including time step)
 
@@ -3317,23 +3322,39 @@ CALLED BY:
         keys = kwargs.get('keys')
         filter_type = kwargs.get('filter_type')
         filter_width = kwargs.get('filter_width')
+        resample_period = kwargs.get('resample_period')
         filter_offset = kwargs.get('filter_offset')
         noresample = kwargs.get('noresample')
         resamplemode = kwargs.get('resamplemode')
         resamplestart = kwargs.get('resamplestart')
         resampleoffset = kwargs.get('resampleoffset')
-        gaussian_factor = kwargs.get('gaussian_factor')
         testplot = kwargs.get('testplot')
         autofill = kwargs.get('autofill')
         dontfillgaps = kwargs.get('dontfillgaps')
         fillgaps = kwargs.get('fillgaps')
         debugmode = kwargs.get('debugmode')
         conservative =  kwargs.get('conservative')
+        missingdata =  kwargs.get('missingdata')
+
+        sr = self.samplingrate()
 
         if not keys:
             keys = self._get_key_headers(numerical=True)
-        if not filter_width:
-            filter_width = timedelta(minutes=1)
+        if not filter_width and not resample_period:
+            if sr < 0.2: # use 1 second filter with 0.3 Hz cut off as default
+                filter_width = timedelta(seconds=3.33333333)
+                resample_period = 1.0
+            else: # use 1 minute filter with 0.008 Hz cut off as default
+                filter_width = timedelta(minutes=2)
+                resample_period = 60.0
+        if not filter_width: # resample_period obviously provided - use nyquist
+                filter_width = timedelta(seconds=2*resample_period)
+        if not resample_period: # filter_width obviously provided... use filter_width as period
+            resample_period = filter_width.total_seconds()
+            # Fall back for old data
+            if filter_width == timedelta(seconds=1):
+                filter_width = timedelta(seconds=3.3)
+                resample_period = 1.0
         if not noresample:
             resample = True
         else:
@@ -3355,9 +3376,6 @@ CALLED BY:
             debugmode = None
         if not filter_type:
             filter_type = 'gaussian'
-        if not gaussian_factor:
-            gaussian_factor = 1.86506  # optimzed for a 45 sec window with less then 1 % outside the window
-                                       # 1.86506: is the ideal numeric values (IAGA recommended for 45 sec fit)
         if resamplestart:
             print("##############  Warning ##############")
             print("option RESAMPLESTART is not used any more. Switch to resampleoffset for modifying time steps")
@@ -3388,6 +3406,8 @@ CALLED BY:
 
         window_period = filter_width.total_seconds()
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
+        #print (si, si.seconds, window_period)
+
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
 
         if debugmode:
@@ -3396,16 +3416,17 @@ CALLED BY:
         # window_len defines the window size in data points assuming the major sampling period to be valid for the dataset
         if filter_type == 'gaussian':
             # For a gaussian fit
-            window_len = np.round(gaussian_factor*(window_period/sampling_period))
+            window_len = np.round((window_period/sampling_period))
+            #print (window_period,sampling_period,window_len)
             # Window length needs to be odd number:
             if window_len % 2 == 0:
                 window_len = window_len +1
             std = 0.83255461*window_len/(2*np.pi)
-            trangetmp = self._det_trange(gaussian_factor*window_period)*24*3600
+            trangetmp = self._det_trange(window_period)*24*3600
             if trangetmp < 1:
                 trange = np.round(trangetmp,3)
             else:
-                trange = timedelta(seconds=(self._det_trange(gaussian_factor*window_period)*24*3600)).seconds
+                trange = timedelta(seconds=(self._det_trange(window_period)*24*3600)).seconds
             if debugmode:
                 print("Window character: ", window_len, std, trange)
         else:
@@ -3448,18 +3469,16 @@ CALLED BY:
             #    nanarray[keyindex] = np.logical_not(np.isnan(v.astype(float)))
 
             # INTERMAGNET 90 percent rule: interpolate missing values if less than 10 percent are missing
-            if not conservative:
+            if not conservative or missingdata in ['interpolate','mean']:
+                fill = 'mean'
                 try:
-                    spli = np.split(v.astype(float),int(len(v)/window_len))
-                    newar = np.array([])
-                    for ar in spli:
-                        nans, x= nan_helper(ar)
-                        if len(ar[~nans]) >= 0.9*len(ar):
-                            ar[nans]= interp(x(nans), x(~nans), ar[~nans])
-                        newar = np.concatenate((newar,ar))
-                    v = newar
+                    if missingdata == 'interpolate':
+                        fill = missingdate
+                    else:
+                        fill = 'mean'
                 except:
-                    print ("Filter: could not split stream in equal parts for interpolation - switching to conservative mode")
+                    fill = 'mean'
+                v = self.missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
 
             if key in autofill:
                 loggerstream.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
@@ -3524,7 +3543,7 @@ CALLED BY:
         if resample:
             if debugmode:
                 print("Resampling: ", keys)
-            self = self.resample(keys,period=window_period,fast=resamplefast,offset=resampleoffset)
+            self = self.resample(keys,period=resample_period,fast=resamplefast,offset=resampleoffset)
             self.header['DataSamplingRate'] = str(window_period) + ' sec'
 
         # ########################
@@ -3791,6 +3810,8 @@ CALLED BY:
         - keys:         (list) List of keys to check for criteria. Default = all numerical
                             please note: for using above and below criteria only one element
                             need to be provided (e.g. ['x']
+        - text          (string) comment
+        - flagnum       (int) Flagid
         - keystoflag:   (list) List of keys to flag. Default = all numerical
         - below:        (float) flag data of key below this numerical value.
         - above:        (float) flag data of key exceeding this numerical value.
@@ -3954,6 +3975,8 @@ CALLED BY:
         if not threshold:
             threshold = 5.0
 
+        cdate = datetime.utcnow()
+        sensorid = self.header.get('SensorID','')
         flaglist = []
 
         # Position of flag in flagstring
@@ -4066,7 +4089,7 @@ CALLED BY:
                         loggerstream.info(infoline)
                         #[starttime,endtime,key,flagid,flagcomment]
                         flagtime = self.ndarray[0][elem]
-                        flaglist.append([flagtime,flagtime,key,1,commline]) # cycle through list later and combine records
+                        flaglist.append([flagtime,flagtime,key,1,commline])
                         if stdout:
                             print(infoline)
                     else:
@@ -4093,11 +4116,12 @@ CALLED BY:
             if flagtimeprev == 0:
                 startflagtime = ft
             if (ft-flagtimeprev)-0.01*srday > srday and not flagtimeprev == 0:
-                newlist.append([startflagtime,flagtimeprev,line[2],line[3],line[4]])
+                newlist.append([num2date(startflagtime),num2date(flagtimeprev),line[2],line[3],line[4],sensorid,cdate])
                 startflagtime = ft
             flagtimeprev = ft
         if len(flaglist) > 0:
-            newlist.append(flaglist[-1])
+            finalfl = [num2date(flaglist[-1][0]),num2date(flaglist[-1][1]),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
+            newlist.append(finalfl)
 
         #print("flag_outlier",newlist)
         if returnflaglist:
@@ -5941,6 +5965,43 @@ CALLED BY:
             else:
                 return float("NaN")
 
+    def missingvalue(self,v,window_len,threshold=0.9,fill='mean'):
+        """
+        DESCRIPTION
+            fills missing values either with means or interpolated values
+        PARAMETER:
+            v: 			(np.array) single column of ndarray  
+            window_len: 	(int) length of window to check threshold   
+            threshold: 	        (float) minimum percentage of available data e.g. 0.9 - 90 precent 
+            fill: 	        (string) 'mean' or 'interpolation'  
+        RETURNS:
+            ndarray - single column
+        """
+        try:
+            v_rest = np.array([])
+            v = v.astype(float)
+            n_split = len(v)/float(window_len)
+            if not n_split == int(n_split):
+                el = int(n_split)*window_len
+                v_rest = v[el:]
+                v = v[:el]
+            spli = np.split(v,int(len(v)/window_len))
+            if len(v_rest) > 0:
+                spli.append(v_rest)
+            newar = np.array([])
+            for idx,ar in enumerate(spli):
+                nans, x = nan_helper(ar)
+                if len(ar[~nans]) >= threshold*len(ar):
+                    if fill == 'mean':
+                        ar[nans]= np.nanmean(ar)
+                    else:
+                        ar[nans]= interp(x(nans), x(~nans), ar[~nans])
+                newar = np.concatenate((newar,ar))
+            v = newar
+        except:
+            print ("Filter: could not split stream in equal parts for interpolation - switching to conservative mode")
+
+        return v
 
     def MODWT_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
                 window=5):
@@ -7589,7 +7650,7 @@ CALLED BY:
         # This is done if timesteps are not at period intervals
         # -----------------------------------------------------
 
-        #print "RESAMPLE Here 3"
+        #print ("RESAMPLE Here 3")
         # Create a list containing time steps
         #t_max = num2date(self._get_max('time'))
         t_list = []
@@ -7603,7 +7664,6 @@ CALLED BY:
         if not len(t_list) > 0:
             return DataStream()
         multiplicator = float(self.length()[0])/float(len(t_list))
-
 
         stwithnan = self.copy()
         res_stream = DataStream()
@@ -7632,18 +7692,17 @@ CALLED BY:
 
                 key_list = []
                 for ind, item in enumerate(t_list):
-                    #print item, ind
                     functime = (item - int_min)/(int_max - int_min)
                     #orgval = eval('self[int(ind*multiplicator)].'+key)
                     if ndtype:
                         if int(ind*multiplicator) <= len(self.ndarray[index]):
                             #orgval = self.ndarray[index][int(ind*multiplicator)]
-                            orgval = stwithnan.ndarray[index][int(ind*multiplicator)]
+                            orgval = stwithnan.ndarray[index][int(ind*multiplicator+startperiod)] # + offset
                         else:
                             print("Check Resampling method")
                             orgval = 1.0
                     else:
-                        orgval = getattr(stwithnan[int(ind*multiplicator)],key)
+                        orgval = getattr(stwithnan[int(ind*multiplicator+startperiod)],key)
                     tempval = np.nan
                     # Not a safe fix, but appears to cover decimal leftover problems
                     # (e.g. functime = 1.0000000014, which raises an error)

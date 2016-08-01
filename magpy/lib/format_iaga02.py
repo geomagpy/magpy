@@ -46,15 +46,9 @@ def readIAGA(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    # get day from filename (platform independent)
-    theday = extractDateFromString(filename)[0]
-    #print theday
-    #splitpath = os.path.split(filename)
-    #tmpdaystring = splitpath[1].split('.')[0]
-    #daystring = re.findall(r'\d+',tmpdaystring)[0]
-    #if len(daystring) >  8:
-    #    daystring = daystring[:8]
     try:
+        # get day from filename (platform independent)
+        theday = extractDateFromString(filename)[0]
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
@@ -64,7 +58,7 @@ def readIAGA(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        logging.warning("Could not identify typical IAGA date for %s. Reading all ..." % day)
+        logging.warning("Could not identify typical IAGA date for %s. Reading all ...".format(filename))
         getfile = True
 
     if getfile:

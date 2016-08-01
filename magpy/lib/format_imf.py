@@ -241,7 +241,7 @@ def readIAF(filename, headonly=False, **kwargs):
                 headers['DataQuality'] = head[8]
                 headers['SensorType'] = head[9]
                 headers['StationK9'] = head[10]
-                headers['DataDigitalSampling'] = head[11]
+                headers['DataDigitalSampling'] = float(head[11])/1000.
                 headers['DataSensorOrientation'] = head[12].lower()
                 pubdate = datetime.strptime(str(head[13]),"%y%m")
                 headers['DataPublicationDate'] = pubdate
@@ -465,7 +465,8 @@ def writeIAF(datastream, filename, **kwargs):
                     if value == '':
                         misslist.append(elem)
                 elif elem == 'StartDate':
-                    value = int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y%j'))
+                    
+                    value = int(datetime.strftime(num2date(dayar[0][0]),'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
                         print("Latitude and Longitude need to be provided in Degree")
@@ -512,7 +513,7 @@ def writeIAF(datastream, filename, **kwargs):
                         print ("writeIAF: DataDigitialSampling info needs to be integer")
                         print ("          - extracting integers from provided string")
                         valtmp = re.findall(r'\d+', value)
-                        value = int(valtmp[-1])
+                        value = int(valtmp[-1])*1000
                         print ("          extracted: {}".format(value))
                 elif elem == 'Reserved':
                     value = 0
@@ -2323,7 +2324,7 @@ def writeIYFV(datastream,filename, **kwargs):
     reslist = coordinatetransform(meanx,meany,meanz,'xyz')
     datalist.extend(reslist)
 
-    #print ( "writeIYFV:", datalist )
+    print ( "writeIYFV means:", meanx, meany, meanz )
     #print ( "writeIYFV: kind", kind )
     #print ( "writeIYFV: comment", comment )
     #kind = 'Q'
@@ -2509,6 +2510,7 @@ def readDKA(filename, headonly=False, **kwargs):
             elif cnt > datacoming:
                 if len(block) > 9:
                     for i in range(8):
+                        # TODO For some reason "01-Mar-14" fails - no idea why
                         ti = datetime.strptime(block[0],"%d-%b-%y") + timedelta(minutes=90) + timedelta(minutes=180*i)
                         val = float(block[2+i])
                         array[0].append(date2num(ti))

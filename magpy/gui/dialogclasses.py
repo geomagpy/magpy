@@ -18,9 +18,12 @@ class OpenWebAddressDialog(wx.Dialog):
     Dialog for File Menu - Load URL
     """
 
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, favorites):
         super(OpenWebAddressDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
+        self.favorites = favorites
+        if self.favorites == None or len(self.favorites) == 0:
+            self.favorites = ['http://www.intermagnet.org/test/ws/?id=BOU']
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -30,19 +33,24 @@ class OpenWebAddressDialog(wx.Dialog):
         # single anaylsis
         #ftp://user:passwd@www.zamg.ac.at//data/magnetism/wic/variation/WIC20160627pmin.min
         # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        self.urlLabel = wx.StaticText(self, label="Insert address (e.g. 'ftp://.../' for all files, or 'ftp://.../data.dat' for a single file)")
-        self.urlTextCtrl = wx.TextCtrl(self, value="ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc",size=(500,30))
+        self.urlLabel = wx.StaticText(self, label="Insert address (e.g. 'ftp://.../' for all files, or 'ftp://.../data.dat' for a single file)",size=(500,30))
+        self.urlTextCtrl = wx.TextCtrl(self, value=self.favorites[0],size=(500,30))
+        self.favoritesLabel = wx.StaticText(self, label="Favorites:",size=(160,30))
+        self.getFavsComboBox = wx.ComboBox(self, choices=self.favorites,
+            style=wx.CB_DROPDOWN, value=self.favorites[0],size=(160,30))
         self.addFavsButton = wx.Button(self, label='Add to favorites',size=(160,30))
-        self.getFavsButton = wx.Button(self, label='Get favorites',size=(160,30))
+        self.dropFavsButton = wx.Button(self, label='Remove from favorites',size=(160,30))
+
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=4, cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=4, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -52,10 +60,19 @@ class OpenWebAddressDialog(wx.Dialog):
         # Add the controls to the sizers:
         for control, options in \
                 [(self.urlLabel, noOptions),
-                 (self.getFavsButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.favoritesLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                 (self.getFavsComboBox, expandOption),
                  (self.urlTextCtrl, expandOption),
+                  emptySpace,
                  (self.addFavsButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                  emptySpace,
+                 (self.dropFavsButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
 
@@ -66,10 +83,36 @@ class OpenWebAddressDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
+        self.addFavsButton.Bind(wx.EVT_BUTTON, self.AddFavs)
+        self.dropFavsButton.Bind(wx.EVT_BUTTON, self.DropFavs)
+        self.getFavsComboBox.Bind(wx.EVT_COMBOBOX, self.GetFavs)
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+
+    def GetFavs(self,e):
+        """
+        http://www.intermagnet.org/test/ws/?id=BOU
+        """
+        url = self.getFavsComboBox.GetValue()
+        self.urlTextCtrl.SetValue(url)
+
+
+    def AddFavs(self, e):
+        url = self.urlTextCtrl.GetValue()
+        if not url in self.favorites:
+            self.favorites.append(url)
+            self.getFavsComboBox.Append(str(url))
+
+    def DropFavs(self, e):
+        url = self.urlTextCtrl.GetValue()
+        self.favorites = [elem for elem in self.favorites if not elem == url]
+        self.getFavsComboBox.Clear()
+        for elem in self.favorites:
+            self.getFavsComboBox.Append(elem)
 
     def OnClose(self, e):
         self.Destroy()
+
 
 class LoadDataDialog(wx.Dialog):
     """
@@ -396,14 +439,6 @@ class OptionsInitDialog(wx.Dialog):
         self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")
         self.dirnameLabel = wx.StaticText(self, label="Default directory")
         self.dirnameTextCtrl = wx.TextCtrl(self, value=".")
-        self.filenameLabel = wx.StaticText(self, label="Default filename")
-        self.filenameTextCtrl = wx.TextCtrl(self, value="noname.txt")
-        self.resolutionLabel = wx.StaticText(self, label="PlotResolution")
-        self.resolutionTextCtrl = wx.TextCtrl(self, value="10000")
-        self.compselectLabel = wx.StaticText(self, label="Components")
-        self.compselectTextCtrl = wx.TextCtrl(self, value="xyz")
-        self.abscompselectLabel = wx.StaticText(self, label="DI Components")
-        self.abscompselectTextCtrl = wx.TextCtrl(self, value="xyz")
 
         self.dipathlistLabel = wx.StaticText(self, label="Default DI path")
         self.divariopathLabel = wx.StaticText(self, label="DI variometer")
@@ -458,28 +493,28 @@ class OptionsInitDialog(wx.Dialog):
                  (self.passwdTextCtrl, expandOption),
                  (self.dbTextCtrl, expandOption),
                  (self.dirnameLabel, noOptions),
-                 (self.filenameLabel, noOptions),
-                 (self.resolutionLabel, noOptions),
-                 (self.compselectLabel, noOptions),
-                 (self.dirnameTextCtrl, expandOption),
-                 (self.filenameTextCtrl, expandOption),
-                 (self.resolutionTextCtrl, expandOption),
-                 (self.compselectTextCtrl, expandOption),
-                 (self.abscompselectLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.abscompselectTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
                  (self.dipathlistLabel, noOptions),
                  (self.divariopathLabel, noOptions),
                  (self.discalarpathLabel, noOptions),
-                 (self.ditypeLabel, noOptions),
+                 (self.dirnameTextCtrl, expandOption),
                  (self.dipathlistTextCtrl, expandOption),
                  (self.divariopathTextCtrl, expandOption),
                  (self.discalarpathTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.ditypeLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
                  (self.ditypeTextCtrl, expandOption),
                  (self.stationidLabel, noOptions),
                  (self.diidLabel, noOptions),
@@ -690,6 +725,64 @@ class StreamSelectKeysDialog(wx.Dialog):
         self.Destroy()
 
 
+class StreamPlotOptionsDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Plot options
+        modify option
+    """
+
+    def __init__(self, parent, title, optdict):
+        super(StreamPlotOptionsDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.optdict = optdict
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        for elem in self.optdict:
+            print (elem, self.optdict[elem])
+            exec('self.'+elem+'Text = wx.StaticText(self,label="'+elem+'")')
+            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self, value="'+self.optdict[elem]+'")')
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=len(self.optdict), cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst = [[eval('(self.'+elem+'Text, noOptions)'),eval('(self.'+elem+'TextCtrl, expandOption)')] for elem in self.optdict]
+        contlst = [y for x in contlst for y in x]
+  
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+
 class StreamFlagOutlierDialog(wx.Dialog):
     """
     DESCRIPTION
@@ -759,60 +852,72 @@ class StreamFlagOutlierDialog(wx.Dialog):
     def OnClose(self, e):
         self.Destroy()
 
-class StreamHeaderDialog(wx.Dialog):
-    """
-    Dialog for Stream panel
-    Select shown keys
-    """
 
-    def __init__(self, parent, title, header):
-        super(StreamHeaderDialog, self).__init__(parent=parent,
+class StreamFlagRangeDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Parameter selection of flag range routine
+    USED BY:
+        Stream Method: onFlagRange()
+    """
+    def __init__(self, parent, title, stream, shownkeylist, keylist):
+        super(StreamFlagRangeDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
-        self.header = header
+        self.shownkeys=shownkeylist
+        self.selectedkey = shownkeylist[0]
+        self.keys2flag = ",".join(shownkeylist)
+        self.keys=keylist
+        self.stream = stream
+        self.mintime = num2date(stream.ndarray[0][0])
+        self.maxtime = num2date(stream.ndarray[0][-1])
+        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.comment = ''  
+        #dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
+        self.ul = np.nanmax(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
+        self.ll = np.nanmin(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
+        self.rangetype = ['value', 'time']
         self.createControls()
-        self.cnts=[0,0,0,0,0]
         self.doLayout()
         self.bindControls()
+        self.SetValue()
 
     # Widgets
     def createControls(self):
         # countvariables for specific header blocks
-        colcnt, datacnt, sensorcnt, stationcnt, othercnt = 0,0,0,0,0
-        for key in self.header:
-            if key.find('-') > 0:
-                # Column contents:
-                tmplst = key.split('-')
-                tmplst[-1] = KEYLIST.index(tmplst[-1])
-                if tmplst[0] == 'unit':
-                    label = tmplst[1].replace('col','Column') + str(tmplst[-1])+'_unit'
-                else:
-                    label = tmplst[0].replace('col','Column') + str(tmplst[-1])
-                key=key.replace('-','')
-                colcnt += 1
-            else:
-                label = key
-                if key.startswith('Data'):
-                    datacnt += 1
-                elif key.startswith('Sensor'):
-                    sensorcnt += 1
-                elif key.startswith('Station'):
-                    stationcnt += 1
-                else:
-                    othercnt += 1
-            exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
-        print ("Counts:", colcnt, datacnt, sensorcnt, stationcnt, othercnt) ## use these cnt for layout
-        self.cnts = [colcnt, datacnt, sensorcnt, stationcnt, othercnt]
-
-        self.okButton = wx.Button(self, wx.ID_OK, label='Update')
-        self.closeButton = wx.Button(self, label='Cancel')
-        self.getMetaFromDBButton = wx.Button(self, label='Meta form DB')
+        self.TimeRangeText = wx.StaticText(self,label="Flag time range")
+        self.ValueRangeText = wx.StaticText(self,label="Flag value range")
+        self.LimitKeyText = wx.StaticText(self,label="Select Key:")
+        self.UpperLimitText = wx.StaticText(self,label="Flag values below:")
+        self.UpperLimitTextCtrl = wx.TextCtrl(self, value=str(self.ul),size=(160,30))
+        self.LowerLimitText = wx.StaticText(self,label="Flag values above:")
+        self.LowerLimitTextCtrl = wx.TextCtrl(self, value=str(self.ll),size=(160,30))
+        self.SelectKeyComboBox = wx.ComboBox(self, choices=self.shownkeys,
+            style=wx.CB_DROPDOWN, value=self.shownkeys[self.shownkeys.index(self.selectedkey)])
+        self.UpperTimeText = wx.StaticText(self,label="Flag data before:")
+        self.LowerTimeText = wx.StaticText(self,label="Flag data after:")
+        self.startFlagDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
+        self.startFlagTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
+        self.endFlagDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
+        self.endFlagTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
+        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
+        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
+        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
+        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3])
+        self.CommentText = wx.StaticText(self,label="Comment:")
+        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.rangeRadioBox = wx.RadioBox(self,
+            label="Select flagging range type:",
+            choices=self.rangetype, majorDimension=2, style=wx.RA_SPECIFY_COLS)
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=5, cols=(np.max(self.cnts)), vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=8, cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -821,28 +926,58 @@ class StreamHeaderDialog(wx.Dialog):
 
         # Add the controls to the sizers:
         # transform headerlist to an array with lines like cnts
-        headarray = [[],[],[],[],[]]
-        for idx,elem in enumerate(['Data','Sensor','Station','col']):
-            headline = []
-            for key in self.header:
-                if key.startswith('elem'):
-                    headline.append(key)
-                elif elem == 'col' and key.find('-'):
-                    headline.append(key)
-            headarray[idx] = headline
-        print ("Array", headarray)
-
-
-        # fill all lines with empty fields to max(cnt)
-        # transpose this array
-        print (self.header)
-        print (sorted(self.header))
         contlst = []
-        for elem in self.header:
-            if elem.find('-') > 0:
-                elem=elem.replace('-','')
-            contlst.append(eval('(self.'+elem+'Text, expandOption)'))
-
+        # 1 row
+        contlst.append((self.rangeRadioBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        # 2 row
+        contlst.append((self.ValueRangeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.LimitKeyText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.LowerLimitText, noOptions))
+        contlst.append((self.UpperLimitText, noOptions))
+        # 3 row
+        contlst.append((self.SelectKeyComboBox, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.LowerLimitTextCtrl, expandOption))
+        contlst.append((self.UpperLimitTextCtrl, expandOption))
+        # 4 row
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.TimeRangeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        # 5 row
+        contlst.append((self.LowerTimeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.UpperTimeText, noOptions))
+        contlst.append(emptySpace)
+        # 6 row
+        contlst.append((self.startFlagDatePicker, expandOption))
+        contlst.append((self.startFlagTimePicker, expandOption))
+        contlst.append((self.endFlagDatePicker, expandOption))
+        contlst.append((self.endFlagTimePicker, expandOption))
+        # 7 row
+        contlst.append((self.KeyListText, noOptions))
+        contlst.append((self.FlagIDText, noOptions))
+        contlst.append((self.CommentText, noOptions))
+        contlst.append(emptySpace)
+        # 8 row
+        contlst.append((self.AffectedKeysTextCtrl, expandOption))
+        contlst.append((self.FlagIDComboBox, expandOption))
+        contlst.append((self.CommentTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        # 9 row
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         for control, options in contlst:
@@ -856,13 +991,325 @@ class StreamHeaderDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        self.getMetaFromDBButton.Bind(wx.EVT_BUTTON, self.OnMetaFromDB)
+        #self.okButton.Bind(wx.EVT_BUTTON, self.OnOK)
+        self.Bind(wx.EVT_RADIOBOX, self.OnChangeGroup, self.rangeRadioBox)
+        self.Bind(wx.EVT_COMBOBOX, self.OnChangeSelection, self.SelectKeyComboBox)
+
+    def OnOK(self, e):
+        if self.comment == '':
+            # ask for comment
+            pass
+        else:
+            # send OK
+            pass
 
     def OnClose(self, e):
         self.Destroy()
 
-    def OnMetaFromDB(self):
+    def SetValue(self):
+            self.UpperLimitTextCtrl.Enable()
+            self.LowerLimitTextCtrl.Enable()
+            self.SelectKeyComboBox.Enable()
+            self.LowerTimeText.Disable()
+            self.UpperTimeText.Disable()
+            self.startFlagDatePicker.Disable()
+            self.startFlagTimePicker.Disable()
+            self.endFlagDatePicker.Disable()
+            self.endFlagTimePicker.Disable()
+            self.UpperLimitTextCtrl.SetValue(str(self.ul))
+            self.LowerLimitTextCtrl.SetValue(str(self.ll))
+
+
+    def OnChangeGroup(self, e):
+        val = self.rangeRadioBox.GetStringSelection()
+        print ("Change group", val)
+        if str(val) == 'time':
+            self.UpperLimitTextCtrl.Disable()
+            self.LowerLimitTextCtrl.Disable()
+            self.SelectKeyComboBox.Disable()
+            self.LowerTimeText.Enable()
+            self.UpperTimeText.Enable()
+            self.startFlagDatePicker.Enable()
+            self.startFlagTimePicker.Enable()
+            self.endFlagDatePicker.Enable()
+            self.endFlagTimePicker.Enable()
+        elif str(val) == 'value':
+            self.SetValue()
+
+    def OnChangeSelection(self, e):
+        firstkey = self.SelectKeyComboBox.GetValue()
+        ind = KEYLIST.index(firstkey)
+        self.ul = np.nanmax(self.stream.ndarray[ind])
+        self.ll = np.nanmin(self.stream.ndarray[ind])
+        self.UpperLimitTextCtrl.SetValue(str(self.ul))
+        self.LowerLimitTextCtrl.SetValue(str(self.ll))
+        print (str(firstkey),ind, self.ul, self.ll)
+
+
+class StreamLoadFlagDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Loading Flagging data from file or DB
+    """
+    def __init__(self, parent, title, db, sensorid):
+        super(StreamLoadFlagDialog, self).__init__(parent=parent,
+            title=title, size=(300, 300))
+        self.flaglist = []
+        self.sensorid = sensorid
+        self.db = db
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.loadDBButton = wx.Button(self, label='Load from DB')
+        self.loadFileButton = wx.Button(self, label='Load file')
+        self.closeButton = wx.Button(self, label='Cancel')
+        if not self.db:
+            self.loadDBButton.Disable()
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.loadDBButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDB)
+        self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
+
+    def OnClose(self, e):
         self.Destroy()
+
+    def OnLoadDB(self, e):
+        self.flaglist = db2flaglist(self.db, self.sensorid)
+        dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.Destroy()
+
+    def OnLoadFile(self, e):
+        openFileDialog = wx.FileDialog(self, "Open", "", "", 
+                                       "Flaglist (*.pkl)|*.pkl", 
+                                       wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        openFileDialog.ShowModal()
+        flagname = openFileDialog.GetPath()
+        try:
+            self.flaglist = loadflags(flagname,sensorid=self.sensorid)
+        except:
+            self.flaglist = [] 
+        openFileDialog.Destroy()
+        self.Destroy()
+
+
+class StreamSaveFlagDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Loading Flagging data from file or DB
+    """
+    def __init__(self, parent, title, db, flaglist):
+        super(StreamSaveFlagDialog, self).__init__(parent=parent,
+            title=title, size=(300, 300))
+        self.flaglist = flaglist
+        self.db = db
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.saveDBButton = wx.Button(self, label='Save to DB')
+        self.saveFileButton = wx.Button(self, label='Save to file')
+        self.closeButton = wx.Button(self, label='Cancel')
+        if not self.db:
+            self.saveDBButton.Disable()
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.saveDBButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.saveFileButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.saveDBButton.Bind(wx.EVT_BUTTON, self.OnSaveDB)
+        self.saveFileButton.Bind(wx.EVT_BUTTON, self.OnSaveFile)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+    def OnSaveDB(self, e):
+        flaglist2db(self.db, self.flaglist)
+        dlg = wx.MessageDialog(self, "Flags stored in connected DB!\nFLAGS table extended with {} inputs\n".format(len(self.flaglist)),"FLAGS added to DB", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.Destroy()
+
+    def OnSaveFile(self, e):
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
+                                       "Flaglist (*.pkl)|*.pkl", 
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        flagname = saveFileDialog.GetPath()
+        saveFileDialog.Destroy()
+        print (flagname)
+        saveflags(self.flaglist,flagname)
+        self.Destroy()
+
+# ###################################################
+#    Meta page
+# ###################################################
+
+class MetaDataDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+
+    def __init__(self, parent, title, header, layer):
+        super(MetaDataDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.header = header
+        self.list = []
+        self.layer=layer
+        self.createControls()
+        self.cnts=[0,0]
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        cnt,colcnt = 0,0
+        self.list = eval(self.layer.upper() + 'KEYLIST')
+
+        for key in self.list:
+            if key.find('-') > 0:
+                # Column contents:
+                tmplst = key.split('-')
+                tmplst[-1] = KEYLIST.index(tmplst[-1])
+                if tmplst[0] == 'unit':
+                    label = tmplst[1].replace('col','Column') + str(tmplst[-1])+'_unit'
+                else:
+                    label = tmplst[0].replace('col','Column') + str(tmplst[-1])
+                key=key.replace('-','')
+                colcnt += 1
+            else:
+                label = key
+                value = str(self.header.get(key,''))
+                #if key.startswith(self.layer):
+                cnt += 1
+                exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
+                exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,30))')
+        self.cnts = [colcnt, cnt]
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Update')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=self.cnts[1], cols=6, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # fill all lines with empty fields to max(cnt)
+        # transpose this array
+        contlst = []
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        headarray = [[],[],[],[],[]]
+        for key in self.list:
+            #if key.startswith(self.layer):
+            contlst.append(eval('(self.'+key+'Text, noOptions)'))
+            contlst.append(eval('(self.'+key+'TextCtrl, expandOption)'))
+                #headline.append(key)
+                #elif elem == 'col' and key.find('-'):
+                #    headline.append(key)
+        #headarray[idx] = headline
+
+        #for elem in self.header:
+        #    if elem.find('-') > 0:
+        #        elem=elem.replace('-','')
+        #    contlst.append(eval('(self.'+elem+'Text, expandOption)'))
+
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
 
 # ###################################################
 #    Analysis page
@@ -934,26 +1381,49 @@ class AnalysisFitDialog(wx.Dialog):
         self.Destroy()
 
 
-class AnalysisOffsetDialog(wx.Dialog):
+class AnalysisFilterDialog(wx.Dialog):
     """
     Dialog for Stream panel
     Select shown keys
     """
 
-    def __init__(self, parent, title, keylst):
-        super(AnalysisOffsetDialog, self).__init__(parent=parent,
+    def __init__(self, parent, title, samplingrate, resample, winlen, resint, resoff, filtertype):
+        super(AnalysisFilterDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.keylst = keylst
+        self.samplingrate = samplingrate
+        self.windowlist = ['flat','barthann','bartlett','blackman','blackmanharris','bohman',
+                                'boxcar','cosine','flattop','hamming','hann','nuttall',
+                                'parzen','triang','gaussian','wiener','spline','butterworth']
+        self.resample = resample
+        self.winlen = str(winlen)
+        self.resint = str(resint)
+        self.filtertype = filtertype
+        self.missing = ['IAGA','interpolate','conservative']
+        self.off = str(resoff)
+        if not resample:
+            self.buttonlabel = 'Smooth'
+        else:
+            self.buttonlabel = 'Filter'
         self.createControls()
         self.doLayout()
         self.bindControls()
 
     # Widgets
     def createControls(self):
-        for elem in self.keylst:
-            exec('self.'+elem+'Label = wx.StaticText(self,label="'+elem+'")')
-            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="")')
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.filtertypeLabel = wx.StaticText(self, label="Select window:")
+        self.filtertypeComboBox = wx.ComboBox(self, choices=self.windowlist,
+            style=wx.CB_DROPDOWN, value=self.filtertype)
+        self.lengthLabel = wx.StaticText(self, label="Window length (sec):")
+        self.lengthTextCtrl = wx.TextCtrl(self, value=self.winlen)
+        if self.resample:
+            self.resampleLabel = wx.StaticText(self, label="Resample interval (sec):")
+            self.resampleTextCtrl = wx.TextCtrl(self, value=self.resint)
+            self.resampleoffsetLabel = wx.StaticText(self, label="Resample offset (sec):")
+            self.resampleoffsetTextCtrl = wx.TextCtrl(self, value=self.off)
+        self.methodRadioBox = wx.RadioBox(self,
+            label="Missing data:",
+            choices=self.missing, majorDimension=1, style=wx.RA_SPECIFY_COLS)
+        self.okButton = wx.Button(self, wx.ID_OK, label=self.buttonlabel)
         self.closeButton = wx.Button(self, label='Cancel')
 
     def doLayout(self):
@@ -961,7 +1431,104 @@ class AnalysisOffsetDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=len(self.keylst), cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=8, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst=[(self.filtertypeLabel, noOptions)]
+        contlst.append((self.filtertypeComboBox, expandOption))
+        contlst.append((self.lengthLabel, noOptions))
+        contlst.append((self.lengthTextCtrl, expandOption))
+        if self.resample:
+            contlst.append((self.resampleLabel, noOptions))
+            contlst.append((self.resampleTextCtrl, expandOption))
+            contlst.append((self.resampleoffsetLabel, noOptions))
+            contlst.append((self.resampleoffsetTextCtrl, expandOption))
+        contlst.append((self.methodRadioBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+
+class AnalysisOffsetDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+
+    def __init__(self, parent, title, keylst, xlimits):
+        super(AnalysisOffsetDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.keylst = keylst
+        self.choices = ['all','timerange']
+        self.start = self._pydate2wxdate(xlimits[0])
+        self.end = self._pydate2wxdate(xlimits[1])
+        self.starttime = datetime.strftime(xlimits[0], "%H:%M:%S")
+        self.endtime = datetime.strftime(xlimits[1], "%H:%M:%S")
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+
+    def _pydate2wxdate(self,date):
+        assert isinstance(date, (datetime, datetime.date))
+        tt = date.timetuple()
+        dmy = (tt[2], tt[1]-1, tt[0])
+        return wx.DateTimeFromDMY(*dmy)
+
+    # Widgets
+    def createControls(self):
+        # Add a radio button on top:
+        # Offset certain timerange / all data 
+        self.offsetRadioBox = wx.RadioBox(self, label="Apply offset to:",
+                     choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS)
+         
+        self.timeshiftLabel = wx.StaticText(self, label="Timeshift (sec):",size=(160,30))
+        self.timeshiftTextCtrl = wx.TextCtrl(self, value='0',size=(160,30))
+
+        self.StartDateLabel = wx.StaticText(self, label="Starting:",size=(160,30))
+        self.StartDatePicker = wx.DatePickerCtrl(self, dt=self.start,size=(160,30))
+        self.StartTimeTextCtrl = wx.TextCtrl(self, value=self.starttime,size=(160,30))
+        self.EndDateLabel = wx.StaticText(self, label="Ending:",size=(160,30))
+        self.EndDatePicker = wx.DatePickerCtrl(self, dt=self.end,size=(160,30))
+        self.EndTimeTextCtrl = wx.TextCtrl(self, value=self.endtime,size=(160,30))
+
+        for elem in self.keylst:
+            exec('self.'+elem+'Label = wx.StaticText(self,label="'+elem+'")')
+            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="")')
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+        self.StartDatePicker.Disable()
+        self.StartTimeTextCtrl.Disable()
+        self.EndDatePicker.Disable()
+        self.EndTimeTextCtrl.Disable()
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=2, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -971,6 +1538,18 @@ class AnalysisOffsetDialog(wx.Dialog):
         # Add the controls to the sizers:
         # (self.'+elem+'Label, noOptions),
         contlst = []
+        contlst.append((self.offsetRadioBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.StartDateLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.StartDatePicker, expandOption))
+        contlst.append((self.StartTimeTextCtrl, expandOption))
+        contlst.append((self.EndDateLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.EndDatePicker, expandOption))
+        contlst.append((self.EndTimeTextCtrl, expandOption))
+        contlst.append((self.timeshiftLabel, noOptions))
+        contlst.append((self.timeshiftTextCtrl, expandOption))
         for elem in self.keylst:
             contlst.append(eval('(self.'+elem+'Label, noOptions)'))
             contlst.append(eval('(self.'+elem+'TextCtrl, expandOption)'))
@@ -987,11 +1566,26 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
+        self.Bind(wx.EVT_RADIOBOX, self.OnChangeRange, self.offsetRadioBox)
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
         self.Destroy()
 
+    def OnChangeRange(self, e):
+        val = self.offsetRadioBox.GetStringSelection()
+        if str(val) == 'all':
+            self.StartDatePicker.Disable()
+            self.StartTimeTextCtrl.Disable()
+            self.EndDatePicker.Disable()
+            self.EndTimeTextCtrl.Disable()
+            self.timeshiftTextCtrl.Enable()
+        elif str(val) == 'timerange':
+            self.StartDatePicker.Enable()
+            self.StartTimeTextCtrl.Enable()
+            self.EndDatePicker.Enable()
+            self.EndTimeTextCtrl.Enable()
+            self.timeshiftTextCtrl.Disable()
 
 class AnalysisRotationDialog(wx.Dialog):
     """
@@ -1062,26 +1656,23 @@ class LoadDIDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, dirname):
         super(LoadDIDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.pathlist = []
+        self.dirname = dirname
         self.createControls()
         self.doLayout()
         self.bindControls()
 
     # Widgets
     def createControls(self):
-        self.sourceLabel = wx.StaticText(self, label="Choose DI source:")
-        self.loadfileLabel = wx.StaticText(self, label="1) Access local files:")
-        self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(120,30))
-        self.getdbLabel = wx.StaticText(self, label="2) Access database:")
-        self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
-        self.selectedLabel = wx.StaticText(self, label="Selected:")
-        self.selectedTextCtrl = wx.TextCtrl(self, value="--")
-
-        self.okButton = wx.Button(self, wx.ID_OK, label='Take')
+        self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(160,30))
+        self.loadDBButton = wx.Button(self,-1,"Use DB Table",size=(160,30))
+        self.loadRemoteButton = wx.Button(self,-1,"Get from Remote",size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel')
+        self.loadDBButton.Disable()
+        self.loadRemoteButton.Disable()
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1096,15 +1687,11 @@ class LoadDIDialog(wx.Dialog):
         emptySpace = ((0, 0), noOptions)
 
         # Add the controls to the sizers:
-        contlst=[(self.sourceLabel, noOptions)]
-        contlst.append((self.loadfileLabel, noOptions))
+        contlst=[]
         contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.getdbLabel, noOptions))
-        contlst.append((self.remoteLabel, noOptions))
+        contlst.append((self.loadDBButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.loadRemoteButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
-        contlst.append((self.selectedLabel, noOptions))
-        contlst.append((self.selectedTextCtrl, expandOption))
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         for control, options in contlst:
             gridSizer.Add(control, **options)
@@ -1118,17 +1705,38 @@ class LoadDIDialog(wx.Dialog):
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadDIFiles)
+        self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDIDB)
+        self.loadRemoteButton.Bind(wx.EVT_BUTTON, self.OnLoadDIRemote)
 
     def OnClose(self, e):
         self.Destroy()
 
     def OnLoadDIFiles(self,e):
+        self.difiledirname = ''
+        stream = DataStream()
+        dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wx.MULTIPLE)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.pathlist = dlg.GetPaths()
+        dlg.Destroy()
+        self.Destroy()
+
+    def OnLoadDIDB(self,e):
+        #self.dirname = ''
+        stream = DataStream()
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.pathlist = dlg.GetPaths()
+        dlg.Destroy()
+        self.Destroy()
+
+    def OnLoadDIRemote(self,e):
         self.dirname = ''
         stream = DataStream()
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
+        self.Destroy()
 
 
 class DefineVarioDialog(wx.Dialog):
@@ -1348,6 +1956,369 @@ class DISetParameterDialog(wx.Dialog):
         self.Destroy()
 
 
+class InputSheetDialog(wx.Dialog):
+    """
+    DESCRITPTION
+        InputDialog for DI data
+    """
+
+    def __init__(self, parent, title, layout, path, defaults,cdate):
+        super(InputSheetDialog, self).__init__(parent=parent,
+            title=title, size=(800, 100))
+        #self.sw = wx.ScrolledWindow(self)
+        #self.sw.SetScrollbars(20,20,55,40)
+        self.scroll = wx.ScrollBar(self,-1,style=wx.SB_VERTICAL)
+        self.path = path
+        self.layout = layout
+        self.defaults = defaults
+        self.cdate = cdate
+        self.units = ['degree','gon']
+        #print (self.layout['order'][2:6])
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # ##### Header Block (fix - 5 columns)
+        # - Load line
+        self.loadButton = wx.Button(self,-1,"Open DI data",size=(160,30))
+        # - Header
+        self.DateLabel = wx.StaticText(self, label="Date:",size=(160,30))
+        self.DatePicker = wx.DatePickerCtrl(self, dt=self.cdate,size=(160,30))
+        self.ObserverLabel = wx.StaticText(self, label="Observer:",size=(160,30))
+        self.ObserverTextCtrl = wx.TextCtrl(self, value="Max",size=(160,30))
+        self.CodeLabel = wx.StaticText(self, label="IAGA code:",size=(160,30))
+        self.CodeTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.TheoLabel = wx.StaticText(self, label="Theodolite:",size=(160,30))
+        self.TheoTextCtrl = wx.TextCtrl(self, value="type_serial_version",size=(160,30))
+        self.FluxLabel = wx.StaticText(self, label="Fluxgate:",size=(160,30))
+        self.FluxTextCtrl = wx.TextCtrl(self, value="type_serial_version",size=(160,30))
+        self.AzimuthLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
+        self.AzimuthTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.PillarLabel = wx.StaticText(self, label="Pier:",size=(160,30))
+        self.PillarTextCtrl = wx.TextCtrl(self, value=self.defaults['pier'],size=(160,30))
+        self.TempLabel = wx.StaticText(self, label="Temperature:",size=(160,30))
+        self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
+        #self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
+
+        # - Mire A
+        self.AmireLabel = wx.StaticText(self, label="Azimuth measurements:",size=(160,30))
+        self.AmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
+        self.AmireUp1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.AmireUp2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.AmireDownLabel = wx.StaticText(self, label="Sensor Down:",size=(160,30))
+        self.AmireDown1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.AmireDown2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+
+        # - Horizonatl Block
+        self.HorizontalLabel = wx.StaticText(self, label="Horizontal measurements:",size=(160,30))
+        self.TimeLabel = wx.StaticText(self, label="Time:",size=(160,30))
+        self.HAngleLabel = wx.StaticText(self, label="Hor. Angle:",size=(160,30))
+        self.VAngleLabel = wx.StaticText(self, label="Ver. Angle:",size=(160,30))
+        self.ResidualLabel = wx.StaticText(self, label="Residual:",size=(160,30))
+        self.EULabel = wx.StaticText(self, label="East(Sensor Up)",size=(160,30))
+        self.EU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.EU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.EU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.EU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.EU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.EU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.EU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.EU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WULabel = wx.StaticText(self, label="West(Sensor Up)",size=(160,30))
+        self.WU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.EDLabel = wx.StaticText(self, label="East(Sensor Down)",size=(160,30))
+        self.ED1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ED1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ED1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.ED1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.ED2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ED2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ED2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.ED2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WDLabel = wx.StaticText(self, label="West(Sensor Down)",size=(160,30))
+        self.WD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WD1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WD2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.EU1GCTextCtrl.Disable()
+        self.EU2GCTextCtrl.Disable()
+        self.ED1GCTextCtrl.Disable()
+        self.ED2GCTextCtrl.Disable()
+        self.WU1GCTextCtrl.Disable()
+        self.WU2GCTextCtrl.Disable()
+        self.WD1GCTextCtrl.Disable()
+        self.WD2GCTextCtrl.Disable()
+
+
+        # - Mire B
+        self.BmireLabel = wx.StaticText(self, label="Azimuth measurements:",size=(160,30))
+        self.BmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
+        self.BmireUp1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.BmireUp2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.BmireDownLabel = wx.StaticText(self, label="Sensor Down:",size=(160,30))
+        self.BmireDown1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.BmireDown2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+
+        # - Vertical Block
+        """
+        self.VerticalLabel = wx.StaticText(self, label="Vertical measurements:",size=(160,30))
+        self.EULabel = wx.StaticText(self, label="East(Sensor Up)",size=(160,30))
+        self.EU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.EU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.EU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.EU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.EU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.EU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.EU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.EU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WULabel = wx.StaticText(self, label="West(Sensor Up)",size=(160,30))
+        self.WU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.EDLabel = wx.StaticText(self, label="East(Sensor Down)",size=(160,30))
+        self.ED1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ED1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ED1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.ED1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.ED2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ED2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ED2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.ED2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WDLabel = wx.StaticText(self, label="West(Sensor Down)",size=(160,30))
+        self.WD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WD1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.WD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.WD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.WD2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.EU1GCTextCtrl.Disable()
+        self.EU2GCTextCtrl.Disable()
+        self.ED1GCTextCtrl.Disable()
+        self.ED2GCTextCtrl.Disable()
+        self.WU1GCTextCtrl.Disable()
+        self.WU2GCTextCtrl.Disable()
+        self.WD1GCTextCtrl.Disable()
+        self.WD2GCTextCtrl.Disable()
+        """
+
+        self.ln = wx.StaticLine(self, -1, style=wx.LI_HORIZONTAL,size=(800,10))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Use')
+        self.closeButton = wx.Button(self, label='Cancel')
+
+
+    def doLayout(self):
+        #mainSizer = wx.BoxSizer(wx.VERTICAL)
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((160, 0), noOptions)
+
+        # Load elements
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        gridSizer = wx.FlexGridSizer(rows=40, cols=5, vgap=10, hgap=10)
+        contlst=[emptySpace]
+        contlst.append(emptySpace)
+        contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+
+        # Header elements
+        contlst.append((self.DateLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.ObserverLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.CodeLabel, noOptions))
+        contlst.append((self.DatePicker, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.ObserverTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.CodeTextCtrl, expandOption))
+        contlst.append((self.TheoLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.FluxLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.AzimuthLabel, noOptions))
+        contlst.append((self.TheoTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.FluxTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.AzimuthTextCtrl, expandOption))
+        contlst.append((self.PillarLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.UnitLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.TempLabel, noOptions))
+        contlst.append((self.PillarTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.TempTextCtrl, expandOption))
+
+        # Mire elements
+        contlst.append((self.AmireLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        blMU = []
+        blMU.append((self.AmireUpLabel, noOptions))
+        blMU.append((self.AmireUp1TextCtrl, expandOption))
+        blMU.append((self.AmireUp2TextCtrl, expandOption))
+        blMU.append(emptySpace)
+        blMU.append(emptySpace)
+        blMD = []
+        blMD.append((self.AmireDownLabel, noOptions))
+        blMD.append((self.AmireDown1TextCtrl, expandOption))
+        blMD.append((self.AmireDown2TextCtrl, expandOption))
+        blMD.append(emptySpace)
+        blMD.append(emptySpace)
+        for el in self.layout['order'][0:2]:
+            contlst.extend(eval('bl'+str(el)))
+
+        blEU = []
+        blEU.append((self.EULabel, noOptions))
+        blEU.append((self.EU1TimeTextCtrl, expandOption))
+        blEU.append((self.EU1AngleTextCtrl, expandOption))
+        blEU.append((self.EU1GCTextCtrl, expandOption))
+        blEU.append((self.EU1ResidualTextCtrl, expandOption))
+        blEU.append(emptySpace)
+        blEU.append((self.EU2TimeTextCtrl, expandOption))
+        blEU.append((self.EU2AngleTextCtrl, expandOption))
+        blEU.append((self.EU2GCTextCtrl, expandOption))
+        blEU.append((self.EU2ResidualTextCtrl, expandOption))
+        blWU = []
+        blWU.append((self.WULabel, noOptions))
+        blWU.append((self.WU1TimeTextCtrl, expandOption))
+        blWU.append((self.WU1AngleTextCtrl, expandOption))
+        blWU.append((self.WU1GCTextCtrl, expandOption))
+        blWU.append((self.WU1ResidualTextCtrl, expandOption))
+        blWU.append(emptySpace)
+        blWU.append((self.WU2TimeTextCtrl, expandOption))
+        blWU.append((self.WU2AngleTextCtrl, expandOption))
+        blWU.append((self.WU2GCTextCtrl, expandOption))
+        blWU.append((self.WU2ResidualTextCtrl, expandOption))
+        blED = []
+        blED.append((self.EDLabel, noOptions))
+        blED.append((self.ED1TimeTextCtrl, expandOption))
+        blED.append((self.ED1AngleTextCtrl, expandOption))
+        blED.append((self.ED1GCTextCtrl, expandOption))
+        blED.append((self.ED1ResidualTextCtrl, expandOption))
+        blED.append(emptySpace)
+        blED.append((self.ED2TimeTextCtrl, expandOption))
+        blED.append((self.ED2AngleTextCtrl, expandOption))
+        blED.append((self.ED2GCTextCtrl, expandOption))
+        blED.append((self.ED2ResidualTextCtrl, expandOption))
+        blWD = []
+        blWD.append((self.WDLabel, noOptions))
+        blWD.append((self.WD1TimeTextCtrl, expandOption))
+        blWD.append((self.WD1AngleTextCtrl, expandOption))
+        blWD.append((self.WD1GCTextCtrl, expandOption))
+        blWD.append((self.WD1ResidualTextCtrl, expandOption))
+        blWD.append(emptySpace)
+        blWD.append((self.WD2TimeTextCtrl, expandOption))
+        blWD.append((self.WD2AngleTextCtrl, expandOption))
+        blWD.append((self.WD2GCTextCtrl, expandOption))
+        blWD.append((self.WD2ResidualTextCtrl, expandOption))
+        #contlst=[]
+        contlst.append((self.HorizontalLabel, noOptions))
+        contlst.append((self.TimeLabel, noOptions))
+        contlst.append((self.HAngleLabel, noOptions))
+        contlst.append((self.VAngleLabel, noOptions))
+        contlst.append((self.ResidualLabel, noOptions))
+        for el in self.layout['order'][2:6]:
+            contlst.extend(eval('bl'+str(el)))
+
+        # Mire elements
+        contlst.append((self.BmireLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        blMU = []
+        blMU.append((self.BmireUpLabel, noOptions))
+        blMU.append((self.BmireUp1TextCtrl, expandOption))
+        blMU.append((self.BmireUp2TextCtrl, expandOption))
+        blMU.append(emptySpace)
+        blMU.append(emptySpace)
+        blMD = []
+        blMD.append((self.BmireDownLabel, noOptions))
+        blMD.append((self.BmireDown1TextCtrl, expandOption))
+        blMD.append((self.BmireDown2TextCtrl, expandOption))
+        blMD.append(emptySpace)
+        blMD.append(emptySpace)
+        for el in self.layout['order'][0:2]:
+            contlst.extend(eval('bl'+str(el)))
+
+        """
+        for control, options in contlst:
+            grid4Sizer.Add(control, **options)
+        for control, options in \
+                [(grid4Sizer, dict(border=5, flag=wx.ALL))]:
+            box4Sizer.Add(control, **options)
+        mainSizer.Add(box4Sizer, 1, wx.EXPAND)
+
+        # Bottom elements
+        box7Sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        grid7Sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=10, hgap=10)
+        contlst=[]
+        """
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        boxSizer.Add(self.scroll, 0, wx.EXPAND|wx.GROW)
+        self.SetScrollbar(0,1000,1000,1000)
+        #boxSizer.Add(self.scroll, 0, wx.EXPAND|wx.GROW)
+
+        """
+        background_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        background_sizer.AddSizer(boxSizer, 1, wx.EXPAND|wx.GROW|wx.ALL, 2)
+        background_sizer.Add(self.scroll, 0, wx.EXPAND|wx.GROW)
+        b.SetScrollbar(0,1000,1000,1000)
+        self.SetSizerAndFit(background_sizer)
+        #background_sizer.Fit(self)
+        """
+        self.SetSizerAndFit(boxSizer)
+        #self.SetSizerAndFit(mainSizer)
+
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.loadButton.Bind(wx.EVT_BUTTON, self.OnLoadDI)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+    def OnLoadDI(self,e):
+        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",self.scalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.path = dialog.GetPath()
+            self.scalarpath = self.path
+        dialog.Destroy()
 
 # ###################################################
 #    Monitor page

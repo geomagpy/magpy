@@ -34,11 +34,11 @@ class StreamPage(wx.Panel):
         self.fileLabel = wx.StaticText(self, label="File/Table:")
         self.fileTextCtrl = wx.TextCtrl(self, value="*")
         self.startdateLabel = wx.StaticText(self, label="Start date:")
-        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-11-22","%Y-%m-%d").timetuple())))
+        self.startDatePicker = wx.DatePickerCtrl(self, style=wx.DP_DEFAULT)
         # the following line produces error in my win xp installation
         self.startTimePicker = wx.TextCtrl(self, value="00:00:00")
         self.enddateLabel = wx.StaticText(self, label="End date:")
-        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.now().timetuple())))
+        self.endDatePicker = wx.DatePickerCtrl(self, style=wx.DP_DEFAULT)
         self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
         self.trimStreamButton = wx.Button(self,-1,"Trim timerange",size=(160,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
