@@ -1046,6 +1046,62 @@ class StreamFlagRangeDialog(wx.Dialog):
         print (str(firstkey),ind, self.ul, self.ll)
 
 
+class StreamFlagSelectionDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Parameter selection of flag range routine
+    USED BY:
+        Stream Method: onFlagRange()
+    """
+    def __init__(self, parent, title):
+        super(StreamFlagSelectionDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.SelectionTextCtrl = wx.TextCtrl(self, value='test',size=(160,160))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.SelectionTextCtrl, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
+
+
 class StreamLoadFlagDialog(wx.Dialog):
     """
     DESCRIPTION
