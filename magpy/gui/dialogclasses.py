@@ -697,8 +697,6 @@ class StreamSelectKeysDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=len(self.keylst), cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -709,6 +707,8 @@ class StreamSelectKeysDialog(wx.Dialog):
         contlst = [eval('(self.'+elem+'CheckBox, expandOption)') for elem in self.keylst]
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=len(contlst), cols=1, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
