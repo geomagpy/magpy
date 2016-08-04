@@ -1,21 +1,13 @@
+#!/usr/bin/env python
+
+import os
 import sys
-from socket import gethostname
 
-planet = gethostname()
-leonplanets = ['Earth', 'uranus', 'saturn']
-
-
-if planet == 'zagll1':
-    magpypath = '/home/rachel/Software/MagPyDev/magpy/trunk/src/'
-else:
-    magpypath = '/home/leon/Software/magpy-git/'
-
+# run the MagPy GUI from a local source rather than from the installed version
+magpypath = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 sys.path.insert(1,magpypath)
 
-#from magpy.stream import *
-from magpy.gui.magpy_gui import *
+from magpy.gui.magpy_gui import MagPyApp
 
-app = wx.App(redirect=False)
-frame = MainFrame(None,-1,"")
-frame.Show()
+app = MagPyApp(0)
 app.MainLoop()

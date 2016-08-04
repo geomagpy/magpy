@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 
-from magpy.gui.magpy_gui import *
+from magpy.gui.magpy_gui import MagPyApp
 
-app = wx.App(redirect=False)
-frame = MainFrame(None,-1,"")
-frame.Show()
+app = MagPyApp(0)
 app.MainLoop()

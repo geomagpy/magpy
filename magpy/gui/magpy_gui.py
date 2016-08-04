@@ -3312,10 +3312,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # then use data_2_file method for binary writing
         pass
 
+class MagPyApp(wx.App):
+    # wxWindows calls this method to initialize the application
+    def OnInit(self):
+        # Create an instance of our customized Frame class
+        frame = MainFrame(None,-1,"")
+        frame.Show(True)
+        # Tell wxWindows that this is our main window
+        self.SetTopWindow(frame)
+        # Return a success flag
+        return True
+
 '''
 # To run:
-app = wx.App(redirect=False)
-frame = MainFrame(None,-1,"")
-frame.Show()
+app = MagPyApp(0)
 app.MainLoop()
 '''
