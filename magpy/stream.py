@@ -7183,9 +7183,9 @@ CALLED BY:
             timearray = self.ndarray[0]
             st = (np.abs(timearray.astype(float)-date2num(starttime))).argmin() - 1
             ed = (np.abs(timearray.astype(float)-date2num(endtime))).argmin() + 1
-            if starttime < num2date(cutstream.ndarray[0][0]).replace(tzinfo=None):
+            if starttime < num2date(cutstream.ndarray[0][0]):
                 st = 0
-            if endtime > num2date(cutstream.ndarray[0][-1]).replace(tzinfo=None):
+            if endtime > num2date(cutstream.ndarray[0][-1]):
                 ed = len(cutstream.ndarray[0])
             dropind = [i for i in range(st,ed)]
             for index,key in enumerate(KEYLIST):
