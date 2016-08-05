@@ -34,6 +34,7 @@ DEPENDENCIES:
                 .format_gfz
                 .format_imf
                 .format_rcs
+                .format_json
 
 CALLED BY:
         magpy.stream.read()
@@ -59,6 +60,7 @@ from magpy.lib.format_wdc import *
 from magpy.lib.format_magpy import *
 from magpy.lib.format_noaa import *
 from magpy.lib.format_latex import *
+from magpy.lib.format_json import *
 
 # IMPORT OBSERVATORY/GROUP SPECIFIC FORMATS:
 from magpy.lib.format_wik import *
@@ -122,6 +124,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "PYBIN"):
         if (isPYBIN(filename)):
+            return True
+    elif (format_type == "JSON"):
+        if (isJSON(filename)):
             return True
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
@@ -272,6 +277,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYCDF(filename, headonly, **kwargs)
     elif (format_type == "PYBIN"):
         return readPYBIN(filename, headonly, **kwargs)
+    elif (format_type == "JSON"):
+        return readJSON(filename, headonly, **kwargs)
     elif (format_type == "GSM19"):
         return readGSM19(filename, headonly, **kwargs)
     elif (format_type == "LEMIHF"):

@@ -316,6 +316,7 @@ PYMAG_SUPPORTED_FORMATS = [
                 'DKA',          # K value format Intermagnet
                 'DIDD',         # Output format from DIDD
                 'GSM19',        # Output format from GSM19 magnetometer
+                'JSON',         # JavaScript Object Notation
                 'LEMIHF',       # LEMI text format data
                 'LEMIBIN',      # Current LEMI binary data format at WIC
                 'LEMIBIN1',     # Deprecated LEMI binary format at WIC
@@ -7182,9 +7183,9 @@ CALLED BY:
             timearray = self.ndarray[0]
             st = (np.abs(timearray.astype(float)-date2num(starttime))).argmin() - 1
             ed = (np.abs(timearray.astype(float)-date2num(endtime))).argmin() + 1
-            if starttime < num2date(cutstream.ndarray[0][0]):
+            if starttime < num2date(cutstream.ndarray[0][0]).replace(tzinfo=None):
                 st = 0
-            if endtime > num2date(cutstream.ndarray[0][-1]):
+            if endtime > num2date(cutstream.ndarray[0][-1]).replace(tzinfo=None):
                 ed = len(cutstream.ndarray[0])
             dropind = [i for i in range(st,ed)]
             for index,key in enumerate(KEYLIST):
@@ -9852,7 +9853,6 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 loggerstream.error("read: Cannot open file/files: %s" % pathname)
-                #raise Exception("Stream is empty!")
                 print("read: Cannot open file/files: {}".format(pathname))
 
     if headonly and (starttime or endtime):
@@ -9884,6 +9884,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
+            print(format_type) # XXX
             if isFormat(filename, format_type):
                 break
     else:
