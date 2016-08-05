@@ -9884,7 +9884,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
-            print(format_type) # XXX
             if isFormat(filename, format_type):
                 break
     else:
@@ -11689,6 +11688,59 @@ def extractDateFromString(datestring):
         return [datetime.date(date)]
     except:
         return [date]
+    
+    
+def testTimeString(time):
+    """
+    Check the date/time input and returns a datetime object if valid:
+
+    ! Use UTC times !
+
+    - accepted are the following inputs:
+    1) absolute time: as provided by date2num
+    2) strings: 2011-11-22 or 2011-11-22T11:11:00
+    3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+    """
+    
+    timeformats = ["%Y-%m-%d", 
+                   "%Y-%m-%dT%H:%M:%S", 
+                   "%Y-%m-%d %H:%M:%S.%f",
+                   "%Y-%m-%dT%H:%M:%S.%f",
+                   "%Y-%m-%d %H:%M:%S"
+                   ]
+                   
+    if isinstance(time, float) or isinstance(time, int):
+        try:
+            timeobj = num2date(time).replace(tzinfo=None)
+        except:
+            raise TypeError
+    elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
+        for i, tf in enumerate(timeformats):
+            try:
+                timeobj = datetime.strptime(time,tf)
+                break
+            except:
+                j = i+1
+                pass
+        if j == len(timeformats):     # Loop found no matching format
+            try:
+                # Necessary to deal with old 1000000 micro second bug
+                timearray = time.split('.')
+                print(timearray)
+                if len(timearray) > 1:
+                    if timearray[1] == '1000000':
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+                    else:
+                        # This would be wrong but leads always to a TypeError
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
+            except:
+                raise TypeError
+    elif not isinstance(time, datetime):
+        raise TypeError
+    else:
+        timeobj = time
+
+    return timeobj
 
 
 def denormalize(column, startvalue, endvalue):
