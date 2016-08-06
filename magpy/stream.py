@@ -316,6 +316,7 @@ PYMAG_SUPPORTED_FORMATS = [
                 'DKA',          # K value format Intermagnet
                 'DIDD',         # Output format from DIDD
                 'GSM19',        # Output format from GSM19 magnetometer
+                'JSON',         # JavaScript Object Notation
                 'LEMIHF',       # LEMI text format data
                 'LEMIBIN',      # Current LEMI binary data format at WIC
                 'LEMIBIN1',     # Deprecated LEMI binary format at WIC
@@ -9934,7 +9935,6 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 loggerstream.error("read: Cannot open file/files: %s" % pathname)
-                #raise Exception("Stream is empty!")
                 print("read: Cannot open file/files: {}".format(pathname))
 
     if headonly and (starttime or endtime):
@@ -11770,6 +11770,59 @@ def extractDateFromString(datestring):
         return [datetime.date(date)]
     except:
         return [date]
+    
+    
+def testTimeString(time):
+    """
+    Check the date/time input and returns a datetime object if valid:
+
+    ! Use UTC times !
+
+    - accepted are the following inputs:
+    1) absolute time: as provided by date2num
+    2) strings: 2011-11-22 or 2011-11-22T11:11:00
+    3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+    """
+    
+    timeformats = ["%Y-%m-%d", 
+                   "%Y-%m-%dT%H:%M:%S", 
+                   "%Y-%m-%d %H:%M:%S.%f",
+                   "%Y-%m-%dT%H:%M:%S.%f",
+                   "%Y-%m-%d %H:%M:%S"
+                   ]
+                   
+    if isinstance(time, float) or isinstance(time, int):
+        try:
+            timeobj = num2date(time).replace(tzinfo=None)
+        except:
+            raise TypeError
+    elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
+        for i, tf in enumerate(timeformats):
+            try:
+                timeobj = datetime.strptime(time,tf)
+                break
+            except:
+                j = i+1
+                pass
+        if j == len(timeformats):     # Loop found no matching format
+            try:
+                # Necessary to deal with old 1000000 micro second bug
+                timearray = time.split('.')
+                print(timearray)
+                if len(timearray) > 1:
+                    if timearray[1] == '1000000':
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+                    else:
+                        # This would be wrong but leads always to a TypeError
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
+            except:
+                raise TypeError
+    elif not isinstance(time, datetime):
+        raise TypeError
+    else:
+        timeobj = time
+
+    return timeobj
 
 
 def denormalize(column, startvalue, endvalue):

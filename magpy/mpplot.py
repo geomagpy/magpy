@@ -1584,7 +1584,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
     if legend == True:
         axes = axis2 + axis1
         labels = [l.get_label() for l in axes]
-        legend = ax1.legend(axes, labels, loc='upper left', shadow=True)
+        legend = ax1.legend(axes, labels, loc='upper right', shadow=True)
         for label in legend.get_texts():
             label.set_fontsize('small')
 
