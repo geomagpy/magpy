@@ -1015,8 +1015,9 @@ class MainFrame(wx.Frame):
         keys = stream._get_key_headers()
         keystr = ','.join(keys)
 
-        keylist = [elem for elem in keys if elem in NUMKEYLIST]
-        self.shownkeylist = keylist[:9]
+        if len(self.shownkeylist) == 0:   ## Initiaize self.shownkeylist if not yet done
+            keylist = [elem for elem in keys if elem in NUMKEYLIST]
+            self.shownkeylist = keylist[:9]
         #print (self.menu_p.str_page.symbolRadioBox.GetStringSelection())
         if self.menu_p.str_page.symbolRadioBox.GetStringSelection() == 'line':
             self.symbollist = ['-'] * len(self.shownkeylist)
@@ -2159,9 +2160,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.changeStatusbar("Delta F ...")
 
         self.plotstream = self.plotstream.delta_f()
-        print (self.plotstream._get_key_headers())
-        #if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
-        #    self.shownkeylist.append('df')
+        #print (self.plotstream._get_key_headers())
+        if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
+            self.shownkeylist.append('df')
         self.menu_p.rep_page.logMsg('- determined delta F between x,y,z and f')
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
@@ -2486,7 +2487,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
                 self.changeStatusbar("Ready")
-            dlg.Destroy()
         else:
             self.changeStatusbar("Failure")
 
