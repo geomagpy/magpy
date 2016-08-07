@@ -1112,8 +1112,18 @@ class MainFrame(wx.Frame):
 
         # Selective fields
         # ----------------------------------------
-        if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF']:
+        if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF','hez','HEZ']:
             self.menu_p.str_page.compRadioBox.Enable()
+            if comps in ['hdz','HDZ']:
+                self.menu_p.str_page.compRadioBox.SetStringSelection('hdz')
+                self.compselect = 'hdz'
+            elif comps in ['idf','IDF']:
+                self.menu_p.str_page.compRadioBox.SetStringSelection('idf')
+                self.compselect = 'idf'
+            else:
+                self.menu_p.str_page.compRadioBox.SetStringSelection('xyz')
+                self.compselect = 'xyz'
+
         if len(commcol) > 0:
             self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
@@ -1278,7 +1288,7 @@ class MainFrame(wx.Frame):
         #        keylist.remove(key)
         keylist = [elem for elem in keylist if elem in NUMKEYLIST]
         self.symbollist = ['-'] * len(keylist)
-        self.menu_p.str_page.compRadioBox.SetStringSelection('line')
+        self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
         self.menu_p.str_page.dailyMeansButton.Disable()
 
 
@@ -2610,7 +2620,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Apply baselinecorrection
         """
+        print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.plotstream = self.plotstream.bc()
+        print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
@@ -2635,7 +2647,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         orgcomp = self.compselect
         self.compselect = self.menu_p.str_page.comp[event.GetInt()]
         coordinate = orgcomp+'2'+self.compselect
-        self.changeStatusbar("Transforming ...")
+        self.changeStatusbar("Transforming ... {}".format(coordinate))
+        print("Transforming ... {}".format(coordinate))
         self.plotstream = self.plotstream._convertstream(coordinate)
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
@@ -2923,7 +2936,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if dlg.ShowModal() == wx.ID_YES:
                 dbdict2fields(self.db,self.plotstream.header)
                 self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
-            dlg.Destroy()
             self.ActivateControls(self.plotstream)
 
     def onMetaDataButton(self,event):
@@ -3023,7 +3035,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.dipathlist = dlg.pathlist
             self.menu_p.abs_page.AnalyzeButton.Enable()
 
-        dlg.Destroy()
 
 
     def onDefineVario(self,event):
@@ -3041,7 +3052,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             path = dialog.GetPath()
             self.menu_p.abs_page.varioTextCtrl.SetValue(path)
             self.divariopath = os.path.join(path,'*')
-        dialog.Destroy()
         """
         dlg = DefineVarioDialog(None, title='Get Variometer path')
         if dlg.ShowModal() == wx.ID_OK:
@@ -3300,17 +3310,33 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
             self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.dbname))
 
+    def _monitor2stream(self,array, db=None, dataid=None):
+        """
+        DESCRIPTION:
+            creates self.plotstream object from monitor data
+        """
+        header = {}
+        if db:
+            header = dbfields2dict(db,dataid)
+        array[0] = date2num(array[0])
+        stream = DataStream([LineStruct()],header,array)
+        return stream 
 
     def onStopMonitorButton(self, event):
         if  self.monitorSource=='MARCOS':
+            dataid = self.plot_p.datavars[0]
             self.plot_p.t1_stop.set()
             self.menu_p.com_page.logMsg(' > Read cycle stopped')
             self.menu_p.com_page.logMsg('MARCOS disconnected')
+            self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
+            self.plotstream = self.stream.copy()
+            self.streamlist.append(self.plotstream)
 
-            # convert array to stream   self.plot_p.array
         self.menu_p.com_page.stopMonitorButton.Disable()
         self.menu_p.com_page.saveMonitorButton.Disable()
-        self.ActivateControls(DataStream())
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+
         self.menu_p.com_page.getMARTASButton.Enable()
         self.menu_p.com_page.getMARCOSButton.Enable()
         self.menu_p.com_page.getMQTTButton.Enable()
