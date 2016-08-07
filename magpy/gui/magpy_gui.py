@@ -823,18 +823,18 @@ class MainFrame(wx.Frame):
         # --------------------------
         self.DeactivateAllControls()
 
-        self.sp.SplitVertically(self.plot_p,self.menu_p,900)
+        self.sp.SplitVertically(self.plot_p,self.menu_p,800)
 
     def __set_properties(self):
         self.SetTitle("MagPy")
-        self.SetSize((1300, 800))
+        self.SetSize((1200, 800))
         self.SetFocus()
         self.StatusBar.SetStatusWidths([-1, -1])
         # statusbar fields
         StatusBar_fields = ["Ready", ""]
         for i in range(len(StatusBar_fields)):
             self.StatusBar.SetStatusText(StatusBar_fields[i], i)
-        self.menu_p.SetMinSize((100, 100))
+        self.menu_p.SetMinSize((400, 750))
         self.plot_p.SetMinSize((100, 100))
 
 
@@ -2289,7 +2289,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION:
             Opens time range dialog and loads data. Returns stream.
         USED BY:
-            OnOpenDir and OnOpenDB
+            OnOpenDir and OnOpenDB , OnOpen
         """
         dlg = LoadDataDialog(None, title='Select timerange:',mintime=mintime,maxtime=maxtime, extension=extension)
         if dlg.ShowModal() == wx.ID_OK:
@@ -2309,10 +2309,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if isinstance(path, basestring):
             if not path=='':
                 self.menu_p.str_page.fileTextCtrl.SetValue(ext)
-                stream = read(path_or_url=os.path.join(path,ext), starttime=start, endtime=end)
+                self.changeStatusbar("Loading data ... please be patient")
+                if path.find('//') > 0:
+                    stream = read(path_or_url=path, starttime=start, endtime=end)
+                else:
+                    stream = read(path_or_url=os.path.join(path,ext), starttime=start, endtime=end)
         else:
             # assume Database
             try:
+                self.changeStatusbar("Loading data ... please be patient")
                 stream = readDB(path[0],path[1], starttime=start, endtime=end)
             except:
                 print ("Reading failed")
