@@ -1305,12 +1305,25 @@ class MetaDataDialog(wx.Dialog):
             else:
                 label = key
                 value = str(self.header.get(key,''))
-                #if key.startswith(self.layer):
+                if not isinstance(value, str) or '[' in value:
+                     print ("not a string")
+                     try:
+                         try:
+                             float(value)
+                         except:
+                             value = 'object with complex data'
+                     except:
+                         value = 'object with complex data'
                 cnt += 1
+
+                label = self.AppendLabel(key,label)
                 exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
                 exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,30))')
+                if value.startswith('object with complex'):
+                    exec('self.'+key+'TextCtrl.Disable()')
         self.cnts = [colcnt, cnt]
 
+        self.legendText = wx.StaticText(self,label="(1: IAF, 2: IAGA, 3: IMAGCDF)")
         self.okButton = wx.Button(self, wx.ID_OK, label='Update')
         self.closeButton = wx.Button(self, label='Cancel')
 
@@ -1348,7 +1361,7 @@ class MetaDataDialog(wx.Dialog):
         #    contlst.append(eval('(self.'+elem+'Text, expandOption)'))
 
         contlst.append(emptySpace)
-        contlst.append(emptySpace)
+        contlst.append((self.legendText, noOptions))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         for control, options in contlst:
@@ -1366,6 +1379,26 @@ class MetaDataDialog(wx.Dialog):
     def OnClose(self, e):
         self.Destroy()
 
+    def AppendLabel(self, key,label):
+        from magpy.lib.magpy_formats import IAFMETA, IAGAMETA, IMAGCDFMETA
+        #print (IAFMETA, IAGAMETA, IMAGCDFMETA)
+        if key in IAFMETA:
+            if not label.find('(') > 0:
+                label += '(1'
+        if key in IAGAMETA:
+            if not label.find('(') > 0:
+                label += '(2'
+            else:
+                label += ',2'
+        if key in IMAGCDFMETA:
+            if not label.find('(') > 0:
+                label += '(3'
+            else:
+                label += ',3'
+        if label.find('(') > 0:
+            label += ')'
+
+        return label
 
 # ###################################################
 #    Analysis page

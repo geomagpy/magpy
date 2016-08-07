@@ -1062,9 +1062,9 @@ class MainFrame(wx.Frame):
                          if self.plotstream._is_number(value):
                              pass
                          else:
-                             value = 'list'
+                             value = 'object - contains complex data'
                      except:
-                         value = 'list'
+                         value = 'object - contains complex data'
                  #print ("-- ", value)
                  metadatatext += "{}: \t{}\n".format(key.replace('Data',''),value)
             if key.startswith('Sensor'):

@@ -358,6 +358,7 @@ PYMAG_SUPPORTED_FORMATS = [
                 'UNKOWN'        # 'Unknown'?
                         ]
 
+
 # ----------------------------------------------------------------------------
 #  Part 3: Main classes -- DataStream, LineStruct and
 #      PyMagLog (To be removed)
