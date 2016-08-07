@@ -732,6 +732,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
+        self.Bind(wx.EVT_CLOSE, self.OnFileQuit)  #Bind the EVT_CLOSE event to FileQuit()
         # BindingControls on the notebooks
         #       Stream Page
         # ------------------------
@@ -1442,8 +1443,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         wx.AboutBox(info)
 
+    """
     def OnExit(self, event):
-        self.Close()  # Close the main window.
+        print ("Exiting with exit") ### TODO this method is not used at all
+        if self.db:
+            self.db.close()
+        self.Destroy()  # Close the main window.
+        sys.exit()
+    """
 
     def OnOpenDir(self, event):
         stream = DataStream()
@@ -1694,7 +1701,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.Destroy()
 
     def OnFileQuit(self, event):
-        self.Close()
+        if self.db:
+            self.db.close()
+        self.Destroy()  # Close the main window.
+        sys.exit()
 
 
     def OnSave(self, event):
