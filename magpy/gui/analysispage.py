@@ -43,7 +43,7 @@ class AnalysisPage(wx.Panel):
         # filter, smooth, offset
         self.head4Label = wx.StaticText(self, label="Geomagnetic methods:")
         # baseline, k_fmi, delta_f
-        self.head5Label = wx.StaticText(self, label="Multiple streams:")
+        #self.head5Label = wx.StaticText(self, label="Multiple streams:")
         # merge, subtract, stack
 
         # 1 Line
@@ -66,9 +66,9 @@ class AnalysisPage(wx.Panel):
         self.baselineButton = wx.Button(self,-1,"Baseline",size=(160,30))
 
         # 5 Line
-        self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
-        self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
-        self.stackButton = wx.Button(self,-1,"Stack/Average",size=(160,30))
+        #self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
+        #self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
+        #self.stackButton = wx.Button(self,-1,"Stack/Average",size=(160,30))
 
         # 3. Section
         #self.selectfilterLabel = wx.StaticText(self, label="Select type:")
@@ -128,12 +128,6 @@ class AnalysisPage(wx.Panel):
                  (self.deltafButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.baselineButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                 (self.head5Label, noOptions),
-                  emptySpace,
-                 (self.mergeButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.subtractButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.stackButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace]:
             gridSizer.Add(control, **options)
 

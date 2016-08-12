@@ -198,42 +198,53 @@ class ExportDataDialog(wx.Dialog):
     """
     Dialog for Exporting data
     """
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, path, stream, defaultformat):
         super(ExportDataDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
+        self.WriteFormats = [ key for key in PYMAG_SUPPORTED_FORMATS if 'w' in PYMAG_SUPPORTED_FORMATS[key][0]]
+        if not defaultformat or not defaultformat in self.WriteFormats:
+            defaultformat = 'PYCDF'
+        self.default = self.WriteFormats.index(defaultformat)
+        # use stream info and defaults file export
+        self.filenamebegins = None
+        self.filenameends = None
+        self.dateformat = None
+        self.coverage = None
+        self.mode = 'overwrite'
+        self.stream = stream
+        self.filename = self.GetFilename(stream, defaultformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
+        self.path = path
         self.createControls()
         self.doLayout()
         self.bindControls()
+
 
     # Widgets
     def createControls(self):
         # single anaylsis
         # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        self.selectDirButton = wx.Button(self, label='Select Directory')
-        self.selectedTextCtrl = wx.TextCtrl(self, value="")
-        self.formatComboBox = wx.ComboBox(self, choices=PYMAG_SUPPORTED_FORMATS,
-            style=wx.CB_DROPDOWN, value=PYMAG_SUPPORTED_FORMATS[0])
+        self.selectDirButton = wx.Button(self, label='Change Directory', size=(160,30))
+        self.selectedTextCtrl = wx.TextCtrl(self, value=self.path, size=(300,30))
+        self.formatLabel = wx.StaticText(self, label="as ...")
+        self.formatComboBox = wx.ComboBox(self, choices=self.WriteFormats,
+            style=wx.CB_DROPDOWN, value=self.WriteFormats[self.default], size=(160,30))
         self.selectLabel = wx.StaticText(self, label="Export data to ...")
-        self.nameLabel = wx.StaticText(self, label="File name ...")
-        self.beginTextCtrl = wx.TextCtrl(self, value="MyFile_")
-        self.dateComboBox = wx.ComboBox(self, choices=['2000-11-22','20001122','NOV2200'],
-            style=wx.CB_DROPDOWN, value='2000-11-22')
-        self.endTextCtrl = wx.TextCtrl(self, value=".txt")
-        self.coverageLabel = wx.StaticText(self, label="File covers ...")
-        self.coverageComboBox = wx.ComboBox(self, choices=['hour','day','month','year','all'],
-            style=wx.CB_DROPDOWN, value='day')
-        self.modeLabel = wx.StaticText(self, label="Write mode ...")
-        self.modeComboBox = wx.ComboBox(self, choices=['replace','append', 'overwrite', 'skip'],
-            style=wx.CB_DROPDOWN, value='overwrite')
-        self.okButton = wx.Button(self, wx.ID_OK, label='Write')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.nameLabel = wx.StaticText(self, label="File name(s) looks like ...")
+        self.filenameTextCtrl = wx.TextCtrl(self, value=self.filename, size=(300,30))
+        self.modifyButton = wx.Button(self, label='Modify name(s)', size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Write', size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel', size=(160,30))
+
+        self.filenameTextCtrl.Disable()
+        self.selectedTextCtrl.Disable()
+
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=3, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=4, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -244,24 +255,15 @@ class ExportDataDialog(wx.Dialog):
         for control, options in \
                 [(self.selectLabel, noOptions),
                   emptySpace,
-                  emptySpace,
-                 (self.selectDirButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.selectedTextCtrl, expandOption),
+                 (self.selectDirButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.formatLabel, noOptions),
                  (self.formatComboBox, expandOption),
                  (self.nameLabel, noOptions),
                   emptySpace,
-                  emptySpace,
-                 (self.beginTextCtrl, expandOption),
-                 (self.dateComboBox, expandOption),
-                 (self.endTextCtrl, expandOption),
-                 (self.coverageLabel, noOptions),
-                 (self.modeLabel, noOptions),
-                  emptySpace,
-                 (self.coverageComboBox, expandOption),
-                 (self.modeComboBox, expandOption),
-                  emptySpace,
+                 (self.filenameTextCtrl, expandOption),
+                 (self.modifyButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
 
@@ -274,6 +276,24 @@ class ExportDataDialog(wx.Dialog):
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.selectDirButton.Bind(wx.EVT_BUTTON, self.OnSelectDirButton)
+        self.modifyButton.Bind(wx.EVT_BUTTON, self.OnModifyButton)
+        self.formatComboBox.Bind(wx.EVT_COMBOBOX, self.OnFormatChange)
+
+
+    def GetFilename(self, stream, format_type, filenamebegins=None, filenameends=None, coverage=None, dateformat=None):
+        """
+        DESCRIPTION:
+            Helper method to determine filename from selections
+        """
+        print ("Calling GetFilename:", filenamebegins, filenameends, coverage, dateformat)
+        format_type, self.filenamebegins, self.filenameends, self.coverage, self.dateformat = stream._write_format(format_type, filenamebegins, filenameends, coverage, dateformat)
+        print ("obtained:", self.filenamebegins, self.filenameends, self.coverage, self.dateformat)
+        datelook = datetime.strftime(stream._find_t_limits()[0],self.dateformat)
+        if format_type.endswith('PYCDF'):
+            self.filenameends = '.cdf'
+        filename = self.filenamebegins+datelook+self.filenameends
+        return filename
+
 
     def OnSelectDirButton(self, event):
         dialog = wx.DirDialog(None, "Choose a directory:",'/srv',style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
@@ -281,11 +301,108 @@ class ExportDataDialog(wx.Dialog):
             #self.ReactivateStreamPage()
             self.selectedTextCtrl.SetValue(dialog.GetPath())
         #self.menu_p.rep_page.logMsg('- Directory for file export defined')
-        dialog.Destroy()
+        #dialog.Destroy()
+
+    def OnModifyButton(self, event):
+        # open a dialog to select filename specifications
+        helpdlg = ExportModifyNameDialog(None, title='File name specifications',filenamebegins=self.filenamebegins, filenameends=self.filenameends,coverage=self.coverage,dateformat=self.dateformat,mode=self.mode)
+        if helpdlg.ShowModal() == wx.ID_OK:
+            self.filenamebegins = helpdlg.beginTextCtrl.GetValue()
+            self.filenameends = helpdlg.endTextCtrl.GetValue()
+            self.dateformat = helpdlg.dateTextCtrl.GetValue()
+            self.coverage = helpdlg.coverageComboBox.GetValue()
+            self.mode = helpdlg.modeComboBox.GetValue()
+        selformat = self.formatComboBox.GetValue()
+        self.filename = self.GetFilename(self.stream, selformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
+        self.filenameTextCtrl.SetValue(self.filename)
+
+
+    def OnFormatChange(self, event):
+        # call stream._write_format to determine self.filename
+        selformat = self.formatComboBox.GetValue()
+        self.filename = self.GetFilename(self.stream, selformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
+        self.filenameTextCtrl.SetValue(self.filename)
 
     def OnClose(self, e):
         self.Destroy()
 
+class ExportModifyNameDialog(wx.Dialog):
+    """
+    Helper Dialog for Exporting data
+    """
+    def __init__(self, parent, title, filenamebegins, filenameends, coverage, dateformat,mode):
+        super(ExportModifyNameDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.filenamebegins = filenamebegins
+        self.filenameends = filenameends
+        self.dateformat = dateformat
+        self.coverage = coverage
+        self.mode = mode
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+
+    # Widgets
+    def createControls(self):
+
+        self.beginLabel = wx.StaticText(self, label="Name(s) start with ...", size=(160,30))
+        self.endLabel = wx.StaticText(self, label="Name(s) end with ...", size=(160,30))
+        self.beginTextCtrl = wx.TextCtrl(self, value=self.filenamebegins, size=(160,30))
+        self.endTextCtrl = wx.TextCtrl(self, value=self.filenameends, size=(160,30))
+        self.dateformatLabel = wx.StaticText(self, label="Date looks like ...")
+        self.dateTextCtrl = wx.TextCtrl(self, value=self.dateformat, size=(160,30))
+        self.coverageLabel = wx.StaticText(self, label="File covers ...")
+        self.coverageComboBox = wx.ComboBox(self, choices=['hour','day','month','year','all'],
+            style=wx.CB_DROPDOWN, value=self.coverage, size=(160,30))
+        self.modeLabel = wx.StaticText(self, label="Write mode ...")
+        self.modeComboBox = wx.ComboBox(self, choices=['replace','append', 'overwrite', 'skip'],
+            style=wx.CB_DROPDOWN, value=self.mode)
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel', size=(160,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=4, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        for control, options in \
+                [(self.beginLabel, noOptions),
+                 (self.endLabel, noOptions),
+                 (self.beginTextCtrl, expandOption),
+                 (self.endTextCtrl, expandOption),
+                 (self.dateformatLabel, noOptions),
+                 (self.coverageLabel, noOptions),
+                 (self.dateTextCtrl, expandOption),
+                 (self.coverageComboBox, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.modeLabel, noOptions),
+                 (self.modeComboBox, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
 
 class DatabaseConnectDialog(wx.Dialog):
     """
@@ -2436,6 +2553,7 @@ class AGetMARCOSDialog(wx.Dialog):
         self.okButton = wx.Button(self, wx.ID_OK, label='Open')
         self.closeButton = wx.Button(self, label='Cancel')
 
+
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
@@ -2526,4 +2644,174 @@ class BGetMARCOSDialog(wx.Dialog):
     def OnClose(self, e):
         self.Destroy()
 
+
+
+class MultiStreamDialog(wx.Dialog):
+    """
+    DESCRIPTION:
+    Subclass for Multiple stream selections
+
+    This class accesses the streamlist object which should contain the following info:
+    datastream and unique header, keylists
+    Layout of the multiple stream page:
+    stream1 uses dataid name (or sensorid) - if not available just stream x is written
+
+    [ ]  stream1     Dropdown with checkboxes [ ] key1
+         (type)                               [ ] key2
+
+    [ ]  stream2     Dropdown with checkboxes [ ] key1
+         (type)                               [ ] key2
+
+    [ Select ]         [ Merge ]
+
+    [ Subtract ]       [ Combine ]
+
+    (All other single stream functions are deactivated as long as multiple streams are selected.
+     If merge is used a new stream is generated and all other methods are available again.)
+    """
+
+    def __init__(self, parent, title, streamlist, idx, streamkeylist):
+        super(MultiStreamDialog, self).__init__(parent=parent,
+            title=title, size=(400, 700))
+        self.streamlist = streamlist
+        self.namelst = []
+        self.streamkeylist = streamkeylist
+        self.activeidx = idx
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.head1Label = wx.StaticText(self, label="Available datastreams:")
+        self.head2Label = wx.StaticText(self, label="Applications:")
+        # 1. Section
+        for idx, elem in enumerate(self.streamlist):
+            name = elem.header.get('DataID','stream'+str(idx))
+            #if not len(self.keylist[idx]) > 0:
+            #    keys = elem._get_key_headers()
+            #self.keylst.append(keys)
+            keys = self.streamkeylist[idx]
+            if name in self.namelst:
+                num = len([el for el in self.namelst if name == el])
+                name = name+'_'+str(num)
+            self.namelst.append(name)
+            exec('self.'+name+'CheckBox = wx.CheckBox(self, label="'+name+'")')
+            exec('self.'+name+'KeyButton = wx.Button(self,-1,"Keys: '+",".join(keys)+'", size=(160,30))')
+            if idx == self.activeidx:
+                exec('self.'+name+'CheckBox.SetValue(True)')
+
+        self.ApplyButton = wx.Button(self, wx.ID_OK,"Apply",size=(160,30))
+        self.MergeButton = wx.Button(self,-1,"Merge",size=(160,30))
+        self.SubtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
+        self.CombineButton = wx.Button(self,-1,"Combine",size=(160,30))
+        self.AverageStackButton = wx.Button(self,-1,"Average",size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=20, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        contlst = []
+        contlst.append((self.head1Label, noOptions))
+        contlst.append(emptySpace)
+        for idx, elem in enumerate(self.streamlist):
+            name = self.namelst[idx]
+            contlst.append(eval('(self.'+name+'CheckBox, noOptions)'))
+            contlst.append(eval('(self.'+name+'KeyButton, dict(flag=wx.ALIGN_CENTER))'))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.head2Label, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.ApplyButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.MergeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.SubtractButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.CombineButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.AverageStackButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        from functools import partial
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        for idx, elem in enumerate(self.streamlist):
+            name = self.namelst[idx]
+            exec('self.'+name+'KeyButton.Bind(wx.EVT_BUTTON, partial( self.OnGetKeys, name = idx ) )')
+
+    def OnClose(self, e):
+        self.Destroy()
+
+    def OnGetKeys(self, e, name):
+        print ("Stream", name)
+        shkeylst = self.streamkeylist[name]
+        keylst = self.streamlist[name]._get_key_headers()
+        namelist = []
+        for key in shkeylst:
+            colname = self.streamlist[name].header.get('col-'+key, '')
+            if not colname == '':
+                namelist.append(colname)
+            else:
+                namelist.append(key)
+        dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylst,shownkeys=shkeylst,namelist=namelist)
+        for elem in shkeylst:
+            exec('dlg.'+elem+'CheckBox.SetValue(True)')
+        if dlg.ShowModal() == wx.ID_OK:
+            shownkeylist = []
+            for elem in keylst:
+                boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                if boolval:
+                   shownkeylist.append(elem)
+            if len(shownkeylist) == 0:
+                shownkeylist = self.streamkeylist[name]
+            else:
+                self.streamkeylist[name] = shownkeylist
+
+        print ("New keys:")
+        for keys in self.streamkeylist:
+            print (keys)
+
+    def onMergeButton(self, event):
+        """
+        DESCRIPTION
+             Merges two streams
+        """
+        self.changeStatusbar("Merging ...")
+        keys = self.shownkeylist
+        self.changeStatusbar("Ready")
+
+    def onSubtractButton(self, event):
+        """
+        DESCRIPTION
+             Subtracts two stream
+        """
+        self.changeStatusbar("Subtracting ...")
+        keys = self.shownkeylist
+        self.changeStatusbar("Ready")
+
+    def onStackButton(self, event):
+        """
+        DESCRIPTION
+             Stacking/Averaging streams
+        """
+        self.changeStatusbar("Stacking/Averaging streams ...")
+        keys = self.shownkeylist
+        self.changeStatusbar("Ready")
 

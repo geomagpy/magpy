@@ -15,6 +15,7 @@ try: # Necessary for wx2.8.11.0
 except:
     pass
 from wx.lib.pubsub import pub
+from wxPython.lib.dialogs import wxScrolledMessageDialog
 
 from magpy.stream import read
 import magpy.mpplot as mp
@@ -41,78 +42,7 @@ import thread, time
 import threading
 
 import wx.py
-import Queue
-from subprocess import Popen, PIPE
 
-class BashProcessThread(threading.Thread):
-    def __init__(self, readlineFunc):
-        threading.Thread.__init__(self)
-
-        self.readlineFunc = readlineFunc
-        self.outputQueue = Queue.Queue()
-        self.setDaemon(True)
-
-    def run(self):
-        while True:
-            line = self.readlineFunc()
-            self.outputQueue.put(line)
-
-    def getOutput(self):
-        """ called from other thread """
-        lines = []
-        while True:
-            try:
-                line = self.outputQueue.get_nowait()
-                lines.append(line)
-            except Queue.Empty:
-                break
-        return ''.join(lines)
-
-class MyInterpretor(object):
-    def __init__(self, locals, rawin, stdin, stdout, stderr):
-        self.introText = "Welcome to stackoverflow bash shell"
-        self.locals = locals
-        self.revision = 1.0
-        self.rawin = rawin
-        self.stdin = stdin
-        self.stdout = stdout
-        self.stderr = stderr
-
-        self.more = False
-
-        # bash process
-        self.bp = Popen('bash', shell=False, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-
-        # start output grab thread
-        self.outputThread = BashProcessThread(self.bp.stdout.readline)
-        self.outputThread.start()
-
-        # start err grab thread
-        self.errorThread = BashProcessThread(self.bp.stderr.readline)
-        self.errorThread.start()
-
-    def getAutoCompleteKeys(self):
-        return [ord('\t')]
-
-    def getAutoCompleteList(self, *args, **kwargs):
-        return []
-
-    def getCallTip(self, command):
-        return ""
-
-    def push(self, command):
-        command = command.strip()
-        if not command: return
-
-        self.bp.stdin.write(command+"\n")
-        # wait a bit
-        time.sleep(.1)
-
-        # print output
-        self.stdout.write(self.outputThread.getOutput())
-
-        # print error
-        self.stderr.write(self.errorThread.getOutput())
 
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
@@ -432,7 +362,7 @@ class PlotPanel(wx.Panel):
         self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
 
 
-    def guiPlot(self,stream,keys,plotopt=None,**kwargs):
+    def guiPlot(self,streams,keys,plotopt=None,**kwargs):
         """
         DEFINITION:
             embbed matplotlib figure in canvas
@@ -456,13 +386,15 @@ class PlotPanel(wx.Panel):
         except:
             pass
 
-        self.axes = mp.plot(stream,keys,figure=self.figure,**kwargs)
+        self.axes = mp.plotStreams(streams,keys,figure=self.figure,**kwargs)
         self.axlist = self.figure.axes
 
         #get current xlimits:
         for ax in self.axlist:
             ax.callbacks.connect('xlim_changed', on_xlims_change)
 
+        stream = streams[-1]
+        key = keys[-1]
         if not len(stream.ndarray[0])>0:
             t = [elem.time for elem in stream]
             flag = [elem.flag for elem in stream]
@@ -470,7 +402,7 @@ class PlotPanel(wx.Panel):
         else:
             t = stream.ndarray[0]
             flagpos = KEYLIST.index('flag')
-            firstcol = KEYLIST.index(keys[0])
+            firstcol = KEYLIST.index(key[0])
             flag = stream.ndarray[flagpos]
             k = stream.ndarray[firstcol]
         #self.axes.af2 = self.AnnoteFinder(t,yplt,flag,self.axes)
@@ -627,6 +559,7 @@ class MainFrame(wx.Frame):
 
         self.streamlist = []
         self.headerlist = []
+        self.streamkeylist = []
         self.currentstreamindex = 0
         self.stream = DataStream() # used for storing original data
         self.plotstream = DataStream() # used for manipulated data
@@ -695,7 +628,9 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.DIMenu, "D&I")
         # ## Stream Operations
         self.StreamOperationsMenu = wx.Menu()
-        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Select active Strea&m...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
+        self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Add current &working state to Streamlist...\tCtrl+W", "Add Stream", wx.ITEM_NORMAL)
+        self.StreamOperationsMenu.AppendItem(self.StreamAddListSelect)
+        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Select active Strea&m...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.AppendItem(self.StreamListSelect)
         self.MainMenu.Append(self.StreamOperationsMenu, "StreamO&perations")
         # ## Options Menu
@@ -709,6 +644,10 @@ class MainFrame(wx.Frame):
         self.HelpMenu = wx.Menu()
         self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
         self.HelpMenu.AppendItem(self.HelpAboutItem)
+        self.HelpReadFormatsItem = wx.MenuItem(self.HelpMenu, 302, "Read Formats...", "Supported data formats to read", wx.ITEM_NORMAL)
+        self.HelpMenu.AppendItem(self.HelpReadFormatsItem)
+        self.HelpWriteFormatsItem = wx.MenuItem(self.HelpMenu, 303, "Write Formats...", "Supported data formats to write", wx.ITEM_NORMAL)
+        self.HelpMenu.AppendItem(self.HelpWriteFormatsItem)
         self.MainMenu.Append(self.HelpMenu, "&Help")
         self.SetMenuBar(self.MainMenu)
         # Menu Bar end
@@ -725,6 +664,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
         self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamListSelect)
+        self.Bind(wx.EVT_MENU, self.OnStreamAdd, self.StreamAddListSelect)
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
         self.Bind(wx.EVT_MENU, self.onDefineVario, self.DIPath2Vario)
         self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
@@ -732,6 +672,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
+        self.Bind(wx.EVT_MENU, self.OnHelpReadFormats, self.HelpReadFormatsItem)
+        self.Bind(wx.EVT_MENU, self.OnHelpWriteFormats, self.HelpWriteFormatsItem)
         self.Bind(wx.EVT_CLOSE, self.OnFileQuit)  #Bind the EVT_CLOSE event to FileQuit()
         # BindingControls on the notebooks
         #       Stream Page
@@ -787,9 +729,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.onDeltafButton, self.menu_p.ana_page.deltafButton)
-        self.Bind(wx.EVT_BUTTON, self.onMergeButton, self.menu_p.ana_page.mergeButton)
-        self.Bind(wx.EVT_BUTTON, self.onSubtractButton, self.menu_p.ana_page.subtractButton)
-        self.Bind(wx.EVT_BUTTON, self.onStackButton, self.menu_p.ana_page.stackButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -976,9 +915,9 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.activityButton.Disable()      # if xyz, hdz magnetic data
         self.menu_p.ana_page.baselineButton.Disable()      # if absstream in streamlist
         self.menu_p.ana_page.deltafButton.Disable()        # if xyzf available
-        self.menu_p.ana_page.mergeButton.Disable()         # if len(self.streamlist) > 1
-        self.menu_p.ana_page.subtractButton.Disable()      # if len(self.streamlist) > 1
-        self.menu_p.ana_page.stackButton.Disable()         # if len(self.streamlist) > 1
+        #self.menu_p.ana_page.mergeButton.Disable()         # if len(self.streamlist) > 1
+        #self.menu_p.ana_page.subtractButton.Disable()      # if len(self.streamlist) > 1
+        #self.menu_p.ana_page.stackButton.Disable()         # if len(self.streamlist) > 1
 
         # Report
         self.menu_p.rep_page.logger.Disable()              # remain disabled
@@ -1187,6 +1126,7 @@ class MainFrame(wx.Frame):
         self.plotstream = self.stream.copy()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.stream)
+        self.streamkeylist.append(self.stream._get_key_headers())
         self.headerlist.append(self.stream.header)
         self.currentstreamindex = currentstreamindex
         return True
@@ -1374,7 +1314,7 @@ class MainFrame(wx.Frame):
         #if len(stream) > self.resolution:
         #    self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
 
-        self.plot_p.guiPlot(self.plotstream,keylist,symbollist=self.symbollist,annotate=self.annotate)
+        self.plot_p.guiPlot([self.plotstream],[keylist],symbollist=self.symbollist,annotate=self.annotate)
 
         """
         if stream.length()[0] > 0 and len(keylist) > 0:
@@ -1401,7 +1341,7 @@ class MainFrame(wx.Frame):
         """
         self.changeStatusbar("Plotting...")
         #print ("ConfineX:", confinex, symbollist)
-        self.plot_p.guiPlot(stream,keylist,padding=padding,specialdict=specialdict,errorbars=errorbars,
+        self.plot_p.guiPlot([stream],[keylist],padding=padding,specialdict=specialdict,errorbars=errorbars,
                             colorlist=colorlist,symbollist=symbollist,annotate=annotate,
                             includeid=includeid, function=function,plottype=plottype,                 
                             labels=labels,resolution=resolution,confinex=confinex,plotopt=plotopt)
@@ -1410,6 +1350,21 @@ class MainFrame(wx.Frame):
             self.ExportData.Enable(True)
         self.changeStatusbar("Ready")
 
+
+    def OnMultiPlot(self, streamlst, keylst, padding=None, specialdict={},errorbars=None,
+        colorlist=None,symbollist=None,annotate=None,stormphases=None,
+        t_stormphases={},includeid=False,function=None,plottype='discontinuous',
+        labels=False,resolution=None, confinex=False, plotopt=None):
+        """
+        DEFINITION:
+            read stream and display
+        """
+        self.changeStatusbar("Plotting...")
+        #print ("ConfineX:", confinex, symbollist)
+        self.plot_p.guiPlot(streamlst,keylst)
+        #if stream.length()[0] > 1 and len(keylist) > 0:
+        #    self.ExportData.Enable(True)
+        self.changeStatusbar("Ready")
 
     # ################
     # Top menu methods:
@@ -1452,6 +1407,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         info.AddTranslator('Bailey')
 
         wx.AboutBox(info)
+
+    def OnHelpWriteFormats(self, event):
+
+        WriteFormats = [ "{}: \t{}".format(key, PYMAG_SUPPORTED_FORMATS[key][1]) for key in PYMAG_SUPPORTED_FORMATS if 'w' in PYMAG_SUPPORTED_FORMATS[key][0]]
+
+        message = "\n".join(WriteFormats)
+        dlg = wxScrolledMessageDialog(self, message, 'Write formats:')
+        dlg.ShowModal()
+
+    def OnHelpReadFormats(self, event):
+
+        ReadFormats = [ "{}: \t{}".format(key, PYMAG_SUPPORTED_FORMATS[key][1]) for key in PYMAG_SUPPORTED_FORMATS if 'r' in PYMAG_SUPPORTED_FORMATS[key][0]]
+
+        message = "\n".join(ReadFormats)
+        dlg = wxScrolledMessageDialog(self, message, 'Read formats:')
+        dlg.ShowModal()
 
     """
     def OnExit(self, event):
@@ -1612,10 +1583,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def OnExportData(self, event):
-        dlg = ExportDataDialog(None, title='Export Data')
+
+        self.changeStatusbar("Writing data ...")
+        dlg = ExportDataDialog(None, title='Export Data',path=self.dirname,stream=self.plotstream,defaultformat='PYCDF')
         if dlg.ShowModal() == wx.ID_OK:
-            filenamebegins = dlg.beginTextCtrl.GetValue()
-            filenameends = dlg.endTextCtrl.GetValue()
+            filenamebegins = dlg.filenamebegins
+            filenameends = dlg.filenameends
+            dateformat = dlg.dateformat
+            coverage = dlg.coverage
+            mode = dlg.mode
+            """
             datetyp = dlg.dateComboBox.GetValue()
             if datetyp == '2000-11-22':
                 dateformat = '%Y-%m-%d'
@@ -1623,8 +1600,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 dateformat = '%Y%m%d'
             else:
                 dateformat = '%b%d%y'
+            """
             path = dlg.selectedTextCtrl.GetValue()
             fileformat = dlg.formatComboBox.GetValue()
+            """
             coverage = dlg.coverageComboBox.GetValue()
             if coverage == 'hour':
                 coverage = timedelta(hour=1)
@@ -1633,9 +1612,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif coverage == 'year':
                 coverage = timedelta(year=1)
             mode = dlg.modeComboBox.GetValue()
+            """
             #print "Stream: ", len(self.stream), len(self.plotstream)
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
-            #print "Main : ", dateformat, fileformat, coverage, mode
+            print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
             try:
                 self.plotstream.write(path,
                                 filenamebegins=filenamebegins,
@@ -1644,6 +1624,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                 mode=mode,
                                 coverage=coverage,
                                 format_type=fileformat)
+                self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
+                self.changeStatusbar("Data written ... Ready")
             except:
                 self.menu_p.rep_page.logMsg("Writing failed - Permission?")
         dlg.Destroy()
@@ -2188,33 +2170,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
         self.changeStatusbar("Ready")
 
-    def onMergeButton(self, event):
-        """
-        DESCRIPTION
-             Merges two streams
-        """
-        self.changeStatusbar("Merging ...")
-        keys = self.shownkeylist
-        self.changeStatusbar("Ready")
-
-    def onSubtractButton(self, event):
-        """
-        DESCRIPTION
-             Subtracts two stream
-        """
-        self.changeStatusbar("Subtracting ...")
-        keys = self.shownkeylist
-        self.changeStatusbar("Ready")
-
-    def onStackButton(self, event):
-        """
-        DESCRIPTION
-             Stacking/Averaging streams
-        """
-        self.changeStatusbar("Stacking/Averaging streams ...")
-        keys = self.shownkeylist
-        self.changeStatusbar("Ready")
-
     # ------------------------------------------------------------------------------------------
     # ################
     # Stream page functions
@@ -2675,21 +2630,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
             Restore originally loaded data
         """
 
-        # Open external dialog with text control
-        #frame = wx.py.shell.ShellFrame(InterpClass=MyInterpretor)
-        #frame.Show()
-        dlg = StreamFlagSelectionDialog(None, title='Stream: Flag...')
-        dlg.ShowModal()
+        #dlg = StreamFlagSelectionDialog(None, title='Stream: Flag selection ...')
 
-        prev_redir = sys.stdout
-        redir=RedirectText(dlg.SelectionTextCtrl)
-        sys.stdout=redir
+        #prev_redir = sys.stdout
+        #redir=RedirectText(dlg.SelectionTextCtrl)
+        #sys.stdout=redir
         ###   commands
         #sys.stdout=prev_redir
 
         self.changeStatusbar("Opening external data viewer ...")
         self.plot_p.plt.close()
         variables = self.keylist
+
+        #p = subprocess.Popen(['ls', '-a'], stdout = subprocess.PIPE)
+        #text = p.stdout.readlines()
+        #text = "".join(text)
+
         self.plotstream, flaglist = mp.plotFlag(self.plotstream,variables)
         self.flaglist.extend(flaglist)
 
@@ -2742,6 +2698,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             Opens a dialog which allows to select the range to be flagged
         """
+        flaglist = []
         sensid = self.plotstream.header.get('SensorID','')
         dataid = self.plotstream.header.get('DataID','')
         if sensid == '' and not dataid == '':
@@ -3008,9 +2965,36 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
         open dialog to select active stream
         """
+        plotstreamlist = []
+        plotkeylist = []
+        dlg = MultiStreamDialog(None, title='Select stream(s):',streamlist=self.streamlist, idx=self.currentstreamindex, streamkeylist=self.streamkeylist)
+        if dlg.ShowModal() == wx.ID_OK:
+            namelst = dlg.namelst
+            for idx, elem in enumerate(self.streamlist):
+                val = eval('dlg.'+namelst[idx]+'CheckBox.GetValue()')
+                if val:
+                    plotstreamlist.append(elem)
+                    plotkeylist.append(dlg.streamkeylist[idx])
+                    activeidx = idx
+            if len(plotstreamlist) > 1:
+                #  deactivate all Meta; Analysis methods
+                self.DeactivateAllControls()
+                self.OnMultiPlot(plotstreamlist,plotkeylist)
+            else:
+                self.currentstreamindex = activeidx
+                self.plotstream = plotstreamlist[0]
+                self.shownkeylist = plotkeylist[0]
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+
         pass
 
-
+    def OnStreamAdd(self,event):
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.plotstream)
+        self.streamkeylist.append(self.shownkeylist)
+        self.headerlist.append(self.plotstream.header)
+        self.currentstreamindex = currentstreamindex
 
     # ------------------------------------------------------------------------------------------
     # ################

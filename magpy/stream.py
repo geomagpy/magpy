@@ -305,11 +305,64 @@ FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[1:8] # only primary values without time
 
 # Formats supported by MagPy read function:
-PYMAG_SUPPORTED_FORMATS = [
-                'IAGA',         # IAGA 2002 text format
-                'WDC',          # World Data Centre format
-                'IMF',          # Intermagnet Format
-                'IAF',          # Intermagnet archive Format
+PYMAG_SUPPORTED_FORMATS = {
+                'IAGA':['rw','IAGA 2002 text format'],
+                'WDC':['rw','World Data Centre format'],
+                'IMF':['rw', 'Intermagnet Format'],
+                'IAF':['rw', 'Intermagnet archive Format'],
+                'IMAGCDF':['rw','Intermagnet CDF Format'],
+                'BLV':['rw','Baseline format Intermagnet'],
+                'IYFV':['rw','Yearly mean format Intermagnet'],
+                'DKA':['rw', 'K value format Intermagnet'],
+                'DIDD':['rw','Output format from MinGeo DIDD'],
+                'GSM19':['r', 'Output format from GSM19 magnetometer'],
+                'JSON':['rw', 'JavaScript Object Notation'],
+                'LEMIHF':['r', 'LEMI text format data'],
+                'LEMIBIN':['r','Current LEMI binary data format'],
+                'LEMIBIN1':['r','Deprecated LEMI binary format at WIC'],
+                'OPT':['r', 'Optical hourly data from WIK'],
+                'PMAG1':['r','Deprecated ELSEC from WIK'],
+                'PMAG2':['r', 'Current ELSEC from WIK'],
+                'GDASA1':['r', 'GDAS binary format'],
+                'GDASB1':['r', 'GDAS text format'],
+                'RMRCS':['r', 'RCS data output from Richards perl scripts'],
+                'RCS':['r', 'RCS raw output'],
+                'METEO':['r', 'Winklbauer METEO files'],
+                'NEIC':['r', 'WGET data from USGS - NEIC'],
+                'LNM':['r', 'Thies Laser-Disdrometer'],
+                'IWT':['r', 'IWT Tiltmeter data'],
+                'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
+                'CR800':['r', 'CR800 datalogger'],
+                'IONO':['r', 'IM806 Ionometer'],
+                'RADON':['r', 'single channel analyser gamma data'],
+                'USBLOG':['r', 'USB temperature logger'],
+                'SERSIN':['r', '?'],
+                'SERMUL':['r', '?'],
+                'PYSTR':['rw', 'MagPy full ascii'],
+                'AUTODIF':['r', 'Deprecated - AutoDIF ouput data'],
+                'AUTODIF_FREAD':['r', 'Deprecated - Special format for AutoDIF read-in'],
+                'PYCDF':['rw', 'MagPy CDF variant'],
+                'PYBIN':['r', 'MagPy own binary format'],
+                'PYASCII':['rw', 'MagPy basic ASCII'],
+                'POS1TXT':['r', 'POS-1 text format output data'],
+                'POS1':['r', 'POS-1 binary output at WIC'],
+                'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
+                'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
+                'SFDMI':['r', 'San Fernando variometer'],
+                'SFGSM':['r', 'San Fernando GSM90'],
+                'BDV1':['r', 'Budkov GDAS data variant'],
+                'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
+                'NOAAACE':['r', 'NOAA ACE satellite data format'],
+                'LATEX':['w','LateX data'],
+                'CS':['r','Cesium G823'],
+                'UNKOWN':['-','Unknown']
+                        }
+"""
+PYMAG_SUPPORTED_FORMATS = {
+                'IAGA':'rw',         # IAGA 2002 text format
+                'WDC':'rw',          # World Data Centre format
+                'IMF':'rw',          # Intermagnet Format
+                'IAF':'rw',          # Intermagnet archive Format
                 'IMAGCDF',      # Intermagnet CDF Format
                 'BLV',          # Baseline format Intermagnet
                 'IYFV',         # Yearly mean format Intermagnet
@@ -356,8 +409,8 @@ PYMAG_SUPPORTED_FORMATS = [
                 'LATEX',        # LateX data
                 'CS',           # ?
                 'UNKOWN'        # 'Unknown'?
-                        ]
-
+                        }
+"""
 
 # ----------------------------------------------------------------------------
 #  Part 3: Main classes -- DataStream, LineStruct and
@@ -8767,6 +8820,143 @@ CALLED BY:
         return absstream
         """
 
+    def _write_format(self, format_type, filenamebegins, filenameends, coverage, dateformat,year):
+        """
+        DEFINITION:
+            Helper method to determine suggested write filenames.
+            Reads format_type and header info of self -> returns specifications 
+        RETURNS:
+            filenamebegins
+            filenameends
+            coverage
+            dateformat
+        """
+
+        # Preconfigure some fileformats - can be overwritten by keywords
+        if format_type == 'IMF':
+            dateformat = '%b%d%y'
+            try:
+                extension = (self.header.get('StationID','')).lower()
+            except:
+                extension = 'txt'
+            filenameends = '.'+extension
+        if format_type == 'IAF':
+            try:
+                filenamebegins = (self.header.get('StationIAGAcode','')).upper()
+            except:
+                filenamebegins = 'XXX'
+            dateformat = '%y%b'
+            extension = 'BIN'
+            filenameends = '.'+extension
+        if format_type == 'IYFV':
+            if not filenameends:
+                head = self.header
+                code = head.get('StationIAGAcode','')
+                if not code == '':
+                    filenameends = '.'+code.upper()
+                else:
+                    filenameends = '.XXX'
+            if not filenamebegins:
+                filenamebegins = 'YEARMEAN'
+            dateformat = 'None'
+            coverage = 'year'
+        if format_type == 'IAGA':
+            dateformat = '%Y%m%d'
+            head = self.header
+            if not filenamebegins:
+                code = head.get('StationIAGAcode','')
+                if not code == '':
+                    filenamebegins = code.upper()
+            if not filenameends:
+                samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
+                plevel = head.get('DataPublicationLevel',0)
+                if int(samprate) == 1:
+                    middle = 'sec'
+                elif int(samprate) == 60:
+                    middle = 'min'
+                elif int(samprate) == 3600:
+                    middle = 'hou'
+                else:
+                    middle = 'lol'
+                if plevel == 4:
+                    fed = 'd'+middle+'.'+middle
+                elif plevel == 3:
+                    fed = 'q'+middle+'.'+middle
+                elif plevel == 2:
+                    fed = 'p'+middle+'.'+middle
+                else:
+                    fed = 'v'+middle+'.'+middle
+                filenameends = fed
+
+        if format_type == 'IMAGCDF':
+            begin = (self.header.get('StationIAGAcode','')).lower()
+            if begin == '':
+                begin = (self.header.get('StationID','XYZ')).lower()
+            publevel = str(self.header.get('DataPublicationLevel',0))
+            samprate = float(str(self.header.get('DataSamplingRate','0')).replace('sec','').strip())
+            if coverage == 'year':
+                dfor = '%Y'
+            elif coverage == 'month':
+                dfor = '%Y%m'
+            else:
+                dfor = '%Y%m%d'
+            if int(samprate) == 1:
+                dateformat = dfor
+                middle = '_000000_PT1S_'
+            elif int(samprate) == 60:
+                dateformat = dfor
+                middle = '_0000_PT1M_'
+            elif int(samprate) == 3600:
+                dateformat = dfor
+                middle = '_00_PT1H_'
+            elif int(samprate) == 86400:
+                dateformat = dfor
+                middle = '_PT1D_'
+            elif int(samprate) > 30000000:
+                dateformat = '%Y'
+                middle = '_PT1Y_'
+            elif int(samprate) > 2400000:
+                dateformat = '%Y%m'
+                middle = '_PT1M_'
+            else:
+                dateformat = '%Y%m%d'
+                middle = 'unknown'
+            filenamebegins = begin+'_'
+            filenameends = middle+publevel+'.cdf'
+        if format_type == 'BLV':
+            if len(self.ndarray[0]) > 0:
+                lt = max(self.ndarray[0].astype(float))
+            else:
+                lt = self[-1].time
+            if year:
+                blvyear = str(year)
+            else:
+                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
+            try:
+                filenamebegins = (self.header['StationID']).upper()+blvyear
+            except:
+                filenamebegins = 'XXX'+blvyear
+            filenameends = '.blv'
+            coverage = 'all'
+
+        if not format_type:
+            format_type = 'PYCDF'
+        if not dateformat:
+            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+        if not coverage:
+            coverage = 'day' #timedelta(days=1)
+        if not filenamebegins:
+            filenamebegins = ''
+        if not filenameends and not filenameends == '':
+            # Extension for cdf files is automatically attached
+            if format_type in ['PYCDF','IMAGCDF']:
+                filenameends = ''
+            else:
+                filenameends = '.txt'
+        
+        return format_type, filenamebegins, filenameends, coverage, dateformat
+
+
     def write(self, filepath, **kwargs):
         """
     DEFINITION:
@@ -8858,8 +9048,14 @@ CALLED BY:
         success = True
 
         t1 = datetime.utcnow()
-        #print "write - Start:", t1
 
+        if not format_type in PYMAG_SUPPORTED_FORMATS:
+            loggerstream.warning('write: Output format not supported.')
+            return
+
+        format_type, filenamebegins, filenameends, coverage, dateformat = self._write_format(format_type, filenamebegins, filenameends, coverage, dateformat, year)
+
+        """
         # Preconfigure some fileformats - can be overwritten by keywords
         if format_type == 'IMF':
             dateformat = '%b%d%y'
@@ -8969,9 +9165,6 @@ CALLED BY:
 
         if not format_type:
             format_type = 'PYSTR'
-        if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.warning('write: Output format not supported.')
-            return
         if not dateformat:
             dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
         if not coverage:
@@ -8984,6 +9177,8 @@ CALLED BY:
                 filenameends = ''
             else:
                 filenameends = '.txt'
+        """
+
         if not mode:
             mode= 'overwrite'
 
@@ -9072,9 +9267,13 @@ CALLED BY:
                 endtime = datetime.strptime(yearstr,'%Y-%m-%dT%H:%M:%S')
         elif not coverage == 'all':
             #starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            if coverage == 'hour':
+                cov = timedelta(hours=1)
+            else:
+                cov = timedelta(days=1)
             dailystream = self.copy()
             maxidx = -1
-            endtime = starttime + coverage
+            endtime = starttime + cov
             while starttime < lasttime:
                 #lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                 #newst = DataStream(lst,self.header)
@@ -9114,7 +9313,7 @@ CALLED BY:
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
                         success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg,skipcompression=skipcompression)
                 starttime = endtime
-                endtime = endtime + coverage
+                endtime = endtime + cov
 
                 t5 = datetime.utcnow()
                 #print "write - written:", t5-t3

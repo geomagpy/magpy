@@ -1848,9 +1848,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     # Get stationid and pier from name (if not provided)
                     tmpname = os.path.split(elem)[1].split('.')[0].split('_')
                     if not stationid or stationid == '':
-                        stationid = tmpname[-1]
+                        try:
+                            stationid = tmpname[-1]
+                        except:
+                            print ("Please provide station name: stationid='WIC'")
                     if not pier or pier == '':
-                        pier = tmpname[-2]
+                        try:
+                            pier = tmpname[-2]
+                        except:
+                            print ("Please provide pier name: pier='MyPier'")
                     if not deltaF:
                         deltaF = 0.0
                     #print stationid, pier, deltaF, alpha, beta

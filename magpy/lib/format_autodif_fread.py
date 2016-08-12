@@ -17,6 +17,7 @@ def isAUTODIF_FREAD(filename):
         return False
     try:
         temp = line.split()
+        print ("Autodif", temp, len(temp[0])
         if len(temp[0]) == 8 and len(temp[1]) == 5 and len(temp[2]) == 2:
             logging.debug("lib - format_autodif: Found Autodif Text file %s" % filename)
             return True
