@@ -10,6 +10,8 @@ import wx
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
+import wx.lib.scrolledpanel as scrolledpanel
+
 
 # Subclasses for Dialogs called by magpy gui
 
@@ -2162,34 +2164,306 @@ class DISetParameterDialog(wx.Dialog):
         self.Destroy()
 
 
+
 class InputSheetDialog(wx.Dialog):
     """
     DESCRITPTION
         InputDialog for DI data
     """
 
-    def __init__(self, parent, title, layout, path, defaults,cdate):
+    def __init__(self, parent, title, layout, path, defaults,cdate, db):
         super(InputSheetDialog, self).__init__(parent=parent,
-            title=title, size=(800, 100))
-        #self.sw = wx.ScrolledWindow(self)
-        #self.sw.SetScrollbars(20,20,55,40)
-        self.scroll = wx.ScrollBar(self,-1,style=wx.SB_VERTICAL)
+            title=title, size=(1000, 800))
         self.path = path
         self.layout = layout
         self.defaults = defaults
         self.cdate = cdate
         self.units = ['degree','gon']
-        #print (self.layout['order'][2:6])
-        self.createControls()
-        self.doLayout()
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        # Add Settings Panel
+        self.panel = SettingsPanel(self, cdate, path, defaults, layout, db)
+        self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
+        # Add Save/Cancel Buttons
+        self.createWidgets()
+        # Set sizer and window size
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+
+    def createWidgets(self):
+        """Create and layout the widgets in the dialog"""
+        btnSizer = wx.StdDialogButtonSizer()
+
+        saveBtn = wx.Button(self, wx.ID_OK, label="Save",size=(160,30))
+        saveBtn.Bind(wx.EVT_BUTTON, self.OnSave)
+        btnSizer.AddButton(saveBtn)
+
+        cancelBtn = wx.Button(self, wx.ID_CANCEL,size=(160,30))
+        btnSizer.AddButton(cancelBtn)
+        btnSizer.Realize()
+
+        self.mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+
+    def degminsec2deg(self, string, back='decimal'):
+        """
+        DESCRIPTION
+            checks input string and returns either deg: or deg.
+        PARAMETER
+            string (string):   a deg:min:sec of deg.decimal value
+            back   (float) :   either decimal or minsec
+        """
+        string = str(string)
+        if string.find(':') > 0:
+            val = 0.
+            numlist = string.split(':')
+            for idx, ele in enumerate(numlist):
+                add = float(ele)/float(60.**idx)
+                val += float(add)
+        else:
+            if string.find(',') > 0:
+                string = string.replace(',','.')
+            try:
+                val = float(string)
+            except:
+                val = 999.0
+
+        if not val >= -180 and not val <= 360:
+            return 999. 
+
+        def decdeg2dms(dd):
+            is_positive = dd >= 0
+            dd = abs(dd)
+            minutes,seconds = divmod(dd*3600,60)
+            degrees,minutes = divmod(minutes,60)
+            degrees = degrees if is_positive else -degrees
+            return [degrees,minutes,seconds]
+
+        if back == 'minsec':
+            return ":".join(decdeg2dms(val))
+        else:
+            return str(val)
+
+    def OnSave(self, event):
+        opstring = []
+        saving = True
+
+        def testangle(angle, primary, prevangle=None):
+            mireproblem = False
+            if angle in ["0.0000 or 00:00:00.0", ""]:
+                if primary == 1:
+                    mireproblem = True
+                if primary == 0:
+                    angle = self.degminsec2deg(prevangle)
+            else:
+                angle = self.degminsec2deg(angle)
+            if angle == 999:
+                mireproblem = True
+
+            if mireproblem:
+                checkdlg = wx.MessageDialog(self, "Provided angles:\n"
+                        "Please check your input data\n",
+                        "Angle checker", wx.OK|wx.ICON_INFORMATION)
+                checkdlg.ShowModal()
+                return 999.
+            return angle
+
+
+        def testtime(time, datestring, primary=1, prevtime=None):
+            timeproblem = False
+            if time in ["00:00:00", ""]:
+                if primary == 1:
+                    timeproblem = True
+                if primary == 0:
+                    time = prevtime
+            else:
+                #2010-06-11_12:03:00
+                time = datestring + '_' + time
+
+            try:
+                tt = datetime.strptime(time, "%Y-%m-%d_%H:%M:%S")
+            except:
+                timeproblem = True
+
+            if timeproblem:
+                checkdlg = wx.MessageDialog(self, "Provided times:\n"
+                        "Input data ' {} ' could not be interpreted\n".format(time),
+                        "Time checker", wx.OK|wx.ICON_INFORMATION)
+                checkdlg.ShowModal()
+                return "2233-12-12_13:21:23"
+            return time
+
+        # Get header
+        opstring.append("# MagPy Absolutes")
+        unit = self.panel.UnitComboBox.GetValue()
+        date = self.panel.DatePicker.GetValue()
+        observer = self.panel.ObserverTextCtrl.GetValue()
+        iagacode= self.panel.CodeTextCtrl.GetValue()
+        theo = self.panel.TheoTextCtrl.GetValue()
+        flux = self.panel.FluxTextCtrl.GetValue()
+        azimuth = self.panel.AzimuthTextCtrl.GetValue()
+        pillar = self.panel.PillarTextCtrl.GetValue()
+        temp = self.panel.TempTextCtrl.GetValue()
+        finst = self.panel.FInstTextCtrl.GetValue()
+
+        if theo == "type_serial_version":
+            theo = ''
+        if flux == "type_serial_version":
+            theo = ''
+        if finst == "type_serial_version":
+            finst = ''
+
+        opstring.append("# Abs-Observer: {}".format(observer))
+        opstring.append("# Abs-Theodolite: {}".format(theo))
+        opstring.append("# Abs-TheoUnit: {}".format(unit))
+        opstring.append("# Abs-FGSensor: {}".format(flux))
+        opstring.append("# Abs-AzimuthMark: {}".format(azimuth))
+        opstring.append("# Abs-Pillar: {}".format(pillar))
+        opstring.append("# Abs-Scalar: {}".format(finst))
+        opstring.append("# Abs-InputDate: {}".format(datetime.strftime(datetime.utcnow(),"%Y-%m-%d")))
+        opstring.append("# Abs-Temperature: {}".format(temp))
+
+        # Get Mire
+        opstring.append("Miren:")
+        amu1 = self.panel.AmireUp1TextCtrl.GetValue()
+        amu2 = self.panel.AmireUp2TextCtrl.GetValue()
+        amd1 = self.panel.AmireDown1TextCtrl.GetValue()
+        amd2 = self.panel.AmireDown2TextCtrl.GetValue()
+        bmu1 = self.panel.BmireUp1TextCtrl.GetValue()
+        bmu2 = self.panel.BmireUp2TextCtrl.GetValue()
+        bmd1 = self.panel.BmireDown1TextCtrl.GetValue()
+        bmd2 = self.panel.BmireDown2TextCtrl.GetValue()
+        amu1 = testangle(amu1,1)
+        amu2 = testangle(amu2,0, amu1)
+        amd1 = testangle(amd1,1)
+        amd2 = testangle(amd2,0, amd1)
+        bmu1 = testangle(bmu1,1)
+        bmu2 = testangle(bmu2,0, bmu1)
+        bmd1 = testangle(bmd1,1)
+        bmd2 = testangle(bmd2,0, bmd1)
+        mline = "{}  {}  {}  {}  {}  {}  {}  {}".format(amu1, amu2, amd1, amd2, bmu1, bmu2, bmd1, bmd2)
+        opstring.append("{}".format(mline))
+
+        # Get Horizontals
+        ymd = map(int, date.FormatISODate().split('-'))
+        datestring = datetime.strftime(datetime(*ymd),"%Y-%m-%d")
+
+        opstring.append("Positions:")
+        for comp in ['EU','WU','ED','WD','NU','SD','ND','SU']:
+            val = []
+            anglelist, timelist = [],[]
+            for i in ['1','2']:
+                for col in ['Time','Angle','GC','Residual']:
+                    na = comp+i
+                    val.append(eval('self.panel.'+na+col+'TextCtrl.GetValue()'))
+                    if col[0] == 'A' and i == '1':
+                        val[-1] = testangle(val[-1],1)
+                        anglelist.append(val[-1])
+                    elif col[0] == 'A' and i == '2':
+                        val[-1] = testangle(val[-1],0,val[-5])
+                        anglelist.append(val[-1])
+                    if col[0] == 'G':
+                        val[-1] = [el for el in val[-1].split('/') if el.endswith(unit[:3])][0].replace(unit[:3],'')
+                    if col[0] == 'R':
+                        val[-1] = float(val[-1].replace(',','.'))
+                    if col[0] == 'T' and i == '1':
+                        val[-1] = testtime(val[-1], datestring)
+                        timelist.append(val[-1])
+                    elif col[0] == 'T' and i == '2':
+                        val[-1] = testtime(val[-1], datestring, 0, val[-5])
+                        timelist.append(val[-1])
+            l1 = "  ".join(map(str, val[:4]))
+            l2 = "  ".join(map(str, val[4:]))
+            opstring.append("{}".format(l1))
+            opstring.append("{}".format(l2))
+
+        # Get F vals
+        opstring.append("PPM:")
+        fvals = self.panel.FValsTextCtrl.GetValue()
+        if not fvals == '':
+            fvals = [el.split(',') for el in fvals.split('\n')]
+            fbase = self.panel.FBaseTextCtrl.GetValue()
+
+            if not fbase == '':
+                try:
+                    fbase = float(fbase.replace(',','.'))
+                except:
+                    fbase = 0.0
+            else:
+                fbase = 0.0
+
+            if len(fvals) > 0 and len(fvals[0]) == 2:
+                for el in fvals:
+                    t = testtime(el[0], datestring)
+                    f = float(el[1])+fbase
+                    fline = "{}  {}".format(t,f)
+                    opstring.append("{}".format(fline))
+            else:
+                checkdlg = wx.MessageDialog(self, "F values:\n"
+                        "It seems as if you provided F values.\nThe format, however, could not be interpreted.\nInputs should look like: 12:12:00, 23.5\n",
+                        "F data checker", wx.OK|wx.ICON_INFORMATION)
+                checkdlg.ShowModal()
+
+
+        # Check block
+        if 999 in [amu1, amu2, amd1, amd2, bmu1, bmu2, bmd1, bmd2]:
+            saving = False
+            print ("Failure in mire")
+        if 999 in anglelist:
+            saving = False
+            print ("Failure in angles")
+        if "2233-12-12_13:21:23" in timelist:
+            saving = False
+            print ("Failure in times")
+        if pillar == '' or iagacode=='':
+            saving = False
+            checkdlg = wx.MessageDialog(self, "Meta data:\n"
+                        "You need to provide a pillar name and a station code\n",
+                        "Meta data checker", wx.OK|wx.ICON_INFORMATION)
+            checkdlg.ShowModal()
+
+        filename = timelist[0]+'_'+pillar+'_'+iagacode+'.txt'
+        print ("Filename", filename)
+
+        print ("Output", opstring)
+
+        # Write Block
+        if saving:
+            didirname = os.path.expanduser("~")
+            dialog = wx.DirDialog(None, "Choose directory to write data:",didirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+            if dialog.ShowModal() == wx.ID_OK:
+                didirname = dialog.GetPath() # modify self.dirname
+                out = os.path.join(didirname,filename)
+                fo = open(out, "w+")
+                #print ("Name of the file: ", fo.name)
+                fo.writelines( opstring )
+                fo.close()
+        
+
+class SettingsPanel(scrolledpanel.ScrolledPanel):
+    def __init__(self, parent, cdate, path, defaults, layout, db):
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(950, 750))
+
+        self.cdate = cdate
+        self.path = path
+        self.db = db
+        self.layout = layout
+        self.defaults = defaults
+        self.units = ['degree','gon']
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.createWidgets()
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+        self.SetupScrolling()
         self.bindControls()
 
-    # Widgets
-    def createControls(self):
+    def createWidgets(self):
+        """Create and layout the widgets in the panel"""
         # ##### Header Block (fix - 5 columns)
         # - Load line
         self.loadButton = wx.Button(self,-1,"Open DI data",size=(160,30))
         # - Header
+        self.HeadLabel = wx.StaticText(self, label="Meta data:",size=(160,30))
         self.DateLabel = wx.StaticText(self, label="Date:",size=(160,30))
         self.DatePicker = wx.DatePickerCtrl(self, dt=self.cdate,size=(160,30))
         self.ObserverLabel = wx.StaticText(self, label="Observer:",size=(160,30))
@@ -2207,19 +2481,20 @@ class InputSheetDialog(wx.Dialog):
         self.TempLabel = wx.StaticText(self, label="Temperature:",size=(160,30))
         self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
         self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
-        #self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
+        self.UnitComboBox = wx.ComboBox(self, choices=self.units,
+            style=wx.CB_DROPDOWN, value=self.units[0])
 
         # - Mire A
-        self.AmireLabel = wx.StaticText(self, label="Azimuth measurements:",size=(160,30))
+        self.AmireLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
         self.AmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
-        self.AmireUp1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
-        self.AmireUp2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.AmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.AmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.AmireDownLabel = wx.StaticText(self, label="Sensor Down:",size=(160,30))
-        self.AmireDown1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
-        self.AmireDown2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.AmireDown1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.AmireDown2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
 
         # - Horizonatl Block
-        self.HorizontalLabel = wx.StaticText(self, label="Horizontal measurements:",size=(160,30))
+        self.HorizontalLabel = wx.StaticText(self, label="Horizontal:",size=(160,30))
         self.TimeLabel = wx.StaticText(self, label="Time:",size=(160,30))
         self.HAngleLabel = wx.StaticText(self, label="Hor. Angle:",size=(160,30))
         self.VAngleLabel = wx.StaticText(self, label="Ver. Angle:",size=(160,30))
@@ -2245,20 +2520,20 @@ class InputSheetDialog(wx.Dialog):
         self.EDLabel = wx.StaticText(self, label="East(Sensor Down)",size=(160,30))
         self.ED1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.ED1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.ED1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.ED1GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
         self.ED1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
         self.ED2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.ED2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.ED2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.ED2GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
         self.ED2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
         self.WDLabel = wx.StaticText(self, label="West(Sensor Down)",size=(160,30))
         self.WD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.WD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.WD1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WD1GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
         self.WD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
         self.WD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.WD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.WD2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+        self.WD2GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
         self.WD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
         self.EU1GCTextCtrl.Disable()
         self.EU2GCTextCtrl.Disable()
@@ -2271,76 +2546,94 @@ class InputSheetDialog(wx.Dialog):
 
 
         # - Mire B
-        self.BmireLabel = wx.StaticText(self, label="Azimuth measurements:",size=(160,30))
+        self.BmireLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
         self.BmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
-        self.BmireUp1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
-        self.BmireUp2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.BmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.BmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.BmireDownLabel = wx.StaticText(self, label="Sensor Down:",size=(160,30))
-        self.BmireDown1TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
-        self.BmireDown2TextCtrl = wx.TextCtrl(self, value="0.000 or 00:00:00.00",size=(160,30))
+        self.BmireDown1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.BmireDown2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
 
         # - Vertical Block
-        """
-        self.VerticalLabel = wx.StaticText(self, label="Vertical measurements:",size=(160,30))
-        self.EULabel = wx.StaticText(self, label="East(Sensor Up)",size=(160,30))
-        self.EU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.EU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.EU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.EU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.EU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.EU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.EU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.EU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.WULabel = wx.StaticText(self, label="West(Sensor Up)",size=(160,30))
-        self.WU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.WU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.WU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.WU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.WU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.WU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.WU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.WU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.EDLabel = wx.StaticText(self, label="East(Sensor Down)",size=(160,30))
-        self.ED1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.ED1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.ED1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.ED1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.ED2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.ED2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.ED2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.ED2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.WDLabel = wx.StaticText(self, label="West(Sensor Down)",size=(160,30))
-        self.WD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.WD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.WD1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.WD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.WD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.WD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.WD2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
-        self.WD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.EU1GCTextCtrl.Disable()
-        self.EU2GCTextCtrl.Disable()
-        self.ED1GCTextCtrl.Disable()
-        self.ED2GCTextCtrl.Disable()
-        self.WU1GCTextCtrl.Disable()
-        self.WU2GCTextCtrl.Disable()
-        self.WD1GCTextCtrl.Disable()
-        self.WD2GCTextCtrl.Disable()
-        """
+        self.VerticalLabel = wx.StaticText(self, label="Vertical:",size=(160,30))
+        self.NULabel = wx.StaticText(self, label="North(Sensor Up)",size=(160,30))
+        self.NU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.NU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.NU1GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+        self.NU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.NU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.NU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.NU2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+        self.NU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.SULabel = wx.StaticText(self, label="South(Sensor Up)",size=(160,30))
+        self.SU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.SU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.SU1GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+        self.SU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.SU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.SU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.SU2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+        self.SU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.NDLabel = wx.StaticText(self, label="North(Sensor Down)",size=(160,30))
+        self.ND1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ND1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ND1GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+        self.ND1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.ND2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ND2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ND2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+        self.ND2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.SDLabel = wx.StaticText(self, label="South(Sensor Down)",size=(160,30))
+        self.SD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.SD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.SD1GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+        self.SD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.SD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.SD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.SD2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+        self.SD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.NU1GCTextCtrl.Disable()
+        self.NU2GCTextCtrl.Disable()
+        self.ND1GCTextCtrl.Disable()
+        self.ND2GCTextCtrl.Disable()
+        self.SU1GCTextCtrl.Disable()
+        self.SU2GCTextCtrl.Disable()
+        self.SD1GCTextCtrl.Disable()
+        self.SD2GCTextCtrl.Disable()
 
-        self.ln = wx.StaticLine(self, -1, style=wx.LI_HORIZONTAL,size=(800,10))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Use')
-        self.closeButton = wx.Button(self, label='Cancel')
+        # Add scale check
+
+        self.FLabel = wx.StaticText(self, label="F:",size=(160,30))
+        self.FInstLabel = wx.StaticText(self, label="F instrument:",size=(160,30))
+        self.FInstTextCtrl = wx.TextCtrl(self, value="type_serial_version",size=(160,30))
+        self.FBaseLabel = wx.StaticText(self, label="F base (nT):",size=(160,30))
+        self.FBaseTextCtrl = wx.TextCtrl(self, value="48000",size=(160,30))
+        self.FValsLabel = wx.StaticText(self, label="Time/Value(+Base):",size=(160,30))
+        self.FValsTextCtrl = wx.TextCtrl(self, value="12:12:00, 23.5",size=(160,100), style = wx.TE_MULTILINE)
 
 
-    def doLayout(self):
-        #mainSizer = wx.BoxSizer(wx.VERTICAL)
+        f = self.VerticalLabel.GetFont()
+        newf = wx.Font(18, wx.DECORATIVE, wx.ITALIC, wx.BOLD)
+        self.VerticalLabel.SetFont(newf) 
+        self.HorizontalLabel.SetFont(newf) 
+        self.AmireLabel.SetFont(newf)
+        self.BmireLabel.SetFont(newf)
+        self.HeadLabel.SetFont(newf)
+        self.FLabel.SetFont(newf)
+
+
+        #self.ln = wx.StaticLine(self, -1, style=wx.LI_HORIZONTAL,size=(800,10))
+        #self.okButton = wx.Button(self, wx.ID_OK, label='Use')
+        #self.closeButton = wx.Button(self, label='Cancel')
+
+        #settingsSizer = wx.GridSizer(rows=0, cols=5, hgap=5, vgap=0)
+
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((160, 0), noOptions)
 
         # Load elements
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        #boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         gridSizer = wx.FlexGridSizer(rows=40, cols=5, vgap=10, hgap=10)
         contlst=[emptySpace]
         contlst.append(emptySpace)
@@ -2349,6 +2642,11 @@ class InputSheetDialog(wx.Dialog):
         contlst.append(emptySpace)
 
         # Header elements
+        contlst.append((self.HeadLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
         contlst.append((self.DateLabel, noOptions))
         contlst.append(emptySpace)
         contlst.append((self.ObserverLabel, noOptions))
@@ -2376,7 +2674,7 @@ class InputSheetDialog(wx.Dialog):
         contlst.append((self.TempLabel, noOptions))
         contlst.append((self.PillarTextCtrl, expandOption))
         contlst.append(emptySpace)
-        contlst.append(emptySpace)
+        contlst.append((self.UnitComboBox, expandOption))
         contlst.append(emptySpace)
         contlst.append((self.TempTextCtrl, expandOption))
 
@@ -2475,61 +2773,396 @@ class InputSheetDialog(wx.Dialog):
         for el in self.layout['order'][0:2]:
             contlst.extend(eval('bl'+str(el)))
 
-        """
-        for control, options in contlst:
-            grid4Sizer.Add(control, **options)
-        for control, options in \
-                [(grid4Sizer, dict(border=5, flag=wx.ALL))]:
-            box4Sizer.Add(control, **options)
-        mainSizer.Add(box4Sizer, 1, wx.EXPAND)
+        # Mire elements
+        blNU = []
+        blNU.append((self.NULabel, noOptions))
+        blNU.append((self.NU1TimeTextCtrl, expandOption))
+        blNU.append((self.NU1GCTextCtrl, expandOption))
+        blNU.append((self.NU1AngleTextCtrl, expandOption))
+        blNU.append((self.NU1ResidualTextCtrl, expandOption))
+        blNU.append(emptySpace)
+        blNU.append((self.NU2TimeTextCtrl, expandOption))
+        blNU.append((self.NU2GCTextCtrl, expandOption))
+        blNU.append((self.NU2AngleTextCtrl, expandOption))
+        blNU.append((self.NU2ResidualTextCtrl, expandOption))
+        blSU = []
+        blSU.append((self.SULabel, noOptions))
+        blSU.append((self.SU1TimeTextCtrl, expandOption))
+        blSU.append((self.SU1GCTextCtrl, expandOption))
+        blSU.append((self.SU1AngleTextCtrl, expandOption))
+        blSU.append((self.SU1ResidualTextCtrl, expandOption))
+        blSU.append(emptySpace)
+        blSU.append((self.SU2TimeTextCtrl, expandOption))
+        blSU.append((self.SU2GCTextCtrl, expandOption))
+        blSU.append((self.SU2AngleTextCtrl, expandOption))
+        blSU.append((self.SU2ResidualTextCtrl, expandOption))
+        blND = []
+        blND.append((self.NDLabel, noOptions))
+        blND.append((self.ND1TimeTextCtrl, expandOption))
+        blND.append((self.ND1GCTextCtrl, expandOption))
+        blND.append((self.ND1AngleTextCtrl, expandOption))
+        blND.append((self.ND1ResidualTextCtrl, expandOption))
+        blND.append(emptySpace)
+        blND.append((self.ND2TimeTextCtrl, expandOption))
+        blND.append((self.ND2GCTextCtrl, expandOption))
+        blND.append((self.ND2AngleTextCtrl, expandOption))
+        blND.append((self.ND2ResidualTextCtrl, expandOption))
+        blSD = []
+        blSD.append((self.SDLabel, noOptions))
+        blSD.append((self.SD1TimeTextCtrl, expandOption))
+        blSD.append((self.SD1GCTextCtrl, expandOption))
+        blSD.append((self.SD1AngleTextCtrl, expandOption))
+        blSD.append((self.SD1ResidualTextCtrl, expandOption))
+        blSD.append(emptySpace)
+        blSD.append((self.SD2TimeTextCtrl, expandOption))
+        blSD.append((self.SD2GCTextCtrl, expandOption))
+        blSD.append((self.SD2AngleTextCtrl, expandOption))
+        blSD.append((self.SD2ResidualTextCtrl, expandOption))
+        #contlst=[]
+        contlst.append((self.VerticalLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        for el in self.layout['order'][6:10]:
+            contlst.extend(eval('bl'+str(el)))
 
-        # Bottom elements
-        box7Sizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        grid7Sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=10, hgap=10)
-        contlst=[]
-        """
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.FLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.FInstLabel, noOptions))
+        contlst.append((self.FBaseLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.FInstTextCtrl, noOptions))
+        contlst.append((self.FBaseTextCtrl, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.FValsLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.FValsTextCtrl, noOptions))
+        contlst.append(emptySpace)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
 
-        boxSizer.Add(self.scroll, 0, wx.EXPAND|wx.GROW)
-        self.SetScrollbar(0,1000,1000,1000)
-        #boxSizer.Add(self.scroll, 0, wx.EXPAND|wx.GROW)
-
-        """
-        background_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        background_sizer.AddSizer(boxSizer, 1, wx.EXPAND|wx.GROW|wx.ALL, 2)
-        background_sizer.Add(self.scroll, 0, wx.EXPAND|wx.GROW)
-        b.SetScrollbar(0,1000,1000,1000)
-        self.SetSizerAndFit(background_sizer)
-        #background_sizer.Fit(self)
-        """
-        self.SetSizerAndFit(boxSizer)
-        #self.SetSizerAndFit(mainSizer)
-
+        self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        self.loadButton.Bind(wx.EVT_BUTTON, self.OnLoadDI)
+        self.loadButton.Bind(wx.EVT_BUTTON, self.OnLoad)
 
-    def OnClose(self, e):
-        self.Destroy()
+    def OnLoad(self, e):
 
-    def OnLoadDI(self,e):
-        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",self.scalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-        if dialog.ShowModal() == wx.ID_OK:
-            self.path = dialog.GetPath()
-            self.scalarpath = self.path
-        dialog.Destroy()
+        def _readDI(path):
+            datalist = []
+            fh = open(path, 'rt')
+            for line in fh:
+                datalist.append(line.strip('\n'))
+            fh.close()
+            return datalist
+
+        def _getDI():
+            datalist = []
+            """
+            if self.db:
+                cursor = self.db.cursor()
+                sql = "SHOW TABLES LIKE 'DIDATA%'"
+                cursor.execute(sql)
+                output = cursor.fetchall()
+                tablelist = [elem[0] for elem in output]
+                if len(tablelist) < 1:
+                    dlg = wx.MessageDialog(self, "No DI data tables available!\n"
+                            "please check your database\n",
+                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    return
+                # 1 dlg, select table
+                if not len(tablelist) == 1:
+                    dlg = DITableDialog(None, title='Select DIDATA table', tablelist=tablelist)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        table = dlg.tableRadioBox.GetStringSelection()
+                else:
+                    table = tablelist[0]
+
+                print table
+                # 2 dlg, select pier
+                sql = "SELECT StartTime, Pier FROM "+table
+                cursor.execute(sql)
+                output = cursor.fetchall()
+                resultlist = [elem[0] for elem in output]
+                # 3 dlg, select time
+                dlg = DISelectionDialog(None, title='Select DI-Dataset',resultlist=resultlist)
+                if dlg.ShowModal() == wx.ID_OK:
+                    # ComboBox with pier and times
+                    pier = dlg.pierComboBox.GetValue()
+                    time = dlg.timeComboBox.GetValue()
+                sql = "Select * FROM {} WHERE StartTime = '{}' and Pier = '{}'".format(table, time, pier)
+                cursor.execute(sql)
+                output = cursor.fetchall()
+                datalist = [elem[0] for elem in output]
+                print ("DATALIST", datalist)
+            """
+            return datalist
+
+
+        def _datalist2wx(datalist):
+
+
+            # datalist looks like:
+            # string list with lines:
+            #['# MagPy Absolutes\n', '# Abs-Observer: Leichter\n', '# Abs-Theodolite: T10B_0619H154167_07-2011\n', '# Abs-TheoUnit: deg\n', '# Abs-FGSensor: MAG01H_SerialSensor_SerialElectronic_07-2011\n', '# Abs-AzimuthMark: 180.1044444\n', '# Abs-Pillar: A4\n', '# Abs-Scalar: /\n', '# Abs-Temperature: 6.7C\n', '# Abs-InputDate: 2016-01-26\n', 'Miren:\n', '0.099166666666667  0.098055555555556  180.09916666667  180.09916666667  0.098055555555556  0.096666666666667  180.09805555556  180.09805555556\n', 'Positions:\n', '2016-01-21_13:22:00  93.870555555556  90  1.1\n', '2016-01-21_13:22:30  93.870555555556  90  1.8\n', '2016-01-21_13:27:00  273.85666666667  90  0.1\n', '2016-01-21_13:27:30  273.85666666667  90  0.2\n', '2016-01-21_13:25:30  273.85666666667  270  0.3\n', '2016-01-21_13:26:00  273.85666666667  270  -0.6\n', '2016-01-21_13:24:00  93.845555555556  270  -0.2\n', '2016-01-21_13:24:30  93.845555555556  270  0.4\n', '2016-01-21_13:39:30  0  64.340555555556  -0.3\n', '2016-01-21_13:40:00  0  64.340555555556  0.1\n', '2016-01-21_13:38:00  0  244.34055555556  0\n', '2016-01-21_13:38:30  0  244.34055555556  -0.4\n', '2016-01-21_13:36:00  180  295.67055555556  1.1\n', '2016-01-21_13:36:30  180  295.67055555556  1.2\n', '2016-01-21_13:34:30  180  115.66916666667  0.3\n', '2016-01-21_13:35:00  180  115.66916666667  0.9\n', '2016-01-21_13:34:30  180  115.66916666667  0\n', 'PPM:\n', 'Result:\n']
+
+            for line in datalist:
+                numelements = len(line.split())
+                if line.isspace():
+                    # blank line
+                    pass
+                elif line.startswith('#'):
+                    # header
+                    line = line.strip('\n')
+                    headline = line.split(':')
+                    #self.CodeTextCtrl.SetValue()
+                    #self.DatePicker = wx.DatePickerCtrl(self, dt=self.cdate,size=(160,30))
+
+                    if headline[0] == ('# Abs-Observer'):
+                        self.ObserverTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Theodolite'):
+                        self.TheoTextCtrl.SetValue(headline[1].replace(', ','_').strip().replace(' ','_'))
+                    if headline[0] == ('# Abs-TheoUnit'):
+                        self.UnitComboBox.SetStringSelection(headline[1].strip().replace('deg','degree'))
+                    if headline[0] == ('# Abs-FGSensor'):
+                        self.FluxTextCtrl.SetValue(headline[1].strip().replace(' ','_'))
+                    if headline[0] == ('# Abs-AzimuthMark'):
+                        self.AzimuthTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Pillar'):
+                        self.PillarTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Scalar'):
+                        datalist.append(headline[1].strip())
+                    #if headline[0] == ('# Abs-DeltaF'):
+                    #    datalist.append(headline[1].strip())
+                    if headline[0] == ('# Abs-Temperature'):
+                        self.TempTextCtrl.SetValue(headline[1].strip())
+                elif numelements == 8:
+                    # Miren mesurements
+                    mirestr = line.split()
+                    self.AmireUp1TextCtrl.SetValue(mirestr[0])
+                    self.AmireUp2TextCtrl.SetValue(mirestr[1])
+                    self.AmireDown1TextCtrl.SetValue(mirestr[2])
+                    self.AmireDown2TextCtrl.SetValue(mirestr[3])
+                    self.BmireUp1TextCtrl.SetValue(mirestr[4])
+                    self.BmireUp2TextCtrl.SetValue(mirestr[5])
+                    self.BmireDown1TextCtrl.SetValue(mirestr[6])
+                    self.BmireDown2TextCtrl.SetValue(mirestr[7])
+                """
+                elif numelements == 2:
+                    # Intensity mesurements
+                    row = AbsoluteDIStruct()
+                    fstr = line.split()
+                    try:
+                        row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
+                        dirow.ftime.append(row.time)
+                    except:
+                        logging.warning('ReadAbsolute: Check date format of f measurements in file %s' % filename)
+                    try:
+                        row.f = float(fstr[1]) + delf
+                        dirow.f.append(row.f)
+                    except:
+                        logging.warning('ReadAbsolute: Check data format in file %s' % filename)
+                    stream.add(row)
+                elif numelements == 4:
+                    # Position mesurements
+                    row = AbsoluteDIStruct()
+                    posstr = line.split()
+                    # correct sorting for DIline
+                    if count == 8:
+                        count = 99
+                    if count == 10:
+                        count = 999
+                    if count == 6:
+                        count = 10
+                    if count == 12:
+                        count = 8
+                    if count == 999:
+                        count = 6
+                    if count == 18:
+                        count = 9999
+                    if count == 14:
+                        count = 999999
+                    if count == 16:
+                        count = 99999
+                    if count == 99:
+                        count = 18
+                    if count == 20:
+                        count = 16
+                    if count == 9999:
+                        count = 14
+                    if count == 99999:
+                        count = 12
+                    if count == 999999:
+                        count = 20
+                    try:
+                        dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+                    except:
+                        logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        return stream
+                    try:
+                        row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+                    except:
+                        if not posstr[0] == 'Variometer':
+                            logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        return stream
+                    try:
+                        row.hc = float(posstr[1])/ang_fac
+                        row.vc = float(posstr[2])/ang_fac
+                        row.res = float(posstr[3].replace(',','.'))
+                        dirow.hc[count] = float(posstr[1])/ang_fac
+                        dirow.vc[count] = float(posstr[2])/ang_fac
+                        dirow.res[count] = float(posstr[3].replace(',','.'))
+                        #print count, dirow.vc[count], dirow.res[count]
+                        row.mu = mu
+                        row.md = md
+                        row.expectedmire = expectedmire
+                        row.temp = temp
+                        row.person = person
+                        row.di_inst = di_inst+'_'+fgsensor
+                        row.f_inst = f_inst
+                    except:
+                        logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
+                        return stream
+                    count = count +1
+                    stream.add(row)
+                else:
+                    #print line
+                    pass
+                """
+
+            """
+            # - Mire A
+            self.AmireUp1TextCtrl.SetValue()
+            self.AmireUp2TextCtrl.SetValue()
+            self.AmireDown1TextCtrl.SetValue()
+            self.AmireDown2TextCtrl.SetValue()
+
+            # - Horizonatl Block
+            self.EU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.EU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.EU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+            self.EU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.EU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.EU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.EU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+            self.EU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.WU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.WU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.WU1GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+            self.WU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.WU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.WU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.WU2GCTextCtrl = wx.TextCtrl(self, value="90deg/100gon",size=(160,30))
+            self.WU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.ED1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.ED1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.ED1GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
+            self.ED1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.ED2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.ED2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.ED2GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
+            self.ED2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.WD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.WD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.WD1GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
+            self.WD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.WD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.WD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.WD2GCTextCtrl = wx.TextCtrl(self, value="270deg/300gon",size=(160,30))
+            self.WD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+
+            # - Mire B
+            self.BmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.BmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.BmireDown1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.BmireDown2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+
+            # - Vertical Block
+            self.NU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.NU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.NU1GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+            self.NU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.NU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.NU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.NU2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+            self.NU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.SU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.SU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.SU1GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+            self.SU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.SU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.SU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.SU2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+            self.SU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.ND1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.ND1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.ND1GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+            self.ND1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.ND2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.ND2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.ND2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+            self.ND2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.SD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.SD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.SD1GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+            self.SD1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+            self.SD2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+            self.SD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+            self.SD2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+            self.SD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+
+            # Add scale check
+
+            self.FInstTextCtrl.SetValue()
+            self.FBaseTextCtrl.SetValue()
+            self.FValsTextCtrl.SetValue()
+            """
+            pass
+
+        loadfile = False
+        loadDB = False
+        if self.db:
+            # Open a selection dlg (database , file)
+            loadfile = True
+        else:
+            loadfile = True
+
+        datalist = []
+        self.dirname = os.path.expanduser('~')
+
+        if loadfile:
+            dlg = wx.FileDialog(self, "Choose a DI raw data file", self.dirname, "", "*.*")
+            if dlg.ShowModal() == wx.ID_OK:
+                path = dlg.GetPath()
+                datalist = _readDI(path)
+        elif loadDB:
+            datalist = _getDI()
+        if len(datalist) > 0:
+            print ("Datalist", datalist)
+            _datalist2wx(datalist)
+
+
+
 
 # ###################################################
 #    Monitor page
 # ###################################################
-
 
 class AGetMARCOSDialog(wx.Dialog):
     """

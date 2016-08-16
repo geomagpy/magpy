@@ -3136,9 +3136,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         else:
             dipath = self.dipathlist[0]
         self.dilayout = {'order':['MU','MD','EU','WU','ED','WD','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'True'}
-        cdate = pydate2wxdate(datetime.utcnow())
         defaults = {'pier':'A2'}
-        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate)
+        cdate = pydate2wxdate(datetime.utcnow())
+        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db)
         if dlg.ShowModal() == wx.ID_OK:
             pass
         dlg.Destroy()
