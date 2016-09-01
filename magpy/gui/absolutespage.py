@@ -33,11 +33,14 @@ class AbsolutePage(wx.Panel):
     def createControls(self):
         self.diLabel = wx.StaticText(self, label="DI files:")
         self.loadDIButton = wx.Button(self,-1,"Load DI data",size=(160,30))
-        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,30))
+        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.defineVarioButton = wx.Button(self,-1,"Variometer path",size=(160,30))
-        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,30))
+        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.defineScalarButton = wx.Button(self,-1,"Scalar path",size=(160,30))
-        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,30))
+        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
         self.logLabel = wx.StaticText(self, label="Logging:")
         self.advancedButton = wx.Button(self,-1,"Set parameter",size=(160,30))

@@ -386,6 +386,8 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         plot.savefig("newfig.png")
     '''
 
+    # Preselect only numerical values
+    variables = [[el for el in lst if el in NUMKEYLIST] for lst in variables]
     num_of_var = 0
     for item in variables:
         num_of_var += len(item)

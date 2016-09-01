@@ -67,65 +67,81 @@ def wxdate2pydate(date):
      else:
           return None
 
-def saveini(dbname=None, user=None, passwd=None, host=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None, diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None, dialpha = None, dideltaF = None, didbadd = None, bookmarks = None):
+def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None, diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None, dialpha = None, dideltaF = None, didbadd = None, bookmarks = None):
     """
-    Method for creating credentials
+    Method for initializing deault paremeters credentials
     """
 
-    if not dbname:
-        dbname = 'None'
-    if not user:
-        user = 'max'
-    if not passwd:
-        passwd = 'secret'
-    if not host:
-        host = 'localhost'
-    if not dirname:
-        dirname = '/srv'
-    if not basecompselect:
-        basecompselect = 'bspline'
+    try:
+        normalpath = os.path.expanduser('~')
+    except:
+        normalpath = os.path('/') # Test that
 
-    if not dipathlist:
-        dipathlist = ''
-    if not divariopath:
-        divariopath = ''
-    if not discalarpath:
-        discalarpath = ''
-    if not diexpD:
-        diexpD = 3.0
-    if not diexpI:
-        diexpI = 64.0
-    if not stationid:
-        stationid = 'wic'
-    if not diid:
-        diid = ''
-    if not ditype:
-        ditype = 'DI' #abstype = ''
-    if not diazimuth:
-        diazimuth = ''
-    if not dipier:
-        dipier = 'A2'
-    if not dialpha:
-        dialpha = '0.0'
-    if not dideltaF:
-        dideltaF = '2.1'
-    if not didbadd:
-        didbadd = 'False'
-    if not bookmarks:
-        bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at//data/magnetism/wic/variation/WIC20160627pmin.min']
-    # starttime,endtime
-    #if not db=db # test whether db is connected
+    if optionsdict.get('dbname','') == '':
+        optionsdict['dbname'] = 'None'
+    if optionsdict.get('user','') == '':
+        optionsdict['user'] = 'Max'
+    if optionsdict.get('passwd','') == '':
+        passwd = 'Secret'
+    else:
+        passwd = optionsdict.get('passwd','')
+    if optionsdict.get('host','') == '':
+        optionsdict['host'] = 'localhost'
+    if optionsdict.get('dirname','') == '':
+        optionsdict['dirname'] = normalpath
+    if optionsdict.get('basefilter','') == '':
+        optionsdict['basefilter'] = 'spline'
+    if optionsdict.get('dipathlist','') == '':
+        optionsdict['dipathlist'] = [normalpath]
+    if optionsdict.get('divariopath','') == '':
+        optionsdict['divariopath'] = os.path.join(normalpath,'*')
+    if optionsdict.get('discalarpath','') == '':
+        optionsdict['discalarpath'] = os.path.join(normalpath,'*')
+    if optionsdict.get('diexpD','') == '':
+        optionsdict['diexpD'] = '3.0'
+    if optionsdict.get('diexpI','') == '':
+        optionsdict['diexpI'] = '64.0'
+    if optionsdict.get('stationid','') == '':
+        optionsdict['stationid'] = 'WIC'
+    if optionsdict.get('diid','') == '':
+        optionsdict['diid'] = ''
+    if optionsdict.get('ditype','') == '':
+        optionsdict['ditype'] = 'manual' #abstype = ''
+    if optionsdict.get('diazimuth','') == '':
+        optionsdict['diazimuth'] = ''
+    if optionsdict.get('dipier','') == '':
+        optionsdict['dipier'] = 'A2'
+    if optionsdict.get('dialpha','') == '':
+        optionsdict['dialpha'] = '0.0'
+    if optionsdict.get('dideltaF','') == '':
+        optionsdict['dideltaF'] = '2.1'
+    if optionsdict.get('didbadd','') == '':
+        optionsdict['didbadd'] = 'False'
+    if optionsdict.get('bookmarks','') == '':
+        optionsdict['bookmarks'] = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+    if optionsdict.get('scalevalue','') == '':
+        optionsdict['scalevalue'] = 'True'
+    if optionsdict.get('double','') == '':
+        optionsdict['double'] = 'True'
+    if optionsdict.get('order','') == '':
+        optionsdict['order'] = 'MU,MD,EU,WU,ED,WD,NU,SD,ND,SU'
+    if optionsdict.get('didbadd','') == '':
+        optionsdict['didbadd'] = 'False'
+    #calculation
+    if optionsdict.get('fitfunction','') == '':
+        optionsdict['fitfunction'] = 'spline'
+    if optionsdict.get('fitdegree','') == '':
+        optionsdict['fitdegree'] = '5'
+    if optionsdict.get('fitknotstep','') == '':
+        optionsdict['fitknotstep'] = '0.3'
 
-    home = os.path.expanduser('~')
-    initpath = os.path.join(home,'.magpyguiini')
+
+    initpath = os.path.join(normalpath,'.magpyguiini')
 
     pwd = base64.b64encode(passwd)
+    optionsdict['passwd'] = pwd
 
-    dictionary = {'dbname': dbname, 'user':user, 'passwd':pwd, 'host':host, \
-                  'dirname':dirname, \
-                  'basecompselect':basecompselect, 'resolution':resolution, 'dipathlist':dipathlist, 'divariopath':divariopath, 'discalarpath':discalarpath, 'diexpD':diexpD, 'diexpI':diexpI, 'stationid':stationid, 'diid':diid, 'ditype':ditype, 'diazimuth':diazimuth, 'dipier':dipier, 'dialpha':dialpha, 'dideltaF':dideltaF, 'didbadd':didbadd , 'bookmarks':bookmarks}
-
-    saveobj(dictionary, initpath)
+    saveobj(optionsdict, initpath)
     print ("Initialization: Added data ")
 
 
@@ -391,6 +407,7 @@ class PlotPanel(wx.Panel):
 
         #get current xlimits:
         for ax in self.axlist:
+            self.xlimits = ax.get_xlim()
             ax.callbacks.connect('xlim_changed', on_xlims_change)
 
         stream = streams[-1]
@@ -568,20 +585,22 @@ class MainFrame(wx.Frame):
         self.keylist = []
         self.flaglist = []
         self.compselect = 'None'
-        self.dipathlist = []
-        self.divariopath = ''
-        self.discalarpath = ''
+
+        self.options = {}
+        self.dipathlist = 'None'
+        self.baselinedictlst = [] # variable to hold info on loaded DI streams for baselinecorrection
+        self.baselineidxlst = []
 
         self.InitPlotParameter()
 
         # Try to load ini-file
         # located within home directory
         inipara = loadini()
-        print ("INIPARA", inipara)
+        #print ("INIPARA", inipara)
         if not inipara:
-            saveini() # initialize defaultvalues
+            saveini(self.options) # initialize defaultvalues
             inipara = loadini()
-            print ("INIPARA", inipara)
+            #print ("INIPARA", inipara)
 
         # Variable initializations
         self.initParameter(inipara)
@@ -630,16 +649,20 @@ class MainFrame(wx.Frame):
         self.StreamOperationsMenu = wx.Menu()
         self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Add current &working state to Streamlist...\tCtrl+W", "Add Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.AppendItem(self.StreamAddListSelect)
+        self.StreamOperationsMenu.AppendSeparator()
         self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Select active Strea&m...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.AppendItem(self.StreamListSelect)
         self.MainMenu.Append(self.StreamOperationsMenu, "StreamO&perations")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
-        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Initialisation/Calculation parameter\tCtrl+I", "Modify initialisation/calculation parameters (e.g. filters, sensitivity)", wx.ITEM_NORMAL)
+        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic initialisation parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
         self.OptionsMenu.AppendItem(self.OptionsInitItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 402, "Observator&y specifications\tCtrl+Y", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
-        self.OptionsMenu.AppendItem(self.OptionsObsItem)
+        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 402, "DI &initialisation parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
+        self.OptionsMenu.AppendItem(self.OptionsDIItem)
+        #self.OptionsMenu.AppendSeparator()
+        #self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 403, "Observator&y specifications\tCtrl+Y", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
+        #self.OptionsMenu.AppendItem(self.OptionsObsItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
         self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
@@ -670,7 +693,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
         self.Bind(wx.EVT_MENU, self.onInputSheet, self.DIInputSheet)
         self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
-        self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
+        self.Bind(wx.EVT_MENU, self.OnOptionsDI, self.OptionsDIItem)
+        #self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
         self.Bind(wx.EVT_MENU, self.OnHelpReadFormats, self.HelpReadFormatsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpWriteFormats, self.HelpWriteFormatsItem)
@@ -755,7 +779,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onLogDataButton, self.menu_p.com_page.saveMonitorButton)
 
         # Connect to database
-        self._db_connect(self.host, self.user, self.passwd, self.dbname)
+        self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
 
 
         # Disable yet unavailbale buttons
@@ -816,29 +840,13 @@ class MainFrame(wx.Frame):
 
     def initParameter(self, dictionary):
         # Variable initializations
-        self.dbname = dictionary['dbname']
-        self.user = dictionary['user']
         pwd = dictionary['passwd']
-        self.passwd = base64.b64decode(pwd)
-        self.host = dictionary['host']
-        self.dirname = dictionary['dirname']
+        #self.passwd = base64.b64decode(pwd)
+        self.dirname = dictionary.get('dirname','')
+        self.dipathlist = dictionary.get('dipathlist','')
+        self.options = dictionary
+        self.options['passwd'] = base64.b64decode(pwd) 
 
-        self.symbolselect = 0
-        self.bascompselect = dictionary['basecompselect']
-
-        self.dipathlist = dictionary['dipathlist']
-        self.divariopath = dictionary['divariopath']
-        self.discalarpath = dictionary['discalarpath']
-        self.diexpD = dictionary['diexpD']
-        self.diexpI = dictionary['diexpI']
-        self.stationid = dictionary['stationid']
-        self.diid = dictionary['diid']
-        self.ditype = dictionary['ditype'] #abstype
-        self.diazimuth = dictionary['diazimuth']
-        self.dipier = dictionary['dipier']
-        self.dialpha = dictionary['dialpha']
-        self.dideltaF = dictionary['dideltaF']
-        self.didbadd = dictionary['didbadd']
 
 
     # ################
@@ -902,6 +910,9 @@ class MainFrame(wx.Frame):
         self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled
         self.menu_p.abs_page.ClearLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.SaveLogButton.Disable()      # Activate if log contains text
+        self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
+        self.menu_p.abs_page.scalarTextCtrl.SetValue(self.options.get('discalarpath',''))
+
         # Analysis
         self.menu_p.ana_page.rotationButton.Disable()      # if xyz magnetic data
         self.menu_p.ana_page.derivativeButton.Disable()    # always
@@ -942,6 +953,7 @@ class MainFrame(wx.Frame):
             Checks contents of stream and state of program.
             Activates controls in dependency of the checks
         """
+        baselineexists = False
         # initially reset all controls
         self.DeactivateAllControls()
         if not len(stream.ndarray[0]) > 0:
@@ -1011,6 +1023,33 @@ class MainFrame(wx.Frame):
             if key.startswith('Station'):
                  metastationtext += "{}: \t{}\n".format(key.replace('Station',''),stream.header.get(key,'')) #key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
 
+        # Append baselineinfo to baselinedictlist
+        if formattype == 'MagPyDI':
+            filename = self.menu_p.str_page.fileTextCtrl.GetValue()
+            basedict = {'startdate':mintime,'enddate':maxtime, 'filename':filename, 'streamidx':len(self.streamlist)-1}
+            self.baselinedictlst.append(basedict)
+
+        def checkbaseline(baselinedictlst, sensorid, mintime, maxtime):
+            """
+              DESCRIPTION:
+                check whether valid baseline info is existing
+              PARAMETER:
+                use global self.baselinedictlist
+                set baselineidxlist 
+              RETURNS:
+                returns baselineidxlst e.g. [1,3,4] which contains currently 
+            """
+            # check self.baseline dictionary
+            baselineidxlst  = []
+            #print (baselinedictlst)
+            for basedict in baselinedictlst:
+                startdate = basedict['startdate']
+                enddate = basedict['enddate']
+                if sensorid in basedict['filename']:
+                    #print ("found filename")
+                    if mintime <= startdate <= maxtime or mintime <= enddate <= maxtime or (startdate <= mintime and enddate >= maxtime):
+                        baselineidxlst.append(basedict['streamidx'])
+            return baselineidxlst
 
         # Activate "always" fields
         # ----------------------------------------
@@ -1070,10 +1109,10 @@ class MainFrame(wx.Frame):
         if formattype == 'MagPyDI':
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
+        if deltas and not formattype == 'MagPyDI':
+            self.menu_p.str_page.errorBarsCheckBox.Enable()   # activated if delta columns are present and not DI file
         if not absinfo == None:
             self.menu_p.str_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
-        if deltas:
-            self.menu_p.str_page.errorBarsCheckBox.Enable()   # activated delta columns are present and not DI file
         if n < 2000:
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated if less then 2000 points, active if DI data
         if not dataid == '' and self.db:
@@ -1088,6 +1127,11 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.activityButton.Enable()      # activate if vector appears to be present
             if 'f' in keys and not 'df' in keys:
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
+            if not formattype == 'MagPyDI':
+                print ("Checking baseline info")
+                self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime)
+                if len(self.baselineidxlst) > 0:
+                    self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
         
 
         # Update "information" fields
@@ -1096,16 +1140,17 @@ class MainFrame(wx.Frame):
         self.menu_p.met_page.samplingrateTextCtrl.SetValue(str(sr))
         self.menu_p.met_page.keysTextCtrl.SetValue(keystr)
         self.menu_p.met_page.typeTextCtrl.SetValue(formattype)
-        self.menu_p.str_page.startDatePicker.SetValue(pydate2wxdate(num2date(mintime)))
-        self.menu_p.str_page.endDatePicker.SetValue(pydate2wxdate(num2date(maxtime)))
-        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-        self.menu_p.rep_page.logMsg('- found {} data points'.format(len(stream.ndarray[0])))
-
         self.menu_p.met_page.dataTextCtrl.SetValue(metadatatext)
         self.menu_p.met_page.sensorTextCtrl.SetValue(metasensortext)
         self.menu_p.met_page.stationTextCtrl.SetValue(metastationtext)
 
+        self.menu_p.str_page.startDatePicker.SetValue(pydate2wxdate(num2date(mintime)))
+        self.menu_p.str_page.endDatePicker.SetValue(pydate2wxdate(num2date(maxtime)))
+        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
+        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
+
+        self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
+        self.menu_p.abs_page.scalarTextCtrl.SetValue(self.options.get('discalarpath',''))
 
     def InitialRead(self,stream):
         """
@@ -1452,13 +1497,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         stream = self.openStream(path=self.dirname,mintime=old, maxtime=new, extension='*')
 
+        self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.dirname,len(stream.ndarray[0])))
+
         if self.InitialRead(stream):
             self.ActivateControls(self.plotstream)
             self.OnInitialPlot(self.plotstream)
 
 
     def OnOpenFile(self, event):
-        self.dirname = ''
+        #self.dirname = ''
         stream = DataStream()
         stream.header = {}
         filelist = []
@@ -1482,6 +1529,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         dlg.Destroy()
 
+        self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
         # plot data
         if self.InitialRead(stream):
             self.ActivateControls(self.plotstream)
@@ -1491,6 +1539,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def OnOpenURL(self, event):
         stream = DataStream()
         bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+
+        #self.options['bookmarks'] = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
         
         dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
         if dlg.ShowModal() == wx.ID_OK:
@@ -1522,8 +1572,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     self.changeStatusbar("Loading url failed ... Ready")
                     dlg.Destroy()
 
+            #self.options['bookmarks'] = dlg.favorites
             #if not bookmarks_old == dlg.favorites:
             #    print ("Favorites have changed ...  modify init")
+
+        self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
             
         if self.InitialRead(stream):
             self.ActivateControls(self.plotstream)
@@ -1577,6 +1630,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             path = [self.db,datainfoid]
             stream = self.openStream(path=path,mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
 
+            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(path[1],len(stream.ndarray[0])))
             if self.InitialRead(stream):
                 self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
@@ -1667,19 +1721,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
         /etc/init.d/mysql restart
         """
         dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
-        dlg.hostTextCtrl.SetValue(self.host)
-        dlg.userTextCtrl.SetValue(self.user)
-        dlg.passwdTextCtrl.SetValue(self.passwd)
+        dlg.hostTextCtrl.SetValue(self.options.get('host',''))
+        dlg.userTextCtrl.SetValue(self.options.get('user',''))
+        dlg.passwdTextCtrl.SetValue(self.options.get('passwd',''))
         if self.db == None or self.db == 'None' or not self.db:
             dlg.dbTextCtrl.SetValue('None')
         else:
-            dlg.dbTextCtrl.SetValue(self.dbname)
+            dlg.dbTextCtrl.SetValue(self.options.get('dbname',''))
         if dlg.ShowModal() == wx.ID_OK:
-            self.host = dlg.hostTextCtrl.GetValue()
-            self.user = dlg.userTextCtrl.GetValue()
-            self.passwd = dlg.passwdTextCtrl.GetValue()
-            self.dbname = dlg.dbTextCtrl.GetValue()
-            self._db_connect(self.host, self.user, self.passwd, self.dbname)
+            self.options['host'] = dlg.hostTextCtrl.GetValue()
+            self.options['user'] = dlg.userTextCtrl.GetValue()
+            self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
+            self.options['dbname'] = dlg.dbTextCtrl.GetValue()
+            self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
             """
             self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
             if self.db:
@@ -1715,68 +1769,73 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DEFINITION
             Change options
         """
-        dlg = OptionsInitDialog(None, title='Options: Parameter specifications')
-        # database
-        dlg.hostTextCtrl.SetValue(self.host)
-        dlg.userTextCtrl.SetValue(self.user)
-        dlg.passwdTextCtrl.SetValue(self.passwd)
-        dlg.dbTextCtrl.SetValue(self.dbname)
-        # database
-        dlg.dirnameTextCtrl.SetValue(self.dirname)
-
-        # default paths
-        dlg.dipathlistTextCtrl.SetValue(self.dipathlist)
-        dlg.divariopathTextCtrl.SetValue(self.divariopath)
-        dlg.discalarpathTextCtrl.SetValue(self.discalarpath)
-
-        # Default di parameter
-        dlg.diexpDTextCtrl.SetValue(str(self.diexpD))
-        dlg.diexpITextCtrl.SetValue(str(self.diexpI))
-        dlg.dialphaTextCtrl.SetValue(str(self.dialpha))
-        dlg.dideltaFTextCtrl.SetValue(str(self.dideltaF))
-
-        dlg.ditypeTextCtrl.SetValue(self.ditype)
-        dlg.stationidTextCtrl.SetValue(self.stationid)
-        dlg.diidTextCtrl.SetValue(self.diid)
-        dlg.diazimuthTextCtrl.SetValue(self.diazimuth)
-        dlg.dipierTextCtrl.SetValue(self.dipier)
-        dlg.didbaddTextCtrl.SetValue(self.didbadd)
-
-        #dlg.hostTextCtrl.SetValue(self.compselect)
-        #dlg.hostTextCtrl.SetValue(self.host)
+        dlg = OptionsInitDialog(None, title='Options: Parameter specifications',options=self.options)
         if dlg.ShowModal() == wx.ID_OK:
-            host = dlg.hostTextCtrl.GetValue()
-            user = dlg.userTextCtrl.GetValue()
-            passwd = dlg.passwdTextCtrl.GetValue()
+            self.options['host'] = dlg.hostTextCtrl.GetValue()
+            self.options['user'] = dlg.userTextCtrl.GetValue()
+            self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
             db = dlg.dbTextCtrl.GetValue()
             if db == '':
-                db = 'None'
-            dirname=dlg.dirnameTextCtrl.GetValue()
+                self.options['dbname'] = 'None'
+            else:
+                self.options['dbname'] = db
+            self.options['dirname']=dlg.dirnameTextCtrl.GetValue()
 
-            diexpD=float(dlg.diexpDTextCtrl.GetValue())
-            diexpI=float(dlg.diexpITextCtrl.GetValue())
-            dialpha=float(dlg.dialphaTextCtrl.GetValue())
-            dideltaF=float(dlg.dideltaFTextCtrl.GetValue())
-            ditype=dlg.ditypeTextCtrl.GetValue()
-            dipathlist=dlg.dipathlistTextCtrl.GetValue()
-            divariopath=dlg.divariopathTextCtrl.GetValue()
-            discalarpath=dlg.discalarpathTextCtrl.GetValue()
+            self.options['stationid']=dlg.stationidTextCtrl.GetValue()
 
-            stationid=dlg.stationidTextCtrl.GetValue()
-            diid=dlg.diidTextCtrl.GetValue()
-            diazimuth=dlg.diazimuthTextCtrl.GetValue()
-            dipier=dlg.dipierTextCtrl.GetValue()
-            didbadd=dlg.didbaddTextCtrl.GetValue()
-
-            basecompselect= 'spline' #basecompselect
-            saveini(host=host, user=user, passwd=passwd, dbname=db, dirname=dirname, basecompselect=basecompselect,dipathlist=dipathlist, divariopath=divariopath, discalarpath=discalarpath, diexpD=diexpD, diexpI=diexpI, dialpha=dialpha, dideltaF=dideltaF, ditype=ditype,stationid=stationid, diid=diid, diazimuth=diazimuth, dipier=dipier, didbadd=didbadd)
+            self.options['fitfunction']=dlg.fitfunctionComboBox.GetValue()
+            self.options['fitknotstep']=dlg.fitknotstepTextCtrl.GetValue()
+            self.options['fitdegree']=dlg.fitdegreeTextCtrl.GetValue()
+            saveini(self.options)
 
             inipara = loadini()
             self.initParameter(inipara)
 
         dlg.Destroy()
 
+    def OnOptionsDI(self, event):
+        """
+        DEFINITION
+            Change options
+        """
 
+        dlg = OptionsDIDialog(None, title='Options: DI Analysis parameters', options=self.options)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            self.options['diexpD']=dlg.diexpDTextCtrl.GetValue()
+            self.options['diexpI']=dlg.diexpITextCtrl.GetValue()
+            self.options['dialpha']=dlg.dialphaTextCtrl.GetValue()
+            self.options['dideltaF']=dlg.dideltaFTextCtrl.GetValue()
+            self.options['ditype']=dlg.ditypeComboBox.GetValue()
+            self.options['divariopath']=dlg.divariopathTextCtrl.GetValue()
+            self.options['discalarpath']=dlg.discalarpathTextCtrl.GetValue()
+            self.options['diid']=dlg.diidTextCtrl.GetValue()
+            self.options['diazimuth']=dlg.diazimuthTextCtrl.GetValue()
+            self.options['dipier']=dlg.dipierTextCtrl.GetValue()
+            self.options['didbadd']=dlg.didbaddTextCtrl.GetValue()
+            self.dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
+            dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
+            dipath = dipathlist[0]
+            if os.path.isfile(dipath):
+                dipath = os.path.split(dipath)[0]
+            self.options['dipathlist'] = [dipath]
+            order=dlg.sheetorderTextCtrl.GetValue()
+            double=dlg.sheetdoubleCheckBox.GetValue()
+            scalevalue=dlg.sheetscaleCheckBox.GetValue()
+            if not double:
+                self.options['double'] = 'False'
+            if not scalevalue:
+                self.options['scalevalue'] = 'False'
+            self.options['order'] = order
+
+            saveini(self.options)
+            inipara = loadini()
+            self.initParameter(inipara)
+
+        dlg.Destroy()
+
+
+    """
     def OnOptionsObs(self, event):
         dlg = OptionsObsDialog(None, title='Options: Observatory specifications')
         dlg.ShowModal()
@@ -1787,6 +1846,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #                "PyMag by RL", wx.OK|wx.ICON_INFORMATION)
         #dlg.ShowModal()
         #dlg.Destroy()
+    """
 
     def onOpenAuxButton(self, event):
         if self.askUserForFilename(style=wx.OPEN,
@@ -1888,23 +1948,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
         keys = self.shownkeylist
         if len(self.plotstream.ndarray[0]) == 0:
             self.plotstream = self.stream.copy()
-        fitknots = str(0.5)
-        fitdegree = str(4)
-        fitfunc='spline'
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', fitfunc=fitfunc, fitknots=fitknots, fitdegree=fitdegree)
+        #fitknots = str(0.5)
+        #fitdegree = str(4)
+        #fitfunc='spline'
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options)
         if dlg.ShowModal() == wx.ID_OK:
             fitfunc = dlg.funcComboBox.GetValue()
             knots = dlg.knotsTextCtrl.GetValue()
             degree = dlg.degreeTextCtrl.GetValue()
+            self.options['fitfunction'] = fitfunc
+            if fitfunc.startswith('poly'):
+                fitfunc = 'poly'
+
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (fitfunc, knots, degree))
             if not 0<float(knots)<1:
                 knots = 0.5
-            if not degree>0:
+            else:
+                knots = float(knots)
+            if not int(degree)>0:
                 degree = 1
             else:
                 degree = int(degree)
+            self.options['fitknotstep'] = str(knots)
+            self.options['fitdegree'] = str(degree)
             if len(self.plotstream.ndarray[0]) > 0:
-                func = self.plotstream.fit(keys=keys)
+                func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots)
                 self.function = func
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
@@ -1974,10 +2042,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         #dlg = AnalysisActivityDialog(None, title='Analysis: get k values (FMI)')
         #if dlg.ShowModal() == wx.ID_OK:
+        backup = self.plotstream.copy()
         self.plotstream = self.plotstream.k_fmi()
-        if len(self.plotstream.ndarray[0]) > 0:
+        if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        else:
+            self.plotstream = backup.copy()
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
@@ -2023,6 +2094,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         teststream = self.plotstream.copy()
         # limits
         self.xlimits = self.plot_p.xlimits
+
         if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
@@ -2151,8 +2223,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
              Calculates baseline correction
         """
         self.changeStatusbar("Baseline adoption ...")
-        keys = self.shownkeylist
-        self.changeStatusbar("Ready")
+        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options)
+        # open dlg which allows to choose baseline data stream, function and parameters
+        # Drop down for baseline data stream (idx: filename)
+        # Text window describing baseline parameter
+        # button to modify baseline parameter
+        if dlg.ShowModal() == wx.ID_OK:
+            # return active stream idx ()
+            #print ("Here", dlg.absstreamComboBox.GetStringSelection())
+            #print ("Here2", dlg.absstreamComboBox.GetValue())
+            idx = int(dlg.absstreamComboBox.GetValue().split(':')[0])
+            self.options = dlg.options
+            absstream = self.streamlist[idx]
+            tmpbasedict = [el for el in self.baselinedictlst if el['streamidx']==idx]
+            basedict = tmpbasedict[0]
+            fitfunc = self.options.get('fitfunction','spline')
+            if fitfunc.startswith('poly'):
+                fitfunc = 'poly'
+            baselinefunc = self.plotstream.baseline(absstream,fitfunc=self.options.get('fitfunction','spline'), knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
+            #keys = self.shownkeylist
+            self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.changeStatusbar("BC function available - Ready")
+        else:
+            self.changeStatusbar("Ready")
 
     def onDeltafButton(self, event):
         """
@@ -2432,7 +2527,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.plotstream = self.stream.copy()
         keylist = self.plotstream._get_key_headers(numerical=True)
         self.keylist = keylist
-        shownkeylist = self.shownkeylist
+        shownkeylist = [el for el in self.shownkeylist if el in NUMKEYLIST]
 
         namelist = []
         unitlist = []
@@ -2609,16 +2704,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
 
     def onChangeSymbol(self, event):
-        orgsymbol = self.symbolselect
-        self.symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
+        #orgsymbol = self.symbolselect
+        symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
         self.changeStatusbar("Transforming ...")
         self.ActivateControls(self.plotstream)
         #if len(self.plotstream.ndarray[0]) == 0:
         #    self.plotstream = self.stream.copy()
-        if self.symbolselect == 'line':
+        if symbolselect == 'line':
             self.symbollist = ['-' for elem in self.shownkeylist]
             self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
-        elif self.symbolselect == 'point':
+        elif symbolselect == 'point':
             self.symbollist = ['o' for elem in self.shownkeylist]
             self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
         self.changeStatusbar("Ready")
@@ -2983,11 +3078,20 @@ Suite 330, Boston, MA  02111-1307  USA"""
             else:
                 self.currentstreamindex = activeidx
                 self.plotstream = plotstreamlist[0]
-                self.shownkeylist = plotkeylist[0]
+                self.shownkeylist = [el for el in plotkeylist[0] if el in NUMKEYLIST]
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
-
-        pass
+        else:
+            mod = dlg.modify
+            if mod == True:
+                self.streamlist.append(dlg.result)
+                self.streamkeylist.append(dlg.resultkeys)
+                self.currentstreamindex = len(self.streamlist)-1
+                self.plotstream = self.streamlist[-1]
+                self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        dlg.Destroy()
 
     def OnStreamAdd(self,event):
         currentstreamindex = len(self.streamlist)
@@ -3007,18 +3111,26 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         open dialog to load DI data
         """
-        if len(self.stream) > 0:
-            pass
-            # send a message box that this data will be erased
+        if isinstance(self.dipathlist, str):
+            dipathlist = self.dipathlist            
+        else:
+            dipathlist = self.dipathlist[0]
+        if os.path.isfile(dipathlist): 
+            dipathlist = os.path.split(dipathlist)[0]
 
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=self.dipathlist)
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist)
         dlg.ShowModal()
         if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
             self.menu_p.rep_page.logMsg("- loaded DI data")
-            self.menu_p.abs_page.diTextCtrl.SetValue(', '.join(dlg.pathlist))
+            self.menu_p.abs_page.diTextCtrl.SetValue(','.join(dlg.pathlist))
             self.dipathlist = dlg.pathlist
+            if os.path.isfile(dlg.pathlist[0]): 
+                dlgpath = os.path.split(dlg.pathlist[0])[0]
+            else:
+                dlgpath = dlg.pathlist[0]
+            self.options['dipathlist'] = [dlgpath]
             self.menu_p.abs_page.AnalyzeButton.Enable()
-
+        dlg.Destroy()
 
 
     def onDefineVario(self,event):
@@ -3030,19 +3142,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
             # send a message box that this data will be erased
 
         #self.variopath = ''
+        divariopath = self.options.get('divariopath','')
         # Open a select path dlg as long as db and remote is not supported
-        dialog = wx.DirDialog(None, "Choose a directory with variometer data:",self.divariopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        dialog = wx.DirDialog(None, "Choose a directory with variometer data:",divariopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
             self.menu_p.abs_page.varioTextCtrl.SetValue(path)
-            self.divariopath = os.path.join(path,'*')
-        """
-        dlg = DefineVarioDialog(None, title='Get Variometer path')
-        if dlg.ShowModal() == wx.ID_OK:
-            self.menu_p.abs_page.varioTextCtrl.SetValue(dlg.path)
-            self.divariopath = os.path.join(dlg.path,'*')
-        dlg.Destroy()
-        """
+            self.options['divariopath'] = os.path.join(path,'*')
+        dialog.Destroy()
 
     def onDefineScalar(self,event):
         """
@@ -3052,40 +3159,66 @@ Suite 330, Boston, MA  02111-1307  USA"""
             pass
             # send a message box that this data will be erased
         # Open a select path dlg as long as db and remote is not supported
-        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",self.discalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        discalarpath = self.options.get('discalarpath','')
+        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",discalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
-            self.menu_p.abs_page.varioTextCtrl.SetValue(path)
-            self.discalarpath = os.path.join(path,'*')
+            self.menu_p.abs_page.scalarTextCtrl.SetValue(path)
+            self.options['discalarpath'] = os.path.join(path,'*')
         dialog.Destroy()
-        """
-        dlg = DefineScalarDialog(None, title='Get path for scalar data')
-        if dlg.ShowModal() == wx.ID_OK:
-            self.menu_p.abs_page.scalarTextCtrl.SetValue(dlg.path)
-            self.discalarpath = os.path.join(dlg.path,'*')
-        dlg.Destroy()
-        """
 
     def onDIAnalyze(self,event):
         """
         open dialog to load DI data
         """
+        # Get parameters from options
+        divariopath = self.options.get('divariopath','')
+        discalarpath = self.options.get('discalarpath','')
+        stationid= self.options.get('stationid','')
+        abstype= self.options.get('ditype','')
+        azimuth= self.options.get('diazimuth','')
+        try:
+            expD= float(self.options.get('diexpD','0.0'))
+        except:
+            expD = 0.0
+        try:
+            expI= float(self.options.get('diexpI','0.0'))
+        except:
+            expI = 0.0
+        try:
+            alpha= float(self.options.get('dialpha','0.0'))
+        except:
+            alpha = 0.0
+        try:
+            deltaF= float(self.options.get('dideltaF','0.0'))
+        except:
+            deltaF = 0.0
+
         if len(self.dipathlist) > 0:
-            self.changeStatusbar("Processing DI data ...")
+            self.changeStatusbar("Processing DI data ... please be patient")
             #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,diid=self.diid,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,pier=self.dipier,alpha=self.dialpha,deltaF=self.dideltaF, dbadd=self.didbadd)
             prev_redir = sys.stdout
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
-            print("Paths:", self.divariopath,self.discalarpath)
-            if not self.diazimuth == '':
-                absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,alpha=self.dialpha,deltaF=self.dideltaF)
+
+            if not azimuth == '':
+                azimuth = float(azimuth)
+                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,deltaF=deltaF)
             else:
-                absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,stationid=self.stationid)
+                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,deltaF=deltaF)
 
             sys.stdout=prev_redir
             # only if more than one point is selected
             self.changeStatusbar("Ready")
-            if absstream.length()[0] > 1:
+            if len(absstream.length()) > 1 and absstream.length()[0] > 0:
+                # Convert absstream
+                array = [[] for el in KEYLIST]
+                for idx,el in enumerate(absstream.ndarray):
+                    if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
+                        array[idx] = np.asarray(el).astype(float)
+                    else:
+                        array[idx] = np.asarray(el)
+                absstream.ndarray = np.asarray(array)
                 self.stream = absstream
                 self.plotstream = absstream
                 currentstreamindex = len(self.streamlist)
@@ -3094,6 +3227,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.currentstreamindex = currentstreamindex
                 self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
+            else:
+                self.ActivateControls(self.plotstream)
+                if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
+                    self.menu_p.abs_page.ClearLogButton.Enable()
+                    self.menu_p.abs_page.SaveLogButton.Enable()
+                # set load di to something useful (seems to be empty now)
+
 
             #redir=RedirectText(self.menu_p.rep_page.logMsg)
             #sys.stdout=prev_redir
@@ -3105,22 +3245,25 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
 
         dlg = DISetParameterDialog(None, title='Set Parameter')
-        dlg.expDTextCtrl.SetValue(str(self.diexpD))
-        dlg.deltaFTextCtrl.SetValue(str(self.dideltaF))
-        dlg.azimuthTextCtrl.SetValue(str(self.diazimuth))
-        dlg.alphaTextCtrl.SetValue(str(self.dialpha))
+        dlg.expDTextCtrl.SetValue(self.options.get('diexpD',''))
+        dlg.deltaFTextCtrl.SetValue(self.options.get('dideltaF',''))
+        dlg.azimuthTextCtrl.SetValue(self.options.get('diazimuth',''))
+        dlg.alphaTextCtrl.SetValue(self.options.get('dialpha',''))
+        dlg.pierTextCtrl.SetValue(self.options.get('dipier',''))
+        dlg.abstypeComboBox.SetStringSelection(self.options.get('ditype',''))
 
         if dlg.ShowModal() == wx.ID_OK:
             if not dlg.expDTextCtrl.GetValue() == '':
-                self.diexpD = float(dlg.expDTextCtrl.GetValue())
+                self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
             if not dlg.azimuthTextCtrl.GetValue() == '':
-                self.diazimuth = float(dlg.azimuthTextCtrl.GetValue())
+                self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
             if not dlg.pierTextCtrl.GetValue() == '':
-                self.dipier = dlg.pierTextCtrl.GetValue()
+                self.options['dipier'] = dlg.pierTextCtrl.GetValue()
             if not dlg.alphaTextCtrl.GetValue() == '':
-                self.dialpha = float(dlg.alphaTextCtrl.GetValue())
+                self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
             if not dlg.deltaFTextCtrl.GetValue() == '':
-                self.dideltaF = float(dlg.deltaFTextCtrl.GetValue())
+                self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
+            self.options['ditype'] =  dlg.abstypeComboBox.GetValue()
 
         dlg.Destroy()
 
@@ -3135,8 +3278,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dipath = self.dipathlist            
         else:
             dipath = self.dipathlist[0]
-        self.dilayout = {'order':['MU','MD','EU','WU','ED','WD','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'True'}
-        defaults = {'pier':'A2'}
+        if os.path.isfile(dipath):
+            dipath = os.path.split(dipath)[0]
+
+        self.dilayout = {}
+        self.dilayout['scalevalue'] = self.options['scalevalue']
+        self.dilayout['double'] = self.options['double']
+        self.dilayout['order'] = self.options['order'].split(',')
+        #self.dilayout = {'order':['MU','MD','EU','WU','ED','WD','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'True'}
+        #self.dilayout = {'order':['MU','MD','WU','EU','WD','ED','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'False'}
+        defaults = self.options
         cdate = pydate2wxdate(datetime.utcnow())
         dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db)
         if dlg.ShowModal() == wx.ID_OK:
@@ -3190,7 +3341,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def onConnectMARTASButton(self, event):
         # start a subscribe to client call
-        # continuously collect data to stream and periodically call monitor plots 
+        # continuously collect data to stream and periodically call monitor plots
+        # Open dlg to select MARTAS-address (IP number)
+        # (favorite dict on MARTAS sheet {'MARTAS':'address','MQTT':'address'})
+        dlg = AGetMARTASDialog(None, title='Select MARTAS',options=self.options)
+        if dlg.ShowModal() == wx.ID_OK:
+            martasaddress = dlg.addressComboBox.GetValue()
+        else:
+            dlg.Destroy()
+            return
+
+        # If IP selected try to get sensor.txt from MARTAS using ssh
+        # If true : start record with sensorid
+        # if false: ask for sensorid (windows)
+
+        # start subscribe2client
+        self.monitorSource='MARTAS'
         success = False
         if success:
             self.menu_p.com_page.startMonitorButton.Enable()
@@ -3251,7 +3417,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.getMARTASButton.Disable()
             self.menu_p.com_page.getMQTTButton.Disable()
             self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.dbname))
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
             self.menu_p.com_page.logMsg('Begin monitoring...')
             self.menu_p.com_page.logMsg(' - Selected MARCOS database')
             self.menu_p.com_page.logMsg(' - Table: {}'.format(datainfoid))
@@ -3260,11 +3426,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def onConnectMQTTButton(self, event):
-        success = False
-        if success:
-            self.menu_p.com_page.startMonitorButton.Enable()
-            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-            self.menu_p.com_page.frequSlider.Enable()         # always
+        dlg = wx.MessageDialog(self, "MQTT protocol not yet implemented!\n"
+                        "... coming soon\n",
+                        "MQTT connection", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+        #success = False
+        #if success:
+        #    self.menu_p.com_page.startMonitorButton.Enable()
+        #    self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+        #    self.menu_p.com_page.frequSlider.Enable()         # always
 
 
     def onStartMonitorButton(self, event):
@@ -3292,14 +3464,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
             self.plot_p.startMARCOSMonitor()
             self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.dbname))
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
+        elif self.monitorSource=='MARTAS':
+            self.plot_p.t1_stop.clear()
+            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
+            #self.plot_p.startMARTASMonitor()
+            # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format('- address -'))
 
-    def _monitor2stream(self,array, db=None, dataid=None):
+    def _monitor2stream(self,array, db=None, dataid=None,header = {}):
         """
         DESCRIPTION:
             creates self.plotstream object from monitor data
         """
-        header = {}
+        #header = {}
         if db:
             header = dbfields2dict(db,dataid)
         array[0] = date2num(array[0])
