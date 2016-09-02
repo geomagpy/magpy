@@ -3396,7 +3396,7 @@ CALLED BY:
         if not keys:
             keys = self._get_key_headers(numerical=True)
         if not filter_width and not resample_period:
-            if sr < 0.2: # use 1 second filter with 0.3 Hz cut off as default
+            if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
                 filter_width = timedelta(seconds=3.33333333)
                 resample_period = 1.0
             else: # use 1 minute filter with 0.008 Hz cut off as default
@@ -3434,6 +3434,8 @@ CALLED BY:
         if resamplestart:
             print("##############  Warning ##############")
             print("option RESAMPLESTART is not used any more. Switch to resampleoffset for modifying time steps")
+        if not missingdata:
+            missingdata = 'conservative'
 
         ndtype = False
 
@@ -3461,7 +3463,6 @@ CALLED BY:
 
         window_period = filter_width.total_seconds()
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
-        #print (si, si.seconds, window_period)
 
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
 
@@ -3507,8 +3508,6 @@ CALLED BY:
         if debugmode:
             print("Length time column:", len(t))
 
-        #nanarray = [[] for key in KEYLIST]
-
         for key in keys:
             #print "Start filtering for", key
             if not key in KEYLIST:
@@ -3519,12 +3518,9 @@ CALLED BY:
             else:
                 v = self._get_column(key)
 
-            # Get indicies of NaN's
-            #if key in NUMKEYLIST:
-            #    nanarray[keyindex] = np.logical_not(np.isnan(v.astype(float)))
-
             # INTERMAGNET 90 percent rule: interpolate missing values if less than 10 percent are missing
-            if not conservative or missingdata in ['interpolate','mean']:
+            #if not conservative or missingdata in ['interpolate','mean']:
+            if missingdata in ['interpolate','mean']:
                 fill = 'mean'
                 try:
                     if missingdata == 'interpolate':
@@ -3593,8 +3589,6 @@ CALLED BY:
         #shortdata = self._select_timerange(starttime="2015-01-01 01:00:00",endtime="2015-01-01 02:00:00")
         #print ("data after filter", shortdata, len(shortdata[0]))
 
-        #print nanarray
-
         if resample:
             if debugmode:
                 print("Resampling: ", keys)
@@ -3604,7 +3598,10 @@ CALLED BY:
         # ########################
         # Update header information
         # ########################
-        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange) + ' sec'
+        passband = filter_width.total_seconds()
+        #print ("passband", 1/passband)
+        #self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange) + ' sec'
+        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(1.0/float(passband)) + ' Hz'
 
         return self
 
@@ -3914,19 +3911,46 @@ CALLED BY:
         # test validity of starttime and endtime
 
         trimmedstream = self.copy()
-        if starttime:
+        if starttime and endtime:
+            trimmedstream = self._select_timerange(starttime=starttime,endtime=endtime)
+        elif starttime:
             trimmedstream = self._select_timerange(starttime=starttime)
-        if endtime:
+        elif endtime:
             trimmedstream = self._select_timerange(endtime=endtime)
 
         if not above and not below:
-            print("Got here")
             # return flags for all data in trimmed stream
-            for elem in keys:
+            for elem in keystoflag:
                 flagline = [num2date(trimmedstream[0][0]).replace(tzinfo=None),num2date(trimmedstream[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                 flaglist.append(flagline)
             return flaglist
-        if above:
+
+        if above and below:
+            # TODO create True/False list and then follow the bin detector example
+            ind = KEYLIST.index(keys[0])
+            trueindicies = (trimmedstream.ndarray[ind] > above) & (trimmedstream.ndarray[ind] < below)
+            
+            d = np.diff(trueindicies)
+            idx, = d.nonzero()
+            idx += 1
+
+            if not text:
+                text = 'outside of range {} to {}'.format(below,above)
+            if trueindicies[0]:
+                # If the start of condition is True prepend a 0
+                idx = np.r_[0, idx]
+            if trueindicies[-1]:
+                # If the end of condition is True, append the length of the array
+                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+            # Reshape the result into two columns
+            idx.shape = (-1,2)
+
+            for start,stop in idx:
+                stop = stop-1
+                for elem in keystoflag:
+                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flaglist.append(flagline)
+        elif above:
             # TODO create True/False list and then follow the bin detector example
             ind = KEYLIST.index(keys[0])
             trueindicies = trimmedstream.ndarray[ind] > above
@@ -3951,7 +3975,7 @@ CALLED BY:
                 for elem in keystoflag:
                     flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
-        if below:
+        elif below:
             # TODO create True/False the other way round
             ind = KEYLIST.index(keys[0])
             truefalse = trimmedstream.ndarray[ind] < below
@@ -4503,34 +4527,47 @@ CALLED BY:
         #print("Identified indicies in ",t2-t1)
 
         if ndtype:
+            array = [[] for el in KEYLIST]
             flagind = KEYLIST.index('flag')
             commentind = KEYLIST.index('comment')
             # Check whether flag and comment are exisiting - if not create empty
             if not len(self.ndarray[flagind]) > 0:
-                self.ndarray[flagind] = [''] * len(self.ndarray[0])
-                self.ndarray[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
+                array[flagind] = [''] * len(self.ndarray[0])
+                #array[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
+                #self.ndarray[flagind] = [''] * len(self.ndarray[0])
+                #self.ndarray[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
+            else:
+                array[flagind] = list(self.ndarray[flagind])
             if not len(self.ndarray[commentind]) > 0:
-                self.ndarray[commentind] = [''] * len(self.ndarray[0])
-                self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
+                array[commentind] = [''] * len(self.ndarray[0])
+                #self.ndarray[commentind] = [''] * len(self.ndarray[0])
+                #self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
+            else:
+                array[commentind] = list(self.ndarray[commentind])
             # Now either modify existing or add new flag
             if st==0 and ed==0:
                 pass
             else:
                 for i in range(st,ed+1):
-                    if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
+                    #if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
+                    if array[flagind][i] == '' or array[flagind][i] == '-':
                         flagls = defaultflag
                     else:
-                        flagls = list(self.ndarray[flagind][i])
+                        flagls = list(array[flagind][i])
                     # if existing flaglistlength is shorter, because new columns where added later to ndarray
                     if len(flagls) < pos:
                         flagls.extend(['-' for j in range(pos+1-flagls)])
                     flagls[pos] = str(flag)
                     #print("flag", ''.join(flagls), comment)
-                    self.ndarray[flagind][i] = ''.join(flagls)
-                    self.ndarray[commentind][i] = comment
-                    #print "flag2", self.ndarray[flagind][i], self.ndarray[commentind][i]
-            self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
-            self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
+                    #self.ndarray[flagind][i] = ''.join(flagls)
+                    array[flagind][i] = ''.join(flagls)
+                    #self.ndarray[commentind][i] = comment
+                    array[commentind][i] = comment
+                #print (self.ndarray[flagind][i], array[flagind][i])
+            self.ndarray[flagind] = np.asarray(array[flagind]).astype(object)
+            self.ndarray[commentind] = np.asarray(array[commentind]).astype(object)
+            #self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
+            #self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
         else:
             for elem in self:
                 if elem.time >= start and elem.time <= end:
@@ -5885,6 +5922,9 @@ CALLED BY:
         #print kstream.ndarray, klist
 
         kstream = kstream.sorting()
+        kstream.header['col-var1'] = 'K'
+        kstream.header['col-var2'] = 'C'
+        kstream.header['col-var3'] = 'Quality'
         #print ("Test",kstream.ndarray)
 
         return DataStream([LineStruct()],kstream.header,kstream.ndarray)

@@ -2249,14 +2249,15 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                         else:
                             print("Found problem in flagging information - still to be solved")
                             print("Flag at count and its index position", cnt0, indexflag)
-                            print("Flag and Comment", flags[0][cnt0], flags[1][cnt0])
+                            print("Flag and Comment (expected -000000000 and comment)", flags[0][cnt0], flags[1][cnt0])
+                linecrit = 2000
                 if len(a_t) > 0:
-                    if len(a_t) > 10000:
+                    if len(a_t) > linecrit:
                         ax.plot(a_t,a_y,'-',c='r') ## Use lines if a lot of data is marked
                     else:
                         ax.scatter(a_t,a_y,c='r')
                 if len(b_t) > 0:
-                    if len(b_t) > 10000:
+                    if len(b_t) > linecrit:
                         ax.plot(b_t,b_y,'-',c='orange')
                     else:
                         ax.scatter(b_t,b_y,c='orange')
@@ -2264,12 +2265,12 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                     # TODO Here we have a masked nan warning - too be solved
                     #print np.asarray(c_t)
                     #print np.asarray(c_y)
-                    if len(c_t) > 10000:
+                    if len(c_t) > linecrit:
                         ax.plot(c_t,c_y,'-',c='g')
                     else:
                         ax.scatter(c_t,c_y,c='g')
                 if len(d_t) > 0:
-                    if len(d_t) > 10000:
+                    if len(d_t) > linecrit:
                         ax.plot(d_t,d_y,'-',c='b')
                     else:
                         ax.scatter(d_t,d_y,c='b')

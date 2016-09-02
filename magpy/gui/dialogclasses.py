@@ -1013,9 +1013,10 @@ class StreamPlotOptionsDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         for elem in self.optdict:
-            print (elem, self.optdict[elem])
-            exec('self.'+elem+'Text = wx.StaticText(self,label="'+elem+'")')
-            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self, value="'+self.optdict[elem]+'")')
+            #print (elem, self.optdict[elem])
+            val = "{}".format(self.optdict[elem])
+            exec('self.'+elem+'Text = wx.StaticText(self,label="'+elem+'",size=(160,30))')
+            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self, value="'+val+'",size=(160,30))')
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, label='Cancel')
 
@@ -1024,7 +1025,7 @@ class StreamPlotOptionsDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=len(self.optdict), cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=len(self.optdict), cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -3588,6 +3589,10 @@ class AGetMARTASDialog(wx.Dialog):
         self.addressComboBox = wx.ComboBox(self, choices=self.martaslist,
                        style=wx.CB_DROPDOWN, value=self.martaslist[0],size=(160,30))
         self.addButton = wx.Button(self, label='Add MARTAS address',size=(160,30))
+        self.userLabel = wx.StaticText(self, label="MARTAS user:",size=(160,30))
+        self.userTextCtrl = wx.TextCtrl(self, value="cobs",size=(160,30))
+        self.pwdLabel = wx.StaticText(self, label="MARTAS pwd:",size=(160,30))
+        self.pwdTextCtrl = wx.TextCtrl(self, value="",size=(160,30),style=wx.TE_PASSWORD)
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
@@ -3610,6 +3615,10 @@ class AGetMARTASDialog(wx.Dialog):
                  (self.addressComboBox, expandOption),
                   emptySpace,
                  (self.addButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.userLabel, noOptions),
+                 (self.pwdLabel, noOptions),
+                 (self.userTextCtrl, expandOption),
+                 (self.pwdTextCtrl, expandOption),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)

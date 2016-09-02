@@ -32,10 +32,6 @@ from magpy.gui.reportpage import *
 from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
-#try:
-#    from magpy.collector import subscribe2client as msubs
-#except:
-#    print ("MARTAS and LogFile options not available - check dependencies")
 import glob, os, pickle, base64
 import pylab
 import thread, time
@@ -254,7 +250,6 @@ class PlotPanel(wx.Panel):
         #    #msubs.storeData(li,parameterstring.split(','))
 
 
-
     def startMARCOSMonitor(self,**kwargs):
         """
         DEFINITION:
@@ -300,6 +295,59 @@ class PlotPanel(wx.Panel):
         t1.start()
         # Display the plot
         self.canvas.draw()
+
+
+    def startMARTASMonitor(self,**kwargs):
+        """
+        DEFINITION:
+            embbed matplotlib figure in canvas for mointoring
+
+        PARAMETERS:
+            kwargs:  - all plot args
+        """
+        #clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst
+        #dataid = self.datavars[0]
+        #parameter = self.datavars[1]
+        #period = self.datavars[2]
+        #pad = self.datavars[3]
+        #currentdate = self.datavars[4]
+        #unitlist = self.datavars[5]
+        #coverage = self.datavars[6]  # coverage
+        #updatetime = self.datavars[7]
+        #db = self.datavars[8]
+
+        try:
+            from magpy.collector import subscribe2client as msubs
+        except:
+            print ("MARTAS and LogFile options not available - check dependencies")
+            return
+
+        # MARTAS specific
+        clientip = self.datavars[9]
+        destpath = self.datavars[10]
+        sshcredlst = self.datavars[11]
+        s = self.datavars[12]
+        o = self.datavars[13]
+        stationid = self.datavars[14]
+
+        # clientname
+        import socket
+        clientaddress = socket.getfqdn(clientip)
+        clientname = clientaddress.split('.')[0]
+
+        dest = 'file'
+        printdata = False
+        dbcredlst = []
+
+        print ("Here", clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst)
+
+        factory = WampClientFactory("ws://"+clientip+":9100", debugWamp = False)
+        msubs.sendparameter(clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst)
+        factory.protocol = msubs.PubSubClient
+        connectWS(factory)
+
+        reactor.run()
+
 
     def monitorPlot(self,array,**kwargs):
         """
@@ -378,7 +426,7 @@ class PlotPanel(wx.Panel):
         self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
 
 
-    def guiPlot(self,streams,keys,plotopt=None,**kwargs):
+    def guiPlot(self,streams,keys,plotopt={},**kwargs):
         """
         DEFINITION:
             embbed matplotlib figure in canvas
@@ -386,14 +434,15 @@ class PlotPanel(wx.Panel):
         PARAMETERS:
         kwargs:  - all plot args
         """
-        #plotopt = {'labels':'None' , 'padding': 'None', 'stormphases': 'False', 'specialdict': 'None', 'bartrange':'None', 'bgcolor': 'white', 'colorlist': ",".join(collist[:lenkeys]) ,'fullday':'False', 'grid':'True','gridcolor':'#316931', 'includeid':'False', 'labelcolor':'0.2', 'legendposition':'upper left', 'plottitle':'', 'plottype':'discontinuous', 'symbollist':",".join(self.symbollist),'t_stormphases':'None', 'opacity':'0.0'}
+
+        #print ("GUI plot", plotopt)
 
         # Declare and register callbacks
         def on_xlims_change(axes):
             self.xlimits = axes.get_xlim()
 
         def on_ylims_change(axes):
-            print ("updated ylims: ", axes.get_ylim())
+            #print ("updated ylims: ", axes.get_ylim())
             return axes.get_ylim()
 
         self.figure.clear()
@@ -402,7 +451,8 @@ class PlotPanel(wx.Panel):
         except:
             pass
 
-        self.axes = mp.plotStreams(streams,keys,figure=self.figure,**kwargs)
+        self.axes = mp.plotStreams(streams,keys,figure=self.figure,**plotopt)
+        #self.axes = mp.plotStreams(streams,keys,figure=self.figure,**kwargs)
         self.axlist = self.figure.axes
 
         #get current xlimits:
@@ -576,6 +626,7 @@ class MainFrame(wx.Frame):
 
         self.streamlist = []
         self.headerlist = []
+        self.plotoptlist = []
         self.streamkeylist = []
         self.currentstreamindex = 0
         self.stream = DataStream() # used for storing original data
@@ -801,42 +852,57 @@ class MainFrame(wx.Frame):
         self.plot_p.SetMinSize((100, 100))
 
 
-    def InitPlotParameter(self):
+    def InitPlotParameter(self, keylist = None):
         # Kwargs for plotting
-        self.annotate = True
+        #self.annotate = True
         self.menu_p.str_page.annotateCheckBox.SetValue(True)
-        self.errorbars = False
+        #self.errorbars = False
         self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
-        self.confinex = False
+        #self.confinex = False
         self.menu_p.str_page.confinexCheckBox.SetValue(False)
-        self.fullday = False
-        self.includeid = False
-        self.grid = True
-        self.padding = None
-        self.specialdict={}
+        #self.fullday = False
+        #self.includeid = False
+        #self.grid = True
+        #self.padding = None
+        #self.specialdict={}
         self.colorlist = ['b','g','m','c','y','k','b','g','m','c','y','k']
-        self.stormphases=None
-        self.t_stormphases={}
-        self.function=None
-        self.plottype='discontinuous'
-        self.labels=False
+        #self.stormphases=None
+        #self.t_stormphases={}
+        #self.function=None
+        #self.plottype='discontinuous'
+        #self.labels=False
         self.resolution=None
         self.monitorSource=None
-        lenkeys = len(self.shownkeylist)
-        self.symbollist=['-']*len(self.shownkeylist)
-        collist=['b','g','m','c','y','k','b','g','m','c','y','k']
-        self.plotopt = {'labels':'None' , 'padding': 'None', 'stormphases': 'False', 'specialdict': 'None', 'bartrange':'None', 'bgcolor': 'white', 'colorlist': ",".join(collist[:lenkeys]) ,'fullday':'False', 'grid':'True','gridcolor':'#316931', 'includeid':'False', 'labelcolor':'0.2', 'legendposition':'upper left', 'plottitle':'', 'plottype':'discontinuous', 'symbollist':",".join(self.symbollist),'t_stormphases':'None', 'opacity':'0.0'}
+        #collist=['b','g','m','c','y','k','b','g','m','c','y','k']
 
-        """
-        self.bartrange = 0
-        self.bgcolor='white'
-        self.function = {}
-        self.gridcolor = '#316931'
-        self.labelcolor = '0.2'
-        self.opacity = 0.0
-        self.legendposition = 'upper left'
-        self.plottitle = None
-        """
+        # please note: symbol and colorlists are defined in ActivateControls
+        
+        #print ("colorlist", collist[:lenkeys])
+        #self.plotopt = {'labels':'None' , 'padding': 'None', 'stormphases': False, 'specialdict': {}, 'bartrange':'None', 'bgcolor': 'white', 'colorlist': ",".join(collist[:lenkeys]) ,'fullday':'False', 'grid':'True','gridcolor':'#316931', 'includeid':'False', 'labelcolor':'0.2', 'legendposition':'upper left', 'plottitle':'', 'plottype':'discontinuous', 'symbollist':",".join(self.symbollist),'t_stormphases':'None', 'opacity':'0.0'}
+
+        self.plotopt = {'labels':None ,
+                        'errorbars':False,
+                        'confinex':False,
+                        'annotate':False,
+                        'padding': None,
+                        'stormphases': False, 
+                        'specialdict': {}, 
+                        'bartrange':0.06,
+                        'bgcolor': 'white', 
+                        'colorlist': [],
+                        'fullday':False,
+                        'grid':True,
+                        'gridcolor':'#316931',
+                        'includeid':False,
+                        'labelcolor':'0.2',
+                        'legendposition':'upper left',
+                        'plottitle':'',
+                        'plottype':'discontinuous',
+                        'symbollist': [],
+                        't_stormphases':{},
+                        'opacity':1.0,
+                        'function':None}
+
 
     def initParameter(self, dictionary):
         # Variable initializations
@@ -970,11 +1036,25 @@ class MainFrame(wx.Frame):
         if len(self.shownkeylist) == 0:   ## Initiaize self.shownkeylist if not yet done
             keylist = [elem for elem in keys if elem in NUMKEYLIST]
             self.shownkeylist = keylist[:9]
-        #print (self.menu_p.str_page.symbolRadioBox.GetStringSelection())
+
+        # Reset line/point selection
+        if n < 2000:
+            self.menu_p.str_page.symbolRadioBox.Enable()
+        else:
+            self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
+            self.menu_p.str_page.symbolRadioBox.Disable()
+
+
         if self.menu_p.str_page.symbolRadioBox.GetStringSelection() == 'line':
             self.symbollist = ['-'] * len(self.shownkeylist)
+            self.plotopt['symbollist'] =  ['-'] * len(self.shownkeylist)
         else:
             self.symbollist = ['o'] * len(self.shownkeylist)
+            self.plotopt['symbollist'] =  ['o'] * len(self.shownkeylist)
+
+        # Other plot options, which are related to len(shownkeylist)
+        self.plotopt['colorlist'] = self.colorlist[:len(self.shownkeylist)]
+        self.UpdatePlotOptions(self.shownkeylist)
 
         # Sampling rate
         try:
@@ -1008,7 +1088,7 @@ class MainFrame(wx.Frame):
             if key.startswith('Data'):
                  value = stream.header.get(key,'')
                  #try:  # python 3
-                 if not isinstance(value, str):
+                 if not isinstance(value, basestring): # p3: str
                      try: 
                          if self.plotstream._is_number(value):
                              pass
@@ -1128,7 +1208,7 @@ class MainFrame(wx.Frame):
             if 'f' in keys and not 'df' in keys:
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
             if not formattype == 'MagPyDI':
-                print ("Checking baseline info")
+                #print ("Checking baseline info")
                 self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime)
                 if len(self.baselineidxlst) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
@@ -1171,9 +1251,12 @@ class MainFrame(wx.Frame):
         self.plotstream = self.stream.copy()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.stream)
-        self.streamkeylist.append(self.stream._get_key_headers())
         self.headerlist.append(self.stream.header)
         self.currentstreamindex = currentstreamindex
+        # Moved the following to InitialPlot
+        #self.streamkeylist.append(self.stream._get_key_headers())
+        #self.plotoptlist.append(self.plotopt)
+
         return True
 
     """
@@ -1252,12 +1335,30 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.openStreamButton.Disable()
     """
 
+    def UpdatePlotOptions(self,keylist):
+        #print ("Update plot characteristics")
+        # check if lists:
+        #special = self.plotopt.get('specialdict',None)
+        pads = self.plotopt.get('padding',None)
+        labs = self.plotopt.get('labels',None)
+
+        if not pads or not len(pads[0]) == len(keylist):
+            #print ("Padding length not fitting")
+            self.plotopt['padding']= [[0] * len(keylist)]
+
+        if not labs or not len(labs[0]) == len(keylist):
+            #print ("Labels length not fitting")
+            self.plotopt['labels']= None
+
+        #if not special or not len(special[0]) == len(keylist):
+        #    #print ("specialdict length not fitting")
+        #    self.plotopt['specialdict']= None
+
  
     def UpdatePlotCharacteristics(self,stream):
         """
         DESCRIPTION
-            Activates specific menus and buttons in dependeny of data content
-            Updating time ranges on Stream page
+            Checks and activates plot options, checks for correct lengths of all list options 
         """
 
         # Some general Checks on Stream
@@ -1272,16 +1373,21 @@ class MainFrame(wx.Frame):
         #    if div <= 5.:
         #        keylist.remove(key)
         keylist = [elem for elem in keylist if elem in NUMKEYLIST]
+
+        # The following will be overwritten by ActivateControls
         self.symbollist = ['-'] * len(keylist)
+        self.plotopt['symbollist'] =  ['-'] * len(keylist)
+        self.plotopt['colorlist']=self.colorlist[:len(keylist)]
+
         self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
         self.menu_p.str_page.dailyMeansButton.Disable()
-
 
         # 2. If stream too long then don't allow scatter plots -- too slowly
         if stream.length()[0] < 2000:
             self.menu_p.str_page.symbolRadioBox.Enable()
         else:
             self.menu_p.str_page.symbolRadioBox.Disable()
+
         # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
         if stream.header.get('DataFormat') == 'MagPyDI':
             self.menu_p.str_page.symbolRadioBox.Enable()
@@ -1289,11 +1395,23 @@ class MainFrame(wx.Frame):
             self.shownkeylist = keylist
             keylist = ['x','y','z','dx','dy','dz']
             self.symbollist = ['o'] * len(keylist)
+            self.plotopt['symbollist'] =  ['o'] * len(keylist)
+            self.plotopt['colorlist']=self.colorlist[:len(keylist)]
             # enable daily average button
             self.menu_p.str_page.dailyMeansButton.Enable()
 
+        # 4. If K values are shown: preselect bar chart
+        if 'var1' in keylist and stream.header.get('col-var1','').startswith('K'):
+            print ("Found K values - apply self.plotopt")
+            self.plotopt['specialdict']=[{'var1':[0,9]}]
+            pos = keylist.index('var1')
+            self.plotopt['symbollist'][pos] = 'z'
+            self.plotopt['bartrange'] = 0.06
+            self.plotopt['opacity'] = 1.0
+
         self.shownkeylist = keylist
 
+        """
         # 4. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
         typus = stream.header.get('DataComponents')
         try:
@@ -1308,12 +1426,14 @@ class MainFrame(wx.Frame):
             if 'x' in keylist and 'y' in keylist and 'z' in keylist:
                 self.compselect = 'xyz'
                 self.menu_p.str_page.compRadioBox.Enable()
-
+        """
         # 5. Baseline correction if Object contained in stream
         #if stream.header.get('DataAbsFunctionObject'):
         #    self.menu_p.str_page.applyBCButton.Enable()
         #else:
         #    self.menu_p.str_page.applyBCButton.Disable()
+
+        self.UpdatePlotOptions(keylist)
 
         return keylist
 
@@ -1339,57 +1459,58 @@ class MainFrame(wx.Frame):
 
 
 
-    def OnInitialPlot(self, stream):
+    def OnInitialPlot(self, stream, restore = False):
         """
         DEFINITION:
-            read stream, extract columns with values and display up to three of them by defailt
+            read stream, extract columns with values and display up to three of them by default
             executes guiPlot then
         """
-        #if not len(stream.ndarray[0]) > 0:
-        #    stream = stream.linestruct2ndarray()
-        #self.stream = stream
-        #self.plotstream = stream.copy()
-        #self.orgheader = stream.header
 
         self.changeStatusbar("Plotting...")
 
-        keylist = self.UpdatePlotCharacteristics(self.plotstream)        
+        self.InitPlotParameter()
+        # Init Controls
+        self.ActivateControls(self.plotstream)
+
+        # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
+        keylist = self.UpdatePlotCharacteristics(self.plotstream)
 
         self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(keylist)))
         #if len(stream) > self.resolution:
         #    self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
+        # Eventually change symbol as matplotlib reports errors for line plot with many points
+        if stream.length()[0] > 200000:
+            self.plotopt['symbollist']= ['.'] * len(keylist)
 
-        self.plot_p.guiPlot([self.plotstream],[keylist],symbollist=self.symbollist,annotate=self.annotate)
+        if not restore:
+            self.streamkeylist.append(keylist)
+            self.plotoptlist.append(self.plotopt)
 
-        """
-        if stream.length()[0] > 0 and len(keylist) > 0:
-            self.ExportData.Enable(True)
-            self.menu_p.ana_page.activityButton.Enable() # enabled at initial plot
-            self.menu_p.ana_page.offsetButton.Enable()
-            self.menu_p.ana_page.fitButton.Enable()
-            self.menu_p.ana_page.activityButton.Enable()
-            self.menu_p.ana_page.filterButton.Enable()
-            self.menu_p.ana_page.outlierButton.Enable()
-            self.menu_p.ana_page.derivativeButton.Enable()
-            self.menu_p.ana_page.rotationButton.Enable()
-        """
+        self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
 
         self.changeStatusbar("Ready")
 
-    def OnPlot(self, stream, keylist, padding=None, specialdict={},errorbars=None,
-        colorlist=None,symbollist=None,annotate=None,stormphases=None,
-        t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-        labels=False,resolution=None, confinex=False, plotopt=None):
+
+    def OnPlot(self, stream, keylist, **kwargs):
         """
         DEFINITION:
             read stream and display
         """
+        #self.plotopt = {'bgcolor':'green'}
+
         self.changeStatusbar("Plotting...")
         #print ("ConfineX:", confinex, symbollist)
+        """
         self.plot_p.guiPlot([stream],[keylist],padding=padding,specialdict=specialdict,errorbars=errorbars,
                             colorlist=colorlist,symbollist=symbollist,annotate=annotate,
                             includeid=includeid, function=function,plottype=plottype,                 
                             labels=labels,resolution=resolution,confinex=confinex,plotopt=plotopt)
+        """
+        print ("Keys", keylist)
+        if stream.length()[0] > 200000:
+            self.plotopt['symbollist']= ['.'] * len(keylist)
+
+        self.plot_p.guiPlot([stream],[keylist],plotopt=self.plotopt)
         #self.plot_p.guiPlot(stream,keylist,**kwargs)
         if stream.length()[0] > 1 and len(keylist) > 0:
             self.ExportData.Enable(True)
@@ -1405,6 +1526,17 @@ class MainFrame(wx.Frame):
             read stream and display
         """
         self.changeStatusbar("Plotting...")
+
+        """
+        - labels:       [ (str) ] List of labels for each stream and variable, e.g.:
+                        [ ['FGE'], ['POS-1'], ['ENV-T1', 'ENV-T2'] ]
+        - padding:      (float/list(list)) List of lists containing paddings for each
+                        respective variable, e.g:
+                        [ [5], [5], [0.1, 0.2] ]
+                        (Enter padding = 5 for all plots to use 5 as padding.)
+        - specialdict:  (list(dict)) Same as plot variable, e.g:
+                        [ {'z': [100,150]}, {}, {'t1':[7,8]} ]
+        """
         #print ("ConfineX:", confinex, symbollist)
         self.plot_p.guiPlot(streamlst,keylst)
         #if stream.length()[0] > 1 and len(keylist) > 0:
@@ -1500,7 +1632,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.dirname,len(stream.ndarray[0])))
 
         if self.InitialRead(stream):
-            self.ActivateControls(self.plotstream)
+            #self.ActivateControls(self.plotstream)
             self.OnInitialPlot(self.plotstream)
 
 
@@ -1532,7 +1664,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
         # plot data
         if self.InitialRead(stream):
-            self.ActivateControls(self.plotstream)
+            #self.ActivateControls(self.plotstream)
             self.OnInitialPlot(self.plotstream)
 
 
@@ -1579,7 +1711,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
             
         if self.InitialRead(stream):
-            self.ActivateControls(self.plotstream)
+            #self.ActivateControls(self.plotstream)
             self.OnInitialPlot(self.plotstream)
 
         self.changeStatusbar("Ready")
@@ -1632,7 +1764,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(path[1],len(stream.ndarray[0])))
             if self.InitialRead(stream):
-                self.ActivateControls(self.plotstream)
+                #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
 
 
@@ -1888,7 +2020,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         filter_type = 'gaussian'
         resample_offset = 0.0
-        if sr < 0.2: # use 1 second filter with 0.3 Hz cut off as default
+
+        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
                 filter_width = timedelta(seconds=3.33333333)
                 resample_period = 1.0
         elif sr < 50: # use 1 minute filter with 0.008 Hz cut off as default
@@ -1901,24 +2034,27 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 filter_type = 'flat'
         miss = 'conservative'
 
-        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=True, winlen=filter_width.seconds, resint=resample_period, resoff= resample_offset, filtertype=filter_type)
+        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=True, winlen=filter_width.total_seconds(), resint=resample_period, resoff= resample_offset, filtertype=filter_type)
+        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
+            dlg.methodRadioBox.SetStringSelection('conservative')
+
         if dlg.ShowModal() == wx.ID_OK:
             filtertype = dlg.filtertypeComboBox.GetValue()
             filterlength = float(dlg.lengthTextCtrl.GetValue())
             resampleinterval = float(dlg.resampleTextCtrl.GetValue())
             resampleoffset = float(dlg.resampleoffsetTextCtrl.GetValue())
             missingdata = dlg.methodRadioBox.GetStringSelection()
-            print (filtertype,filterlength,missingdata,resampleinterval,resampleoffset)
+            #print (filtertype,filterlength,missingdata,resampleinterval,resampleoffset)
             if missingdata == 'IAGA':
                 miss = 'mean'
             elif missingdata == 'interpolate':
                 miss = 'interpolate'
 
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_length=filterlength,resample_period=resampleinterval,resample_offset=resampleoffset,missingdata=miss,resample=True)
+            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resample_offset=resampleoffset,missingdata=miss,resample=True)
             self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
 
             self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
 
@@ -1937,7 +2073,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.menu_p.rep_page.logMsg('- derivative calculated')
         self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
     def onFitButton(self, event):
@@ -1974,8 +2110,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if len(self.plotstream.ndarray[0]) > 0:
                 func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots)
                 self.function = func
+                self.plotopt['function'] = func
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.OnPlot(self.plotstream,self.shownkeylist)
             else:
                 # Msgbox to load data first
                 pass
@@ -2026,7 +2163,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plotstream = self.plotstream.offset(offsetdict, starttime=st, endtime=et)
 
             self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
@@ -2043,14 +2180,20 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #dlg = AnalysisActivityDialog(None, title='Analysis: get k values (FMI)')
         #if dlg.ShowModal() == wx.ID_OK:
         backup = self.plotstream.copy()
-        self.plotstream = self.plotstream.k_fmi()
+        stream = self.plotstream.k_fmi()
+        self.streamlist.append(stream)
+        self.streamkeylist.append(stream._get_key_headers())
+        self.currentstreamindex = len(self.streamlist)-1
+        self.plotstream = self.streamlist[-1]
+        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
         if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
             self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            keylist = self.UpdatePlotCharacteristics(self.plotstream)
+            self.plotoptlist.append(self.plotopt)
+            self.OnPlot(self.plotstream,self.shownkeylist)
         else:
             self.plotstream = backup.copy()
 
-        dlg.Destroy()
         self.changeStatusbar("Ready")
 
     def onRotationButton(self, event):
@@ -2077,7 +2220,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plotstream = self.plotstream.rotation(alpha=alpha, beta=beta)
                 self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.OnPlot(self.plotstream,self.shownkeylist)
 
         dlg.Destroy()
         self.changeStatusbar("Ready")
@@ -2214,7 +2357,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
 
             self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
     def onBaselineButton(self, event):
@@ -2244,7 +2387,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
             self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("BC function available - Ready")
         else:
             self.changeStatusbar("Ready")
@@ -2262,7 +2405,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.shownkeylist.append('df')
         self.menu_p.rep_page.logMsg('- determined delta F between x,y,z and f')
         self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
     # ------------------------------------------------------------------------------------------
@@ -2281,13 +2424,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         if not self.menu_p.str_page.errorBarsCheckBox.GetValue():
             self.errorbars=False
+            self.plotopt['errorbars'] = [False]
             self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
         else:
             self.errorbars=True
+            self.plotopt['errorbars'] = [True]
             self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
         self.ActivateControls(self.plotstream)
         if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("Ready")
         else:
             self.changeStatusbar("Failure")
@@ -2302,13 +2447,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         if not self.menu_p.str_page.confinexCheckBox.GetValue():
             self.confinex=False
+            self.plotopt['confinex'] = False
             self.menu_p.str_page.confinexCheckBox.SetValue(False)
         else:
             self.confinex=True
+            self.plotopt['confinex'] = True
             self.menu_p.str_page.confinexCheckBox.SetValue(True)
         self.ActivateControls(self.plotstream)
         if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("Ready")
         else:
             self.changeStatusbar("Failure")
@@ -2337,7 +2484,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.ActivateControls(self.plotstream)
         if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("Ready")
         else:
             self.changeStatusbar("Failure")
@@ -2559,8 +2706,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 else:
                     self.shownkeylist = shownkeylist
                 self.symbollist = [self.symbollist[0]]*len(shownkeylist)
+                self.plotopt['symbollist'] =  [self.symbollist[0]]*len(shownkeylist)
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.OnPlot(self.plotstream,self.shownkeylist)
                 self.changeStatusbar("Ready")
         else:
             self.changeStatusbar("Failure")
@@ -2605,7 +2753,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             # TODO extractedstream = join(extractedstream,extractedstream3)
                 self.plotstream = extractedstream
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.OnPlot(self.plotstream,self.shownkeylist)
                 self.changeStatusbar("Ready")
         else:
             self.menu_p.rep_page.logMsg("Extract: No data available so far")
@@ -2623,10 +2771,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg = StreamPlotOptionsDialog(None, title='Plot Options:',optdict=self.plotopt)
             if dlg.ShowModal() == wx.ID_OK:
                 for elem in self.plotopt:
-                    val = eval('dlg.'+elem+'TextCtrl.GetValue()')
-                    if not val == self.plotopt[elem]:
-                        self.plotopt[elem] = val
+                    if not elem in ['function']:
+                        val = eval('dlg.'+elem+'TextCtrl.GetValue()')
+                        if val in ['False','True','None'] or val.startswith('[') or val.startswith('{'):
+                            val = eval(val)
+                        if elem in ['opacity','bartrange']:
+                            val = float(val)
+                        if not val == self.plotopt[elem]:
+                            self.plotopt[elem] = val
 
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
 
     def onRestoreData(self,event):
         """
@@ -2642,9 +2797,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plotstream.header = self.headerlist[self.currentstreamindex]
 
         self.menu_p.rep_page.logMsg('Original data restored...')
-        self.InitPlotParameter()
-        self.ActivateControls(self.stream)
-        self.OnInitialPlot(self.stream)
+        #self.InitPlotParameter()
+        #self.ActivateControls(self.stream)
+        self.OnInitialPlot(self.stream, restore=True)
 
     def onDailyMeansButton(self,event):
         """
@@ -2658,9 +2813,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.shownkeylist = self.plotstream._get_key_headers(numerical=True)[:3]
         self.symbollist = self.symbollist[0]*len(self.shownkeylist)
 
+        self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
+        self.plotopt['errorbars'] = [True]
+ 
         self.ActivateControls(self.plotstream)
         self.errorbars = True
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
         self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
         self.menu_p.str_page.errorBarsCheckBox.Enable()
         self.changeStatusbar("Ready")
@@ -2674,7 +2832,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plotstream = self.plotstream.bc()
         print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
 
     def onAnnotateCheckBox(self,event):
@@ -2683,15 +2841,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         #### get True or False
         if not self.menu_p.str_page.annotateCheckBox.GetValue():
-            self.annotate=False
+            #self.annotate=False
+            self.plotopt['annotate'] = False
             self.menu_p.str_page.annotateCheckBox.SetValue(False)
         else:
-            self.annotate=True
+            #self.annotate=True
+            self.plotopt['annotate'] = True
             self.menu_p.str_page.annotateCheckBox.SetValue(True)
 
         #mp.plot(self.plotstream,annotate=True)
         self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
     def onChangeComp(self, event):
         orgcomp = self.compselect
@@ -2701,7 +2861,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         print("Transforming ... {}".format(coordinate))
         self.plotstream = self.plotstream._convertstream(coordinate)
         self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
     def onChangeSymbol(self, event):
         #orgsymbol = self.symbolselect
@@ -2712,10 +2872,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #    self.plotstream = self.stream.copy()
         if symbolselect == 'line':
             self.symbollist = ['-' for elem in self.shownkeylist]
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.plotopt['symbollist'] =  ['-' for elem in self.shownkeylist]
+            self.OnPlot(self.plotstream,self.shownkeylist)
         elif symbolselect == 'point':
             self.symbollist = ['o' for elem in self.shownkeylist]
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.plotopt['symbollist'] =  ['o' for elem in self.shownkeylist]
+            self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
 
@@ -2748,9 +2910,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.rep_page.logMsg('- flagged user selection: added {} flags'.format(len(flaglist)))
         self.ActivateControls(self.plotstream)
 
-        self.annotate = True
+        #self.annotate = True
+        self.plotopt['annotate'] = True
+
         self.menu_p.str_page.annotateCheckBox.SetValue(True)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
 
     def onFlagOutlierButton(self, event):
@@ -2782,9 +2946,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
 
         self.ActivateControls(self.plotstream)
-        self.annotate = True
+        #self.annotate = True
+        self.plotopt['annotate'] = True
+
         self.menu_p.str_page.annotateCheckBox.SetValue(True)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
 
@@ -2799,6 +2965,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if sensid == '' and not dataid == '':
             sensid = dataid[:-5]
 
+        self.xlimits = self.plot_p.xlimits
+
         if sensid == '':
             dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
                             "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
@@ -2807,8 +2975,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         else:
             self.changeStatusbar("Flagging range ...")
             dlg = StreamFlagRangeDialog(None, title='Stream: Flag range', stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
-            dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(self.plotstream.ndarray[0][0])))
-            dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(self.plotstream.ndarray[0][-1])))
+            startdate=self.xlimits[0]
+            enddate=self.xlimits[1]
+            starttime = num2date(startdate).strftime('%X')
+            endtime = num2date(enddate).strftime('%X')
+            dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
+            dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
+            dlg.startFlagTimePicker.SetValue(starttime)
+            dlg.endFlagTimePicker.SetValue(endtime)
             if dlg.ShowModal() == wx.ID_OK:
                 # get values from dlg
                 flagtype = dlg.rangeRadioBox.GetStringSelection()
@@ -2825,8 +2999,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                      flagval = True
                      if not below == '' and not above == '':
                          above = float(above)
-                         below = None
-                         self.menu_p.rep_page.logMsg('- flagging values above {} - ignoring upper limit'.format(above))
+                         below = float(below)
+                         #below = None
+                         self.menu_p.rep_page.logMsg('- flagging values between {} and {}'.format(above, below))
                      elif not below == '':
                          below = float(below)
                          above = None
@@ -2838,7 +3013,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                      else:
                          flagval = False
                      if flagval:
-                         print ("Above , Below:", above, below) 
+                         #print ("Above , Below:", above, below) 
                          flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
                          self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
                 elif flagtype == 'time':
@@ -2852,20 +3027,24 @@ Suite 330, Boston, MA  02111-1307  USA"""
                      entime = str(dlg.endFlagTimePicker.GetValue())
                      ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
                      endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+                     #print ("Range", starttime, endtime, keys2flag)
                      flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
                      self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
                 else:
                      pass
 
         if len(flaglist) > 0:
-            print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
+            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
+            #print ("TEst", flaglist)
             self.flaglist.extend(flaglist)
             self.plotstream = self.plotstream.flag(flaglist)
 
             self.ActivateControls(self.plotstream)
-            self.annotate = True
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
             self.menu_p.str_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
 
@@ -2889,9 +3068,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
 
             self.ActivateControls(self.plotstream)
-            self.annotate = True
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
             self.menu_p.str_page.annotateCheckBox.SetValue(False)
-            self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
 
@@ -2934,9 +3115,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.flaglist = []
         self.ActivateControls(self.plotstream)
-        self.annotate = False
+        #self.annotate = False
+        self.plotopt['annotate'] = False
+
         self.menu_p.str_page.annotateCheckBox.SetValue(False)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
 
@@ -3079,8 +3262,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.currentstreamindex = activeidx
                 self.plotstream = plotstreamlist[0]
                 self.shownkeylist = [el for el in plotkeylist[0] if el in NUMKEYLIST]
+                #self.shownkeylist = self.streamkeylist[activeidx]
+                self.plotopt = self.plotoptlist[activeidx]
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.OnPlot(self.plotstream,self.shownkeylist)
         else:
             mod = dlg.modify
             if mod == True:
@@ -3090,7 +3275,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plotstream = self.streamlist[-1]
                 self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+                self.plotoptlist.append(self.plotopt)
+                self.OnPlot(self.plotstream,self.shownkeylist)
         dlg.Destroy()
 
     def OnStreamAdd(self,event):
@@ -3099,6 +3285,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.streamkeylist.append(self.shownkeylist)
         self.headerlist.append(self.plotstream.header)
         self.currentstreamindex = currentstreamindex
+        self.plotoptlist.append(self.plotopt)
+
 
     # ------------------------------------------------------------------------------------------
     # ################
@@ -3225,8 +3413,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.streamlist.append(self.stream)
                 self.headerlist.append(self.stream.header)
                 self.currentstreamindex = currentstreamindex
-                self.ActivateControls(self.plotstream)
+                #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
+                #self.plotoptlist.append(self.plotopt)
             else:
                 self.ActivateControls(self.plotstream)
                 if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
@@ -3341,12 +3530,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def onConnectMARTASButton(self, event):
         # start a subscribe to client call
+        success = True
+
         # continuously collect data to stream and periodically call monitor plots
         # Open dlg to select MARTAS-address (IP number)
+        # and to provide ssh access
         # (favorite dict on MARTAS sheet {'MARTAS':'address','MQTT':'address'})
         dlg = AGetMARTASDialog(None, title='Select MARTAS',options=self.options)
         if dlg.ShowModal() == wx.ID_OK:
             martasaddress = dlg.addressComboBox.GetValue()
+            martasuser = dlg.userTextCtrl.GetValue()
+            martaspasswd = dlg.pwdTextCtrl.GetValue()
         else:
             dlg.Destroy()
             return
@@ -3354,12 +3548,84 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # If IP selected try to get sensor.txt from MARTAS using ssh
         # If true : start record with sensorid
         # if false: ask for sensorid (windows)
+        print ("Getting sensor information from ", martasaddress)
+        martaspath = os.path.join('/home',martasuser,'MARTAS')
+        print (martaspath)
+        sensfile = os.path.join(martaspath,'sensors.txt')
+        owfile = os.path.join(martaspath,'owlist.csv')
+
+        import tempfile
+        destpath = tempfile.gettempdir()
+
+        destsensfile = os.path.join(destpath,martasaddress+'_sensors.txt')
+        destowfile = os.path.join(destpath,martasaddress+'_owlist.csv')
+ 
+        try:
+            scptransfer(martasuser+'@'+martasaddress+':'+sensfile,destsensfile,martaspasswd)
+        except:
+            print ("Could not connect to/get sensor info of client {} - aborting".format(martasaddress))
+            success = False
+            #print "Please make sure that you connected at least once to the client by ssh"
+            #print " with your defaultuser %s " % martasuser
+            #print " This way the essential key data is established."
+        print ("Searching for onewire data from {}".format(martasaddress))
+        try:
+            scptransfer(martasuser+'@'+martasaddress+':'+owfile,destowfile,martaspasswd)
+        except:
+            print ("No one wire info available on client {} - proceeding".format(martasaddress))
+
+        s,o = [],[]
+        if os.path.exists(destsensfile):
+            with open(destsensfile,'rb') as f:
+                reader = csv.reader(f)
+                s = []
+                for line in reader:
+                    print (line)
+                    if len(line) < 2:
+                        try:
+                            s.append(line[0].split())
+                        except:
+                            # Empty line for example
+                            pass
+                    else:
+                        s.append(line)
+            print (s)
+        else:
+            print ("Apparently no sensors defined on client {} - aborting".format(martasaddress))
+            success = False
+            return
+
+        if os.path.exists(destowfile):
+            with open(destowfile,'rb') as f:
+                reader = csv.reader(f)
+                o = [line for line in reader]
+            print (o)
+
+
+        # get all parameters
+        pad = 5
+        sr = 1.0 # sampling rate
+        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+        period = float(self.menu_p.com_page.frequSlider.GetValue())
+        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+        coverage = covval/sr
+        limit = period/sr
 
         # start subscribe2client
+        #self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db}
+        self.plot_p.datavars = {2: limit, 3: pad, 4: currentdate, 6: coverage, 7: period, 9: martasaddress, 10: destpath, 11: [martasuser,martaspasswd], 12: s, 13: o, 14: self.options.get('stationid','WIC')}
+
         self.monitorSource='MARTAS'
-        success = False
+        success = True
         if success:
             self.menu_p.com_page.startMonitorButton.Enable()
+            self.menu_p.com_page.getMARCOSButton.Disable()
+            self.menu_p.com_page.getMQTTButton.Disable()
+            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
+            self.menu_p.com_page.logMsg('Begin monitoring...')
+            self.menu_p.com_page.logMsg(' - Selected MARTAS')
+            self.menu_p.com_page.logMsg(' - IP: {}'.format(martasaddress))
             self.menu_p.com_page.coverageTextCtrl.Enable()    # always
             self.menu_p.com_page.frequSlider.Enable()         # always
 
@@ -3468,10 +3734,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         elif self.monitorSource=='MARTAS':
             self.plot_p.t1_stop.clear()
             self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
-            #self.plot_p.startMARTASMonitor()
+            self.plot_p.startMARTASMonitor()
             # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
-            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format('- address -'))
+            #self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+            #self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format('- address -'))
 
     def _monitor2stream(self,array, db=None, dataid=None,header = {}):
         """
@@ -3493,12 +3759,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.logMsg('MARCOS disconnected')
             self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
             self.plotstream = self.stream.copy()
+            currentstreamindex = len(self.streamlist)
             self.streamlist.append(self.plotstream)
+            self.streamkeylist.append(self.plotstream._get_key_headers())
+            self.headerlist.append(self.plotstream.header)
+            self.currentstreamindex = currentstreamindex
 
         self.menu_p.com_page.stopMonitorButton.Disable()
         self.menu_p.com_page.saveMonitorButton.Disable()
         self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist,padding=self.padding, specialdict=self.specialdict,errorbars=self.errorbars,colorlist=self.colorlist, symbollist=self.symbollist,annotate=self.annotate,stormphases=self.stormphases, t_stormphases=self.t_stormphases,includeid=self.includeid,function=self.function, plottype=self.plottype,labels=self.labels,resolution=self.resolution,confinex=self.confinex)
+        self.shownkeylist = self.UpdatePlotCharacteristics(self.plotstream)
+        self.plotoptlist.append(self.plotopt)
+        self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.menu_p.com_page.getMARTASButton.Enable()
         self.menu_p.com_page.getMARCOSButton.Enable()

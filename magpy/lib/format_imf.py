@@ -1316,6 +1316,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     if keydic == ('unit-col-'+key):
                         if key in ['x','y','z','f','dx','dy','dz','df','t1','t2']:
                             try:
+                                unit = 'unspecified'
                                 if 'unit-col-'+key == 'deg C':
                                     #mycdf[cdfkey].attrs['FIELDNAM'] = "Temperature "+key.upper()
                                     unit = 'Celsius'
@@ -2489,6 +2490,12 @@ def readDKA(filename, headonly=False, **kwargs):
     kcol = KEYLIST.index('var1')
 
     if ok:
+        import locale  # to get english month descriptions
+        old_loc = locale.getlocale(locale.LC_TIME)
+        try:
+            locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
+        except:
+            pass
         for line in fh:
             cnt = cnt+1
             block = line.split()
@@ -2510,7 +2517,10 @@ def readDKA(filename, headonly=False, **kwargs):
             elif cnt > datacoming:
                 if len(block) > 9:
                     for i in range(8):
-                        # TODO For some reason "01-Mar-14" fails - no idea why
+                        # TODO Locale language settings is important to correctly interpret date
+                        # e.g. "01-Mar-14" fails for de_DE
+                        # solved by tring to switch to english-US 
+                        # - might not work if language not installed and on windows
                         ti = datetime.strptime(block[0],"%d-%b-%y") + timedelta(minutes=90) + timedelta(minutes=180*i)
                         val = float(block[2+i])
                         array[0].append(date2num(ti))
@@ -2518,6 +2528,7 @@ def readDKA(filename, headonly=False, **kwargs):
                             array[kcol].append(val)
                         else:
                             array[kcol].append(np.nan)
+        locale.setlocale(locale.LC_TIME, old_loc)
 
     fh.close()
     headers['col-var1'] = 'K'
