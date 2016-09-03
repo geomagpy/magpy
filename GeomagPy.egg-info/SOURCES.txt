@@ -20,6 +20,7 @@ magpy/acquisition/callprotocol.py
 magpy/acquisition/cobs_ws_protocols.py
 magpy/acquisition/csprotocol.py
 magpy/acquisition/envprotocol.py
+magpy/acquisition/gsm19protocol.py
 magpy/acquisition/gsm90protocol.py
 magpy/acquisition/gsmp20protocol.py
 magpy/acquisition/kernprotocol.py
@@ -47,7 +48,9 @@ magpy/gui/magpy.png
 magpy/gui/magpy128.xpm
 magpy/gui/magpy_gui.py
 magpy/gui/magpy_gui_test.py
+magpy/gui/metapage.py
 magpy/gui/monitorpage.py
+magpy/gui/reportpage.py
 magpy/gui/streampage.py
 magpy/gui/xmagpy
 magpy/gui/xmagpy.py
@@ -66,6 +69,7 @@ magpy/lib/format_gsm19.py
 magpy/lib/format_iaga02.py
 magpy/lib/format_imf.py
 magpy/lib/format_iono.py
+magpy/lib/format_json.py
 magpy/lib/format_latex.py
 magpy/lib/format_lemi.py
 magpy/lib/format_magpy.py

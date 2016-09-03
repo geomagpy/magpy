@@ -48,8 +48,11 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     if getfile:
         with open(filename, 'rb') as csvfile:
             neicreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+            #print (neicreader)
             for row in neicreader:
-                if row[0] == 'time':
+                print (row)
+                if len(row) > 0:
+                  if row[0] == 'time':
                     #print("Got Header")
                     #print(len(row))
                     dxp = KEYLIST.index('dy')
@@ -69,7 +72,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
                             headers['col-'+key] = row[17]
                         if i == secp:
                             headers['col-'+key] = row[12]
-                else:
+                  else:
                     datalist.append(row)
 
     neicarray = np.asarray(datalist)

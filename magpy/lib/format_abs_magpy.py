@@ -37,6 +37,20 @@ def isMAGPYNEWABS(filename):
     return True
 
 
+def isAUTODIF(filename):
+    """
+    Checks whether a file is AUTODIF format.
+    """
+    try:
+        temp = open(filename, 'rt')
+        line = temp.readline()
+    except:
+        return False
+    if not line.startswith('AUTODIF') and not line.startswith('auto'):
+        return False
+    return True
+
+
 def readMAGPYABS(filename, headonly=False, **kwargs):
     """
     Reading MAGPY's Absolute format data.
@@ -394,21 +408,6 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     else:
         return stream
 
-
-def isAUTODIF(filename):
-    """
-    Checks whether a file is ASCII DIDD (Tihany) format.
-    """
-    try:
-        temp = open(filename, 'rt')
-        line = temp.readline()
-    except:
-        return False
-    if not line.startswith('AUTODIF'):
-        return False
-    return True
-
-
 def readAUTODIF(filename, headonly=False, **kwargs):
     """
     Reading Autodifs's Absolute format data.
@@ -479,6 +478,9 @@ def readAUTODIF(filename, headonly=False, **kwargs):
             # blank line
             pass
         elif line.startswith('AUTODIF'):
+            di_inst = line.split()[0]
+            pass
+        elif line.startswith('auto'):
             di_inst = line.split()[0]
             pass
         elif line.startswith('Measure'):

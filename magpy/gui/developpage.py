@@ -453,25 +453,6 @@ class GraphPage(wx.Panel):
         self.SetSizerAndFit(boxSizer)
 
 
-class ReportPage(wx.Panel):
-    def __init__(self, *args, **kwds):
-        wx.Panel.__init__(self, *args, **kwds)
-        #self.parent = parent
-        self.createControls()
-        self.doLayout()
-
-    def createControls(self):
-        self.logger = wx.TextCtrl(self, style=wx.TE_MULTILINE|wx.TE_READONLY)
-
-    def doLayout(self):
-        self.logger.SetDimensions(x=10, y=20, width=200, height=300)
-
-    def logMsg(self, message):
-        ''' Private method to append a string to the logger text
-            control. '''
-        #print message
-        self.logger.AppendText('%s\n'%message)
-
 class PortCommunicationPage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)

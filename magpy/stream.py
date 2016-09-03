@@ -305,17 +305,71 @@ FLAGKEYLIST = KEYLIST[:16]
 # KEYLIST[1:8] # only primary values without time
 
 # Formats supported by MagPy read function:
-PYMAG_SUPPORTED_FORMATS = [
-                'IAGA',         # IAGA 2002 text format
-                'WDC',          # World Data Centre format
-                'IMF',          # Intermagnet Format
-                'IAF',          # Intermagnet archive Format
+PYMAG_SUPPORTED_FORMATS = {
+                'IAGA':['rw','IAGA 2002 text format'],
+                'WDC':['rw','World Data Centre format'],
+                'IMF':['rw', 'Intermagnet Format'],
+                'IAF':['rw', 'Intermagnet archive Format'],
+                'IMAGCDF':['rw','Intermagnet CDF Format'],
+                'BLV':['rw','Baseline format Intermagnet'],
+                'IYFV':['rw','Yearly mean format Intermagnet'],
+                'DKA':['rw', 'K value format Intermagnet'],
+                'DIDD':['rw','Output format from MinGeo DIDD'],
+                'GSM19':['r', 'Output format from GSM19 magnetometer'],
+                'JSON':['rw', 'JavaScript Object Notation'],
+                'LEMIHF':['r', 'LEMI text format data'],
+                'LEMIBIN':['r','Current LEMI binary data format'],
+                'LEMIBIN1':['r','Deprecated LEMI binary format at WIC'],
+                'OPT':['r', 'Optical hourly data from WIK'],
+                'PMAG1':['r','Deprecated ELSEC from WIK'],
+                'PMAG2':['r', 'Current ELSEC from WIK'],
+                'GDASA1':['r', 'GDAS binary format'],
+                'GDASB1':['r', 'GDAS text format'],
+                'RMRCS':['r', 'RCS data output from Richards perl scripts'],
+                'RCS':['r', 'RCS raw output'],
+                'METEO':['r', 'Winklbauer METEO files'],
+                'NEIC':['r', 'WGET data from USGS - NEIC'],
+                'LNM':['r', 'Thies Laser-Disdrometer'],
+                'IWT':['r', 'IWT Tiltmeter data'],
+                'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
+                'CR800':['r', 'CR800 datalogger'],
+                'IONO':['r', 'IM806 Ionometer'],
+                'RADON':['r', 'single channel analyser gamma data'],
+                'USBLOG':['r', 'USB temperature logger'],
+                'SERSIN':['r', '?'],
+                'SERMUL':['r', '?'],
+                'PYSTR':['rw', 'MagPy full ascii'],
+                'AUTODIF':['r', 'Deprecated - AutoDIF ouput data'],
+                'AUTODIF_FREAD':['r', 'Deprecated - Special format for AutoDIF read-in'],
+                'PYCDF':['rw', 'MagPy CDF variant'],
+                'PYBIN':['r', 'MagPy own binary format'],
+                'PYASCII':['rw', 'MagPy basic ASCII'],
+                'POS1TXT':['r', 'POS-1 text format output data'],
+                'POS1':['r', 'POS-1 binary output at WIC'],
+                'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
+                'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
+                'SFDMI':['r', 'San Fernando variometer'],
+                'SFGSM':['r', 'San Fernando GSM90'],
+                'BDV1':['r', 'Budkov GDAS data variant'],
+                'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
+                'NOAAACE':['r', 'NOAA ACE satellite data format'],
+                'LATEX':['w','LateX data'],
+                'CS':['r','Cesium G823'],
+                'UNKOWN':['-','Unknown']
+                        }
+"""
+PYMAG_SUPPORTED_FORMATS = {
+                'IAGA':'rw',         # IAGA 2002 text format
+                'WDC':'rw',          # World Data Centre format
+                'IMF':'rw',          # Intermagnet Format
+                'IAF':'rw',          # Intermagnet archive Format
                 'IMAGCDF',      # Intermagnet CDF Format
                 'BLV',          # Baseline format Intermagnet
                 'IYFV',         # Yearly mean format Intermagnet
                 'DKA',          # K value format Intermagnet
                 'DIDD',         # Output format from DIDD
                 'GSM19',        # Output format from GSM19 magnetometer
+                'JSON',         # JavaScript Object Notation
                 'LEMIHF',       # LEMI text format data
                 'LEMIBIN',      # Current LEMI binary data format at WIC
                 'LEMIBIN1',     # Deprecated LEMI binary format at WIC
@@ -355,7 +409,8 @@ PYMAG_SUPPORTED_FORMATS = [
                 'LATEX',        # LateX data
                 'CS',           # ?
                 'UNKOWN'        # 'Unknown'?
-                        ]
+                        }
+"""
 
 # ----------------------------------------------------------------------------
 #  Part 3: Main classes -- DataStream, LineStruct and
@@ -1466,14 +1521,15 @@ CALLED BY:
         return y - func
 
 
-    def _tau(self, period):
+    def _tau(self, period, fac=0.83255461):
         """
         low pass filter with -3db point at period in sec (e.g. 120 sec)
         1. convert period from seconds to days as used in daytime
         2. return tau (in unit "day")
+        - The value of 0.83255461 is obtained for -3db (see IAGA Guide)
         """
         per = period/(3600*24)
-        return 0.83255461*per/(2*np.pi)
+        return fac*per/(2*np.pi)
 
 
     # ------------------------------------------------------------------------
@@ -2635,6 +2691,7 @@ CALLED BY:
                 #data.header['col-'+KEYLIST[dpos]] = 'sigma '+self.header.get('col-'+KEYLIST[idx+diff])
         data.header['DataFormat'] = 'MagPyDailyMean'
 
+        array = [np.asarray(el) for el in array]
         return DataStream([LineStruct()],data.header,np.asarray(array))
 
 
@@ -3262,6 +3319,9 @@ CALLED BY:
             in the begining and end part of the output signal.
             This function is approximately twice as fast as the previous version.
             Difference: Gaps of the stream a filled by time steps with NaNs in the data columns
+            By default missing values are interpolated if more than 90 percent of data is present
+            within the window range. This is used to comply with INTERMAGNET rules. Set option
+            conservative to False to avoid this.
 
         PARAMETERS:
         Kwargs:
@@ -3272,12 +3332,17 @@ CALLED BY:
                                 'parzen','triang','gaussian','wiener','spline','butterworth'
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:     (timedelta) window width of the filter
+            - resample_period:  (int) resampling interval in seconds (e.g. 1 for one second data)
+                                 leave blank for standard filters as it will be automatically selected
             - noresample:       (bool) if True the data set is resampled at filter_width positions
+            - missingdata:      (string) define how to deal with missing data
+                                          'conservative' (default): no filtering
+                                          'interpolate': interpolate if less than 10% are missing
+                                          'mean': use mean if less than 10% are missing'
+            - conservative:     (bool) if True than no interpolation is performed
             - autofill:         (list) of keys: provide a keylist for which nan values are linearly interpolated before filtering - use with care, might be useful if you have low resolution parameters asociated with main values like (humidity etc)
             - resampleoffset:   (timedelta) if provided the offset will be added to resamples starttime
             - resamplemode:     (string) if 'fast' then fast resampling is used
-            - gaussian_factor:  (float) factor to multiply filterwidth.
-                                1.86506: is the ideal numerical value for IAGA recommended 45 sec filter
             - testplot:         (bool) provides a plot of unfiltered and filtered data for each key if true
             - dontfillgaps:     (bool) if true, get_gaps will not be conducted - much faster but requires the absence of data gaps (including time step)
 
@@ -3312,22 +3377,39 @@ CALLED BY:
         keys = kwargs.get('keys')
         filter_type = kwargs.get('filter_type')
         filter_width = kwargs.get('filter_width')
+        resample_period = kwargs.get('resample_period')
         filter_offset = kwargs.get('filter_offset')
         noresample = kwargs.get('noresample')
         resamplemode = kwargs.get('resamplemode')
         resamplestart = kwargs.get('resamplestart')
         resampleoffset = kwargs.get('resampleoffset')
-        gaussian_factor = kwargs.get('gaussian_factor')
         testplot = kwargs.get('testplot')
         autofill = kwargs.get('autofill')
         dontfillgaps = kwargs.get('dontfillgaps')
         fillgaps = kwargs.get('fillgaps')
         debugmode = kwargs.get('debugmode')
+        conservative =  kwargs.get('conservative')
+        missingdata =  kwargs.get('missingdata')
+
+        sr = self.samplingrate()
 
         if not keys:
             keys = self._get_key_headers(numerical=True)
-        if not filter_width:
-            filter_width = timedelta(minutes=1)
+        if not filter_width and not resample_period:
+            if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
+                filter_width = timedelta(seconds=3.33333333)
+                resample_period = 1.0
+            else: # use 1 minute filter with 0.008 Hz cut off as default
+                filter_width = timedelta(minutes=2)
+                resample_period = 60.0
+        if not filter_width: # resample_period obviously provided - use nyquist
+                filter_width = timedelta(seconds=2*resample_period)
+        if not resample_period: # filter_width obviously provided... use filter_width as period
+            resample_period = filter_width.total_seconds()
+            # Fall back for old data
+            if filter_width == timedelta(seconds=1):
+                filter_width = timedelta(seconds=3.3)
+                resample_period = 1.0
         if not noresample:
             resample = True
         else:
@@ -3349,12 +3431,11 @@ CALLED BY:
             debugmode = None
         if not filter_type:
             filter_type = 'gaussian'
-        if not gaussian_factor:
-            gaussian_factor = 1.86506  # optimzed for a 45 sec window with less then 1 % outside the window
-                                       # 1.86506: is the ideal numeric values (IAGA recommended for 45 sec fit)
         if resamplestart:
             print("##############  Warning ##############")
             print("option RESAMPLESTART is not used any more. Switch to resampleoffset for modifying time steps")
+        if not missingdata:
+            missingdata = 'conservative'
 
         ndtype = False
 
@@ -3382,6 +3463,7 @@ CALLED BY:
 
         window_period = filter_width.total_seconds()
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
+
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
 
         if debugmode:
@@ -3390,16 +3472,17 @@ CALLED BY:
         # window_len defines the window size in data points assuming the major sampling period to be valid for the dataset
         if filter_type == 'gaussian':
             # For a gaussian fit
-            window_len = np.round(gaussian_factor*(window_period/sampling_period))
+            window_len = np.round((window_period/sampling_period))
+            #print (window_period,sampling_period,window_len)
             # Window length needs to be odd number:
             if window_len % 2 == 0:
                 window_len = window_len +1
             std = 0.83255461*window_len/(2*np.pi)
-            trangetmp = self._det_trange(gaussian_factor*window_period)*24*3600
+            trangetmp = self._det_trange(window_period)*24*3600
             if trangetmp < 1:
                 trange = np.round(trangetmp,3)
             else:
-                trange = timedelta(seconds=(self._det_trange(gaussian_factor*window_period)*24*3600)).seconds
+                trange = timedelta(seconds=(self._det_trange(window_period)*24*3600)).seconds
             if debugmode:
                 print("Window character: ", window_len, std, trange)
         else:
@@ -3425,8 +3508,6 @@ CALLED BY:
         if debugmode:
             print("Length time column:", len(t))
 
-        #nanarray = [[] for key in KEYLIST]
-
         for key in keys:
             #print "Start filtering for", key
             if not key in KEYLIST:
@@ -3437,9 +3518,18 @@ CALLED BY:
             else:
                 v = self._get_column(key)
 
-            # Get indicies of NaN's
-            #if key in NUMKEYLIST:
-            #    nanarray[keyindex] = np.logical_not(np.isnan(v.astype(float)))
+            # INTERMAGNET 90 percent rule: interpolate missing values if less than 10 percent are missing
+            #if not conservative or missingdata in ['interpolate','mean']:
+            if missingdata in ['interpolate','mean']:
+                fill = 'mean'
+                try:
+                    if missingdata == 'interpolate':
+                        fill = missingdate
+                    else:
+                        fill = 'mean'
+                except:
+                    fill = 'mean'
+                v = self.missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
 
             if key in autofill:
                 loggerstream.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
@@ -3467,7 +3557,7 @@ CALLED BY:
                 elif filter_type == 'wiener':
                     res = signal.wiener(v, window_len, noise=0.5)
                 elif filter_type == 'butterworth':
-                    dt = 800/float(len(v))
+                    dt = 800./float(len(v))
                     nyf = 0.5/dt
                     b, a = signal.butter(4, 1.5/nyf)
                     res = signal.filtfilt(b, a, v)
@@ -3475,8 +3565,9 @@ CALLED BY:
                     res = UnivariateSpline(t, v, s=240)
                 elif filter_type == 'flat':
                     w=np.ones(window_len,'d')
-                    y=np.convolve(w/w.sum(),s,mode='valid')
-                    res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
+                    s = np.ma.masked_invalid(s)
+                    y=np.convolve(w/w.sum(),s,mode='valid') #'valid')
+                    res = y[(int(window_len/2)-1):(len(v)+int(window_len/2)-1)]
                 else:
                     w = eval('signal.'+filter_type+'(window_len)')
                     y=np.convolve(w/w.sum(),s,mode='valid')
@@ -3495,19 +3586,22 @@ CALLED BY:
 
         #print "End length:", self.length()
         #print self.ndarray
-
-        #print nanarray
+        #shortdata = self._select_timerange(starttime="2015-01-01 01:00:00",endtime="2015-01-01 02:00:00")
+        #print ("data after filter", shortdata, len(shortdata[0]))
 
         if resample:
             if debugmode:
                 print("Resampling: ", keys)
-            self = self.resample(keys,period=window_period,fast=resamplefast,offset=resampleoffset)
+            self = self.resample(keys,period=resample_period,fast=resamplefast,offset=resampleoffset)
             self.header['DataSamplingRate'] = str(window_period) + ' sec'
 
         # ########################
         # Update header information
         # ########################
-        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange) + ' sec'
+        passband = filter_width.total_seconds()
+        #print ("passband", 1/passband)
+        #self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange) + ' sec'
+        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(1.0/float(passband)) + ' Hz'
 
         return self
 
@@ -3768,6 +3862,8 @@ CALLED BY:
         - keys:         (list) List of keys to check for criteria. Default = all numerical
                             please note: for using above and below criteria only one element
                             need to be provided (e.g. ['x']
+        - text          (string) comment
+        - flagnum       (int) Flagid
         - keystoflag:   (list) List of keys to flag. Default = all numerical
         - below:        (float) flag data of key below this numerical value.
         - above:        (float) flag data of key exceeding this numerical value.
@@ -3815,19 +3911,46 @@ CALLED BY:
         # test validity of starttime and endtime
 
         trimmedstream = self.copy()
-        if starttime:
+        if starttime and endtime:
+            trimmedstream = self._select_timerange(starttime=starttime,endtime=endtime)
+        elif starttime:
             trimmedstream = self._select_timerange(starttime=starttime)
-        if endtime:
+        elif endtime:
             trimmedstream = self._select_timerange(endtime=endtime)
 
         if not above and not below:
-            print("Got here")
             # return flags for all data in trimmed stream
-            for elem in keys:
+            for elem in keystoflag:
                 flagline = [num2date(trimmedstream[0][0]).replace(tzinfo=None),num2date(trimmedstream[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                 flaglist.append(flagline)
             return flaglist
-        if above:
+
+        if above and below:
+            # TODO create True/False list and then follow the bin detector example
+            ind = KEYLIST.index(keys[0])
+            trueindicies = (trimmedstream.ndarray[ind] > above) & (trimmedstream.ndarray[ind] < below)
+            
+            d = np.diff(trueindicies)
+            idx, = d.nonzero()
+            idx += 1
+
+            if not text:
+                text = 'outside of range {} to {}'.format(below,above)
+            if trueindicies[0]:
+                # If the start of condition is True prepend a 0
+                idx = np.r_[0, idx]
+            if trueindicies[-1]:
+                # If the end of condition is True, append the length of the array
+                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+            # Reshape the result into two columns
+            idx.shape = (-1,2)
+
+            for start,stop in idx:
+                stop = stop-1
+                for elem in keystoflag:
+                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flaglist.append(flagline)
+        elif above:
             # TODO create True/False list and then follow the bin detector example
             ind = KEYLIST.index(keys[0])
             trueindicies = trimmedstream.ndarray[ind] > above
@@ -3852,7 +3975,7 @@ CALLED BY:
                 for elem in keystoflag:
                     flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
-        if below:
+        elif below:
             # TODO create True/False the other way round
             ind = KEYLIST.index(keys[0])
             truefalse = trimmedstream.ndarray[ind] < below
@@ -3931,6 +4054,8 @@ CALLED BY:
         if not threshold:
             threshold = 5.0
 
+        cdate = datetime.utcnow()
+        sensorid = self.header.get('SensorID','')
         flaglist = []
 
         # Position of flag in flagstring
@@ -4043,7 +4168,7 @@ CALLED BY:
                         loggerstream.info(infoline)
                         #[starttime,endtime,key,flagid,flagcomment]
                         flagtime = self.ndarray[0][elem]
-                        flaglist.append([flagtime,flagtime,key,1,commline]) # cycle through list later and combine records
+                        flaglist.append([flagtime,flagtime,key,1,commline])
                         if stdout:
                             print(infoline)
                     else:
@@ -4070,11 +4195,12 @@ CALLED BY:
             if flagtimeprev == 0:
                 startflagtime = ft
             if (ft-flagtimeprev)-0.01*srday > srday and not flagtimeprev == 0:
-                newlist.append([startflagtime,flagtimeprev,line[2],line[3],line[4]])
+                newlist.append([num2date(startflagtime),num2date(flagtimeprev),line[2],line[3],line[4],sensorid,cdate])
                 startflagtime = ft
             flagtimeprev = ft
         if len(flaglist) > 0:
-            newlist.append(flaglist[-1])
+            finalfl = [num2date(flaglist[-1][0]),num2date(flaglist[-1][1]),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
+            newlist.append(finalfl)
 
         #print("flag_outlier",newlist)
         if returnflaglist:
@@ -4401,34 +4527,47 @@ CALLED BY:
         #print("Identified indicies in ",t2-t1)
 
         if ndtype:
+            array = [[] for el in KEYLIST]
             flagind = KEYLIST.index('flag')
             commentind = KEYLIST.index('comment')
             # Check whether flag and comment are exisiting - if not create empty
             if not len(self.ndarray[flagind]) > 0:
-                self.ndarray[flagind] = [''] * len(self.ndarray[0])
-                self.ndarray[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
+                array[flagind] = [''] * len(self.ndarray[0])
+                #array[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
+                #self.ndarray[flagind] = [''] * len(self.ndarray[0])
+                #self.ndarray[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
+            else:
+                array[flagind] = list(self.ndarray[flagind])
             if not len(self.ndarray[commentind]) > 0:
-                self.ndarray[commentind] = [''] * len(self.ndarray[0])
-                self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
+                array[commentind] = [''] * len(self.ndarray[0])
+                #self.ndarray[commentind] = [''] * len(self.ndarray[0])
+                #self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
+            else:
+                array[commentind] = list(self.ndarray[commentind])
             # Now either modify existing or add new flag
             if st==0 and ed==0:
                 pass
             else:
                 for i in range(st,ed+1):
-                    if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
+                    #if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
+                    if array[flagind][i] == '' or array[flagind][i] == '-':
                         flagls = defaultflag
                     else:
-                        flagls = list(self.ndarray[flagind][i])
+                        flagls = list(array[flagind][i])
                     # if existing flaglistlength is shorter, because new columns where added later to ndarray
                     if len(flagls) < pos:
                         flagls.extend(['-' for j in range(pos+1-flagls)])
                     flagls[pos] = str(flag)
                     #print("flag", ''.join(flagls), comment)
-                    self.ndarray[flagind][i] = ''.join(flagls)
-                    self.ndarray[commentind][i] = comment
-                    #print "flag2", self.ndarray[flagind][i], self.ndarray[commentind][i]
-            self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
-            self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
+                    #self.ndarray[flagind][i] = ''.join(flagls)
+                    array[flagind][i] = ''.join(flagls)
+                    #self.ndarray[commentind][i] = comment
+                    array[commentind][i] = comment
+                #print (self.ndarray[flagind][i], array[flagind][i])
+            self.ndarray[flagind] = np.asarray(array[flagind]).astype(object)
+            self.ndarray[commentind] = np.asarray(array[commentind]).astype(object)
+            #self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
+            #self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
         else:
             for elem in self:
                 if elem.time >= start and elem.time <= end:
@@ -5783,6 +5922,9 @@ CALLED BY:
         #print kstream.ndarray, klist
 
         kstream = kstream.sorting()
+        kstream.header['col-var1'] = 'K'
+        kstream.header['col-var2'] = 'C'
+        kstream.header['col-var3'] = 'Quality'
         #print ("Test",kstream.ndarray)
 
         return DataStream([LineStruct()],kstream.header,kstream.ndarray)
@@ -5918,6 +6060,43 @@ CALLED BY:
             else:
                 return float("NaN")
 
+    def missingvalue(self,v,window_len,threshold=0.9,fill='mean'):
+        """
+        DESCRIPTION
+            fills missing values either with means or interpolated values
+        PARAMETER:
+            v: 			(np.array) single column of ndarray  
+            window_len: 	(int) length of window to check threshold   
+            threshold: 	        (float) minimum percentage of available data e.g. 0.9 - 90 precent 
+            fill: 	        (string) 'mean' or 'interpolation'  
+        RETURNS:
+            ndarray - single column
+        """
+        try:
+            v_rest = np.array([])
+            v = v.astype(float)
+            n_split = len(v)/float(window_len)
+            if not n_split == int(n_split):
+                el = int(n_split)*window_len
+                v_rest = v[el:]
+                v = v[:el]
+            spli = np.split(v,int(len(v)/window_len))
+            if len(v_rest) > 0:
+                spli.append(v_rest)
+            newar = np.array([])
+            for idx,ar in enumerate(spli):
+                nans, x = nan_helper(ar)
+                if len(ar[~nans]) >= threshold*len(ar):
+                    if fill == 'mean':
+                        ar[nans]= np.nanmean(ar)
+                    else:
+                        ar[nans]= interp(x(nans), x(~nans), ar[~nans])
+                newar = np.concatenate((newar,ar))
+            v = newar
+        except:
+            print ("Filter: could not split stream in equal parts for interpolation - switching to conservative mode")
+
+        return v
 
     def MODWT_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
                 window=5):
@@ -7566,7 +7745,7 @@ CALLED BY:
         # This is done if timesteps are not at period intervals
         # -----------------------------------------------------
 
-        #print "RESAMPLE Here 3"
+        #print ("RESAMPLE Here 3")
         # Create a list containing time steps
         #t_max = num2date(self._get_max('time'))
         t_list = []
@@ -7580,7 +7759,6 @@ CALLED BY:
         if not len(t_list) > 0:
             return DataStream()
         multiplicator = float(self.length()[0])/float(len(t_list))
-
 
         stwithnan = self.copy()
         res_stream = DataStream()
@@ -7609,18 +7787,17 @@ CALLED BY:
 
                 key_list = []
                 for ind, item in enumerate(t_list):
-                    #print item, ind
                     functime = (item - int_min)/(int_max - int_min)
                     #orgval = eval('self[int(ind*multiplicator)].'+key)
                     if ndtype:
                         if int(ind*multiplicator) <= len(self.ndarray[index]):
                             #orgval = self.ndarray[index][int(ind*multiplicator)]
-                            orgval = stwithnan.ndarray[index][int(ind*multiplicator)]
+                            orgval = stwithnan.ndarray[index][int(ind*multiplicator+startperiod)] # + offset
                         else:
                             print("Check Resampling method")
                             orgval = 1.0
                     else:
-                        orgval = getattr(stwithnan[int(ind*multiplicator)],key)
+                        orgval = getattr(stwithnan[int(ind*multiplicator+startperiod)],key)
                     tempval = np.nan
                     # Not a safe fix, but appears to cover decimal leftover problems
                     # (e.g. functime = 1.0000000014, which raises an error)
@@ -8683,6 +8860,143 @@ CALLED BY:
         return absstream
         """
 
+    def _write_format(self, format_type, filenamebegins, filenameends, coverage, dateformat,year):
+        """
+        DEFINITION:
+            Helper method to determine suggested write filenames.
+            Reads format_type and header info of self -> returns specifications 
+        RETURNS:
+            filenamebegins
+            filenameends
+            coverage
+            dateformat
+        """
+
+        # Preconfigure some fileformats - can be overwritten by keywords
+        if format_type == 'IMF':
+            dateformat = '%b%d%y'
+            try:
+                extension = (self.header.get('StationID','')).lower()
+            except:
+                extension = 'txt'
+            filenameends = '.'+extension
+        if format_type == 'IAF':
+            try:
+                filenamebegins = (self.header.get('StationIAGAcode','')).upper()
+            except:
+                filenamebegins = 'XXX'
+            dateformat = '%y%b'
+            extension = 'BIN'
+            filenameends = '.'+extension
+        if format_type == 'IYFV':
+            if not filenameends:
+                head = self.header
+                code = head.get('StationIAGAcode','')
+                if not code == '':
+                    filenameends = '.'+code.upper()
+                else:
+                    filenameends = '.XXX'
+            if not filenamebegins:
+                filenamebegins = 'YEARMEAN'
+            dateformat = 'None'
+            coverage = 'year'
+        if format_type == 'IAGA':
+            dateformat = '%Y%m%d'
+            head = self.header
+            if not filenamebegins:
+                code = head.get('StationIAGAcode','')
+                if not code == '':
+                    filenamebegins = code.upper()
+            if not filenameends:
+                samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
+                plevel = head.get('DataPublicationLevel',0)
+                if int(samprate) == 1:
+                    middle = 'sec'
+                elif int(samprate) == 60:
+                    middle = 'min'
+                elif int(samprate) == 3600:
+                    middle = 'hou'
+                else:
+                    middle = 'lol'
+                if plevel == 4:
+                    fed = 'd'+middle+'.'+middle
+                elif plevel == 3:
+                    fed = 'q'+middle+'.'+middle
+                elif plevel == 2:
+                    fed = 'p'+middle+'.'+middle
+                else:
+                    fed = 'v'+middle+'.'+middle
+                filenameends = fed
+
+        if format_type == 'IMAGCDF':
+            begin = (self.header.get('StationIAGAcode','')).lower()
+            if begin == '':
+                begin = (self.header.get('StationID','XYZ')).lower()
+            publevel = str(self.header.get('DataPublicationLevel',0))
+            samprate = float(str(self.header.get('DataSamplingRate','0')).replace('sec','').strip())
+            if coverage == 'year':
+                dfor = '%Y'
+            elif coverage == 'month':
+                dfor = '%Y%m'
+            else:
+                dfor = '%Y%m%d'
+            if int(samprate) == 1:
+                dateformat = dfor
+                middle = '_000000_PT1S_'
+            elif int(samprate) == 60:
+                dateformat = dfor
+                middle = '_0000_PT1M_'
+            elif int(samprate) == 3600:
+                dateformat = dfor
+                middle = '_00_PT1H_'
+            elif int(samprate) == 86400:
+                dateformat = dfor
+                middle = '_PT1D_'
+            elif int(samprate) > 30000000:
+                dateformat = '%Y'
+                middle = '_PT1Y_'
+            elif int(samprate) > 2400000:
+                dateformat = '%Y%m'
+                middle = '_PT1M_'
+            else:
+                dateformat = '%Y%m%d'
+                middle = 'unknown'
+            filenamebegins = begin+'_'
+            filenameends = middle+publevel+'.cdf'
+        if format_type == 'BLV':
+            if len(self.ndarray[0]) > 0:
+                lt = max(self.ndarray[0].astype(float))
+            else:
+                lt = self[-1].time
+            if year:
+                blvyear = str(year)
+            else:
+                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
+            try:
+                filenamebegins = (self.header['StationID']).upper()+blvyear
+            except:
+                filenamebegins = 'XXX'+blvyear
+            filenameends = '.blv'
+            coverage = 'all'
+
+        if not format_type:
+            format_type = 'PYCDF'
+        if not dateformat:
+            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+        if not coverage:
+            coverage = 'day' #timedelta(days=1)
+        if not filenamebegins:
+            filenamebegins = ''
+        if not filenameends and not filenameends == '':
+            # Extension for cdf files is automatically attached
+            if format_type in ['PYCDF','IMAGCDF']:
+                filenameends = ''
+            else:
+                filenameends = '.txt'
+        
+        return format_type, filenamebegins, filenameends, coverage, dateformat
+
+
     def write(self, filepath, **kwargs):
         """
     DEFINITION:
@@ -8774,8 +9088,14 @@ CALLED BY:
         success = True
 
         t1 = datetime.utcnow()
-        #print "write - Start:", t1
 
+        if not format_type in PYMAG_SUPPORTED_FORMATS:
+            loggerstream.warning('write: Output format not supported.')
+            return
+
+        format_type, filenamebegins, filenameends, coverage, dateformat = self._write_format(format_type, filenamebegins, filenameends, coverage, dateformat, year)
+
+        """
         # Preconfigure some fileformats - can be overwritten by keywords
         if format_type == 'IMF':
             dateformat = '%b%d%y'
@@ -8885,9 +9205,6 @@ CALLED BY:
 
         if not format_type:
             format_type = 'PYSTR'
-        if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.warning('write: Output format not supported.')
-            return
         if not dateformat:
             dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
         if not coverage:
@@ -8900,6 +9217,8 @@ CALLED BY:
                 filenameends = ''
             else:
                 filenameends = '.txt'
+        """
+
         if not mode:
             mode= 'overwrite'
 
@@ -8988,9 +9307,13 @@ CALLED BY:
                 endtime = datetime.strptime(yearstr,'%Y-%m-%dT%H:%M:%S')
         elif not coverage == 'all':
             #starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
+            if coverage == 'hour':
+                cov = timedelta(hours=1)
+            else:
+                cov = timedelta(days=1)
             dailystream = self.copy()
             maxidx = -1
-            endtime = starttime + coverage
+            endtime = starttime + cov
             while starttime < lasttime:
                 #lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                 #newst = DataStream(lst,self.header)
@@ -9030,7 +9353,7 @@ CALLED BY:
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
                         success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg,skipcompression=skipcompression)
                 starttime = endtime
-                endtime = endtime + coverage
+                endtime = endtime + cov
 
                 t5 = datetime.utcnow()
                 #print "write - written:", t5-t3
@@ -9852,7 +10175,6 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 loggerstream.error("read: Cannot open file/files: %s" % pathname)
-                #raise Exception("Stream is empty!")
                 print("read: Cannot open file/files: {}".format(pathname))
 
     if headonly and (starttime or endtime):
@@ -11688,6 +12010,59 @@ def extractDateFromString(datestring):
         return [datetime.date(date)]
     except:
         return [date]
+    
+    
+def testTimeString(time):
+    """
+    Check the date/time input and returns a datetime object if valid:
+
+    ! Use UTC times !
+
+    - accepted are the following inputs:
+    1) absolute time: as provided by date2num
+    2) strings: 2011-11-22 or 2011-11-22T11:11:00
+    3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+    """
+    
+    timeformats = ["%Y-%m-%d", 
+                   "%Y-%m-%dT%H:%M:%S", 
+                   "%Y-%m-%d %H:%M:%S.%f",
+                   "%Y-%m-%dT%H:%M:%S.%f",
+                   "%Y-%m-%d %H:%M:%S"
+                   ]
+                   
+    if isinstance(time, float) or isinstance(time, int):
+        try:
+            timeobj = num2date(time).replace(tzinfo=None)
+        except:
+            raise TypeError
+    elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
+        for i, tf in enumerate(timeformats):
+            try:
+                timeobj = datetime.strptime(time,tf)
+                break
+            except:
+                j = i+1
+                pass
+        if j == len(timeformats):     # Loop found no matching format
+            try:
+                # Necessary to deal with old 1000000 micro second bug
+                timearray = time.split('.')
+                print(timearray)
+                if len(timearray) > 1:
+                    if timearray[1] == '1000000':
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+                    else:
+                        # This would be wrong but leads always to a TypeError
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
+            except:
+                raise TypeError
+    elif not isinstance(time, datetime):
+        raise TypeError
+    else:
+        timeobj = time
+
+    return timeobj
 
 
 def denormalize(column, startvalue, endvalue):

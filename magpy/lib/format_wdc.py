@@ -252,6 +252,7 @@ def readWDC(filename, headonly=False, **kwargs):
 
     #    if minute:
     headers['DataComponents'] = "".join(complist).upper()
+    headers['DataFormat'] = "WDC"
     headers['StationIAGAcode'] = code
     headers['StationID'] = code
     array = np.asarray([np.asarray(el) for el in array])

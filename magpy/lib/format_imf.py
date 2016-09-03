@@ -241,7 +241,7 @@ def readIAF(filename, headonly=False, **kwargs):
                 headers['DataQuality'] = head[8]
                 headers['SensorType'] = head[9]
                 headers['StationK9'] = head[10]
-                headers['DataDigitalSampling'] = head[11]
+                headers['DataDigitalSampling'] = float(head[11])/1000.
                 headers['DataSensorOrientation'] = head[12].lower()
                 pubdate = datetime.strptime(str(head[13]),"%y%m")
                 headers['DataPublicationDate'] = pubdate
@@ -461,12 +461,12 @@ def writeIAF(datastream, filename, **kwargs):
         for elem in requiredinfo:
             try:
                 if elem == 'StationIAGAcode':
-                    value = datastream.header.get('StationIAGAcode','')
+                    value = " "+datastream.header.get('StationIAGAcode','')
                     if value == '':
                         misslist.append(elem)
-                    #print value
                 elif elem == 'StartDate':
-                    value = int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y%j'))
+                    
+                    value = int(datetime.strftime(num2date(dayar[0][0]),'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
                         print("Latitude and Longitude need to be provided in Degree")
@@ -484,7 +484,10 @@ def writeIAF(datastream, filename, **kwargs):
                     if value == 0:
                         misslist.append(elem)
                 elif elem == 'DataConversion':
-                    value = int(np.round(float(datastream.header.get('DataConversion',0))))
+                    if datastream.header.get('DataComponents','').startswith('XYZ'):
+                        value = int(10000)
+                    else:
+                        value = int(np.round(float(datastream.header.get('DataConversion',0))))
                     if value == 0:
                         misslist.append(elem)
                 elif elem == 'DataPublicationDate':
@@ -502,7 +505,7 @@ def writeIAF(datastream, filename, **kwargs):
                         misslist.append(elem)
                 elif elem == 'DataDigitalSampling':
                     try:
-                        value = int(datastream.header.get('DataDigitalSampling',0))
+                        value = int(datastream.header.get('DataDigitalSampling',0)*1000)
                         if value == 0:
                             misslist.append(elem)
                     except:
@@ -510,7 +513,7 @@ def writeIAF(datastream, filename, **kwargs):
                         print ("writeIAF: DataDigitialSampling info needs to be integer")
                         print ("          - extracting integers from provided string")
                         valtmp = re.findall(r'\d+', value)
-                        value = int(valtmp[-1])
+                        value = int(valtmp[-1])*1000
                         print ("          extracted: {}".format(value))
                 elif elem == 'Reserved':
                     value = 0
@@ -662,8 +665,8 @@ def writeIAF(datastream, filename, **kwargs):
     if len(kstr) > 0:
         station=datastream.header['StationIAGAcode']
         k9=datastream.header['StationK9']
-        lat=datastream.header['DataAcquisitionLatitude']
-        lon=datastream.header['DataAcquisitionLongitude']
+        lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
+        lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
         year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
         kfile = os.path.join(path[0],station.upper()+year+'K.DKA')
@@ -671,8 +674,8 @@ def writeIAF(datastream, filename, **kwargs):
         head = []
         if not os.path.isfile(kfile):
             head.append("{0:^66}".format(station.upper()))
-            head2 = '                  Geographical latitude: {:>10.3} N'.format(lat)
-            head3 = '                  Geographical longitude:{:>10.3} E'.format(lon)
+            head2 = '                  Geographical latitude: {:>10.3f} N'.format(lat)
+            head3 = '                  Geographical longitude:{:>10.3f} E'.format(lon)
             head4 = '            K-index values for {0}     (K9-limit = {1:>4} nT)'.format(ye, k9)
             head5 = '  DA-MON-YR  DAY #    1    2    3    4      5    6    7    8       SK'
             emptyline = ''
@@ -739,8 +742,8 @@ def writeIAF(datastream, filename, **kwargs):
         station=datastream.header['StationIAGAcode']
         stationname = datastream.header['StationName']
         k9=datastream.header['StationK9']
-        lat=datastream.header['DataAcquisitionLatitude']
-        lon=datastream.header['DataAcquisitionLongitude']
+        lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
+        lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
         rfile = os.path.join(path[0],"README."+station.upper())
         head = []
@@ -760,8 +763,8 @@ def writeIAF(datastream, filename, **kwargs):
             head.append("STATION ID   : {0}".format(station.upper()))
             head.append("LOCATION     : {0}, {1}".format(datastream.header['StationCity'],datastream.header['StationCountry']))
             head.append("ORGANIZATION : {0:<50}".format(datastream.header['StationInstitution']))
-            head.append("CO-LATITUDE  : {:.2} Deg.".format(90-float(lat)))
-            head.append("LONGITUDE    : {:.2} Deg. E".format(float(lon)))
+            head.append("CO-LATITUDE  : {:.3f} Deg.".format(90.-float(lat)))
+            head.append("LONGITUDE    : {:.3f} Deg. E".format(float(lon)))
             head.append("ELEVATION    : {0} meters".format(int(datastream.header['DataElevation'])))
             head.append("{0:<50}".format(emptyline))
             head.append("ABSOLUTE")
@@ -772,7 +775,7 @@ def writeIAF(datastream, filename, **kwargs):
             head.append("{0:<50}".format(emptyline))
             head.append("DYNAMIC RANGE: {}".format(datastream.header.get('SensorDynamicRange',dummy)))
             head.append("RESOLUTION   : {}".format(datastream.header.get('SensorResolution',dummy)))
-            head.append("SAMPLING RATE: please insert manually")
+            head.append("SAMPLING RATE: {}".format(datastream.header.get('DataDigitalSampling',dummy)))
             head.append("FILTER       : {0}".format(dsf))
             # Provide method with head of kvals
             head.append("K-NUMBERS    : Computer derived (FMI method, MagPy)")
@@ -1313,6 +1316,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     if keydic == ('unit-col-'+key):
                         if key in ['x','y','z','f','dx','dy','dz','df','t1','t2']:
                             try:
+                                unit = 'unspecified'
                                 if 'unit-col-'+key == 'deg C':
                                     #mycdf[cdfkey].attrs['FIELDNAM'] = "Temperature "+key.upper()
                                     unit = 'Celsius'
@@ -2321,7 +2325,7 @@ def writeIYFV(datastream,filename, **kwargs):
     reslist = coordinatetransform(meanx,meany,meanz,'xyz')
     datalist.extend(reslist)
 
-    #print ( "writeIYFV:", datalist )
+    print ( "writeIYFV means:", meanx, meany, meanz )
     #print ( "writeIYFV: kind", kind )
     #print ( "writeIYFV: comment", comment )
     #kind = 'Q'
@@ -2330,7 +2334,7 @@ def writeIYFV(datastream,filename, **kwargs):
     #_YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
     decsep= str(datalist[1]).split('.')
     incsep= str(datalist[2]).split('.')
-    newline = " {0}.500 {1:>3} {2:4.1f} {3:>3} {4:4.1f} {5:>6} {6:>6} {7:>6} {8:>6} {9:>6} {10:>1} {11:>4} {12:>3}\r\n".format(meanyear,decsep[0],float('0.'+str(decsep[1]))*60.,incsep[0],float('0.'+str(incsep[1]))*60.,int(datalist[3]),int(datalist[4]),int(datalist[5]),int(datalist[6]),int(datalist[7]), kind, comp.upper(), int(note))
+    newline = " {0}.500 {1:>3} {2:4.1f} {3:>3} {4:4.1f} {5:>6} {6:>6} {7:>6} {8:>6} {9:>6} {10:>1} {11:>4} {12:>3}\r\n".format(meanyear,decsep[0],float('0.'+str(decsep[1]))*60.,incsep[0],float('0.'+str(incsep[1]))*60.,int(np.round(datalist[3],0)),int(np.round(datalist[4],0)),int(np.round(datalist[5],0)),int(np.round(datalist[6],0)),int(np.round(datalist[7],0)), kind, comp.upper(), int(note))
 
     # create dummy header (check for existing values) and add data
     # inform observer to modify/check head
@@ -2379,7 +2383,7 @@ def writeIYFV(datastream,filename, **kwargs):
            deg min  deg min    nT     nT     nT     nT     nT
 
 * A = All days
-* Q = Quet days
+* Q = Quiet days
 * D = Disturbed days
 * I = Incomplete
 * J = Jump:         jump value = old site value - new site value
@@ -2486,6 +2490,12 @@ def readDKA(filename, headonly=False, **kwargs):
     kcol = KEYLIST.index('var1')
 
     if ok:
+        import locale  # to get english month descriptions
+        old_loc = locale.getlocale(locale.LC_TIME)
+        try:
+            locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
+        except:
+            pass
         for line in fh:
             cnt = cnt+1
             block = line.split()
@@ -2507,6 +2517,10 @@ def readDKA(filename, headonly=False, **kwargs):
             elif cnt > datacoming:
                 if len(block) > 9:
                     for i in range(8):
+                        # TODO Locale language settings is important to correctly interpret date
+                        # e.g. "01-Mar-14" fails for de_DE
+                        # solved by tring to switch to english-US 
+                        # - might not work if language not installed and on windows
                         ti = datetime.strptime(block[0],"%d-%b-%y") + timedelta(minutes=90) + timedelta(minutes=180*i)
                         val = float(block[2+i])
                         array[0].append(date2num(ti))
@@ -2514,6 +2528,7 @@ def readDKA(filename, headonly=False, **kwargs):
                             array[kcol].append(val)
                         else:
                             array[kcol].append(np.nan)
+        locale.setlocale(locale.LC_TIME, old_loc)
 
     fh.close()
     headers['col-var1'] = 'K'

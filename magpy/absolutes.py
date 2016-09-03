@@ -1783,6 +1783,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #alpha = None
             #beta = None
             vafunc = variostr.interpol(['x','y','z'])
+            if vafunc[0] == {}:
+                print("absoluteAnalysis: check variation data -- data seems to be invalid")
+                variofound = False
         else:
             print("absoluteAnalysis: no variometer data available")
             variofound = False
@@ -1828,6 +1831,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             scalarstr = DataStream()
         if (len(scalarstr) > 3 and not np.isnan(scalarstr.mean('time'))) or len(scalarstr.ndarray[0]) > 0: # Because scalarstr can contain ([], 'File not specified')
             scfunc = scalarstr.interpol(['f'])
+            if scfunc[0] == {}:
+                print("absoluteAnalysis: check scalar data -- f data seems to be invalid")
+                scalarfound = False
         else:
             print("absoluteAnalysis: no external scalar data provided")
             scalarfound = False
@@ -1848,9 +1854,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     # Get stationid and pier from name (if not provided)
                     tmpname = os.path.split(elem)[1].split('.')[0].split('_')
                     if not stationid or stationid == '':
-                        stationid = tmpname[-1]
+                        try:
+                            stationid = tmpname[-1]
+                        except:
+                            print ("Please provide station name: stationid='WIC'")
                     if not pier or pier == '':
-                        pier = tmpname[-2]
+                        try:
+                            pier = tmpname[-2]
+                        except:
+                            print ("Please provide pier name: pier='MyPier'")
                     if not deltaF:
                         deltaF = 0.0
                     #print stationid, pier, deltaF, alpha, beta
@@ -1972,6 +1984,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if expD:
                 if not float(expD)-float(expT) < result.y < float(expD)+float(expT):
                     try:
+                        #print ("expD", expD, expT, stream[0], stream[0].time)
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]
                         failinglist.append(xl[0])
@@ -2075,30 +2088,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['col-str3'] = 'Mire'
     resultstream.header['col-str4'] = 'F-type'
 
-    """
-    if outputformat == 'xyz':
-        #for elem in st:
-        result = result.idf2xyz()
-        result.typ = 'xyzf'
-        resultstream.header['col-x'] = 'x'
-        resultstream.header['unit-col-x'] = 'nT'
-        resultstream.header['col-y'] = 'y'
-        resultstream.header['unit-col-y'] = 'nT'
-        resultstream.header['col-z'] = 'z'
-        resultstream.header['unit-col-z'] = 'nT'
-    elif outputformat == 'hdz':
-        #for elem in st:
-        result = result.idf2xyz()
-        #for elem in st:
-        result = result.xyz2hdz()
-        result.typ = 'hdzf'
-        resultstream.header['col-x'] = 'h'
-        resultstream.header['unit-col-x'] = 'nT'
-        resultstream.header['col-y'] = 'd'
-        resultstream.header['unit-col-y'] = 'deg'
-        resultstream.header['col-z'] = 'z'
-        resultstream.header['unit-col-z'] = 'nT'
-    """
 
     #print "Files for archive:"
     #print "---------------------------"
@@ -2148,6 +2137,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream = resultstream.sorting()
 
     #print "Finished", resultstream, resultstream.ndarray
+
+    # Apply correct format to resultsstream
+    array = [[] for el in KEYLIST]
+    for idx,el in enumerate(resultstream.ndarray):
+        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
+            array[idx] = np.asarray(el).astype(float)
+        else:
+            array[idx] = np.asarray(el)
+    resultstream.ndarray = np.asarray(array)
 
     return resultstream
 

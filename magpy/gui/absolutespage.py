@@ -32,19 +32,21 @@ class AbsolutePage(wx.Panel):
     # Widgets
     def createControls(self):
         self.diLabel = wx.StaticText(self, label="DI files:")
-        self.loadDIButton = wx.Button(self,-1,"Load DI data",size=(130,30))
-        self.diTextCtrl = wx.TextCtrl(self, value="--")
-        self.varioLabel = wx.StaticText(self, label="Variometer:")
-        self.defineVarioButton = wx.Button(self,-1,"Select path",size=(130,30))
-        self.varioTextCtrl = wx.TextCtrl(self, value="--")
-        self.scalarLabel = wx.StaticText(self, label="Scalar:")
-        self.defineScalarButton = wx.Button(self,-1,"Select path",size=(130,30))
-        self.scalarTextCtrl = wx.TextCtrl(self, value="--")
-        self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(130,30))
-        self.advancedLabel = wx.StaticText(self, label="Advanced:")
-        self.advancedButton = wx.Button(self,-1,"Set parameter",size=(130,30))
-        self.ClearLogButton = wx.Button(self,-1,"Clear Log",size=(130,30))
-        self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(300,250),
+        self.loadDIButton = wx.Button(self,-1,"Load DI data",size=(160,30))
+        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.defineVarioButton = wx.Button(self,-1,"Variometer path",size=(160,30))
+        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.defineScalarButton = wx.Button(self,-1,"Scalar path",size=(160,30))
+        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
+        self.logLabel = wx.StaticText(self, label="Logging:")
+        self.advancedButton = wx.Button(self,-1,"Set parameter",size=(160,30))
+        self.ClearLogButton = wx.Button(self,-1,"Clear Log",size=(160,30))
+        self.SaveLogButton = wx.Button(self,-1,"Save Log",size=(160,30))
+        self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,300),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
 
 
@@ -78,26 +80,24 @@ class AbsolutePage(wx.Panel):
 
         # Add the controls to the sizers:
         for control, options in \
-                [(self.diLabel, noOptions),
-                 (self.loadDIButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+                [(self.loadDIButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.diTextCtrl, expandOption),
-                 (self.varioLabel, noOptions),
                  (self.defineVarioButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
                  (self.varioTextCtrl, expandOption),
-                 (self.scalarLabel, noOptions),
                  (self.defineScalarButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
                  (self.scalarTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.diLabel, noOptions),
+                  emptySpace,
                  (self.AnalyzeButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                 (self.advancedLabel, noOptions),
-                  emptySpace,
                  (self.advancedButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
+                  emptySpace,
+                 (self.logLabel, noOptions),
+                  emptySpace,
                  (self.ClearLogButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace]:
+                 (self.SaveLogButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
 
         for control, options in \
