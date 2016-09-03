@@ -136,10 +136,12 @@ try:
     print("Loading SpacePy package cdf support ...")
     try:
         # check for windows
-        nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
+        nasacdfdir = findpath('libcdf.dll','C:\CDF_Distribution') ## new path since nasaCDF3.6
+        if not nasacdfdir:
+            nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
         #print nasacdfdir
         os.putenv("CDF_LIB", nasacdfdir)
-        print("trying CDF lib in %s" % nasacdfdir)
+        print("using CDF lib in %s" % nasacdfdir)
         try:
             import spacepy.pycdf as cdf
             print("... success")
@@ -151,7 +153,7 @@ try:
             pass
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
-        print("trying CDF lib in /usr/local/cdf")
+        print("using CDF lib in /usr/local/cdf")
         try:
             import spacepy.pycdf as cdf
             print("... success")
@@ -10115,7 +10117,11 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     #date = os.path.basename(path_or_url).partition('.')[0][-8:]
                     #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])
                     date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
-                    fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+                    fname = date+suffix
+                    fname = fname.strip('?').strip(':')      ## Necessary for windows
+                    #fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+                    fh = NamedTemporaryFile(suffix=fname,delete=False)
+                    print (fh.name)
                     fh.write(content)
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
@@ -10131,7 +10137,9 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             #date = os.path.basename(path_or_url).partition('.')[0][-8:]
             #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])[0]
             date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
-            fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+            fname = date+suffix
+            fname = fname.strip('?').strip(':')   ## Necessary for windows
+            fh = NamedTemporaryFile(suffix=fname,delete=False)
             fh.write(content)
             fh.close()
             st = _read(fh.name, dataformat, headonly, **kwargs)

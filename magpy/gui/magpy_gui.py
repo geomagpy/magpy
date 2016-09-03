@@ -1506,7 +1506,7 @@ class MainFrame(wx.Frame):
                             includeid=includeid, function=function,plottype=plottype,                 
                             labels=labels,resolution=resolution,confinex=confinex,plotopt=plotopt)
         """
-        print ("Keys", keylist)
+        #print ("Keys", keylist)
         if stream.length()[0] > 200000:
             self.plotopt['symbollist']= ['.'] * len(keylist)
 
@@ -1658,10 +1658,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.filename = ' ,'.join(filelist)
             self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
             self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
 
         dlg.Destroy()
 
-        self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
         # plot data
         if self.InitialRead(stream):
             #self.ActivateControls(self.plotstream)
@@ -1672,7 +1672,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         stream = DataStream()
         bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
 
-        #self.options['bookmarks'] = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+        self.options['bookmarks'] = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
         
         dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
         if dlg.ShowModal() == wx.ID_OK:

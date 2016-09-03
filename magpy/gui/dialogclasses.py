@@ -692,9 +692,9 @@ class OptionsDIDialog(wx.Dialog):
         #self.sheetorder = ",".join(self.options.get('order',''))
         self.sheetdouble = False
         self.sheetscale = False
-        if self.options['double'] == 'True':
+        if self.options.get('double','False') == 'True':
             self.sheetdouble = True
-        if self.options['scalevalue'] == 'True':
+        if self.options.get('scalevalue','False') == 'True':
             self.sheetscale = True
         self.createControls()
         self.doLayout()
