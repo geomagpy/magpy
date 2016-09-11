@@ -52,7 +52,7 @@ class OpenWebAddressDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=4, cols=3, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
