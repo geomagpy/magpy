@@ -15,7 +15,7 @@ try: # Necessary for wx2.8.11.0
 except:
     pass
 from wx.lib.pubsub import pub
-from wxPython.lib.dialogs import wxScrolledMessageDialog
+from wx.lib.dialogs import ScrolledMessageDialog
 
 from magpy.stream import read
 import magpy.mpplot as mp
@@ -1590,7 +1590,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         WriteFormats = [ "{}: \t{}".format(key, PYMAG_SUPPORTED_FORMATS[key][1]) for key in PYMAG_SUPPORTED_FORMATS if 'w' in PYMAG_SUPPORTED_FORMATS[key][0]]
 
         message = "\n".join(WriteFormats)
-        dlg = wxScrolledMessageDialog(self, message, 'Write formats:')
+        dlg = ScrolledMessageDialog(self, message, 'Write formats:')
         dlg.ShowModal()
 
     def OnHelpReadFormats(self, event):
@@ -1598,7 +1598,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         ReadFormats = [ "{}: \t{}".format(key, PYMAG_SUPPORTED_FORMATS[key][1]) for key in PYMAG_SUPPORTED_FORMATS if 'r' in PYMAG_SUPPORTED_FORMATS[key][0]]
 
         message = "\n".join(ReadFormats)
-        dlg = wxScrolledMessageDialog(self, message, 'Read formats:')
+        dlg = ScrolledMessageDialog(self, message, 'Read formats:')
         dlg.ShowModal()
 
     """
