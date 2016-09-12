@@ -2424,11 +2424,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         if not self.menu_p.str_page.errorBarsCheckBox.GetValue():
             self.errorbars=False
-            self.plotopt['errorbars'] = [False]
+            self.plotopt['errorbars'] = [[False]*len(self.shownkeylist)]
             self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
         else:
             self.errorbars=True
-            self.plotopt['errorbars'] = [True]
+            self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
             self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
         self.ActivateControls(self.plotstream)
         if self.plotstream.length()[0] > 0:
@@ -2814,7 +2814,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.symbollist = self.symbollist[0]*len(self.shownkeylist)
 
         self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
-        self.plotopt['errorbars'] = [True]
+        self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
  
         self.ActivateControls(self.plotstream)
         self.errorbars = True
