@@ -301,6 +301,10 @@ def writeIAGA(datastream, filename, **kwargs):
         datacomp = 'XYZ'
 
     find = KEYLIST.index('f')
+    findg = KEYLIST.index('df')
+    if len(datastream.ndarray[findg]) > 0:
+        useg = True
+
     if len(datastream.ndarray[find]) > 0:
         if not useg:
             datacomp = datacomp+'F'
@@ -348,7 +352,7 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(str(header.get('DataSamplingRate'," "))+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',publ[:44]))
         if not header.get('DataPublicationDate','') == '':
-            line.append(' {a:<20}  {b:<45s}|\n'.format(a='Publication date',b=str(header.get('DataPublicationDate'))[:44]))
+            line.append(' {a:<20}   {b:<45s}|\n'.format(a='Publication date',b=str(header.get('DataPublicationDate'))[:10]))
         # Optional header part:
         skipopt = False
         if not skipopt:
