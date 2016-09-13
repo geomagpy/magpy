@@ -301,6 +301,10 @@ def writeIAGA(datastream, filename, **kwargs):
         datacomp = 'XYZ'
 
     find = KEYLIST.index('f')
+    findg = KEYLIST.index('df')
+    if len(datastream.ndarray[findg]) > 0:
+        useg = True
+
     if len(datastream.ndarray[find]) > 0:
         if not useg:
             datacomp = datacomp+'F'
@@ -311,13 +315,13 @@ def writeIAGA(datastream, filename, **kwargs):
 
     publevel = str(header.get('DataPublicationLevel'," "))
     if publevel == '2':
-        publ = 'P'
+        publ = 'Provisional'
     elif publevel == '3':
-        publ = 'Q'
+        publ = 'Quasi-definitive'
     elif publevel == '4':
-        publ = 'D'
+        publ = 'Definitive'
     else:
-        publ = 'V'
+        publ = 'Variation'
 
     proj = header.get('DataLocationReference','')
     longi = header.get('DataAcquisitionLongitude',' ')
@@ -347,6 +351,8 @@ def writeIAGA(datastream, filename, **kwargs):
         line.append(' Digital Sampling %-5s %-44s |\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
         line.append(' Data Interval Type %-3s %-44s |\n' % (' ',(str(header.get('DataSamplingRate'," "))+' ('+header.get('DataSamplingFilter'," ")+')')[:44]))
         line.append(' Data Type %-12s %-44s |\n' % (' ',publ[:44]))
+        if not header.get('DataPublicationDate','') == '':
+            line.append(' {a:<20}   {b:<45s}|\n'.format(a='Publication date',b=str(header.get('DataPublicationDate'))[:10]))
         # Optional header part:
         skipopt = False
         if not skipopt:
@@ -364,8 +370,6 @@ def writeIAGA(datastream, filename, **kwargs):
                             line.append(' #{a:<20}  {b:<45s}|\n'.format(a='Approx H',b=hval[1]))
                 except:
                     pass
-            if not header.get('DataPublicationDate','') == '':
-                line.append(' #{a:<20}  {b:<45s}|\n'.format(a='Publication Date',b=str(header.get('DataPublicationDate'))[:44]))
         line.append(' #{a:<20}  {b:<45s}|\n'.format(a='File created by',b='MagPy '+magpyversion))
         line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (datacomp[0],datacomp[1],datacomp[2],datacomp[3]))
 
