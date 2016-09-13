@@ -11492,7 +11492,7 @@ def obspy2magpy(opstream, keydict={}):
             if not twrite: # Only write time array once (for multiple channels):
                 _diff = d.stats.endtime.datetime - d.stats.starttime.datetime
                 # Work time in milliseconds:
-                diff = _diff.days*24*60*60*1000 + _diff.seconds*1000 + _diff.microseconds/1000.
+                diff = _diff.days*24.*60.*60.*1000. + _diff.seconds*1000. + _diff.microseconds/1000.
                 numval = int(diff/1000. * d.stats.sampling_rate) + 1
                 array[tind] += [date2num(d.stats.starttime.datetime + timedelta(milliseconds=x/d.stats.sampling_rate*1000.))
                              for x in range(0, numval)]
