@@ -113,7 +113,7 @@ class OpenWebAddressDialog(wx.Dialog):
             self.getFavsComboBox.Append(elem)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class LoadDataDialog(wx.Dialog):
@@ -153,8 +153,6 @@ class LoadDataDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -177,6 +175,11 @@ class LoadDataDialog(wx.Dialog):
                  'self.okButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.closeButton, dict(flag=wx.ALIGN_CENTER)']
 
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         # Add the controls to the sizers:
         for elem in elemlist:
             control = elem.split(', ')[0]
@@ -193,7 +196,7 @@ class LoadDataDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class ExportDataDialog(wx.Dialog):
@@ -245,17 +248,13 @@ class ExportDataDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=6, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.selectLabel, noOptions),
+        elemlist = [(self.selectLabel, noOptions),
                   emptySpace,
                  (self.selectedTextCtrl, expandOption),
                  (self.selectDirButton, dict(flag=wx.ALIGN_CENTER)),
@@ -266,7 +265,16 @@ class ExportDataDialog(wx.Dialog):
                  (self.filenameTextCtrl, expandOption),
                  (self.modifyButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -335,7 +343,8 @@ class ExportDataDialog(wx.Dialog):
         self.filenameTextCtrl.SetValue(self.filename)
 
     def OnClose(self, e):
-        self.Destroy()
+        #self.Close(True)
+        self.Close(True)
 
 class ExportModifyNameDialog(wx.Dialog):
     """
@@ -380,17 +389,13 @@ class ExportModifyNameDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.beginLabel, noOptions),
+        elemlist = [(self.beginLabel, noOptions),
                  (self.endLabel, noOptions),
                  (self.beginTextCtrl, expandOption),
                  (self.endTextCtrl, expandOption),
@@ -405,7 +410,15 @@ class ExportModifyNameDialog(wx.Dialog):
                  (self.yearLabel, noOptions),
                  (self.yearTextCtrl, expandOption),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -418,7 +431,7 @@ class ExportModifyNameDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 class DatabaseConnectDialog(wx.Dialog):
     """
@@ -452,16 +465,14 @@ class DatabaseConnectDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=4, vgap=10, hgap=10)
+        #gridSizer = wx.FlexGridSizer(rows=3, cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.hostLabel, noOptions),
+        elemlist = [(self.hostLabel, noOptions),
                  (self.userLabel, noOptions),
                  (self.passwdLabel, noOptions),
                  (self.dbLabel, noOptions),
@@ -472,7 +483,15 @@ class DatabaseConnectDialog(wx.Dialog):
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 4
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -485,7 +504,7 @@ class DatabaseConnectDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class DatabaseContentDialog(wx.Dialog):
@@ -516,21 +535,27 @@ class DatabaseContentDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+        #gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.dataLabel, noOptions),
+        elemlist=[(self.dataLabel, noOptions),
                  (self.dataComboBox, expandOption),
                   emptySpace,
                   emptySpace,
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -543,7 +568,7 @@ class DatabaseContentDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class OptionsInitDialog(wx.Dialog):
@@ -668,7 +693,7 @@ class OptionsInitDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class OptionsDIDialog(wx.Dialog):
@@ -827,7 +852,7 @@ class OptionsDIDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 # ###################################################
 #    Stream page
@@ -931,7 +956,7 @@ class StreamExtractValuesDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class StreamSelectKeysDialog(wx.Dialog):
@@ -992,7 +1017,7 @@ class StreamSelectKeysDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class StreamPlotOptionsDialog(wx.Dialog):
@@ -1051,7 +1076,7 @@ class StreamPlotOptionsDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class StreamFlagOutlierDialog(wx.Dialog):
@@ -1121,7 +1146,7 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class StreamFlagRangeDialog(wx.Dialog):
@@ -1275,7 +1300,7 @@ class StreamFlagRangeDialog(wx.Dialog):
             pass
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def SetValue(self):
             self.UpperLimitTextCtrl.Enable()
@@ -1370,7 +1395,7 @@ class StreamFlagSelectionDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class StreamLoadFlagDialog(wx.Dialog):
@@ -1433,14 +1458,14 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnLoadDB(self, e):
         self.flaglist = db2flaglist(self.db, self.sensorid)
         dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
-        self.Destroy()
+        self.Close(True)
 
     def OnLoadFile(self, e):
         openFileDialog = wx.FileDialog(self, "Open", "", "", 
@@ -1453,7 +1478,7 @@ class StreamLoadFlagDialog(wx.Dialog):
         except:
             self.flaglist = [] 
         openFileDialog.Destroy()
-        self.Destroy()
+        self.Close(True)
 
 
 class StreamSaveFlagDialog(wx.Dialog):
@@ -1515,14 +1540,14 @@ class StreamSaveFlagDialog(wx.Dialog):
         self.saveFileButton.Bind(wx.EVT_BUTTON, self.OnSaveFile)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnSaveDB(self, e):
         flaglist2db(self.db, self.flaglist)
         dlg = wx.MessageDialog(self, "Flags stored in connected DB!\nFLAGS table extended with {} inputs\n".format(len(self.flaglist)),"FLAGS added to DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
-        self.Destroy()
+        self.Close(True)
 
     def OnSaveFile(self, e):
         saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
@@ -1533,7 +1558,7 @@ class StreamSaveFlagDialog(wx.Dialog):
         saveFileDialog.Destroy()
         print (flagname)
         saveflags(self.flaglist,flagname)
-        self.Destroy()
+        self.Close(True)
 
 # ###################################################
 #    Meta page
@@ -1648,7 +1673,7 @@ class MetaDataDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def AppendLabel(self, key,label):
         from magpy.lib.magpy_formats import IAFMETA, IAGAMETA, IMAGCDFMETA
@@ -1739,7 +1764,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class AnalysisFilterDialog(wx.Dialog):
@@ -1826,7 +1851,7 @@ class AnalysisFilterDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class AnalysisOffsetDialog(wx.Dialog):
@@ -1931,7 +1956,7 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnChangeRange(self, e):
         val = self.offsetRadioBox.GetStringSelection()
@@ -2003,7 +2028,7 @@ class AnalysisRotationDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class AnalysisBaselineDialog(wx.Dialog):
@@ -2089,7 +2114,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.parameterButton.Bind(wx.EVT_BUTTON, self.OnParameter)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnParameter(self, e):
         # open fit dlg
@@ -2177,7 +2202,7 @@ class LoadDIDialog(wx.Dialog):
         self.loadRemoteButton.Bind(wx.EVT_BUTTON, self.OnLoadDIRemote)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnLoadDIFiles(self,e):
         self.difiledirname = ''
@@ -2186,7 +2211,7 @@ class LoadDIDialog(wx.Dialog):
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
-        self.Destroy()
+        self.Close(True)
 
     def OnLoadDIDB(self,e):
         #self.dirname = ''
@@ -2195,7 +2220,7 @@ class LoadDIDialog(wx.Dialog):
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
-        self.Destroy()
+        self.Close(True)
 
     def OnLoadDIRemote(self,e):
         self.dirname = ''
@@ -2204,7 +2229,7 @@ class LoadDIDialog(wx.Dialog):
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
-        self.Destroy()
+        self.Close(True)
 
 
 class DefineVarioDialog(wx.Dialog):
@@ -2267,7 +2292,7 @@ class DefineVarioDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineVario)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnDefineVario(self,e):
         dialog = wx.DirDialog(None, "Choose a directory with variometer data:",self.variopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
@@ -2337,7 +2362,7 @@ class DefineScalarDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineScalar)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
     def OnDefineScalar(self,e):
@@ -2423,7 +2448,7 @@ class DISetParameterDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 
@@ -3508,7 +3533,7 @@ class AGetMARCOSDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 class BGetMARCOSDialog(wx.Dialog):
     """
@@ -3564,7 +3589,7 @@ class BGetMARCOSDialog(wx.Dialog):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
 
 class AGetMARTASDialog(wx.Dialog):
@@ -3634,10 +3659,10 @@ class AGetMARTASDialog(wx.Dialog):
         self.addButton.Bind(wx.EVT_BUTTON, self.OnAdd)
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnAdd(self, e):
-        self.Destroy()
+        self.Close(True)
 
 class MultiStreamDialog(wx.Dialog):
     """
@@ -3761,7 +3786,7 @@ class MultiStreamDialog(wx.Dialog):
             exec('self.'+name+'KeyButton.Bind(wx.EVT_BUTTON, partial( self.OnGetKeys, name = idx ) )')
 
     def OnClose(self, e):
-        self.Destroy()
+        self.Close(True)
 
     def OnGetKeys(self, e, name):
         print ("Stream", name)
@@ -3810,7 +3835,7 @@ class MultiStreamDialog(wx.Dialog):
             #self.streamlist.append(self.result)
             #self.streamkeylist.append(self.result._get_key_headers())
             #
-            self.Destroy()
+            self.Close(True)
         else:
             dlg = wx.MessageDialog(self, "Merge requires two records\n"
                             " - not less, not more\n",
@@ -3836,7 +3861,7 @@ class MultiStreamDialog(wx.Dialog):
             self.result = subtractStreams(substreamlist[0],substreamlist[1])
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
-            self.Destroy()
+            self.Close(True)
         else:
             dlg = wx.MessageDialog(self, "Subtract requires two records\n"
                             " - not less, not more\n",
@@ -3875,7 +3900,7 @@ class MultiStreamDialog(wx.Dialog):
             self.result = joinStreams(substreamlist[0],substreamlist[1])
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
-            self.Destroy()
+            self.Close(True)
         else:
             dlg = wx.MessageDialog(self, "Subtract requires two records\n"
                             " - not less, not more\n",

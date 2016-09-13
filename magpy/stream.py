@@ -10686,6 +10686,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 print("- Put in the larger (higher resolution) stream as stream_a,")
                 print("- otherwise you might wait an endless amount of time.")
                 # interpolate b
+                # TODO here it is necessary to limit the stream to numerical keys
+                #sb.ndarray = np.asarray([col for idx,col in enumerate(sb.ndarray) if KEYLIST[idx] in NUMKEYLIST])
                 print("  a) starting interpolation of stream_b")
                 mst = datetime.utcnow()
                 function = sb.interpol(keys)
