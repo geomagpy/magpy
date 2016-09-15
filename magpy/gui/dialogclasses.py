@@ -39,7 +39,7 @@ class OpenWebAddressDialog(wx.Dialog):
         self.urlTextCtrl = wx.TextCtrl(self, value=self.favorites[0],size=(500,30))
         self.favoritesLabel = wx.StaticText(self, label="Favorites:",size=(160,30))
         self.getFavsComboBox = wx.ComboBox(self, choices=self.favorites,
-            style=wx.CB_DROPDOWN, value=self.favorites[0],size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.favorites[0],size=(160,-1))
         self.addFavsButton = wx.Button(self, label='Add to favorites',size=(160,30))
         self.dropFavsButton = wx.Button(self, label='Remove from favorites',size=(160,30))
 
@@ -232,7 +232,7 @@ class ExportDataDialog(wx.Dialog):
         self.selectedTextCtrl = wx.TextCtrl(self, value=self.path, size=(300,30))
         self.formatLabel = wx.StaticText(self, label="as ...")
         self.formatComboBox = wx.ComboBox(self, choices=self.WriteFormats,
-            style=wx.CB_DROPDOWN, value=self.WriteFormats[self.default], size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.WriteFormats[self.default],size=(160,-1))
         self.selectLabel = wx.StaticText(self, label="Export data to ...")
         self.nameLabel = wx.StaticText(self, label="File name(s) looks like ...")
         self.filenameTextCtrl = wx.TextCtrl(self, value=self.filename, size=(300,30))
@@ -375,10 +375,10 @@ class ExportModifyNameDialog(wx.Dialog):
         self.dateTextCtrl = wx.TextCtrl(self, value=self.dateformat, size=(160,30))
         self.coverageLabel = wx.StaticText(self, label="File covers ...")
         self.coverageComboBox = wx.ComboBox(self, choices=['hour','day','month','year','all'],
-            style=wx.CB_DROPDOWN, value=self.coverage, size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.coverage,size=(160,-1))
         self.modeLabel = wx.StaticText(self, label="Write mode ...")
         self.modeComboBox = wx.ComboBox(self, choices=['replace','append', 'overwrite', 'skip'],
-            style=wx.CB_DROPDOWN, value=self.mode)
+            style=wx.CB_DROPDOWN, value=self.mode,size=(160,-1))
         self.yearLabel = wx.StaticText(self, label="Year (BLV export):", size=(160,30))
         self.yearTextCtrl = wx.TextCtrl(self, value=self.year, size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
@@ -523,11 +523,11 @@ class DatabaseContentDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
-        self.dataLabel = wx.StaticText(self, label="Data tables:")
+        self.dataLabel = wx.StaticText(self, label="Data tables:",size=(160,30))
         self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
-            style=wx.CB_DROPDOWN, value=self.datalst[0])
-        self.okButton = wx.Button(self, wx.ID_OK, label='Open')
-        self.closeButton = wx.Button(self, label='Cancel')
+            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -608,13 +608,14 @@ class OptionsInitDialog(wx.Dialog):
 
         self.fitfunctionLabel = wx.StaticText(self, label="Fit function",size=(160,30))
         self.fitfunctionComboBox = wx.ComboBox(self, choices=self.funclist,
-                              style=wx.CB_DROPDOWN, value=self.options.get('fitfunction','spline'))
+                              style=wx.CB_DROPDOWN, value=self.options.get('fitfunction','spline'),size=(160,-1))
         self.fitknotstepLabel = wx.StaticText(self, label="Knotstep (spline)",size=(160,30))
         self.fitknotstepTextCtrl = wx.TextCtrl(self, value=self.options.get('fitknotstep','0.3'),size=(160,30))
         self.fitdegreeLabel = wx.StaticText(self, label="Degree (polynom)",size=(160,30))
         self.fitdegreeTextCtrl = wx.TextCtrl(self, value=self.options.get('fitdegree','5'),size=(160,30))
         self.bookmarksLabel = wx.StaticText(self, label="Favorite URLs",size=(160,30))
-        self.bookmarksComboBox = wx.ComboBox(self, choices=self.options.get('bookmarks',[]),size=(160,30),style=wx.CB_DROPDOWN, value=self.options.get('bookmarks',[])[0])
+        bm = self.options.get('bookmarks',['http://www.intermagnet.org/test/ws/?id=BOU'])
+        self.bookmarksComboBox = wx.ComboBox(self, choices=bm,style=wx.CB_DROPDOWN, value=bm[0],size=(160,-1))
 
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
         self.saveButton = wx.Button(self, wx.ID_OK, label='Save',size=(160,30))
@@ -631,17 +632,13 @@ class OptionsInitDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=10, cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.dboptLabel, noOptions),
+        elemlist = [(self.dboptLabel, noOptions),
                   emptySpace,
                   emptySpace,
                   emptySpace,
@@ -680,7 +677,15 @@ class OptionsInitDialog(wx.Dialog):
                  (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 4
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -732,9 +737,13 @@ class OptionsDIDialog(wx.Dialog):
         self.dipathlistLabel = wx.StaticText(self, label="Default DI path")
         self.divariopathLabel = wx.StaticText(self, label="DI variometer")
         self.discalarpathLabel = wx.StaticText(self, label="DI scalar")
+        self.diselectpathLabel = wx.StaticText(self, label="(select paths in DI panel)")
         self.dipathlistTextCtrl = wx.TextCtrl(self, value=self.dipathlist)
         self.divariopathTextCtrl = wx.TextCtrl(self, value=self.options.get('divariopath',''))
         self.discalarpathTextCtrl = wx.TextCtrl(self, value=self.options.get('discalarpath',''))
+        self.dipathlistTextCtrl.Disable()
+        self.divariopathTextCtrl.Disable()
+        self.discalarpathTextCtrl.Disable()
         # Thresholds and defaults
         self.DIDefaultsLabel = wx.StaticText(self, label="Defaults:",size=(160,30))
         self.diexpDLabel = wx.StaticText(self, label="expected Dec",size=(160,30))
@@ -751,7 +760,7 @@ class OptionsDIDialog(wx.Dialog):
         self.diidTextCtrl = wx.TextCtrl(self, value=self.options.get('diid',''),size=(160,30))
         #self.ditypeTextCtrl = wx.TextCtrl(self, value=,size=(160,30)) #abstype
         self.ditypeComboBox = wx.ComboBox(self, choices=self.abstypes,
-                 style=wx.CB_DROPDOWN, value=self.options.get('ditype',''),size=(160,30))
+                 style=wx.CB_DROPDOWN, value=self.options.get('ditype',''),size=(160,-1))
         self.diazimuthTextCtrl = wx.TextCtrl(self, value=self.options.get('diazimuth',''),size=(160,30))
         self.dipierTextCtrl = wx.TextCtrl(self, value=self.options.get('dipier',''),size=(160,30))
         self.dialphaTextCtrl = wx.TextCtrl(self, value=self.options.get('dialpha',''),size=(160,30))
@@ -786,9 +795,7 @@ class OptionsDIDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.DIPathsLabel, noOptions),
+        elemlist = [(self.DIPathsLabel, noOptions),
                   emptySpace,
                   emptySpace,
                   emptySpace,
@@ -796,7 +803,7 @@ class OptionsDIDialog(wx.Dialog):
                  (self.dipathlistLabel, noOptions),
                  (self.divariopathLabel, noOptions),
                  (self.discalarpathLabel, noOptions),
-                  emptySpace,
+                 (self.diselectpathLabel, noOptions),
                  (self.dipathlistTextCtrl, expandOption),
                  (self.divariopathTextCtrl, expandOption),
                  (self.discalarpathTextCtrl, expandOption),
@@ -839,7 +846,16 @@ class OptionsDIDialog(wx.Dialog):
                  (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+
+        # A GridSizer will contain the other controls:
+        cols = 4
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -880,31 +896,31 @@ class StreamExtractValuesDialog(wx.Dialog):
 
         self.keyLabel = wx.StaticText(self, label="Available keys:")
         self.key1ComboBox = wx.ComboBox(self, choices=self.keylst,
-            style=wx.CB_DROPDOWN, value=self.keylst[0])
+            style=wx.CB_DROPDOWN, value=self.keylst[0],size=(160,-1))
         self.compare1ComboBox = wx.ComboBox(self, choices=self.comparelst,
-            style=wx.CB_DROPDOWN, value=self.comparelst[0])
+            style=wx.CB_DROPDOWN, value=self.comparelst[0],size=(160,-1))
         self.value1TextCtrl = wx.TextCtrl(self, value="")
         self.logic2ComboBox = wx.ComboBox(self, choices=self.logic2lst,
-            style=wx.CB_DROPDOWN, value=self.logic2lst[0])
+            style=wx.CB_DROPDOWN, value=self.logic2lst[0],size=(160,-1))
         if len(self.keylst) > 1:
             val2 =  self.keylst[1]
         else:
             val2 = ''
         self.key2ComboBox = wx.ComboBox(self, choices=self.keylst,
-            style=wx.CB_DROPDOWN, value=val2)
+            style=wx.CB_DROPDOWN, value=val2,size=(160,-1))
         self.compare2ComboBox = wx.ComboBox(self, choices=self.comparelst,
-            style=wx.CB_DROPDOWN, value=self.comparelst[0])
+            style=wx.CB_DROPDOWN, value=self.comparelst[0],size=(160,-1))
         self.value2TextCtrl = wx.TextCtrl(self, value="")
         self.logic3ComboBox = wx.ComboBox(self, choices=self.logic3lst,
-            style=wx.CB_DROPDOWN, value=self.logic3lst[0])
+            style=wx.CB_DROPDOWN, value=self.logic3lst[0],size=(160,-1))
         if len(self.keylst) > 2:
             val3 =  self.keylst[2]
         else:
             val3 = ''
         self.key3ComboBox = wx.ComboBox(self, choices=self.keylst,
-            style=wx.CB_DROPDOWN, value=val3)
+            style=wx.CB_DROPDOWN, value=val3,size=(160,-1))
         self.compare3ComboBox = wx.ComboBox(self, choices=self.comparelst,
-            style=wx.CB_DROPDOWN, value=self.comparelst[0])
+            style=wx.CB_DROPDOWN, value=self.comparelst[0],size=(160,-1))
         self.value3TextCtrl = wx.TextCtrl(self, value="")
         self.okButton = wx.Button(self, wx.ID_OK, label='Extract')
         self.closeButton = wx.Button(self, label='Cancel')
@@ -914,17 +930,13 @@ class StreamExtractValuesDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [emptySpace,
+        elemlist = [emptySpace,
                  (self.keyLabel, noOptions),
                   emptySpace,
                   emptySpace,
@@ -943,7 +955,16 @@ class StreamExtractValuesDialog(wx.Dialog):
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+
+        # A GridSizer will contain the other controls:
+        cols = 4
+        rows = int(len(elemlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -1049,8 +1070,6 @@ class StreamPlotOptionsDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=len(self.optdict), cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1063,6 +1082,11 @@ class StreamPlotOptionsDialog(wx.Dialog):
   
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        cols = 4
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1110,8 +1134,6 @@ class StreamFlagOutlierDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=4, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1133,6 +1155,12 @@ class StreamFlagOutlierDialog(wx.Dialog):
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 3
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1188,7 +1216,7 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.LowerLimitText = wx.StaticText(self,label="Flag values above:")
         self.LowerLimitTextCtrl = wx.TextCtrl(self, value=str(self.ll),size=(160,30))
         self.SelectKeyComboBox = wx.ComboBox(self, choices=self.shownkeys,
-            style=wx.CB_DROPDOWN, value=self.shownkeys[self.shownkeys.index(self.selectedkey)])
+            style=wx.CB_DROPDOWN, value=self.shownkeys[self.shownkeys.index(self.selectedkey)],size=(160,-1))
         self.UpperTimeText = wx.StaticText(self,label="Flag data before:")
         self.LowerTimeText = wx.StaticText(self,label="Flag data after:")
         self.startFlagDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
@@ -1199,7 +1227,7 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
         self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
         self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
-            style=wx.CB_DROPDOWN, value=self.flagidlist[3])
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
         self.CommentText = wx.StaticText(self,label="Comment:")
         self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
@@ -1212,8 +1240,6 @@ class StreamFlagRangeDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=4, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1276,6 +1302,12 @@ class StreamFlagRangeDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 4
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1349,9 +1381,15 @@ class StreamFlagSelectionDialog(wx.Dialog):
     USED BY:
         Stream Method: onFlagRange()
     """
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, shownkeylist, keylist):
         super(StreamFlagSelectionDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
+        self.shownkeys=shownkeylist
+        self.selectedkey = shownkeylist[0]
+        self.keys2flag = ",".join(shownkeylist)
+        self.keys=keylist
+        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.comment = ''  
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1359,7 +1397,13 @@ class StreamFlagSelectionDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # countvariables for specific header blocks
-        self.SelectionTextCtrl = wx.TextCtrl(self, value='test',size=(160,160))
+        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
+        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
+        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
+        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
+        self.CommentText = wx.StaticText(self,label="Comment:")
+        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
@@ -1367,8 +1411,6 @@ class StreamFlagSelectionDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1378,10 +1420,22 @@ class StreamFlagSelectionDialog(wx.Dialog):
         # Add the controls to the sizers:
         # transform headerlist to an array with lines like cnts
         contlst = []
-        contlst.append((self.SelectionTextCtrl, noOptions))
+        contlst.append((self.KeyListText, noOptions))
+        contlst.append((self.FlagIDText, noOptions))
+        contlst.append((self.CommentText, noOptions))
+        # 8 row
+        contlst.append((self.AffectedKeysTextCtrl, expandOption))
+        contlst.append((self.FlagIDComboBox, expandOption))
+        contlst.append((self.CommentTextCtrl, expandOption))
         contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 3
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1426,8 +1480,6 @@ class StreamLoadFlagDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1443,6 +1495,12 @@ class StreamLoadFlagDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1508,8 +1566,6 @@ class StreamSaveFlagDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1525,6 +1581,12 @@ class StreamSaveFlagDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1566,8 +1628,8 @@ class StreamSaveFlagDialog(wx.Dialog):
 
 class MetaDataDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRITPTION
+        InputDialog for DI data
     """
 
     def __init__(self, parent, title, header, layer):
@@ -1576,10 +1638,51 @@ class MetaDataDialog(wx.Dialog):
         self.header = header
         self.list = []
         self.layer=layer
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        # Add Settings Panel
+        self.panel = MetaDataPanel(self, header, layer)
+        self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
+        # Add Save/Cancel Buttons
+        self.createWidgets()
+        # Set sizer and window size
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+
+    def createWidgets(self):
+        """Create and layout the widgets in the dialog"""
+        btnSizer = wx.StdDialogButtonSizer()
+
+        saveBtn = wx.Button(self, wx.ID_OK, label="Update",size=(160,30))
+        #saveBtn.Bind(wx.EVT_BUTTON, self.OnSave)
+        btnSizer.AddButton(saveBtn)
+
+        cancelBtn = wx.Button(self, wx.ID_CANCEL,size=(160,30))
+        btnSizer.AddButton(cancelBtn)
+        btnSizer.Realize()
+
+        self.mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+
+
+class MetaDataPanel(scrolledpanel.ScrolledPanel):
+    """
+    Dialog for MetaData panel
+    """
+    def __init__(self, parent, header, layer):
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(1000, 600))
+
+        self.header = header
+        self.list = []
+        self.layer=layer
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+
         self.createControls()
         self.cnts=[0,0]
         self.doLayout()
-        self.bindControls()
+
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+        self.SetupScrolling()
 
     # Widgets
     def createControls(self):
@@ -1620,16 +1723,8 @@ class MetaDataDialog(wx.Dialog):
         self.cnts = [colcnt, cnt]
 
         self.legendText = wx.StaticText(self,label="(1: IAF, 2: IAGA, 3: IMAGCDF)")
-        self.okButton = wx.Button(self, wx.ID_OK, label='Update')
-        self.closeButton = wx.Button(self, label='Cancel')
 
     def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=self.cnts[1], cols=6, vgap=10, hgap=10)
-
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
@@ -1658,22 +1753,17 @@ class MetaDataDialog(wx.Dialog):
 
         contlst.append(emptySpace)
         contlst.append((self.legendText, noOptions))
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 6
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
+        self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
 
-        self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
 
     def AppendLabel(self, key,label):
         from magpy.lib.magpy_formats import IAFMETA, IAGAMETA, IMAGCDFMETA
@@ -1720,22 +1810,20 @@ class AnalysisFitDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
-        self.funcLabel = wx.StaticText(self, label="Fit function:")
+        self.funcLabel = wx.StaticText(self, label="Fit function:",size=(160,30))
         self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
-            style=wx.CB_DROPDOWN, value=self.fitfunc)
+            style=wx.CB_DROPDOWN, value=self.fitfunc,size=(160,-1))
         self.knotsLabel = wx.StaticText(self, label="Knots [e.g. 0.5  (0..1)] (spline only):")
-        self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots)
+        self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots,size=(160,30))
         self.degreeLabel = wx.StaticText(self, label="Degree [e.g. 1, 2, 345, etc.] (polynomial only):")
-        self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree)
-        self.okButton = wx.Button(self, wx.ID_OK, label='Fit')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree,size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1751,6 +1839,12 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.degreeTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1798,7 +1892,7 @@ class AnalysisFilterDialog(wx.Dialog):
     def createControls(self):
         self.filtertypeLabel = wx.StaticText(self, label="Select window:")
         self.filtertypeComboBox = wx.ComboBox(self, choices=self.windowlist,
-            style=wx.CB_DROPDOWN, value=self.filtertype)
+            style=wx.CB_DROPDOWN, value=self.filtertype,size=(160,-1))
         self.lengthLabel = wx.StaticText(self, label="Window length (sec):")
         self.lengthTextCtrl = wx.TextCtrl(self, value=self.winlen)
         if self.resample:
@@ -1816,8 +1910,6 @@ class AnalysisFilterDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1838,6 +1930,12 @@ class AnalysisFilterDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1913,8 +2011,6 @@ class AnalysisOffsetDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=2, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -1942,6 +2038,11 @@ class AnalysisOffsetDialog(wx.Dialog):
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         #print "Hello:", contlst
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -1998,8 +2099,6 @@ class AnalysisRotationDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -2015,6 +2114,11 @@ class AnalysisRotationDialog(wx.Dialog):
         contlst.append((self.betaTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -2061,7 +2165,7 @@ class AnalysisBaselineDialog(wx.Dialog):
     def createControls(self):
         self.absstreamLabel = wx.StaticText(self, label="Select basevalue data:",size=(160,30))
         self.absstreamComboBox = wx.ComboBox(self, choices=self.absstreamlist,
-            style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(160,-1))
 
         self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(160,30))
         self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(160,60),
@@ -2084,8 +2188,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -2100,6 +2202,10 @@ class AnalysisBaselineDialog(wx.Dialog):
         contlst.append((self.parameterButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -2171,8 +2277,6 @@ class LoadDIDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -2186,6 +2290,12 @@ class LoadDIDialog(wx.Dialog):
         contlst.append((self.loadRemoteButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -2262,8 +2372,6 @@ class DefineVarioDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -2278,6 +2386,11 @@ class DefineVarioDialog(wx.Dialog):
         contlst.append((self.remoteLabel, noOptions))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -2332,8 +2445,6 @@ class DefineScalarDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=1, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -2348,6 +2459,11 @@ class DefineScalarDialog(wx.Dialog):
         contlst.append((self.remoteLabel, noOptions))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -2394,7 +2510,7 @@ class DISetParameterDialog(wx.Dialog):
         self.azimuthTextCtrl = wx.TextCtrl(self,value="",size=(160,30))
         self.abstypeLabel = wx.StaticText(self, label="Absolute type",size=(160,30))
         self.abstypeComboBox = wx.ComboBox(self, choices=self.abstypes,
-                 style=wx.CB_DROPDOWN, value=self.abstypes[0],size=(160,30))
+                 style=wx.CB_DROPDOWN, value=self.abstypes[0],size=(160,-1))
         self.pierLabel = wx.StaticText(self, label="Pier",size=(160,30))
         self.pierTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
         self.alphaLabel = wx.StaticText(self, label="Horizontal rotation",size=(160,30))
@@ -2411,17 +2527,13 @@ class DISetParameterDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.azimuthLabel, noOptions),
+        contlist = [(self.azimuthLabel, noOptions),
                  (self.abstypeLabel, noOptions),
                  (self.pierLabel, noOptions),
                  (self.azimuthTextCtrl, expandOption),
@@ -2435,7 +2547,16 @@ class DISetParameterDialog(wx.Dialog):
                  (self.expDTextCtrl, expandOption),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+
+        # A GridSizer will contain the other controls:
+        cols = 3
+        rows = int(len(contlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -2449,7 +2570,6 @@ class DISetParameterDialog(wx.Dialog):
 
     def OnClose(self, e):
         self.Close(True)
-
 
 
 class InputSheetDialog(wx.Dialog):
@@ -2804,7 +2924,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
         self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
         self.UnitComboBox = wx.ComboBox(self, choices=self.units,
-            style=wx.CB_DROPDOWN, value=self.units[0])
+            style=wx.CB_DROPDOWN, value=self.units[0],size=(160,-1))
 
         # - Mire A
         self.AmireLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
@@ -2970,7 +3090,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
         # Load elements
         #boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        gridSizer = wx.FlexGridSizer(rows=40, cols=5, vgap=10, hgap=10)
+
         contlst=[emptySpace]
         contlst.append(emptySpace)
         contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
@@ -3216,6 +3336,11 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         contlst.append(emptySpace)
         contlst.append((self.FValsTextCtrl, noOptions))
         contlst.append(emptySpace)
+
+        # A GridSizer will contain the other controls:
+        cols = 5
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
             gridSizer.Add(control, **options)
@@ -3496,7 +3621,7 @@ class AGetMARCOSDialog(wx.Dialog):
     def createControls(self):
         self.dataLabel = wx.StaticText(self, label="Data tables:",size=(160,30))
         self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
-            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
@@ -3505,22 +3630,26 @@ class AGetMARCOSDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.dataLabel, noOptions),
+        contlist = [(self.dataLabel, noOptions),
                  (self.dataComboBox, expandOption),
                   emptySpace,
                   emptySpace,
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -3553,7 +3682,7 @@ class BGetMARCOSDialog(wx.Dialog):
     def createControls(self):
         self.dataLabel = wx.StaticText(self, label="Data tables:",size=(160,30))
         self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
-            style=wx.CB_DROPDOWN, value=self.datalst[0])
+            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
@@ -3561,22 +3690,27 @@ class BGetMARCOSDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.dataLabel, noOptions),
+        contlist = [(self.dataLabel, noOptions),
                  (self.dataComboBox, expandOption),
                   emptySpace,
                   emptySpace,
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -3612,7 +3746,7 @@ class AGetMARTASDialog(wx.Dialog):
     def createControls(self):
         self.addressLabel = wx.StaticText(self, label="Open MARTAS:",size=(160,30))
         self.addressComboBox = wx.ComboBox(self, choices=self.martaslist,
-                       style=wx.CB_DROPDOWN, value=self.martaslist[0],size=(160,30))
+                       style=wx.CB_DROPDOWN, value=self.martaslist[0],size=(160,-1))
         self.addButton = wx.Button(self, label='Add MARTAS address',size=(160,30))
         self.userLabel = wx.StaticText(self, label="MARTAS user:",size=(160,30))
         self.userTextCtrl = wx.TextCtrl(self, value="cobs",size=(160,30))
@@ -3626,17 +3760,13 @@ class AGetMARTASDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        for control, options in \
-                [(self.addressLabel, noOptions),
+        contlist = [(self.addressLabel, noOptions),
                  (self.addressComboBox, expandOption),
                   emptySpace,
                  (self.addButton, dict(flag=wx.ALIGN_CENTER)),
@@ -3645,7 +3775,15 @@ class AGetMARTASDialog(wx.Dialog):
                  (self.userTextCtrl, expandOption),
                  (self.pwdTextCtrl, expandOption),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlist)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -3738,8 +3876,6 @@ class MultiStreamDialog(wx.Dialog):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=20, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -3765,6 +3901,12 @@ class MultiStreamDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(len(contlst)/cols)
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 

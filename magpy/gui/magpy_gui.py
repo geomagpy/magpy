@@ -52,7 +52,7 @@ def pydate2wxdate(datum):
      assert isinstance(datum, (datetime, datetime.date))
      tt = datum.timetuple()
      dmy = (tt[2], tt[1]-1, tt[0])
-     print (tt, dmy)
+     #print (tt, dmy)
      return wx.DateTimeFromDMY(*dmy)
  
 def wxdate2pydate(date):
@@ -185,6 +185,7 @@ class PlotPanel(wx.Panel):
         self.array = [[] for key in KEYLIST] # for monitoring
         self.t1_stop= threading.Event()
         self.xlimits = None
+        self.ylimits = None
         self.initialPlot()
         self.__do_layout()
 
@@ -443,7 +444,8 @@ class PlotPanel(wx.Panel):
 
         def on_ylims_change(axes):
             #print ("updated ylims: ", axes.get_ylim())
-            return axes.get_ylim()
+            self.ylimits = axes.get_ylim()
+            #return axes.get_ylim()
 
         self.figure.clear()
         try:
@@ -458,7 +460,9 @@ class PlotPanel(wx.Panel):
         #get current xlimits:
         for ax in self.axlist:
             self.xlimits = ax.get_xlim()
+            self.ylimits = ax.get_ylim()
             ax.callbacks.connect('xlim_changed', on_xlims_change)
+            ax.callbacks.connect('ylim_changed', on_ylims_change)
 
         stream = streams[-1]
         key = keys[-1]
@@ -1186,6 +1190,7 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
             self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
+            self.plotopt['annotate'] = True                   # activate annotation
         if formattype == 'MagPyDI':
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
@@ -1259,81 +1264,6 @@ class MainFrame(wx.Frame):
 
         return True
 
-    """
-    def CheckStreamContent(self, stream):
-
-        if not len(stream.ndarray[0]) > 0:
-            stream = stream.linestruct2ndarray()
-        if not len(stream.ndarray[0]) > 0:
-            self.DeactivateAllControls()
-            self.changeStatusbar("No data available")
-            return False
-
-        self.stream = stream
-        
-        self.ActivateControls(stream)
-
-        # Check Header contents
-        if not stream.header.get('DataComponents','')[:3] in ['xyz','XYZ','hdz','HDZ','idf','IDF']:
-            print ("DataComponents failure", stream.header.get('DataComponents',''))
-            self.menu_p.str_page.compRadioBox.Disable()
-
-        # Update Text windowsand their contents
-        #self.SetPageValues(stream)
-
-        # Avtivate/Deactivate page contents and buttons
-        self.menu_p.str_page.openStreamButton.Disable()
-  
-        self.changeStatusbar("Ready")
-        return True
-
-
-    def ReactivateStreamPage(self):
-            self.menu_p.str_page.fileTextCtrl.Enable()
-            self.menu_p.str_page.pathTextCtrl.Enable()
-            self.menu_p.str_page.startDatePicker.Enable()
-            self.menu_p.str_page.endDatePicker.Enable()
-            self.menu_p.str_page.startTimePicker.Enable()
-            self.menu_p.str_page.endTimePicker.Enable()
-            self.menu_p.str_page.openStreamButton.Enable()
-
-    def SetPageValues(self, stream):
-        Method to update all pages with the streams values
-        # Length
-        n = stream.length()[0]
-        # keys
-        keys = stream._get_key_headers()
-        keystr = ','.join(keys)
-        # Sampling rate
-        sr = stream.samplingrate()
-        # Coverage
-        ind = np.argmin(stream.ndarray[0].astype(float))
-        mintime = stream._get_min('time')
-        maxtime = stream._get_max('time')
-
-        self.menu_p.met_page.amountTextCtrl.SetValue(str(n))
-        self.menu_p.met_page.samplingrateTextCtrl.SetValue(str(sr))
-        self.menu_p.met_page.keysTextCtrl.SetValue(keystr)
-        #print(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-        self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-        self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-        self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-        self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-        self.menu_p.rep_page.logMsg('- %i data point loaded' % len(stream.ndarray[0]))
-
-    def UpdateTimeRanges(self,stream):
-            mintime = stream._get_min('time')
-            maxtime = stream._get_max('time')
-            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-            #self.menu_p.str_page.startDatePicker.Disable()
-            #self.menu_p.str_page.endDatePicker.Disable()
-            #self.menu_p.str_page.startTimePicker.Disable()
-            #self.menu_p.str_page.endTimePicker.Disable()
-            self.menu_p.str_page.openStreamButton.Disable()
-    """
 
     def UpdatePlotOptions(self,keylist):
         #print ("Update plot characteristics")
@@ -1575,11 +1505,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2016 Roman Leonhardt')
+        info.SetCopyright('(C) 2011 - 2016 Roman Leonhardt, Rachel Bailey, Mojca Miklavec')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
-        info.AddDeveloper('Roman Leonhardt, Rachel Bailey')
-        info.AddDocWriter('Leonhardt,Bailey')
+        info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec')
+        info.AddDocWriter('Leonhardt,Bailey,Miklavec,Matzka')
         info.AddArtist('Leonhardt')
         info.AddTranslator('Bailey')
 
@@ -1670,10 +1600,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def OnOpenURL(self, event):
         stream = DataStream()
-        bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
 
-        self.options['bookmarks'] = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
-        
+        bookmarks = self.options.get('bookmarks',[])
+        if bookmarks == []:
+            bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+
         dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
         if dlg.ShowModal() == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
@@ -1704,11 +1635,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     self.changeStatusbar("Loading url failed ... Ready")
                     dlg.Destroy()
 
-            #self.options['bookmarks'] = dlg.favorites
-            #if not bookmarks_old == dlg.favorites:
-            #    print ("Favorites have changed ...  modify init")
+            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
 
-        self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
+            self.options['bookmarks'] = dlg.favorites
+            #print ("Here", dlg.favorites)
+            #if not bookmarks == dlg.favorites:
+            #print ("Favorites have changed ...  can be saved in init")
+
             
         if self.InitialRead(stream):
             #self.ActivateControls(self.plotstream)
@@ -1814,6 +1747,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.changeStatusbar("Data written ... Ready")
             except:
                 self.menu_p.rep_page.logMsg("Writing failed - Permission?")
+        else:
+            self.changeStatusbar("Ready")
         dlg.Destroy()
 
     def _db_connect(self, host, user, passwd, dbname):
@@ -2531,138 +2466,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         return stream
 
-    """
-    def onOpenStreamButton(self, event):
-        # TODO Remove this method
-        stream = DataStream()
-        stday = self.menu_p.str_page.startDatePicker.GetValue()
-        sttime = self.menu_p.str_page.startTimePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks())
-        enday = self.menu_p.str_page.endDatePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks())
-        path = self.menu_p.str_page.pathTextCtrl.GetValue()
-        files = self.menu_p.str_page.fileTextCtrl.GetValue()
-
-
-        if path == "":
-            dlg = wx.MessageDialog(self, "Please select a path first!\n"
-                        "go to File -> Select Dir\n",
-                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-        if files == "":
-            dlg = wx.MessageDialog(self, "Please select a file first!\n"
-                        "accepted wildcards are * (e.g. *, *.dat, FGE*)\n",
-                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-
-        start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
-        end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
-
-
-        try:
-            self.changeStatusbar("Loading data ...")
-            if path.endswith('/'):
-                address = path
-                stream = read(path_or_url=address,starttime=sd, endtime=ed)
-            elif path.startswith('MySQL'):
-                start= datetime.strftime(sd, "%Y-%m-%d %H:%M:%S")
-                end= datetime.strftime(ed, "%Y-%m-%d %H:%M:%S")
-                stream = readDB(self.db, files, starttime=sd, endtime=ed)
-            else:
-                address = os.path.join(path,files)
-                stream = read(path_or_url=address,starttime=sd, endtime=ed)
-            self.UpdateTimeRanges(stream)
-        except:
-            dlg = wx.MessageDialog(self, "Could not read file(s)!\n"
-                        "check your files and/or selected time range\n",
-                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-
-        self.menu_p.rep_page.logMsg('- Stream loaded of length %i' % len(stream))
-
-        if self.CheckStreamContent(stream):
-            self.OnInitialPlot(stream)
-    """
-
-    """
-    def onReDrawButton(self, event):
-        # TODO Remove this method
-
-        #self.plotstream = self.stream.copy()
-        print("Stream restored of length ", len(self.stream.ndarray[0]))
-        #self.SetPageValues(self.stream)
-        #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-        if self.CheckStreamContent(self.stream):
-            self.stream.header = self.orgheader
-            self.OnInitialPlot(self.stream)
-        stday = self.menu_p.str_page.startDatePicker.GetValue()
-        sttime = self.menu_p.str_page.startTimePicker.GetValue()
-        sd = datetime.fromtimestamp(stday.GetTicks())
-        enday = self.menu_p.str_page.endDatePicker.GetValue()
-        entime = self.menu_p.str_page.endTimePicker.GetValue()
-        ed = datetime.fromtimestamp(enday.GetTicks())
-        print("OnReDraw",sttime)
-
-        if 'AM' in sttime or 'PM' in sttime:
-            stt = datetime.strptime(sttime,'%I:%M:%S %p')
-            ett = datetime.strptime(entime,'%I:%M:%S %p')
-        else:
-            stt = datetime.strptime(sttime,'%H:%M:%S')
-            ett = datetime.strptime(entime,'%H:%M:%S')
-
-        start = datetime.combine(datetime.date(sd), datetime.time(stt))
-        end = datetime.combine(datetime.date(ed), datetime.time(ett))
-
-        if len(self.stream) == 0:
-            dlg = wx.MessageDialog(self, "Please select a path first!\n"
-                        "go to File -> Select Dir\n",
-                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-
-        #st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
-        #start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
-        #et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
-        #end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
-
-        try:
-            self.changeStatusbar("Loading data ...")
-            stream = self.plotstream.trim(starttime=start, endtime=end)
-            mintime = stream._get_min('time')
-            maxtime = stream._get_max('time')
-            self.menu_p.str_page.startDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(mintime).timetuple())))
-            self.menu_p.str_page.endDatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(num2date(maxtime).timetuple())))
-            self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
-            self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
-            #self.menu_p.str_page.startDatePicker.Disable()
-            #self.menu_p.str_page.endDatePicker.Disable()
-            #self.menu_p.str_page.startTimePicker.Disable()
-            #self.menu_p.str_page.endTimePicker.Disable()
-            self.menu_p.str_page.openStreamButton.Disable()
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim data!\n"
-                        "check your files and/or selected time range\n",
-                        "OpenStream", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-
-        print("Stream loaded of length ", len(stream))
-        self.plotstream = stream.copy()
-        self.SetPageValues(stream)
-        #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-        self.OnInitialPlot(stream)
-    """
 
     def onSelectKeys(self,event):
         """
@@ -2884,9 +2687,57 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onFlagSelectionButton(self,event):
         """
         DESCRIPTION
-            Restore originally loaded data
+            Flag all data within the zoomed region
         """
 
+        flaglist = []
+        sensid = self.plotstream.header.get('SensorID','')
+        dataid = self.plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        self.xlimits = self.plot_p.xlimits
+        self.ylimits = self.plot_p.ylimits
+
+        if sensid == '':
+            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            self.changeStatusbar("Flagging selection ...")
+            dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+            if dlg.ShowModal() == wx.ID_OK:
+                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                keys2flag = keys2flag.split(',')
+                keys2flag = [el for el in keys2flag if el in KEYLIST]
+                comment = dlg.CommentTextCtrl.GetValue()
+                flagid = dlg.FlagIDComboBox.GetValue()
+                flagid = int(flagid[0])
+
+                above = min(self.ylimits)
+                below = max(self.ylimits)
+                starttime =num2date(min(self.xlimits))
+                endtime = num2date(max(self.xlimits))
+
+                flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
+                self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
+
+        if len(flaglist) > 0:
+            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
+            #print ("TEst", flaglist)
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+        """
         #dlg = StreamFlagSelectionDialog(None, title='Stream: Flag selection ...')
 
         #prev_redir = sys.stdout
@@ -2915,6 +2766,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.menu_p.str_page.annotateCheckBox.SetValue(True)
         self.OnPlot(self.plotstream,self.shownkeylist)
+        """
 
 
     def onFlagOutlierButton(self, event):
@@ -3184,7 +3036,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='DATAINFO')
             if dlg.ShowModal() == wx.ID_OK:
                 for key in DATAINFOKEYLIST:
-                    exec('value = dlg.'+key+'TextCtrl.GetValue()')
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not value == dlg.header.get(key,''):
                         self.plotstream.header[key] = value
                 self.ActivateControls(self.plotstream)
