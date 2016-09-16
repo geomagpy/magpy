@@ -1748,6 +1748,34 @@ CALLED BY:
         return DataStream(newst,self.header,np.asarray(array))
 
 
+    def _select_keys(self, keys):
+        """
+      DESCRIPTION
+        Non-destructive method to select provided keys from Data stream.
+      APPLICATION:
+        streamxy = streamyxzf._select_keys(['x','y'])
+        """
+        result = self.copy()
+
+        try:
+            if not len(keys) > 0:
+                return self
+        except:
+            return self
+
+        """
+        print ("sel", keys)
+        if not 'time' in keys:
+            keys.append('time')
+        print ("sel", keys)
+        """
+
+        ndarray = [[] for key in KEYLIST]
+        ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)])
+
+        return DataStream([LineStruct()],result.header,ndarray)
+
+
     def _select_timerange(self, starttime=None, endtime=None, maxidx=-1):
         """
       DESCRIPTION

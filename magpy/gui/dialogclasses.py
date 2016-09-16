@@ -755,16 +755,22 @@ class OptionsDIDialog(wx.Dialog):
         self.dialphaLabel = wx.StaticText(self, label="Alpha",size=(160,30))
         self.dideltaFLabel = wx.StaticText(self, label="Delta F",size=(160,30))
         self.didbaddLabel = wx.StaticText(self, label="Add to DB",size=(160,30))
-        self.diexpDTextCtrl = wx.TextCtrl(self, value=self.options.get('diexpD',''),size=(160,30))
-        self.diexpITextCtrl = wx.TextCtrl(self, value=self.options.get('diexpI',''),size=(160,30))
+        diexpD = str(self.options.get('diexpD',''))
+        diexpI = str(self.options.get('diexpI',''))
+        diazimuth = str(self.options.get('diazimuth',''))
+        dipier = str(self.options.get('dipier',''))
+        dialpha = str(self.options.get('dialpha',''))
+        dideltaF = str(self.options.get('dideltaF',''))
+        self.diexpDTextCtrl = wx.TextCtrl(self, value=diexpD,size=(160,30))
+        self.diexpITextCtrl = wx.TextCtrl(self, value=diexpI,size=(160,30))
         self.diidTextCtrl = wx.TextCtrl(self, value=self.options.get('diid',''),size=(160,30))
         #self.ditypeTextCtrl = wx.TextCtrl(self, value=,size=(160,30)) #abstype
         self.ditypeComboBox = wx.ComboBox(self, choices=self.abstypes,
                  style=wx.CB_DROPDOWN, value=self.options.get('ditype',''),size=(160,-1))
-        self.diazimuthTextCtrl = wx.TextCtrl(self, value=self.options.get('diazimuth',''),size=(160,30))
-        self.dipierTextCtrl = wx.TextCtrl(self, value=self.options.get('dipier',''),size=(160,30))
-        self.dialphaTextCtrl = wx.TextCtrl(self, value=self.options.get('dialpha',''),size=(160,30))
-        self.dideltaFTextCtrl = wx.TextCtrl(self, value=self.options.get('dideltaF',''),size=(160,30))
+        self.diazimuthTextCtrl = wx.TextCtrl(self, value=diazimuth,size=(160,30))
+        self.dipierTextCtrl = wx.TextCtrl(self, value=dipier,size=(160,30))
+        self.dialphaTextCtrl = wx.TextCtrl(self, value=dialpha,size=(160,30))
+        self.dideltaFTextCtrl = wx.TextCtrl(self, value=dideltaF,size=(160,30))
         self.didbaddTextCtrl = wx.TextCtrl(self, value=self.options.get('didbadd',''),size=(160,30))
         # Thresholds and defaults
         self.DIInputLabel = wx.StaticText(self, label="Input sheet:",size=(160,30))
@@ -2861,7 +2867,7 @@ class InputSheetDialog(wx.Dialog):
                         "Meta data checker", wx.OK|wx.ICON_INFORMATION)
             checkdlg.ShowModal()
 
-        filename = timelist[0].replace(':','_')+'_'+pillar+'_'+iagacode+'.txt'
+        filename = timelist[0].replace(':','-')+'_'+pillar+'_'+iagacode+'.txt'
 
         # Write Block
         if saving:
@@ -3934,6 +3940,7 @@ class MultiStreamDialog(wx.Dialog):
         print ("Stream", name)
         shkeylst = self.streamkeylist[name]
         keylst = self.streamlist[name]._get_key_headers()
+        print ("Stream", shkeylst)
         namelist = []
         for key in shkeylst:
             colname = self.streamlist[name].header.get('col-'+key, '')
@@ -3955,9 +3962,9 @@ class MultiStreamDialog(wx.Dialog):
             else:
                 self.streamkeylist[name] = shownkeylist
 
-        print ("New keys:")
-        for keys in self.streamkeylist:
-            print (keys)
+        # update
+        buttonname = self.namelst[name]
+        exec('self.'+str(buttonname)+'KeyButton.SetLabel("Keys: '+",".join(shownkeylist)+'")')
 
     def OnMergeButton(self, event):
         """
@@ -3968,9 +3975,11 @@ class MultiStreamDialog(wx.Dialog):
         for idx, elem in enumerate(self.streamlist):
             val = eval('self.'+self.namelst[idx]+'CheckBox.GetValue()')
             if val:
+                elem = elem._select_keys(self.streamkeylist[idx])
                 mergestreamlist.append(elem)
                 mergekeylist.append(self.streamkeylist[idx])
         if len(mergestreamlist) == 2:
+            print (mergestreamlist[0].length(),mergestreamlist[1].length())
             self.result = mergeStreams(mergestreamlist[0],mergestreamlist[1])
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
@@ -3997,6 +4006,7 @@ class MultiStreamDialog(wx.Dialog):
         for idx, elem in enumerate(self.streamlist):
             val = eval('self.'+self.namelst[idx]+'CheckBox.GetValue()')
             if val:
+                elem = elem._select_keys(self.streamkeylist[idx])
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:
@@ -4021,6 +4031,7 @@ class MultiStreamDialog(wx.Dialog):
         for idx, elem in enumerate(self.streamlist):
             val = eval('self.'+self.namelst[idx]+'CheckBox.GetValue()')
             if val:
+                elem = elem._select_keys(self.streamkeylist[idx])
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
         self.result = stackStreams(substreamlist,get='mean',uncert='True')
@@ -4036,6 +4047,7 @@ class MultiStreamDialog(wx.Dialog):
         for idx, elem in enumerate(self.streamlist):
             val = eval('self.'+self.namelst[idx]+'CheckBox.GetValue()')
             if val:
+                elem = elem._select_keys(self.streamkeylist[idx])
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:

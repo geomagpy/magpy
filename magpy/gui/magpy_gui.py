@@ -73,6 +73,10 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     except:
         normalpath = os.path('/') # Test that
 
+    from magpy.version import __version__
+
+    if optionsdict.get('magpyversion','') == '':
+        optionsdict['magpyversion'] = __version__
     if optionsdict.get('dbname','') == '':
         optionsdict['dbname'] = 'None'
     if optionsdict.get('user','') == '':
@@ -146,19 +150,25 @@ def loadini():
     Load initialisation data
 
     """
+    from magpy.version import __version__
     home = os.path.expanduser('~')
     initpath = os.path.join(home,'.magpyguiini')
     print ("Trying to access initialization file:", initpath)
 
     try:
         initdata = loadobj(initpath)
+        magpyversion = __version__
+        if not initdata.get('magpyversion','') == magpyversion:
+            # version number has changes and thus eventually also the options ini
+            print ("MagPy version has changed ({}): inititalization parameters will be updated".format(magpyversion))
+            return initdata, True
         print ("... success")
     except:
-        print ("Init file not found: Could not load data")
-        return False
+        print ("Initialization data not found: Setting defaults")
+        return {}, False
 
     #print "Initialization data loaded"
-    return initdata
+    return initdata, False
 
 
 class RedirectText(object):
@@ -650,12 +660,16 @@ class MainFrame(wx.Frame):
 
         # Try to load ini-file
         # located within home directory
-        inipara = loadini()
+        inipara,update = loadini()
         #print ("INIPARA", inipara)
-        if not inipara:
+        if inipara == {}:
             saveini(self.options) # initialize defaultvalues
             inipara = loadini()
             #print ("INIPARA", inipara)
+        if update:
+            self.initParameter(inipara)
+            saveini(self.options) # initialize defaultvalues
+            inipara = loadini()
 
         # Variable initializations
         self.initParameter(inipara)
@@ -910,7 +924,7 @@ class MainFrame(wx.Frame):
 
     def initParameter(self, dictionary):
         # Variable initializations
-        pwd = dictionary['passwd']
+        pwd = dictionary.get('passwd')
         #self.passwd = base64.b64decode(pwd)
         self.dirname = dictionary.get('dirname','')
         self.dipathlist = dictionary.get('dipathlist','')
@@ -1542,29 +1556,40 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def OnOpenDir(self, event):
         stream = DataStream()
+        success = False
         dialog = wx.DirDialog(None, "Choose a directory:",self.dirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
             self.dirname = dialog.GetPath() # modify self.dirname
             files = sorted(filelist, key=os.path.getmtime)
-            oldest = extractDateFromString(files[0])[0]
-            old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
-            newest = extractDateFromString(files[-1])[0]
-            newest = newest+timedelta(days=1)
-            new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
-            self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
-            self.menu_p.str_page.fileTextCtrl.SetValue("*")
+            try:
+                oldest = extractDateFromString(files[0])[0]
+                old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
+                newest = extractDateFromString(files[-1])[0]
+                newest = newest+timedelta(days=1)
+                new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
+                self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
+                self.menu_p.str_page.fileTextCtrl.SetValue("*")
+                success = True
+            except:
+                success = False
             #self.changeStatusbar("Loading data ...")
         dialog.Destroy()
 
-        stream = self.openStream(path=self.dirname,mintime=old, maxtime=new, extension='*')
+        if success:
+            stream = self.openStream(path=self.dirname,mintime=old, maxtime=new, extension='*')
+            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.dirname,len(stream.ndarray[0])))
 
-        self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.dirname,len(stream.ndarray[0])))
-
-        if self.InitialRead(stream):
-            #self.ActivateControls(self.plotstream)
-            self.OnInitialPlot(self.plotstream)
-
+            if self.InitialRead(stream):
+                #self.ActivateControls(self.plotstream)
+                self.OnInitialPlot(self.plotstream)
+        else:
+                    dlg = wx.MessageDialog(self, "Could identfy appropriate files in directory!\n"
+                        "please check and/or try OpenFile\n",
+                        "OpenDirectory", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    self.changeStatusbar("Loading from directory failed ... Ready")
+                    dlg.Destroy()
 
     def OnOpenFile(self, event):
         #self.dirname = ''
@@ -1841,6 +1866,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['host'] = dlg.hostTextCtrl.GetValue()
             self.options['user'] = dlg.userTextCtrl.GetValue()
             self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
+            #print (self.options['passwd'])
             db = dlg.dbTextCtrl.GetValue()
             if db == '':
                 self.options['dbname'] = 'None'
@@ -1855,7 +1881,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitdegree']=dlg.fitdegreeTextCtrl.GetValue()
             saveini(self.options)
 
-            inipara = loadini()
+            inipara, check = loadini()
             self.initParameter(inipara)
 
         dlg.Destroy()
@@ -1880,6 +1906,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['diazimuth']=dlg.diazimuthTextCtrl.GetValue()
             self.options['dipier']=dlg.dipierTextCtrl.GetValue()
             self.options['didbadd']=dlg.didbaddTextCtrl.GetValue()
+            # TODO to be added
+            #self.options['dideltaD']=dlg.dideltaDTextCtrl.GetValue()
+            #self.options['dideltaI']=dlg.dideltaITextCtrl.GetValue()
+            #self.options['disign']=dlg.disignTextCtrl.GetValue()
+
             self.dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
             dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
             dipath = dipathlist[0]
@@ -1896,7 +1927,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['order'] = order
 
             saveini(self.options)
-            inipara = loadini()
+            inipara, check = loadini()
             self.initParameter(inipara)
 
         dlg.Destroy()
@@ -2120,6 +2151,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.streamkeylist.append(stream._get_key_headers())
         self.currentstreamindex = len(self.streamlist)-1
         self.plotstream = self.streamlist[-1]
+        self.headerlist.append(self.plotstream.header)
         self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
         if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
             self.ActivateControls(self.plotstream)
@@ -2448,23 +2480,25 @@ Suite 330, Boston, MA  02111-1307  USA"""
             et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
             end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
 
-        if isinstance(path, basestring):
-            if not path=='':
-                self.menu_p.str_page.fileTextCtrl.SetValue(ext)
-                self.changeStatusbar("Loading data ... please be patient")
-                if path.find('//') > 0:
-                    stream = read(path_or_url=path, starttime=start, endtime=end)
-                else:
-                    stream = read(path_or_url=os.path.join(path,ext), starttime=start, endtime=end)
-        else:
-            # assume Database
-            try:
-                self.changeStatusbar("Loading data ... please be patient")
-                stream = readDB(path[0],path[1], starttime=start, endtime=end)
-            except:
-                print ("Reading failed")
+            if isinstance(path, basestring):
+                if not path=='':
+                    self.menu_p.str_page.fileTextCtrl.SetValue(ext)
+                    self.changeStatusbar("Loading data ... please be patient")
+                    if path.find('//') > 0:
+                        stream = read(path_or_url=path, starttime=start, endtime=end)
+                    else:
+                        stream = read(path_or_url=os.path.join(path,ext), starttime=start, endtime=end)
+            else:
+                # assume Database
+                try:
+                    self.changeStatusbar("Loading data ... please be patient")
+                    stream = readDB(path[0],path[1], starttime=start, endtime=end)
+                except:
+                    print ("Reading failed")
 
-        return stream
+            return stream
+        else:
+            return DataStream()
 
 
     def onSelectKeys(self,event):
@@ -2596,6 +2630,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.DeactivateAllControls()
             self.changeStatusbar("No data available")
             return False
+        print ("Restoring (works only for latest stream):", self.currentstreamindex)
+        #self.plotstream = self.streamlist[self.currentstreamindex].copy()
         self.plotstream = self.stream.copy()
         self.plotstream.header = self.headerlist[self.currentstreamindex]
 
@@ -3125,6 +3161,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.streamkeylist.append(dlg.resultkeys)
                 self.currentstreamindex = len(self.streamlist)-1
                 self.plotstream = self.streamlist[-1]
+                self.headerlist.append(self.plotstream.header)
                 self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
                 self.ActivateControls(self.plotstream)
                 self.plotoptlist.append(self.plotopt)
@@ -3263,6 +3300,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plotstream = absstream
                 currentstreamindex = len(self.streamlist)
                 self.streamlist.append(self.stream)
+                self.streamkeylist.append(absstream._get_key_headers())
                 self.headerlist.append(self.stream.header)
                 self.currentstreamindex = currentstreamindex
                 #self.ActivateControls(self.plotstream)
