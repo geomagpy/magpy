@@ -8438,7 +8438,7 @@ CALLED BY:
             extension = 'BIN'
             filenameends = '.'+extension
         if format_type == 'IYFV':
-            if not filenameends:
+            if not filenameends or filenameends=='.cdf':
                 head = self.header
                 code = head.get('StationIAGAcode','')
                 if not code == '':
@@ -8455,8 +8455,8 @@ CALLED BY:
             if not filenamebegins:
                 code = head.get('StationIAGAcode','')
                 if not code == '':
-                    filenamebegins = code.upper()
-            if not filenameends:
+                    filenamebegins = code.lower()
+            if not filenameends or filenameends=='.cdf':
                 samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
                 plevel = head.get('DataPublicationLevel',0)
                 if int(samprate) == 1:

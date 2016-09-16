@@ -1759,7 +1759,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             """
             #print "Stream: ", len(self.stream), len(self.plotstream)
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
-            print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
+            #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
             try:
                 self.plotstream.write(path,
                                 filenamebegins=filenamebegins,
