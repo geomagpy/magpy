@@ -1748,6 +1748,34 @@ CALLED BY:
         return DataStream(newst,self.header,np.asarray(array))
 
 
+    def _select_keys(self, keys):
+        """
+      DESCRIPTION
+        Non-destructive method to select provided keys from Data stream.
+      APPLICATION:
+        streamxy = streamyxzf._select_keys(['x','y'])
+        """
+        result = self.copy()
+
+        try:
+            if not len(keys) > 0:
+                return self
+        except:
+            return self
+
+        """
+        print ("sel", keys)
+        if not 'time' in keys:
+            keys.append('time')
+        print ("sel", keys)
+        """
+
+        ndarray = [[] for key in KEYLIST]
+        ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)])
+
+        return DataStream([LineStruct()],result.header,ndarray)
+
+
     def _select_timerange(self, starttime=None, endtime=None, maxidx=-1):
         """
       DESCRIPTION
@@ -3915,15 +3943,18 @@ CALLED BY:
         trimmedstream = self.copy()
         if starttime and endtime:
             trimmedstream = self._select_timerange(starttime=starttime,endtime=endtime)
+            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
         elif starttime:
             trimmedstream = self._select_timerange(starttime=starttime)
+            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
         elif endtime:
             trimmedstream = self._select_timerange(endtime=endtime)
+            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
 
         if not above and not below:
             # return flags for all data in trimmed stream
             for elem in keystoflag:
-                flagline = [num2date(trimmedstream[0][0]).replace(tzinfo=None),num2date(trimmedstream[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                flagline = [num2date(trimmedstream.ndarray[0][0]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                 flaglist.append(flagline)
             return flaglist
 
@@ -3943,14 +3974,14 @@ CALLED BY:
                 idx = np.r_[0, idx]
             if trueindicies[-1]:
                 # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
             # Reshape the result into two columns
             idx.shape = (-1,2)
 
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
         elif above:
             # TODO create True/False list and then follow the bin detector example
@@ -3968,14 +3999,14 @@ CALLED BY:
                 idx = np.r_[0, idx]
             if trueindicies[-1]:
                 # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
             # Reshape the result into two columns
             idx.shape = (-1,2)
 
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
         elif below:
             # TODO create True/False the other way round
@@ -3993,14 +4024,14 @@ CALLED BY:
                 idx = np.r_[0, idx]
             if truefalse[-1]:
                 # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
             # Reshape the result into two columns
             idx.shape = (-1,2)
 
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
 
         return flaglist
