@@ -1,9 +1,10 @@
 # MagPy
 MagPy (or GeomagPy) is a Python package for analysing and displaying geomagnetic data.
 
-Version Info: (please note: this package is still in development state with lots of modifcations between different uploads, detailed version information will be available here starting with 1.0.0) 
+Version Info: (please note: this package is still in development state with frequent modifcations)
+    please check the release notes
 
-MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on observatories. MagPy combines basic applications like format conversions, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and WDC dissemination/ communication. Additional routines (not supported by the standard package) comprise acquisition libraries and real-time streaming support as well as an experimental graphical user interface.  
+MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on typical data processing in observatories. MagPy provides methods for format conversion, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and WDC/IAGA/IM dissemination/communication routines. Full installation further provides a graphical user interface - xmagpy.   
 
 Typical usage often looks like this:
 
@@ -141,7 +142,7 @@ or
 
 or
 
-    data = read('c:\path\to\file\example.min')
+    data = read('c:\\path\\to\\file\\example.min')
 
 Different paths are related to your operating system. In the following we will assume a Linux system. 
 Any file is uploaded to the memory and each data column (or header information) is assigned to an internal variable (key). To get a quick overview about the assigned keys you can use the following method:

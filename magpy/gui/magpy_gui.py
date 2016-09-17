@@ -73,10 +73,10 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     except:
         normalpath = os.path('/') # Test that
 
+    # Updating version info in file
     from magpy.version import __version__
+    optionsdict['magpyversion'] = __version__
 
-    if optionsdict.get('magpyversion','') == '':
-        optionsdict['magpyversion'] = __version__
     if optionsdict.get('dbname','') == '':
         optionsdict['dbname'] = 'None'
     if optionsdict.get('user','') == '':
@@ -134,7 +134,6 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['fitdegree'] = '5'
     if optionsdict.get('fitknotstep','') == '':
         optionsdict['fitknotstep'] = '0.3'
-
 
     initpath = os.path.join(normalpath,'.magpyguiini')
 
@@ -664,12 +663,12 @@ class MainFrame(wx.Frame):
         #print ("INIPARA", inipara)
         if inipara == {}:
             saveini(self.options) # initialize defaultvalues
-            inipara = loadini()
+            inipara, test = loadini()
             #print ("INIPARA", inipara)
         if update:
             self.initParameter(inipara)
             saveini(self.options) # initialize defaultvalues
-            inipara = loadini()
+            inipara, test = loadini()
 
         # Variable initializations
         self.initParameter(inipara)
