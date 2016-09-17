@@ -3092,7 +3092,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='SENSORS')
             if dlg.ShowModal() == wx.ID_OK:
                 for key in SENSORSKEYLIST:
-                    exec('value = dlg.'+key+'TextCtrl.GetValue()')
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not value == dlg.header.get(key,''):
                         self.plotstream.header[key] = value
                 self.ActivateControls(self.plotstream)
@@ -3113,7 +3113,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='STATIONS')
             if dlg.ShowModal() == wx.ID_OK:
                 for key in STATIONSKEYLIST:
-                    exec('value = dlg.'+key+'TextCtrl.GetValue()')
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not value == dlg.header.get(key,''):
                         self.plotstream.header[key] = value
                 self.ActivateControls(self.plotstream)
