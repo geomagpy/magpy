@@ -4,8 +4,9 @@ MagPy
 
 Version Info: (please note: this package is still in development state with frequent modifcations)
 v0.3.4, current version
-    v0.3.3 fixes:
-      GUI: meta data of sensor and station
+    v0.3.4 fixes:
+      GUI: meta data of sensor and station can be changed 
+      GUI: initialization file is automatically updated
 
 v0.3.3, published on 2016-09-17
     v0.3.3 fixes:
