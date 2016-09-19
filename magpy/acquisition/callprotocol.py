@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 import serial
 import struct, binascii, re, csv
@@ -91,7 +92,7 @@ if call:
                 ser = serial.Serial(self.port, baudrate=self.baudrate , parity='N', bytesize=8, stopbits=1)
                 #print 'Connection made.'
             except:
-                print 'SerialCall: Connection flopped.'
+                print('SerialCall: Connection flopped.')
 
             for item in self.commands:
                 answer, actime = self.send_command(ser,item,self.eol,hex=False)
@@ -109,7 +110,7 @@ if call:
             elif len(answer.split()) == 4 and answer.split()[0].startswith('\x03'):
                 self.writeAnemometer(answer,actime)
             else:
-                print "SerialCall: Could no analyze data"
+                print("SerialCall: Could no analyze data")
                 return False
             return True
 
@@ -239,7 +240,7 @@ if call:
                 evt0 = {'id': 0, 'value': self.hostname}
                 evt99 = {'id': 99, 'value': 'eol'}
             except:
-                print "SerialCall - writeDisdro: Problem assigning values to dict"
+                print("SerialCall - writeDisdro: Problem assigning values to dict")
 
             try:
                 self.wsMcuFactory.dispatch(dispatch_url, evt0)
@@ -266,7 +267,7 @@ if call:
                 ser.close()
                 serialnum = answer.replace('!12SH','').strip('\x03').strip('\x02')
             except:
-                print 'writeAnemometer: Failed to get Serial number.'
+                print('writeAnemometer: Failed to get Serial number.')
 
 
             sensorid = sensor + '_' + serialnum + '_' + revision
@@ -287,7 +288,7 @@ if call:
                 windspeed = float('nan')                          # var1
                 winddirection = float('nan')                      # var2
                 virtualtemperature = float('nan')                 # t2
-                print 'writeAnemometer: Failed to interprete data.'
+                print('writeAnemometer: Failed to interprete data.')
 
             #print sensorid, windspeed
 
@@ -318,7 +319,7 @@ if call:
                 evt51 = {'id': 51, 'value': winddirection}
                 evt99 = {'id': 99, 'value': 'eol'}
             except:
-                print "writeAnemometer: Problem assigning values to dict"
+                print("writeAnemometer: Problem assigning values to dict")
 
             try:
                 self.wsMcuFactory.dispatch(dispatch_url, evt1)

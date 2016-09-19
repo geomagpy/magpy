@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 
 from twisted.protocols.basic import LineReceiver
@@ -87,7 +88,7 @@ def dataToFile(sensorid, filedate, bindata, header):
 class FileProtocol():
     def __init__(self, wsMcuFactory):
         self.wsMcuFactory = wsMcuFactory
-        print "Init"
+        print("Init")
         self.path_or_url = ''
 
     def establishConnection(self, path_or_url):
@@ -115,7 +116,7 @@ class FileProtocol():
 class GSM90Protocol(LineReceiver):
     def __init__(self, wsMcuFactory):
         self.wsMcuFactory = wsMcuFactory
-        print "Initialize the connection and set automatic mode (use ser.commands?)"
+        print("Initialize the connection and set automatic mode (use ser.commands?)")
 
     def initConnection(self, path_or_url):
         log.msg('MagPy Module connected - Accessing file: %s ' % (path_or_url))

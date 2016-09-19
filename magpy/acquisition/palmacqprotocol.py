@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 import struct, binascii, re, csv
 from datetime import datetime, timedelta
@@ -245,7 +246,7 @@ class PalmAcqProtocol(LineReceiver):
 
         if printdata:
             #print header
-            print timestamp
+            print(timestamp)
 
         # File Operations
         try:

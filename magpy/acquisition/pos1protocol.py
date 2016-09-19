@@ -24,6 +24,7 @@ DEPENDENCIES:
 CALLED BY:
         magpy.bin.acquisition
 '''
+from __future__ import print_function
 
 import sys, time, os, socket
 import struct, binascii, re
@@ -122,20 +123,20 @@ def startPOS1(port,commands):
     # Once called, the device will continue to read unless interrupted.
     try:
         pos_ser = serial.Serial(port, baudrate=9600, parity='N', bytesize=8, stopbits=1)
-        print 'Connection to POS-1 made.'
+        print('Connection to POS-1 made.')
     except:
-        print 'Connection to POS-1 flopped.'
-    print ''
+        print('Connection to POS-1 flopped.')
+    print('')
 
     # Send commands and read output from serial device:
-    print 'Parameters entered:'
+    print('Parameters entered:')
     for item in commands:
         command_hex = _hexifyCommand(item,eol)
-        print 'Command:  ', command
+        print('Command:  ', command)
         ser.write(command_hex)
         response = _serReadline(pos_ser,eol)
-        print 'Response: ', response
-    print ''
+        print('Response: ', response)
+    print('')
 
 
 def _hexifyCommand(command,eol):
@@ -226,10 +227,10 @@ class Pos1Protocol(LineReceiver):
     @exportRpc("control-led")
     def controlLed(self, status):
         if status:
-            print "turn on LED"
+            print("turn on LED")
             self.transport.write('1')
         else:
-            print "turn off LED"
+            print("turn off LED")
             self.transport.write('0')
 
     @exportRpc("send-command")

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 import struct, binascii, re, csv
 from datetime import datetime, timedelta
@@ -70,21 +71,21 @@ class EnvProtocol(LineReceiver):
         self.sensor = sensor
         self.hostname = socket.gethostname()
         self.outputdir = outputdir
-        print self.sensor
+        print(self.sensor)
 
     @exportRpc("control-led")
     def controlLed(self, status):
         if status:
-            print "turn on LED"
+            print("turn on LED")
             self.transport.write('1')
         else:
-            print "turn off LED"
+            print("turn off LED")
             self.transport.write('0')
 
     @exportRpc("send-command")
     def sendCommand(self, command):
         if not command == "":
-            print command
+            print(command)
             #self.transport.write(command)
 
     def connectionMade(self):
@@ -155,7 +156,7 @@ class EnvProtocol(LineReceiver):
             if len(data) == 3:
                 evt0,evt1,evt3,evt30,evt33,evt34,evt99 = self.processEnvData(data)
             else:
-                print 'Data error'
+                print('Data error')
 
             ## publish event to all clients subscribed to topic
             ##

@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 
 import sys, time, os, socket
@@ -72,7 +73,7 @@ class KernProtocol(LineReceiver):
         self.sensor = sensor
         self.hostname = socket.gethostname()
         self.outputdir = outputdir
-        print self.sensor
+        print(self.sensor)
 
 
     def connectionMade(self):
@@ -142,7 +143,7 @@ class KernProtocol(LineReceiver):
             if len(data) == 2:
                 evt0,evt1,evt3,evt38,evt99 = self.processKernData(data)
             else:
-                print 'Data error'
+                print('Data error')
 
             ## publish event to all clients subscribed to topic
             ##

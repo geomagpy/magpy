@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 from twisted.python import log
 from twisted.internet import reactor
@@ -50,7 +51,7 @@ class PubSubClient(WampClientProtocol):
                  sensdesc = row[1]
                  module = row[2].lower()
                  param = row[3]
-                 print row, len(param.split(','))
+                 print(row, len(param.split(',')))
                  #self.checkDB4DataInfo(db,cursor,sensid,sensdesc)
                  #cursor.execute("DROP TABLE %s" % sensid)
                  # Create Sensor Table if it does not yet exist  # TODO: check the length of param for other then temperatur data
@@ -62,10 +63,10 @@ class PubSubClient(WampClientProtocol):
                  subscriptionstring = "%s:%s-value" % (module, sensid)
                  self.subscribe(subscriptionstring, self.onEvent)
                  # Now print fetched result
-                 print "sensid=%s,sensdesc=%s,module=%s,param=%s" % \
-                            (sensid, sensdesc, module, param )
+                 print("sensid=%s,sensdesc=%s,module=%s,param=%s" % \
+                            (sensid, sensdesc, module, param ))
         except:
-            print "Error: unable to fetch data"
+            print("Error: unable to fetch data")
 
 
     def convertUnicode(self, data):

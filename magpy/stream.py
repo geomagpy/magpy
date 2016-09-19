@@ -3,7 +3,7 @@
 MagPy-General: Standard pymag package containing the following classes:
 Written by Roman Leonhardt, Rachel Bailey 2011/2012/2013/2014
 Written by Roman Leonhardt, Rachel Bailey, Mojca Miklavec 2015/2016
-Version 0.2 (starting 28.02.2015)
+Version 0.3 (starting May 2016)
 """
 from __future__ import print_function
 
@@ -149,7 +149,7 @@ try:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("Could not import spacepy: Trying alternative...")
+            print("... Could not import spacepy")
             pass
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
@@ -161,30 +161,13 @@ try:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("Unexpected error")
+            print("... Could not import spacepy")
             pass
 except ImportError as e:
     logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
     logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
     badimports.append(e)
 
-# Utilities
-# ---------
-try:
-    import smtplib
-    from email.MIMEMultipart import MIMEMultipart
-    from email.MIMEBase import MIMEBase
-    from email.MIMEText import MIMEText
-    from email.Utils import COMMASPACE, formatdate
-    from email import Encoders
-    #import smtplib
-    from email.mime.text import MIMEText
-    #from smtplib import SMTP_SSL as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
-    from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
-    #from email.MIMEText import MIMEText
-except ImportError as e:
-    logpygen += "MagPy initiation ImportError: Mailing functions not available.\n"
-    badimports.append(e)
 
 if logpygen == '':
     logpygen = "OK"
@@ -9140,17 +9123,8 @@ class PyMagLog(object):
     def _removeduplicates(self,content):
         return list(set(content))
 
+    """
     def sendLogByMail(self,loglist,**kwargs):
-        """
-        function to send loggerstream lists by mail to the observer
-        keywords:
-        smtpserver
-        sender
-        user
-        pwd
-        destination
-        subject
-        """
         smtpserver = kwargs.get('smtpserver')
         sender = kwargs.get('sender')
         user = kwargs.get('user')
@@ -9195,6 +9169,7 @@ class PyMagLog(object):
 
         except Exception as exc:
             raise ValueError( "mail failed; %s" % str(exc) ) # give a error message
+    """
 
     def combineWarnLog(self,warning,log):
         comlst = ['Warning:']
@@ -9202,7 +9177,6 @@ class PyMagLog(object):
         comlst.extend(['Non-critical info:'])
         comlst.extend(self._removeduplicates(log))
         return comlst
-
 
 
 class LineStruct(object):
@@ -9510,63 +9484,6 @@ def ceil_dt(dt,seconds):
         return dt + timedelta(seconds=delta)
     else:
         return dt
-
-
-def send_mail(send_from, send_to, **kwargs):
-    """
-    Function for sending mails with attachments
-    """
-
-    assert type(send_to)==list
-
-    files = kwargs.get('files')
-    user = kwargs.get('user')
-    pwd = kwargs.get('pwd')
-    port = kwargs.get('port')
-    smtpserver = kwargs.get('smtpserver')
-    subject = kwargs.get('subject')
-    text = kwargs.get('text')
-
-    if not smtpserver:
-        smtpserver = 'smtp.web.de'
-    if not files:
-        files = []
-    if not text:
-        text = 'Cheers, Your Analysis-Robot'
-    if not subject:
-        subject = 'MagPy - Automatic Analyzer Message'
-    if not port:
-        port = 587
-
-    assert type(files)==list
-
-    msg = MIMEMultipart()
-    msg['From'] = send_from
-    msg['To'] = COMMASPACE.join(send_to)
-    msg['Date'] = formatdate(localtime=True)
-    msg['Subject'] = subject
-
-    msg.attach( MIMEText(text) )
-
-    for f in files:
-        part = MIMEBase('application', "octet-stream")
-        part.set_payload( open(f,"rb").read() )
-        Encoders.encode_base64(part)
-        part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
-        msg.attach(part)
-
-    #smtp = smtplib.SMTP(server)
-    smtp = SMTP()
-    smtp.set_debuglevel(False)
-    smtp.connect(smtpserver, port)
-    smtp.ehlo()
-    if port == 587:
-        smtp.starttls()
-    smtp.ehlo()
-    if user:
-        smtp.login(user, pwd)
-    smtp.sendmail(send_from, send_to, msg.as_string())
-    smtp.close()
 
 
 # ##################

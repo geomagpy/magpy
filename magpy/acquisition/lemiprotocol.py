@@ -25,6 +25,7 @@ DEPENDENCIES:
 CALLED BY:
         magpy.bin.acquisition
 '''
+from __future__ import print_function
 
 import sys, time, os, socket
 import sys, time, os, socket
@@ -67,17 +68,17 @@ class LemiProtocol(LineReceiver):
     @exportRpc("control-led")
     def controlLed(self, status):
         if status:
-            print "turn on LED"
+            print("turn on LED")
             self.transport.write('1')
         else:
-            print "turn off LED"
+            print("turn off LED")
             self.transport.write('0')
 
 
     @exportRpc("send-command")
     def sendCommand(self, command):
         if not command == "":
-            print command
+            print(command)
             #self.transport.write(command)
 
     def connectionMade(self):

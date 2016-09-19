@@ -679,7 +679,7 @@ class MainFrame(wx.Frame):
         self.MainMenu = wx.MenuBar()
         # ## File Menu
         self.FileMenu = wx.Menu()
-        self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+O", "Open file", wx.ITEM_NORMAL)
+        self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+F", "Open file", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileOpen)
         self.DirOpen = wx.MenuItem(self.FileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DirOpen)
@@ -698,14 +698,14 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.FileMenu, "&File")
         # ## Database Menu
         self.DatabaseMenu = wx.Menu()
-        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+C", "Connect Database", wx.ITEM_NORMAL)
+        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
         self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "&Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2DI)
-        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+V", "Variometer data...", wx.ITEM_NORMAL)
+        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2Vario)
         self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scala&r data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2Scalar)
@@ -1061,8 +1061,10 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
             self.menu_p.str_page.symbolRadioBox.Disable()
 
-
-        if self.menu_p.str_page.symbolRadioBox.GetStringSelection() == 'line':
+        if len(self.plotopt.get('symbollist',[])) == len(self.shownkeylist):
+            # everything is fine use current symbollist
+            pass
+        elif self.menu_p.str_page.symbolRadioBox.GetStringSelection() == 'line':
             self.symbollist = ['-'] * len(self.shownkeylist)
             self.plotopt['symbollist'] =  ['-'] * len(self.shownkeylist)
         else:

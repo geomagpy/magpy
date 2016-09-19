@@ -10,6 +10,8 @@ Usage:
 sudo python acquisition.py
 
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 # -------------------------------------------------------------------
 # Import software
@@ -27,8 +29,8 @@ if sys.platform == 'win32':
     win32eventreactor.install()
 # IMPORT TWISTED
 from twisted.internet import reactor
-print "Using Twisted reactor", reactor.__class__
-print
+print("Using Twisted reactor", reactor.__class__)
+print()
 from twisted.python import usage, log
 from twisted.protocols.basic import LineReceiver
 from twisted.internet.serialport import SerialPort
@@ -36,7 +38,7 @@ from twisted.internet import task
 from twisted.web.server import Site
 from twisted.web.static import File
 from autobahn import version as autobahnversion
-print "Autobahn Version: ", autobahnversion
+print("Autobahn Version: ", autobahnversion)
 try: # version > 0.8.0
     from autobahn.wamp1.protocol import WampServerFactory, WampServerProtocol, exportRpc
 except:
@@ -61,7 +63,7 @@ from serial import SEVENBITS
 #from magpy.acquisition.owprotocol import OwProtocol
 #from magpy.acquisition.arduinoprotocol import ArduinoProtocol
 #from palmacqprotocol import PalmAcqProtocol
-from gsm19protocol import GSM19Protocol
+from .gsm19protocol import GSM19Protocol
 
 # Other possible protocals are: lemiprotocol, pos1protocol, envprotocol, csprotocol, gsm90protocol
 # SELECT DIRECTORY FOR BUFFER FILES
@@ -115,7 +117,7 @@ def GetSensors():
             # Possible issue - empty line
             pass
 
-    print "Found", sensorlist, portdict, baudratedict
+    print("Found", sensorlist, portdict, baudratedict)
     return sensorlist, portdict, baudratedict
 
 
@@ -177,7 +179,7 @@ class WsMcuFactory(WampServerFactory):
             if sensor[:3].upper() == 'POS':
                 self.pos1Protocol = Pos1Protocol(self,sensor.strip(), outputdir)
             if sensor[:3].upper() == 'KER':
-                print "Test1:", sensor.strip
+                print("Test1:", sensor.strip)
                 self.kernProtocol = KernProtocol(self,sensor.strip(), outputdir)
             if sensor[:3].upper() == 'ARD':
                 self.arduinoProtocol = ArduinoProtocol(self, sensor.strip(), outputdir)

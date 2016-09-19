@@ -60,11 +60,11 @@ debian/ubuntu: full installation with all supported features
 
 3. Install MagPy
 
-    a) Using setuptools
+    a) Using pip
 
-        sudo easy_install GeomagPy
-          * upgrading:
-        sudo easy_install GeomagPy --upgrade
+        sudo pip install GeomagPy
+          * specific version:
+        sudo pip install GeomagPy==v0.3.4
 
     b) Using github
 

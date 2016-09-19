@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 import struct, binascii, re, csv
 from datetime import datetime, timedelta
@@ -198,7 +199,7 @@ class GSMP20NSProtocol(LineReceiver):
                     dataToFile(self.outputdir,self.sensor, cdate, data_bin, header)
                 except:
                     log.msg('GSMP20 - Protocol: Error while packing binary data')
-                    print data
+                    print(data)
                     pass
             except:
                 log.msg('GSMP20 - Protocol: Error with binary save routine')

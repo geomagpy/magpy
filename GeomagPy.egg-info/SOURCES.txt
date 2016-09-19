@@ -36,6 +36,7 @@ magpy/collector/lemiclient.py
 magpy/collector/owclient.py
 magpy/collector/posclient.py
 magpy/collector/subscribe2client.py
+magpy/examples/__init__.py
 magpy/examples/example1.cdf
 magpy/examples/example1.py
 magpy/examples/example2.py
@@ -87,5 +88,6 @@ magpy/opt/Table.py
 magpy/opt/__init__.py
 magpy/opt/cred.py
 magpy/opt/emd.py
+magpy/opt/mails.py
 magpy/opt/sigfig.py
 magpy/opt/stormdet.py
