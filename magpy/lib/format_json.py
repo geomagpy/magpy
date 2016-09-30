@@ -51,6 +51,18 @@ def readJSON(filename, headonly=False, **kwargs):
             elif key == 'temperature':
                 keydict[i] = 'var3'
                 fillkeys.pop(fillkeys.index('var3'))
+            elif 'bx' in key.lower():
+                keydict[i] = 'x'
+                fillkeys.pop(fillkeys.index('x'))
+            elif 'by' in key.lower():
+                keydict[i] = 'y'
+                fillkeys.pop(fillkeys.index('y'))
+            elif 'bz' in key.lower():
+                keydict[i] = 'z'
+                fillkeys.pop(fillkeys.index('z'))
+            elif 'bt' in key.lower():
+                keydict[i] = 'f'
+                fillkeys.pop(fillkeys.index('f'))
             else:
                 try:
                     keydict[i] = fillkeys.pop(0)
@@ -61,7 +73,7 @@ def readJSON(filename, headonly=False, **kwargs):
             if 'time' in key:
                 data = [date2num(testTimeString(str(x[i]))) for x in dataset[1:]]
             else:
-                data = [float(x[i]) for x in dataset[1:]]
+                data = [np.nan if x[i] is None else float(x[i]) for x in dataset[1:]]
             array[KEYLIST.index(keydict[i])] = data
             stream.header['col-'+keydict[i]] = key
             stream.header['unit-col-'+keydict[i]] = ''
