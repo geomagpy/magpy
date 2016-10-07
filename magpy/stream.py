@@ -317,6 +317,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'LNM':['r', 'Thies Laser-Disdrometer'],
                 'IWT':['r', 'IWT Tiltmeter data'],
                 'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
+                'GRAVSG':['r', 'GWR TSF data'],
                 'CR800':['r', 'CR800 datalogger'],
                 'IONO':['r', 'IM806 Ionometer'],
                 'RADON':['r', 'single channel analyser gamma data'],
@@ -1688,7 +1689,10 @@ CALLED BY:
                                         # This would be wrong but leads always to a TypeError
                                         timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
                                 except:
-                                    raise TypeError
+                                    try:
+                                        timeobj = num2date(float(time)).replace(tzinfo=None)
+                                    except:
+                                        raise TypeError
         elif not isinstance(time, datetime):
             raise TypeError
         else:
