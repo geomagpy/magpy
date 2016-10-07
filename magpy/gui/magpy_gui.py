@@ -1693,7 +1693,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             sql = "SELECT DataID, DataMinTime, DataMaxTime FROM DATAINFO"
             cursor.execute(sql)
             output = cursor.fetchall()
-            print ("Test", output)
+            #print ("Test", output)
             datainfoidlist = [elem[0] for elem in output]
             if len(datainfoidlist) < 1:
                 dlg = wx.MessageDialog(self, "No data tables available!\n"
@@ -2439,12 +2439,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
+        if sttime.endswith('AM') or sttime.endswith('am'):
+            sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+        if sttime.endswith('pm') or sttime.endswith('PM'):
+            sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
         sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
         start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = str(self.menu_p.str_page.endTimePicker.GetValue())
+        if entime.endswith('AM') or entime.endswith('am'):
+            entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+        if entime.endswith('pm') or entime.endswith('PM'):
+            print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+            entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
         ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
         end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+        print ("Range", start, end)
 
         try:
             self.changeStatusbar("Trimming stream ...")
@@ -2916,10 +2926,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
                          comment = 'Time range flagged with unspecified reason'
                      stday = dlg.startFlagDatePicker.GetValue()
                      sttime = str(dlg.startFlagTimePicker.GetValue())
+                     if sttime.endswith('AM') or sttime.endswith('am'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if sttime.endswith('pm') or sttime.endswith('PM'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
                      sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
                      starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
                      enday = dlg.endFlagDatePicker.GetValue()
                      entime = str(dlg.endFlagTimePicker.GetValue())
+                     if entime.endswith('AM') or entime.endswith('am'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if entime.endswith('pm') or entime.endswith('PM'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
                      ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
                      endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
                      #print ("Range", starttime, endtime, keys2flag)
@@ -3572,7 +3590,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
            if not key == '':
                unitlist.append([key, units[idx]])
 
-        parameter = ','.join([key for key in keys if not key=='' and key in NUMKEYLIST])
+        parameter = ','.join([KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and KEYLIST[idx+1] in NUMKEYLIST])
 
         self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db}
         self.monitorSource='MARCOS'

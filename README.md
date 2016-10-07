@@ -78,7 +78,9 @@ Alternative B)
 
 1. install anaconda
         - https://docs.continuum.io/anaconda/install
+          (currently tested on anacondo with python2.7)
 2. install magpy
+        - change to the anaconda2/bin directory (if not set as default)
         - if you want to use CDF formats like ImagCDF: 
              optional: install NasaCDF (http://cdf.gsfc.nasa.gov/)
              optional: - ./pip install spacepy
@@ -90,7 +92,7 @@ Windows
 Tested on XP, Win7, Win10
 1. Get a current version of Python(x,y) and install it
    - optionally select packages ffnet and netcdf during install - for cdf support
-2. Get a current version of MySQL and install it
+2. Optional: Get a current version of MySQL and install it
 3. Download nasaCDF packages and install
 4. get python-spacepy package
 5. download and unpack GeomagPy-x.x.x.tar.gz
@@ -103,12 +105,15 @@ MacOS
 ----------
 
 1. using MacPorts:
+    coming soon
+
 
 On all platforms supporting Docker Images
 -------
 1. Install Docker
         - https://docs.docker.com/engine/installation/
 2. Get the MagPy Image
+    instructions will follow
 
 
 ======================
