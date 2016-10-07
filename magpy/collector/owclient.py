@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, os, struct
 from twisted.python import log
 try: # version > 0.8.0
@@ -11,17 +12,10 @@ from datetime import datetime, timedelta
 # Database
 import MySQLdb
 
-try:
-    import magpy.stream as st
-    from magpy.database import stream2db
-    from magpy.opt import cred as mpcred
-    from magpy.transfer import scptransfer
-except:
-    sys.path.append('/home/leon/Software/magpy/trunk/src')
-    import stream as st
-    from magpy.database import stream2db
-    from magpy.opt import cred as mpcred
-    from magpy.transfer import scptransfer
+import magpy.stream as st
+from magpy.database import stream2db
+from magpy.opt import cred as mpcred
+from magpy.transfer import scptransfer
 
 clientname = 'default'
 s = []
@@ -137,7 +131,7 @@ class PubSubClient(WampClientProtocol):
             # ideal way: upload an already existing file from moon for each sensor
             # check client for existing file:
             for row in owlist:
-                print "collectors owclient: Running for sensor", row[0]
+                print("collectors owclient: Running for sensor", row[0])
                 # Try to find sensor in db:
                 sql = "SELECT SensorID FROM SENSORS WHERE SensorID LIKE '%s%%'" % row[0]
                 try:
@@ -154,8 +148,6 @@ class PubSubClient(WampClientProtocol):
                 if len(results) < 1:
                     # Initialize e.g. ow table
                     log.msg("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
-                    # if not present then get a file and upload it
-                    #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                     destfile = os.path.join(destpath,'MoonsFiles', row[0]+'_'+day+'.bin') 
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
@@ -179,13 +171,13 @@ class PubSubClient(WampClientProtocol):
                 else:
                     log.msg("collectors owclient: Found sensor(s) in DB - subscribing to the highest revision number")
                 subscriptionstring = "%s:%s-value" % (module, row[0])
-                print "collectors owclient: Subscribing (directing to DB): ", subscriptionstring
+                print("collectors owclient: Subscribing (directing to DB): ", subscriptionstring)
                 self.subscribe(subscriptionstring, self.onEvent)
         elif output == 'file':
             for row in o:
-                print "collectors owclient: Running for sensor", row[0]
+                print("collectors owclient: Running for sensor", row[0])
                 subscriptionstring = "%s:%s-value" % (mod, row[0])
-                print "collectors owclient: Subscribing (directing to file): ", subscriptionstring
+                print("collectors owclient: Subscribing (directing to file): ", subscriptionstring)
                 self.subscribe(subscriptionstring, self.onEvent)
 
     def subscribeSensor(self,sensorshort):
@@ -193,10 +185,10 @@ class PubSubClient(WampClientProtocol):
         Subscribing to Sensors:
         principally any subscrition is possible if the subscription string is suppported by the moons protocols
         """
-        print "collectors owclient: Running for sensor", sensorshort
+        print("collectors owclient: Running for sensor", sensorshort)
         # Try to find sensor in db:
         sql = "SELECT SensorID, SensorDescription, SensorDataLogger, SensorKeys FROM SENSORS WHERE SensorID LIKE '%s%%'" % sensorshort
-        print sql
+        print(sql)
         try:
             # Execute the SQL command
             cursor.execute(sql)
@@ -205,7 +197,7 @@ class PubSubClient(WampClientProtocol):
         try:
             # Fetch all the rows in a list of lists.
             results = self.cursor.fetchall()
-            print "SQL-Results:", results
+            print("SQL-Results:", results)
         except:
             log.msg("collectors owclient: Unable to fetch SENSOR data from DB")
             results = []
@@ -213,7 +205,7 @@ class PubSubClient(WampClientProtocol):
             pass
 
     def subscribeInst(self, db, cursor, client, mod, output):
-        print "Starting Subscription ...."
+        print("Starting Subscription ....")
         self.prefix(mod, "http://example.com/" + client +"/"+mod+"#")
         if mod == 'cs':
              sensshort = 'G82'
@@ -239,10 +231,10 @@ class PubSubClient(WampClientProtocol):
             # ideal way: upload an already existing file from moon for each sensor
             # check client for existing file:
             for row in o:
-                print "collectors owclient: Running for sensor", row[0]
+                print("collectors owclient: Running for sensor", row[0])
                 # Try to find sensor in db:
                 sql = "SELECT SensorID FROM SENSORS WHERE SensorID LIKE '%s%%'" % row[0]
-                print sql
+                print(sql)
                 try:
                     # Execute the SQL command
                     cursor.execute(sql)
@@ -251,15 +243,13 @@ class PubSubClient(WampClientProtocol):
                 try:
                     # Fetch all the rows in a list of lists.
                     results = self.cursor.fetchall()
-                    print "SQL-Results:", results
+                    print("SQL-Results:", results)
                 except:
                     log.msg("collectors owclient: Unable to fetch SENSOR data from DB")
                     results = []
                 if len(results) < 1:
                     # Initialize e.g. ow table
                     log.msg("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
-                    # if not present then get a file and upload it
-                    #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                     destfile = os.path.join(destpath,'MoonsFiles', row[0]+'_'+day+'.bin') 
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
@@ -296,11 +286,11 @@ class PubSubClient(WampClientProtocol):
                     if not row[2] == 'typus':
                         self.sensorgroup = row[2]
                 subscriptionstring = "%s:%s-value" % (module, row[0])
-                print "collectors owclient: Subscribing: ", subscriptionstring
+                print("collectors owclient: Subscribing: ", subscriptionstring)
                 self.subscribe(subscriptionstring, self.onEvent)
         elif output == 'file':
             for row in o:
-                print "collectors owclient: Running for sensor", row[0]
+                print("collectors owclient: Running for sensor", row[0])
                 subscriptionstring = "%s:%s-value" % (mod, row[0])
                 self.subscribe(subscriptionstring, self.onEvent)
    
@@ -344,34 +334,34 @@ class PubSubClient(WampClientProtocol):
                 if self.output == 'file':
                     # Appending data to buffer which contains pcdate, pctime and sensordata
                     # extract time data
-                    print sensorid
+                    print(sensorid)
                     packcode = '6hLl'
                     keylst = ['t1']
                     namelst = ['T']
                     unitlst = ['deg_C']
                     multilst = [1000]
                     #header = "# MagPyBin %s %s %s %s %s %s %d" % (sensor.id, '[t1,var1,var2,var3,var4]', '[T,rh,vdd,vad,vis]', '[deg_C,per,V,V,V]', '[1000,100,100,100,1]', packcode, struct.calcsize(packcode))
-                    print self.line
+                    print(self.line)
                     datearray = timeToArray(self.line[0])
                     try:
                         datearray.append(int(self.line[1]*1000))
                         try:
-                            print self.line[2]
+                            print(self.line[2])
                             if self.line[2] <= 0:
                                 humidity = 999999
                             else:
                                 humidity = int(self.line[2]*100)
-                            print self.line[2]
+                            print(self.line[2])
                             namelst.append('rh')
                             unitlst.append('percent')
-                            print "here"
+                            print("here")
                             multilst.append(100)
                             keylst.append('var1')
                             datearray.append(humidity)
-                            print "Well"
+                            print("Well")
                             packcode += 'L'
                         except:
-                            print "No line2"
+                            print("No line2")
                             pass
                         try:
                             datearray.append(int(self.line[3]*100))
@@ -381,7 +371,7 @@ class PubSubClient(WampClientProtocol):
                             multilst.append(100)
                             keylst.append('var2')
                         except:
-                            print "No line3"
+                            print("No line3")
                             pass
                         try:
                             datearray.append(int(self.line[4]*100))
@@ -391,7 +381,7 @@ class PubSubClient(WampClientProtocol):
                             multilst.append(100)
                             keylst.append('var3')
                         except:
-                            print "No line4"
+                            print("No line4")
                             pass
                         try: 
                             datearray.append(self.line[5]*100)
@@ -401,10 +391,10 @@ class PubSubClient(WampClientProtocol):
                             multilst.append(100)
                             keylst.append('var4')
                         except:
-                            print "No line5"
+                            print("No line5")
                             pass
-                        print packcode, namelst, unitlst, multilst, keylst
-                        print str(keylst)
+                        print(packcode, namelst, unitlst, multilst, keylst)
+                        print(str(keylst))
                         #header = "# MagPyBin %s %s %s %s %s %s %d" % (sensorid, str(keylst), str(namelst), str(unitlst), str(multilst), packcode, struct.calcsize(packcode))
                         #data_bin = struct.pack(packcode,*datearray)
                     except:

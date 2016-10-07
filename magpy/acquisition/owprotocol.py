@@ -1,10 +1,11 @@
+from __future__ import print_function
 # OneWire part
 try:
     import ow
     onewire = True
     owsensorlist = []
 except:
-    print "Onewire package not available"
+    print("Onewire package not available")
     onewire = False
 
 import sys, time, os, socket
@@ -72,15 +73,18 @@ if onewire:
                 if self.reconnectcount < 10:
                     self.owConnected()
                 else:
-                    print "owConnect: reconnection not possible"
+                    print("owConnect: reconnection not possible")
 
             self.oneWireInstruments(self.root)
 
 
         def connectionMade(self,root):
             # A loading eventually existing sensor list
-            print "Connection made"
-            martasdir = [path for path, dirs, files in os.walk("/home") if path.endswith('MARTAS')][0]
+            print("Connection made")
+            from os.path import expanduser
+            home = expanduser("~")
+
+            martasdir = [path for path, dirs, files in os.walk(home) if path.endswith('MARTAS')][0]
             owsensorfile = os.path.join(martasdir,'owlist.csv')
             owlist = []
             idlist = []
@@ -258,7 +262,7 @@ if onewire:
                     evt5 = {'id': 0, 'value': self.hostname}
                     evt8 = {'id': 99, 'value': 'eol'}
                 except:
-                    print "OW - readTemperature: Problem assigning values to dict"
+                    print("OW - readTemperature: Problem assigning values to dict")
 
                 try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)
@@ -341,7 +345,7 @@ if onewire:
                     evt7 = {'id': 62, 'value': vis}
                     evt8 = {'id': 99, 'value': 'eol'}
                 except:
-                    print "OW - readBattery: Problem assigning values to dict"
+                    print("OW - readBattery: Problem assigning values to dict")
 
                 try:
                     self.wsMcuFactory.dispatch(dispatch_url, evt1)

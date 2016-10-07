@@ -33,7 +33,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    debugmode = kwargs.get('debugmode')
+    debug = kwargs.get('debug')
     getfile = True
 
     array = [[] for key in KEYLIST]

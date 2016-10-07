@@ -1676,6 +1676,9 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
 
     t = stream._get_column('time')
 
+    if not minfreq:
+        minfreq = 0.0001
+
     if not len(t) > 0:
         loggerplot.error('plotSpectrogram: stream of zero length -- aborting')
         return
@@ -1685,15 +1688,20 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         val = maskNAN(val)
         dt = stream.get_sampling_period()*(samp_rate_multiplicator)
         Fs = float(1.0/dt)
+        if not maxfreq:
+            maxfreq = int(Fs/2.0)
+            print ("Maxfreq", maxfreq)
+            if maxfreq < 1:
+                maxfreq = 1
         ax1=subplot(211)
         plt.plot_date(t,val,'-')
         ax1.set_ylabel('{} [{}]'.format(stream.header.get('col-'+key,''),stream.header.get('unit-col-'+key,'')))
         ax1.set_xlabel('Time (UTC)')
         ax2=subplot(212)
         ax2.set_yscale('log')
-        NFFT = 1024
+        #NFFT = 1024
         Pxx, freqs, bins, im = magpySpecgram(val, NFFT=NFFT, Fs=Fs, noverlap=noverlap, 
-                                cmap=cmap, minfreq = 0.0001, maxfreq = 3)
+                                cmap=cmap, minfreq = minfreq, maxfreq = maxfreq)
 
         plt.show()
 

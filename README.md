@@ -22,13 +22,13 @@ INSTALL
 
 Requirements:
   * Python 2.7
-  * MySQL (all other requirements are resolved)
 Recommended: 
   * Python packages:
-    * NASA SpacePy ()
+    * SpacePy ()
     * pexpect (for SSH support on non-Windows machines)
-    * netcdf (will be supported in a future version)
+    * NetCDF 
   * Other Software:
+    * MySQL
     * NasaCDF
     * NetCDF4 (support is currently in preparation)
     * Webserver (e.g. Apache2, PHP)
@@ -37,9 +37,11 @@ Linux/Unix
 ----------
 debian/ubuntu: full installation with all supported features
 
+Alternative A)
+
 1. Get python packages and other extensions (for other distros install similar packages):
 
-        sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb
+        sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb libmysqlclient-dev
         sudo easy_install ffnet
         sudo easy_install pexpect
 
@@ -60,11 +62,11 @@ debian/ubuntu: full installation with all supported features
 
 3. Install MagPy
 
-    a) Using setuptools
+    a) Using pip
 
-        sudo easy_install GeomagPy
-          * upgrading:
-        sudo easy_install GeomagPy --upgrade
+        sudo pip install GeomagPy
+          * specific version:
+        sudo pip install GeomagPy==v0.3.4
 
     b) Using github
 
@@ -72,19 +74,46 @@ debian/ubuntu: full installation with all supported features
         cd MagPy*
         sudo python setup.py install
 
+Alternative B)
+
+1. install anaconda
+        - https://docs.continuum.io/anaconda/install
+          (currently tested on anacondo with python2.7)
+2. install magpy
+        - change to the anaconda2/bin directory (if not set as default)
+        - if you want to use CDF formats like ImagCDF: 
+             optional: install NasaCDF (http://cdf.gsfc.nasa.gov/)
+             optional: - ./pip install spacepy
+        - run './pip install geomagpy' within the anaconda path
+               possible issues: MySQL-python problem -> install libmysqlclient-dev on linux 
 
 Windows
 -------
-Tested on XP and Win7
+Tested on XP, Win7, Win10
 1. Get a current version of Python(x,y) and install it
    - optionally select packages ffnet and netcdf during install - for cdf support
-2. Get a current version of MySQL and install it
+2. Optional: Get a current version of MySQL and install it
 3. Download nasaCDF packages and install
 4. get python-spacepy package
 5. download and unpack GeomagPy-x.x.x.tar.gz
 6. open a command window
 7. go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
 8. execute "setup.py install"
+
+
+MacOS
+----------
+
+1. using MacPorts:
+    coming soon
+
+
+On all platforms supporting Docker Images
+-------
+1. Install Docker
+        - https://docs.docker.com/engine/installation/
+2. Get the MagPy Image
+    instructions will follow
 
 
 ======================

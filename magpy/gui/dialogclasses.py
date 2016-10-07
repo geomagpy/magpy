@@ -1526,6 +1526,7 @@ class StreamLoadFlagDialog(wx.Dialog):
 
     def OnLoadDB(self, e):
         self.flaglist = db2flaglist(self.db, self.sensorid)
+        print ("StreamLoadFlag", self.flaglist)
         dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()

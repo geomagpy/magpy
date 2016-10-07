@@ -45,6 +45,8 @@ Other Software: NasaCDF, NetCDF4 (support is currently in preparation), Webserve
 
 Linux/Unix
 ----------
+
+Alternative A)
 debian/ubuntu: full installation with all supported features
 
 1. Get python packages and other extensions (for other distros install similar packages):
@@ -70,17 +72,31 @@ debian/ubuntu: full installation with all supported features
 
 3. Install MagPy
 
-    a) Using setuptools
+    a) Using pip
 
-        sudo easy_install GeomagPy
-          * upgrading:
-        sudo easy_install GeomagPy --upgrade
+        sudo pip install GeomagPy
+          * version:
+        sudo pip install GeomagPy==v0.3.4
 
     b) Using github
 
         git clone git://github.com/GeomagPy/MagPy.git
         cd MagPy*
         sudo python setup.py install
+
+Alternative B)
+using Anaconda
+
+1. install anaconda
+        - https://docs.continuum.io/anaconda/install
+          (currently tested on anacondo with python2.7)
+2. install magpy
+        - change to the anaconda2/bin directory (if not set as default)
+        - if you want to use CDF formats like ImagCDF: 
+             optional: install NasaCDF (http://cdf.gsfc.nasa.gov/)
+             optional: - ./pip install spacepy
+        - run './pip install geomagpy' within the anaconda path
+               possible issues: MySQL-python problem -> install libmysqlclient-dev on linux 
 
 
 Windows
@@ -95,6 +111,20 @@ Tested on XP and Win7
 6. open a command window
 7. go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
 8. execute "setup.py install"
+
+
+MacOS
+----------
+
+1. using MacPorts:
+    too be outlined soon
+
+On all platforms supporting Docker Images
+-------
+1. Install Docker
+        - https://docs.docker.com/engine/installation/
+2. Get the MagPy Image
+    instructions will follow
 
 
 ======================

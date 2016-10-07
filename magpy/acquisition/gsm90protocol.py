@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, time, os, socket
 import struct, binascii, re, csv
 from datetime import datetime, timedelta
@@ -59,15 +60,15 @@ class GSM90Protocol(LineReceiver):
         self.sensor = sensor
         self.outputdir = outputdir
         self.hostname = socket.gethostname()
-        print "Initialize the connection and set automatic mode (use ser.commands?)"
+        print("Initialize the connection and set automatic mode (use ser.commands?)")
 
     @exportRpc("control-led")
     def controlLed(self, status):
         if status:
-            print "turn on LED"
+            print("turn on LED")
             self.transport.write('1')
         else:
-            print "turn off LED"
+            print("turn off LED")
             self.transport.write('0')
 
     #def send_command(...?)

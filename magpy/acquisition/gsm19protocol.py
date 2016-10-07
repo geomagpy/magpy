@@ -88,7 +88,7 @@ class GSM19Protocol(LineReceiver):
         log.msg('GSM19 connection lost. Perform steps to restart it!')
 
     def connectionMade(self):
-        log.msg('%s connected.' % self.sensor)
+        log.msg('%s connected. Getting data...' % self.sensor)
 
     def processData(self, data):
 
@@ -102,7 +102,7 @@ class GSM19Protocol(LineReceiver):
         dontsavedata = False
 
         packcode = '6hLLl'
-        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f,var1]', '[f]', '[nT,none]', '[1000,1000]', packcode, struct.calcsize(packcode))
+        header = "# MagPyBin %s %s %s %s %s %s %d" % (self.sensor, '[f,var1]', '[f,err]', '[nT,none]', '[1000,1000]', packcode, struct.calcsize(packcode))
 
         try:
             # Extract data
@@ -163,6 +163,7 @@ class GSM19Protocol(LineReceiver):
          
     def lineReceived(self, line):
         dispatch_url =  "http://example.com/"+self.hostname+"/gn#"+self.sensor+"-value"
+        #print ("got", line)
         try:
             #print line
             evt1, evt3, evt10, evt99 = self.processData(line)
@@ -182,6 +183,3 @@ class GSM19Protocol(LineReceiver):
             self.wsMcuFactory.dispatch(dispatch_url, evt99)
         except:
             log.err('GSM19 - Protocol: wsMcuFactory error while dispatching data.')
-
-
-

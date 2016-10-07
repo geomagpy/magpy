@@ -158,9 +158,6 @@ def isFormat(filename, format_type):
     elif (format_type == "RADON"): # Data from the CR800 datalogger
         if (isRADON(filename)):
             return True
-    elif (format_type == "USBLOG"): # Data from the USB temperature logger
-        if (isUSBLOG(filename)):
-            return True
     elif (format_type == "CS"):
         if (isCS(filename)):
             return True
@@ -232,6 +229,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "NEIC"): # NEIC USGS data
         if (isNEIC(filename)):
+            return True
+    elif (format_type == "USBLOG"): # Data from the USB temperature logger
+        if (isUSBLOG(filename)):
             return True
     else:
         return False

@@ -195,6 +195,7 @@ class PlotPanel(wx.Panel):
         self.t1_stop= threading.Event()
         self.xlimits = None
         self.ylimits = None
+        self.selplt = 0 # Index to the selected plot - used by flagselection
         self.initialPlot()
         self.__do_layout()
 
@@ -286,6 +287,7 @@ class PlotPanel(wx.Panel):
         li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
 
         if not len(li) > 0:
+            print("Parameter", parameterstring, dataid, coverage)
             print("Did not find any data to display - aborting")
             return
         else:
@@ -454,7 +456,7 @@ class PlotPanel(wx.Panel):
         def on_ylims_change(axes):
             #print ("updated ylims: ", axes.get_ylim())
             self.ylimits = axes.get_ylim()
-            #return axes.get_ylim()
+            self.selplt = self.axlist.index(axes)
 
         self.figure.clear()
         try:
@@ -467,7 +469,7 @@ class PlotPanel(wx.Panel):
         self.axlist = self.figure.axes
 
         #get current xlimits:
-        for ax in self.axlist:
+        for idx, ax in enumerate(self.axlist):
             self.xlimits = ax.get_xlim()
             self.ylimits = ax.get_ylim()
             ax.callbacks.connect('xlim_changed', on_xlims_change)
@@ -679,7 +681,7 @@ class MainFrame(wx.Frame):
         self.MainMenu = wx.MenuBar()
         # ## File Menu
         self.FileMenu = wx.Menu()
-        self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+O", "Open file", wx.ITEM_NORMAL)
+        self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+F", "Open file", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.FileOpen)
         self.DirOpen = wx.MenuItem(self.FileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DirOpen)
@@ -698,14 +700,14 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.FileMenu, "&File")
         # ## Database Menu
         self.DatabaseMenu = wx.Menu()
-        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+C", "Connect Database", wx.ITEM_NORMAL)
+        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
         self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "&Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2DI)
-        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+V", "Variometer data...", wx.ITEM_NORMAL)
+        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2Vario)
         self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scala&r data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
         self.DIMenu.AppendItem(self.DIPath2Scalar)
@@ -1061,8 +1063,10 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
             self.menu_p.str_page.symbolRadioBox.Disable()
 
-
-        if self.menu_p.str_page.symbolRadioBox.GetStringSelection() == 'line':
+        if len(self.plotopt.get('symbollist',[])) == len(self.shownkeylist):
+            # everything is fine use current symbollist
+            pass
+        elif self.menu_p.str_page.symbolRadioBox.GetStringSelection() == 'line':
             self.symbollist = ['-'] * len(self.shownkeylist)
             self.plotopt['symbollist'] =  ['-'] * len(self.shownkeylist)
         else:
@@ -1070,7 +1074,8 @@ class MainFrame(wx.Frame):
             self.plotopt['symbollist'] =  ['o'] * len(self.shownkeylist)
 
         # Other plot options, which are related to len(shownkeylist)
-        self.plotopt['colorlist'] = self.colorlist[:len(self.shownkeylist)]
+        if not len(self.plotopt.get('colorlist',[])) == len(self.shownkeylist):
+            self.plotopt['colorlist'] = self.colorlist[:len(self.shownkeylist)]
         self.UpdatePlotOptions(self.shownkeylist)
 
         # Sampling rate
@@ -1688,6 +1693,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             sql = "SELECT DataID, DataMinTime, DataMaxTime FROM DATAINFO"
             cursor.execute(sql)
             output = cursor.fetchall()
+            #print ("Test", output)
             datainfoidlist = [elem[0] for elem in output]
             if len(datainfoidlist) < 1:
                 dlg = wx.MessageDialog(self, "No data tables available!\n"
@@ -2433,12 +2439,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
+        if sttime.endswith('AM') or sttime.endswith('am'):
+            sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+        if sttime.endswith('pm') or sttime.endswith('PM'):
+            sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
         sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
         start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = str(self.menu_p.str_page.endTimePicker.GetValue())
+        if entime.endswith('AM') or entime.endswith('am'):
+            entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+        if entime.endswith('pm') or entime.endswith('PM'):
+            print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+            entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
         ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
         end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+        print ("Range", start, end)
 
         try:
             self.changeStatusbar("Trimming stream ...")
@@ -2733,6 +2749,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.xlimits = self.plot_p.xlimits
         self.ylimits = self.plot_p.ylimits
+        selplt = self.plot_p.selplt
+        selkey=[self.shownkeylist[selplt]] # Get the marked key here
 
         if sensid == '':
             dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
@@ -2755,7 +2773,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 starttime =num2date(min(self.xlimits))
                 endtime = num2date(max(self.xlimits))
 
-                flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
+                flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
                 self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
 
         if len(flaglist) > 0:
@@ -2908,10 +2926,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
                          comment = 'Time range flagged with unspecified reason'
                      stday = dlg.startFlagDatePicker.GetValue()
                      sttime = str(dlg.startFlagTimePicker.GetValue())
+                     if sttime.endswith('AM') or sttime.endswith('am'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if sttime.endswith('pm') or sttime.endswith('PM'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
                      sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
                      starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
                      enday = dlg.endFlagDatePicker.GetValue()
                      entime = str(dlg.endFlagTimePicker.GetValue())
+                     if entime.endswith('AM') or entime.endswith('am'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if entime.endswith('pm') or entime.endswith('PM'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
                      ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
                      endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
                      #print ("Range", starttime, endtime, keys2flag)
@@ -2971,13 +2997,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         currentlen = len(self.flaglist)
 
+        print ("FlagSave", self.flaglist)
+
         self.changeStatusbar("Saving flags ...")
         dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist)
         if dlg.ShowModal() == wx.ID_OK:
             #flaglist = dlg.flaglist
             pass
 
-        self.changeStatusbar("Ready")
+        #self.flaglist = []
+        self.changeStatusbar("Flaglist saved and reset - Ready")
 
 
     def onFlagDropButton(self,event):
@@ -3561,7 +3590,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
            if not key == '':
                unitlist.append([key, units[idx]])
 
-        parameter = ','.join([key for key in keys if not key=='' and key in NUMKEYLIST])
+        parameter = ','.join([KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and KEYLIST[idx+1] in NUMKEYLIST])
 
         self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db}
         self.monitorSource='MARCOS'

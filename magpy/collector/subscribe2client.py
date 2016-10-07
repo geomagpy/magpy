@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, os, struct
 from twisted.python import log
 try: # version > 0.8.0
@@ -51,7 +52,7 @@ UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V
 NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P'],'sug': ['S1','S2','S3','Grad_S3_S1','Grad_S3_S2','Grad_S2_S1']}
 
 def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None):
-    print "Getting parameters ..."
+    print("Getting parameters ...")
     global clientname
     clientname = cname
     global clientip
@@ -75,7 +76,7 @@ def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None
             log.msg('collectors owclient: for db output you need to provide the credentials as last option')
         global dbcred
         dbcred = dbc
-    print "Parameters transfered"
+    print("Parameters transfered")
     return
 
 def timeToArray(timestring):
@@ -117,7 +118,7 @@ class PubSubClient(WampClientProtocol):
     Class for OneWire communication
     """
     def onSessionOpen(self):
-        print "Starting"
+        print("Starting")
         global clientname
         global clientip
         global o
@@ -174,7 +175,7 @@ class PubSubClient(WampClientProtocol):
             # check client for existing file:
             for row in owlist:
                 subs = True
-                print "collectors owclient: Running for sensor", row[0]
+                print("collectors owclient: Running for sensor", row[0])
                 # Try to find sensor in db:
                 sql = "SELECT SensorID FROM SENSORS WHERE SensorID LIKE '%s%%'" % row[0]
                 try:
@@ -191,8 +192,6 @@ class PubSubClient(WampClientProtocol):
                 if len(results) < 1:
                     # Initialize e.g. ow table
                     log.msg("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
-                    # if not present then get a file and upload it
-                    #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                     destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin')
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
@@ -221,13 +220,13 @@ class PubSubClient(WampClientProtocol):
                     log.msg("collectors owclient: Found sensor(s) in DB - subscribing to the highest revision number")
                 if subs:
                     subscriptionstring = "%s:%s-value" % (module, row[0])
-                    print "collectors owclient: Subscribing (directing to DB): ", subscriptionstring
+                    print("collectors owclient: Subscribing (directing to DB): ", subscriptionstring)
                     self.subscribe(subscriptionstring, self.onEvent)
         elif output == 'file':
             for row in o:
-                print "collectors owclient: Running for sensor", row[0]
+                print("collectors owclient: Running for sensor", row[0])
                 subscriptionstring = "%s:%s-value" % (module, row[0])
-                print "collectors owclient: Subscribing (directing to file): ", subscriptionstring
+                print("collectors owclient: Subscribing (directing to file): ", subscriptionstring)
                 self.subscribe(subscriptionstring, self.onEvent)
 
     def subscribeSensor(self,client,output,module,sensorshort,sensorid):
@@ -285,11 +284,11 @@ class PubSubClient(WampClientProtocol):
             else:
                 log.msg("collectors client: Found sensor(s) in DB - subscribing to the highest revision number")
             subscriptionstring = "%s:%s-value" % (module, sensorid)
-            print "collectors sensor client: Subscribing: ", subscriptionstring
+            print("collectors sensor client: Subscribing: ", subscriptionstring)
             self.subscribe(subscriptionstring, self.onEvent)
         elif output == 'file':
             for row in o:
-                print "collectors client: Running for sensor", sensorid
+                print("collectors client: Running for sensor", sensorid)
                 subscriptionstring = "%s:%s-value" % (module, sensorid)
                 self.subscribe(subscriptionstring, self.onEvent)
 
@@ -433,7 +432,7 @@ class PubSubClient(WampClientProtocol):
             linestr = ', '.join(map(str, nelst))
             sql = "INSERT INTO %s(%s) VALUES (%s)" % (datainfoid, parastr, linestr)
             if printdata:
-                print "!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql
+                print("!!!!!!!!!!!!!!!! SQL !!!!!!!!!!!!!!", sql)
             self.line = []
             # Prepare SQL query to INSERT a record into the database.
             try:
@@ -454,7 +453,7 @@ class PubSubClient(WampClientProtocol):
     def sortAndFilter(self,array):
         # 1) Sorts array into subarrays with identical sensorids
         sens = array[0][:]
-        print sens
+        print(sens)
         #print list(set(sens))
         # 2) for each subarray:
         #     filter the dataset
@@ -492,7 +491,7 @@ class PubSubClient(WampClientProtocol):
                     paralst.append(var)
 
                 if printdata:
-                    print "Received from %s: %s" % (sensorid,str(self.line))
+                    print("Received from %s: %s" % (sensorid,str(self.line)))
 
                 row = [sensorid, module, self.line]
                 self.bufferarray.append(row)
@@ -514,7 +513,7 @@ class PubSubClient(WampClientProtocol):
                         # Begin of buffered save
                         begin = datetime.utcnow()
                         array = self.bufferarray[-self.count:]
-                        print "Lengths", len(array), self.count
+                        print("Lengths", len(array), self.count)
                         self.count = 0
                         #self.storeData(array,paralst)
                         p1 = multiprocessing.Process(target=self.storeData, args=(array,paralst,))
@@ -523,7 +522,7 @@ class PubSubClient(WampClientProtocol):
                         p2.start()
                         p1.join()
                         p2.join()
-                        print "Duration of buffered save", datetime.utcnow()-begin
+                        print("Duration of buffered save", datetime.utcnow()-begin)
 
         except:
             pass
