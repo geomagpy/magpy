@@ -3,6 +3,7 @@
 *.py.bak
 *.py.old
 *.md~
+*.txt~
 build
 dist
 dist/*.egg
