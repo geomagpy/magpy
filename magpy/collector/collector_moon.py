@@ -14,17 +14,16 @@ except:
 import collections
 
 
-try:
-    from magpy.collector import subscribe2client as cl
-    from magpy.opt import cred as mpcred
-    from magpy.transfer import scptransfer
-except: # development lines
-    sys.path.append('/home/leon/Software/magpy/trunk/src')
-    from magpy.collector import subscribe2client as cl
-    from magpy.opt import cred as mpcred
-    from magpy.transfer import scptransfer
+from magpy.collector import subscribe2client as cl
+from magpy.opt import cred as mpcred
+from magpy.transfer import scptransfer
 
-import MySQLdb
+try:
+    import MySQLdb
+except:
+    print("Failure loading MySQLdb")
+    pass
+
 
 # TODO
 """
@@ -86,8 +85,15 @@ if __name__ == '__main__':
     try:
         db = MySQLdb.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
         dbcredlst = [dbhost,dbuser,dbpasswd,dbname]
+        cursor = db.cursor ()
+        cursor.execute ("SELECT VERSION()")
+        row = cursor.fetchone ()
+        print("MySQL server version:", row[0])
+        cursor.close ()
+        db.close ()
     except:
         print("Create a credential file first or provide login info for database directly")
+<<<<<<< HEAD
         raise
     cursor = db.cursor ()
     cursor.execute ("SELECT VERSION()")
@@ -95,12 +101,23 @@ if __name__ == '__main__':
     print("MySQL server version:", row[0])
     cursor.close ()
     db.close ()
+=======
+        dest = "file"
+        raise
+>>>>>>> master
 
     # ----------------------------------------------------------
     # 3. connect to client and get sensor list as well as owlist
     # ----------------------------------------------------------
     print("Locating MARCOS directory ...")
+<<<<<<< HEAD
     destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
+=======
+    from os.path import expanduser
+    home = expanduser("~")
+
+    destpath = [path for path, dirs, files in os.walk(home) if path.endswith('MARCOS')][0]
+>>>>>>> master
     sensfile = os.path.join(martaspath,'sensors.txt')
     owfile = os.path.join(martaspath,'owlist.csv')
     destsensfile = os.path.join(destpath,'MoonsSensors',clientname+'_sensors.txt')

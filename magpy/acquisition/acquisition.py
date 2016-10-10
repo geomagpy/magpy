@@ -11,6 +11,10 @@ sudo python acquisition.py
 
 """
 from __future__ import print_function
+<<<<<<< HEAD
+=======
+from __future__ import absolute_import
+>>>>>>> master
 
 # -------------------------------------------------------------------
 # Import software
@@ -62,7 +66,7 @@ from serial import SEVENBITS
 #from magpy.acquisition.owprotocol import OwProtocol
 #from magpy.acquisition.arduinoprotocol import ArduinoProtocol
 #from palmacqprotocol import PalmAcqProtocol
-from gsm19protocol import GSM19Protocol
+from .gsm19protocol import GSM19Protocol
 
 # Other possible protocals are: lemiprotocol, pos1protocol, envprotocol, csprotocol, gsm90protocol
 # SELECT DIRECTORY FOR BUFFER FILES

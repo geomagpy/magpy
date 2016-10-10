@@ -1,9 +1,10 @@
 # MagPy
 MagPy (or GeomagPy) is a Python package for analysing and displaying geomagnetic data.
 
-Version Info: (please note: this package is still in development state with lots of modifcations between different uploads, detailed version information will be available here starting with 1.0.0) 
+Version Info: (please note: this package is still in development state with frequent modifcations)
+    please check the release notes
 
-MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on observatories. MagPy combines basic applications like format conversions, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and WDC dissemination/ communication. Additional routines (not supported by the standard package) comprise acquisition libraries and real-time streaming support as well as an experimental graphical user interface.  
+MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on typical data processing in observatories. MagPy provides methods for format conversion, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and WDC/IAGA/IM dissemination/communication routines. Full installation further provides a graphical user interface - xmagpy.   
 
 Typical usage often looks like this:
 
@@ -21,16 +22,49 @@ INSTALL
 
 Requirements:
   * Python 2.7
-  * MySQL (all other requirements are resolved)
 Recommended: 
   * Python packages:
-    * NASA SpacePy ()
+    * SpacePy ()
     * pexpect (for SSH support on non-Windows machines)
-    * netcdf (will be supported in a future version)
+    * NetCDF 
   * Other Software:
+    * MySQL
     * NasaCDF
     * NetCDF4 (support is currently in preparation)
     * Webserver (e.g. Apache2, PHP)
+
+
+Platform independent installations - Anaconda
+---------------------------------------------
+
+1. install anaconda for your operating system
+        - https://docs.continuum.io/anaconda/install
+          (currently tested on anaconda with python2.7)
+2. install magpy
+        - open the anaconda prompt or change to the anaconda2/bin directory (if not set as default)
+        - if you want to use CDF formats like ImagCDF: 
+             optional: install NasaCDF (http://cdf.gsfc.nasa.gov/)
+             optional: - ./pip install spacepy
+                 known issues: installation of spacepy eventually requires a fortran compiler
+        - run './pip install geomagpy' within the anaconda path
+               possible issues: MySQL-python problem -> install libmysqlclient-dev on linux 
+
+
+Platform independent installations - Docker
+-------
+1. Install Docker (toolbox) for your operating system
+        - https://docs.docker.com/engine/installation/
+2. Get the MagPy Image
+        - open a docker shell
+        >>> docker pull geomagpy/magpy:latest
+        >>> docker run -d --name magpy -p 8000:8000 geomagpy/magpy:latest
+3. Open a browser
+        - open address http://localhost:8000 (or http://"IP of your VM":8000)
+        - run python shell (not conda) 
+        - in python shell
+        >>> %matplotlib inline
+        >>> from magpy.stream import read
+        >>> ...
 
 Linux/Unix
 ----------
@@ -38,7 +72,7 @@ debian/ubuntu: full installation with all supported features
 
 1. Get python packages and other extensions (for other distros install similar packages):
 
-        sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb
+        sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb libmysqlclient-dev
         sudo easy_install ffnet
         sudo easy_install pexpect
 
@@ -59,11 +93,11 @@ debian/ubuntu: full installation with all supported features
 
 3. Install MagPy
 
-    a) Using setuptools
+    a) Using pip
 
-        sudo easy_install GeomagPy
-          * upgrading:
-        sudo easy_install GeomagPy --upgrade
+        sudo pip install GeomagPy
+          * specific version:
+        sudo pip install GeomagPy==v0.3.4
 
     b) Using github
 
@@ -74,16 +108,24 @@ debian/ubuntu: full installation with all supported features
 
 Windows
 -------
-Tested on XP and Win7
+Tested on XP, Win7, Win10
 1. Get a current version of Python(x,y) and install it
    - optionally select packages ffnet and netcdf during install - for cdf support
-2. Get a current version of MySQL and install it
+2. Optional: Get a current version of MySQL and install it
 3. Download nasaCDF packages and install
 4. get python-spacepy package
 5. download and unpack GeomagPy-x.x.x.tar.gz
 6. open a command window
 7. go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
 8. execute "setup.py install"
+
+
+MacOS
+----------
+
+1. using MacPorts:
+    coming soon
+
 
 
 ======================
@@ -141,7 +183,7 @@ or
 
 or
 
-    data = read('c:\path\to\file\example.min')
+    data = read('c:\\path\\to\\file\\example.min')
 
 Different paths are related to your operating system. In the following we will assume a Linux system. 
 Any file is uploaded to the memory and each data column (or header information) is assigned to an internal variable (key). To get a quick overview about the assigned keys you can use the following method:

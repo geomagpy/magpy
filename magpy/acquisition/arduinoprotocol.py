@@ -153,7 +153,10 @@ class ArduinoProtocol(LineReceiver):
         return arduinolist
 
     def extendarduinolist(self, idnum):
-        martasdir = [path for path, dirs, files in os.walk("/home") if path.endswith('MARTAS')][0]
+        from os.path import expanduser
+        home = expanduser("~")
+
+        martasdir = [path for path, dirs, files in os.walk(home) if path.endswith('MARTAS')][0]
         arduinosensorfile = os.path.join(martasdir,'arduinolist.csv')
         log.msg('Checking Arduinofile: %s' % arduinosensorfile)
         arduinolist = []

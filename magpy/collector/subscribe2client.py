@@ -192,8 +192,6 @@ class PubSubClient(WampClientProtocol):
                 if len(results) < 1:
                     # Initialize e.g. ow table
                     log.msg("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
-                    # if not present then get a file and upload it
-                    #destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                     destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin')
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')

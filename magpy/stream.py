@@ -3,7 +3,7 @@
 MagPy-General: Standard pymag package containing the following classes:
 Written by Roman Leonhardt, Rachel Bailey 2011/2012/2013/2014
 Written by Roman Leonhardt, Rachel Bailey, Mojca Miklavec 2015/2016
-Version 0.2 (starting 28.02.2015)
+Version 0.3 (starting May 2016)
 """
 from __future__ import print_function
 
@@ -136,10 +136,12 @@ try:
     print("Loading SpacePy package cdf support ...")
     try:
         # check for windows
-        nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
+        nasacdfdir = findpath('libcdf.dll','C:\CDF_Distribution') ## new path since nasaCDF3.6
+        if not nasacdfdir:
+            nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
         #print nasacdfdir
         os.putenv("CDF_LIB", nasacdfdir)
-        print("trying CDF lib in %s" % nasacdfdir)
+        print("using CDF lib in %s" % nasacdfdir)
         try:
             import spacepy.pycdf as cdf
             print("... success")
@@ -147,11 +149,11 @@ try:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("Could not import spacepy: Trying alternative...")
+            print("... Could not import spacepy")
             pass
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
-        print("trying CDF lib in /usr/local/cdf")
+        print("using CDF lib in /usr/local/cdf")
         try:
             import spacepy.pycdf as cdf
             print("... success")
@@ -159,30 +161,13 @@ try:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("Unexpected error")
+            print("... Could not import spacepy")
             pass
 except ImportError as e:
     logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
     logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
     badimports.append(e)
 
-# Utilities
-# ---------
-try:
-    import smtplib
-    from email.MIMEMultipart import MIMEMultipart
-    from email.MIMEBase import MIMEBase
-    from email.MIMEText import MIMEText
-    from email.Utils import COMMASPACE, formatdate
-    from email import Encoders
-    #import smtplib
-    from email.mime.text import MIMEText
-    #from smtplib import SMTP_SSL as SMTP       # this invokes the secure SMTP protocol (port 465, uses SSL)
-    from smtplib import SMTP                  # use this for standard SMTP protocol   (port 25, no encryption)
-    #from email.MIMEText import MIMEText
-except ImportError as e:
-    logpygen += "MagPy initiation ImportError: Mailing functions not available.\n"
-    badimports.append(e)
 
 if logpygen == '':
     logpygen = "OK"
@@ -332,6 +317,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'LNM':['r', 'Thies Laser-Disdrometer'],
                 'IWT':['r', 'IWT Tiltmeter data'],
                 'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
+                'GRAVSG':['r', 'GWR TSF data'],
                 'CR800':['r', 'CR800 datalogger'],
                 'IONO':['r', 'IM806 Ionometer'],
                 'RADON':['r', 'single channel analyser gamma data'],
@@ -1703,7 +1689,10 @@ CALLED BY:
                                         # This would be wrong but leads always to a TypeError
                                         timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
                                 except:
-                                    raise TypeError
+                                    try:
+                                        timeobj = num2date(float(time)).replace(tzinfo=None)
+                                    except:
+                                        raise TypeError
         elif not isinstance(time, datetime):
             raise TypeError
         else:
@@ -1744,6 +1733,34 @@ CALLED BY:
             newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
 
         return DataStream(newst,self.header,np.asarray(array))
+
+
+    def _select_keys(self, keys):
+        """
+      DESCRIPTION
+        Non-destructive method to select provided keys from Data stream.
+      APPLICATION:
+        streamxy = streamyxzf._select_keys(['x','y'])
+        """
+        result = self.copy()
+
+        try:
+            if not len(keys) > 0:
+                return self
+        except:
+            return self
+
+        """
+        print ("sel", keys)
+        if not 'time' in keys:
+            keys.append('time')
+        print ("sel", keys)
+        """
+
+        ndarray = [[] for key in KEYLIST]
+        ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)])
+
+        return DataStream([LineStruct()],result.header,ndarray)
 
 
     def _select_timerange(self, starttime=None, endtime=None, maxidx=-1):
@@ -3913,15 +3930,18 @@ CALLED BY:
         trimmedstream = self.copy()
         if starttime and endtime:
             trimmedstream = self._select_timerange(starttime=starttime,endtime=endtime)
+            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
         elif starttime:
             trimmedstream = self._select_timerange(starttime=starttime)
+            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
         elif endtime:
             trimmedstream = self._select_timerange(endtime=endtime)
+            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
 
         if not above and not below:
             # return flags for all data in trimmed stream
             for elem in keystoflag:
-                flagline = [num2date(trimmedstream[0][0]).replace(tzinfo=None),num2date(trimmedstream[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                flagline = [num2date(trimmedstream.ndarray[0][0]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                 flaglist.append(flagline)
             return flaglist
 
@@ -3941,14 +3961,14 @@ CALLED BY:
                 idx = np.r_[0, idx]
             if trueindicies[-1]:
                 # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
             # Reshape the result into two columns
             idx.shape = (-1,2)
 
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
         elif above:
             # TODO create True/False list and then follow the bin detector example
@@ -3966,14 +3986,14 @@ CALLED BY:
                 idx = np.r_[0, idx]
             if trueindicies[-1]:
                 # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
             # Reshape the result into two columns
             idx.shape = (-1,2)
 
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
         elif below:
             # TODO create True/False the other way round
@@ -3991,14 +4011,14 @@ CALLED BY:
                 idx = np.r_[0, idx]
             if truefalse[-1]:
                 # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
+                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
             # Reshape the result into two columns
             idx.shape = (-1,2)
 
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
 
         return flaglist
@@ -6619,57 +6639,8 @@ CALLED BY:
     def plot(self, keys=None, debugmode=None, **kwargs):
         """
     DEFINITION:
-        Code for simple application.
-        Creates a simple graph of the current stream.
-        In order to run matplotlib from cron one needs to include (matplotlib.use('Agg')).
-
-    PARAMETERS:
-    Variables:
-        - keys:         (list) A list of the keys (str) to be plotted.
-    Kwargs:
-        - annotate:     (bool) Annotate data using comments
-        - annoxy:       (dictionary) Define placement of annotation (in % of scale).
-                        Possible parameters:
-                        (called for annotated storm phases:)
-                        sscx, sscy, mphx, mphy, recx, recy
-        - annophases:   (bool) Annotate phase times with titles. Default False.
-        - bgcolor:      (string) Define background color e.g. '0.5' greyscale, 'r' red, etc
-        - colorlist:    (list - default []) Provide a ordered color list of type ['b','g']
-        - confinex:     (bool) Confines tags on x-axis to shorter values.
-        - errorbar:     (boolean - default False) plot dx,dy,dz,df values if True
-        - function:     (func) [0] is a dictionary containing keys (e.g. fx), [1] the startvalue, [2] the endvalue
-                        Plot the content of function within the plot.
-        - fullday:      (boolean) - default False. Rounds first and last day two 0:00 respectively 24:00 if True
-        - fmt:          (string?) format of outfile
-        - grid:         (bool) show grid or not, default = True
-        - gridcolor:    (string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
-        - labelcolor:   (string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
-        - noshow:       (bool) don't call show at the end, just returns figure handle
-        - outfile:      string to save the figure, if path is not existing it will be created
-        - padding:      (integer - default 0) Value to add to the max-min data for adjusting y-scales
-        - savedpi:      (integer) resolution
-        - stormphases:  (list) Should be a list with four datetime objects:
-                        [0 = date of SSC/start of initial phase,
-                        1 = start of main phase,
-                        2 = start of recovery phase,
-                        3 = end of recovery phase]
-        - plotphases:   (list) List of keys of plots to shade.
-        - resolution:   (int) maximum number of points to be displayed.
-        - specialdict:  (dictionary) contains special information for specific plots.
-                        key corresponds to the column
-                        input is a list with the following parameters
-                        ('None' if not used)
-                        ymin
-                        ymax
-                        ycolor
-                        bgcolor
-                        grid
-                        gridcolor
-        - symbollist:   (string - default '-') symbol for primary plot
-        - symbol_func:  (string - default '-') symbol of function plot
-
-    RETURNS:
-        - matplotlib plot.show(), or plot.save() if variable outfile defined.
+        Code for plotting one dataset. Consult mpplot.plot() and .plotStreams() for more
+        details.
 
     EXAMPLE:
         >>> cs1_data.plot(['f'],
@@ -6677,447 +6648,12 @@ CALLED BY:
                 specialdict = {'f':[44184.8,44185.8]},
                 plottitle = 'Station Graz - Feldstaerke 05.08.2013',
                 bgcolor='white')
-
-    APPLICATION:
-
         """
 
-        annotate = kwargs.get('annotate')
-        annoxy = kwargs.get('annoxy')
-        annophases = kwargs.get('annophases')
-        bartrange = kwargs.get('bartrange') # in case of bars (z) use the following trange
-        bgcolor = kwargs.get('bgcolor')
-        colorlist = kwargs.get('colorlist')
-        confinex = kwargs.get('confinex')
-        endvalue = kwargs.get('endvalue')
-        errorbar = kwargs.get('errorbar')
-        figure = kwargs.get('figure')
-        fmt = kwargs.get('fmt')
-        function = kwargs.get('function')
-        fullday = kwargs.get('fullday')
-        grid = kwargs.get('grid')
-        gridcolor = kwargs.get('gridcolor')
-        labelcolor = kwargs.get('labelcolor')
-        noshow = kwargs.get('noshow')
-        outfile = kwargs.get('outfile')
-        padding = kwargs.get('padding')
-        plotphases = kwargs.get('plotphases')
-        plottitle = kwargs.get('plottitle')
-        plottype = kwargs.get('plottype')
-        resolution = kwargs.get('resolution')
-        savedpi = kwargs.get('savedpi')
-        stormphases = kwargs.get('stormphases')
-        specialdict = kwargs.get('specialdict')
-        symbol_func = kwargs.get('symbol_func')
-        symbollist = kwargs.get('symbollist')
-
-        if not keys:
-            keys = self._get_key_headers(limit=9,numerical=True)
-            print("Plotting keys:", keys)
-        if not function:
-            function = None
-        if not plottitle:
-            plottitle = None
-        if not colorlist:
-            colorlist = ['b','g','m','c','y','k','b','g','m','c','y','k']
-        if not symbollist:
-            symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-','-']
-        if not plottype:
-            plottype = 'discontinuous' # can also be "continuous"
-        if not symbol_func:
-            symbol_func = '-'
-        if not savedpi:
-            savedpi = 80
-        if not bartrange:
-            bartrange = 0.06
-        if not padding:
-            padding = 0
-        if not labelcolor:
-            labelcolor = '0.2'
-        if not bgcolor:
-            bgcolor = '#d5de9c'
-        if not gridcolor:
-            gridcolor = '#316931'
-        if not grid:
-            grid =True
-        if not resolution:
-            resolution = 1296000  # 15 days of 1 second data can be maximale shown in detail, 1.5 days of 10 Hz
-
-        myyfmt = ScalarFormatter(useOffset=False)
-
-        # TODO first check whether all keys contain data - Otherwise the subplot amount is wrong
-        # or alternatively plot empty datasets as well
-        n_subplots = len(keys)
-
-        if n_subplots < 1:
-            loggerstream.error("plot: Number of keys not valid.")
-            raise Exception("Need keys to plot!")
-        count = 0
-
-        if not figure:
-            fig = plt.figure()
-        else:
-            fig = figure
-
-        #fig = matplotlib.figure.Figure()
-        lst = np.asarray([elem.comment for elem in self])
-        lst2 = [elem.comment for elem in self if not elem.comment == '-']
-        print("Starting", lst2, lst)
-
-        #print "Starting", self._get_column('flag')
-
-        plotstream = self
-        if resolution and len(plotstream) > resolution:
-            loggerstream.info("plot: Reducing resultion ...")
-            loggerstream.info("plot: Original resolution: %i" % len(plotstream))
-            stepwidth = int(len(plotstream)/resolution)
-            plotstream = DataStream(plotstream[::stepwidth],plotstream.header)
-            loggerstream.info("plot: New resolution: %i" % len(plotstream))
-
-        try:
-            t = self.ndarray[0]
-            if not len(t) > 0:
-                x=1/0
-            print("Found ndarray time", t)
-            if len(t) > resolution:
-                loggerstream.info("plot: Reducing data resultion ...")
-                stepwidth = int(len(t)/resolution)
-                t = t[::stepwidth]
-                print("New length", len(t))
-            loggerstream.info("plot: Start plotting of stream with length %i" % len(self.ndarray[0]))
-        except:
-            t = np.asarray([row[0] for row in plotstream])
-            loggerstream.info("plot: Start plotting of stream with length %i" % len(plotstream))
-        for key in keys:
-            if not key in KEYLIST[1:16]:
-                loggerstream.error("plot: Column key (%s) not valid!" % key)
-                raise Exception("Column key (%s) not valid!" % key)
-            ind = KEYLIST.index(key)
-            try:
-                yplt = self.ndarray[ind]
-                if not len(yplt) > 0:
-                    x=1/0
-                if len(yplt) > resolution:
-                    stepwidth = int(len(yplt)/resolution)
-                    yplt = yplt[::stepwidth]
-            except:
-                yplt = np.asarray([float(row[ind]) for row in plotstream])
-            #yplt = self._get_column(key)
-
-            # Switch between continuous and discontinuous plots
-            if debugmode:
-                print("column extracted at %s" % datetime.utcnow())
-            if plottype == 'discontinuous':
-                yplt = maskNAN(yplt)
-            else:
-                #yplt = yplt[numpy.logical_not(numpy.isnan(yplt))]
-                nans, test = nan_helper(yplt)
-                t = [t[idx] for idx, el in enumerate(yplt) if not nans[idx]]
-                #t = newt
-                yplt = [el for idx, el in enumerate(yplt) if not nans[idx]]
-
-            # 1. START PLOTTING (if non-NaN data is present)
-
-            len_val= len(yplt)
-            if debugmode:
-                print("Got row with %d elements" % len_val)
-            if len_val > 1:
-                count += 1
-                ax = count
-                subplt = "%d%d%d" %(n_subplots,1,count)
-
-                # 2. PREAMBLE: define plot properties
-                # -- Create primary plot and define x scale and ticks/labels of subplots
-                # -- If primary plot already exists, add subplot
-                if count == 1:
-                    ax = fig.add_subplot(subplt, axisbg=bgcolor)
-                    if plottitle:
-                        ax.set_title(plottitle)
-                    a = ax
-                else:
-                    ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
-
-                timeunit = ''
-
-                # -- If dates to be confined, set value types:
-                if confinex:
-                    trange = np.max(t) - np.min(t)
-                    loggerstream.debug('plot: x range = %s' % str(trange))
-                    #print trange
-                    if trange < 0.0001: # 8 sec level
-                        #set 0.5 second
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%S'))
-                        timeunit = '[Sec]'
-                    elif trange < 0.01: # 13 minute level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%M:%S'))
-                        timeunit = '[M:S]'
-                    elif trange <= 1: # day level
-                        # set 1 hour
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-                        timeunit = '[H:M]'
-                    elif trange < 7: # 3 day level
-                        if trange < 2:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=6))
-                        elif trange < 5:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=12))
-                        else:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.WeekdayLocator(byweekday=matplotlib.dates.MO))
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%H:%M'))
-                        setp(ax.get_xticklabels(),rotation='0')
-                        timeunit = '[Day-H:M]'
-                    elif trange < 60: # month level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b'))
-                        setp(ax.get_xticklabels(),rotation='70')
-                        timeunit = '[Day]'
-                    elif trange < 150: # year level
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%Y'))
-                        setp(ax.get_xticklabels(),rotation='0')
-                        timeunit = '[Day]'
-                    elif trange < 600: # minute level
-                        if trange < 300:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=1))
-                        elif trange < 420:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=2))
-                        else:
-                            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=4))
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b %Y'))
-                        setp(ax.get_xticklabels(),rotation='0')
-                        timeunit = '[Month]'
-                    else:
-                        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
-                        timeunit = '[Year]'
-
-                # -- Set x-labels:
-                if count < len(keys):
-                    setp(ax.get_xticklabels(), visible=False)
-                else:
-                    ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
-
-                # -- Adjust scales with padding:
-                defaultpad = (np.max(yplt)-np.min(yplt))*0.05
-                if defaultpad == 0.0:
-                    defaultpad = 0.1
-                if not padding or not padding == defaultpad:
-                    padding = defaultpad
-                ymin = np.min(yplt)-padding
-                ymax = np.max(yplt)+padding
-
-                if specialdict:
-                    if key in specialdict:
-                        paramlst = specialdict[key]
-                        if not paramlst[0] == None:
-                            ymin = paramlst[0]
-                        if not paramlst[1] == None:
-                            ymax = paramlst[1]
-
-                # 3. PLOT EVERYTHING
-
-                # -- Plot k-values with z (= symbol for plotting colored bars for k values)
-                if symbollist[count-1] == 'z':
-                    xy = range(9)
-                    for num in range(len(t)):
-                        if bartrange < t[num] < np.max(t)-bartrange:
-                            ax.fill([t[num]-bartrange,t[num]+bartrange,t[num]+bartrange,t[num]-
-                                bartrange],[0,0,yplt[num]+0.1,yplt[num]+0.1],
-                                facecolor=cm.RdYlGn((9-yplt[num])/9.,1),alpha=1,edgecolor='k')
-                    ax.plot_date(t,yplt,colorlist[count-1]+'|')
-                else:
-                    ax.plot_date(t,yplt,colorlist[count-1]+symbollist[count-1])
-
-                # -- Plot error bars:
-                if errorbar:
-                    yerr = plotstream._get_column('d'+key)
-                    if len(yerr) > 0:
-                        ax.errorbar(t,yplt,yerr=varlist[ax+4],fmt=colorlist[count]+'o')
-                    else:
-                        loggerstream.warning('plot: Errorbars (d%s) not found for key %s' % (key, key))
-
-                # -- Add grid:
-                if grid:
-                    ax.grid(True,color=gridcolor,linewidth=0.5)
-
-                # -- Add annotations for flagged data:
-                if annotate:
-                    print("Yesss")
-                    flag = plotstream._get_column('flag')
-                    comm = plotstream._get_column('comment')
-                    elemprev = "-"
-                    try: # only do all that if column is in range of flagged elements (e.g. x,y,z,f)
-                        print("Got here")
-                        idxflag = FLAGKEYLIST.index(key)
-                        poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-                        indexflag = int(poslst[0])
-                        print(idxflag, poslst, indexflag)
-                        print(comm, flag)
-                        for idx, elem in enumerate(comm):
-                            if not elem == elemprev:
-                                print("Yesss, again")
-                                if not elem == "-" and flag[idx][indexflag] in ['0','3']:
-                                    annotecount = idx
-                                    ax.annotate(r'%s' % (elem),
-                                        xy=(t[idx], yplt[idx]),
-                                        xycoords='data', xytext=(20, 20),
-                                        textcoords='offset points',
-                                        bbox=dict(boxstyle="round", fc="0.8"),
-                                        arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1,
-                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                                elif elem == "-" and idx > annotecount + 3: # test that one point defines the flagged range
-                                    ax.annotate(r'End of %s' % (comm[idx-1]),
-                                        xy=(t[idx-1], yplt[idx-1]),
-                                        xycoords='data', xytext=(20, -20),
-                                        textcoords='offset points',
-                                        bbox=dict(boxstyle="round", fc="0.8"),
-                                        arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1,
-                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                            elemprev = elem
-                    except:
-                        if debugmode:
-                            loggerstream.debug('plot: shown column beyong flagging range: assuming flag of column 0 (= time)')
-
-                # -- Shade in areas of storm phases:
-                if plotphases:
-                    if not stormphases:
-                        loggerstream.warning('plot: Need phase definition times in "stormphases" list variable.')
-                    if len(stormphases) < 4:
-                        loggerstream.warning('plot: Incorrect number of phase definition times in variable shadephases. 4 required.')
-                    else:
-                        t_ssc = stormphases[0]
-                        t_mphase = stormphases[1]
-                        t_recphase = stormphases[2]
-                        t_end = stormphases[3]
-
-                    if key in plotphases:
-                        try:
-                            ax.axvspan(t_ssc, t_mphase, facecolor='red', alpha=0.3, linewidth=0)
-                            ax.axvspan(t_mphase, t_recphase, facecolor='yellow', alpha=0.3, linewidth=0)
-                            ax.axvspan(t_recphase, t_end, facecolor='green', alpha=0.3, linewidth=0)
-                        except:
-                            loggerstream.error('plot: Error plotting shaded phase regions.')
-
-                # -- Plot phase types with shaded regions:
-
-                if not annoxy:
-                    annoxy = {}
-                if annophases:
-                    if not stormphases:
-                        loggerstream.debug('Plot: Need phase definition times in "stormphases" variable to plot phases.')
-                    if len(stormphases) < 4:
-                        loggerstream.debug('Plot: Incorrect number of phase definition times in variable shadephases. 4 required, %s given.' % len(stormphases))
-                    else:
-                        t_ssc = stormphases[0]
-                        t_mphase = stormphases[1]
-                        t_recphase = stormphases[2]
-                        t_end = stormphases[3]
-
-                    if key == plotphases[0]:
-                        try:
-                            y_auto = [0.85, 0.75, 0.70, 0.6, 0.5, 0.5, 0.5]
-                            y_anno = ymin + y_auto[len(keys)-1]*(ymax-ymin)
-                            tssc_anno, issc_anno = find_nearest(np.asarray(t), date2num(t_ssc))
-                            yt_ssc = yplt[issc_anno]
-                            if 'sscx' in annoxy:        # parameters for SSC annotation.
-                                x_ssc = annoxy['sscx']
-                            else:
-                                x_ssc = t_ssc-timedelta(hours=2)
-                            if 'sscy' in annoxy:
-                                y_ssc = ymin + annoxy['sscy']*(ymax-ymin)
-                            else:
-                                y_ssc = y_anno
-                            if 'mphx' in annoxy:        # parameters for main-phase annotation.
-                                x_mph = annoxy['mphx']
-                            else:
-                                x_mph = t_mphase+timedelta(hours=1.5)
-                            if 'mphy' in annoxy:
-                                y_mph = ymin + annoxy['mphy']*(ymax-ymin)
-                            else:
-                                y_mph = y_anno
-                            if 'recx' in annoxy:        # parameters for recovery-phase annotation.
-                                x_rec = annoxy['recx']
-                            else:
-                                x_rec = t_recphase+timedelta(hours=1.5)
-                            if 'recy' in annoxy:
-                                y_rec = ymin + annoxy['recy']*(ymax-ymin)
-                            else:
-                                y_rec = y_anno
-
-                            if not yt_ssc > 0.:
-                                loggerstream.debug('plot: No data value at point of SSC.')
-                            ax.annotate('SSC', xy=(t_ssc,yt_ssc),
-                                        xytext=(x_ssc,y_ssc),
-                                        bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
-                                        arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1,
-                                        connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-                            ax.annotate('Main\nPhase', xy=(t_mphase,y_mph), xytext=(x_mph,y_mph),
-                                        bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
-                            ax.annotate('Recovery\nPhase', xy=(t_recphase,y_rec),xytext=(x_rec,y_rec),
-                                        bbox=dict(boxstyle="round", fc="0.95", alpha=0.6))
-                        except:
-                            loggerstream.error('Plot: Error annotating shaded phase regions.')
-
-                # -- Plot given function:
-                if function:
-                    fkey = 'f'+key
-                    if fkey in function[0]:
-                        ttmp = arange(0,1,0.0001)# Get the minimum and maximum relative times
-                        ax.plot_date(denormalize(ttmp,function[1],function[2]),function[0][fkey](ttmp),'r-')
-
-                # -- Add Y-axis ticks:
-                if bool((count-1) & 1):
-                    ax.yaxis.tick_right()
-                    ax.yaxis.set_label_position("right")
-
-                # -- Take Y-axis labels from header information
-                try:
-                    ylabel = plotstream.header['col-'+key].upper()
-                except:
-                    ylabel = ''
-                    pass
-                try:
-                    yunit = plotstream.header['unit-col-'+key]
-                except:
-                    yunit = ''
-                    pass
-                if not yunit == '':
-                    #yunit = re.sub('[#$%&~_^\{}]', '', yunit)
-                    yunit = re.sub('[#$%&~_\{}]', '', yunit)    # Allow for powers (^)
-                    label = ylabel+' $['+yunit+']$'
-                else:
-                    label = ylabel
-                ax.set_ylabel(label, color=labelcolor)
-                ax.set_ylim(ymin,ymax)
-                ax.get_yaxis().set_major_formatter(myyfmt)
-                if fullday: # lower range is rounded at 0.01 digits to avoid full empty day plots at 75678.999993
-                    ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
-
-                loggerstream.info("plot: Finished plot %d at %s" % (count, datetime.utcnow()))
-
-            # 4. END PLOTTING
-
-            else:
-                loggerstream.warning("plot: No data available for key %s" % key)
-
-
-        fig.subplots_adjust(hspace=0)
-
-        # 5. SAVE TO FILE (or show)
-        if figure:
-            return ax
-        if outfile:
-            path = os.path.split(outfile)[0]
-            if not path == '':
-                if not os.path.exists(path):
-                    os.makedirs(path)
-            if fmt:
-                fig.savefig(outfile, format=fmt, dpi=savedpi)
-            else:
-                fig.savefig(outfile, dpi=savedpi)
-        elif noshow:
-            return fig
-        else:
-            plt.show()
+        import mpplot as mp
+        if keys == None:
+            keys = []
+        mp.plot(self, variables=keys, **kwargs)
 
 
     def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs):
@@ -8889,7 +8425,7 @@ CALLED BY:
             extension = 'BIN'
             filenameends = '.'+extension
         if format_type == 'IYFV':
-            if not filenameends:
+            if not filenameends or filenameends=='.cdf':
                 head = self.header
                 code = head.get('StationIAGAcode','')
                 if not code == '':
@@ -8906,8 +8442,8 @@ CALLED BY:
             if not filenamebegins:
                 code = head.get('StationIAGAcode','')
                 if not code == '':
-                    filenamebegins = code.upper()
-            if not filenameends:
+                    filenamebegins = code.lower()
+            if not filenameends or filenameends=='.cdf':
                 samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
                 plevel = head.get('DataPublicationLevel',0)
                 if int(samprate) == 1:
@@ -9591,17 +9127,8 @@ class PyMagLog(object):
     def _removeduplicates(self,content):
         return list(set(content))
 
+    """
     def sendLogByMail(self,loglist,**kwargs):
-        """
-        function to send loggerstream lists by mail to the observer
-        keywords:
-        smtpserver
-        sender
-        user
-        pwd
-        destination
-        subject
-        """
         smtpserver = kwargs.get('smtpserver')
         sender = kwargs.get('sender')
         user = kwargs.get('user')
@@ -9646,6 +9173,7 @@ class PyMagLog(object):
 
         except Exception as exc:
             raise ValueError( "mail failed; %s" % str(exc) ) # give a error message
+    """
 
     def combineWarnLog(self,warning,log):
         comlst = ['Warning:']
@@ -9653,7 +9181,6 @@ class PyMagLog(object):
         comlst.extend(['Non-critical info:'])
         comlst.extend(self._removeduplicates(log))
         return comlst
-
 
 
 class LineStruct(object):
@@ -9963,63 +9490,6 @@ def ceil_dt(dt,seconds):
         return dt
 
 
-def send_mail(send_from, send_to, **kwargs):
-    """
-    Function for sending mails with attachments
-    """
-
-    assert type(send_to)==list
-
-    files = kwargs.get('files')
-    user = kwargs.get('user')
-    pwd = kwargs.get('pwd')
-    port = kwargs.get('port')
-    smtpserver = kwargs.get('smtpserver')
-    subject = kwargs.get('subject')
-    text = kwargs.get('text')
-
-    if not smtpserver:
-        smtpserver = 'smtp.web.de'
-    if not files:
-        files = []
-    if not text:
-        text = 'Cheers, Your Analysis-Robot'
-    if not subject:
-        subject = 'MagPy - Automatic Analyzer Message'
-    if not port:
-        port = 587
-
-    assert type(files)==list
-
-    msg = MIMEMultipart()
-    msg['From'] = send_from
-    msg['To'] = COMMASPACE.join(send_to)
-    msg['Date'] = formatdate(localtime=True)
-    msg['Subject'] = subject
-
-    msg.attach( MIMEText(text) )
-
-    for f in files:
-        part = MIMEBase('application', "octet-stream")
-        part.set_payload( open(f,"rb").read() )
-        Encoders.encode_base64(part)
-        part.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(f))
-        msg.attach(part)
-
-    #smtp = smtplib.SMTP(server)
-    smtp = SMTP()
-    smtp.set_debuglevel(False)
-    smtp.connect(smtpserver, port)
-    smtp.ehlo()
-    if port == 587:
-        smtp.starttls()
-    smtp.ehlo()
-    if user:
-        smtp.login(user, pwd)
-    smtp.sendmail(send_from, send_to, msg.as_string())
-    smtp.close()
-
-
 # ##################
 # read/write functions
 # ##################
@@ -10115,7 +9585,11 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     #date = os.path.basename(path_or_url).partition('.')[0][-8:]
                     #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])
                     date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
-                    fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+                    fname = date+suffix
+                    fname = fname.strip('?').strip(':')      ## Necessary for windows
+                    #fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+                    fh = NamedTemporaryFile(suffix=fname,delete=False)
+                    print (fh.name)
                     fh.write(content)
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
@@ -10131,7 +9605,9 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             #date = os.path.basename(path_or_url).partition('.')[0][-8:]
             #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])[0]
             date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
-            fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
+            fname = date+suffix
+            fname = fname.strip('?').strip(':')   ## Necessary for windows
+            fh = NamedTemporaryFile(suffix=fname,delete=False)
             fh.write(content)
             fh.close()
             st = _read(fh.name, dataformat, headonly, **kwargs)
@@ -10678,6 +10154,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 print("- Put in the larger (higher resolution) stream as stream_a,")
                 print("- otherwise you might wait an endless amount of time.")
                 # interpolate b
+                # TODO here it is necessary to limit the stream to numerical keys
+                #sb.ndarray = np.asarray([col for idx,col in enumerate(sb.ndarray) if KEYLIST[idx] in NUMKEYLIST])
                 print("  a) starting interpolation of stream_b")
                 mst = datetime.utcnow()
                 function = sb.interpol(keys)
@@ -11910,6 +11388,79 @@ def array2stream(listofarrays, keystring,starttime=None,sr=None):
                 st[i][index] = elem
 
         return st
+
+
+def obspy2magpy(opstream, keydict={}):
+    """
+    Function for converting obspy streams to magpy streams.
+    
+    INPUT:
+        - opstream          obspy.core.stream.Stream object
+                            Obspy stream
+        - keydict           dict
+                            ID of obspy traces to assign to magpy keys
+                            
+    OUTPUT:
+        - mpstream          Stream in magpy format
+        
+    EXAMPLE:
+        >>> mpst = obspy2magpy(opst, keydict={'nn.e6046.11.p0': 'x', 'nn.e6046.11.p1': 'y'})
+    """
+    array = [[] for key in KEYLIST]
+    mpstream = DataStream()
+    
+    # Split into channels:
+    datadict = {}
+    for tr in opstream.traces:
+        try:
+            datadict[tr.id].append(tr)
+        except:
+            datadict[tr.id] = [tr]
+    
+    twrite = False
+    tind = KEYLIST.index("time")
+    fillkeys = ['var1', 'var2', 'var3', 'var4', 'var5', 'x', 'y', 'z', 'f']
+    for channel in datadict:
+        data = datadict[channel]
+        # Sort by time:
+        data.sort(key=lambda x: x.stats.starttime)
+        
+        # Assign magpy keys:
+        if channel in keydict:
+            ind = KEYLIST.index(keydict[channel])
+        else:
+            try:
+                key = fillkeys.pop(0)
+                print("Writing {i} data to key {k}.".format(i=channel, k=key))
+            except IndexError:
+                print("CAUTION! Out of available keys for data. {} will not be contained in stream.".format(key))
+            ind = KEYLIST.index(key)
+        mpstream.header['col-'+key] = channel
+        mpstream.header['unit-col-'+key] = ''
+        
+        # Arrange in preparatory array:
+        t = []
+        for d in data:
+            if not twrite: # Only write time array once (for multiple channels):
+                _diff = d.stats.endtime.datetime - d.stats.starttime.datetime
+                # Work time in milliseconds:
+                diff = _diff.days*24.*60.*60.*1000. + _diff.seconds*1000. + _diff.microseconds/1000.
+                numval = int(diff/1000. * d.stats.sampling_rate) + 1
+                array[tind] += [date2num(d.stats.starttime.datetime + timedelta(milliseconds=x/d.stats.sampling_rate*1000.))
+                             for x in range(0, numval)]
+            else: # Check anyway
+                if date2num(d.stats.starttime.datetime) not in array[tind]:
+                    raise Exception("Time arrays do not match!") # could be handled
+            array[ind] += list(d.data)
+        twrite = True
+            
+    # Convert to ndarrays:
+    for idx, elem in enumerate(array):
+        array[idx] = np.asarray(array[idx])
+
+    mpstream = DataStream([], mpstream.header, np.asarray(array))
+    
+    return mpstream
 
 
 def extractDateFromString(datestring):

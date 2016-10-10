@@ -687,6 +687,7 @@ def readIWT(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     sensorid = kwargs.get('sensorid')
+    debug = kwargs.get('debug')
     getfile = True
 
     stream = DataStream()
@@ -704,7 +705,8 @@ def readIWT(filename, headonly=False, **kwargs):
             if not theday[0] <= datetime.date(stream._testtime(endtime)):
                 getfile = False
     except:
-        print("Did not recognize the date format")
+        if debug:
+            print("IWT: Did not recognize the date format")
         # Date format not recognized. Need to read all files
         getfile = True
 
@@ -712,6 +714,7 @@ def readIWT(filename, headonly=False, **kwargs):
 
     if getfile:
         ta,xa,ya,za = [],[],[],[]
+        cnt = 0
         for line in fh:
             skipline = False
             if line.isspace():
@@ -721,24 +724,29 @@ def readIWT(filename, headonly=False, **kwargs):
                 continue
             else:
                 colsstr = line.split()
-                #row = LineStruct()
                 try:
-                    #row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
-                    ta.append(date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f")))
-                except:
-                    #row.time = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
                     try:
-                        ta.append(date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S")))
+                        t = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
                     except:
-                        skipline = True
-                #row.x = float(colsstr[1])
-                #row.y = float(colsstr[2])
-                #row.z = float(colsstr[3])
-                #stream.add(row)
-                if not skipline:
-                    xa.append(float(colsstr[1]))
-                    ya.append(float(colsstr[2]))
-                    za.append(float(colsstr[3]))
+                        try:
+                            t = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
+                        except:
+                            if debug:
+                                print("IWT: Could not interprete time in line {}".format(cnt))
+                            skipline = True
+                    if not skipline:
+                        x = float(colsstr[1])
+                        y = float(colsstr[2])
+                        z = float(colsstr[3])
+                        ta.append(t)
+                        xa.append(x)
+                        ya.append(y)
+                        za.append(z)
+                except:
+                    if debug:
+                        print("IWT: Could not interprete values in line {}: Found {}".format(cnt,line))
+                    pass
+                cnt += 1
         array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
 
 
@@ -847,6 +855,8 @@ def readGRAVSG(filename, headonly=False, **kwargs):
 
     stream = DataStream()
 
+    array = [[] for key in KEYLIST]
+
     # Check whether header infromation is already present
     headers = {}
 
@@ -865,14 +875,18 @@ def readGRAVSG(filename, headonly=False, **kwargs):
 
     fh = open(filename, 'rt')
 
+    ncol = 0
+    ucol = 0
+    getchannel = False
+    getunit = False
     if getfile:
         datablogstarts = False
         for line in fh:
             if line.isspace():
                 # blank line
                 continue
-            elif line.startswith(' '):
-                continue
+            #elif line.startswith(' '):
+            #    continue
             elif line.startswith('[TSF-file]'):
                 contline = line.split()
                 stream.header['DataFormat'] = contline[1]
@@ -883,8 +897,11 @@ def readGRAVSG(filename, headonly=False, **kwargs):
                 contline = line.split()
                 stream.header['DataSamplingRate'] = contline[1]
             elif line.startswith('[CHANNELS]'):
+                getchannel = True
                 #line = fh.readline()
                 #while not line.startswith('['):
+                #    #except:
+                #    #    pass
                 #    # eventually do ot like that
                 #
                 #CO:SG025:Grav-1
@@ -892,13 +909,33 @@ def readGRAVSG(filename, headonly=False, **kwargs):
                 #CO:SG025:Baro-1
                 #CO:SG025:Baro-2
                 pass
+            elif line.startswith('   ') and getchannel:
+                ncol += 1
+                #line = fh.readline()
+                #try:
+                if ncol <= 15:
+                    colnames = line.split(':')[2]
+                    key = KEYLIST[ncol]
+                    stream.header['col-'+key] = colnames.strip()
+                else:
+                    ncol = 15
             elif line.startswith('[UNITS]'):
+                getchannel = False
+                getunit = True
+            elif line.startswith('   ') and getunit:
+                ucol += 1
+                if ucol <= 15:
+                    unitnames = line.strip()
+                    key = KEYLIST[ucol]
+                    stream.header['unit-col-'+key] = unitnames
+                else:
+                    ucol = 15
                 #VOLT
                 #VOLT
                 #mbar
                 #mbar
-                pass
             elif line.startswith('[UNDETVAL]'):
+                getunit = False
                 pass
             elif line.startswith('[PHASE_LAG_1_DEG_CPD]'):
                 #0.0390
@@ -992,15 +1029,17 @@ def readGRAVSG(filename, headonly=False, **kwargs):
                     colsstr = line.split()
                     row = LineStruct()
                     datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
-                    row.time = date2num(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S"))
-                    row.x = float(colsstr[6])
-                    row.y = float(colsstr[7])
-                    row.z = float(colsstr[8])
-                    row.f = float(colsstr[9])
-                    stream.add(row)
+                    array[0].append(date2num(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S")))
+                    for n in range(ncol):
+                        array[n+1].append(float(colsstr[n+6]))
                 else:
                     # some header lines not noted above found
                     pass
+
+    for idx, elem in enumerate(array):
+        array[idx] = np.asarray(array[idx])
+
+    stream = DataStream([LineStruct()],stream.header,np.asarray(array))
 
     fh.close()
     return stream
