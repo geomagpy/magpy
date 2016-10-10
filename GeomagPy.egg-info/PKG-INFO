@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: GeomagPy
-Version: v0.3.4-2-g9169d54
+Version: v0.3.5
 Summary: Geomagnetic analysis tools.
 Home-page: http://pypi.python.org/pypi/GeomagPy/
 Author: R. Leonhardt, R. Bailey, M. Miklavec
@@ -53,6 +53,8 @@ Description: ===========
         
         Linux/Unix
         ----------
+        
+        Alternative A)
         debian/ubuntu: full installation with all supported features
         
         1. Get python packages and other extensions (for other distros install similar packages):
@@ -90,6 +92,20 @@ Description: ===========
                 cd MagPy*
                 sudo python setup.py install
         
+        Alternative B)
+        using Anaconda
+        
+        1. install anaconda
+                - https://docs.continuum.io/anaconda/install
+                  (currently tested on anacondo with python2.7)
+        2. install magpy
+                - change to the anaconda2/bin directory (if not set as default)
+                - if you want to use CDF formats like ImagCDF: 
+                     optional: install NasaCDF (http://cdf.gsfc.nasa.gov/)
+                     optional: - ./pip install spacepy
+                - run './pip install geomagpy' within the anaconda path
+                       possible issues: MySQL-python problem -> install libmysqlclient-dev on linux 
+        
         
         Windows
         -------
@@ -103,6 +119,20 @@ Description: ===========
         6. open a command window
         7. go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
         8. execute "setup.py install"
+        
+        
+        MacOS
+        ----------
+        
+        1. using MacPorts:
+            too be outlined soon
+        
+        On all platforms supporting Docker Images
+        -------
+        1. Install Docker
+                - https://docs.docker.com/engine/installation/
+        2. Get the MagPy Image
+            instructions will follow
         
         
         ======================
