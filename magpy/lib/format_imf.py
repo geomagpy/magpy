@@ -11,6 +11,10 @@ Written by Roman Leonhardt December 2012
         BLV     (baseline data)
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+import io
 
 from magpy.stream import *
 
@@ -182,7 +186,7 @@ def readIAF(filename, headonly=False, **kwargs):
     gethead = True
 
     if not resolution:
-        resolution = 'minutes'
+        resolution = u'minutes'
     stream = DataStream()
     # Check whether header infromation is already present
 
@@ -199,12 +203,15 @@ def readIAF(filename, headonly=False, **kwargs):
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
 
-    fh = open(filename, 'rb')
+    #import io
+    fh = io.open(filename, 'rb')
     while True:
       try:
         getline = True
         start = fh.read(64)
         head = struct.unpack('<4s4l4s4sl4s4sll4s4sll', start)
+        head = [el.decode('utf-8') if not isinstance(el,(int,basestring)) else el for el in head]
+        print (head)
         date = datetime.strptime(str(head[1]),"%Y%j")
         datelist.append(date)
         if starttime:
@@ -228,9 +235,9 @@ def readIAF(filename, headonly=False, **kwargs):
                         headers['col-df'] = 'dF'
                         headers['unit-col-df'] = 'nT'
                     else:
-                        headers['col-'+c] = c
-                        headers['unit-col-'+c] = 'nT'
-                keystr = ','.join([c for c in head[5].lower()])
+                        headers['col-'+str(c)] = c
+                        headers['unit-col-'+str(c)] = 'nT'
+                keystr = ','.join([str(c) for c in head[5].lower()])
                 if len(keystr) < 6:
                     keystr = keystr + ',f'
                 keystr = keystr.replace('d','y')
@@ -345,6 +352,7 @@ def readIAF(filename, headonly=False, **kwargs):
         ndarray = data2array([k,ir],['var1','var2'],min(datelist)+timedelta(minutes=90),sr=10800)
         headers['DataSamplingRate'] = '10800 sec'
     else:
+        print (keystr, min(datelist))
         ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
         headers['DataSamplingRate'] = '60 sec'
 

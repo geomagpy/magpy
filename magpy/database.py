@@ -15,14 +15,13 @@ try:
     import MySQLdb
     print("... success")
 except ImportError:
-    print("Failed to import SQL package 'MySQLdb' - trying alternative pymysql e.g. for MAC users")
     try:
         # Loading alternative MySQL functionality
         import pymysql
         pymysql.install_as_MySQLdb()
         print("... success")
     except:
-        print("Failed to import alternative SQL package 'pymysql'")
+        print("Failed to import SQL packages 'MySQLdb' or 'pymysql'")
 except:
     print("SQL package import failed")
     pass

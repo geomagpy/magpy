@@ -1862,29 +1862,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def OnOptionsInit(self, event):
-<<<<<<< HEAD
-        dlg = OptionsInitDialog(None, title='Options: Parameter specifications')
-        dlg.hostTextCtrl.SetValue(self.host)
-        dlg.userTextCtrl.SetValue(self.user)
-        dlg.passwdTextCtrl.SetValue(self.passwd)
-        dlg.dbTextCtrl.SetValue(self.dbname)
-        dlg.resolutionTextCtrl.SetValue(str(self.resolution))
-        dlg.filenameTextCtrl.SetValue(self.filename)
-        dlg.dirnameTextCtrl.SetValue(self.dirname)
-        #dlg.hostTextCtrl.SetValue(self.compselect)
-        #dlg.hostTextCtrl.SetValue(self.host)
-        dlg.diexpDTextCtrl.SetValue(str(self.diexpD))
-        dlg.diexpITextCtrl.SetValue(str(self.diexpI))
-        dlg.dialphaTextCtrl.SetValue(str(self.dialpha))
-        dlg.dideltaFTextCtrl.SetValue(str(self.dideltaF))
-        dlg.ditypeTextCtrl.SetValue(self.ditype)
-=======
         """
         DEFINITION
             Change options
         """
         dlg = OptionsInitDialog(None, title='Options: Parameter specifications',options=self.options)
->>>>>>> master
         if dlg.ShowModal() == wx.ID_OK:
             self.options['host'] = dlg.hostTextCtrl.GetValue()
             self.options['user'] = dlg.userTextCtrl.GetValue()
@@ -1892,22 +1874,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #print (self.options['passwd'])
             db = dlg.dbTextCtrl.GetValue()
             if db == '':
-<<<<<<< HEAD
-                db = 'None'
-            filename=dlg.filenameTextCtrl.GetValue()
-            dirname=dlg.dirnameTextCtrl.GetValue()
-            resolution=dlg.resolutionTextCtrl.GetValue()
-            diexpD=float(dlg.diexpDTextCtrl.GetValue())
-            diexpI=float(dlg.diexpITextCtrl.GetValue())
-            dialpha=float(dlg.dialphaTextCtrl.GetValue())
-            dideltaF=float(dlg.dideltaFTextCtrl.GetValue())
-            ditype=dlg.ditypeTextCtrl.GetValue()
-
-            compselect= 'xyz' # compselect
-            abscompselect= 'xyz' #abscompselect
-            basecompselect= 'poly' #basecompselect
-            saveini(host=host, user=user, passwd=passwd, dbname=db, filename=filename, dirname=dirname, compselect=compselect, abscompselect=abscompselect, basecompselect=basecompselect, diexpD=diexpD, diexpI=diexpI, dialpha=dialpha, dideltaF=dideltaF, ditype=ditype)
-=======
                 self.options['dbname'] = 'None'
             else:
                 self.options['dbname'] = db
@@ -1919,7 +1885,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitknotstep']=dlg.fitknotstepTextCtrl.GetValue()
             self.options['fitdegree']=dlg.fitdegreeTextCtrl.GetValue()
             saveini(self.options)
->>>>>>> master
 
             inipara, check = loadini()
             self.initParameter(inipara)

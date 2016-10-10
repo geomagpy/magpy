@@ -6,6 +6,9 @@ Written by Roman Leonhardt, Rachel Bailey, Mojca Miklavec 2015/2016
 Version 0.3 (starting May 2016)
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
 
 # ----------------------------------------------------------------------------
 # Part 1: Import routines for packages
