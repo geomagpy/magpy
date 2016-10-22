@@ -5,6 +5,10 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from io import open
 
 from magpy.stream import *
 
@@ -32,6 +36,7 @@ def isRADON(filename):
     """
     Checks whether a file is ASCII Komma separated txt file with radon data.
     """
+    debug = True
     try:
         temp = open(filename, 'rt').readline()
     except:
@@ -58,8 +63,11 @@ def readRADON(filename, headonly=False, **kwargs):
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    debug = kwargs.get('debug')
     getfile = True
 
+    if debug:
+        print ("RADON: Reading Radon data")
     theday = extractDateFromString(filename)
     try:
         if starttime:
@@ -86,7 +94,8 @@ def readRADON(filename, headonly=False, **kwargs):
 
     if getfile:
         try:
-            CSVReader = csv.reader(open(filename, 'rb'))
+            infile = open(filename, 'r', encoding='utf-8', newline='')
+            CSVReader = csv.reader(infile)
             for line in CSVReader:
                 if line[0].isspace():
                     # blank line
@@ -110,9 +119,13 @@ def readRADON(filename, headonly=False, **kwargs):
             stream.header['unit-col-t1'] = 'deg'
             stream.header['col-var1'] = 'Voltage'
             stream.header['unit-col-var1'] = 'V'
+            if debug:
+                print ("RADON: Successfully loaded radon data")
         except:
             headers = stream.header
             stream =[]
+            if debug:
+                print ("RADON: Error when reading data")
 
         array[0] = np.asarray(array[0]).astype(object)
         array[1] = np.asarray(array[1]).astype(object)
@@ -140,7 +153,8 @@ def readCR800(filename, headonly=False, **kwargs):
         headers = stream.header
 
     try:
-        CSVReader = csv.reader(open(filename, 'rb'), delimiter=' ', quotechar='|')
+        infile = open(filename, 'r', encoding='utf-8', newline='')
+        CSVReader = csv.reader(infile, delimiter=' ', quotechar='|')
         for line in CSVReader:
             elem = line.split
             print(elem, len(elem))

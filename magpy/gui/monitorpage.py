@@ -163,7 +163,7 @@ class MonitorPage(wx.Panel):
         # The following should only be required in case of db
         if dest == 'db':
             try:
-                db = MySQLdb.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
+                db = mysql.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
                 dbcredlst = [dbhost,dbuser,dbpasswd,dbname]
             except:
                 print("Create a credential file first or provide login info for database directly")

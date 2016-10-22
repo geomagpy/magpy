@@ -22,6 +22,8 @@ def isNEIC(filename):
             return False
     except:
         return False
+
+    print ("Found NEIC data")
     return True
 
 

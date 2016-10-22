@@ -6,8 +6,21 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+
+from io import open
 
 from magpy.stream import *
+
+
+def OpenFile(filename, mode='w'):
+    if sys.version_info >= (3,0,0):
+        f = open(filename, mode, newline='')
+    else:
+        f = open(filename, mode+'b')
+    return f
 
 def isUSBLOG(filename):
     """
@@ -72,7 +85,7 @@ def isMETEO(filename):
     """
 
     try:
-        fh = open(filename, 'rt')
+        fh = open(filename, 'rb')
         temp = fh.readline()
     except:
         return False
@@ -80,18 +93,20 @@ def isMETEO(filename):
         comp = temp.split()
     except:
         return False
+
     try:
-        if not comp[0] == 'Date':
+        if not comp[0].decode('utf-8') == 'Date':
             return False
-        if not comp[3].startswith('AP23'):
+        if not comp[3].decode('utf-8').startswith('AP23'):
             return False
 
         temp = fh.readline()
         comp = temp.split()
-        date = comp[0] + '-' + comp[1]
+        date = comp[0].decode('utf-8') + '-' + comp[1].decode('utf-8')
         test = datetime.strptime(date,"%Y%m%d-%H%M%S")
     except:
         return False
+
     return True
 
 
@@ -196,6 +211,12 @@ def readRMRCS(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+
+    debug = kwargs.get('debug')
+    debug = True
+    if debug:
+        print ("RCS: found data from Richards Perl script")
+
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -338,8 +359,9 @@ def readLNM(filename, headonly=False, **kwargs):
         indvar4 = KEYLIST.index('var4')
         indvar5 = KEYLIST.index('var5')
 
-        qFile= file( filename, "rb" )
-        csvReader= csv.reader( qFile, delimiter=';')
+        #qFile= file( filename, "rb" )
+        qFile= open( filename, encoding='utf-8' )
+        csvReader= csv.reader( qFile, delimiter=str(';'))
         for elem in csvReader:
             try:
                 if elem[0].startswith('# LNM'):
@@ -465,11 +487,15 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     takehelium = kwargs.get('takehelium')
+    debug = kwargs.get('debug')
     getfile = True
 
     heliumcols = []
 
     stream = DataStream()
+
+    if debug:
+        print ("METEO: found RCS meteo data")
 
     # Check whether header infromation is already present
     headers = {}
@@ -488,7 +514,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
         # Date format not recognized. Need to read all files
         getfile = True
 
-    fh = open(filename, 'rt')
+    fh = open(filename, 'rb')
 
     array = [[] for key in KEYLIST]
     fkeys = []
@@ -496,6 +522,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if getfile:
         for line in fh:
+            line = line.decode('utf-8',errors='ignore')
             if line.isspace():
                 # blank line
                 continue
@@ -572,8 +599,10 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
             headers['unit-col-var1'] = 'm/s'
 
         headers['SensorKeys'] = ','.join(fkeys)
-        headers['SensorElements'] = ','.join([eval("headers['col-"+key+"']") for key in KEYLIST if key in fkeys])
+        headers['SensorElements'] = ','.join([headers['col-'+key] for key in KEYLIST if key in fkeys])
 
+    if debug:
+        print ("METEO: Successfully loaded METEO data")
     return DataStream([LineStruct()], headers, np.asarray(array))
 
 

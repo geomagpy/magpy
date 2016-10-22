@@ -5,7 +5,12 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from io import open
 
+# Specify what methods are really needed
 from magpy.stream import *
 
 import gc
@@ -99,7 +104,7 @@ def isPYBIN(filename):
     Checks whether a file is binary PyStr format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        temp = open(filename, 'r', encoding='utf-8', newline='', errors='ignore').readline()
     except:
         return False
     if not temp.startswith('# MagPyBin'):
@@ -701,6 +706,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
     else:
         headskip = True
 
+    if debug:
+        print ("PYBIN: reading data")
+
     theday = extractDateFromString(filename)
     try:
         if starttime:
@@ -713,16 +721,24 @@ def readPYBIN(filename, headonly=False, **kwargs):
         # Date format not recognized. Need to read all files
         getfile = True
     logbaddata = False
-
+    debug = True
     if getfile:
         loggerlib.info("read: %s Format: PYCDF" % filename)
+        if debug:
+            print ("PYBIN: Found pybin files")
+
         fh = open(filename, 'rb')
+        #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
+        #infile = open(filename, 'r', encoding='utf-8', newline='')
         # read header line and extract packing format
         header = fh.readline()
+        header = header.decode('utf-8')
         # some cleaning actions for false header inputs
         header = header.replace(', ',',')
         header = header.replace('deg C','deg')
         h_elem = header.strip().split()
+        if debug:
+            print ("PYBIN: Header {}".format(header))
 
         if debug:
             print('readPYBIN- debug header type (len should be 9): ', h_elem, len(h_elem))
@@ -742,7 +758,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     return stream
                 elemlist = h_elem[3].strip('[').strip(']').split(',')
                 unitlist = h_elem[4].strip('[').strip(']').split(',')
-                multilist = map(float,h_elem[5].strip('[').strip(']').split(','))
+                multilist = list(map(float,h_elem[5].strip('[').strip(']').split(',')))
             except:
                 print("readPYBIN: Could not extract lists from header - check format - aborting...")
                 return stream
@@ -756,7 +772,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 keylist = h_elem[3].strip('[').strip(']').split(',')
                 elemlist = h_elem[4].strip('[').strip(']').split(',')
                 unitlist = h_elem[5].strip('[').strip(']').split(',')
-                multilist = map(float,h_elem[6].strip('[').strip(']').split(','))
+                multilist = list(map(float,h_elem[6].strip('[').strip(']').split(',')))
             except:
                 loggerlib.error("readPYBIN: Could not extract lists from header - check format - aborting...")
                 return stream
@@ -799,6 +815,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         if debug:
             print('readPYBIN- unpack info:', packstr, lengthcode, lengthgiven)
 
+        #fh = open(filename, 'rb')
         line = fh.read(length)
         stream.header['SensorID'] = h_elem[2]
         stream.header['SensorElements'] = ','.join(elemlist)
@@ -818,15 +835,13 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 stream.header['unit-col-'+elem] = unitlist[idx]
                 # Header info
                 pass
-            while not line == "":
-                if debug:
-                    print('readPYBIN- debug found line')
+            while not len(line) == 0:
+                lastdata = 'None'
+                data = 'None'
                 try:
                     data= struct.unpack(packstr, line)
-                    if debug:
-                        print('readPYBIN- debug unpacked line: ', data)
                 except:
-                    print("readPYBIN: struct error", filename, packstr, struct.calcsize(packstr))
+                    print("readPYBIN: struct error", filename, len(line))
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:

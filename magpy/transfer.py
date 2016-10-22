@@ -7,6 +7,8 @@ Version 1.0 (from the 23.02.2012)
 """
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
 
 from magpy.stream import *
 import ftplib
@@ -222,7 +224,8 @@ if ssh:
         COMMAND= "ssh %s@%s '%s';" % (user,host,searchstr)
 
         child = pexpect.spawn(COMMAND)
-        child.expect('password:')
+        #child.expect('password:')
+        child.expect('assword:')   # please not "assword" is correct as it supports both "password" and "Password"
         child.sendline(passwd)
         child.expect(pexpect.EOF)
         result = child.before

@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 import sys, os, struct
 from twisted.python import log
 try: # version > 0.8.0
@@ -13,7 +14,7 @@ import multiprocessing
 # Timing
 from datetime import datetime, timedelta
 # Database
-import MySQLdb
+#import MySQLdb
 # sets for removing duplicates
 
 
@@ -27,7 +28,7 @@ secondary time column in POS1 file was added manually to data base - not availab
 """
 
 import magpy.stream as st
-from magpy.database import stream2db
+from magpy.database import *
 from magpy.opt import cred as mpcred
 from magpy.transfer import scptransfer
 
@@ -151,7 +152,7 @@ class PubSubClient(WampClientProtocol):
         self.cursor = None
         if not output == 'file':
             log.msg("collectors client: Connecting to DB ...")
-            self.db = MySQLdb.connect(dbcred[0],dbcred[1],dbcred[2],dbcred[3] )
+            self.db = mysql.connect(dbcred[0],dbcred[1],dbcred[2],dbcred[3] )
             # prepare a cursor object using cursor() method
             self.cursor = self.db.cursor()
             log.msg("collectors client: ... DB successfully connected ")

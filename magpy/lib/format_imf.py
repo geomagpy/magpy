@@ -14,7 +14,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
-import io
+from io import open
 
 from magpy.stream import *
 
@@ -203,15 +203,13 @@ def readIAF(filename, headonly=False, **kwargs):
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
 
-    #import io
-    fh = io.open(filename, 'rb')
+    fh = open(filename, 'rb')
     while True:
       try:
         getline = True
         start = fh.read(64)
         head = struct.unpack('<4s4l4s4sl4s4sll4s4sll', start)
         head = [el.decode('utf-8') if not isinstance(el,(int,basestring)) else el for el in head]
-        print (head)
         date = datetime.strptime(str(head[1]),"%Y%j")
         datelist.append(date)
         if starttime:
@@ -370,6 +368,7 @@ def writeIAF(datastream, filename, **kwargs):
 
     kvals = kwargs.get('kvals')
     mode = kwargs.get('mode')
+    debug = kwargs.get('debug')
 
     df=False
     # Check whether data is present at all
@@ -444,11 +443,11 @@ def writeIAF(datastream, filename, **kwargs):
 
     # cycle through data - day by day
     t0 = int(datastream.ndarray[0][1])
-    output = ''
+    output = b''
     kstr=[]
 
     tmpstream = datastream.copy()
-    hourvals = tmpstream.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
+    hourvals = tmpstream.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat',missingdata='mean')
     hourvals = hourvals.get_gaps()
 
     for i in range(tdiff):
@@ -555,6 +554,9 @@ def writeIAF(datastream, filename, **kwargs):
 
         # Constructing header Info
         packcode = '<4s4l4s4sl4s4sll4s4sll' # fh.read(64)
+        head = [el.encode('ascii','ignore') if isinstance(el, unicode) else el for el in head]
+        if debug:
+            print ("Header looks like:", head)
         head_bin = struct.pack(packcode,*head)
         # add minute values
         packcode += '1440l' # fh.read(64)
@@ -798,7 +800,7 @@ def writeIAF(datastream, filename, **kwargs):
                 head.append(elem)
             with open(rfile, "wb") as myfile:
                 for elem in head:
-                    myfile.write(elem+'\r\n')
+                    myfile.write(elem+'\r\n'.encode('utf-8'))
             myfile.close()
 
     return True
@@ -1561,14 +1563,16 @@ def writeIMF(datastream, filename, **kwargs):
         strcola = '%3.f' % (colat*10)
         strlong = '%3.f' % (longi*10)
         decbasis = str(int(np.round(decbas*60*10)))
-        blockline = "%s %s %s %s %s %s %s %s%s %s %s\r\n" % (idc.upper(),day.upper(),doy, hh, elemtype, datatype, gin, strcola.zfill(4), strlong.zfill(4), decbasis.zfill(6),'RRRRRRRRRRRRRRRR')
+        blockline = "{} {} {} {} {} {} {} {}{} {} {}\r\n".format(idc.upper(),day.upper(),doy, hh, elemtype, datatype, gin, strcola.zfill(4), strlong.zfill(4), decbasis.zfill(6),'RRRRRRRRRRRRRRRR')
         if minute == 0 and not i == 0:
             #print blockline
-            myFile.writelines( blockline )
+            #myFile.writelines( blockline.encode('utf-8') )
+            myFile.write( blockline.encode('utf-8') )
             pass
         if i == 0:
             #print blockline
-            myFile.writelines( blockline )
+            #myFile.writelines( blockline.encode('utf-8') )
+            myFile.write( blockline.encode('utf-8') )
             if not minute == 0:
                 j = 0
                 while j < minute:
@@ -1598,7 +1602,8 @@ def writeIMF(datastream, filename, **kwargs):
             while minuteprev+1 < minute:
                 if minuteprev+1 % 2: # uneven
                     dataline += '  9999999 9999999 9999999 999999\r\n'
-                    myFile.writelines( dataline )
+                    #myFile.writelines( dataline.encode('utf-8') )
+                    myFile.write( dataline.encode('utf-8') )
                     #print minuteprev+1, dataline
                 else: # even
                     dataline = '9999999 9999999 9999999 999999'
@@ -1608,7 +1613,8 @@ def writeIMF(datastream, filename, **kwargs):
             if len(dataline) < 10: # if record starts with uneven minute then
                 dataline = '9999999 9999999 9999999 999999'
             dataline += '  %7.0f%8.0f%8.0f%7.0f\r\n' % (x, y, z, f)
-            myFile.writelines( dataline )
+            #myFile.writelines( dataline.encode('utf-8') )
+            myFile.write( dataline.encode('utf-8') )
             #print minute, dataline
         else: # even
             dataline = '%7.0f%8.0f%8.0f%7.0f' % (x, y, z, f)
@@ -1618,7 +1624,7 @@ def writeIMF(datastream, filename, **kwargs):
         while minute < 60:
             if minute % 2: # uneven
                 dataline += '  9999999 9999999 9999999 999999\r\n'
-                myFile.writelines( dataline )
+                myFile.writelines( dataline.encode('utf-8') )
                 #print minute, dataline
             else: # even
                 dataline = '9999999 9999999 9999999 999999'
@@ -1931,7 +1937,7 @@ def writeBLV(datastream, filename, **kwargs):
         logging.error("formatBLV: No station code specified. Aborting ...")
         return False
     headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
-    myFile.writelines( headerline+'\r\n' )
+    myFile.writelines( headerline+'\r\n'.encode('utf-8') )
 
     #print "writeBLV:", headerline
 
@@ -1957,7 +1963,7 @@ def writeBLV(datastream, filename, **kwargs):
                 if np.isnan(df) or ftype.startswith('Fext'):
                     df = 99999.00
                 line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
-                myFile.writelines( line )
+                myFile.writelines( line.encode('utf-8') )
     else:
         datastream = datastream.trim(starttime=t1, endtime=t2)
         for elem in datastream:
@@ -1986,7 +1992,7 @@ def writeBLV(datastream, filename, **kwargs):
             else:
                 f = elem.df
             line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,f)
-            myFile.writelines( line )
+            myFile.writelines( line.encode('utf-8') )
 
     # 9. adopted basevalues
     myFile.writelines( '*\r\n' )
@@ -2033,11 +2039,11 @@ def writeBLV(datastream, filename, **kwargs):
         else:
             df = 888.00
         line = '%s %9.2f %9.2f %9.2f %9.2f %7.2f %s\r\n' % (day,x,y,z,f,df,parameter)
-        myFile.writelines( line )
+        myFile.writelines( line.encode('utf-8') )
 
     # 9. comments
-    myFile.writelines( '*\r\n' )
-    myFile.writelines( 'Comments:\r\n' )
+    myFile.writelines( '*\r\n'.encode('utf-8') )
+    myFile.writelines( 'Comments:\r\n'.encode('utf-8') )
     absinfoline = dummystream.header.get('DataAbsInfo','').split('_')
     print ("Infoline", absinfoline)
     funcline1 = 'Baselinefunction: %s\r\n' % absinfoline[3]
@@ -2059,16 +2065,16 @@ def writeBLV(datastream, filename, **kwargs):
     funcline8 = 'Variometer: %s\r\n' % infolist[2]
     # additional text with pier, instrument, how f difference is defined, which are the instruments etc
     summaryline = '-- analysis supported by MagPy\r\n'
-    myFile.writelines( '-'*40 + '\r\n' )
-    myFile.writelines( funcline1 )
-    myFile.writelines( funcline2 )
-    myFile.writelines( funcline3 )
-    myFile.writelines( funcline4 )
-    myFile.writelines( funcline5 )
-    myFile.writelines( funcline6 )
-    myFile.writelines( funcline7 )
-    myFile.writelines( '-'*40 + '\r\n' )
-    myFile.writelines( summaryline )
+    myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
+    myFile.writelines( funcline1.encode('utf-8') )
+    myFile.writelines( funcline2.encode('utf-8') )
+    myFile.writelines( funcline3.encode('utf-8') )
+    myFile.writelines( funcline4.encode('utf-8') )
+    myFile.writelines( funcline5.encode('utf-8') )
+    myFile.writelines( funcline6.encode('utf-8') )
+    myFile.writelines( funcline7.encode('utf-8') )
+    myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
+    myFile.writelines( summaryline.encode('utf-8') )
 
     myFile.close()
     return True
@@ -2402,9 +2408,10 @@ def writeIYFV(datastream,filename, **kwargs):
         internal method to insert new yearly means in a file
         """
         content = []
-        fh = open(filename, 'r')
+        fh = open(filename, 'rU', newline='')
         for line in fh:
             content.append(line)
+
         fh.close()
 
         yearlst = []

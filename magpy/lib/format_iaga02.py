@@ -5,6 +5,10 @@ Written by Roman Leonhardt June 2012
 - contains test, read and write function
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from io import open
 
 from magpy.stream import *
 
@@ -193,10 +197,10 @@ def readIAGA(filename, headonly=False, **kwargs):
                 row=[]
                 # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
                 # da darin der Zeilenumbruch "\n" steht
-                for val in string.split(line[:-1]):
+                for val in line[:-1].split():
                     # nur nicht-leere Spalten hinzufuegen
-                    if string.strip(val)!="":
-                        row.append(string.strip(val))
+                    if val.strip()!="":
+                        row.append(val.strip())
 
                 # Baue zweidimensionales Array auf
                 array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
@@ -269,22 +273,29 @@ def writeIAGA(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
+    def OpenFile(filename, mode='w'):
+        if sys.version_info >= (3,0,0):
+            f = open(filename, mode, newline='')
+        else:
+            f = open(filename, mode+'b')
+        return f
+
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
             datastream = mergeStreams(exst,datastream,extend=True)
-            myFile= open( filename, "wb" )
+            myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
             datastream = mergeStreams(datastream,exst,extend=True)
-            myFile= open( filename, "wb" )
+            myFile= OpenFile(filename)
         elif mode == 'append':
-            myFile= open( filename, "ab" )
+            myFile= OpenFile(filename,mode='a')
         else: # overwrite mode
             #os.remove(filename)  ?? necessary ??
-            myFile= open( filename, "wb" )
+            myFile= OpenFile(filename)
     else:
-        myFile= open( filename, "wb" )
+        myFile= OpenFile(filename)
 
     header = datastream.header
 
@@ -351,8 +362,8 @@ def writeIAGA(datastream, filename, **kwargs):
 
     line = []
     if not mode == 'append':
-        if header.get('Elevation') > 0:
-            print(header)
+        #if header.get('Elevation') > 0:
+        #    print(header)
         line.append(' Format %-15s IAGA-2002 %-34s |\n' % (' ',' '))
         line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('StationInstitution'," ")[:44]))
         line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('StationName'," ")[:44]))

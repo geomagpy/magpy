@@ -39,7 +39,10 @@ Version 1.0 (from the 23.02.2012)
 
 """
 from __future__ import print_function
+from __future__ import unicode_literals
 from __future__ import absolute_import
+from __future__ import division
+
 
 from magpy.stream import *
 from magpy.database import *
@@ -1469,7 +1472,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         - starttime:    (string/datetime) define begin
         - endtime:      (string/datetime) define end
         - abstype:      (string) default manual, can be autodif
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - dbadd:        (bool) if True DI-raw data will be added to the database
         - alpha:        (float) orientation angle 1 in deg (if z is vertical, alpha is the horizontal rotation angle)
         - beta:         (float) orientation angle 2 in deg

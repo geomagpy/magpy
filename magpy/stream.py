@@ -47,10 +47,21 @@ try:
         import copy_reg as copyreg
     except ImportError: # python3
         import copyreg as copyreg
+    # Python 2 and 3: alternative 4
+    try:
+        from urllib.parse import urlparse, urlencode
+        from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
+        from urllib.error import HTTPError
+    except ImportError:
+        from urlparse import urlparse
+        from urllib import urlencode
+        from urllib2 import urlopen, Request, HTTPError, ProxyHandler, install_opener, build_opener
+    """
     try:                # python2
         import urllib2
     except ImportError: # python3
         import urllib.request
+    """
     try:                # python2
         import thread
     except ImportError: # python3
@@ -1794,7 +1805,7 @@ CALLED BY:
                 # Trim should start at point >= starttime, so check:
                 if self.ndarray[0][idx] < date2num(starttime):
                     idx += 1
-                startindices = range(0,idx)
+                startindices = list(range(0,idx))
         if endtime:
             endtime = self._testtime(endtime)
             if self.ndarray[0].size > 0:   # time column present
@@ -1828,7 +1839,7 @@ CALLED BY:
                     #    print ("Value now", idx, self.ndarray[0][idx+1], date2num(endtime))
                 except:
                     pass
-                endindices = range(idx,len(self.ndarray[0]))
+                endindices = list(range(idx,len(self.ndarray[0])))
 
         indices = startindices + endindices
 
@@ -3915,7 +3926,7 @@ CALLED BY:
         if not keystoflag:
             keystoflag = self._get_key_headers(numerical=True)
         if not flagnum:
-            flagnum = 1
+            flagnum = 0
 
         if not len(self.ndarray[0]) > 0:
             print ("flag_range: No data available - aborting")
@@ -4097,8 +4108,12 @@ CALLED BY:
         commentidx = KEYLIST.index('comment')
         if not len(self.ndarray[flagidx]) > 0:
             self.ndarray[flagidx] = [''] * len(self.ndarray[0])
+        else:
+            self.ndarray[flagidx] = self.ndarray[flagidx].astype(object)
         if not len(self.ndarray[commentidx]) > 0:
             self.ndarray[commentidx] = [''] * len(self.ndarray[0])
+        else:
+            self.ndarray[commentidx] = self.ndarray[commentidx].astype(object)
 
         # get a poslist of all keys - used for markall
         flagposls = [FLAGKEYLIST.index(key) for key in keys]
@@ -6967,12 +6982,13 @@ CALLED BY:
                 indlst = [i for i,el in enumerate(self.ndarray[flagind]) if not el in ['','-']]
                 for i in indlst:
                     try:
+                        #if len(self.ndarray[flagind]) > 0:
                         flagls = list(self.ndarray[flagind][i])
                         flag = flagls[pos]
                         if flag in flaglist:
-                            array[pos][i] = float("nan")
+                           array[pos][i] = float("nan")
                     except:
-                        print("stream remove_flagged: index error")
+                        print("stream remove_flagged: index error: indlst {}, pos {}, length flag colum {}".format(indlst, pos, len(self.ndarray[flagind])))
                         pass
                 liste = [LineStruct()]
             else:
@@ -8634,130 +8650,6 @@ CALLED BY:
 
         format_type, filenamebegins, filenameends, coverage, dateformat = self._write_format(format_type, filenamebegins, filenameends, coverage, dateformat, year)
 
-        """
-        # Preconfigure some fileformats - can be overwritten by keywords
-        if format_type == 'IMF':
-            dateformat = '%b%d%y'
-            try:
-                extension = (self.header['StationID']).lower()
-            except:
-                extension = 'txt'
-            filenameends = '.'+extension
-        if format_type == 'IAF':
-            try:
-                filenamebegins = (self.header['StationIAGAcode']).upper()
-            except:
-                filenamebegins = 'XXX'
-            dateformat = '%y%b'
-            extension = 'BIN'
-            filenameends = '.'+extension
-        if format_type == 'IYFV':
-            if not filenameends:
-                head = self.header
-                code = head.get('StationIAGAcode','')
-                if not code == '':
-                    filenameends = '.'+code.upper()
-                else:
-                    filenameends = '.XXX'
-            if not filenamebegins:
-                filenamebegins = 'YEARMEAN'
-            dateformat = 'None'
-            coverage = 'year'
-        if format_type == 'IAGA':
-            dateformat = '%Y%m%d'
-            head = self.header
-            if not filenamebegins:
-                code = head.get('StationIAGAcode','')
-                if not code == '':
-                    filenamebegins = code.upper()
-            if not filenameends:
-                samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
-                plevel = head.get('DataPublicationLevel',0)
-                if int(samprate) == 1:
-                    middle = 'sec'
-                elif int(samprate) == 60:
-                    middle = 'min'
-                elif int(samprate) == 3600:
-                    middle = 'hou'
-                else:
-                    middle = 'lol'
-                if plevel == 4:
-                    fed = 'd'+middle+'.'+middle
-                elif plevel == 3:
-                    fed = 'q'+middle+'.'+middle
-                elif plevel == 2:
-                    fed = 'p'+middle+'.'+middle
-                else:
-                    fed = 'v'+middle+'.'+middle
-                filenameends = fed
-
-        if format_type == 'IMAGCDF':
-            begin = (self.header.get('StationIAGAcode','')).lower()
-            if begin == '':
-                begin = (self.header.get('StationID','XYZ')).lower()
-            publevel = str(self.header.get('DataPublicationLevel',0))
-            samprate = float(str(self.header.get('DataSamplingRate','0')).replace('sec','').strip())
-            if coverage == 'year':
-                dfor = '%Y'
-            elif coverage == 'month':
-                dfor = '%Y%m'
-            else:
-                dfor = '%Y%m%d'
-            if int(samprate) == 1:
-                dateformat = dfor
-                middle = '_000000_PT1S_'
-            elif int(samprate) == 60:
-                dateformat = dfor
-                middle = '_0000_PT1M_'
-            elif int(samprate) == 3600:
-                dateformat = dfor
-                middle = '_00_PT1H_'
-            elif int(samprate) == 86400:
-                dateformat = dfor
-                middle = '_PT1D_'
-            elif int(samprate) > 30000000:
-                dateformat = '%Y'
-                middle = '_PT1Y_'
-            elif int(samprate) > 2400000:
-                dateformat = '%Y%m'
-                middle = '_PT1M_'
-            else:
-                dateformat = '%Y%m%d'
-                middle = 'unknown'
-            filenamebegins = begin+'_'
-            filenameends = middle+publevel+'.cdf'
-        if format_type == 'BLV':
-            if len(self.ndarray[0]) > 0:
-                lt = max(self.ndarray[0].astype(float))
-            else:
-                lt = self[-1].time
-            if year:
-                blvyear = str(year)
-            else:
-                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
-            try:
-                filenamebegins = (self.header['StationID']).upper()+blvyear
-            except:
-                filenamebegins = 'XXX'+blvyear
-            filenameends = '.blv'
-            coverage = 'all'
-
-        if not format_type:
-            format_type = 'PYSTR'
-        if not dateformat:
-            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
-        if not coverage:
-            coverage = timedelta(days=1)
-        if not filenamebegins:
-            filenamebegins = ''
-        if not filenameends and not filenameends == '':
-            # Extension for cdf files is automatically attached
-            if format_type in ['PYCDF','IMAGCDF']:
-                filenameends = ''
-            else:
-                filenameends = '.txt'
-        """
-
         if not mode:
             mode= 'overwrite'
 
@@ -9538,12 +9430,13 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     disableproxy = kwargs.get('disableproxy')
     skipsorting = kwargs.get('skipsorting')
     keylist = kwargs.get('keylist') # for PYBIN
+    debug = kwargs.get('debug')
 
     if disableproxy:
-        proxy_handler = urllib2.ProxyHandler( {} )
-        opener = urllib2.build_opener(proxy_handler)
+        proxy_handler = ProxyHandler( {} )
+        opener = build_opener(proxy_handler)
         # install this opener
-        urllib2.install_opener(opener)
+        install_opener(opener)
 
     # 1. No path
     if not path_or_url:
@@ -9572,9 +9465,9 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some URL
         # extract extension if any
         loggerstream.info("read: Found URL to read at %s" % path_or_url)
-        content = urllib2.urlopen(path_or_url).read()
+        content = urlopen(path_or_url).read()
         if debugmode:
-            print(urllib2.urlopen(path_or_url).info())
+            print(urlopen(path_or_url).info())
         if path_or_url[-1] == '/':
             # directory
             string = content.decode('utf-8')
@@ -9583,7 +9476,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     filename = (line.strip().split()[-1])
                     if debugmode:
                         print(filename)
-                    content = urllib2.urlopen(path_or_url+filename).read()
+                    content = urlopen(path_or_url+filename).read()
                     suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
                     #date = os.path.basename(path_or_url).partition('.')[0][-8:]
                     #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])
@@ -9592,7 +9485,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     fname = fname.strip('?').strip(':')      ## Necessary for windows
                     #fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
                     fh = NamedTemporaryFile(suffix=fname,delete=False)
-                    print (fh.name)
+                    print (fh.name, suffix)
                     fh.write(content)
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
@@ -9620,6 +9513,15 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pathname = path_or_url
         for filename in iglob(pathname):
             getfile = True
+            if filename.endswith('.gz'):
+                ## Added gz support to read IMO compressed data directly - future option might include tarfiles
+                import gzip
+                print ("Found zipped file")
+                fname = os.path.split(filename)[1]
+                fname = fname.strip('.gz')
+                with NamedTemporaryFile(suffix=fname,delete=False) as fh:
+                    shutil.copyfileobj(gzip.open(filename), fh)
+                    filename = fh.name
             theday = extractDateFromString(filename)
             try:
                 if starttime:
@@ -9678,6 +9580,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     Reads a single file into a MagPy DataStream object.
     Internal function only.
     """
+    debug = kwargs.get('debug')
 
     stream = DataStream([],{})
     format_type = None
@@ -9685,7 +9588,11 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
+            if debug:
+                print ("Checking format:", format_type)
             if isFormat(filename, format_type):
+                if debug:
+                    print ("  -- found:", format_type)
                 break
     else:
         # format given via argument

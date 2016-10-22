@@ -702,6 +702,9 @@ class MainFrame(wx.Frame):
         self.DatabaseMenu = wx.Menu()
         self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
+        self.DatabaseMenu.AppendSeparator()
+        self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "&Initialize a new MySQL DB...\tCtrl+I", "Initialize Database", wx.ITEM_NORMAL)
+        self.DatabaseMenu.AppendItem(self.DBInit)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
@@ -756,6 +759,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
+        self.Bind(wx.EVT_MENU, self.OnDBInit, self.DBInit)
         self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamListSelect)
         self.Bind(wx.EVT_MENU, self.OnStreamAdd, self.StreamAddListSelect)
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
@@ -1787,7 +1791,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
             pass
         try:
-            self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=dbname)
+            self.db = mysql.connect (host=host,user=user,passwd=passwd,db=dbname)
         except:
             self.db = False
         if self.db:
@@ -1832,7 +1836,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['dbname'] = dlg.dbTextCtrl.GetValue()
             self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
             """
-            self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
+            self.db = mysql.connect (host=host,user=user,passwd=passwd,db=mydb)
             if self.db:
                 self.DBOpen.Enable(True)
                 self.menu_p.rep_page.logMsg('- MySQL Database selected.')
@@ -1842,6 +1846,59 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.changeStatusbar("Database connection failed")
             """
         dlg.Destroy()
+
+
+    def OnDBInit(self, event):
+        """
+        Provide access for local network:
+        Open your /etc/mysql/my.cnf file in your editor.
+        scroll down to the entry:
+        bind-address = 127.0.0.1
+        and you can either hash that so it binds to all ip addresses assigned
+        #bind-address = 127.0.0.1
+        or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
+        Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
+        Login to your mysql console:
+        milkchunk@milkchunk-desktop:~$ mysql -uroot -p
+        GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
+        You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
+        Then issue the following:
+        FLUSH PRIVILEGES;
+        Be sure to restart your mysql (because of the config file editing):
+        /etc/init.d/mysql restart
+        """
+        # Open a message box to confirm that you really want to do that and to provide info on prerequisits
+        dlg = wx.MessageDialog(self, "Your are going to intialize a new database\n"
+                        "Please make sure that the following points are fullfilled:\n"
+                        "1) MySQL is installed\n"
+                        "2) An empty database has been created:\n"
+                        "   $ CREATE DATABASE mydb;\n"
+                        "3) A new user has been added and access has been granted:\n"
+                        "   $ GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass';\n",
+                        "Init database", wx.OK|wx.CANCEL)
+        if dlg.ShowModal() == wx.ID_OK:
+            dlg.Destroy()
+            # open dialog to select empty db or create new db if mysql is existing
+            dlg = DatabaseConnectDialog(None, title='MySQL Database: Initialize...')
+            dlg.hostTextCtrl.SetValue(self.options.get('host',''))
+            dlg.userTextCtrl.SetValue(self.options.get('user',''))
+            dlg.passwdTextCtrl.SetValue(self.options.get('passwd',''))
+            if self.db == None or self.db == 'None' or not self.db:
+                dlg.dbTextCtrl.SetValue('None')
+            else:
+                dlg.dbTextCtrl.SetValue(self.options.get('dbname',''))
+            if dlg.ShowModal() == wx.ID_OK:
+                self.options['host'] = dlg.hostTextCtrl.GetValue()
+                self.options['user'] = dlg.userTextCtrl.GetValue()
+                self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
+                self.options['dbname'] = dlg.dbTextCtrl.GetValue()
+                self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
+                dbinit(self.db)
+                self.changeStatusbar("New database initiated - Ready")
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+
 
     def OnFileQuit(self, event):
         if self.db:
@@ -2773,6 +2830,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 starttime =num2date(min(self.xlimits))
                 endtime = num2date(max(self.xlimits))
 
+                print ("FlagID:", flagid)
                 flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
                 self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
 

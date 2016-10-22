@@ -19,9 +19,9 @@ from magpy.opt import cred as mpcred
 from magpy.transfer import scptransfer
 
 try:
-    import MySQLdb
+    from magpy.database import *
 except:
-    print("Failure loading MySQLdb")
+    print("Failure loading MySQL")
     pass
 
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     # 2. connect to database and check availability and version
     # ----------------------------------------------------------
     try:
-        db = MySQLdb.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
+        db = mysql.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
         dbcredlst = [dbhost,dbuser,dbpasswd,dbname]
         cursor = db.cursor ()
         cursor.execute ("SELECT VERSION()")
