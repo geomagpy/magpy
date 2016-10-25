@@ -5,6 +5,10 @@ Written by Roman Leonhardt February 2015
 - contains read function to import neic data (usgs wget seismic data)
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from io import open
 
 from magpy.stream import *
 import csv
@@ -44,15 +48,14 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     stream = DataStream([],{},np.asarray(array))
     headers = {}
 
-    print("reading NEIC")
     datalist = []
     pos = KEYLIST.index('str1')
     if getfile:
-        with open(filename, 'rb') as csvfile:
-            neicreader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as csvfile:
+            neicreader = csv.reader(csvfile, delimiter=str(','), quotechar=str('"'))
             #print (neicreader)
             for row in neicreader:
-                print (row)
+                #row = [el.encode('ascii','ignore') for el in row]
                 if len(row) > 0:
                   if row[0] == 'time':
                     #print("Got Header")
@@ -79,7 +82,10 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
 
     neicarray = np.asarray(datalist)
     neicar = neicarray.transpose()
-    timecol = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[0]])
+    if sys.version_info >= (3,0,0):
+        timecol = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[0]])
+    else:
+        timecol = np.asarray([date2num(stream._testtime(elem.replace('Z','').encode('ascii','ignore'))) for elem in neicar[0]])
     array[0] = timecol
     for i in range(1,5):
         array[i] = neicar[i].astype(float)
@@ -91,7 +97,10 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
         array[i] = neicar[i-dxp+15]
     array[pos] = neicar[11]
     # sec time
-    array[secp] = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[12]])
+    if sys.version_info >= (3,0,0):
+        array[secp] = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[12]])
+    else:
+        array[secp] = np.asarray([date2num(stream._testtime(elem.replace('Z','').encode('ascii','ignore'))) for elem in neicar[12]])
     # status
     array[pos+1] = neicar[i-dxp+17]
 

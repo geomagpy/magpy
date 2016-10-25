@@ -39,10 +39,16 @@ def isSFGSM(filename):
         temp = fh.readline()
     except:
         return False
+
     sp = temp.split()
     if len(sp) != 2:
         return False
     if not isNumber(sp[0]):
+        return False
+    try:
+        if not 20000 < float(sp[1]) < 80000:
+            return False
+    except:
         return False
     return True
 

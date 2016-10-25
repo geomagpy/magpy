@@ -1212,7 +1212,9 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
             self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
-            self.plotopt['annotate'] = True                   # activate annotation
+            if self.menu_p.str_page.annotateCheckBox.GetValue():
+                self.menu_p.str_page.annotateCheckBox.SetValue(True)
+                self.plotopt['annotate'] = True                   # activate annotation
         if formattype == 'MagPyDI':
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
@@ -2213,7 +2215,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.streamkeylist.append(stream._get_key_headers())
         self.currentstreamindex = len(self.streamlist)-1
         self.plotstream = self.streamlist[-1]
-        self.headerlist.append(self.plotstream.header)
+        #self.headerlist.append(self.plotstream.header)
+        self.headerlist.append(stream.header)
         self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
         if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
             self.ActivateControls(self.plotstream)
@@ -2703,6 +2706,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.changeStatusbar("No data available")
             return False
         print ("Restoring (works only for latest stream):", self.currentstreamindex)
+        #print ("Header", self.headerlist)
         #self.plotstream = self.streamlist[self.currentstreamindex].copy()
         self.plotstream = self.stream.copy()
         self.plotstream.header = self.headerlist[self.currentstreamindex]
@@ -3032,8 +3036,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.ShowModal()
         if len(dlg.flaglist) > 0:
             flaglist = dlg.flaglist
-            #print ("Loaded flags", len(flaglist))
+            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
             self.flaglist.extend(flaglist)
+            #print ("extended flaglist looking like", self.flaglist[0])
             self.changeStatusbar("Applying flags ... please be patient")
             self.plotstream = self.plotstream.flag(flaglist)
             self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
@@ -3042,7 +3047,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #self.annotate = True
             self.plotopt['annotate'] = True
 
-            self.menu_p.str_page.annotateCheckBox.SetValue(False)
+            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
@@ -3055,7 +3060,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         currentlen = len(self.flaglist)
 
-        print ("FlagSave", self.flaglist)
+        #print ("FlagSave", self.flaglist)
 
         self.changeStatusbar("Saving flags ...")
         dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist)
@@ -3080,19 +3085,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #    self.plotstream = self.plotstream.flag(self.shownkeylist)
         #else:
         self.plotstream = self.plotstream.remove_flagged()
-        #flagidx = KEYLIST.index('flag')
-        #commidx = KEYLIST.index('comment')
-        self.plotstream = self.plotstream._drop_column('flag')
-        self.plotstream = self.plotstream._drop_column('comment')
+        flagid = KEYLIST.index('flag')
+        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
+        if not len(check) > 0:
+           self.plotstream = self.plotstream._drop_column('flag')
+           self.plotstream = self.plotstream._drop_column('comment')
+           #self.plotopt['annotate'] = False
+        else:
+           pass
+           #self.plotopt['annotate'] = True
 
         self.menu_p.rep_page.logMsg('- flagged data removed')
 
         self.flaglist = []
         self.ActivateControls(self.plotstream)
-        #self.annotate = False
-        self.plotopt['annotate'] = False
 
-        self.menu_p.str_page.annotateCheckBox.SetValue(False)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")

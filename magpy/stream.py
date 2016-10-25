@@ -310,7 +310,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'IMF':['rw', 'Intermagnet Format'],
                 'IAF':['rw', 'Intermagnet archive Format'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
-                'BLV':['rw','Baseline format Intermagnet'],
+                'BLV':['r','Baseline format Intermagnet'],
                 'IYFV':['rw','Yearly mean format Intermagnet'],
                 'DKA':['rw', 'K value format Intermagnet'],
                 'DIDD':['rw','Output format from MinGeo DIDD'],
@@ -336,8 +336,8 @@ PYMAG_SUPPORTED_FORMATS = {
                 'IONO':['r', 'IM806 Ionometer'],
                 'RADON':['r', 'single channel analyser gamma data'],
                 'USBLOG':['r', 'USB temperature logger'],
-                'SERSIN':['r', '?'],
-                'SERMUL':['r', '?'],
+                #'SERSIN':['r', '?'],
+                #'SERMUL':['r', '?'],
                 'PYSTR':['rw', 'MagPy full ascii'],
                 'AUTODIF':['r', 'Deprecated - AutoDIF ouput data'],
                 'AUTODIF_FREAD':['r', 'Deprecated - Special format for AutoDIF read-in'],
@@ -346,15 +346,15 @@ PYMAG_SUPPORTED_FORMATS = {
                 'PYASCII':['rw', 'MagPy basic ASCII'],
                 'POS1TXT':['r', 'POS-1 text format output data'],
                 'POS1':['r', 'POS-1 binary output at WIC'],
-                'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
-                'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
-                'SFDMI':['r', 'San Fernando variometer'],
-                'SFGSM':['r', 'San Fernando GSM90'],
-                'BDV1':['r', 'Budkov GDAS data variant'],
+                #'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
+                #'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
+                #'BDV1':['r', 'Budkov GDAS data variant'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
                 'LATEX':['w','LateX data'],
                 'CS':['r','Cesium G823'],
+                #'SFDMI':['r', 'San Fernando variometer'],
+                #'SFGSM':['r', 'San Fernando GSM90'],
                 'UNKOWN':['-','Unknown']
                         }
 """
@@ -716,7 +716,11 @@ CALLED BY:
         #print self.container
         #assert isinstance(self.container, (list, tuple))
         co = DataStream()
-        co.header = self.header
+        #co.header = self.header
+        newheader = {}
+        for el in self.header:
+            newheader[el] = self.header[el]
+
         array = [[] for el in KEYLIST]
         if len(self.ndarray[0])> 0:
             for ind, key in enumerate(KEYLIST):
@@ -737,7 +741,7 @@ CALLED BY:
                         setattr(li, key, elkey)
                 co.add(li)
 
-        return DataStream(co.container,co.header,np.asarray(array, dtype=object))
+        return DataStream(co.container,newheader,np.asarray(array, dtype=object))
 
 
     def __str__(self):
@@ -4088,7 +4092,7 @@ CALLED BY:
         if not threshold:
             threshold = 5.0
 
-        cdate = datetime.utcnow()
+        cdate = datetime.utcnow().replace(tzinfo=None)
         sensorid = self.header.get('SensorID','')
         flaglist = []
 
@@ -4233,11 +4237,11 @@ CALLED BY:
             if flagtimeprev == 0:
                 startflagtime = ft
             if (ft-flagtimeprev)-0.01*srday > srday and not flagtimeprev == 0:
-                newlist.append([num2date(startflagtime),num2date(flagtimeprev),line[2],line[3],line[4],sensorid,cdate])
+                newlist.append([num2date(startflagtime).replace(tzinfo=None),num2date(flagtimeprev).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
                 startflagtime = ft
             flagtimeprev = ft
         if len(flaglist) > 0:
-            finalfl = [num2date(flaglist[-1][0]),num2date(flaglist[-1][1]),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
+            finalfl = [num2date(flaglist[-1][0]).replace(tzinfo=None),num2date(flaglist[-1][1]).replace(tzinfo=None),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
             newlist.append(finalfl)
 
         #print("flag_outlier",newlist)
@@ -7006,6 +7010,7 @@ CALLED BY:
                         liste.append(elem)
 
         #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
+
         return DataStream(liste, self.header,array)
 
 
@@ -8646,7 +8651,11 @@ CALLED BY:
 
         if not format_type in PYMAG_SUPPORTED_FORMATS:
             loggerstream.warning('write: Output format not supported.')
-            return
+            return False
+        else:
+            if not 'w' in PYMAG_SUPPORTED_FORMATS[format_type][0]:
+                loggerstream.warning('write: Selected format does not support write methods.')
+                return False
 
         format_type, filenamebegins, filenameends, coverage, dateformat = self._write_format(format_type, filenamebegins, filenameends, coverage, dateformat, year)
 
@@ -9513,15 +9522,25 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pathname = path_or_url
         for filename in iglob(pathname):
             getfile = True
-            if filename.endswith('.gz'):
+            if filename.endswith('.gz') or filename.endswith('.GZ'):
                 ## Added gz support to read IMO compressed data directly - future option might include tarfiles
                 import gzip
-                print ("Found zipped file")
+                print ("Found zipped file (gz) ... unpacking")
                 fname = os.path.split(filename)[1]
                 fname = fname.strip('.gz')
                 with NamedTemporaryFile(suffix=fname,delete=False) as fh:
                     shutil.copyfileobj(gzip.open(filename), fh)
                     filename = fh.name
+            if filename.endswith('.zip') or filename.endswith('.ZIP'):
+                ## Added gz support to read IMO compressed data directly - future option might include tarfiles
+                from zipfile import ZipFile
+                print ("Found zipped file (zip) ... unpacking")
+                with ZipFile(filename) as myzip:
+                    fname =  myzip.namelist()[0]
+                    with NamedTemporaryFile(suffix=fname,delete=False) as fh:
+                        shutil.copyfileobj(myzip.open(fname), fh)
+                        filename = fh.name
+
             theday = extractDateFromString(filename)
             try:
                 if starttime:
@@ -9584,6 +9603,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
 
     stream = DataStream([],{})
     format_type = None
+    foundapproptiate = False
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
@@ -9593,7 +9613,11 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
             if isFormat(filename, format_type):
                 if debug:
                     print ("  -- found:", format_type)
+                foundapproptiate = True
                 break
+        if not foundapproptiate:
+            print ("Could not identify a suitable data format")
+            return DataStream([LineStruct()],{},np.asarray([[] for el in KEYLIST]))
     else:
         # format given via argument
         dataformat = dataformat.upper()

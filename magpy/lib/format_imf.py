@@ -1371,6 +1371,10 @@ def readIMF(filename, headonly=False, **kwargs):
     headers = {}
     data = []
     key = None
+    find = KEYLIST.index('f')
+    t1ind = KEYLIST.index('t1')
+    var1ind = KEYLIST.index('var1')
+    t2ind = KEYLIST.index('t2')
 
     theday = extractDateFromString(filename)
     try:
@@ -1643,6 +1647,7 @@ def readBLV(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     mode = kwargs.get('mode')
+    debug = kwargs.get('debug')
     getfile = True
 
     fh = open(filename, 'rt')
@@ -1657,9 +1662,14 @@ def readBLV(filename, headonly=False, **kwargs):
 
     data = []
     key = None
+    year = 1900
 
     # get day from filename (platform independent)
     theday = extractDateFromString(filename)
+    try:
+        year = str(theday[0].year)
+    except:
+        pass
     try:
         if starttime:
             if not theday[-1] >= datetime.date(stream._testtime(starttime)):
@@ -1679,7 +1689,7 @@ def readBLV(filename, headonly=False, **kwargs):
             if line.isspace():
                 # blank line
                 continue
-            elif len(line) == 27 and not len(starfound) > 0:
+            elif len(line) in [26,27] and not len(starfound) > 0:
                 # data info
                 block = line.split()
                 #print block
@@ -1692,7 +1702,7 @@ def readBLV(filename, headonly=False, **kwargs):
             elif headonly:
                 # skip data for option headonly
                 return
-            elif len(line) == 44 or len(line) == 45:  # block 1 - basevalues
+            elif len(line) in [44,45] and not len(starfound) > 1:  # block 1 - basevalues
                 # data info
                 if not mode == 'adopted':
                     block = line.split()
@@ -1705,7 +1715,7 @@ def readBLV(filename, headonly=False, **kwargs):
                         array[2].append(float(block[2]))
                     array[3].append(float(block[3]))
                 #print block
-            elif len(line) == 54 or len(line) == 55:  # block 2 - adopted basevalues
+            elif len(line) in [54,55] and not len(starfound) > 1:  # block 2 - adopted basevalues
                 # data info
                 if mode == 'adopted':
                     block = line.split()

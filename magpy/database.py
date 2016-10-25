@@ -3273,11 +3273,12 @@ def db2flaglist(db,sensorid, begin=None, end=None):
     cursor.execute (searchsql + addbeginsql + addendsql)
     rows = cursor.fetchall()
 
+    tmp = DataStream()
     res=[]
     for line in rows:
         comps = line[2].split('_')
         for elem in comps:
-            res.append([line[0],line[1],elem,int(line[3]),line[4],line[5],line[6]])
+            res.append([tmp._testtime(line[0]),tmp._testtime(line[1]),elem,int(line[3]),line[4],line[5],tmp._testtime(line[6])])
 
     cursor.close ()
 

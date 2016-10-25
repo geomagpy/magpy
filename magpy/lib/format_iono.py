@@ -5,6 +5,11 @@ Written by Roman Leonhardt December 2015
 - contains test and read function, no write function
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from io import open
+
 
 from magpy.stream import *
 
@@ -24,15 +29,17 @@ def isIONO(filename):
     return True
 
 
-def readIONO(filename, headonly):
+def readIONO(filename, headonly, **kwargs):
     """
     Reading IONOMETER data to ndarray
     """
+    debug = kwargs.get('debug')
     stream = DataStream()
     # Check whether header infromation is already present
     headers = {}
     array = [[] for key in KEYLIST]
-    qFile= file( filename, "rb" )
+    #qFile= file( filename, "rb" )
+    qFile= open( filename, "rt", newline='' )
     csvReader= csv.reader( qFile )
     for line in csvReader:
         elem = line[0].split(';')

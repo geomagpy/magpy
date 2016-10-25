@@ -130,7 +130,9 @@ def readPYASCII(filename, headonly=False, **kwargs):
     headers = {}
 
     loggerlib.info('readPYASCII: Reading %s' % (filename))
-    qFile= file( filename, "rb" )
+
+    qFile= open( filename, "r", newline='' )
+
     csvReader= csv.reader( qFile )
     keylst = []
     timeconv = False
@@ -225,7 +227,8 @@ def readPYSTR(filename, headonly=False, **kwargs):
     headers={}
 
     loggerlib.info('readPYSTR: Reading %s' % (filename))
-    qFile= file( filename, "rb" )
+    #qFile= file( filename, "rb" )
+    qFile= open( filename, "rt", newline='' )
     csvReader= csv.reader( qFile )
 
     for elem in csvReader:
@@ -721,7 +724,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         # Date format not recognized. Need to read all files
         getfile = True
     logbaddata = False
-    debug = True
+
     if getfile:
         loggerlib.info("read: %s Format: PYCDF" % filename)
         if debug:
@@ -890,7 +893,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
         array = np.asarray([np.asarray(el).astype(object) for el in array])
         stream.ndarray = array
         if len(stream.ndarray[0]) > 0:
-            print("readPYBIN: Imported bin as ndarray")
+            if debug:
+                print("readPYBIN: Imported bin as ndarray")
             stream.container = [LineStruct()]
             # if unequal lengths are found, then usually txt and bin files are loaded together
 
@@ -912,20 +916,35 @@ def writePYSTR(datastream, filename, **kwargs):
                 datastream = joinStreams(exst,datastream)
             except:
                 loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
-            myFile= open( filename, "wb" )
+            if sys.version_info >= (3,0,0):
+                myFile= open( filename, "w", newline='' )
+            else:
+                myFile= open( filename, "wb")
         elif mode == 'replace': # replace existing inputs
             try:
                 exst = read(path_or_url=filename)
                 datastream = joinStreams(datastream,exst)
             except:
                 loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
-            myFile= open( filename, "wb" )
+            if sys.version_info >= (3,0,0):
+                myFile= open( filename, "w", newline='' )
+            else:
+                myFile= open( filename, "wb")
         elif mode == 'append':
-            myFile= open( filename, "ab" )
+            if sys.version_info >= (3,0,0):
+                myFile= open( filename, "a", newline='' )
+            else:
+                myFile= open( filename, "ab")
         else:
-            myFile= open( filename, "wb" )
+            if sys.version_info >= (3,0,0):
+                myFile= open( filename, "w", newline='' )
+            else:
+                myFile= open( filename, "wb")
     else:
-        myFile= open( filename, "wb" )
+        if sys.version_info >= (3,0,0):
+            myFile= open( filename, "w", newline='' )
+        else:
+            myFile= open( filename, "wb")
     wtr= csv.writer( myFile )
     headdict = datastream.header
     head, line = [],[]
@@ -1171,18 +1190,34 @@ def writePYASCII(datastream, filename, **kwargs):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream,extend=True)
-            myFile= open( filename, "wb" )
+            if sys.version_info >= (3,0,0):
+                myFile = open(filename, 'w', newline='')
+            else:
+                myFile = open(filename, 'wb')
         elif mode == 'replace': # replace existing inputs
             print("write ascii filename", filename)
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst,extend=True)
-            myFile= open( filename, "wb" )
+            if sys.version_info >= (3,0,0):
+                myFile = open(filename, 'w', newline='')
+            else:
+                myFile = open(filename, 'wb')
         elif mode == 'append':
-            myFile= open( filename, "ab" )
+            if sys.version_info >= (3,0,0):
+                myFile = open(filename, 'a', newline='')
+            else:
+                myFile = open(filename, 'ab')
         else:
-            myFile= open( filename, "wb" )
+            if sys.version_info >= (3,0,0):
+                myFile = open(filename, 'w', newline='')
+            else:
+                myFile = open(filename, 'wb')
     else:
-        myFile= open( filename, "wb" )
+        if sys.version_info >= (3,0,0):
+            myFile = open(filename, 'w', newline='')
+        else:
+            myFile = open(filename, 'wb')
+
     wtr= csv.writer( myFile )
     headdict = datastream.header
     head, line = [],[]
