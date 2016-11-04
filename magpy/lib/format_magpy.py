@@ -59,6 +59,11 @@ def isPYCDF(filename):
     except:
         return False
     try:
+        cdfformat = temp.attrs['DataFormat']
+        print ("CDF-Format:", cdfformat)
+    except:
+        pass
+    try:
         if not 'Epoch' in temp:
             if not 'time' in temp:
                 return False

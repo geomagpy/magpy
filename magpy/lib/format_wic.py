@@ -329,6 +329,28 @@ def readLNM(filename, headonly=False, **kwargs):
 
 
     print("Found LNM file")
+    synopdict = {"-1":"Sensorfehler",
+                 "41":"Leichter bis maessiger Niederschlag (nicht identifiziert, unbekannt)",
+                 "42":"Starker Niederschlag (nicht identifiziert, unbekannt)",
+                 "00":"Kein Niederschlag",
+                 "51":"Leichter Niesel",
+                 "52":"Maessiger Niesel",
+                 "53":"Starker Niesel",
+                 "57":"Leichter Niesel mit Regen",
+                 "58":"Maessiger bis starker Niesel mit Regen",
+                 "61":"Leichter Regen",
+                 "62":"Maessiger Regen",
+                 "63":"Starker Regen",
+                 "67":"Leichter Regen",
+                 "68":"Maessiger bis starker Regen",
+                 "77":"Schneegriesel",
+                 "71":"Leichter Schneefall",
+                 "72":"Maessiger Schneefall",
+                 "73":"Starker Schneefall",
+                 "74":"Leichte Graupel",
+                 "75":"Maessige Graupel",
+                 "76":"Starke Graupel",
+                 "89":"Hagel"}
 
     # get day from filename (platform independent)
     theday = extractDateFromString(filename)
@@ -361,11 +383,14 @@ def readLNM(filename, headonly=False, **kwargs):
         indvar3 = KEYLIST.index('var3')
         indvar4 = KEYLIST.index('var4')
         indvar5 = KEYLIST.index('var5')
+        indstr1 = KEYLIST.index('str1')
+        indstr2 = KEYLIST.index('str2')
 
+        cnt = 0
         #qFile= file( filename, "rb" )
         qFile= open( filename, encoding='utf-8' )
         csvReader= csv.reader( qFile, delimiter=str(';'))
-        for elem in csvReader:
+        for idx, elem in enumerate(csvReader):
             try:
                 if elem[0].startswith('# LNM'):
                     headers['col-x'] = 'rainfall'
@@ -389,7 +414,10 @@ def readLNM(filename, headonly=False, **kwargs):
                     headers['col-dx'] = 'P_slow'
                     headers['col-dy'] = 'P_fast'
                     headers['col-dz'] = 'P_small'
+                    headers['col-str1'] = 'SYNOP-4680-code'
+                    headers['col-str2'] = 'SYNOP-4680-description'
                 elif len(elem) == 527:
+                    cnt += 1
                     #print datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")
                     array[0].append(date2num(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")))
                     array[indx].append(elem[17])
@@ -406,6 +434,11 @@ def readLNM(filename, headonly=False, **kwargs):
                     array[inddx].append(elem[53])
                     array[inddy].append(elem[55])
                     array[inddz].append(elem[57])
+                    array[indstr1].append(elem[8])
+                    array[indstr2].append(synopdict.get(elem[8],'undefined'))
+                    if cnt == 1:
+                        headers['SensorDate'] = datetime.strftime(datetime.strptime(elem[5],'%d.%m.%y'),'%Y-%m-%d')
+                        headers['SensorSerialNum'] = elem[3]
                 else:
                     pass
             except:
@@ -413,12 +446,18 @@ def readLNM(filename, headonly=False, **kwargs):
     qFile.close()
 
     for idx,elem in enumerate(array):
-        array[idx] = np.asarray(array[idx]).astype(float)
+        if KEYLIST[idx] in NUMKEYLIST:
+            array[idx] = np.asarray(array[idx]).astype(float)
+        else:
+            array[idx] = np.asarray(array[idx]).astype(object)
     # Add some Sensor specific header information
     headers['SensorDescription'] = 'Thies Laser Niederschlags Monitor: Percipitation analysis'
     headers['SensorName'] = 'LNM'
-    headers['SensorType'] = 'meteorology'
     headers['SensorGroup'] = 'environment'
+    headers['SensorType'] = 'meteorology'
+    headers['SensorKeys'] = 'x,y,z,f,t1,t2,var1,var2,var3,var4,var5,dx,dy,dz,df,str1,str2'
+    headers['SensorElements'] = 'rainfall,visibility,reflectivity,P_tot,T,T_el,I_tot,I_fluid,I_solid,d(hail),qualtiy,P_slow,P_fast,P_small,SYNOP-4680-code,SYNOP-4680-description'
+
 
     return DataStream([LineStruct()], headers, np.asarray(array))
 

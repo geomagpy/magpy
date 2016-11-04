@@ -872,7 +872,7 @@ def dbdict2fields(db,header_dict,**kwargs):
                 datainfovaluelst.append(fieldvalue)
         else:
             loggerdatabase.warning("dbdict2fields: !!!!!!!! %s not existing !!!!!!!" % fieldname)
-            return
+            pass
 
     print(len(stationfieldlst), len(sensorfieldlst), len(datainfofieldlst))
     if mode == 'insert':   #####   Insert ########
@@ -905,6 +905,7 @@ def dbdict2fields(db,header_dict,**kwargs):
             if not msg == '':
                 loggerdatabase.warning("dbdict2fields: insert for STATIONS failed - %s - try update mode" % msg)
         if len(sensorfieldlst) > 0:
+            print (sensorvaluelst)
             insertsql = 'REPLACE INTO SENSORS (%s) VALUE (%s)' %  (', '.join(sensorfieldlst), '"'+'", "'.join(sensorvaluelst)+'"')
             msg = executesql(insertsql)
             if not msg == '':
@@ -1324,9 +1325,10 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
         cursor.execute(createsensortablesql)
 
     if len(rows) > 0:
+        print ("SensorID is existing in Table SENSORS")
         # SensorID is existing in Table
         loggerdatabase.info("dbsensorinfo: Sensorid already existing in SENSORS")
-        loggerdatabase.info("dbsensorinfo: rows: %s" % rows)
+        loggerdatabase.info("dbsensorinfo: rows: {}".format(rows))
         # Get the maximum revision number
         for i in range(len(rows)):
             rowval = rows[i][1]
@@ -1334,11 +1336,11 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
                 numlst.append(int(rowval))
             except:
                 pass
-        #print "Existing revisions", numlst
         try:
             maxnum = max(numlst)
         except:
             maxnum = None
+
         if isinstance(maxnum, int):
             index = numlst.index(maxnum)
             sensorid = rows[index][0]
@@ -1357,16 +1359,17 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
             updatesensorsql = 'UPDATE SENSORS SET SensorID = "' + sensorid + '", SensorRevision = "' + sensorrevision + '", SensorSerialNum = "' + sensorserialnum + '" WHERE SensorID = "' + oldsensorid + '"'
             cursor.execute(updatesensorsql)
     else:
+        print ("SensorID not yet existing in Table SENSORS")
         # SensorID is not existing in Table
         loggerdatabase.info("dbsensorinfo: Sensorid not yet existing in SENSORS.")
         # Check whether given sensorid is incomplete e.g. revision number is missing
         loggerdatabase.info("dbsensorinfo: Creating new sensorid %s " % sensorid)
         if not 'SensorSerialNum' in sensorhead:
+            print ("No serial number")
             sensoridsplit = sensorid.split('_')
-            if len(sensoridsplit) == 2:
+            if len(sensoridsplit) in [2,3]:
                 sensorserialnum = sensoridsplit[1]
-            elif len(sensoridsplit) == 3:
-                sensorserialnum = sensoridsplit[1]
+            if len(sensoridsplit) == 3:
                 if not 'SensorRevision' in sensorhead:
                     sensorhead.append('SensorRevision')
                     sensorvalue.append(sensoridsplit[2])
@@ -1377,16 +1380,23 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
             sensorhead.append('SensorSerialNum')
             sensorvalue.append(sensorserialnum)
             loggerdatabase.debug("dbsensorinfo: sensor %s, %s" % (sensoridsplit, sensorserialnum))
+
         if not 'SensorRevision' in sensorhead:
+            sensoridsplit = sensorid.split('_')
+            if len(sensoridsplit) > 1:
+                sensorrevision = sensoridsplit[-1]
             sensorhead.append('SensorRevision')
             sensorvalue.append(sensorrevision)
             if not 'SensorID' in sensorhead:
                 sensorhead.append('SensorID')
                 sensorvalue.append(sensorid+'_'+sensorrevision)
+                sensorid = sensorid+'_'+sensorrevision
             else:
                 index = sensorhead.index('SensorID')
-                sensorvalue[index] = sensorid+'_'+sensorrevision
-            sensorid = sensorid+'_'+sensorrevision
+                # Why???????? This seems to be wrong (maybe important for OW  -- added an untested corr (leon))
+                if 'OW' in sensorvalue:
+                    sensorvalue[index] = sensorid+'_'+sensorrevision
+
         ### create an input for the new sensor
         sensorsql = "INSERT INTO SENSORS(%s) VALUES (%s)" % (', '.join(sensorhead), '"'+'", "'.join(sensorvalue)+'"')
         #print "Adding the following info to SENSORS: ", sensorsql
@@ -1612,7 +1622,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         else:
             print ("dbdatainfo: Creating new DataID")
             print ("dbdatainfo: because - {}".format(intensiverows))
-            print (intensivesearch)
+            #print (intensivesearch)
             selectupdate = False
             datainfonum = '{0:04}'.format(maxnum+1)
             #print "dbdatainfo", datainfohead, datainfovalue, datainfonum
@@ -1770,7 +1780,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         datastream.header['DataAbsFunctionObject'] = ''
         tablename = dbdatainfo(db,datastream.header['SensorID'],datastream.header,None,datastream.header['StationID'])
 
-        #print "After", tablename, datastream.header['SensorID']
+        #print ("After", tablename, datastream.header.get('SensorID'))
 
     # ----------------------------------------------
     #   Putting together all data
