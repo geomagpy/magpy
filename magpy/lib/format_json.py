@@ -73,6 +73,7 @@ def readJSON(filename, headonly=False, **kwargs):
             if 'time' in key:
                 data = [date2num(testTimeString(str(x[i]))) for x in dataset[1:]]
             else:
+
                 data = [np.nan if x[i] is None else float(x[i]) for x in dataset[1:]]
             array[KEYLIST.index(keydict[i])] = data
             stream.header['col-'+keydict[i]] = key

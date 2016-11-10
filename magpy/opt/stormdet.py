@@ -472,27 +472,30 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                         print(ace_ssc)
                 pflux_prob = pflux_prob * pflux_weight
                 probf = probf * total_weight
-                prob_var = (probf + pflux_prob)/(total_weight + pflux_weight)
+                probf = (probf + pflux_prob)/(total_weight + pflux_weight)
                 flux_var = flux_val
+                
+            elif ACE_5m == None:
+                flux_var = None
 
-                acedict = {}
-                # CALCULATE ESTIMATED ARRIVAL TIME
-                satssctime = num2date(t_max).replace(tzinfo=None)
-                #a_arr = -0.0000706504807969411
-                #b_arr = 0.0622525912
-                #arr_est = a_arr * v_max + b_arr # original
-                #estssctime = satssctime + timedelta(minutes=(arr_est * 60. * 24.))
-                a_arr = 2.29684514e+04
-                b_arr = -7.62595734e+00
-                arr_est = a_arr * (1./v_max) + b_arr
-                estssctime = satssctime + timedelta(minutes=arr_est)
-                acedict['satssctime'] = satssctime
-                acedict['estssctime'] = estssctime
-                acedict['vwind'] = v_max
-                acedict['pflux'] = flux_var
-                acedict['probf'] = prob_var
-                detection = True
-                ace_ssc.append(acedict)
+            acedict = {}
+            # CALCULATE ESTIMATED ARRIVAL TIME
+            satssctime = num2date(t_max).replace(tzinfo=None)
+            #a_arr = -0.0000706504807969411
+            #b_arr = 0.0622525912
+            #arr_est = a_arr * v_max + b_arr # original
+            #estssctime = satssctime + timedelta(minutes=(arr_est * 60. * 24.))
+            a_arr = 2.29684514e+04
+            b_arr = -7.62595734e+00
+            arr_est = a_arr * (1./v_max) + b_arr
+            estssctime = satssctime + timedelta(minutes=arr_est)
+            acedict['satssctime'] = satssctime
+            acedict['estssctime'] = estssctime
+            acedict['vwind'] = v_max
+            acedict['pflux'] = flux_var
+            acedict['probf'] = probf
+            detection = True
+            ace_ssc.append(acedict)
 
             if verbose:
                 print("Removing data from %s to %s." % (num2date(t_max)-timedelta(minutes=15+timestep), num2date(t_max)+timedelta(minutes=15+lastcompare)))
