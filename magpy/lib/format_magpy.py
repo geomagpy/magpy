@@ -797,7 +797,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 keylist = h_elem[3].strip('[').strip(']').split(',')
                 elemlist = h_elem[4].strip('[').strip(']').split(',')
                 unitlist = h_elem[5].strip('[').strip(']').split(',')
-                multilist = map(float,h_elem[7].strip('[').strip(']').split(','))
+                multilist = list(map(float,h_elem[7].strip('[').strip(']').split(',')))
                 nospecial = True
         else:
             loggerlib.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
@@ -807,6 +807,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print('readPYBIN- checking code')
 
         packstr = '<'+h_elem[-2]+'B'
+        packstr = packstr.encode('ascii','ignore')
         lengthcode = struct.calcsize(packstr)
         lengthgiven = int(h_elem[-1])+1
         length = lengthgiven
@@ -1154,7 +1155,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = np.asarray(col) # to get string conversion
             else:
                 #print(col, key)
-                col = np.asarray([np.nan if el is None else el for el in col])
+                col = np.asarray([np.nan if el in [None,'-'] else el for el in col])
                 #col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)
             mycdf[key] = col

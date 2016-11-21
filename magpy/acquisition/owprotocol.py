@@ -81,14 +81,11 @@ if onewire:
         def connectionMade(self,root):
             # A loading eventually existing sensor list
             print("Connection made")
-<<<<<<< HEAD
-            martasdir = [path for path, dirs, files in os.walk("/home") if path.endswith('MARTAS')][0]
-=======
             from os.path import expanduser
             home = expanduser("~")
 
             martasdir = [path for path, dirs, files in os.walk(home) if path.endswith('MARTAS')][0]
->>>>>>> master
+
             owsensorfile = os.path.join(martasdir,'owlist.csv')
             owlist = []
             idlist = []

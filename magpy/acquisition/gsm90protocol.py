@@ -96,8 +96,14 @@ class GSM90Protocol(LineReceiver):
             if len(data_array) == 4:
                 intensity = float(data_array[2])
                 err_code = int(data_array[3])
-                internal_t = datetime.strptime(data_array[0]+'T'+data_array[1], "%m-%d-%YT%H%M%S")
-                internal_time = datetime.strftime(internal_t, "%Y-%m-%d %H:%M:%S.%f")
+                try:
+                    try:
+                        internal_t = datetime.strptime(data_array[0]+'T'+data_array[1], "%m-%d-%YT%H%M%S.%f")
+                    except:
+                        internal_t = datetime.strptime(data_array[0]+'T'+data_array[1], "%m-%d-%YT%H%M%S")
+                    internal_time = datetime.strftime(internal_t, "%Y-%m-%d %H:%M:%S.%f")
+                except:
+                    internal_time = datetime.strftime(datetime.utcnow(), "%Y-%m-%d %H:%M:%S.%f")
                 #print internal_time
             else:
                 err_code = 0
@@ -106,6 +112,12 @@ class GSM90Protocol(LineReceiver):
         except:
             log.err('GSM90 - Protocol: Data formatting error. Data looks like: %s' % data)
         try:
+            ## GSM90 does not provide any info on whether the GPS reading is OK or not
+            gps = True
+            if gps:
+                baktimestamp = timestamp
+                timestamp = internal_time
+                internal_time = baktimestamp
             # extract time data
             datearray = timeToArray(timestamp)
             try:
@@ -137,7 +149,7 @@ class GSM90Protocol(LineReceiver):
         dispatch_url =  "http://example.com/"+self.hostname+"/gsm#"+self.sensor+"-value"
         try:
             data = line
-            #print "Line", line
+            #print ("Line", line)
             evt1, evt3, evt10, evt99 = self.processData(data)
         except ValueError:
             log.err('GSM90 - Protocol: Unable to parse data %s' % line)

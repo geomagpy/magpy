@@ -1575,16 +1575,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     failinglist = []
     successlist = []
     if db:
-        print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
+        #print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
         try:
             import magpy.database as dbase
             #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist, string2dict
         except:
-            print("absoluteAnalysis:  import failed - skipping eventually selected option dbadd")
+            print("absoluteAnalysis:  import of database methods failed - skipping eventually selected option dbadd")
             dbadd = False
         cursor = db.cursor()
         # Check whether absdata exists as table
-        print("absoluteAnalysis:  Tyring to interprete the didata path as DB Table")
+        #print("absoluteAnalysis:  Tyring to interprete the didata path as DB Table")
         cursor.execute("SHOW TABLES LIKE '%s'" % absdata)
         try:
             value = cursor.fetchone()[0]
@@ -1600,9 +1600,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 return
             # DI TABLE FOUND
             readfile = False
-            print("absoluteAnalysis:  ... success")
+            print("absoluteAnalysis:  getting DI data from database")
         except:
-            print("absoluteAnalysis:  Could not read DB Table with DI values - checking files")
+            print("absoluteAnalysis:  getting DI data from files")
             pass
 
     if readfile:

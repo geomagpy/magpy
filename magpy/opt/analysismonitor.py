@@ -6,11 +6,12 @@ from __future__ import absolute_import
 from __future__ import division
 
 """
-Tested and running in python 2.7
-updates necessary for 3.x as pickle format has changed
+Tested and running in python 2.7, 3.4
+logfiles and hidden pickle file need to be recreated when updating from 2.7 to 3.x
+as pickle format has changed
 
 Creating a monitoring dictionary and connecting it to a nagios log file indicator
-This app is located within the ANALYSIS folder and its logging routines (to be added)
+This app used within the ANALYSIS folder and its logging routines
 
 Concept:
 
@@ -50,7 +51,7 @@ To initialize the analysis monitor use:
 
 2.) dictionary is stored as a pickle object
 
-3.) Every ANALYSIS job can access the pickle object, check its contents and eventually update the dictionary "istwert"
+3.) Every ANALYSIS job can access the pickle object, check its contents and eventually update the dictionaries "istwert"
     -> provide method "update(key, istwert, sollwert=None)"
        - updates the "istwert" of key
        - if key not existing it will be created (requires "sollwert")
@@ -74,16 +75,11 @@ To initialize the analysis monitor use:
 ## IMPLEMENTING THE CODE In ANALYSIS:
 1. add class analysis to magpy.opt
 
-2. from magpy.opt.analysismonitor import analysismonitor
+2. from magpy.opt.analysismonitor import Analysismonitor
 
-3. INIT: 
-   mydict = analysismonitor(logfile='/home/cobs/ANALYSIS/Logs/AnalysisMonitor.log')
-   mydict['data_threshold_f_GSMPS3_11224_0001_0001'] = [30000,'>',20000]
-   mydict.save('/home/cobs/ANALYSIS/Logs/AnalysisMonitor.pkl')
-
-4. ADD to ANALYSIS - Jobs:
-   from magpy.opt.analysismonitor import analysismonitor
-   mydict = analysismonitor(logfile='/home/cobs/ANALYSIS/Logs/AnalysisMonitor.log')
+2. ADD to ANALYSIS - Jobs:
+   from magpy.opt.analysismonitor import Analysismonitor
+   mydict = Analysismonitor(logfile='/home/cobs/ANALYSIS/Logs/AnalysisMonitor.log')
    mydict = mydict.load('/home/cobs/ANALYSIS/Logs/AnalysisMonitor.pkl')
    mydict.check({'data_threshold_f_GSMPS3_11224_0001_0001': [mean_f,'>',20000]})
    mydict.check({'upload_zamg_radondata': [status,'=','success']})
@@ -93,12 +89,12 @@ To initialize the analysis monitor use:
 """
 
 
-import io, pickle, os
+import io, pickle, os, sys
 from datetime import datetime, timedelta
 import operator
 from matplotlib.dates import date2num
 
-class analysismonitor(dict):
+class Analysismonitor(dict):
     def __init__(self, logfile=None, dictfile=None):
         homedir = os.path.expanduser('~')
         if not logfile:
@@ -174,9 +170,12 @@ class analysismonitor(dict):
         """
         if not len(valuelist) > 2:
             return 'invalid'
-        
+
         actual = valuelist[0]
-        comp = valuelist[1].decode('ascii')  # will not work in python3 as str cannot be decoded
+        if sys.version_info >= (3,0,0):
+            comp = valuelist[1]
+        else:
+            comp = valuelist[1].decode('ascii')  # will not work in python3 as str cannot be decoded
         reference = valuelist[2]
         #print (actual, comp, reference)
 

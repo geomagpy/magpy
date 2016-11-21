@@ -93,7 +93,7 @@ try:
     version = matplotlib.__version__.replace('svn', '')
     try:
         version = map(int, version.replace("rc","").split("."))
-        MATPLOTLIB_VERSION = version
+        MATPLOTLIB_VERSION = list(version)
     except:
         version = version.strip("rc")
         MATPLOTLIB_VERSION = version

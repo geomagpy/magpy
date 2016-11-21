@@ -92,32 +92,19 @@ if __name__ == '__main__':
         cursor.close ()
         db.close ()
     except:
-        print("Create a credential file first or provide login info for database directly")
-<<<<<<< HEAD
-        raise
-    cursor = db.cursor ()
-    cursor.execute ("SELECT VERSION()")
-    row = cursor.fetchone ()
-    print("MySQL server version:", row[0])
-    cursor.close ()
-    db.close ()
-=======
+        print("Could not connect to database")
         dest = "file"
-        raise
->>>>>>> master
+        #raise
 
     # ----------------------------------------------------------
     # 3. connect to client and get sensor list as well as owlist
     # ----------------------------------------------------------
     print("Locating MARCOS directory ...")
-<<<<<<< HEAD
     destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
-=======
     from os.path import expanduser
     home = expanduser("~")
 
     destpath = [path for path, dirs, files in os.walk(home) if path.endswith('MARCOS')][0]
->>>>>>> master
     sensfile = os.path.join(martaspath,'sensors.txt')
     owfile = os.path.join(martaspath,'owlist.csv')
     destsensfile = os.path.join(destpath,'MoonsSensors',clientname+'_sensors.txt')

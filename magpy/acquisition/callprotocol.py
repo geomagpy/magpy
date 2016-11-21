@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 from __future__ import print_function
-=======
-
->>>>>>> master
 import sys, time, os, socket
 import serial
 import struct, binascii, re, csv
@@ -43,7 +39,7 @@ if call:
             self.eol = '\r'
             #print source
             self.errorcnt = 1
-            print "Initialization of callprotocl finished"
+            print ("Initialization of callprotocl finished")
 
         def lineread(self, ser,eol):
             # FUNCTION 'LINEREAD'
@@ -103,13 +99,8 @@ if call:
             try:   
                 ser = serial.Serial(self.port, baudrate=self.baudrate , parity='N', bytesize=8, stopbits=1, timeout=10)
                 #print 'Connection made.'
-<<<<<<< HEAD
             except:
                 print('SerialCall: Connection flopped.')
-=======
-            except: 
-                print 'SerialCall: Connection flopped.'
->>>>>>> master
 
             for item in self.commands:
                 #print "sending command", item
@@ -142,12 +133,8 @@ if call:
             elif len(answer.split()) == 4 and answer.split()[0].startswith('\x03'):
                 self.writeAnemometer(answer,actime)
             else:
-<<<<<<< HEAD
-                print("SerialCall: Could no analyze data")
-=======
                 if self.errorcnt < 5:
-                    print "SerialCall: Could no analyze data:", answer, answer.split()
->>>>>>> master
+                    print("SerialCall: Could no analyze data", answer)
                 return False
             return True
     
@@ -302,15 +289,9 @@ if call:
                 ser = serial.Serial(self.port, baudrate=self.baudrate , parity='N', bytesize=8, stopbits=1)
                 answer, tmptime = self.send_command(ser,address+'SH',self.eol,hex=False)
                 ser.close()
-<<<<<<< HEAD
-                serialnum = answer.replace('!12SH','').strip('\x03').strip('\x02')
+                serialnum = answer.replace('!'+address+'SH','').strip('\x03').strip('\x02')
             except:
                 print('writeAnemometer: Failed to get Serial number.')
-=======
-                serialnum = answer.replace('!'+address+'SH','').strip('\x03').strip('\x02')
-            except: 
-                print 'writeAnemometer: Failed to get Serial number.'
->>>>>>> master
 
             
             sensorid = sensor + '_' + serialnum + '_' + revision
