@@ -5,8 +5,12 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
 
 from magpy.stream import *
+from io import open
 
 
 def isDIDD(filename):
@@ -182,7 +186,11 @@ def writeDIDD(datastream, filename, **kwargs):
         yhead = 'Y'
         zhead = 'Z'
         fhead = 'F'
-    myFile= open( filename, 'wb' )
+
+    if sys.version_info >= (3,0,0):
+        myFile = open(filename, 'w', newline='')
+    else:
+        myFile= open( filename, 'wb' )
     wtr= csv.writer( myFile )
     headline = 'hh mm        '+xhead+'        '+yhead+'        '+zhead+'        '+fhead
     wtr.writerow( [headline] )

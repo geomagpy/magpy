@@ -6,8 +6,21 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+
+from io import open
 
 from magpy.stream import *
+
+
+def OpenFile(filename, mode='w'):
+    if sys.version_info >= (3,0,0):
+        f = open(filename, mode, newline='')
+    else:
+        f = open(filename, mode+'b')
+    return f
 
 def isUSBLOG(filename):
     """
@@ -16,7 +29,7 @@ def isUSBLOG(filename):
     Extend that code for CO logger as well
     """
     try:
-        temp = open(filename, 'rt').readline()
+        temp = open( filename, "r", newline='', encoding='utf-8', errors='ignore' ).readline()
     except:
         return False
     try:
@@ -35,7 +48,8 @@ def isRMRCS(filename):
     Checks whether a file is ASCII RCS format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
+        temp = fh.readline()
     except:
         return False
     try:
@@ -72,7 +86,7 @@ def isMETEO(filename):
     """
 
     try:
-        fh = open(filename, 'rt')
+        fh = open(filename, 'rb')
         temp = fh.readline()
     except:
         return False
@@ -80,18 +94,20 @@ def isMETEO(filename):
         comp = temp.split()
     except:
         return False
+
     try:
-        if not comp[0] == 'Date':
+        if not comp[0].decode('utf-8') == 'Date':
             return False
-        if not comp[3].startswith('AP23'):
+        if not comp[3].decode('utf-8').startswith('AP23'):
             return False
 
         temp = fh.readline()
         comp = temp.split()
-        date = comp[0] + '-' + comp[1]
+        date = comp[0].decode('utf-8') + '-' + comp[1].decode('utf-8')
         test = datetime.strptime(date,"%Y%m%d-%H%M%S")
     except:
         return False
+
     return True
 
 
@@ -197,7 +213,14 @@ def readRMRCS(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    fh = open(filename, 'rt')
+    debug = kwargs.get('debug')
+    debug = True
+    if debug:
+        print ("RCS: found data from Richards Perl script")
+
+    #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
+    #fh = open(filename, 'r', newline='')
+    fh = open(filename, 'rb')
     # read file and split text into channels
     # --------------------------------------
     stream = DataStream()
@@ -225,6 +248,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
 
     if getfile:
         for line in fh:
+            line = line.decode('utf-8','ignore')
             if line.isspace():
                 # blank line
                 pass
@@ -240,8 +264,8 @@ def readRMRCS(filename, headonly=False, **kwargs):
                     unittype = colsstr[2].split()
                     measurement.append(meastype[2])
                     unit.append(unittype[2])
-                    headers['col-'+KEYLIST[i+1]] = unicode(measurement[i],errors='ignore')
-                    headers['unit-col-'+KEYLIST[i+1]] = unicode(unit[i],errors='ignore')
+                    headers['col-'+KEYLIST[i+1]] = measurement[i]
+                    headers['unit-col-'+KEYLIST[i+1]] = unit[i]
                     if headers['unit-col-'+KEYLIST[i+1]] == '--':
                         headers['unit-col-'+KEYLIST[i+1]] = ''
                     i=i+1
@@ -251,7 +275,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
             else:
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
-                elem = string.split(line[:-1])
+                elem = line[:-1].split()
                 gottime = False
 
                 try:
@@ -305,6 +329,28 @@ def readLNM(filename, headonly=False, **kwargs):
 
 
     print("Found LNM file")
+    synopdict = {"-1":"Sensorfehler",
+                 "41":"Leichter bis maessiger Niederschlag (nicht identifiziert, unbekannt)",
+                 "42":"Starker Niederschlag (nicht identifiziert, unbekannt)",
+                 "00":"Kein Niederschlag",
+                 "51":"Leichter Niesel",
+                 "52":"Maessiger Niesel",
+                 "53":"Starker Niesel",
+                 "57":"Leichter Niesel mit Regen",
+                 "58":"Maessiger bis starker Niesel mit Regen",
+                 "61":"Leichter Regen",
+                 "62":"Maessiger Regen",
+                 "63":"Starker Regen",
+                 "67":"Leichter Regen",
+                 "68":"Maessiger bis starker Regen",
+                 "77":"Schneegriesel",
+                 "71":"Leichter Schneefall",
+                 "72":"Maessiger Schneefall",
+                 "73":"Starker Schneefall",
+                 "74":"Leichte Graupel",
+                 "75":"Maessige Graupel",
+                 "76":"Starke Graupel",
+                 "89":"Hagel"}
 
     # get day from filename (platform independent)
     theday = extractDateFromString(filename)
@@ -337,10 +383,14 @@ def readLNM(filename, headonly=False, **kwargs):
         indvar3 = KEYLIST.index('var3')
         indvar4 = KEYLIST.index('var4')
         indvar5 = KEYLIST.index('var5')
+        indstr1 = KEYLIST.index('str1')
+        indstr2 = KEYLIST.index('str2')
 
-        qFile= file( filename, "rb" )
-        csvReader= csv.reader( qFile, delimiter=';')
-        for elem in csvReader:
+        cnt = 0
+        #qFile= file( filename, "rb" )
+        qFile= open( filename, encoding='utf-8' )
+        csvReader= csv.reader( qFile, delimiter=str(';'))
+        for idx, elem in enumerate(csvReader):
             try:
                 if elem[0].startswith('# LNM'):
                     headers['col-x'] = 'rainfall'
@@ -364,7 +414,10 @@ def readLNM(filename, headonly=False, **kwargs):
                     headers['col-dx'] = 'P_slow'
                     headers['col-dy'] = 'P_fast'
                     headers['col-dz'] = 'P_small'
+                    headers['col-str1'] = 'SYNOP-4680-code'
+                    headers['col-str2'] = 'SYNOP-4680-description'
                 elif len(elem) == 527:
+                    cnt += 1
                     #print datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")
                     array[0].append(date2num(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")))
                     array[indx].append(elem[17])
@@ -381,6 +434,11 @@ def readLNM(filename, headonly=False, **kwargs):
                     array[inddx].append(elem[53])
                     array[inddy].append(elem[55])
                     array[inddz].append(elem[57])
+                    array[indstr1].append(elem[8])
+                    array[indstr2].append(synopdict.get(elem[8],'undefined'))
+                    if cnt == 1:
+                        headers['SensorDate'] = datetime.strftime(datetime.strptime(elem[5],'%d.%m.%y'),'%Y-%m-%d')
+                        headers['SensorSerialNum'] = elem[3]
                 else:
                     pass
             except:
@@ -388,12 +446,18 @@ def readLNM(filename, headonly=False, **kwargs):
     qFile.close()
 
     for idx,elem in enumerate(array):
-        array[idx] = np.asarray(array[idx]).astype(float)
+        if KEYLIST[idx] in NUMKEYLIST:
+            array[idx] = np.asarray(array[idx]).astype(float)
+        else:
+            array[idx] = np.asarray(array[idx]).astype(object)
     # Add some Sensor specific header information
     headers['SensorDescription'] = 'Thies Laser Niederschlags Monitor: Percipitation analysis'
     headers['SensorName'] = 'LNM'
-    headers['SensorType'] = 'meteorology'
     headers['SensorGroup'] = 'environment'
+    headers['SensorType'] = 'meteorology'
+    headers['SensorKeys'] = 'x,y,z,f,t1,t2,var1,var2,var3,var4,var5,dx,dy,dz,df,str1,str2'
+    headers['SensorElements'] = 'rainfall,visibility,reflectivity,P_tot,T,T_el,I_tot,I_fluid,I_solid,d(hail),qualtiy,P_slow,P_fast,P_small,SYNOP-4680-code,SYNOP-4680-description'
+
 
     return DataStream([LineStruct()], headers, np.asarray(array))
 
@@ -410,13 +474,20 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     7,29/07/2010 14:58:03,21.0,89.0,19.1
     8,29/07/2010 15:28:03,21.0,89.0,19.1
     """
+
     stream = DataStream()
+
+    array = [[] for elem in KEYLIST]
+    t1ind = KEYLIST.index('t1')
+    t2ind = KEYLIST.index('t2')
+    var1ind = KEYLIST.index('var1')
+
     # Check whether header infromation is already present
     headers = {}
-    qFile= file( filename, "rb" )
+    qFile= open( filename, "r", newline='', encoding='utf-8', errors='ignore' )
     csvReader= csv.reader( qFile )
     for elem in csvReader:
-        row = LineStruct()
+        #row = LineStruct()
         try:
             if elem[1] == 'Time':
                 el2 = elem[2].split('(')
@@ -432,11 +503,15 @@ def readUSBLOG(filename, headonly=False, **kwargs):
             elif len(elem) == 6 and not elem[1] == 'Time':
                 headers['SensorSerialNum'] = '%s' % elem[5]
             else:
-                row.time = date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
-                row.t1 = float(elem[2])
-                row.var1 = float(elem[3])
-                row.t2 = float(elem[4])
-                stream.add(row)
+                array[0].append(date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S")))
+                array[t1ind].append(float(elem[2]))
+                array[t2ind].append(float(elem[4]))
+                array[var1ind].append(float(elem[3]))
+                #row.time = date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
+                #row.t1 = float(elem[2])
+                #row.var1 = float(elem[3])
+                #row.t2 = float(elem[4])
+                #stream.add(row)
         except:
             pass
     qFile.close()
@@ -446,7 +521,10 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     headers['SensorType'] = 'Temperature/Humidity'
     headers['SensorGroup'] = 'environment'
 
-    return DataStream(stream, headers)
+
+    array = np.asarray([np.asarray(el) for el in array])
+    stream = [LineStruct()]
+    return DataStream(stream, headers, array)
 
 
 def readMETEO(filename, headonly=False, **kwargs):
@@ -465,11 +543,15 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     takehelium = kwargs.get('takehelium')
+    debug = kwargs.get('debug')
     getfile = True
 
     heliumcols = []
 
     stream = DataStream()
+
+    if debug:
+        print ("METEO: found RCS meteo data")
 
     # Check whether header infromation is already present
     headers = {}
@@ -488,7 +570,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
         # Date format not recognized. Need to read all files
         getfile = True
 
-    fh = open(filename, 'rt')
+    fh = open(filename, 'rb')
 
     array = [[] for key in KEYLIST]
     fkeys = []
@@ -496,6 +578,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if getfile:
         for line in fh:
+            line = line.decode('utf-8',errors='ignore')
             if line.isspace():
                 # blank line
                 continue
@@ -572,8 +655,10 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
             headers['unit-col-var1'] = 'm/s'
 
         headers['SensorKeys'] = ','.join(fkeys)
-        headers['SensorElements'] = ','.join([eval("headers['col-"+key+"']") for key in KEYLIST if key in fkeys])
+        headers['SensorElements'] = ','.join([headers['col-'+key] for key in KEYLIST if key in fkeys])
 
+    if debug:
+        print ("METEO: Successfully loaded METEO data")
     return DataStream([LineStruct()], headers, np.asarray(array))
 
 
@@ -781,7 +866,8 @@ def readCS(filename, headonly=False, **kwargs):
     stream = DataStream()
     # Check whether header infromation is already present
     headers = {}
-    qFile= file( filename, "rb" )
+    array = [[] for elem in KEYLIST]
+    qFile= open( filename, "rt", newline='' )
     csvReader= csv.reader( qFile )
 
     # get day from filename (platform independent)
@@ -801,8 +887,10 @@ def readCS(filename, headonly=False, **kwargs):
 
     # Select only files within eventually defined time range
     if getfile:
+        print ("REading", theday[0])
         logging.info(' Read: %s Format: CS (txt) ' % (filename))
         for elem in csvReader:
+            #print (elem)
             if len(elem) == 1:
                 elem = elem[0].split()
             if elem[0]=='#':
@@ -813,19 +901,26 @@ def readCS(filename, headonly=False, **kwargs):
                 continue
             else:
                 try:
-                    row = LineStruct()
+                    #row = LineStruct()
                     try:
-                        row.time = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                        #row.time = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                        ti = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
                     except:
-                        row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                        #row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                        ti = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                    array[find].append(ti)
                     if len(elem) == 2:
-                        row.f = float(elem[1])
+                        #row.f = float(elem[1])
+                        array[find].append(float(elem[1]))
                     elif len(elem) == 4:
-                        row.t1 = float(elem[1])
-                        row.var1 = float(elem[2])
-                        row.t2 = float(elem[3])
+                        array[t1ind].append(float(elem[1]))
+                        array[var1ind].append(float(elem[2]))
+                        array[t2ind].append(float(elem[3]))
+                        #row.t1 = float(elem[1])
+                        #row.var1 = float(elem[2])
+                        #row.t2 = float(elem[3])
 
-                    stream.add(row)
+                    #stream.add(row)
                 except ValueError:
                     pass
         qFile.close()
@@ -841,7 +936,9 @@ def readCS(filename, headonly=False, **kwargs):
             headers['col-t2'] = 'Dewpoint'
             headers['col-var1'] = 'RH'
 
-    return DataStream(stream, headers)
+    array = np.asarray([np.asarray(el) for el in array])
+    stream = [LineStruct()]
+    return DataStream(stream, headers, array)
 
 
 def readGRAVSG(filename, headonly=False, **kwargs):

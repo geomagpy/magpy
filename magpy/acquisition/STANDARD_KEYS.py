@@ -42,6 +42,7 @@ The asociations with the MagPy stream class are contained as IDKEY dictionary in
 
 **40-49 : Other Variables**
 40: Error code (POS1)           -- float (80) [-]
+45: SYNOP code (LNM)		-- string (01) [-]
    41-49:                       -- [reserved]
 
 **50-59 : Temperature and Environment Data - continued**

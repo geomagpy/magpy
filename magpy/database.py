@@ -5,6 +5,10 @@
 # ----------------------------------------------------------------------------
 
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+
 from magpy.stream import *
 from magpy.absolutes import *
 from magpy.transfer import *
@@ -12,17 +16,16 @@ from magpy.transfer import *
 print("Loading python's SQL support")
 try:
     # Loading MySQL functionality
-    import MySQLdb
+    import MySQLdb as mysql
     print("... success")
 except ImportError:
-    print("Failed to import SQL package 'MySQLdb' - trying alternative pymysql e.g. for MAC users")
     try:
         # Loading alternative MySQL functionality
-        import pymysql
-        pymysql.install_as_MySQLdb()
+        import pymysql as mysql
+        mysql.install_as_MySQLdb()
         print("... success")
     except:
-        print("Failed to import alternative SQL package 'pymysql'")
+        print("Failed to import SQL packages 'MySQLdb' or 'pymysql'")
 except:
     print("SQL package import failed")
     pass
@@ -233,7 +236,7 @@ def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'
         Gets values from DeltaDictionary of the PIERS table
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - pierid:       (string) The pier you are interested in
         - RP:           (string) ReferencePier
         - value:        (string) one of 'deltaD', 'deltaI' and 'deltaF' - default is 'deltaF'
@@ -293,7 +296,7 @@ def dbgetlines(db, tablename, lines):
         Get the last x lines from the selected table
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - tablename:    name of the table
         - lines:        (int) amount of lines to extract
     APPLICATION:
@@ -306,9 +309,9 @@ def dbgetlines(db, tablename, lines):
     headsql = 'SHOW COLUMNS FROM %s' % (tablename)
     try:
         cursor.execute(headsql)
-    except MySQLdb.IntegrityError as message:
+    except mysql.IntegrityError as message:
         return message
-    except MySQLdb.Error as message:
+    except mysql.Error as message:
         return message
     except:
         return 'dbgetlines: unkown error'
@@ -318,10 +321,10 @@ def dbgetlines(db, tablename, lines):
     getsql = 'SELECT * FROM %s ORDER BY time DESC LIMIT %d' % (tablename, lines)
     try:
         cursor.execute(getsql)
-    except MySQLdb.IntegrityError as message:
+    except mysql.IntegrityError as message:
         print(message)
         return stream
-    except MySQLdb.Error as message:
+    except mysql.Error as message:
         print(message)
         return stream
     except:
@@ -353,7 +356,7 @@ def dbupdate(db,tablename, keys, values, condition=None):
         Perform an update call to add values into specific keys of the selected table
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - tablename:    name of the table
         - keys:         (list) list of keys to modify
         - values:       (list) list of values for the keys
@@ -391,9 +394,9 @@ def dbupdate(db,tablename, keys, values, condition=None):
     print(updatesql)
     try:
         cursor.execute(updatesql)
-    except MySQLdb.IntegrityError as message:
+    except mysql.IntegrityError as message:
         return message
-    except MySQLdb.Error as message:
+    except mysql.Error as message:
         return message
     except:
         return 'dbupdate: unkown error'
@@ -407,7 +410,7 @@ def dbgetfloat(db,tablename,sensorid,columnid,revision=None):
         Perform a select search and return floats
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - tablename:    name of the table
         - sensorid:     sensor to match
         - columnid:     column in which search is performed
@@ -440,7 +443,7 @@ def dbgetstring(db,tablename,sensorid,columnid,revision=None):
         Perform a select search and return strings
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - tablename:    name of the table
         - sensorid:     sensor to match
         - columnid:     column in which search is performed
@@ -466,7 +469,7 @@ def dbupload(db, path,stationid,**kwargs):
         method to upload data to a database and to create an archive
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - path:         path wher to fine the data (e.g. /home/data/*).
         - stationid:    station code (e.g. WIC).
     Kwargs:
@@ -486,7 +489,7 @@ def dbupload(db, path,stationid,**kwargs):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         1. Connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         2. use method
         dbinit(db)
     headerdict =
@@ -567,7 +570,7 @@ def dbinit(db):
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
     Kwargs:
         --
     RETURNS:
@@ -578,7 +581,7 @@ def dbinit(db):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         1. Connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         2. use method
         dbinit(db)
     """
@@ -668,7 +671,7 @@ def dbdelete(db,datainfoid,**kwargs):
 
     PARAMETERS:
     Variables:
-        - db:               (mysql database) defined by MySQLdb.connect().
+        - db:               (mysql database) defined by mysql.connect().
         - datainfoid:       (string) table and dataid
     Kwargs:
         - samplingrateratio:(float) defines the ratio for deleting data older than (samplingperiod(sec)*samplingrateratio) DAYS
@@ -684,7 +687,7 @@ def dbdelete(db,datainfoid,**kwargs):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
 
     TODO:
         - If sampling rate not given in DATAINFO get it from the datastream
@@ -755,7 +758,7 @@ def dbdict2fields(db,header_dict,**kwargs):
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - header_dict:  (dict) dictionary with header information
     Kwargs:
         - mode:         (string) can be insert (default) or replace
@@ -774,7 +777,7 @@ def dbdict2fields(db,header_dict,**kwargs):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
     """
     mode = kwargs.get('mode')
     update = kwargs.get('update')
@@ -800,9 +803,9 @@ def dbdict2fields(db,header_dict,**kwargs):
         message = ''
         try:
             cursor.execute(sql)
-        except MySQLdb.IntegrityError as message:
+        except mysql.IntegrityError as message:
             return message
-        except MySQLdb.Error as message:
+        except mysql.Error as message:
             return message
         except:
             return 'unkown error'
@@ -869,7 +872,7 @@ def dbdict2fields(db,header_dict,**kwargs):
                 datainfovaluelst.append(fieldvalue)
         else:
             loggerdatabase.warning("dbdict2fields: !!!!!!!! %s not existing !!!!!!!" % fieldname)
-            return
+            pass
 
     print(len(stationfieldlst), len(sensorfieldlst), len(datainfofieldlst))
     if mode == 'insert':   #####   Insert ########
@@ -902,6 +905,7 @@ def dbdict2fields(db,header_dict,**kwargs):
             if not msg == '':
                 loggerdatabase.warning("dbdict2fields: insert for STATIONS failed - %s - try update mode" % msg)
         if len(sensorfieldlst) > 0:
+            print (sensorvaluelst)
             insertsql = 'REPLACE INTO SENSORS (%s) VALUE (%s)' %  (', '.join(sensorfieldlst), '"'+'", "'.join(sensorvaluelst)+'"')
             msg = executesql(insertsql)
             if not msg == '':
@@ -954,7 +958,7 @@ def dbfields2dict(db,datainfoid):
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - datainfoid:   (string)
     Kwargs:
         --
@@ -966,7 +970,7 @@ def dbfields2dict(db,datainfoid):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
     """
     metadatadict = {}
     cursor = db.cursor()
@@ -1000,7 +1004,7 @@ def dbfields2dict(db,datainfoid):
                 else:
                     if not row[0] == None:
                         metadatadict[key] = float(row[0])
-            except MySQLdb.Error as e:
+            except mysql.Error as e:
                 loggerdatabase.error("dbfields2dict: mysqlerror while adding key %s, %s" % (key,e))
             except:
                 loggerdatabase.error("dbfields2dict: unkown error while adding key %s" % key)
@@ -1103,7 +1107,7 @@ def dbalter(db):
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
     Kwargs:
         --
     RETURNS:
@@ -1114,7 +1118,7 @@ def dbalter(db):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         1. Connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         2. use method
         dbalter(db)
     """
@@ -1275,7 +1279,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
 
     PARAMETERS:
     Variables:
-        - db:             (mysql database) defined by MySQLdb.connect().
+        - db:             (mysql database) defined by mysql.connect().
         - sensorid:       (string) code for sensor if.
     Optional variables:
         - sensorkeydict:  (dict) provide a dictionary with sensor information (see SENSORS) .
@@ -1292,7 +1296,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         1. Connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         2. use method
         dbalter(db)
     """
@@ -1321,9 +1325,10 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
         cursor.execute(createsensortablesql)
 
     if len(rows) > 0:
+        print ("SensorID is existing in Table SENSORS")
         # SensorID is existing in Table
         loggerdatabase.info("dbsensorinfo: Sensorid already existing in SENSORS")
-        loggerdatabase.info("dbsensorinfo: rows: %s" % rows)
+        loggerdatabase.info("dbsensorinfo: rows: {}".format(rows))
         # Get the maximum revision number
         for i in range(len(rows)):
             rowval = rows[i][1]
@@ -1331,11 +1336,11 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
                 numlst.append(int(rowval))
             except:
                 pass
-        #print "Existing revisions", numlst
         try:
             maxnum = max(numlst)
         except:
             maxnum = None
+
         if isinstance(maxnum, int):
             index = numlst.index(maxnum)
             sensorid = rows[index][0]
@@ -1354,16 +1359,17 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
             updatesensorsql = 'UPDATE SENSORS SET SensorID = "' + sensorid + '", SensorRevision = "' + sensorrevision + '", SensorSerialNum = "' + sensorserialnum + '" WHERE SensorID = "' + oldsensorid + '"'
             cursor.execute(updatesensorsql)
     else:
+        print ("SensorID not yet existing in Table SENSORS")
         # SensorID is not existing in Table
         loggerdatabase.info("dbsensorinfo: Sensorid not yet existing in SENSORS.")
         # Check whether given sensorid is incomplete e.g. revision number is missing
         loggerdatabase.info("dbsensorinfo: Creating new sensorid %s " % sensorid)
         if not 'SensorSerialNum' in sensorhead:
+            print ("No serial number")
             sensoridsplit = sensorid.split('_')
-            if len(sensoridsplit) == 2:
+            if len(sensoridsplit) in [2,3]:
                 sensorserialnum = sensoridsplit[1]
-            elif len(sensoridsplit) == 3:
-                sensorserialnum = sensoridsplit[1]
+            if len(sensoridsplit) == 3:
                 if not 'SensorRevision' in sensorhead:
                     sensorhead.append('SensorRevision')
                     sensorvalue.append(sensoridsplit[2])
@@ -1374,16 +1380,23 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
             sensorhead.append('SensorSerialNum')
             sensorvalue.append(sensorserialnum)
             loggerdatabase.debug("dbsensorinfo: sensor %s, %s" % (sensoridsplit, sensorserialnum))
+
         if not 'SensorRevision' in sensorhead:
+            sensoridsplit = sensorid.split('_')
+            if len(sensoridsplit) > 1:
+                sensorrevision = sensoridsplit[-1]
             sensorhead.append('SensorRevision')
             sensorvalue.append(sensorrevision)
             if not 'SensorID' in sensorhead:
                 sensorhead.append('SensorID')
                 sensorvalue.append(sensorid+'_'+sensorrevision)
+                sensorid = sensorid+'_'+sensorrevision
             else:
                 index = sensorhead.index('SensorID')
-                sensorvalue[index] = sensorid+'_'+sensorrevision
-            sensorid = sensorid+'_'+sensorrevision
+                # Why???????? This seems to be wrong (maybe important for OW  -- added an untested corr (leon))
+                if 'OW' in sensorvalue:
+                    sensorvalue[index] = sensorid+'_'+sensorrevision
+
         ### create an input for the new sensor
         sensorsql = "INSERT INTO SENSORS(%s) VALUES (%s)" % (', '.join(sensorhead), '"'+'", "'.join(sensorvalue)+'"')
         #print "Adding the following info to SENSORS: ", sensorsql
@@ -1403,7 +1416,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     PARAMETERS:
     Variables:
-        - db:             (mysql database) defined by MySQLdb.connect().
+        - db:             (mysql database) defined by mysql.connect().
         - sensorid:       (string) code for sensor if.
     Optional variables:
         - datakeydict:    (dict) provide a dictionary with data table information (see DATAINFO) .
@@ -1594,7 +1607,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: using searchlist %s"% intensivesearch)
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
-            print ("dbdatainfo: DataID existing - updating")
+            print ("dbdatainfo: DataID existing - updating {}".format(intensiverows[0]))
             selectupdate = True
             for i in range(len(intensiverows)):
                 # if more than one record is existing select the latest (highest) number
@@ -1609,7 +1622,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         else:
             print ("dbdatainfo: Creating new DataID")
             print ("dbdatainfo: because - {}".format(intensiverows))
-            print (intensivesearch)
+            #print (intensivesearch)
             selectupdate = False
             datainfonum = '{0:04}'.format(maxnum+1)
             #print "dbdatainfo", datainfohead, datainfovalue, datainfonum
@@ -1670,7 +1683,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             try:
                 print ("Updating DATAINFO table")
                 cursor.execute(datainfosql)
-            except MySQLdb.Error as e:
+            except mysql.Error as e:
                 print ("Failed: {}".format(e))
             except:
                 print ("Failed for unknown reason")
@@ -1689,7 +1702,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - datastream:   (magpy datastream)
     Kwargs:
         - mode:         (string)
@@ -1720,7 +1733,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         >>> writeDB(db,stream,tablename='myid_0001_0001',noheader=True)
 
     APPLICATION:
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         stream = read('/path/to/my/files/*', starttime='2013-01-01',endtime='2013-02-01')
         writeDB(db,stream,StationID='MyObsCode')
 
@@ -1746,6 +1759,9 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         # Just check whether DataID, if not a table, exists and append data
         #return some message on success
     else:
+        if not StationID==None:
+            datastream.header['StationID'] = StationID
+
         if not 'SensorID' in datastream.header:
             #loggerdatabase.error("writeDB: No SensorID provided in header - aborting")
             print ("writeDB: No SensorID provided in header - define by datastream.header['SensorID'] = 'YourID' before calling writeDB - aborting")
@@ -1764,7 +1780,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         datastream.header['DataAbsFunctionObject'] = ''
         tablename = dbdatainfo(db,datastream.header['SensorID'],datastream.header,None,datastream.header['StationID'])
 
-        #print "After", tablename, datastream.header['SensorID']
+        #print ("After", tablename, datastream.header.get('SensorID'))
 
     # ----------------------------------------------
     #   Putting together all data
@@ -1795,10 +1811,12 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
         if len(col) > 0 and not False in checkEqual3(col):
+            print ("Found False and identical", idx, col[0])
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
             else: # add as usual
-                array[idx] = datastream.ndarray[idx]
+                array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
+                #array[idx] = datastream.ndarray[idx]
                 try:
                     array[idx][np.isnan(array[idx].astype(float))] = None
                 except:
@@ -1808,9 +1826,13 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
             array[idx]=np.asarray(tcol)
         elif len(col) > 0: # and KEYLIST[idx] in NUMKEYLIST:
-            array[idx] = datastream.ndarray[idx]
+            #array[idx] = datastream.ndarray[idx]
+            array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
+            #print ("idx1", type(array[idx][0]))
+            #print ("idx1", array[idx][0], type(array[idx][0]))
             try:
-                array[idx][np.isnan(array[idx].astype(float))] = None
+                array[idx] = [None if np.isnan(el) else el for el in array[idx]]
+                #array[idx][np.isnan(tarray[idx].astype(float))] = None
             except:
                 pass # will fail for strings
         #elif len(col) > 0:
@@ -1821,7 +1843,11 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     array = np.asarray([elem for elem in array if len(elem)>0], dtype=object)
     dollarstring = ['%s' for elem in keys]
 
+    
     values = array.transpose()
+
+    #print ("Test0", values[0])
+    #print ("Type: ", [type(el) for el in values[0]])
 
     insertmanysql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename, ', '.join(keys), ', '.join(dollarstring))
 
@@ -1859,7 +1885,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                 cursor.execute(sql)
                 count +=1
-            except MySQLdb.Error as e:
+            except mysql.Error as e:
                 emsg = str(e)
                 if emsg.find("Table") >= 0 and emsg.find("doesn't exist") >= 0:
                     # if table not existing
@@ -1894,6 +1920,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     #print insertmanysql
     if mode == 'replace':
         insertmanysql = insertmanysql.replace("INSERT","REPLACE")
+    #print (values)
     cursor.executemany(insertmanysql,values)
 
     # ----------------------------------------------
@@ -1913,7 +1940,7 @@ def dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
         using data from table tablename
 
     PARAMETERS:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - tablename:    (string) name of the table
     APPLICATION:
         >>> dbsetTimesDataInfo(db, "MyTable_12345_0001_0001")
@@ -1943,7 +1970,7 @@ def dbupdateDataInfo(db, tablename, header):
         using data from table tablename
 
     PARAMETERS:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - tablename:    (string) name of the table
     APPLICATION:
         >>> dbupadteDataInfo(db, "MyTable_12345_0001", myheader)
@@ -1985,7 +2012,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - datastream:   (magpy datastream)
     Kwargs:
         - mode:         (string)
@@ -2019,7 +2046,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         stream = read('/home/leon/Dropbox/Daten/Magnetism/DIDD-WIK/raw/*', starttime='2013-01-01',endtime='2013-02-01')
         datainfoid = dbdatainfo(db,stream.header['SensorID'],stream.header)
         stream2db(db,stream)
@@ -2456,7 +2483,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
             insertsql = insertmanysql
             insertsql = insertsql.replace("INSERT","REPLACE")
             cursor.executemany(insertsql,values)
-        except MySQLdb.Error as e:
+        except mysql.Error as e:
             loggerdatabase.error("stream2db: mysqlerror while replacing data: %s" % (e))
         except:
             try:
@@ -2497,7 +2524,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
 
     PARAMETERS:
     Variables:
-        - db:               (mysql database) defined by MySQLdb.connect().
+        - db:               (mysql database) defined by mysql.connect().
         - table:            (string) tablename or sensorID -> for sensor ID
                                      lowest revision is selected
         - sql:              (string) provide any additional search criteria
@@ -2513,7 +2540,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
 
     TODO:
         - If sampling rate not given in DATAINFO get it from the datastream
@@ -2556,7 +2583,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
         cursor.execute(getcols)
         rows = cursor.fetchall()
         keys = [el[0] for el in rows]
-    except MySQLdb.Error as e:
+    except mysql.Error as e:
         # Table does not exist - assume sensor id
         getdatainfo = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + table + '"'
         cursor.execute(getdatainfo)
@@ -2605,7 +2632,9 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                         try:
                             ls[index].append(date2num(stream._testtime(elem)))
                         except:
-                            print ("readDB: could not identify time: {a}, {b}".format(a=index,b=elem) )
+                            if ind == 0:
+                                print ("readDB: could not identify time! Column {a} contains {b}, which cannot be interpreted as time by the testtime method".format(a=keys[i],b=elem) )
+                            pass
                     else:
                         if keys[i] in NUMKEYLIST:
                             if elem == None or elem == 'null':
@@ -2653,7 +2682,7 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
 
     PARAMETERS:
     Variables:
-        - db:               (mysql database) defined by MySQLdb.connect().
+        - db:               (mysql database) defined by mysql.connect().
         - sensorid:       (string) table and dataid
         - sql:      (string) provide any additional search criteria
                              example: sql = "DataSamplingRate=60 AND DataType='variation'"
@@ -2669,7 +2698,7 @@ def db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
 
     TODO:
         - If sampling rate not given in DATAINFO get it from the datastream
@@ -2785,7 +2814,7 @@ def diline2db(db, dilinestruct, mode=None, **kwargs):
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
         - dilinestruct: (magpy diline)
     Optional:
         - mode:         (string) - default is insert
@@ -2801,7 +2830,7 @@ def diline2db(db, dilinestruct, mode=None, **kwargs):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
     """
 
     tablename = kwargs.get('tablename')
@@ -2907,7 +2936,7 @@ def db2diline(db,**kwargs):
 
     PARAMETERS:
     Variables:
-        - db:           (mysql database) defined by MySQLdb.connect().
+        - db:           (mysql database) defined by mysql.connect().
     kwargs:
         - starttime:    (string/datetime) - time range to select
         - endtime:      (string/datetime) -
@@ -2921,7 +2950,7 @@ def db2diline(db,**kwargs):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
 
     RETURNS:
         list of DILineStruct elements
@@ -3255,11 +3284,12 @@ def db2flaglist(db,sensorid, begin=None, end=None):
     cursor.execute (searchsql + addbeginsql + addendsql)
     rows = cursor.fetchall()
 
+    tmp = DataStream()
     res=[]
     for line in rows:
         comps = line[2].split('_')
         for elem in comps:
-            res.append([line[0],line[1],elem,int(line[3]),line[4],line[5],line[6]])
+            res.append([tmp._testtime(line[0]),tmp._testtime(line[1]),elem,int(line[3]),line[4],line[5],tmp._testtime(line[6])])
 
     cursor.close ()
 
