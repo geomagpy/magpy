@@ -479,7 +479,7 @@ class DataStream(object):
     - stream.filter(self, **kwargs):
     - stream.fit(self, keys, **kwargs):
     - stream.flag_outlier(self, **kwargs):
-    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None):
+    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
     - stream.func2stream(self,function,**kwargs):
     - stream.func_add(self,function,**kwargs):
     - stream.func_subtract(self,function,**kwargs):
@@ -4622,9 +4622,15 @@ CALLED BY:
         if flag == 1 or flag == 3:
             if enddate:
                 #print ("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
-                loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
+                try:
+                    loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat().encode('ascii','ignore'),enddate.isoformat().encode('ascii','ignore'),comment.encode('ascii','ignore')))
+                except:
+                    pass
             else:
-                loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat(),comment))
+                try:
+                    loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat().encode('ascii','ignore'),comment.encode('ascii','ignore')))
+                except:
+                    pass
 
         #print self.ndarray[flagind][np.where(self.ndarray[flagind] != '')]
         #print self.ndarray[flagind]
@@ -6986,13 +6992,13 @@ CALLED BY:
                 indlst = [i for i,el in enumerate(self.ndarray[flagind]) if not el in ['','-']]
                 for i in indlst:
                     try:
-                        #if len(self.ndarray[flagind]) > 0:
+                        #if len(array[pos]) > 0:
                         flagls = list(self.ndarray[flagind][i])
                         flag = flagls[pos]
                         if flag in flaglist:
                            array[pos][i] = float("nan")
                     except:
-                        print("stream remove_flagged: index error: indlst {}, pos {}, length flag colum {}".format(indlst, pos, len(self.ndarray[flagind])))
+                        #print("stream remove_flagged: index error: indlst {}, pos {}, length flag colum {}".format(len(indlst), pos, len(self.ndarray[flagind])))
                         pass
                 liste = [LineStruct()]
             else:
@@ -8557,7 +8563,7 @@ CALLED BY:
         return format_type, filenamebegins, filenameends, coverage, dateformat
 
 
-    def write(self, filepath, **kwargs):
+    def write(self, filepath, compression=5, **kwargs):
         """
     DEFINITION:
         Code for simple application: write Stream to a file.
@@ -8645,13 +8651,19 @@ CALLED BY:
         comment = kwargs.get('comment')
         useg = kwargs.get('useg')
         skipcompression = kwargs.get('skipcompression')
+
         success = True
+
+        #compression: provide compression factor for CDF data: 0 no compression, 9 high compression
 
         t1 = datetime.utcnow()
 
         if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.warning('write: Output format not supported.')
-            return False
+            if not format_type:
+                format_type = 'PYSTR'
+            else:
+                loggerstream.warning('write: Output format not supported.')
+                return False
         else:
             if not 'w' in PYMAG_SUPPORTED_FORMATS[format_type][0]:
                 loggerstream.warning('write: Selected format does not support write methods.')
@@ -8714,7 +8726,7 @@ CALLED BY:
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -8739,7 +8751,7 @@ CALLED BY:
                     dat = ''
                 filename = filenamebegins + dat + filenameends
                 if len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression)
                 # get next endtime
                 starttime = endtime
                 cyear = cyear + 1
@@ -8791,7 +8803,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         loggerstream.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg,skipcompression=skipcompression)
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -8801,7 +8813,7 @@ CALLED BY:
 
         else:
             filename = filenamebegins + filenameends
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression)
 
         return success
 

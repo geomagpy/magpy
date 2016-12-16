@@ -42,15 +42,15 @@ IDDICT = {0:'clientname',1:'time',2:'date',3:'time',4:'time',5:'coord',
           10:'f',11:'x',12:'y',13:'z',14:'df',
           20:'x',21:'y',22:'z',23:'dx',24:'dy',25:'dz',
           30:'t1',31:'t1',32:'t2',33:'var1',34:'t2',35:'x',36:'x',37:'y',38:'var1',39:'f',
-          40:'var1',
+          40:'var1',45:'str1',
           50:'var1',51:'var2',
           60:'var2',61:'var3',62:'var4'}
 
-MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38], 'ult': [1,32,50,51], 'lnm': [1,30,36,37,39], 'pal': [1,11,12,13], 'ard': [1,10,11,12,13,14,30,33,35], 'sug': [1,20,21,22,23,24,25]}
+MODIDDICT = {'env': [1,30,33,34], 'ow': [1,30,33,60,61,62], 'lemi': [1,4,11,12,13,31,32,60] ,'pos1': [1,4,10,14,40], 'cs': [1,10], 'gsm': [1,10], 'kern': [1,38], 'ult': [1,32,50,51], 'lnm': [1,30,36,37,39,45], 'pal': [1,11,12,13], 'ard': [1,10,11,12,13,14,30,33,35], 'sug': [1,20,21,22,23,24,25], 'bm3': [1,35]}
 
-UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g'], 'ult': ['degC','m_s','deg'], 'lnm': ['degC','mm','m','N'], 'ard': ['nT','nT','nT','nT','-','degC','percent','HPa'], 'sug': ['nT','nT','nT','-','-','-']}
+UNITDICT = {'env': ['degC','percent','degC'], 'ow': ['degC','percent','V','V','V'], 'lemi': ['nT','nT','nT','degC','degC','V'] ,'pos1': ['nT','nT','index'], 'cs': ['nT'], 'cs': ['nT'], 'kern': ['g'], 'ult': ['degC','m_s','deg'], 'lnm': ['degC','mm','m','N'], 'ard': ['nT','nT','nT','nT','-','degC','percent','HPa'], 'sug': ['nT','nT','nT','-','-','-'], 'bm3': ['mBar']}
 
-NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P'],'sug': ['S1','S2','S3','Grad_S3_S1','Grad_S3_S2','Grad_S2_S1']}
+NAMEDICT = {'env': ['T','rh','Dewpoint'], 'ow': ['T','rh','VDD','VAD','VIS'], 'lemi': ['x','y','z','Ts','Te','Vol'] ,'pos1': ['f','df','errorcode'], 'cs': ['f'], 'gsm': ['f'], 'kern': ['w'], 'ult': ['T','v','Dir'], 'lnm': ['T','R','visibility','Ptotal'], 'ard': ['f','x','y','z','df','T','rh','P'],'sug': ['S1','S2','S3','Grad_S3_S1','Grad_S3_S2','Grad_S2_S1'], 'bm3': ['P']}
 
 def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None):
     print("Getting parameters ...")
@@ -74,7 +74,7 @@ def sendparameter(cname,cip,marcospath,op,sid,sshc,sensorlist,owlist,pd,dbc=None
     printdata = pd
     if output == 'db':
         if not dbc:
-            log.msg('collectors owclient: for db output you need to provide the credentials as last option')
+            print ('collectors owclient: for db output you need to provide the credentials as last option')
         global dbcred
         dbcred = dbc
     print("Parameters transfered")
@@ -93,7 +93,7 @@ def timeToArray(timestring):
         datearray = map(int,datearray)
         return datearray
     except:
-        log.msg('collectors owclient: Error while extracting time array')
+        print('collectors owclient: Error while extracting time array')
         return []
 
 def dataToFile(outputdir, sensorid, filedate, bindata, header):
@@ -112,7 +112,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
             with open(savefile, "a") as myfile:
                 myfile.write(bindata + "\n")
     except:
-        log.msg('collectors owclient: Error while saving file')
+        print('collectors owclient: Error while saving file')
 
 class PubSubClient(WampClientProtocol):
     """
@@ -132,7 +132,7 @@ class PubSubClient(WampClientProtocol):
         global stationid
         global dbcred
         global sshcred
-        log.msg("Starting " + clientname + " session")
+        print("Starting " + clientname + " session")
         # TODO Make all the necessary parameters variable
         # Basic definitions to change
         self.stationid = stationid
@@ -151,16 +151,16 @@ class PubSubClient(WampClientProtocol):
         self.db = None
         self.cursor = None
         if not output == 'file':
-            log.msg("collectors client: Connecting to DB ...")
+            print("collectors client: Connecting to DB ...")
             self.db = mysql.connect(dbcred[0],dbcred[1],dbcred[2],dbcred[3] )
             # prepare a cursor object using cursor() method
             self.cursor = self.db.cursor()
-            log.msg("collectors client: ... DB successfully connected ")
+            print("collectors client: ... DB successfully connected ")
         # Initiate subscriptions
         self.line = []
         for row in s:
             module = row[0]
-            log.msg("collectors client: Starting subscription for %s" % module)
+            print("collectors client: Starting subscription for %s" % module)
             self.subscribeInst(self.db, self.cursor, clientname, module, output)
 
     def subscribeOw(self, client, output, module, owlist):
@@ -183,24 +183,24 @@ class PubSubClient(WampClientProtocol):
                     # Execute the SQL command
                     self.cursor.execute(sql)
                 except:
-                    log.msg("collectors owclient: Unable to execute SENSOR sql")
+                    print("collectors owclient: Unable to execute SENSOR sql")
                 try:
                     # Fetch all the rows in a list of lists.
                     results = self.cursor.fetchall()
                 except:
-                    log.msg("collectors owclient: Unable to fetch SENSOR data from DB")
+                    print("collectors owclient: Unable to fetch SENSOR data from DB")
                     results = []
                 if len(results) < 1:
                     # Initialize e.g. ow table
-                    log.msg("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
+                    print("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                     destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin')
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
                     try:
-                        log.msg("collectors owclient: Downloading data: %s" % datafile)
+                        print("collectors owclient: Downloading data: %s" % datafile)
                         scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1])
                         stream = st.read(destfile)
-                        log.msg("collectors owclient: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
+                        print("collectors owclient: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
                         stream.header['StationID'] = self.stationid
                         stream.header['SensorModule'] = 'OW'
                         stream.header['SensorType'] = row[1]
@@ -213,12 +213,12 @@ class PubSubClient(WampClientProtocol):
                         if not len(stream.ndarray[0]) > 0:
                             stream = stream.linestruct2ndarray()
                         stream2db(self.db,stream)
-                        log.msg("collectors owclient: Stream uploaded successfully")
+                        print("collectors owclient: Stream uploaded successfully")
                     except:
-                        log.msg("collectors owclient: Could not upload data to the data base - subscription to %s failed" % row[0])
+                        print("collectors owclient: Could not upload data to the data base - subscription to %s failed" % row[0])
                         subs = False
                 else:
-                    log.msg("collectors owclient: Found sensor(s) in DB - subscribing to the highest revision number")
+                    print("collectors owclient: Found sensor(s) in DB - subscribing to the highest revision number")
                 if subs:
                     subscriptionstring = "%s:%s-value" % (module, row[0])
                     print("collectors owclient: Subscribing (directing to DB): ", subscriptionstring)
@@ -246,44 +246,44 @@ class PubSubClient(WampClientProtocol):
                 # Execute the SQL command
                 self.cursor.execute(sql)
             except:
-                log.msg("collectors client: Unable to execute SENSOR sql")
+                print("collectors client: Unable to execute SENSOR sql")
             try:
                 # Fetch all the rows in a list of lists.
                 results = self.cursor.fetchall()
             except:
-                log.msg("collectors client: Unable to fetch SENSOR data from DB")
+                print("collectors client: Unable to fetch SENSOR data from DB")
                 results = []
             if len(results) < 1:
                 # if not present then get a file and upload it
-                log.msg("collectors client: No sensors registered so far - Getting data file from moon and uploading it using stream2db")
+                print("collectors client: No sensors registered so far - Getting data file from moon and uploading it using stream2db")
                 day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                 for exten in ['bin','asc']:
                     destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.'+exten)
                     datafile = os.path.join('/srv/ws/', clientname, sensorid, sensorid+'_'+day+'.'+exten)
                     try:
-                        log.msg("collectors client: Downloading data: %s" % datafile)
+                        print("collectors client: Downloading data: %s" % datafile)
                         scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1])
                         stream = st.read(destfile)
-                        log.msg("collectors client: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
+                        print("collectors client: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
                         stream.header['StationID'] = self.stationid
                         stream.header['SensorModule'] = sensorshort
                         try:
                             stream.header['SensorRevision'] = sensorid[-4:]
                         except:
-                            log.msg("collectors client: Could not extract revision number for %s" % sensorid)
+                            print("collectors client: Could not extract revision number for %s" % sensorid)
                             pass
                         try:
                             stream.header['SensorSerialNum'] = sensorid.split('_')[-2]
                         except:
-                            log.msg("collectors client: Could not extract serial number for %s" % sensorid)
+                            print("collectors client: Could not extract serial number for %s" % sensorid)
                             pass
                         if not len(stream.ndarray[0]) > 0:
                             stream = stream.linestruct2ndarray()
                         stream2db(self.db,stream)
                     except:
-                        log.msg("collectors client: Could not upload data to the data base - subscription failed")
+                        print("collectors client: Could not upload data to the data base - subscription failed")
             else:
-                log.msg("collectors client: Found sensor(s) in DB - subscribing to the highest revision number")
+                print("collectors client: Found sensor(s) in DB - subscribing to the highest revision number")
             subscriptionstring = "%s:%s-value" % (module, sensorid)
             print("collectors sensor client: Subscribing: ", subscriptionstring)
             self.subscribe(subscriptionstring, self.onEvent)
@@ -318,14 +318,16 @@ class PubSubClient(WampClientProtocol):
             module = 'lemi'
         elif sensshort == 'GP2':
             module = 'sug'
+        elif sensshort.startswith'BM3':
+            module = 'bm3'
         else:
             module = sensshort.lower()
         self.module = module
         if module == 'ow':
             if not len(o) > 0:
-                log.msg('collectors client: No OW sensors available')
+                print('collectors client: No OW sensors available')
             else:
-                log.msg('Subscribing all OneWire Sensors ...')
+                print('Subscribing all OneWire Sensors ...')
                 self.subscribeOw(client,output,module,o)
         else:
             self.subscribeSensor(client,output,module,sensshort,mod)
@@ -378,7 +380,7 @@ class PubSubClient(WampClientProtocol):
 
             if not len(line) == len(paralst):
                 # Output only for testing purpose if you dont want to smash your logs
-                #log.msg("ERRRRRRRRRRRRRRRRRRRRROR")
+                #print("ERRRRRRRRRRRRRRRRRRRRROR")
                 self.line = []
             else:
                 for i, elem in enumerate(line):
@@ -393,7 +395,7 @@ class PubSubClient(WampClientProtocol):
                     data_bin = struct.pack(packcode,*datearray)
                     dataToFile(os.path.join(destpath,'MartasFiles'), sensorid, day, data_bin, header)
                 except:
-                    #log.msg("error")
+                    #print("error")
                     pass
         else:
             """
@@ -443,7 +445,7 @@ class PubSubClient(WampClientProtocol):
                 self.db.commit()
             except:
                 # No regular output here. Otherwise log-file will be smashed
-                #log.msg("client: could not append data to table")
+                #print("client: could not append data to table")
                 # Rollback in case there is any error
                 self.db.rollback()
 

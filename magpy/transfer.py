@@ -260,6 +260,7 @@ def ginupload(filename=None, user=None, password=None, url=None,**kwargs):
     faillog = kwargs.get('faillog')
     logpath = kwargs.get('logpath')
     stdout = kwargs.get('stdout')
+    success = False
 
     if not logpath:
         logpath = "/tmp/ginupload.log"
@@ -295,8 +296,10 @@ def ginupload(filename=None, user=None, password=None, url=None,**kwargs):
             if not "Success" in out:
                 with open(logpath, 'a') as f:
                     f.write(command+'\n')
+        if "Success" in out:
+            success = True
 
-
+    return success
 
 # ####################
 # 1. ftp check

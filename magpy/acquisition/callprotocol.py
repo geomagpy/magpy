@@ -226,6 +226,7 @@ if call:
                 Pslow = int(data[51])		 	# dx
                 Pfast= int(data[53])		 	# dy
                 Psmall= int(data[55])		 	# dz
+                synop= data[6]			 	# str1
                 revision = '0001' # Software version 2.42
                 sensorid = sensor + '_' + serialnum + '_' + revision
             except:
@@ -260,6 +261,7 @@ if call:
                 evt36 = {'id': 36, 'value': cumulativerain}
                 evt37 = {'id': 37, 'value': visibility}
                 evt39 = {'id': 39, 'value': Ptotal}
+                evt45 = {'id': 45, 'value': synop}
                 evt0 = {'id': 0, 'value': self.hostname}
                 evt99 = {'id': 99, 'value': 'eol'}
             except:
@@ -274,6 +276,7 @@ if call:
                 self.wsMcuFactory.dispatch(dispatch_url, evt36)
                 self.wsMcuFactory.dispatch(dispatch_url, evt37)
                 self.wsMcuFactory.dispatch(dispatch_url, evt39)
+                self.wsMcuFactory.dispatch(dispatch_url, evt45)
                 self.wsMcuFactory.dispatch(dispatch_url, evt99)
             except ValueError:
                 log.err('SerialCall - writeDisdro: Unable to parse data at %s' % actualtime)

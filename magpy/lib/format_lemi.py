@@ -87,13 +87,13 @@ def isLEMIBIN(filename):
     '''
     try:
         temp = open(filename, 'rb').read(169)
-        #print ("Found LEMI Like data structure", temp)
-        if "LemiBin" in temp:
+        if temp[:20].decode('ascii').startswith("LemiBin"):
             return True
         else:
             data= struct.unpack('<4cb6B8hb30f3BcB6hL', temp)
     except:
         return False
+
     try:
         if not data[0].decode('ascii') == 'L':
             return False
@@ -262,9 +262,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
 
-    if "LemiBin" in temp:
+    if temp[:60].decode('ascii').startswith("LemiBin"):
         # current format
-        sensorid = temp.split()[1]
+        sensorid = temp[:60].split()[1]
         dataheader = True
         lemiformat = "current"
         packcode = '<4cb6B8hb30f3BcB6hL'
@@ -332,8 +332,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         timediff = []
 
         line = fh.read(linelength)
+        #print (line, len(line))
 
-        while line != '':
+        while len(line) > 0:
             try:
                 data= struct.unpack(packcode,line)
             except Exception as e:

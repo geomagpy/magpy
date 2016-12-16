@@ -98,23 +98,20 @@ class CsProtocol(LineReceiver):
             if 10000 < value < 100000:
                 intensity = value
             else:
-                intensity = 0.0
+                intensity = 88888.0
         except ValueError:
             log.err("CS - Protocol: Not a number. Instead found:", data[0])
-            intensity = 88888
+            intensity = 88888.0
 
-        datearray = timeToArray(timestamp)
         try:
             datearray = timeToArray(timestamp)
             datearray.append(int(intensity*1000))
             data_bin = struct.pack(packcode,*datearray)
+            # File Operations
+            dataToFile(self.outputdir, self.sensor, filename, data_bin, header)
         except:
             log.msg('Error while packing binary data')
             pass
-
-        # File Operations
-        dataToFile(self.outputdir, self.sensor, filename, data_bin, header)
-
 
         #return value every second
         if lastActualtime+timedelta(microseconds=999000) <= currenttime:   # Using ms instead of s accounts for only small errors, not all.

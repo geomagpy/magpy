@@ -1014,6 +1014,16 @@ def writePYSTR(datastream, filename, **kwargs):
 
 
 def writePYCDF(datastream, filename, **kwargs):
+    """
+    VARIABLES
+        new: use compression variable instead of skipcompression
+        compression = 0: skip compression
+        compression = 1-9: use this compression factor: 
+                           9 high compreesion (slow)
+                           1 low compression (fast)
+               default is 5
+
+    """
     # check for nan and - columns
     #for key in KEYLIST:
     #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
@@ -1029,6 +1039,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mode = kwargs.get('mode')
     skipcompression = kwargs.get('skipcompression')
+    compression = kwargs.get('compression')
 
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
@@ -1172,12 +1183,17 @@ def writePYCDF(datastream, filename, **kwargs):
                     except:
                         pass
 
-    if not skipcompression:
+    if compression == 0: ## temporary solution until all refs to skipcomression are eliminated
+        skipcompression = True
+
+    if isinstance(compression, int) and not compression == 0 and compression in range(0,10) and not skipcompression and len(mycdf['Epoch']) > 0:
         try:
-            mycdf.compress(cdf.const.GZIP_COMPRESSION, 5)
+            mycdf.compress(cdf.const.GZIP_COMPRESSION, compression)
         except:
             print("format_magypy: compression of CDF failed - Trying to store uncompressed data")
             print("format_magypy: please use option skipcompression=True if unreadable")
+            print("format_magypy: CDF: {}".format(mycdf))
+            print("format_magypy: attrs: {}".format(mycdf.attrs))
             pass
 
     mycdf.close()

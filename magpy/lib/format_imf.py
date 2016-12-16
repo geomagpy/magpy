@@ -941,6 +941,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             possvals.extend(['d','e'])
         if key == 'df':
             possvals.append('g')
+        if key == 'f':
+            possvals.append('s')
         for elem in datalist:
             try:
                 label = cdfdat[elem].attrs['LABLAXIS'].lower()
@@ -975,7 +977,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 ind = KEYLIST.index(elem[0])
                 headers['col-'+elem[0]] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()
                 headers['unit-col-'+elem[0]] = cdfdat[elem[1]].attrs['UNITS']
-                if len(indexarray) > 0 and elem[0] in ['f','df']:  ## this is not really good - point to depend_0
+                if len(indexarray) > 0 and elem[0] in ['f','df']:  ## this is no good - point to depend_0
                     newar = np.asarray([np.nan]*arlen)
                     #print (len(newar),len(ar),len(indexarray))
                     newar[indexarray] = ar
@@ -1044,7 +1046,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     dcomps = headers.get('DataComponents','')
     dkeys = datastream._get_key_headers()
     if 'f' in dkeys and len(dcomps) == 3:
-        dcomps = dcomps+'F'
+        dcomps = dcomps+'S'
     if 'df' in dkeys and len(dcomps) == 3:
         dcomps = dcomps+'G'
     headers['DataComponents'] = dcomps
@@ -1198,7 +1200,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ## Analyze F and dF columns:
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
-            print ("Found F ...")
+            print ("Found F/S ...")
             pos = KEYLIST.index('f')
             col = datastream.ndarray[pos]
         if 'df' in keylst:
@@ -1267,6 +1269,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             compsupper = comps[1].upper()
                         elif key == 'z':
                             compsupper = comps[2].upper()
+                        elif key == 'f':
+                            compsupper = 'S' ## hard coded S as F should not be used - MagPy requires independend F (denoted S)
                         elif key == 'df':
                             compsupper = 'G'
                         else:

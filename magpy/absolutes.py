@@ -509,9 +509,9 @@ class AbsoluteData(object):
         # -- check, whether inclination and declination values are present:
         # ------------------------------
         if nr_lines < 9:
-            linecount = nr_lines
+            linecount = int(nr_lines)
         else:
-            linecount = (nr_lines-1)/2
+            linecount = int((nr_lines-1)/2.)
 
         # -- Determine poslst index closest to mean time
         # ----------------------------------------------
@@ -876,7 +876,7 @@ class AbsoluteData(object):
             return linestruct, 20000.0, 0.0
 
         # - Now cycle through inclination steps and apply residuum correction
-        for k in range((nr_lines-1)/2,nr_lines):
+        for k in range(int((nr_lines-1)/2.),int(nr_lines)):
             val = poslst[k].vc
             try:
                 # Calculate the mean variations during the I measurements -> Used for offset calc
@@ -964,7 +964,7 @@ class AbsoluteData(object):
                 scaleangle = poslst[k].vc
                 minimum = 10000
                 calcscaleval = 999.0
-                for n in range((nr_lines-1)/2,nr_lines-1):
+                for n in range(int((nr_lines-1)/2.),int(nr_lines-1)):
                     rotation = np.abs(scaleangle - poslst[n].vc)
                     if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value
                         #=(-SIN(B37*PI()/200)*(F20-F19)/K35+COS(B37*PI()/200)*(H20-H19)/K35)*200/PI()
@@ -1940,6 +1940,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     print ("Warning! Scalar data missing at DI time range")
             try:
                 # get delta D and delta I values here
+                #print ("Checking database")
                 if not deltaD:
                     try:
                         val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
