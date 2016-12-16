@@ -1815,7 +1815,8 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
             else: # add as usual
-                array[idx] = datastream.ndarray[idx]
+                array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
+                #array[idx] = datastream.ndarray[idx]
                 try:
                     array[idx][np.isnan(array[idx].astype(float))] = None
                 except:
