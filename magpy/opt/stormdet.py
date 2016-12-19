@@ -476,7 +476,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
                 flux_var = flux_val
                 
             elif ACE_5m == None:
-                flux_var = None
+                flux_var = 0.
 
             acedict = {}
             # CALCULATE ESTIMATED ARRIVAL TIME
