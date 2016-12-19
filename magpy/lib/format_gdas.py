@@ -42,10 +42,13 @@ def isGDASB1(filename):
         return False
     try:
         data= struct.unpack("<BBBBLLLLLc", temp)
+        print ("GDAS", data)
     except:
         return False
     try:
         if not data[9]=='x':
+            return False
+        if data[0].decode('ascii') == 'L':
             return False
     except:
         return False

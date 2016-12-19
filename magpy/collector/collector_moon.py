@@ -19,9 +19,9 @@ from magpy.opt import cred as mpcred
 from magpy.transfer import scptransfer
 
 try:
-    import MySQLdb
+    from magpy.database import *
 except:
-    print("Failure loading MySQLdb")
+    print("Failure loading MySQL")
     pass
 
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     # 2. connect to database and check availability and version
     # ----------------------------------------------------------
     try:
-        db = MySQLdb.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
+        db = mysql.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
         dbcredlst = [dbhost,dbuser,dbpasswd,dbname]
         cursor = db.cursor ()
         cursor.execute ("SELECT VERSION()")
@@ -92,14 +92,15 @@ if __name__ == '__main__':
         cursor.close ()
         db.close ()
     except:
-        print("Create a credential file first or provide login info for database directly")
+        print("Could not connect to database")
         dest = "file"
-        raise
+        #raise
 
     # ----------------------------------------------------------
     # 3. connect to client and get sensor list as well as owlist
     # ----------------------------------------------------------
     print("Locating MARCOS directory ...")
+    destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
     from os.path import expanduser
     home = expanduser("~")
 

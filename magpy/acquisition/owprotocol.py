@@ -81,10 +81,10 @@ if onewire:
         def connectionMade(self,root):
             # A loading eventually existing sensor list
             print("Connection made")
-            from os.path import expanduser
-            home = expanduser("~")
+            import os
+            martasdir = os.getcwd()
+            print ("MARTAS directory", martasdir)
 
-            martasdir = [path for path, dirs, files in os.walk(home) if path.endswith('MARTAS')][0]
             owsensorfile = os.path.join(martasdir,'owlist.csv')
             owlist = []
             idlist = []
@@ -145,15 +145,7 @@ if onewire:
 
         def alias(self, sensorid):
             #define a alias dictionary
-            sensordict = {"332988040000": "Mobil", "504C88040000": "1. Stock: Treppenhaus",
-                          "6C2988040000": "1. Stock: Flur", "FD9087040000": "Nordmauer Erdgeschoss",
-                          "090A88040000": "1. Stock: Wohnzimmer", "BB5388040000": "1. Stock: Kueche",
-                          "F58788040000": "1. Stock: Schlafzimmer", "BAAE87040000": "Dach: Nico (T)",
-                          "E2FE87040000": "1. Stock: Speis",
-                          "BED887040000": "Dach: Flur", "2F3488040000": "1. Stock: Bad (T)", "0EB354010000": "Dach: Nico",
-                          "3AD754010000": "Dach: Tina", "CBC454010000": "1. Stock: Kinderzimmer",
-                          "05CE54010000": "1. Stock: Bad", "B1C687040000": "Vogel",
-                          "DACF54010000": "Aussen Kaefig"}
+            sensordict = {"332988040000": "Mobil"}
             try:
                 return sensordict[sensorid]
             except:

@@ -40,6 +40,8 @@ CALLED BY:
 '''
 from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
 
 from magpy.stream import *
 '''
@@ -2198,6 +2200,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 
         # ANNOTATE:
         if data[i]['annotate'] == True:
+            orientationcnt = 0
             flags = data[i]['flags']
             emptycomment = "-"
             indexflag = KEYLIST.index(key)
@@ -2209,34 +2212,39 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                 uniqueflags = tmp.union(flags[1])
                 #print "Flags", flags,uniqueflags, key
                 for fl in uniqueflags:
-                    #print "Flag", fl
-                    #if fl in ['-','']:
-                    #    break
-                    #print fl
-                    # 1. get all indicies of this comment
+                    #print ("Flag", fl)
                     flagindicies = []
                     for idx, elem in enumerate(flags[1]):
                         if not elem == '' and elem == fl:
+                            #print ("ELEM", elem)
                             flagindicies.append(idx)
                     #print "IDX", np.asarray(flagindicies)
                     # 2. get consecutive groups
                     for k, g in groupby(enumerate(flagindicies), lambda ix: ix[0] - ix[1]):
-                        consecutives = map(itemgetter(1), g)
-                        #print "Cons", np.asarray(consecutives)
+                        orientationcnt += 1 # used to flip orientation of text box
+                        consecutives = list(map(itemgetter(1), g))
                         # 3. add annotation arrow for all but 1
                         cnt0 = consecutives[0]
-                        #print(consecutives)
-                        #print cnt0, indexflag, flags[0], flags[0][cnt0], flags[1][cnt0], flags[0][cnt0][indexflag]
+                        #print ("Cons", np.asarray(consecutives), len(flags[0][cnt0]))
                         if len(flags[0][cnt0]) >= indexflag:
                           try:
+                            #print ("Fl", flags[0][cnt0][indexflag], flags[1][cnt0], y[cnt0])
                             if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
+                                axisextend = (max(y)-min(y))*0.15 ## 15 percent of axislength
+                                if orientationcnt % 2 or y[cnt0]-axisextend < min(y):
+                                    xytext=(20, 20)
+                                elif y[cnt0]+axisextend > max(y):
+                                    xytext=(20, -20)
+                                else:
+                                    xytext=(20, -20)
+                                connstyle = "angle,angleA=0,angleB=90,rad=10"
                                 ax.annotate(r'%s' % (flags[1][cnt0]),
                                         xy=(t[cnt0], y[cnt0]),
-                                        xycoords='data', xytext=(20, 20),
+                                        xycoords='data', xytext=xytext, size=10, 
                                         textcoords='offset points',
                                         bbox=dict(boxstyle="round", fc="0.9"),
                                         arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1, connectionstyle="angle,angleA=0,angleB=90,rad=10"))
+                                        shrinkA=0, shrinkB=1, connectionstyle=connstyle))
                             for idx in consecutives:
                                 #if not flags[0][idx][indexflag] == '0':
                                 #    print "Got", flags[0][idx][indexflag], idx

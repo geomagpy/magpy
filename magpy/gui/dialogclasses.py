@@ -34,7 +34,7 @@ class OpenWebAddressDialog(wx.Dialog):
     def createControls(self):
         # single anaylsis
         #ftp://user:passwd@www.zamg.ac.at//data/magnetism/wic/variation/WIC20160627pmin.min
-        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         self.urlLabel = wx.StaticText(self, label="Insert address (e.g. 'ftp://.../' for all files, or 'ftp://.../data.dat' for a single file)",size=(500,30))
         self.urlTextCtrl = wx.TextCtrl(self, value=self.favorites[0],size=(500,30))
         self.favoritesLabel = wx.StaticText(self, label="Favorites:",size=(160,30))
@@ -227,7 +227,7 @@ class ExportDataDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # single anaylsis
-        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         self.selectDirButton = wx.Button(self, label='Change Directory', size=(160,30))
         self.selectedTextCtrl = wx.TextCtrl(self, value=self.path, size=(300,30))
         self.formatLabel = wx.StaticText(self, label="as ...")
@@ -448,7 +448,7 @@ class DatabaseConnectDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # single anaylsis
-        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         self.hostLabel = wx.StaticText(self, label="Host")
         self.hostTextCtrl = wx.TextCtrl(self, value="localhost")
         self.userLabel = wx.StaticText(self, label="User")
@@ -588,7 +588,7 @@ class OptionsInitDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # single anaylsis
-        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         self.dboptLabel = wx.StaticText(self, label="Database:",size=(160,30))
         self.basicLabel = wx.StaticText(self, label="Basics:",size=(160,30))
         self.calcLabel = wx.StaticText(self, label="Calculation:",size=(160,30))
@@ -1526,7 +1526,6 @@ class StreamLoadFlagDialog(wx.Dialog):
 
     def OnLoadDB(self, e):
         self.flaglist = db2flaglist(self.db, self.sensorid)
-        print ("StreamLoadFlag", self.flaglist)
         dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
@@ -1612,6 +1611,7 @@ class StreamSaveFlagDialog(wx.Dialog):
         self.Close(True)
 
     def OnSaveDB(self, e):
+        print ("Saving", self.flaglist[0])
         flaglist2db(self.db, self.flaglist)
         dlg = wx.MessageDialog(self, "Flags stored in connected DB!\nFLAGS table extended with {} inputs\n".format(len(self.flaglist)),"FLAGS added to DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
@@ -2512,7 +2512,7 @@ class DISetParameterDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # single anaylsis
-        # db = MySQLdb.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
+        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
         self.azimuthLabel = wx.StaticText(self, label="Azimuth",size=(160,30))
         self.azimuthTextCtrl = wx.TextCtrl(self,value="",size=(160,30))
         self.abstypeLabel = wx.StaticText(self, label="Absolute type",size=(160,30))

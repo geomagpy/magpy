@@ -104,15 +104,16 @@ def GetSensors():
 
     for item in sensordata:
         try:
-            bits = item.split()
-            sensorname = bits[0]
-            sensorlist.append(sensorname)
-            portdict[sensorname] = bits[1]
-            try:
-                baudratedict[sensorname] = float(bits[2])
-            except:
-                # no float, assuming ow
-                baudratedict[sensorname] = 0.0
+            if not item.startswith('#'):
+                bits = item.split()
+                sensorname = bits[0]
+                sensorlist.append(sensorname)
+                portdict[sensorname] = bits[1]
+                try:
+                    baudratedict[sensorname] = float(bits[2])
+                except:
+                    # no float, assuming ow
+                    baudratedict[sensorname] = 0.0
         except:
             # Possible issue - empty line
             pass

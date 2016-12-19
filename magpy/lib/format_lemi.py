@@ -21,6 +21,10 @@ CALLED BY:
         magpy.lib.magpy_formats
 '''
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from io import open
 
 from magpy.stream import *
 
@@ -66,9 +70,9 @@ def isLEMIBIN1(filename):
     except:
         return False
     try:
-        if not data[0] == 'L':
+        if not data[0].decode('ascii') == 'L':
             return False
-        if not data[22] in (['A','P']):
+        if not data[22].decode('ascii') in (['A','P']):
             return false
     except:
         return False
@@ -83,16 +87,17 @@ def isLEMIBIN(filename):
     '''
     try:
         temp = open(filename, 'rb').read(169)
-        if "LemiBin" in temp:
+        if temp[:20].decode('ascii').startswith("LemiBin"):
             return True
         else:
             data= struct.unpack('<4cb6B8hb30f3BcB6hL', temp)
     except:
         return False
+
     try:
-        if not data[0] == 'L':
+        if not data[0].decode('ascii') == 'L':
             return False
-        if not data[53] in (['A','P']):
+        if not data[53].decode('ascii') in (['A','P']):
             return false
     except:
         return False
@@ -118,7 +123,6 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     headers = {}
     data = []
     key = None
-
 
     xpos = KEYLIST.index('x')
     ypos = KEYLIST.index('y')
@@ -239,6 +243,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     # Reading Lemi025 Binary format data.
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    debug = kwargs.get('debug')
     getfile = True
 
     timeshift = kwargs.get('timeshift')
@@ -257,9 +262,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
 
-    if "LemiBin" in temp:
+    if temp[:60].decode('ascii').startswith("LemiBin"):
         # current format
-        sensorid = temp.split()[1]
+        sensorid = temp[:60].split()[1]
         dataheader = True
         lemiformat = "current"
         packcode = '<4cb6B8hb30f3BcB6hL'
@@ -327,8 +332,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         timediff = []
 
         line = fh.read(linelength)
+        #print (line, len(line))
 
-        while line != '':
+        while len(line) > 0:
             try:
                 data= struct.unpack(packcode,line)
             except Exception as e:
@@ -417,6 +423,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
 
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    debug = kwargs.get('debug')
     getfile = True
 
     fh = open(filename, 'rb')
@@ -449,16 +456,25 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
         headers['col-z'] = 'z'
         headers['unit-col-z'] = 'nT'
 
+
+        xpos = KEYLIST.index('x')
+        ypos = KEYLIST.index('y')
+        zpos = KEYLIST.index('z')
+        t1pos = KEYLIST.index('t1')
+        t2pos = KEYLIST.index('t2')
+
         line = fh.read(32)
-        while line != '':
+        #print (line, len(line))
+        while len(line) > 0:
             data= struct.unpack("<4cb6B11Bcbbhhhb", line)
+            data = [el.decode('ascii') if isinstance(el, basestring) else el for el in data]
             bfx = data[-4]/400.
             bfy = data[-3]/400.
             bfz = data[-2]/400.
             headers['DataCompensationX'] = bfx
             headers['DataCompensationY'] = bfy
             headers['DataCompensationZ'] = bfz
-            headers['SensorID'] = line[0:4]
+            headers['SensorID'] = line[0:4].decode('ascii')
             newtime = []
             for i in range (5,11):
                 newtime.append(h2d(data[i]))
@@ -478,17 +494,22 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
                 newtime[-1] = microsec-secadd
                 newtime[-2] = currsec+secadd
                 time = datetime(2000+newtime[0],newtime[1],newtime[2],newtime[3],newtime[4],int(newtime[5]),int(newtime[6]*1000000))
-                row.time = date2num(time)
-                row.x = (data[0])*1000.
-                row.y = (data[1])*1000.
-                row.z = (data[2])*1000.
-                row.t1 = data[3]/100.
-                row.t2 = data[4]/100.
-                stream.add(row)
+
+                array[0].append(date2num(time))
+                array[xpos].append((data[0])*1000.)
+                array[ypos].append((data[1])*1000.)
+                array[zpos].append((data[2])*1000.)
+                array[t1pos].append(data[3]/100.)
+                array[t2pos].append(data[4]/100.)
+
             line = fh.read(32)
 
     fh.close()
 
     #print "Finished file reading of %s" % filename
+    for idx,ar in enumerate(array):
+        if len(ar) > 0:
+            array[idx] = np.asarray(array[idx]).astype(object)
 
-    return DataStream(stream, headers)
+    return DataStream([LineStruct()], headers, np.asarray(array))
+

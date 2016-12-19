@@ -233,7 +233,12 @@ def isFormat(filename, format_type):
     elif (format_type == "USBLOG"): # Data from the USB temperature logger
         if (isUSBLOG(filename)):
             return True
+    elif (format_type in ["PYNC", "AUTODIF", "SERMUL", "SERSIN", "LATEX"]): # Not yet supported
+        return False
+    elif (format_type == "UNKOWN"): # Unkown
+        return False
     else:
+        print ("Could not identify data format", filename,format_type)
         return False
 
 

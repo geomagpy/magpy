@@ -702,6 +702,9 @@ class MainFrame(wx.Frame):
         self.DatabaseMenu = wx.Menu()
         self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
+        self.DatabaseMenu.AppendSeparator()
+        self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "&Initialize a new MySQL DB...\tCtrl+I", "Initialize Database", wx.ITEM_NORMAL)
+        self.DatabaseMenu.AppendItem(self.DBInit)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
@@ -756,6 +759,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
         self.Bind(wx.EVT_MENU, self.OnDBConnect, self.DBConnect)
+        self.Bind(wx.EVT_MENU, self.OnDBInit, self.DBInit)
         self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamListSelect)
         self.Bind(wx.EVT_MENU, self.OnStreamAdd, self.StreamAddListSelect)
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
@@ -1208,7 +1212,9 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
             self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
-            self.plotopt['annotate'] = True                   # activate annotation
+            if self.menu_p.str_page.annotateCheckBox.GetValue():
+                self.menu_p.str_page.annotateCheckBox.SetValue(True)
+                self.plotopt['annotate'] = True                   # activate annotation
         if formattype == 'MagPyDI':
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
@@ -1787,7 +1793,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
             pass
         try:
-            self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=dbname)
+            self.db = mysql.connect (host=host,user=user,passwd=passwd,db=dbname)
         except:
             self.db = False
         if self.db:
@@ -1832,7 +1838,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['dbname'] = dlg.dbTextCtrl.GetValue()
             self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
             """
-            self.db = MySQLdb.connect (host=host,user=user,passwd=passwd,db=mydb)
+            self.db = mysql.connect (host=host,user=user,passwd=passwd,db=mydb)
             if self.db:
                 self.DBOpen.Enable(True)
                 self.menu_p.rep_page.logMsg('- MySQL Database selected.')
@@ -1842,6 +1848,59 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.changeStatusbar("Database connection failed")
             """
         dlg.Destroy()
+
+
+    def OnDBInit(self, event):
+        """
+        Provide access for local network:
+        Open your /etc/mysql/my.cnf file in your editor.
+        scroll down to the entry:
+        bind-address = 127.0.0.1
+        and you can either hash that so it binds to all ip addresses assigned
+        #bind-address = 127.0.0.1
+        or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
+        Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
+        Login to your mysql console:
+        milkchunk@milkchunk-desktop:~$ mysql -uroot -p
+        GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
+        You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
+        Then issue the following:
+        FLUSH PRIVILEGES;
+        Be sure to restart your mysql (because of the config file editing):
+        /etc/init.d/mysql restart
+        """
+        # Open a message box to confirm that you really want to do that and to provide info on prerequisits
+        dlg = wx.MessageDialog(self, "Your are going to intialize a new database\n"
+                        "Please make sure that the following points are fullfilled:\n"
+                        "1) MySQL is installed\n"
+                        "2) An empty database has been created:\n"
+                        "   $ CREATE DATABASE mydb;\n"
+                        "3) A new user has been added and access has been granted:\n"
+                        "   $ GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass';\n",
+                        "Init database", wx.OK|wx.CANCEL)
+        if dlg.ShowModal() == wx.ID_OK:
+            dlg.Destroy()
+            # open dialog to select empty db or create new db if mysql is existing
+            dlg = DatabaseConnectDialog(None, title='MySQL Database: Initialize...')
+            dlg.hostTextCtrl.SetValue(self.options.get('host',''))
+            dlg.userTextCtrl.SetValue(self.options.get('user',''))
+            dlg.passwdTextCtrl.SetValue(self.options.get('passwd',''))
+            if self.db == None or self.db == 'None' or not self.db:
+                dlg.dbTextCtrl.SetValue('None')
+            else:
+                dlg.dbTextCtrl.SetValue(self.options.get('dbname',''))
+            if dlg.ShowModal() == wx.ID_OK:
+                self.options['host'] = dlg.hostTextCtrl.GetValue()
+                self.options['user'] = dlg.userTextCtrl.GetValue()
+                self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
+                self.options['dbname'] = dlg.dbTextCtrl.GetValue()
+                self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
+                dbinit(self.db)
+                self.changeStatusbar("New database initiated - Ready")
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+
 
     def OnFileQuit(self, event):
         if self.db:
@@ -2156,7 +2215,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.streamkeylist.append(stream._get_key_headers())
         self.currentstreamindex = len(self.streamlist)-1
         self.plotstream = self.streamlist[-1]
-        self.headerlist.append(self.plotstream.header)
+        #self.headerlist.append(self.plotstream.header)
+        self.headerlist.append(stream.header)
         self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
         if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
             self.ActivateControls(self.plotstream)
@@ -2646,6 +2706,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.changeStatusbar("No data available")
             return False
         print ("Restoring (works only for latest stream):", self.currentstreamindex)
+        #print ("Header", self.headerlist)
         #self.plotstream = self.streamlist[self.currentstreamindex].copy()
         self.plotstream = self.stream.copy()
         self.plotstream.header = self.headerlist[self.currentstreamindex]
@@ -2773,6 +2834,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 starttime =num2date(min(self.xlimits))
                 endtime = num2date(max(self.xlimits))
 
+                print ("FlagID:", flagid)
                 flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
                 self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
 
@@ -2974,8 +3036,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.ShowModal()
         if len(dlg.flaglist) > 0:
             flaglist = dlg.flaglist
-            #print ("Loaded flags", len(flaglist))
+            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
             self.flaglist.extend(flaglist)
+            #print ("extended flaglist looking like", self.flaglist[0])
             self.changeStatusbar("Applying flags ... please be patient")
             self.plotstream = self.plotstream.flag(flaglist)
             self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
@@ -2984,7 +3047,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #self.annotate = True
             self.plotopt['annotate'] = True
 
-            self.menu_p.str_page.annotateCheckBox.SetValue(False)
+            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
@@ -2997,7 +3060,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         currentlen = len(self.flaglist)
 
-        print ("FlagSave", self.flaglist)
+        #print ("FlagSave", self.flaglist)
 
         self.changeStatusbar("Saving flags ...")
         dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist)
@@ -3022,19 +3085,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #    self.plotstream = self.plotstream.flag(self.shownkeylist)
         #else:
         self.plotstream = self.plotstream.remove_flagged()
-        #flagidx = KEYLIST.index('flag')
-        #commidx = KEYLIST.index('comment')
-        self.plotstream = self.plotstream._drop_column('flag')
-        self.plotstream = self.plotstream._drop_column('comment')
+        flagid = KEYLIST.index('flag')
+        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
+        if not len(check) > 0:
+           self.plotstream = self.plotstream._drop_column('flag')
+           self.plotstream = self.plotstream._drop_column('comment')
+           #self.plotopt['annotate'] = False
+        else:
+           pass
+           #self.plotopt['annotate'] = True
 
         self.menu_p.rep_page.logMsg('- flagged data removed')
 
         self.flaglist = []
         self.ActivateControls(self.plotstream)
-        #self.annotate = False
-        self.plotopt['annotate'] = False
 
-        self.menu_p.str_page.annotateCheckBox.SetValue(False)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")

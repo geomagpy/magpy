@@ -29,12 +29,7 @@ magpy/acquisition/owprotocol.py
 magpy/acquisition/palmacqprotocol.py
 magpy/acquisition/pos1protocol.py
 magpy/collector/__init__.py
-magpy/collector/all_instruments.py
 magpy/collector/collector_moon.py
-magpy/collector/csclient.py
-magpy/collector/lemiclient.py
-magpy/collector/owclient.py
-magpy/collector/posclient.py
 magpy/collector/subscribe2client.py
 magpy/examples/__init__.py
 magpy/examples/example1.cdf
@@ -86,6 +81,7 @@ magpy/lib/magpy_absformats.py
 magpy/lib/magpy_formats.py
 magpy/opt/Table.py
 magpy/opt/__init__.py
+magpy/opt/analysismonitor.py
 magpy/opt/cred.py
 magpy/opt/emd.py
 magpy/opt/mails.py

@@ -6,6 +6,9 @@ Written by Roman Leonhardt, Rachel Bailey, Mojca Miklavec 2015/2016
 Version 0.3 (starting May 2016)
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from __future__ import division
 
 # ----------------------------------------------------------------------------
 # Part 1: Import routines for packages
@@ -44,10 +47,21 @@ try:
         import copy_reg as copyreg
     except ImportError: # python3
         import copyreg as copyreg
+    # Python 2 and 3: alternative 4
+    try:
+        from urllib.parse import urlparse, urlencode
+        from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
+        from urllib.error import HTTPError
+    except ImportError:
+        from urlparse import urlparse
+        from urllib import urlencode
+        from urllib2 import urlopen, Request, HTTPError, ProxyHandler, install_opener, build_opener
+    """
     try:                # python2
         import urllib2
     except ImportError: # python3
         import urllib.request
+    """
     try:                # python2
         import thread
     except ImportError: # python3
@@ -79,7 +93,7 @@ try:
     version = matplotlib.__version__.replace('svn', '')
     try:
         version = map(int, version.replace("rc","").split("."))
-        MATPLOTLIB_VERSION = version
+        MATPLOTLIB_VERSION = list(version)
     except:
         version = version.strip("rc")
         MATPLOTLIB_VERSION = version
@@ -296,7 +310,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'IMF':['rw', 'Intermagnet Format'],
                 'IAF':['rw', 'Intermagnet archive Format'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
-                'BLV':['rw','Baseline format Intermagnet'],
+                'BLV':['r','Baseline format Intermagnet'],
                 'IYFV':['rw','Yearly mean format Intermagnet'],
                 'DKA':['rw', 'K value format Intermagnet'],
                 'DIDD':['rw','Output format from MinGeo DIDD'],
@@ -322,8 +336,8 @@ PYMAG_SUPPORTED_FORMATS = {
                 'IONO':['r', 'IM806 Ionometer'],
                 'RADON':['r', 'single channel analyser gamma data'],
                 'USBLOG':['r', 'USB temperature logger'],
-                'SERSIN':['r', '?'],
-                'SERMUL':['r', '?'],
+                #'SERSIN':['r', '?'],
+                #'SERMUL':['r', '?'],
                 'PYSTR':['rw', 'MagPy full ascii'],
                 'AUTODIF':['r', 'Deprecated - AutoDIF ouput data'],
                 'AUTODIF_FREAD':['r', 'Deprecated - Special format for AutoDIF read-in'],
@@ -332,15 +346,15 @@ PYMAG_SUPPORTED_FORMATS = {
                 'PYASCII':['rw', 'MagPy basic ASCII'],
                 'POS1TXT':['r', 'POS-1 text format output data'],
                 'POS1':['r', 'POS-1 binary output at WIC'],
-                'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
-                'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
-                'SFDMI':['r', 'San Fernando variometer'],
-                'SFGSM':['r', 'San Fernando GSM90'],
-                'BDV1':['r', 'Budkov GDAS data variant'],
+                #'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
+                #'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
+                #'BDV1':['r', 'Budkov GDAS data variant'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
                 'LATEX':['w','LateX data'],
                 'CS':['r','Cesium G823'],
+                #'SFDMI':['r', 'San Fernando variometer'],
+                #'SFGSM':['r', 'San Fernando GSM90'],
                 'UNKOWN':['-','Unknown']
                         }
 """
@@ -465,7 +479,7 @@ class DataStream(object):
     - stream.filter(self, **kwargs):
     - stream.fit(self, keys, **kwargs):
     - stream.flag_outlier(self, **kwargs):
-    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None):
+    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
     - stream.func2stream(self,function,**kwargs):
     - stream.func_add(self,function,**kwargs):
     - stream.func_subtract(self,function,**kwargs):
@@ -702,7 +716,11 @@ CALLED BY:
         #print self.container
         #assert isinstance(self.container, (list, tuple))
         co = DataStream()
-        co.header = self.header
+        #co.header = self.header
+        newheader = {}
+        for el in self.header:
+            newheader[el] = self.header[el]
+
         array = [[] for el in KEYLIST]
         if len(self.ndarray[0])> 0:
             for ind, key in enumerate(KEYLIST):
@@ -723,7 +741,7 @@ CALLED BY:
                         setattr(li, key, elkey)
                 co.add(li)
 
-        return DataStream(co.container,co.header,np.asarray(array, dtype=object))
+        return DataStream(co.container,newheader,np.asarray(array, dtype=object))
 
 
     def __str__(self):
@@ -1791,7 +1809,7 @@ CALLED BY:
                 # Trim should start at point >= starttime, so check:
                 if self.ndarray[0][idx] < date2num(starttime):
                     idx += 1
-                startindices = range(0,idx)
+                startindices = list(range(0,idx))
         if endtime:
             endtime = self._testtime(endtime)
             if self.ndarray[0].size > 0:   # time column present
@@ -1825,7 +1843,7 @@ CALLED BY:
                     #    print ("Value now", idx, self.ndarray[0][idx+1], date2num(endtime))
                 except:
                     pass
-                endindices = range(idx,len(self.ndarray[0]))
+                endindices = list(range(idx,len(self.ndarray[0])))
 
         indices = startindices + endindices
 
@@ -3912,7 +3930,7 @@ CALLED BY:
         if not keystoflag:
             keystoflag = self._get_key_headers(numerical=True)
         if not flagnum:
-            flagnum = 1
+            flagnum = 0
 
         if not len(self.ndarray[0]) > 0:
             print ("flag_range: No data available - aborting")
@@ -4074,7 +4092,7 @@ CALLED BY:
         if not threshold:
             threshold = 5.0
 
-        cdate = datetime.utcnow()
+        cdate = datetime.utcnow().replace(tzinfo=None)
         sensorid = self.header.get('SensorID','')
         flaglist = []
 
@@ -4094,8 +4112,12 @@ CALLED BY:
         commentidx = KEYLIST.index('comment')
         if not len(self.ndarray[flagidx]) > 0:
             self.ndarray[flagidx] = [''] * len(self.ndarray[0])
+        else:
+            self.ndarray[flagidx] = self.ndarray[flagidx].astype(object)
         if not len(self.ndarray[commentidx]) > 0:
             self.ndarray[commentidx] = [''] * len(self.ndarray[0])
+        else:
+            self.ndarray[commentidx] = self.ndarray[commentidx].astype(object)
 
         # get a poslist of all keys - used for markall
         flagposls = [FLAGKEYLIST.index(key) for key in keys]
@@ -4215,11 +4237,11 @@ CALLED BY:
             if flagtimeprev == 0:
                 startflagtime = ft
             if (ft-flagtimeprev)-0.01*srday > srday and not flagtimeprev == 0:
-                newlist.append([num2date(startflagtime),num2date(flagtimeprev),line[2],line[3],line[4],sensorid,cdate])
+                newlist.append([num2date(startflagtime).replace(tzinfo=None),num2date(flagtimeprev).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
                 startflagtime = ft
             flagtimeprev = ft
         if len(flaglist) > 0:
-            finalfl = [num2date(flaglist[-1][0]),num2date(flaglist[-1][1]),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
+            finalfl = [num2date(flaglist[-1][0]).replace(tzinfo=None),num2date(flaglist[-1][1]).replace(tzinfo=None),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
             newlist.append(finalfl)
 
         #print("flag_outlier",newlist)
@@ -4600,9 +4622,15 @@ CALLED BY:
         if flag == 1 or flag == 3:
             if enddate:
                 #print ("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
-                loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
+                try:
+                    loggerstream.info("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat().encode('ascii','ignore'),enddate.isoformat().encode('ascii','ignore'),comment.encode('ascii','ignore')))
+                except:
+                    pass
             else:
-                loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat(),comment))
+                try:
+                    loggerstream.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat().encode('ascii','ignore'),comment.encode('ascii','ignore')))
+                except:
+                    pass
 
         #print self.ndarray[flagind][np.where(self.ndarray[flagind] != '')]
         #print self.ndarray[flagind]
@@ -6964,12 +6992,13 @@ CALLED BY:
                 indlst = [i for i,el in enumerate(self.ndarray[flagind]) if not el in ['','-']]
                 for i in indlst:
                     try:
+                        #if len(array[pos]) > 0:
                         flagls = list(self.ndarray[flagind][i])
                         flag = flagls[pos]
                         if flag in flaglist:
-                            array[pos][i] = float("nan")
+                           array[pos][i] = float("nan")
                     except:
-                        print("stream remove_flagged: index error")
+                        #print("stream remove_flagged: index error: indlst {}, pos {}, length flag colum {}".format(len(indlst), pos, len(self.ndarray[flagind])))
                         pass
                 liste = [LineStruct()]
             else:
@@ -6987,6 +7016,7 @@ CALLED BY:
                         liste.append(elem)
 
         #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
+
         return DataStream(liste, self.header,array)
 
 
@@ -8533,7 +8563,7 @@ CALLED BY:
         return format_type, filenamebegins, filenameends, coverage, dateformat
 
 
-    def write(self, filepath, **kwargs):
+    def write(self, filepath, compression=5, **kwargs):
         """
     DEFINITION:
         Code for simple application: write Stream to a file.
@@ -8621,139 +8651,25 @@ CALLED BY:
         comment = kwargs.get('comment')
         useg = kwargs.get('useg')
         skipcompression = kwargs.get('skipcompression')
+
         success = True
+
+        #compression: provide compression factor for CDF data: 0 no compression, 9 high compression
 
         t1 = datetime.utcnow()
 
         if not format_type in PYMAG_SUPPORTED_FORMATS:
-            loggerstream.warning('write: Output format not supported.')
-            return
+            if not format_type:
+                format_type = 'PYSTR'
+            else:
+                loggerstream.warning('write: Output format not supported.')
+                return False
+        else:
+            if not 'w' in PYMAG_SUPPORTED_FORMATS[format_type][0]:
+                loggerstream.warning('write: Selected format does not support write methods.')
+                return False
 
         format_type, filenamebegins, filenameends, coverage, dateformat = self._write_format(format_type, filenamebegins, filenameends, coverage, dateformat, year)
-
-        """
-        # Preconfigure some fileformats - can be overwritten by keywords
-        if format_type == 'IMF':
-            dateformat = '%b%d%y'
-            try:
-                extension = (self.header['StationID']).lower()
-            except:
-                extension = 'txt'
-            filenameends = '.'+extension
-        if format_type == 'IAF':
-            try:
-                filenamebegins = (self.header['StationIAGAcode']).upper()
-            except:
-                filenamebegins = 'XXX'
-            dateformat = '%y%b'
-            extension = 'BIN'
-            filenameends = '.'+extension
-        if format_type == 'IYFV':
-            if not filenameends:
-                head = self.header
-                code = head.get('StationIAGAcode','')
-                if not code == '':
-                    filenameends = '.'+code.upper()
-                else:
-                    filenameends = '.XXX'
-            if not filenamebegins:
-                filenamebegins = 'YEARMEAN'
-            dateformat = 'None'
-            coverage = 'year'
-        if format_type == 'IAGA':
-            dateformat = '%Y%m%d'
-            head = self.header
-            if not filenamebegins:
-                code = head.get('StationIAGAcode','')
-                if not code == '':
-                    filenamebegins = code.upper()
-            if not filenameends:
-                samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
-                plevel = head.get('DataPublicationLevel',0)
-                if int(samprate) == 1:
-                    middle = 'sec'
-                elif int(samprate) == 60:
-                    middle = 'min'
-                elif int(samprate) == 3600:
-                    middle = 'hou'
-                else:
-                    middle = 'lol'
-                if plevel == 4:
-                    fed = 'd'+middle+'.'+middle
-                elif plevel == 3:
-                    fed = 'q'+middle+'.'+middle
-                elif plevel == 2:
-                    fed = 'p'+middle+'.'+middle
-                else:
-                    fed = 'v'+middle+'.'+middle
-                filenameends = fed
-
-        if format_type == 'IMAGCDF':
-            begin = (self.header.get('StationIAGAcode','')).lower()
-            if begin == '':
-                begin = (self.header.get('StationID','XYZ')).lower()
-            publevel = str(self.header.get('DataPublicationLevel',0))
-            samprate = float(str(self.header.get('DataSamplingRate','0')).replace('sec','').strip())
-            if coverage == 'year':
-                dfor = '%Y'
-            elif coverage == 'month':
-                dfor = '%Y%m'
-            else:
-                dfor = '%Y%m%d'
-            if int(samprate) == 1:
-                dateformat = dfor
-                middle = '_000000_PT1S_'
-            elif int(samprate) == 60:
-                dateformat = dfor
-                middle = '_0000_PT1M_'
-            elif int(samprate) == 3600:
-                dateformat = dfor
-                middle = '_00_PT1H_'
-            elif int(samprate) == 86400:
-                dateformat = dfor
-                middle = '_PT1D_'
-            elif int(samprate) > 30000000:
-                dateformat = '%Y'
-                middle = '_PT1Y_'
-            elif int(samprate) > 2400000:
-                dateformat = '%Y%m'
-                middle = '_PT1M_'
-            else:
-                dateformat = '%Y%m%d'
-                middle = 'unknown'
-            filenamebegins = begin+'_'
-            filenameends = middle+publevel+'.cdf'
-        if format_type == 'BLV':
-            if len(self.ndarray[0]) > 0:
-                lt = max(self.ndarray[0].astype(float))
-            else:
-                lt = self[-1].time
-            if year:
-                blvyear = str(year)
-            else:
-                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
-            try:
-                filenamebegins = (self.header['StationID']).upper()+blvyear
-            except:
-                filenamebegins = 'XXX'+blvyear
-            filenameends = '.blv'
-            coverage = 'all'
-
-        if not format_type:
-            format_type = 'PYSTR'
-        if not dateformat:
-            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
-        if not coverage:
-            coverage = timedelta(days=1)
-        if not filenamebegins:
-            filenamebegins = ''
-        if not filenameends and not filenameends == '':
-            # Extension for cdf files is automatically attached
-            if format_type in ['PYCDF','IMAGCDF']:
-                filenameends = ''
-            else:
-                filenameends = '.txt'
-        """
 
         if not mode:
             mode= 'overwrite'
@@ -8810,7 +8726,7 @@ CALLED BY:
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -8835,7 +8751,7 @@ CALLED BY:
                     dat = ''
                 filename = filenamebegins + dat + filenameends
                 if len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression)
                 # get next endtime
                 starttime = endtime
                 cyear = cyear + 1
@@ -8887,7 +8803,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         loggerstream.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype,useg=useg,skipcompression=skipcompression)
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -8897,7 +8813,7 @@ CALLED BY:
 
         else:
             filename = filenamebegins + filenameends
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression)
 
         return success
 
@@ -9535,12 +9451,13 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     disableproxy = kwargs.get('disableproxy')
     skipsorting = kwargs.get('skipsorting')
     keylist = kwargs.get('keylist') # for PYBIN
+    debug = kwargs.get('debug')
 
     if disableproxy:
-        proxy_handler = urllib2.ProxyHandler( {} )
-        opener = urllib2.build_opener(proxy_handler)
+        proxy_handler = ProxyHandler( {} )
+        opener = build_opener(proxy_handler)
         # install this opener
-        urllib2.install_opener(opener)
+        install_opener(opener)
 
     # 1. No path
     if not path_or_url:
@@ -9569,9 +9486,9 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # some URL
         # extract extension if any
         loggerstream.info("read: Found URL to read at %s" % path_or_url)
-        content = urllib2.urlopen(path_or_url).read()
+        content = urlopen(path_or_url).read()
         if debugmode:
-            print(urllib2.urlopen(path_or_url).info())
+            print(urlopen(path_or_url).info())
         if path_or_url[-1] == '/':
             # directory
             string = content.decode('utf-8')
@@ -9580,7 +9497,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     filename = (line.strip().split()[-1])
                     if debugmode:
                         print(filename)
-                    content = urllib2.urlopen(path_or_url+filename).read()
+                    content = urlopen(path_or_url+filename).read()
                     suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
                     #date = os.path.basename(path_or_url).partition('.')[0][-8:]
                     #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])
@@ -9589,7 +9506,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                     fname = fname.strip('?').strip(':')      ## Necessary for windows
                     #fh = NamedTemporaryFile(suffix=date+suffix,delete=False)
                     fh = NamedTemporaryFile(suffix=fname,delete=False)
-                    print (fh.name)
+                    print (fh.name, suffix)
                     fh.write(content)
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
@@ -9617,6 +9534,25 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pathname = path_or_url
         for filename in iglob(pathname):
             getfile = True
+            if filename.endswith('.gz') or filename.endswith('.GZ'):
+                ## Added gz support to read IMO compressed data directly - future option might include tarfiles
+                import gzip
+                print ("Found zipped file (gz) ... unpacking")
+                fname = os.path.split(filename)[1]
+                fname = fname.strip('.gz')
+                with NamedTemporaryFile(suffix=fname,delete=False) as fh:
+                    shutil.copyfileobj(gzip.open(filename), fh)
+                    filename = fh.name
+            if filename.endswith('.zip') or filename.endswith('.ZIP'):
+                ## Added gz support to read IMO compressed data directly - future option might include tarfiles
+                from zipfile import ZipFile
+                print ("Found zipped file (zip) ... unpacking")
+                with ZipFile(filename) as myzip:
+                    fname =  myzip.namelist()[0]
+                    with NamedTemporaryFile(suffix=fname,delete=False) as fh:
+                        shutil.copyfileobj(myzip.open(fname), fh)
+                        filename = fh.name
+
             theday = extractDateFromString(filename)
             try:
                 if starttime:
@@ -9675,15 +9611,25 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     Reads a single file into a MagPy DataStream object.
     Internal function only.
     """
+    debug = kwargs.get('debug')
 
     stream = DataStream([],{})
     format_type = None
+    foundapproptiate = False
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
+            if debug:
+                print ("Checking format:", format_type)
             if isFormat(filename, format_type):
+                if debug:
+                    print ("  -- found:", format_type)
+                foundapproptiate = True
                 break
+        if not foundapproptiate:
+            print ("Could not identify a suitable data format")
+            return DataStream([LineStruct()],{},np.asarray([[] for el in KEYLIST]))
     else:
         # format given via argument
         dataformat = dataformat.upper()

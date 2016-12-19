@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 import sys, time, os, socket
 import serial
 import struct, binascii, re, csv
@@ -39,7 +39,7 @@ if call:
             self.eol = '\r'
             #print source
             self.errorcnt = 1
-            print "Initialization of callprotocl finished"
+            print ("Initialization of callprotocl finished")
 
         def lineread(self, ser,eol):
             # FUNCTION 'LINEREAD'
@@ -99,8 +99,8 @@ if call:
             try:   
                 ser = serial.Serial(self.port, baudrate=self.baudrate , parity='N', bytesize=8, stopbits=1, timeout=10)
                 #print 'Connection made.'
-            except: 
-                print 'SerialCall: Connection flopped.'
+            except:
+                print('SerialCall: Connection flopped.')
 
             for item in self.commands:
                 #print "sending command", item
@@ -134,7 +134,7 @@ if call:
                 self.writeAnemometer(answer,actime)
             else:
                 if self.errorcnt < 5:
-                    print "SerialCall: Could no analyze data:", answer, answer.split()
+                    print("SerialCall: Could no analyze data", answer)
                 return False
             return True
     
@@ -226,6 +226,7 @@ if call:
                 Pslow = int(data[51])		 	# dx
                 Pfast= int(data[53])		 	# dy
                 Psmall= int(data[55])		 	# dz
+                synop= data[6]			 	# str1
                 revision = '0001' # Software version 2.42
                 sensorid = sensor + '_' + serialnum + '_' + revision
             except:
@@ -260,10 +261,11 @@ if call:
                 evt36 = {'id': 36, 'value': cumulativerain}
                 evt37 = {'id': 37, 'value': visibility}
                 evt39 = {'id': 39, 'value': Ptotal}
+                evt45 = {'id': 45, 'value': synop}
                 evt0 = {'id': 0, 'value': self.hostname}
                 evt99 = {'id': 99, 'value': 'eol'}
             except:
-                print "SerialCall - writeDisdro: Problem assigning values to dict"
+                print("SerialCall - writeDisdro: Problem assigning values to dict")
 
             try:
                 self.wsMcuFactory.dispatch(dispatch_url, evt0)
@@ -274,6 +276,7 @@ if call:
                 self.wsMcuFactory.dispatch(dispatch_url, evt36)
                 self.wsMcuFactory.dispatch(dispatch_url, evt37)
                 self.wsMcuFactory.dispatch(dispatch_url, evt39)
+                self.wsMcuFactory.dispatch(dispatch_url, evt45)
                 self.wsMcuFactory.dispatch(dispatch_url, evt99)
             except ValueError:
                 log.err('SerialCall - writeDisdro: Unable to parse data at %s' % actualtime)
@@ -290,8 +293,8 @@ if call:
                 answer, tmptime = self.send_command(ser,address+'SH',self.eol,hex=False)
                 ser.close()
                 serialnum = answer.replace('!'+address+'SH','').strip('\x03').strip('\x02')
-            except: 
-                print 'writeAnemometer: Failed to get Serial number.'
+            except:
+                print('writeAnemometer: Failed to get Serial number.')
 
             
             sensorid = sensor + '_' + serialnum + '_' + revision
@@ -313,7 +316,7 @@ if call:
                 windspeed = float('nan')                          # var1
                 winddirection = float('nan')                      # var2
                 virtualtemperature = float('nan')                 # t2
-                print 'writeAnemometer: Failed to interprete data.'
+                print('writeAnemometer: Failed to interprete data.')
 
             #print sensorid, windspeed
   
@@ -343,7 +346,7 @@ if call:
                 evt51 = {'id': 51, 'value': winddirection}
                 evt99 = {'id': 99, 'value': 'eol'}
             except:
-                print "writeAnemometer: Problem assigning values to dict"
+                print("writeAnemometer: Problem assigning values to dict")
 
             try:
                 self.wsMcuFactory.dispatch(dispatch_url, evt1)

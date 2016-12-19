@@ -74,8 +74,11 @@ def readGFZKP(filename, headonly=False, **kwargs):
         elements = line.split()
         getdat = True
         try:
-            day = datetime.strptime(elements[0],"%y%m%d")
-            getdat = True
+            if len(elements[0])>4:
+                day = datetime.strptime(elements[0],"%y%m%d")
+                getdat = True
+            else:
+                getdat = False
         except:
             getdat = False
         if line.isspace():
@@ -102,7 +105,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
             else:
                 endcount = len(elements)
             for i in range (1,endcount):
-                row = LineStruct()
+                #row = LineStruct()
                 signval = elements[i][1:]
                 if signval == 'o':
                     adderval = 0.0

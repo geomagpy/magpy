@@ -6,6 +6,10 @@ Written by Roman Leonhardt October 2012
 ToDo: Filter for minute data
 """
 from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import division
+from io import open
 
 from magpy.stream import *
 from datetime import timedelta
@@ -639,7 +643,8 @@ COLUMNS   FORMAT   DESCRIPTION
             year = datetime.strftime(timestamp, "%Y")
             day = datetime.strftime(timestamp, "%d")
             for key in write_KEYLIST:
-                exec('value = elem'+key)
+                #exec('value = elem'+key)
+                value = eval('elem'+key)
                 if not isnan(value):
                     if len(str(value)) > 6:
                         if value >= 10000:
@@ -759,7 +764,7 @@ COLUMNS   FORMAT   DESCRIPTION
                         data = '999999'*60
                         hourly_mean = '999999'
                     line = preamble + data + hourly_mean + '\r\n'
-                    myFile.write(line)
+                    myFile.write(line.encode('utf-8'))
             day = day + timedelta(days=1)
 
         success = True
