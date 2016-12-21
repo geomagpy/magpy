@@ -1633,7 +1633,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
 def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
              window=mlab.window_hanning, noverlap=900,
-             cmap=cm.Accent, xextent=None, pad_to=None, sides='default',
+             cmap=cm.Accent, cbar=False, xextent=None, pad_to=None, sides='default',
              scale_by_freq=None, minfreq = None, maxfreq = None, plottitle=False, **kwargs):
     """
     DEFINITION:
@@ -1653,7 +1653,8 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         - axes:         (?) ?
         - dbscale:      (?) ?
         - mult:         (?) ?
-        - cmap:         (?) ?
+        - cmap:         (cm.) Colormap object
+        - cbar:         (bool) Plot colorbar alongside spectrogram
         - zorder:       (?) ?
         - plottitle:    (?) ?
         - samp_rate_multiplicator:
@@ -1702,8 +1703,16 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         ax2=subplot(212)
         ax2.set_yscale('log')
         #NFFT = 1024
-        Pxx, freqs, bins, im = magpySpecgram(val, NFFT=NFFT, Fs=Fs, noverlap=noverlap, 
+        Pxx, freqs, bins, im = magpySpecgram(val, NFFT=NFFT, Fs=Fs, noverlap=noverlap,
                                 cmap=cmap, minfreq = minfreq, maxfreq = maxfreq)
+        
+        if plottitle:
+            ax1.set_title(plottitle)
+            
+        if cbar:
+            fig = plt.gcf()
+            axes = fig.axes
+            fig.colorbar(im, ax=np.ravel(axes).tolist())
 
         plt.show()
 
