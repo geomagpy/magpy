@@ -1463,12 +1463,14 @@ class StreamLoadFlagDialog(wx.Dialog):
     DESCRIPTION
         Dialog for Loading Flagging data from file or DB
     """
-    def __init__(self, parent, title, db, sensorid):
+    def __init__(self, parent, title, db, sensorid, start, end):
         super(StreamLoadFlagDialog, self).__init__(parent=parent,
             title=title, size=(300, 300))
         self.flaglist = []
         self.sensorid = sensorid
         self.db = db
+        self.start = start
+        self.end = end
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1525,7 +1527,7 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.Close(True)
 
     def OnLoadDB(self, e):
-        self.flaglist = db2flaglist(self.db, self.sensorid)
+        self.flaglist = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
         dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
@@ -1538,7 +1540,7 @@ class StreamLoadFlagDialog(wx.Dialog):
         openFileDialog.ShowModal()
         flagname = openFileDialog.GetPath()
         try:
-            self.flaglist = loadflags(flagname,sensorid=self.sensorid)
+            self.flaglist = loadflags(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
         except:
             self.flaglist = [] 
         openFileDialog.Destroy()
@@ -1965,7 +1967,7 @@ class AnalysisOffsetDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, keylst, xlimits):
+    def __init__(self, parent, title, keylst, xlimits, deltas):
         super(AnalysisOffsetDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.keylst = keylst
@@ -1974,6 +1976,20 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.end = self._pydate2wxdate(xlimits[1])
         self.starttime = datetime.strftime(xlimits[0], "%H:%M:%S")
         self.endtime = datetime.strftime(xlimits[1], "%H:%M:%S")
+        self.val = {}
+        self.val['time'] = '0'
+        if not deltas == '':
+            try:
+                dlist = deltas.split(',')
+                for delt in dlist:
+                    de = delt.split('_')
+                    if not de[0] == 'time':
+                        self.val[de[0]] = str(de[1])
+                    else:
+                        self.val[de[0]] = str(de[1].strip(')').split('=')[-1])
+                    print ("BB", self.val[de[0]], de[0])
+            except:
+                pass
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1993,7 +2009,7 @@ class AnalysisOffsetDialog(wx.Dialog):
                      choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS)
          
         self.timeshiftLabel = wx.StaticText(self, label="Timeshift (sec):",size=(160,30))
-        self.timeshiftTextCtrl = wx.TextCtrl(self, value='0',size=(160,30))
+        self.timeshiftTextCtrl = wx.TextCtrl(self, value=self.val.get('time','0'),size=(160,30))
 
         self.StartDateLabel = wx.StaticText(self, label="Starting:",size=(160,30))
         self.StartDatePicker = wx.DatePickerCtrl(self, dt=self.start,size=(160,30))
@@ -2004,7 +2020,7 @@ class AnalysisOffsetDialog(wx.Dialog):
 
         for elem in self.keylst:
             exec('self.'+elem+'Label = wx.StaticText(self,label="'+elem+'")')
-            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="")')
+            exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="'+self.val.get(elem,'')+'")')
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, label='Cancel')
 

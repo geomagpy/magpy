@@ -160,15 +160,18 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
     print("Credentials: Now containing entries for", entries)
 
 
-def lc(dictionary,value):
+def lc(dictionary,value,path=None):
     """
     Load credentials
     """
 
-    sysuser = getuser()
-    home = expanduser('~'+sysuser)
-    # previously used expanduser('~') which does not work for root
-    credentials = os.path.join(home,'.magpycred')
+    if not path:
+        sysuser = getuser()
+        home = expanduser('~'+sysuser)
+        # previously used expanduser('~') which does not work for root
+        credentials = os.path.join(home,'.magpycred')
+    else:
+        credentials = path
     print("Accessing credential file:", credentials)
 
     try:
