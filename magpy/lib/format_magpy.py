@@ -60,7 +60,6 @@ def isPYCDF(filename):
         return False
     try:
         cdfformat = temp.attrs['DataFormat']
-        print ("CDF-Format:", cdfformat)
     except:
         pass
     try:
