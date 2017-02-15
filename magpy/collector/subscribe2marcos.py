@@ -43,9 +43,17 @@ class MARCOSsubscription(object):
         subscript1 = MARCOSsubscription(parameterlist)
         subscript1.run()
     """
-    def __init__(self, remotedb=None, localdb=None, filepath=None, datainfoid=None, keylist=None, interval=10):
+    def __init__(self, remotedb={}, localdb={}, filepath=None, datainfoid=None, keylist=None, interval=10):
         self.remotedb = remotedb
         self.localdb = localdb
+        self.rhost = remotedb.get('host','')
+        self.ruser = remotedb.get('user','')
+        self.rpwd = remotedb.get('passwd','')
+        self.rname = remotedb.get('name','')
+        self.lhost = localdb.get('host','')
+        self.luser = localdb.get('user','')
+        self.lpwd = localdb.get('passwd','')
+        self.lname = localdb.get('name','')
         self.filepath = filepath
         self.datainfoid = datainfoid
         self.keylist = keylist
@@ -59,11 +67,15 @@ class MARCOSsubscription(object):
         # Check validity of each parameter
         if remotedb:
             try:
-                rcursor = remotedb.cursor()
+                rdb = mysql.connect(host=self.rhost,user=self.ruser,passwd=self.rpwd,db=self.rname)
+                rcursor = rdb.cursor()
                 rcursor.execute ("SELECT VERSION()")
                 row = rcursor.fetchone()
-                print("Remote MySQL server ({}), Version: {}".format('name',row[0]))
+                rcursor.execute ("select @@hostname")
+                host = rcursor.fetchone()
+                print("Remote MySQL server ({}), Version: {}".format(host[0],row[0]))
                 rcursor.close()
+                rdb.close()
             except:
                 print("Remote MySQL server connection failed")
                 remotedb = None
@@ -71,11 +83,15 @@ class MARCOSsubscription(object):
         if localdb:
             try:
                 #dbalter(localdb)
-                lcursor = localdb.cursor()
+                ldb = mysql.connect(host=self.lhost,user=self.luser,passwd=self.lpwd,db=self.lname)
+                lcursor = ldb.cursor()
                 lcursor.execute ("SELECT VERSION()")
                 row = lcursor.fetchone()
-                print("Local MySQL server ({}), Version: {}".format('name',row[0]))
+                lcursor.execute ("select @@hostname")
+                host = lcursor.fetchone()
+                print("Local MySQL server ({}), Version: {}".format(host[0],row[0]))
                 lcursor.close()
+                ldb.close()
             except:
                 print("Local MySQL server connection failed")
                 localdb = None
@@ -84,8 +100,9 @@ class MARCOSsubscription(object):
         """
         obtain any initial information not yet available
         """
+        rdb = mysql.connect(host=self.rhost,user=self.ruser,passwd=self.rpwd,db=self.rname)
         try:
-            li = dbselect(remotedb, 'time', str(datainfoid), expert='ORDER BY time DESC LIMIT 1')
+            li = dbselect(rdb, 'time', str(datainfoid), expert='ORDER BY time DESC LIMIT 1')
         except:
             print ("subcribeMARCOS: check whether provided datainfoid is really existing")
             li = [] 
@@ -94,9 +111,10 @@ class MARCOSsubscription(object):
         if ((datetime.utcnow()-lasttime).days) > 1:
             print ("subscribeMARCOS: no current data available for this dataid")
         # if OK proceed...
-        teststream = readDB(remotedb, datainfoid, starttime=datetime.strftime(lasttime,"%Y-%m-%d"))  
+        teststream = readDB(rdb, datainfoid, starttime=datetime.strftime(lasttime,"%Y-%m-%d"))  
         print ("subscribeMARCOS: Initiating stream content for {} with length {}".format(self.datainfoid, teststream.length()[0]))
-        
+
+        rdb.close()        
         # add teststream to localdb or file
         return teststream
 
@@ -105,20 +123,27 @@ class MARCOSsubscription(object):
         """
         obtain any initial information not yet available
         """
+        rdb = mysql.connect(host=self.rhost,user=self.ruser,passwd=self.rpwd,db=self.rname)
         if lines <= 1:
             lines = 2 ## get at least two lines
-        teststream = dbgetlines(remotedb, datainfoid, lines)
-        
+        print ("Getting new data ...")
+        teststream = dbgetlines(rdb, datainfoid, lines)
+        print ("... found {} datapoints".format(teststream.length()[0]))
+        rdb.close()
+         
         return teststream
 
     def appendData(self,stream,keylist,init=False):
         if keylist:
             stream = stream.selectkeys(keylist)
+        #print ("Appending", localdb)
         if self.localdb:
+            ldb = mysql.connect(host=self.lhost,user=self.luser,passwd=self.lpwd,db=self.lname)
             if init:
-                writeDB(self.localdb,stream)
+                writeDB(ldb,stream)
             else:
-                writeDB(self.localdb,stream,tablename=self.datainfoid)
+                writeDB(ldb,stream,tablename=self.datainfoid)
+            ldb.close()
         if self.filepath:
             # TODO finish this method
             self.counter += 1
@@ -206,11 +231,8 @@ class MARCOSsubscription(object):
     def subscribe2Data(self):
         #t1 = datetime.utcnow()
         newstream = self.getNewData(self.remotedb, self.datainfoid, int(self.interval/self.samplingrate))
-        #print ( "got", newstream.length()[0])
         if newstream.length()[0]>0:
             self.appendData(newstream,self.keylist)
-        #t2 = datetime.utcnow()
-        #print ("Delta time", t2-t1)
         threading.Timer(self.interval, self.subscribe2Data).start()
 
     def timeToArray(self, timestring):

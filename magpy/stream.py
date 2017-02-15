@@ -10191,7 +10191,6 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     else:
         timeb = sb._get_column('time')
 
-
     # keeping a - changed by leon 10/2015
     """
     # truncate a to range of b
@@ -10275,6 +10274,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     dcnt = int(len(timeb)/fracratio)
     #print ("Merge:", abratio, dcnt, len(timeb))
 
+    timea = np.round(timea, decimals=9)
+    timeb = np.round(timeb, decimals=9)
     if ndtype:
             array = [[] for key in KEYLIST]
             # Init array with keys from stream_a
@@ -10300,6 +10301,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
                             #print("Found sb values", key)
                             valb = [sb.ndarray[keyind][ind] for ind in indtib]
+                        vala = [sa.ndarray[keyind][ind] for ind in indtia]
                         ### Change by leon in 10/2015
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
                             pass
@@ -10317,13 +10319,22 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
                             for i,ind in enumerate(indtia):
                                 if key in NUMKEYLIST:
-                                    tester = isnan(array[keyind][ind])
+                                    tester = np.isnan(array[keyind][ind])
                                 else:
                                     tester = False
                                     if array[keyind][ind] == '':
                                         tester = True
-                                if mode == 'insert' and tester:
-                                    array[keyind][ind] = valb[i]
+                                #print ("Merge3", tester)
+                                if mode == 'insert':
+                                    if tester:
+                                        array[keyind][ind] = valb[i]
+                                    else:
+                                        array[keyind][ind] = vala[i]
+                                elif mode == 'replace':
+                                    if not np.isnan(valb[i]):
+                                        array[keyind][ind] = valb[i]
+                                    else:
+                                        array[keyind][ind] = vala[i]
                                 else:
                                     array[keyind][ind] = valb[i]
                                 if flag:
@@ -10408,10 +10419,24 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                 tester = False
                                 if array[keyind][ind] == '':
                                     tester = True
+                            if mode == 'insert':
+                                if tester:
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    array[keyind][ind] = vala[i]
+                            elif mode == 'replace':
+                                if not np.isnan(valb[i]):
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    array[keyind][ind] = vala[i]
+                            else:
+                                array[keyind][ind] = valb[i]
+                            """
                             if mode == 'insert' and tester:
                                 array[keyind][ind] = valb[i]
                             elif mode == 'replace':
                                 array[keyind][ind] = valb[i]
+                            """
                             if flag:
                                 ttt = num2date(array[0][ind])
                                 fllst.append([ttt,ttt,key,flagid,comment])

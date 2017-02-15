@@ -1816,7 +1816,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
         if len(col) > 0 and not False in checkEqual3(col):
-            print ("Found False and identical", idx, col[0])
+            print ("Found only identical values of {} in column {}".format(col[0],idx))
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
             else: # add as usual
@@ -1827,7 +1827,15 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 except:
                     pass # will fail for strings
         elif key.endswith('time') and len(col) > 0:
-            tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
+            #if col[0]
+            try:
+                tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
+            except:
+                try:
+                    tstr = DataStream()
+                    tcol = np.asarray([tstr._testtime(elem) for elem in col])
+                except:
+                    tcol = np.asarray([])
             tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
             array[idx]=np.asarray(tcol)
         elif len(col) > 0: # and KEYLIST[idx] in NUMKEYLIST:

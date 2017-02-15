@@ -29,8 +29,10 @@ magpy/acquisition/owprotocol.py
 magpy/acquisition/palmacqprotocol.py
 magpy/acquisition/pos1protocol.py
 magpy/collector/__init__.py
-magpy/collector/collector_moon.py
+magpy/collector/collector-marcos.py
+magpy/collector/collector-martas.py
 magpy/collector/subscribe2client.py
+magpy/collector/subscribe2marcos.py
 magpy/examples/__init__.py
 magpy/examples/example1.cdf
 magpy/examples/example1.py
