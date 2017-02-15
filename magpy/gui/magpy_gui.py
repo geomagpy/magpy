@@ -2167,7 +2167,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         else:
             self.xlimits = [num2date(self.xlimits[0]),num2date(self.xlimits[-1])]
 
-        dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=self.xlimits)
+        # get existing deltas from database
+        deltas = self.plotstream.header.get('DataDeltaValues','')
+
+        dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=self.xlimits, deltas=deltas)
         if dlg.ShowModal() == wx.ID_OK:
             for key in keys:
                 offset = eval('dlg.'+key+'TextCtrl.GetValue()')
@@ -3032,7 +3035,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         sensorid = self.plotstream.header.get('SensorID','')
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
-        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid)
+        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),end=self.plotstream.end())
         dlg.ShowModal()
         if len(dlg.flaglist) > 0:
             flaglist = dlg.flaglist

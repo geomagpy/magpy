@@ -190,9 +190,19 @@ class PubSubClient(WampClientProtocol):
                 except:
                     print("collectors owclient: Unable to fetch SENSOR data from DB")
                     results = []
-                if len(results) < 1:
+                # checking existing data table
+                try:
+                    self.cursor.execute("SHOW TABLES LIKE '{}%'".format(sensorid))
+                    secresults = self.cursor.fetchall()                    
+                except:
+                    secresults = []
+                if len(results) < 1 and len(secresults) < 1:
                     # Initialize e.g. ow table
-                    print("collectors owclient: No sensors registered so far - Getting file from moon and uploading it")
+                    print("collectors owclient: No sensors registered so far ...")
+
+                if len(secresults) < 1:
+                    # Initialize e.g. ow table
+                    print("collectors owclient: No data table existing so far - Getting file from moon and uploading it")
                     day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                     destfile = os.path.join(destpath,'MartasFiles', row[0]+'_'+day+'.bin')
                     datafile = os.path.join('/srv/ws/', clientname, row[0], row[0]+'_'+day+'.bin')
@@ -200,7 +210,7 @@ class PubSubClient(WampClientProtocol):
                         print("collectors owclient: Downloading data: %s" % datafile)
                         scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1])
                         stream = st.read(destfile)
-                        print("collectors owclient: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
+                        print("collectors owclient: Reading with MagPy... Found: {} datapoints".format(stream.length()[0]))
                         stream.header['StationID'] = self.stationid
                         stream.header['SensorModule'] = 'OW'
                         stream.header['SensorType'] = row[1]
@@ -253,18 +263,29 @@ class PubSubClient(WampClientProtocol):
             except:
                 print("collectors client: Unable to fetch SENSOR data from DB")
                 results = []
-            if len(results) < 1:
+            # checking existing data table
+            try:
+                self.cursor.execute("SHOW TABLES LIKE '{}%'".format(sensorid))
+                secresults = self.cursor.fetchall()                    
+            except:
+                secresults = []
+            if len(results) < 1 and len(secresults) < 1:
+                # Initialize e.g. ow table
+                print("collectors client: No sensors registered so far ...")
+
+            if len(secresults) < 1:
                 # if not present then get a file and upload it
-                print("collectors client: No sensors registered so far - Getting data file from moon and uploading it using stream2db")
+                print("collectors client: No sensors registered so far - Getting data file from martas and uploading it using writeDB")
                 day = datetime.strftime(datetime.utcnow(),'%Y-%m-%d')
                 for exten in ['bin','asc']:
                     destfile = os.path.join(destpath,'MartasFiles', sensorid+'_'+day+'.'+exten)
                     datafile = os.path.join('/srv/ws/', clientname, sensorid, sensorid+'_'+day+'.'+exten)
+                    print("collectors client: Downloading data: {}".format(datafile))
+                    scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1],timeout=120)
+                    print("collectors client: copying evetually existing data file to local directory {}".format(destfile))
                     try:
-                        print("collectors client: Downloading data: %s" % datafile)
-                        scptransfer(sshcred[0]+'@'+clientip+':'+datafile,destfile,sshcred[1])
                         stream = st.read(destfile)
-                        print("collectors client: Reading with MagPy... Found: %s datapoints" % str(len(stream)))
+                        print("collectors client: Reading with MagPy... Found: {} datapoints".format(stream.length()[0]))
                         stream.header['StationID'] = self.stationid
                         stream.header['SensorModule'] = sensorshort
                         try:
@@ -282,6 +303,7 @@ class PubSubClient(WampClientProtocol):
                         stream2db(self.db,stream)
                     except:
                         print("collectors client: Could not upload data to the data base - subscription failed")
+                        print("                 : possible reason: no ssh key established so far?")
             else:
                 print("collectors client: Found sensor(s) in DB - subscribing to the highest revision number")
             subscriptionstring = "%s:%s-value" % (module, sensorid)
@@ -318,7 +340,7 @@ class PubSubClient(WampClientProtocol):
             module = 'lemi'
         elif sensshort == 'GP2':
             module = 'sug'
-        elif sensshort.startswith'BM3':
+        elif sensshort.startswith('BM3'):
             module = 'bm3'
         else:
             module = sensshort.lower()

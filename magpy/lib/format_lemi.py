@@ -336,7 +336,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
         while len(line) > 0:
             try:
-                data= struct.unpack(packcode,line)
+                data= struct.unpack(str(packcode),line)
             except Exception as e:
                 loggerlib.warning('readLEMIBIN: Error reading data. There is probably a broken line.')
                 loggerlib.warning('readLEMIBIN: Error string: "%s"' % e)

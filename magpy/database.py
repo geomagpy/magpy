@@ -1203,7 +1203,7 @@ def dbalter(db):
     cursor.close ()
 
 
-def dbselect(db, element, table, condition=None, expert=None):
+def dbselect(db, element, table, condition=None, expert=None, debug=False):
     """
     DESCRIPTION:
         Function to select elements from a table.
@@ -1228,10 +1228,14 @@ def dbselect(db, element, table, condition=None, expert=None):
         sql = "SELECT "+element+" from "+table
     else:
         sql = "SELECT "+element+" from "+table+" WHERE "+condition
+    if debug:
+        print ("dbselect SQL:", sql)
     try:
         cursor = db.cursor()
         cursor.execute(sql)
         rows = cursor.fetchall()
+        if debug:
+            print ("dbselect rows:", rows)
         for el in rows:
             if len(el) < 2:
                 returnlist.append(el[0])
@@ -1694,7 +1698,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     return datainfoid
 
-def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, **kwargs):
+def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, debug=False, **kwargs):
 
     """
     DEFINITION:
@@ -1754,8 +1758,9 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     # ----------------------------------------------
 
     if tablename:
-        print ("writeDB: not bothering with header, sensorid etc")
-        print ("         updating DATAINFO only if existing")
+        if debug:
+            print ("writeDB: not bothering with header, sensorid etc")
+            print ("         updating DATAINFO only if existing")
         # Just check whether DataID, if not a table, exists and append data
         #return some message on success
     else:
@@ -1811,7 +1816,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
         if len(col) > 0 and not False in checkEqual3(col):
-            print ("Found False and identical", idx, col[0])
+            print ("Found only identical values of {} in column {}".format(col[0],idx))
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
             else: # add as usual
@@ -1822,7 +1827,15 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 except:
                     pass # will fail for strings
         elif key.endswith('time') and len(col) > 0:
-            tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
+            #if col[0]
+            try:
+                tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
+            except:
+                try:
+                    tstr = DataStream()
+                    tcol = np.asarray([tstr._testtime(elem) for elem in col])
+                except:
+                    tcol = np.asarray([])
             tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
             array[idx]=np.asarray(tcol)
         elif len(col) > 0: # and KEYLIST[idx] in NUMKEYLIST:
@@ -1952,7 +1965,7 @@ def dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
     getminmaxtimesql = "Select MIN(time),MAX(time) FROM " + tablename
     cursor.execute(getminmaxtimesql)
     rows = cursor.fetchall()
-    #print rows
+    #print (rows)
     loggerdatabase.info("stream2DB: Table now covering a time range from " + str(rows[0][0]) + " to " + str(rows[0][1]))
     # removed columncontents and units from update
     updatedatainfotimesql = 'UPDATE DATAINFO SET DataMinTime = "' + rows[0][0] + '", DataMaxTime = "' + rows[0][1] +'", ColumnContents = "' + colstr +'", ColumnUnits = "' + unitstr +'" WHERE DataID = "'+ tablename + '"'
@@ -3139,7 +3152,7 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     if not sensorid:
         sensorid = 'defaultsensor'
     if not modificationdate:
-        modificationdate = '1971-11-22 11:22:00'
+        modificationdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d %H:%M:%S.%f")
 
     if not db:
         print("No database connected - aborting")
@@ -3148,8 +3161,16 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
 
     # Check flaglist:
     if not len(flaglist) > 0:
-        print("No data found in flaglist - aborting")
-        return
+        if mode == 'delete' and sensorid:
+            print("Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+            cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+            db.commit()
+            cursor.close ()
+            return
+        else:
+            print("No data found in flaglist - aborting")
+            return
+
     lentype = len(flaglist[0])
 
     if lentype <= 5:
@@ -3208,8 +3229,12 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     # Flagging TABLE
     # Create flagging table
     if mode == 'delete':
-        print("Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
-        cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+        if sensorid in ['all','All','ALL']:
+            print("Executing: TRUNCATE FLAGS")
+            cursor.execute("TRUNCATE FLAGS")
+        else:
+            print("Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+            cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
 
     flagstr = 'FlagID INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, SensorID CHAR(50), FlagBeginTime CHAR(50), FlagEndTime CHAR(50), FlagComponents CHAR(50), FlagNum INT, FlagReason TEXT, ModificationDate CHAR(50)'
 
@@ -3250,12 +3275,14 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     cursor.close ()
 
 
-def db2flaglist(db,sensorid, begin=None, end=None):
+def db2flaglist(db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, key=None, removeduplicates=False):
     """
     DEFINITION:
         Read flagging information for specified sensor from data base and return a flagging list
     PARAMETERS:
         sensorid:	   (string) sensorid for flaglist, default is sensorid of self
+        removeduplicates:  (bool) if True, any duplicates with identical start and endtimes are removed
+                           -> considerably slower
     RETURNS:
         flaglist:          flaglist contains start, end , key2flag, flagnumber, comment, sensorid,
                            ModificationDate
@@ -3269,7 +3296,10 @@ def db2flaglist(db,sensorid, begin=None, end=None):
         return []
     cursor = db.cursor ()
 
-    searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS WHERE SensorID = "%s"' % sensorid
+    if sensorid in ['all','All','ALL']:
+        searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS'
+    else:
+        searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS WHERE SensorID = "%s"' % sensorid
     if begin:
         #addbeginsql = ' AND FlagBeginTime >= "%s"' % begin
         addbeginsql = ' AND FlagEndTime >= "%s"' % begin
@@ -3280,8 +3310,18 @@ def db2flaglist(db,sensorid, begin=None, end=None):
         addendsql = ' AND FlagBeginTime <= "%s"' % end
     else:
         addendsql = ''
-
-    cursor.execute (searchsql + addbeginsql + addendsql)
+    addsql = ''
+    if comment:
+        addsql += ' AND FlagReason LIKE "%{}%"'.format(comment)
+    try:
+        if int(flagnumber) > -1:
+            addsql += ' AND FlagNum LIKE {}'.format(flagnumber)
+    except:
+        pass
+    if key:
+        addsql += ' AND FlagComponents LIKE "%{}%"'.format(key)
+    #print ("SQL", searchsql + addbeginsql + addendsql + addsql)
+    cursor.execute (searchsql + addbeginsql + addendsql + addsql)
     rows = cursor.fetchall()
 
     tmp = DataStream()
@@ -3309,8 +3349,10 @@ def db2flaglist(db,sensorid, begin=None, end=None):
 
             return flaglist
 
-    return flagclean(res)
-
+    if removeduplicates:
+        return flagclean(res)
+    else:
+        return res
 
 def string2dict(string):
     """

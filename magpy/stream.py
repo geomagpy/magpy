@@ -98,7 +98,11 @@ try:
         version = version.strip("rc")
         MATPLOTLIB_VERSION = version
     print("Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION))
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.pyplot as plt
+    except: ## Workaround for anaconda PYQT4 patch error
+        matplotlib.use('qt5agg')
+        import matplotlib.pyplot as plt
     from matplotlib.colors import Normalize
     from matplotlib.widgets import RectangleSelector, RadioButtons
     #from matplotlib.colorbar import ColorbarBase
@@ -830,6 +834,13 @@ CALLED BY:
         return DataStream(self, self.header, np.asarray(array))
 
 
+    def start(self, dateformt=None):
+        st,et = self._find_t_limits()
+        return st
+
+    def end(self, dateformt=None):
+        st,et = self._find_t_limits()
+        return et
 
     def findtime(self,time,**kwargs):
         """
@@ -3258,6 +3269,62 @@ CALLED BY:
             liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + too)]
             return DataStream(liste,self.header,self.ndarray)
 
+    def extract2(self, keys, get='>', func=None, debugmode=None):
+        """
+        DEFINITION:
+            Read stream and extract data of the selected keys which meets the choosen criteria
+
+        PARAMETERS:
+        Variables:
+            - keys:     (list) keylist like ['x','f'].
+            - func:     a function object
+         Kwargs:
+            - get:  (str) criteria, one out of ">=", "<=",">", "<", "==", "!=", default is '=='
+            - debugmode:(bool) if true several additional outputs will be created
+
+        RETURNS:
+            - DataStream with selected values only
+
+        EXAMPLES:
+            >>> extractedstream = stream.extract('x',20000,'>')
+            >>> extractedstream = stream.extract('str1','Berger')
+        """
+
+        if not get:
+            get = '=='
+        if not get in [">=", "<=",">", "<", "==", "!=", 'like']:
+            print ('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==", "like" or "!=" ')
+            return self
+
+        stream = self.copy()
+
+        def func(x):
+            y = 1/(0.2*exp(0.06/(x/10000.))) + 2.5
+            return y
+
+        xpos = KEYLIST.index(keys[0])
+        ypos = KEYLIST.index(keys[1])
+        x = stream.ndarray[xpos].astype(float)
+        y = stream.ndarray[ypos].astype(float)
+
+        idxlist = []
+        for idx,val in enumerate(x):
+            ythreshold = func(val)
+            test = eval('y[idx] '+ get + ' ' + str(ythreshold))
+            #print (val, 'y[idx] '+ get + ' ' + str(ythreshold))
+            if test:
+                idxlist.append(idx)
+
+        array = [[] for key in KEYLIST]
+        for i,key in enumerate(KEYLIST):
+            for idx in idxlist:
+                if len(stream.ndarray[i]) > 0:
+                    array[i].append(stream.ndarray[i][idx])
+            array[i] = np.asarray(array[i])
+        print ("Length of list", len(idxlist))
+
+        return DataStream([LineStruct()], stream.header,np.asarray(array))
+
 
     def extrapolate(self, start, end):
         """
@@ -3808,6 +3875,60 @@ CALLED BY:
             func = [functionkeylist, 0, 0]
         return func
 
+    def extractflags(self):
+        # [st,st,key,flagnumber,commentarray[idx],sensorid,now]
+        sensorid = self.header.get('SensorID','')
+        now = datetime.utcnow()
+        flaglist = []
+
+        flpos = KEYLIST.index('flag')
+        compos = KEYLIST.index('comment')
+        flags = self.ndarray[flpos]
+        comments = self.ndarray[compos]
+        if not len(flags) > 0 or not len(comments) > 0:
+            return flaglist
+
+        uniqueflags = self.union(flags)
+        uniquecomments = self.union(comments)
+
+        # 1. Extract relevant keys from uniqueflags
+        print ("extractflags: Unique Flags -", uniqueflags)
+        print ("extractflags: Unique Comments -", uniquecomments)
+        # zeroflag = ''
+        keylist = []
+        for elem in uniqueflags:
+            if not elem in ['','-']:
+                #print (elem)
+                for idx,el in enumerate(elem):
+                    if not el == '-' and el in ['0','1','2','3','4','5','6']:
+                        keylist.append(NUMKEYLIST[idx-1])
+        # 2. Cycle through keys and extract comments
+        if not len(keylist) > 0:
+            return flaglist
+
+        keylist = self.union(np.asarray(keylist))
+
+        for key in keylist:
+            indexflag = KEYLIST.index(key)
+            for comment in uniquecomments:
+                flagindicies = []
+                for idx, elem in enumerate(comments):
+                    if not elem == '' and elem == comment:
+                        #print ("ELEM", elem)
+                        flagindicies.append(idx)
+                # 2. get consecutive groups
+                for k, g in groupby(enumerate(flagindicies), lambda ix: ix[0] - ix[1]):
+                    try:
+                        consecutives = list(map(itemgetter(1), g))
+                        st = num2date(self.ndarray[0][consecutives[0]]).replace(tzinfo=None)
+                        et = num2date(self.ndarray[0][consecutives[-1]]).replace(tzinfo=None)
+                        flagnumber = int(flags[consecutives[0]][indexflag])
+                        flaglist.append([st,et,key,flagnumber,comment,sensorid,now])
+                    except:
+                        print ("extractflags: error when extracting flaglist")
+
+        return flaglist
+
 
     def flagfast(self,indexarray,flag, comment,keys=None):
         """
@@ -4250,7 +4371,7 @@ CALLED BY:
 
         return self
 
-    def flag(self, flaglist):
+    def flag(self, flaglist, removeduplicates=False):
         """
     DEFINITION:
         Apply flaglist to stream. A flaglist typically looks like:
@@ -4302,7 +4423,8 @@ CALLED BY:
 
             return flaglist
 
-        flaglist = flagclean(flaglist)
+        if removeduplicates:
+            flaglist = flagclean(flaglist)
 
         lenfl = len(flaglist)
         print ("Flag: Relevant flags: {}".format(lenfl))
@@ -4315,14 +4437,15 @@ CALLED BY:
         if lenfl > 0:
             #print "flag: going through flaglist", st,et
             for i in range(lenfl):
-                if i == int(lenfl/5.):
-                    print("Flag: 20 percent done")
-                if i == int(lenfl/5.*2.):
-                    print("Flag: 40 percent done")
-                if i == int(lenfl/5.*3.):
-                    print("Flag: 60 percent done")
-                if i == int(lenfl/5.*4.):
-                    print("Flag: 80 percent done")
+                if removeduplicates:
+                    if i == int(lenfl/5.):
+                        print("Flag: 20 percent done")
+                    if i == int(lenfl/5.*2.):
+                        print("Flag: 40 percent done")
+                    if i == int(lenfl/5.*3.):
+                        print("Flag: 60 percent done")
+                    if i == int(lenfl/5.*4.):
+                        print("Flag: 80 percent done")
                 fs = date2num(self._testtime(flaglist[i][0]))
                 fe = date2num(self._testtime(flaglist[i][1]))
                 if st < fs and et < fs and st < fe and et < fe:
@@ -4337,6 +4460,71 @@ CALLED BY:
                         self = self.flag_stream(key,int(flaglist[i][3]),flaglist[i][4],flaglist[i][0],flaglist[i][1],samplingrate = sr)
 
         return self
+
+    def flagliststats(self,flaglist):
+        """
+        DESCRIPTION:
+            Provides some information on flag statistics
+        PARAMETER:
+            flaglist   (list) flaglist to be investigated
+        APPLICTAION:
+            flaglist = db2flaglist(db,'all')
+            self.flagliststats(flaglist)
+        """
+        amountlist = []
+        print ('##########################################')
+        print ('           Flaglist statistics            ')
+        print ('##########################################')
+        print ('')
+        print ('A) Total contents: {}'.format(len(flaglist)))
+        print ('')
+        print ('B) Content for each ID:')
+        print (flaglist[0], len(flaglist[0]))
+        if len(flaglist[0]) > 6:
+            ids = [el[5] for el in flaglist]
+            uniquenames = list(set(ids))
+        for name in uniquenames:
+            amount = len([el[0] for el in flaglist if el[5] == name])
+            amountlist.append([name,amount])
+        amountlist = sorted(amountlist,key=lambda x: x[1])
+        for el in amountlist:
+            print ("Dataset: {} \t Amount: {}".format(el[0],el[1])) 
+
+
+    def flaglistclean(self,flaglist):
+        """
+        DESCRIPTION:
+            identify and remove duplicates from flaglist, only the latest inputs are used
+            start, endtime and key are used to identfy duplicates
+        PARAMETER:
+            flaglist   (list) flaglist to be investigated
+        APPLICTAION:
+            flaglist = db2flaglist(db,'all')
+            flgalistwithoutduplicates = self.flaglistclean(flaglist)
+        """
+        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+        ## (use only last input)
+        indicies = []
+        for line in flaglist:
+            if len(line) > 5:
+                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2] and elem[5] == line[5]]
+            else:
+                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2]]
+            if len(inds) > 1:
+                # get inputs dates for all duplicates and select the latest
+                dates = [[flaglist[dupind][-1], dupind] for dupind in inds]
+                indicies.append(sorted(dates)[-1][1])
+            else:
+                index = inds[-1]
+                indicies.append(index)
+        uniqueidx = (list(set(indicies)))
+        print ("flaglistclean: found {} unique inputs".format(len(uniqueidx)))
+        uniqueidx.sort()
+        #print(uniqueidx)
+        flaglist = [elem for idx, elem in enumerate(flaglist) if idx in uniqueidx]
+
+        return flaglist
+
 
     def stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None):
         """
@@ -4420,6 +4608,54 @@ CALLED BY:
                         res.append([st,st,key,flagnumber,comment,sensorid,now])
         return res
 
+
+    def flaglistmod(self, mode='select', flaglist=[], parameter='key', value=None, newvalue=None):
+        """
+        DEFINITION:
+            Extract/Replace information in flaglist
+            , keys, flagnumber, comment, startdate, enddate=None
+        APPLICTAION
+        """
+        # convert start and end to correct format
+        if parameter == 'key':
+            num = 2
+        elif parameter == 'flagnumber':
+            num = 3
+        elif parameter == 'comment':
+            num = 4
+
+        if mode == 'select':
+            flaglist = [elem for elem in flaglist if elem[num] == value]
+        elif mode == 'replace':
+            for idx, elem in enumerate(flaglist):
+                if elem[num] == value:
+                    flaglist[idx][num] = newvalue
+
+        return flaglist
+
+
+    def flaglistadd(self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None):
+        """
+        DEFINITION:
+            Add a specific input to a flaglist
+        """
+        # convert start and end to correct format
+        st = self._testtime(startdate)
+        if enddate:
+            et = self._testtime(enddate)
+        else:
+            et = st
+        now = datetime.utcnow()
+        if keys in ['all','All','ALL']:
+            keys = KEYLIST
+        for key in keys:
+            flagelem = [st,et,key,flagnumber,comment,sensorid,now]
+            exists = [elem for elem in flaglist if elem[:5] == flagelem[:5]]
+            if len(exists) == 0:
+                flaglist.append(flagelem)
+            else:
+                print ("flaglistadd: Flag already exists")
+        return flaglist
 
     def flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate=0.):
         """
@@ -9685,7 +9921,7 @@ def saveflags(mylist=None,path=None):
     except:
         return False
 
-def loadflags(path=None,sensorid=None):
+def loadflags(path=None,sensorid=None,begin=None, end=None):
     """
     DEFINITION:
         Load list e.g. flaglist from file using pickle.
@@ -9708,6 +9944,10 @@ def loadflags(path=None,sensorid=None):
         if sensorid:
             print(" - extracting data for sensor {}".format(sensorid))
             mylist = [el for el in mylist if el[5] == sensorid]
+            if begin:
+                mylist = [el for el in mylist if el[1] > start]
+            if end:
+                mylist = [el for el in mylist if el[0] < end]
             print(" -> remaining flags: {b}".format(b=len(mylist)))
         return mylist
     except:
@@ -9951,7 +10191,6 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     else:
         timeb = sb._get_column('time')
 
-
     # keeping a - changed by leon 10/2015
     """
     # truncate a to range of b
@@ -10035,6 +10274,8 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     dcnt = int(len(timeb)/fracratio)
     #print ("Merge:", abratio, dcnt, len(timeb))
 
+    timea = np.round(timea, decimals=9)
+    timeb = np.round(timeb, decimals=9)
     if ndtype:
             array = [[] for key in KEYLIST]
             # Init array with keys from stream_a
@@ -10060,6 +10301,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
                             #print("Found sb values", key)
                             valb = [sb.ndarray[keyind][ind] for ind in indtib]
+                        vala = [sa.ndarray[keyind][ind] for ind in indtia]
                         ### Change by leon in 10/2015
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
                             pass
@@ -10077,13 +10319,22 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
                             for i,ind in enumerate(indtia):
                                 if key in NUMKEYLIST:
-                                    tester = isnan(array[keyind][ind])
+                                    tester = np.isnan(array[keyind][ind])
                                 else:
                                     tester = False
                                     if array[keyind][ind] == '':
                                         tester = True
-                                if mode == 'insert' and tester:
-                                    array[keyind][ind] = valb[i]
+                                #print ("Merge3", tester)
+                                if mode == 'insert':
+                                    if tester:
+                                        array[keyind][ind] = valb[i]
+                                    else:
+                                        array[keyind][ind] = vala[i]
+                                elif mode == 'replace':
+                                    if not np.isnan(valb[i]):
+                                        array[keyind][ind] = valb[i]
+                                    else:
+                                        array[keyind][ind] = vala[i]
                                 else:
                                     array[keyind][ind] = valb[i]
                                 if flag:
@@ -10168,10 +10419,24 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                 tester = False
                                 if array[keyind][ind] == '':
                                     tester = True
+                            if mode == 'insert':
+                                if tester:
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    array[keyind][ind] = vala[i]
+                            elif mode == 'replace':
+                                if not np.isnan(valb[i]):
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    array[keyind][ind] = vala[i]
+                            else:
+                                array[keyind][ind] = valb[i]
+                            """
                             if mode == 'insert' and tester:
                                 array[keyind][ind] = valb[i]
                             elif mode == 'replace':
                                 array[keyind][ind] = valb[i]
+                            """
                             if flag:
                                 ttt = num2date(array[0][ind])
                                 fllst.append([ttt,ttt,key,flagid,comment])

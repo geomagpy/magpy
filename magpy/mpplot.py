@@ -1025,7 +1025,7 @@ def plotFlag(data,variables=None,figure=False):
 
 
 def plotEMD(stream,key,verbose=False,plottitle=None,
-        outfile=None,sratio=0.25,max_modes=20,hht=True):
+        outfile=None,sratio=0.25,max_modes=20,hht=True,stackvals=[2,8,14]):
     '''
     DEFINITION:
         NOTE: EXPERIMENTAL FUNCTION ONLY.
@@ -1043,6 +1043,9 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
         - plottitle:    (str) Title to place at top of plot.
         - sratio:       (float) Decomposition percentage. Determines how curve
                         is split. Default = 0.25.
+        - stackvals:    (list) provide a list of three intergers defining which components 
+                        are to be stacked together. e.g. [2,8,14] means: 2 to 7 define the 
+                        high frequ part, 8 to 14 the mid frequ, >14 the low frequ 
         - verbose:      (bool) Print results. Default False.
 
     RETURNS:
@@ -1098,15 +1101,15 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
                 print "Noise:", i
             noisecurve = [x + y for x, y in zip(noisecurve, elem)]
         """
-        if i >= 15:
+        if i > stackvals[2]: # 14 - add stackvals = [2,8,14]
             if verbose:
                 print("Smooth:", i)
             smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
-        if 8 <= i < 14:
+        if stackvals[1] <= i <= stackvals[2]:
             if verbose:
                 print("Mid:", i)
             midcurve = [x + y for x, y in zip(midcurve, elem)]
-        if 2 < i < 8:
+        if stackvals[0] < i < stackvals[1]:
             if verbose:
                 print("Noise:", i)
             noisecurve = [x + y for x, y in zip(noisecurve, elem)]
