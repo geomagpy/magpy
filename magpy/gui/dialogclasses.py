@@ -11,6 +11,8 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 import wx.lib.scrolledpanel as scrolledpanel
+from io import open
+
 
 
 # Subclasses for Dialogs called by magpy gui
@@ -2737,6 +2739,12 @@ class InputSheetDialog(wx.Dialog):
         temp = self.panel.TempTextCtrl.GetValue()
         finst = self.panel.FInstTextCtrl.GetValue()
 
+        fluxorient = self.panel.ressignRadioBox.GetSelection()
+        if fluxorient == 0:
+            ressign = 1
+        else:
+            ressign = -1
+
         if theo == "type_serial_version":
             theo = ''
         if flux == "type_serial_version":
@@ -2804,7 +2812,7 @@ class InputSheetDialog(wx.Dialog):
                         else:
                             val[-1] = val[-1]
                     if col[0] == 'R':
-                        val[-1] = float(val[-1].replace(',','.'))
+                        val[-1] = ressign*float(val[-1].replace(',','.'))
                     if col[0] == 'T' and i == '1':
                         val[-1] = testtime(val[-1], datestring)
                         timelist.append(val[-1])
@@ -2888,7 +2896,7 @@ class InputSheetDialog(wx.Dialog):
 
         # Write Block
         if saving:
-            opstring = [el+'\n' for el in opstring]
+            opstring = [unicode(el+'\n', "utf-8") for el in opstring]
             didirname = os.path.expanduser("~")
             dialog = wx.DirDialog(None, "Choose directory to write data:",didirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
             if dialog.ShowModal() == wx.ID_OK:
@@ -2911,6 +2919,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.defaults = defaults
         self.units = ['degree','gon']
         self.choices = ['decimal', 'dms']
+        self.ressign = ['inline','opposite']
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.createWidgets()
@@ -2959,6 +2968,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.AmireDown2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
 
         # - Horizonatl Block
+        self.ressignRadioBox = wx.RadioBox(self, label="Fluxgate orientation:",
+                     choices=self.ressign, majorDimension=2, style=wx.RA_SPECIFY_COLS)
         self.HorizontalLabel = wx.StaticText(self, label="Horizontal:",size=(160,30))
         self.TimeLabel = wx.StaticText(self, label="Time:",size=(160,30))
         self.HAngleLabel = wx.StaticText(self, label="Hor. Angle:",size=(160,30))
@@ -3162,7 +3173,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append(emptySpace)
-        contlst.append(emptySpace)
+        contlst.append((self.ressignRadioBox, noOptions))
         blMU = []
         blMU.append((self.AmireUpLabel, noOptions))
         blMU.append((self.AmireUp1TextCtrl, expandOption))
