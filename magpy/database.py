@@ -3257,7 +3257,7 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         flagid = flagid+1
         ne = [str(flagid)]
         ne.extend(elem)
-        elem = [str(el) for el in ne]
+        elem = [str(el).encode('ascii','ignore') for el in ne]
         flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
         #print flagsql
         if mode == "replace":

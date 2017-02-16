@@ -10298,10 +10298,12 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                     for key in keys:
                         keyind = KEYLIST.index(key)
                         #array[keyind] = sa.ndarray[keyind]
+                        vala, valb = [], []
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
                             #print("Found sb values", key)
                             valb = [sb.ndarray[keyind][ind] for ind in indtib]
-                        vala = [sa.ndarray[keyind][ind] for ind in indtia]
+                        if len(sa.ndarray[keyind]) > 0: # stream_b values are existing
+                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
                         ### Change by leon in 10/2015
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
                             pass
@@ -10329,12 +10331,14 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                     if tester:
                                         array[keyind][ind] = valb[i]
                                     else:
-                                        array[keyind][ind] = vala[i]
+                                        if len(vala) > 0:
+                                            array[keyind][ind] = vala[i]
                                 elif mode == 'replace':
                                     if not np.isnan(valb[i]):
                                         array[keyind][ind] = valb[i]
                                     else:
-                                        array[keyind][ind] = vala[i]
+                                        if len(vala) > 0:
+                                            array[keyind][ind] = vala[i]
                                 else:
                                     array[keyind][ind] = valb[i]
                                 if flag:
@@ -10395,9 +10399,12 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         keyind = KEYLIST.index(key)
                         #print key, keyind
                         #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
+                        vala, valb = [], []
                         if len(sb.ndarray[keyind]) > 0: # and key in function:
 
                             valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
+                        if len(sa.ndarray[keyind]) > 0: # and key in function:
+                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
 
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
                             pass
@@ -10423,12 +10430,14 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                 if tester:
                                     array[keyind][ind] = valb[i]
                                 else:
-                                    array[keyind][ind] = vala[i]
+                                    if len(vala) > 0:
+                                        array[keyind][ind] = vala[i]
                             elif mode == 'replace':
                                 if not np.isnan(valb[i]):
                                     array[keyind][ind] = valb[i]
                                 else:
-                                    array[keyind][ind] = vala[i]
+                                    if len(vala) > 0:
+                                        array[keyind][ind] = vala[i]
                             else:
                                 array[keyind][ind] = valb[i]
                             """
