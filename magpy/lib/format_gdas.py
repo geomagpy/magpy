@@ -42,7 +42,7 @@ def isGDASB1(filename):
         return False
     try:
         data= struct.unpack("<BBBBLLLLLc", temp)
-        print ("GDAS", data)
+        #print ("GDAS", data)
     except:
         return False
     try:

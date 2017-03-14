@@ -3255,21 +3255,33 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
 
     for elem in newlst:
         flagid = flagid+1
+        try:
+            elem[3] = unicode(elem[3],'utf-8')
+            elem[3] = elem[3].encode('ascii',errors='ignore')
+        except:
+            print ('flag_stream id {}: non-ascii characters in comment. Replacing by unkown reason'.format(flagid))
+            elem[3] = 'Unkown reason'
         ne = [str(flagid)]
         ne.extend(elem)
-        elem = [str(el).encode('ascii','ignore') for el in ne]
-        flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
-        #print flagsql
-        if mode == "replace":
-            try:
-                cursor.execute(flagsql.replace("INSERT","REPLACE"))
-            except:
-                print("Write MySQL: Replace failed")
-        else:
-            try:
-                cursor.execute(flagsql)
-            except:
-                print("Record already existing: use mode 'replace' to override")
+        #try:
+        here = True
+        if here:
+            #print ("Checking:", ne)
+            elem = [str(el) for el in ne]
+            flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
+            #print flagsql
+            if mode == "replace":
+                try:
+                    cursor.execute(flagsql.replace("INSERT","REPLACE"))
+                except:
+                    print("Write MySQL: Replace failed")
+            else:
+                try:
+                    cursor.execute(flagsql)
+                except:
+                    print("Record already existing: use mode 'replace' to override")
+        #except:
+        #    print (" Failed to INSERT {}".format(ne))
 
     db.commit()
     cursor.close ()

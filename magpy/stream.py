@@ -4371,7 +4371,7 @@ CALLED BY:
 
         return self
 
-    def flag(self, flaglist, removeduplicates=False):
+    def flag(self, flaglist, removeduplicates=False, debug=False):
         """
     DEFINITION:
         Apply flaglist to stream. A flaglist typically looks like:
@@ -4437,7 +4437,7 @@ CALLED BY:
         if lenfl > 0:
             #print "flag: going through flaglist", st,et
             for i in range(lenfl):
-                if removeduplicates:
+                if removeduplicates or debug:
                     if i == int(lenfl/5.):
                         print("Flag: 20 percent done")
                     if i == int(lenfl/5.*2.):
@@ -4457,7 +4457,7 @@ CALLED BY:
                     flaglist[i][4] = ''.join([e for e in list(flaglist[i][4]) if e in list(valid_chars)])
                     keys = flaglist[i][2].split('_')
                     for key in keys:
-                        self = self.flag_stream(key,int(flaglist[i][3]),flaglist[i][4],flaglist[i][0],flaglist[i][1],samplingrate = sr)
+                        self = self.flag_stream(key,int(flaglist[i][3]),flaglist[i][4],flaglist[i][0],flaglist[i][1],samplingrate = sr,debug=debug)
 
         return self
 
@@ -4657,7 +4657,7 @@ CALLED BY:
                 print ("flaglistadd: Flag already exists")
         return flaglist
 
-    def flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate=0.):
+    def flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate=0., debug=False):
         """
     DEFINITION:
         Add flags to specific times or time ranges (if enddate is provided).
@@ -4737,7 +4737,6 @@ CALLED BY:
         ### You are likely exclude more data then necessary.
         ### Flag the high resolution data set to avoid that.
 
-        #print("Flag",startdate, enddate)
         def rangeExtend(startdate,enddate,samplingrate,divisor=3):
             if startdate == enddate:
                 startdate = startdate-timedelta(seconds=samplingrate/divisor)
@@ -4757,7 +4756,10 @@ CALLED BY:
         #t1 = datetime.utcnow()
         #print("Defined start and enddate",t1)
 
-        #print("Flag",startdate, enddate)
+        if debug:
+            print("Flag",startdate, enddate)
+            # check for startdate in stream
+
         start = date2num(startdate)
         end = date2num(enddate)
         mint = np.min(self.ndarray[0])
@@ -4773,12 +4775,26 @@ CALLED BY:
             st = 0
             ed = 0
         else:
+            if debug:
+                print ("Using Findtime... slow")
             ### Modified to use nearest value to be flagged if flagtimes
             ### overlap with streams timerange
             ### find_nearest is probably very slowly...
             ### Using startidx values to speed up the process at least for later data
             # Get start and end indicies:
+            if debug:
+                ti1 = datetime.utcnow()
             st, ls = self.findtime(startdate)
+            if debug:
+                ti2 = datetime.utcnow()
+                print ("Findtime duration", ti2-ti1)
+
+            #if debug:
+            #    ti1 = datetime.utcnow()
+            #    testls = nonzero(self.ndarray[0]==startdate)
+            #    ti2 = datetime.utcnow()
+            #    print ("Findtime duration -alternative", ti2-ti1)
+                
             if st == 0:
                 #print("Flag_stream: slowly start",st)
                 if not sr == 0:
@@ -7217,6 +7233,7 @@ CALLED BY:
         ndtype = False
         if len(self.ndarray[0]) > 0:
             flagind = KEYLIST.index('flag')
+            commind = KEYLIST.index('comment')
             ndtype = True
 
         for key in keys:
@@ -7237,6 +7254,9 @@ CALLED BY:
                         #print("stream remove_flagged: index error: indlst {}, pos {}, length flag colum {}".format(len(indlst), pos, len(self.ndarray[flagind])))
                         pass
                 liste = [LineStruct()]
+                # Drop contents of flag and comment column
+                array[flagind] = np.asarray([])
+                array[commind] = np.asarray([])
             else:
                 for elem in self:
                     fllst = list(elem.flag)

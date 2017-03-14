@@ -3,24 +3,13 @@ MagPy
 ===========
 
 Version Info: (please note: this package is still in development state with frequent modifcations)
-v0.3.4, current version
-    v0.3.4 fixes:
-      GUI: meta data of sensor and station can be changed 
-      GUI: initialization file is automatically updated
+current: v0.3.8
 
-v0.3.3, published on 2016-09-17
-    v0.3.3 fixes:
-      IAGA 2002 format issues regarding data type and components
-      DI output file format
-      GUI: window sizes and freezing issues on MacOS
-      GUI: many dialog related problems
-    v0.3.3 additions:
-      added support for ObsPy2MagPy conversion
-      docker support
-    v0.3.3 removals:
-      None
-    v0.3.3 other changes:
-      None
+Please check Release version info on
+
+https://github.com/geomagpy/magpy/releases
+
+for details on changes
 
 MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on typical data processing in observatories. MagPy provides methods for format conversion, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and WDC/IAGA/IM dissemination/communication routines. Full installation further provides a graphical user interface - xmagpy.   
 
