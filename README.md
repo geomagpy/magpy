@@ -4,7 +4,8 @@ MagPy (or GeomagPy) is a Python package for analysing and displaying geomagnetic
 Version Info: (please note: this package is still in development state with frequent modifcations)
     please check the release notes
 
-MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on typical data processing in observatories. MagPy provides methods for format conversion, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and WDC/IAGA/IM dissemination/communication routines. Full installation further provides a graphical user interface - xmagpy.   
+MagPy (GeomagPy) provides tools for geomagnetic analysis with special focus on typical data processing in observatories. MagPy provides methods for format conversion, plotting routines and mathematical procedures with special geomagnetic analysis routines like basevalue and baseline calculation, database features and routines. Among the supported data formats are: ImagCDF, IAGA-02, WDC, IMF, IAF, BLV, and many more.
+Full installation further provides a graphical user interface - xmagpy.   
 
 Typical usage often looks like this:
 
