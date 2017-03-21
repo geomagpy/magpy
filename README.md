@@ -57,15 +57,18 @@ Platform independent installations - Docker
         - https://docs.docker.com/engine/installation/
 2. Get the MagPy Image
         - open a docker shell
-        >>> docker pull geomagpy/magpy:latest
-        >>> docker run -d --name magpy -p 8000:8000 geomagpy/magpy:latest
+            >>> docker pull geomagpy/magpy:latest
+            >>> docker run -d --name magpy -p 8000:8000 geomagpy/magpy:latest
 3. Open a browser
         - open address http://localhost:8000 (or http://"IP of your VM":8000)
+        - NEW: first time access might require a token or passwd
+            >>> docker logs magpy
+            will show the token 
         - run python shell (not conda) 
         - in python shell
-        >>> %matplotlib inline
-        >>> from magpy.stream import read
-        >>> ...
+            >>> %matplotlib inline
+            >>> from magpy.stream import read
+            >>> ...
 
 Linux/Unix
 ----------
