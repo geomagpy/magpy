@@ -2940,25 +2940,27 @@ CALLED BY:
             loggerstream.error('Amount of columns read must be equal to outputcolumns')
             return self
 
+        stream = self.copy()
+
         ndtype = False
-        if len(self.ndarray[0]) > 0:
-            t = self.ndarray[0].astype(float)
+        if len(stream.ndarray[0]) > 0:
+            t = stream.ndarray[0].astype(float)
             ndtype = True
         else:
-            t = self._get_column('time')
+            t = stream._get_column('time')
 
         for i, key in enumerate(keys):
             if ndtype:
                 ind = KEYLIST.index(key)
-                val = self.ndarray[ind].astype(float)
+                val = stream.ndarray[ind].astype(float)
             else:
-                val = self._get_column(key)
+                val = stream._get_column(key)
             dval = np.gradient(np.asarray(val))
-            self._put_column(dval, put2keys[i])
-            self.header['col-'+put2keys[i]] = r"d%s vs dt" % (key)
+            stream._put_column(dval, put2keys[i])
+            stream.header['col-'+put2keys[i]] = r"d%s vs dt" % (key)
 
         loggerstream.info('--- derivative obtained at %s ' % str(datetime.now()))
-        return self
+        return stream
 
 
     def DWT_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None,
@@ -5163,7 +5165,7 @@ CALLED BY:
         accuracy = kwargs.get('accuracy')
         key = kwargs.get('key')
         gapvariable = kwargs.get('gapvariable')
-        debugmode = kwargs.get('debugmode')
+        debug = kwargs.get('debug')
 
         if key in KEYLIST:
             gapvariable = True
@@ -5195,44 +5197,54 @@ CALLED BY:
 
         ndtype = False
         if len(stream.ndarray[0]) > 0:
-            maxtime = max(stream.ndarray[0])
-            mintime = min(stream.ndarray[0])
+            maxtime = stream.ndarray[0][-1]
+            mintime = stream.ndarray[0][0]
             length = len(stream.ndarray[0])
             sourcetime = stream.ndarray[0]
             ndtype = True
         else:
+            mintime = self[0].time
             maxtime = self[-1].time
 
-        if debugmode:
-            print("Time range:", self[0].time, self[-1].time)
-            print("Length, samp_per and accuracy:", len(self), sp, accuracy)
+        if debug:
+            print("Time range:", mintime, maxtime)
+            print("Length, samp_per and accuracy:", self.length()[0], newsps, accuracy)
 
         shift = 0
         if ndtype:
             # Get time diff and expected count
             timediff = maxtime - mintime
             expN = int(round(timediff/newsp))+1
+            if debug:
+                print("Expected length vs actual length:", expN, length)
             if expN == len(sourcetime):
                 # Found the expected amount of time steps - no gaps
                 loggerstream.info("get_gaps: No gaps found - Returning")
                 return stream
             else:
+                # correct way (will be used by default) - does not use any accuracy value
+                #projtime = np.linspace(mintime, maxtime, num=expN, endpoint=True)
+                #print("proj:", projtime, len(projtime))
+                # find values or projtime, which are not in sourcetime
+                #dif = setdiff1d(projtime,sourcetime, assume_unique=True)
+                #print (dif, len(dif))
+                #print (len(dif),len(sourcetime),len(projtime))                
                 diff = sourcetime[1:] - sourcetime[:-1]
                 num_fills = np.round(diff / newsp) - 1
-                #projtime = np.linspace(mintime, maxtime, num=expN, endpoint=True)
-                #print "Here", len(sourcetime), len(diff), mintime, maxtime, newsp
                 getdiffids = np.where(diff > newsp+accuracy)[0]
                 loggerstream.info("get_gaps: Found gaps - Filling nans to them")
+                if debug:
+                    print ("Here", diff, num_fills, newsp, getdiffids)
                 missingt = []
                 # Get critical differences and number of missing steps 
                 for i in getdiffids:
-                    #print (i,  num_fills[i], diff[i-1], diff[i], diff[i+1], newsp)
                     #print (i,  sourcetime[i-1], sourcetime[i], sourcetime[i+1])
                     nf = num_fills[i]
                     # if nf is larger than zero then get append the missing time steps to missingt list
                     if nf > 0:
                         for n in range(int(nf)): # add n+1 * samplingrate for each missing value
                             missingt.append(sourcetime[i]+(n+1)*newsp)
+
                 print ("Filling {} gaps".format(len(missingt)))
 
                 # Cycle through stream and append nans to each column for missing time steps
@@ -7254,9 +7266,6 @@ CALLED BY:
                         #print("stream remove_flagged: index error: indlst {}, pos {}, length flag colum {}".format(len(indlst), pos, len(self.ndarray[flagind])))
                         pass
                 liste = [LineStruct()]
-                # Drop contents of flag and comment column
-                array[flagind] = np.asarray([])
-                array[commind] = np.asarray([])
             else:
                 for elem in self:
                     fllst = list(elem.flag)
@@ -7272,6 +7281,11 @@ CALLED BY:
                         liste.append(elem)
 
         #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
+
+        if ndtype:
+            # Drop contents of flag and comment column
+            array[flagind] = np.asarray([])
+            array[commind] = np.asarray([])
 
         return DataStream(liste, self.header,array)
 
