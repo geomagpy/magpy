@@ -18,41 +18,70 @@ Typical usage often looks like this:
 
 Below you will find a quick guide for the MagPy package. The quickest approach can be accomplished when skipping everything except the tutorials. 
 
+=======
 INSTALL
 =======
 
-Requirements:
-  * Python 2.7
-Recommended: 
-  * Python packages:
-    * SpacePy ()
-    * pexpect (for SSH support on non-Windows machines)
-    * NetCDF 
-  * Other Software:
-    * MySQL
-    * NasaCDF
-    * NetCDF4 (support is currently in preparation)
-    * Webserver (e.g. Apache2, PHP)
+
+Windows installation - WinPython Package
+========================================
+
+1. install NASA CDF support
+        - enabling CDF support for formats like ImagCDF: 
+             go to http://cdf.gsfc.nasa.gov/
+             get and install a recent version of CDF e.g. cdf36_2_1-setup-32.exe
+2. install MagPy
+        - install MagPy based on a WinPython package): 
+             go to http://www.conrad-observatory.at/
+             download and execute magpy-install.exe
+3. postinstallation information
+        - after installation:
+             check your programs overview for MagPy:
+             below MagPy you will find three submenus
+                 * python -> open a python shell ready for MagPy
+                 * xmagpy -> open the graphical user interface of MagPy
+                 * update -> check for and install MagPy updates
+
+IMPORTANT: NASA CDF and SpacePy only support 32 bit 
 
 
-Platform independent installations - Anaconda
----------------------------------------------
+Linux/MacOs installations - Anaconda
+====================================
 
 1. install anaconda for your operating system
         - https://docs.continuum.io/anaconda/install
           (currently tested on anaconda with python2.7)
-2. install magpy
+2. install NASA CDF support
+        - http://cdf.gsfc.nasa.gov/
+          dowload and install the latest cdf version for your operating system
+          (installation instructions are provided on the webpage give above)          
+3. install MagPy and SpacePy (required for CDF support)
         - open the anaconda prompt or change to the anaconda2/bin directory (if not set as default)
-        - if you want to use CDF formats like ImagCDF: 
-             optional: install NasaCDF (http://cdf.gsfc.nasa.gov/)
-             optional: - ./pip install spacepy
+        - run './pip install spacepy' 
                  known issues: installation of spacepy eventually requires a fortran compiler
-        - run './pip install geomagpy' within the anaconda path
-               possible issues: MySQL-python problem -> install libmysqlclient-dev on linux 
+        - run './pip install geomagpy'
+               possible issues: MySQL-python problem -> install libmysqlclient-dev on linux
+                   (e.g. debian/ubuntu: sudo apt-get install libmysqlclient-dev)
+4. postinstallation information
+        - please note that anaconda provides a full python environment 
+          with many packages not used by MagPy 
+        - for a "slim" installation follow the "from scratch" instructions below (for experienced users)
+        - for upgrades: run './pip install geomagpy --upgrade'
+        Installation provides both shell based magpy and the graphical user interface xmagpy 
+                 * type "python" -> opens a python shell ready for MagPy
+                 * type "xmagpy" in a shell -> open the graphical user interface of MagPy
+                   adding a shortcut for xmagpy:
+                       coming soon    
+
+MacOs installations - MacPorts
+==============================
+
+coming soon
 
 
 Platform independent installations - Docker
--------
+===========================================
+
 1. Install Docker (toolbox) for your operating system
         - https://docs.docker.com/engine/installation/
 2. Get the MagPy Image
@@ -67,18 +96,31 @@ Platform independent installations - Docker
         >>> from magpy.stream import read
         >>> ...
 
-Linux/Unix
-----------
-debian/ubuntu: full installation with all supported features
 
-1. Get python packages and other extensions (for other distros install similar packages):
+Install from source - Experts only
+==================================
 
+Requirements:
+  * Python 2.7,3.x (xmagpy will only work with python 2.7)
+Recommended: 
+  * Python packages:
+    * NasaCDF
+    * SpacePy ()
+    * pexpect (for SSH support)
+  * Other useful Software:
+    * MySQL (database features)
+    * NetCDF4 (support is currently in preparation)
+    * Webserver (e.g. Apache2, PHP)
+
+Linux
+-----
+
+1. Get python packages and other extensions (for other distros than debian/ubuntu install similar packages):
         sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb libmysqlclient-dev
-        sudo easy_install ffnet
-        sudo easy_install pexpect
+        sudo pip install ffnet
+        sudo pip install pexpect
 
 2. Get CDF and Omni database support:
-
     a) CDF (Nasa): http://cdf.gsfc.nasa.gov/html/sw_and_docs.html (tested with 3.6.1.0, please check validity of belows make command for any future versions)
 
         tar -zxvf cdf36_1-dist-all.tar.gz
@@ -86,11 +128,9 @@ debian/ubuntu: full installation with all supported features
         make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
         sudo make INSTALLDIR=/usr/local/cdf install
 
-    b) SpacePy (Los Alamos): https://sourceforge.net/projects/spacepy/files/spacepy/ (tested with 0.1.5)
+    b) SpacePy (Los Alamos): https://sourceforge.net/projects/spacepy/files/spacepy/ (tested with 0.1.6)
 
-        tar -zxvf spacepy-0.1.5.tar.gz
-        cd spacepy*
-        sudo python setup.py install
+        sudo pip install spacepy
 
 3. Install MagPy
 
@@ -98,9 +138,9 @@ debian/ubuntu: full installation with all supported features
 
         sudo pip install GeomagPy
           * specific version:
-        sudo pip install GeomagPy==v0.3.4
+        sudo pip install GeomagPy==v0.3.9
 
-    b) Using github
+    b) Using github (latest development versions)
 
         git clone git://github.com/GeomagPy/MagPy.git
         cd MagPy*
@@ -112,20 +152,13 @@ Windows
 Tested on XP, Win7, Win10
 1. Get a current version of Python(x,y) and install it
    - optionally select packages ffnet and netcdf during install - for cdf support
-2. Optional: Get a current version of MySQL and install it
-3. Download nasaCDF packages and install
+3. Download nasaCDF packages and install (see links above)
 4. get python-spacepy package
 5. download and unpack GeomagPy-x.x.x.tar.gz
 6. open a command window
 7. go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
 8. execute "setup.py install"
 
-
-MacOS
-----------
-
-1. using MacPorts:
-    coming soon
 
 
 
@@ -143,12 +176,11 @@ then import the basic read method form the stream object
 
     from magpy.stream import read
 
-You should get something like that (if the :
+You should get an output like:
 
     MagPy version x.x.xxx
     Loaded Matplotlib - Version [1, 1, 1]
     Loading Numpy and SciPy...
-    Loading Netcdf4 support ...
     Loading SpacePy package cdf support ...
     trying CDF lib in /usr/local/cdf
     SpacePy: Space Science Tools for Python
@@ -163,95 +195,125 @@ You should get something like that (if the :
 b Reading and writing data
 ==========================
 
+MagPy supports the following data formats and thus conversions between them:
+WDC: 	World Data Centre format
+JSON: 	JavaScript Object Notation
+IMF: 	Intermagnet Format
+IAF: 	Intermagnet Archive Format
+NEIC: 	WGET data from USGS - NEIC
+IAGA: 	IAGA 2002 text format
+IMAGCDF: 	Intermagnet CDF Format
+GFZKP: 	GeoForschungsZentrum KP-Index format
+GSM19/GSM90: 	Output formats from GSM magnetometers
+POS1: 	POS-1 binary output
+BLV: 	Baseline format Intermagnet
+IYFV: 	Yearly mean format Intermagnet
+and many others...  To get a full list: from magpy.stream import *; print (PYMAG_SUPPORTED_FORMATS))
+
 You will find files `example1.cdf` and `example2.min` in an example directory provided together with mapy. The `cdf` file is stored along with meta information in the NASA's common data format (cdf). Reading this file requires a working installation of Spacepy cdf and a `'success'` information when Loading SpacePy as shown in (a).
 
 If you do not have any geomagnetic data file you can access example data by using the following commands:
 
-    from pkg_resources import resource_filename
-    example1 = resource_filename('magpy', 'examples/example1.cdf')
-    data = read(example1)
+        from pkg_resources import resource_filename
+        example1 = resource_filename('magpy', 'examples/example1.cdf')
+        data = read(example1)
 
 
 1. Reading:
 -----------
 
 
-    data = read('example.min') 
+        data = read('example.min') 
 
 or
 
-    data = read('/path/to/file/example.min') 
+        data = read('/path/to/file/example.min') 
 
 or
 
-    data = read('c:\\path\\to\\file\\example.min')
+        data = read('c:\\path\\to\\file\\example.min')
 
-Different paths are related to your operating system. In the following we will assume a Linux system. 
+Pathnames are related to your operating system. In the following we will assume a Linux system. 
 Any file is uploaded to the memory and each data column (or header information) is assigned to an internal variable (key). To get a quick overview about the assigned keys you can use the following method:
 
-    print data._get_key_headers() 
+        print data._get_key_headers() 
 
-Now we would like to have a IAGA02 and a WDC output
+After loading some data file we would like to save it as IAGA02 and IMAGCDF output
 
 2. Writing:
 -----------
 
-Creating an Intermagnet IMF format:
+Creating an IAGA-02 format:
 
-    data.write('/path/to/diretory/',filenamebegins='MyIntermagnetFile_',filenameends='.imf',format_type='IMF')
+        data.write('/path/to/diretory/',format_type='IAGA')
 
-Creating a WDC format:
+Creating a INTERMAGNET CDF (ImagCDF) format:
 
-    data.write('/path/to/diretory/',filenamebegins='MyWDCFile_',filenameends='.wdc',format_type='WDC')
+        data.write('/path/to/diretory/',format_type='IMAGCDF')
 
 By default, daily files are created and the date is added to the filename inbetween the optional parameters `filenamebegins` and `filenameends`. If `filenameends` is missing, `.txt` is used as default.
 
 3. Other possibilities to read files:
 -------------------------------------
 
-All local files within a directory:
+All local files ending with .min within a directory:
 
-    data = read('/path/to/file/*.min')
+        data = read('/path/to/file/*.min')
 
-Getting magnetic data from the WDC:
+Getting magnetic data directly from the WDC:
 
-    data = read('ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
+        data = read('ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
 
 Getting kp data from the GFZ Potsdam:
 
-    data = read('http://')
+        data = read('http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
 
 Getting ACE data from NASA:
 
-    data = read('http://')
+        data = read('http://')
 
 (please note: data access and usage is subjected to terms and policy of the indvidual data provider. Please make sure to read them before accessing any of these products.)
 
-No format specifications are required for reading. If MagPy can handle the format, it will be automatically recognized. A list of supported formats can be found here soon (a method is in preparation).
+No format specifications are required for reading. If MagPy can handle the format, it will be automatically recognized.
 
 Getting data of a specific time window:
 Local files:
 
-    data = read('/path/to/files/*.min',starttime="2014-01-01", endtime="2014-05-01")
+        data = read('/path/to/files/*.min',starttime="2014-01-01", endtime="2014-05-01")
 
 Remote files:
 
-    data = read('ftp://address/fur2013.wdc',starttime="2013-1-01", endtime="2013-02-01")
+        data = read('ftp://address/fur2013.wdc',starttime="2013-01-01", endtime="2013-02-01")
 
-4. Tutorial
+
+4. Selecting timerange:
+-------------------------------------
+
+You can trim the data stream anytime later to a specified time interval by applying the trim method:
+
+        data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
+
+
+5. Tutorial
 -----------
 
 For the ongoing quick example please use the following steps. This will create daily IAGA02 files within the directory. Please make sure that the directory is empty before writing data to it.
 
-1. Obtain data from WDC (requires an active internet connection)
+1. Load example data
+------------------------
 
+        # Skip the following two lines, if you have your own data 
+        from pkg_resources import resource_filename
+        example1 = resource_filename('magpy', 'examples/example1.cdf')
 
-        data = read('ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_obs/fur/fur2011.wdc',starttime="2011-01-01", endtime="2011-02-01")
+        data = read(example1)
 
 2. Store it locally in your favorite directory
+------------------------
 
+        data.write('/tmp/',filenamebegins='MyExample_', format_type='IAGA')
 
-        data.write('/my/favorite/directory/',filenamebegins='MyExample_', filenameends='.wdc', format_type='WDC')
+Please note that storing data in a different formt might require additional meta information. Checkout section (i) on how to deal with these aspects.
 
 
 c Getting help on options and usage
@@ -264,20 +326,19 @@ Information on individual methods and their options can be obtained as follows:
 
 For basic functions:
 
-    help(read)
+        help(read)
 
 For specific methods related to e.g. a stream object "data":
 
-    help(data.fit)
+        help(data.fit)
 
-(this reqires the existance of a "data" object, which can be done by data = read(...) or data = DataStream() )
+(this reqires the existance of a "data" object, which is obtained e.g. by data = read(...) or data = DataStream() )
 
 
 2. Tutorial
 -----------
 
-
-    help(data.fit)
+        help(data.fit)
 
 
 d Plotting 
@@ -288,116 +349,297 @@ You will find some example plots at the [Conrad Observatory](http://www.conrad-o
 1. Quick (and not dirty)
 ------------------------
 
-    import magpy.mpplot as mp
-    mp.plot(data)
+        import magpy.mpplot as mp
+        mp.plot(data)
 
 2. Some options
 ---------------
 
 Select specific keys:
 
-    mp.plot(data,['x','y','z'])
+        mp.plot(data,variables=['x','y','z'])
 
 3. Multiple streams
 -------------------
 
 Provide  a list of stream and an array of keys:
 
-    mp.plotStreams([data1,data2],[['x','y','z'],['f']])
+        mp.plotStreams([data1,data2],[['x','y','z'],['f']])
 
 4. Tutorial
 -----------
 
 Read a second stream
 
-    otherdata = read(WDC)
+        otherdata = read(WDC)
 
 Plot xyz data from both streams
 
-    mp.plotStreams([data,otherdata]) 
+        mp.plotStreams([data,otherdata]) 
 
 
-e Basic geomagnetic methods 
+e Flagging data 
+===========================
+
+The flagging procedure allows the observer to mark specific data (like spikes, storm onsets, pulsations, disturbances, lightning strikes, etc). Each flag is asociated with a comment and a type number. Flagtype number ranges between 0 and 4. 
+        0:  normal data with comment (e.g. Hello World)
+        1:  automatic process added mark (e.g. spike)
+        2:  observer marked data as valid geomagnetic signature (e.g. storm onset, pulsation)
+            - such data cannot be marked invalid by automatic procedures
+        3:  observer marked data as invalid (e.g. lightning, magnetic disturbance)
+        4:  merging mark (e.g. data inserted from another source/instrument as defined in the comment)   
+Flags can be stored along with the data set (requires CDF output) or separatly in a binary archive. These flags can then be applied anytime to the raw data again, acertaining perfect reproducability.
+
+
+1. Mark spikes
+------------
+
+Getting a spiked record:
+
+        datawithspikes = read(example1)
+
+Mark all spikes using defaults options
+
+        flaggeddata = datawithspikes.flag_outlier(timerange=timedelta(minutes=1),threshold=3)
+
+Show flagged data data
+
+        mp.plot(flaggeddata,['f'],annotate=True)
+
+
+2. Flag range
+----------------------------------
+
+Flag a certain time range
+
+        flaglist = flaggeddata.flag_range(keys=['f'], starttime='2012-08-02T04:33:40', endtime='2012-08-02T04:44:10', flagnum=3, text="iron metal near sensor")
+
+Apply flags to data
+
+        flaggeddata = flaggeddata.flag(flaglist)
+
+Show flagged data data
+
+        mp.plot(flaggeddata,['f'],annotate=True)
+
+
+3. Save flagged data
+-----------
+
+        flaggeddata.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
+
+    Check it:
+        newdata = read("/tmp/MyFlaggedExample_*")
+        mp.plot(newdata,annotate=True, plottitle='Reloaded flagged CDF data')
+
+
+4. Save flags separately
+-----------
+
+        fullflaglist = flaggeddata.extractflags()
+        saveflags(fullflaglist,"/tmp/MyFlagList.pkl"))
+
+    Check it:
+        data = read(example1)
+        flaglist = loadflags("/tmp/MyFlagList.pkl")
+        data = data.flag(flaglist)
+        mp.plot(data,annotate=True, plottitle='Raw data with flags from file')
+
+5. Drop flagged data
+-----------
+
+For some further analyses it is necessary to drop data marked invalid. By default the following method removes all data marked with flagtype numbers 1 and 3.
+
+        cleandata = flaggeddata.remove_flagged()
+        mp.plot(cleandata, ['f'], plottitle='Flagged data dropped')
+
+
+f Basic methods 
 ===========================
 
 1. Filtering
 ------------
 
+Filtering uses by default IAGA/INTERMAGNET recommended settings. Ckeck help(data.filter) for options and possible definitions of filter types and pass bands.
 
-    filtereddata = data.nfilter()
+Get sampling rate before filtering in seconds: 
+
+        print ("Sampling rate before [sec]:", cleandata.samplingrate())
+
+Filter the data set with default parameters (automatically chooses the correct settings depending on provided sanmpling rate):
+
+        filtereddata = cleandata.filter()
+
+Get sampling rate and filter data after filtering (please note that all filterinformation is added to the data's meta information dictionary (data.header): 
+
+        print ("Sampling rate after [sec]:", filtereddata.samplingrate())
+        print ("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
+
+2. Coordinate transform
+------------
+
+Assuming vector data in columns x,y,z you can freely convert between xyz, hdz, idf:
+
+        cleandata = cleandata.xyz2hdz()
+
+3. Calculate delta F
+------------
+
+If the data file contains x,y,z (hdz, idf) data and an independently measured f value you can calculate delta F:
+
+        cleandata = cleandata.delta_f()
+        mp.plot(cleandata,plottitle='Data with delta F')
+
+4. Calculate Means
+------------
+
+Mean values for certain data columns can be obtained using the mean method. Missing data is considered using the percentage option (default 95). If more data is missing as denoted by this value, then no mean is calulated (result NaN).
+
+        print (cleandata.mean('df', percentage=80))
+
+5. Applying offsets
+------------
+
+Constant offsets can be added to individual columns using the offset method.
+
+        offsetdata = cleandata.offset({'time':timedelta(seconds=0.19),'f':1.24})
+
+6. Scaling data
+------------
+
+Individual columns can also be mulitplied by provided values.
+
+        multdata = cleandata.multiply({'x':1.1})
+
+7. Fit functions
+------------
+
+MagPy offers the possibility to fit data using either polynomial functions or cubic splines (default). 
+
+        func = cleandata.fit(keys=['x','y','z'],knotstep=0.1)
+        mp.plot(cleandata,variables=['x','y','z'],function=func)
+
+8. Derivatives
+------------
+
+Derivaties, which are useful to identify outliers and sharp changes, are calculated as follows:
+
+        diffdata = cleandata.differentiate(keys=['x','y','z'],put2keys = ['dx','dy','dz'])
+        mp.plot(diffdata,variables=['dx','dy','dz'])
 
 
-2. Outlier identification (spikes)
-----------------------------------
-Outlier identification is using quartiles.
-
-Getting a spiked record:
-
-    datawithspikes = read()
-
-Mark all spikes using defaults options
-
-    flaggeddata = datawithspikes.flag_outlier()
-
-Show flagged data data
-
-    mp.plot(flaggeddata,['f'],annotate=True)
-
-Remove flagged data
-
-    datawithoutspikes = flaggeddata.remove_flagged()
-
-Plot all
-
-    mp.plotStream([datawithspikes,datawithoutspikes])
-
-3. Flagging
------------
+9. All methods at a glance
+------------------------------
+        
+A summary of all supported methods is provided in section x. 
 
 
-    flaggeddata = data.flag_stream()
-    mp.plot(flaggeddata,annotate=True)
 
+g Geomagnetic analysis
+======================
 
-4. Fitting
-----------
-
-5. Interpolation and derivatives
---------------------------------
-
-6. The art of meta information
+1. Determination of K indicies
 ------------------------------
 
-7. Further methods at a glance
+MagPy supports the FMI method for determination of K indicies. Please read the MagPy publication for details on this method and its application. A month of one minute data is provided in example2, which corresponds to an INTERMAGNET IAF archive file. Reading such a file will load one minute data by default. Accessing hourly data and other information is described below.
+
+        data2 = read(example2)
+        kvals = data2.k_fmi()
+
+Detemination of K values will nees a while as the filtering window is dyanmically adjusted within this method. In order to plot original data (H component) and K values together we now use the multiple stream plotting method plotStreams. Here you need to provide at least a list of streams and an array containing variables for each stream. The additional options determine the look (limits, bar chart, symbols). 
+
+        mp.plotStreams([data2,kvals],[['x'],['var1']],specialdict = [{},{'var1':[0,9]}],symbollist=['-','z'],bartrange=0.06)
+
+
+2. Geomagnetic storm detection
 ------------------------------
 
+Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike-information criterion as outlined in detail by Bailey and Leonhardt (2016). 
 
-8. Tutorial
------------
+3. Validity check of data
+------------------------------
+
+A common application of such software can be a general validity check of geomagnetic data too be submitted to IAGA, WDC, or INTERMAGNET.
 
 
-f Multiple streams 
+
+h Multiple streams 
 ==================
 
-1. delta values e.g. delta F
+1. Merging streams
 ----------------------------
 
+Merging data comprises combinations of two stream into one new stream. This includes adding a new column from another stream, filling gaps with data from another stream or replacing data from one column with data from another stream. The following example scetches the typical usage:
 
-    variodata = read(vario)
-    variodata = varidata.correct()
-    variodata = varidata.calc_f()
-    scalardata = read(scalar)
-    diffdata = subtractStreams(variodata, scalardata)
-    mp.plot(diffdata,['f'])
-    deltaf = diffdata.mean('f')
+        print ("     Used columns in data2:", data2._get_key_headers())
+        newstream = mergeStreams(data2,kvals,keys=['var1'])
+        print ("     Columns now:", data2._get_key_headers())
+
+If column "var1" s not existing in data2, then this column is added. If column var1 would exist, then missing data would be inserted from stream kvals. In order to replace any existing data use option "mode='replace'".
+
+2. Differences
+----------------------------
+
+Sometimes it is necessary to examine differences between two data streams e.g. differences between the F values of two instruments running in parallel at the observatory. For this analyses teh method "subtractStreams" is provided.
+
+        diff = subtractStreams(data1,data2,keys=['f'])
 
 
-g Basic data transfer 
+i The art of meta information
+=============================
+
+Each data set is accompanied by a dictionary containing meta information for this data. This dictionary is completely dynamic and can be filled freely. Yet there are a number of predefined fields, which should help the user to provide essential meta information as requested by IAGA, INTERMAGNET
+and other data providers. All provided meta information is saved only to MagPy own archive format's 'PYCDF' and 'PYSTR'. All other export formats save only specific information as required the projected format.
+
+The current content of this dictionary can be accessed by:
+
+        print (data.header)
+
+Information is added to the dictionary by:
+
+        data.header['SensorName'] = 'FGE'
+
+Information is obtained from the dictionary by:
+
+        print (data.header.get('SensorName'))
+
+
+1. Conversions to ImagCDF - adding meta
+--------------------------------
+
+Example: IAF to ImagCDF
+
+        data2.write('/tmp',format_type='IMAGCDF')
+
+
+
+Similar informations are obtained for all other conversions:
+
+        data2.write('/tmp',format_type='IAGA')
+        data2.write('/tmp',format_type='IMF')
+        data2.write('/tmp',format_type='IAF')
+        data2.write('/tmp',format_type='WDC')
+
+
+2. Providing location data 
+--------------------------------
+
+
+3. Special meta information fields 
+----------------------------------
+
+Basevalue, baseline parameters, sensor information and serial numbers 
+
+
+
+
+
+j Data transfer 
 =====================
 
-These procedures require an additional object
+MagPy contains a number of methods to simplify data transfer for observatory applications. Beside you can always use the basic python functionality. Using the implemented methods requires:
 
-    from magpy.transfer import *
+        import magpy.transfer as mt
 
 1. Ftp upload
 -------------
@@ -405,8 +647,11 @@ These procedures require an additional object
 2. Secure communication
 -----------------------
 
+3. Upload data to GIN
+-----------------------
 
-h DI measurements, basevalues and baselines 
+
+k DI measurements, basevalues and baselines 
 ===========================================
 
 These procedures require an additional object
@@ -462,7 +707,7 @@ Getting started (we need the following packages):
 
     diresult.write()
 
-i Database support  
+l Database support
 ==================
 
 These procedures require an additional object
@@ -492,8 +737,13 @@ These procedures require an additional object
 -----------
 
 
-j Acquisition support  
+m Acquisition support
 =====================
 
-k Graphical user interface  
+n Graphical user interface
 ==========================
+
+
+x List of all MagPy methods
+===========================
+

@@ -203,89 +203,94 @@ def readIAF(filename, headonly=False, **kwargs):
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
 
+    #print ("READING IAF")
     fh = open(filename, 'rb')
     while True:
-      try:
+        #try:
         getline = True
         start = fh.read(64)
-        head = struct.unpack('<4s4l4s4sl4s4sll4s4sll', start)
-        head = [el.decode('utf-8') if not isinstance(el,(int,basestring)) else el for el in head]
-        date = datetime.strptime(str(head[1]),"%Y%j")
-        datelist.append(date)
-        if starttime:
-            if date < begin:
-                getline = False
-        if endtime:
-            if date > end:
-                getline = False
-        if getline:
-            # unpack header
-            if gethead:
-                stream.header['StationIAGAcode'] = head[0].strip()
-                headers['StationID'] = head[0].strip()
-                #
-                headers['DataAcquisitionLatitude'] = (90-float(head[2]))/1000.
-                headers['DataAcquisitionLongitude'] = float(head[3])/1000.
-                headers['DataElevation'] = head[4]
-                headers['DataComponents'] = head[5].lower()
-                for c in head[5].lower():
-                    if c == 'g':
-                        headers['col-df'] = 'dF'
-                        headers['unit-col-df'] = 'nT'
-                    else:
-                        headers['col-'+str(c)] = c
-                        headers['unit-col-'+str(c)] = 'nT'
-                keystr = ','.join([str(c) for c in head[5].lower()])
-                if len(keystr) < 6:
-                    keystr = keystr + ',f'
-                keystr = keystr.replace('d','y')
-                keystr = keystr.replace('g','df')
-                keystr = keystr.replace('h','x')
-                headers['StationInstitution'] = head[6]
-                headers['DataConversion'] = head[7]
-                headers['DataQuality'] = head[8]
-                headers['SensorType'] = head[9]
-                headers['StationK9'] = head[10]
-                headers['DataDigitalSampling'] = float(head[11])/1000.
-                headers['DataSensorOrientation'] = head[12].lower()
-                pubdate = datetime.strptime(str(head[13]),"%y%m")
-                headers['DataPublicationDate'] = pubdate
-                gethead = False
-            # get minute data
-            xb = fh.read(5760)
-            x.extend(struct.unpack('<1440l', xb))
-            #x = np.asarray(struct.unpack('<1440l', xb))/10. # needs an extend
-            yb = fh.read(5760)
-            y.extend(struct.unpack('<1440l', yb))
-            zb = fh.read(5760)
-            z.extend(struct.unpack('<1440l', zb))
-            fb = fh.read(5760)
-            f.extend(struct.unpack('<1440l', fb))
-            # get hourly means
-            xhb = fh.read(96)
-            xho.extend(struct.unpack('<24l', xhb))
-            #xho = np.asarray(struct.unpack('<24l', xhb))/10.
-            yhb = fh.read(96)
-            yho.extend(struct.unpack('<24l', yhb))
-            zhb = fh.read(96)
-            zho.extend(struct.unpack('<24l', zhb))
-            fhb = fh.read(96)
-            fho.extend(struct.unpack('<24l', fhb))
-            # get daily means
-            xdb = fh.read(4)
-            xd.extend(struct.unpack('<l', xdb))
-            ydb = fh.read(4)
-            yd.extend(struct.unpack('<l', ydb))
-            zdb = fh.read(4)
-            zd.extend(struct.unpack('<l', zdb))
-            fdb = fh.read(4)
-            fd.extend(struct.unpack('<l', fdb))
-            kb = fh.read(32)
-            k.extend(struct.unpack('<8l', kb))
-            ilb = fh.read(16)
-            ir.extend(struct.unpack('<4l', ilb))
-      except:
-        break
+        #print (len(start))
+        if not len(start) == 64:
+            break
+        else:
+            head = struct.unpack('<4s4l4s4sl4s4sll4s4sll', start)
+            head = [el.decode('utf-8') if not isinstance(el,(int,basestring)) else el for el in head]
+            date = datetime.strptime(str(head[1]),"%Y%j")
+            datelist.append(date)
+            if starttime:
+                if date < begin:
+                    getline = False
+            if endtime:
+                if date > end:
+                    getline = False
+            if getline:
+                # unpack header
+                if gethead:
+                    stream.header['StationIAGAcode'] = head[0].strip()
+                    headers['StationID'] = head[0].strip()
+                    #
+                    headers['DataAcquisitionLatitude'] = (90-float(head[2]))/1000.
+                    headers['DataAcquisitionLongitude'] = float(head[3])/1000.
+                    headers['DataElevation'] = head[4]
+                    headers['DataComponents'] = head[5].lower()
+                    for c in head[5].lower():
+                        if c == 'g':
+                            headers['col-df'] = 'dF'
+                            headers['unit-col-df'] = 'nT'
+                        else:
+                            headers['col-'+str(c)] = c
+                            headers['unit-col-'+str(c)] = 'nT'
+                    keystr = ','.join([str(c) for c in head[5].lower()])
+                    if len(keystr) < 6:
+                        keystr = keystr + ',f'
+                    keystr = keystr.replace('d','y')
+                    keystr = keystr.replace('g','df')
+                    keystr = keystr.replace('h','x')
+                    headers['StationInstitution'] = head[6]
+                    headers['DataConversion'] = head[7]
+                    headers['DataQuality'] = head[8]
+                    headers['SensorType'] = head[9]
+                    headers['StationK9'] = head[10]
+                    headers['DataDigitalSampling'] = float(head[11])/1000.
+                    headers['DataSensorOrientation'] = head[12].lower()
+                    pubdate = datetime.strptime(str(head[13]),"%y%m")
+                    headers['DataPublicationDate'] = pubdate
+                    gethead = False
+                # get minute data
+                xb = fh.read(5760)
+                x.extend(struct.unpack('<1440l', xb))
+                #x = np.asarray(struct.unpack('<1440l', xb))/10. # needs an extend
+                yb = fh.read(5760)
+                y.extend(struct.unpack('<1440l', yb))
+                zb = fh.read(5760)
+                z.extend(struct.unpack('<1440l', zb))
+                fb = fh.read(5760)
+                f.extend(struct.unpack('<1440l', fb))
+                # get hourly means
+                xhb = fh.read(96)
+                xho.extend(struct.unpack('<24l', xhb))
+                #xho = np.asarray(struct.unpack('<24l', xhb))/10.
+                yhb = fh.read(96)
+                yho.extend(struct.unpack('<24l', yhb))
+                zhb = fh.read(96)
+                zho.extend(struct.unpack('<24l', zhb))
+                fhb = fh.read(96)
+                fho.extend(struct.unpack('<24l', fhb))
+                # get daily means
+                xdb = fh.read(4)
+                xd.extend(struct.unpack('<l', xdb))
+                ydb = fh.read(4)
+                yd.extend(struct.unpack('<l', ydb))
+                zdb = fh.read(4)
+                zd.extend(struct.unpack('<l', zdb))
+                fdb = fh.read(4)
+                fd.extend(struct.unpack('<l', fdb))
+                kb = fh.read(32)
+                k.extend(struct.unpack('<8l', kb))
+                ilb = fh.read(16)
+                ir.extend(struct.unpack('<4l', ilb))
+        #except:
+        #break
     fh.close()
 
     #x = np.asarray([val for val in x if not val > 888880])/10.   # use a pythonic way here
@@ -1011,8 +1016,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     cdf.lib.set_backward(False) ## necessary for time_tt2000 support
 
-    if os.path.isfile(filename+'.cdf'):
-        filename = filename+'.cdf'
+    testname = str(filename+'.cdf')
+
+    if os.path.isfile(testname):
+        filename = testname
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
@@ -1543,6 +1550,28 @@ def writeIMF(datastream, filename, **kwargs):
     ndtype = False
     if len(datastream.ndarray[0]) > 0:
         ndtype = True
+
+    # Check data contents
+    xlen = len(datastream.ndarray[KEYLIST.index('x')])
+    ylen = len(datastream.ndarray[KEYLIST.index('y')])
+    zlen = len(datastream.ndarray[KEYLIST.index('z')])
+    flen = len(datastream.ndarray[KEYLIST.index('f')])
+    dflen = len(datastream.ndarray[KEYLIST.index('df')])
+
+    if not xlen > 0 or not ylen > 0 or not zlen > 0:
+        print ("writeIMF: vector data seems to be missing or incomplete - aborting")
+        return False
+ 
+    if not flen > 0 and not dflen > 0:
+        print ("writeIMF: required information on f is missing - aborting")
+        return False
+
+    if not flen > 0 and dflen > 0:
+        print ("writeIMF: delta F provided, but no F values")
+        print ("writeIMF: calcualting F ...")
+        datastream = datastream.calc_f()
+
+    flen = len(datastream.ndarray[KEYLIST.index('f')])
 
     xind = KEYLIST.index('x')
     yind = KEYLIST.index('y')

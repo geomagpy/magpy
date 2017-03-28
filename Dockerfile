@@ -1,7 +1,7 @@
 FROM debian:jessie
 
 MAINTAINER Roman Leonhardt <roman.leonhardt@zamg.ac.at>
-LABEL geomagpy.magpy.version=0.3.2
+LABEL geomagpy.magpy.version=0.3.9
 
 # update os
 RUN apt-get update --fix-missing && \
@@ -9,6 +9,7 @@ RUN apt-get update --fix-missing && \
         bzip2 \
         ca-certificates \
         curl \
+        wget \
         gcc \
         gfortran \
         libcurl4-gnutls-dev \
@@ -51,20 +52,17 @@ COPY . /magpy
 
 
 # install cdf, spacepy, and magpy
-RUN cd /tmp && \
-    curl -O "http://cdaweb.gsfc.nasa.gov/pub/software/cdf/dist/cdf36_2/linux/cdf36_2_1-dist-all.tar.gz" && \
-    tar -xzvf cdf36* && \
+RUN cd /tmp && \ 
+    wget http://cdaweb.gsfc.nasa.gov/pub/software/cdf/dist/cdf36_2/linux/cdf36_2_1-dist-all.tar.gz && \
+    tar zxvf cdf36_2_1-dist-all.tar.gz && \
     cd cdf36* && \
     make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all && \
     make INSTALLDIR=/usr/local/cdf install && \
     cd /tmp && \
-    curl -O "http://netassist.dl.sourceforge.net/project/spacepy/spacepy/spacepy-0.1.6/spacepy-0.1.6.tar.gz" && \
-    tar -xzvf spacepy* && \
-    cd spacepy* && \
-    pip install . && \
-    pip install /magpy && \
+    pip install spacepy && \
+    pip install geomagpy && \
     cd /tmp && \
-    rm -rf /tmp/cdf36* /tmp/spacepy*
+    rm -rf /tmp/cdf36*
 
 
 USER magpy_user

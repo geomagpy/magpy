@@ -3878,7 +3878,20 @@ CALLED BY:
         return func
 
     def extractflags(self):
-        # [st,st,key,flagnumber,commentarray[idx],sensorid,now]
+        """
+    DEFINITION:
+        Extracts flags asociated with the provided DataStream object 
+        (as obtained by flaggedstream = stream.flag_outlier())
+
+    PARAMETERS:
+    Variables:
+        None
+    RETURNS:
+        - flaglist:     (list) a flaglist of type [st,et,key,flagnumber,commentarray[idx],sensorid,now]
+
+    EXAMPLE:
+        >>> flaglist = stream.extractflags()
+        """
         sensorid = self.header.get('SensorID','')
         now = datetime.utcnow()
         flaglist = []
@@ -8921,6 +8934,7 @@ CALLED BY:
         comment = kwargs.get('comment')
         useg = kwargs.get('useg')
         skipcompression = kwargs.get('skipcompression')
+        debug = kwargs.get('debug')
 
         success = True
 
@@ -8995,6 +9009,8 @@ CALLED BY:
                     ndarray = np.asarray([])
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                # remove any eventually existing null byte
+                filename = filename.replace('\x00','')
                 if len(lst) > 0 or len(ndarray[0]) > 0:
                     success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression)
                 starttime = endtime
@@ -9020,6 +9036,9 @@ CALLED BY:
                 else:
                     dat = ''
                 filename = filenamebegins + dat + filenameends
+                # remove any eventually existing null byte
+                filename = filename.replace('\x00','')
+
                 if len(ndarray[0]) > 0:
                     success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression)
                 # get next endtime
@@ -9065,10 +9084,16 @@ CALLED BY:
                 #print "write - selecting time range needs:", t4-t3
 
                 newst = DataStream(lst,self.header,ndarray)
-                filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                filename = str(filenamebegins) + str(datetime.strftime(starttime,dateformat)) + str(filenameends)
+                # remove any eventually existing null byte
+                filename = filename.replace('\x00','')
 
                 if format_type == 'IMF':
                     filename = filename.upper()
+
+                if debug:
+                    print ("Writing data:", os.path.join(filepath,filename))
+
                 if len(lst) > 0 or ndtype:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         loggerstream.info('write: writing %s' % filename)
@@ -9083,6 +9108,10 @@ CALLED BY:
 
         else:
             filename = filenamebegins + filenameends
+            # remove any eventually existing null byte
+            filename = filename.replace('\x00','')
+            if debug:
+                print ("Writing file:", filename)
             success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression)
 
         return success
