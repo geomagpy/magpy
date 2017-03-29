@@ -223,15 +223,15 @@ If you do not have any geomagnetic data file you can access example data by usin
 -----------
 
 
-        data = read('example.min') 
+        data = read(r'example.min') 
 
 or
 
-        data = read('/path/to/file/example.min') 
+        data = read(r'/path/to/file/example.min') 
 
 or
 
-        data = read('c:\\path\\to\\file\\example.min')
+        data = read(r'c:\path\to\file\example.min')
 
 Pathnames are related to your operating system. In the following we will assume a Linux system. 
 Any file is uploaded to the memory and each data column (or header information) is assigned to an internal variable (key). To get a quick overview about the assigned keys you can use the following method:
@@ -245,11 +245,11 @@ After loading some data file we would like to save it as IAGA02 and IMAGCDF outp
 
 Creating an IAGA-02 format:
 
-        data.write('/path/to/diretory/',format_type='IAGA')
+        data.write(r'/path/to/diretory/',format_type='IAGA')
 
 Creating a INTERMAGNET CDF (ImagCDF) format:
 
-        data.write('/path/to/diretory/',format_type='IMAGCDF')
+        data.write(r'/path/to/diretory/',format_type='IMAGCDF')
 
 By default, daily files are created and the date is added to the filename inbetween the optional parameters `filenamebegins` and `filenameends`. If `filenameends` is missing, `.txt` is used as default.
 
@@ -258,15 +258,15 @@ By default, daily files are created and the date is added to the filename inbetw
 
 All local files ending with .min within a directory:
 
-        data = read('/path/to/file/*.min')
+        data = read(r'/path/to/file/*.min')
 
 Getting magnetic data directly from the WDC:
 
-        data = read('ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
+        data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
 
 Getting kp data from the GFZ Potsdam:
 
-        data = read('http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
+        data = read(r'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
 
 Getting ACE data from NASA:
 
@@ -279,11 +279,11 @@ No format specifications are required for reading. If MagPy can handle the forma
 Getting data of a specific time window:
 Local files:
 
-        data = read('/path/to/files/*.min',starttime="2014-01-01", endtime="2014-05-01")
+        data = read(r'/path/to/files/*.min',starttime="2014-01-01", endtime="2014-05-01")
 
 Remote files:
 
-        data = read('ftp://address/fur2013.wdc',starttime="2013-01-01", endtime="2013-02-01")
+        data = read(r'ftp://address/fur2013.wdc',starttime="2013-01-01", endtime="2013-02-01")
 
 
 4. Selecting timerange:
@@ -302,9 +302,16 @@ For the ongoing quick example please use the following steps. This will create d
 1. Load example data
 ------------------------
 
+Along with magpy, we provide several example data sets:
+   example1: INTERMAGNET CDF (ImagCDF) file with 1 second data
+   example2: INTERMAGNET Archive format (IAF) file with 1 min, 1 hour, K and mean data
+   *example3: MagPy readable DI data file with data from 1 single DI measurement
+   *example4: MagPy Basevalue file with analysis results of several DI data
+
         # Skip the following two lines, if you have your own data 
         from pkg_resources import resource_filename
         example1 = resource_filename('magpy', 'examples/example1.cdf')
+        example2 = resource_filename('magpy', 'examples/example2.bin')
 
         data = read(example1)
 
@@ -550,16 +557,35 @@ Detemination of K values will nees a while as the filtering window is dyanmicall
 
         mp.plotStreams([data2,kvals],[['x'],['var1']],specialdict = [{},{'var1':[0,9]}],symbollist=['-','z'],bartrange=0.06)
 
-
 2. Geomagnetic storm detection
 ------------------------------
 
 Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike-information criterion as outlined in detail by Bailey and Leonhardt (2016). 
 
-3. Validity check of data
+
+3. Sq analysis
+------------------------------
+
+Methods are currently in preparation.
+
+
+4. Validity check of data
 ------------------------------
 
 A common application of such software can be a general validity check of geomagnetic data too be submitted to IAGA, WDC, or INTERMAGNET.
+
+        comming soon
+
+
+5. Spectral Analysis and Noise
+------------------------------
+
+For analysis of spectral data, magpy provides two basic plotting methods. plotPS will caluclate and display a powerspectrum of the selected component. plotSpectrogram will show a spectrogram of the timeseries. As usual, there are many options on windows and processing parameters which can be accessed by the help method. 
+ 
+        data = read(example1)
+        mp.plotPS(data,key='f')
+        help(mp.plotSpectrogram)
+        mp.plotSpectrogram(data,['f'])
 
 
 
@@ -593,23 +619,34 @@ and other data providers. All provided meta information is saved only to MagPy o
 
 The current content of this dictionary can be accessed by:
 
+        data = read(example1)
         print (data.header)
 
-Information is added to the dictionary by:
+Information is added/changed by:
 
         data.header['SensorName'] = 'FGE'
 
-Information is obtained from the dictionary by:
+Individual information is obtained from the dictionary by:
 
         print (data.header.get('SensorName'))
+
+If you want to have a more readable list of the header information do:
+
+        for key in data.header:
+            print ("Key: {} \t Content: {}".format(key,data.header.get(key)))
 
 
 1. Conversions to ImagCDF - adding meta
 --------------------------------
 
+If you convert data from IAGA or IAF formats to the new INTERMAGNET CDF format, you usually need to add additional meta information which is required for the new data formats. MagPy assists you here, firstly by extracting and correctly adding already existing meta information towrads newly defined fields and secondly by informing you which information needs to be added for producing correct output formats.
+ 
 Example: IAF to ImagCDF
 
+        data2 = read(example2)
         data2.write('/tmp',format_type='IMAGCDF')
+
+The console output of the write command will tell you which information needs to be added (and how) in order to obtain correct ImagCDF files. Please note, MagPy will store the data in any case and will be able to read it again even if information is missing. Before submitting to a GIN, you need to make sure that the appropriate information is contained.
 
 
 
@@ -617,7 +654,7 @@ Similar informations are obtained for all other conversions:
 
         data2.write('/tmp',format_type='IAGA')
         data2.write('/tmp',format_type='IMF')
-        data2.write('/tmp',format_type='IAF')
+        data2.write('/tmp',format_type='IAF',coverage='month')
         data2.write('/tmp',format_type='WDC')
 
 
@@ -628,9 +665,10 @@ Similar informations are obtained for all other conversions:
 3. Special meta information fields 
 ----------------------------------
 
-Basevalue, baseline parameters, sensor information and serial numbers 
+The meta information fields can hold much more information as requested by most output formats. This includes basevalue, baseline parameters, flagging details, detailed sensor information, serial numbers and many more. MagPy makes use of these possibilities. In order to save these information along with your data set you can use MagPy internal archiving format (PYCDF) of which any of the above mentioned outputformats can be obtained. You can even reconstruct a full data base (see section l). Any upcoming meta information or output request can be easily added/modified without disrupting already existing data sets, and the possibilities to read/analyse old data. This data format is also based on Nasa CDF. Ascii outputs are also supported by MagPy of which the PYSTR format also contains all meta information and PYASCII is least space consuming. Please consider that such ascii format require a lot of memory especially for one second and higher resolution data.
 
 
+        data2.write('/tmp',format_type='PYCDF',coverage='year')
 
 
 
@@ -644,8 +682,10 @@ MagPy contains a number of methods to simplify data transfer for observatory app
 1. Ftp upload
 -------------
 
+
 2. Secure communication
 -----------------------
+
 
 3. Upload data to GIN
 -----------------------
@@ -656,7 +696,7 @@ k DI measurements, basevalues and baselines
 
 These procedures require an additional object
 
-    from magpy.absolutes import *
+        from magpy.absolutes import *
 
 1. Data structure of DI measurements
 ------------------------------------
@@ -665,7 +705,7 @@ These procedures require an additional object
 ------------------
 
 
-    absresult = absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/', alpha=alpha, deltaF=2.1)
+        absresult = absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/', alpha=alpha, deltaF=2.1)
 
 What happens here? 
 

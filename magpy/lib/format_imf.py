@@ -1058,10 +1058,17 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         dcomps = dcomps+'G'
     headers['DataComponents'] = dcomps
 
+    ### #########################################
+    ###            Check Header 
+    ### #########################################
+
+    ## 1. Fixed Part -- current version is 1.2
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     mycdf.attrs['FormatDescription'] = 'INTERMAGNET CDF format'
-    mycdf.attrs['FormatVersion'] = '1.1'
+    mycdf.attrs['FormatVersion'] = '1.2'
     mycdf.attrs['Title'] = 'Geomagnetic time series data'
+
+    ## 2. Check for required info
     for key in headers:
         if key == 'StationIAGAcode' or key == 'IagaCode':
             mycdf.attrs['IagaCode'] = headers[key]
@@ -1132,6 +1139,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             print("writeIMAGCDF: StandardLevel not defined - please specify by yourdata.header['DataStandardLevel'] = ['None','Partial','Full']")
             mycdf.attrs['StandardLevel'] = 'None'
         if headers[key] in ['partial','Partial']:
+            # if PartialStandDesc == '' write warning
             print("writeIMAGCDF: Don't forget - Add PartialStandDesc items like IMOM-11,IMOM-12,IMOM-13")
     else:
         print("writeIMAGCDF: StandardLevel not defined - please specify by yourdata.header['DataStandardLevel'] = ['None','Partial','Full']")
@@ -1141,7 +1149,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         mycdf.attrs['StandardName'] = headers.get('DataStandardName','')
     else:
         try:
-            print ("writeIMAGCDF: Asigning StandardName")
+            #print ("writeIMAGCDF: Asigning StandardName")
             samprate = float(str(headers.get('DataSamplingRate',0)).replace('sec','').strip())
             if int(samprate) == 1:
                 stdadd = 'INTERMAGNET_1-Second'
@@ -1153,7 +1161,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             elif int(headers.get('DataPublicationLevel',0)) == 4:
                 mycdf.attrs['StandardName'] = stdadd
             else:
-                print ("writeIMAGCDF: Current publication level does not support a StandardName - setting level none")
+                print ("writeIMAGCDF: current Publication level {} does not allow to set StandardName".format(headers.get('DataPublicationLevel',0)))
                 mycdf.attrs['StandardLevel'] = 'None'
         except:
             print ("writeIMAGCDF: Asigning StandardName Failed")
@@ -1189,6 +1197,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if not 'StationIagaCode' in headers and 'StationID' in headers:
         mycdf.attrs['IagaCode'] = headers.get('StationID','')
 
+    ### #########################################
+    ###               Data 
+    ### #########################################
+
     def checkEqualIvo(lst):
         # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
         return not lst or lst.count(lst[0]) == len(lst)
@@ -1200,6 +1212,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if len(datastream.ndarray[0]>0):
         ndarray = True
 
+    # Check F/S/G select either S or G, send out warning if presumably F (mean zero, stddeviation < resolution)
     print ("writeIMAGCDF:", keylst)
     print ("Select appropriate Components and keys and define vector and scalar")
 
@@ -1207,11 +1220,11 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ## Analyze F and dF columns:
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
-            print ("Found F/S ...")
+            print ("writeIMAGCDF: Found F/S column") # check whether F or S
             pos = KEYLIST.index('f')
             col = datastream.ndarray[pos]
         if 'df' in keylst:
-            print ("Found dF ...")
+            print ("writeIMAGCDF: Found dF column")
             pos = KEYLIST.index('df')
             col = datastream.ndarray[pos]
         col = col.astype(float)
