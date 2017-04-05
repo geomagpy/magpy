@@ -118,7 +118,7 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('didbadd','') == '':
         optionsdict['didbadd'] = 'False'
     if optionsdict.get('bookmarks','') == '':
-        optionsdict['bookmarks'] = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+        optionsdict['bookmarks'] = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
     if optionsdict.get('scalevalue','') == '':
         optionsdict['scalevalue'] = 'True'
     if optionsdict.get('double','') == '':
@@ -502,12 +502,16 @@ class PlotPanel(wx.Panel):
         try:
             self.axes = self.figure.add_subplot(111)
             plt.axis("off") # turn off axis
-            startupimage = 'magpy.png'
-            # TODO add alternative positions
-            # either use a walk to locate the image in /usr for linux and installation path on win
-            # or put installation path in ini
-            img = imread(startupimage)
-            self.axes.imshow(img)
+            try:
+                script_dir = os.path.dirname(__file__)
+                startupimage = os.path.join(script_dir,'magpy.png')
+                # TODO add alternative positions
+                # either use a walk to locate the image in /usr for linux and installation path on win
+                # or put installation path in ini
+                img = imread(startupimage)
+                self.axes.imshow(img)
+            except:
+                pass
             self.canvas.draw()
         except:
             pass
@@ -1525,11 +1529,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         info = wx.AboutDialogInfo()
 
-        info.SetIcon(wx.Icon('magpy128.xpm', wx.BITMAP_TYPE_XPM))
+        try:
+            info.SetIcon(wx.Icon('magpy128.xpm', wx.BITMAP_TYPE_XPM))
+        except:
+            pass
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2016 Roman Leonhardt, Rachel Bailey, Mojca Miklavec')
+        info.SetCopyright('(C) 2011 - 2017 Roman Leonhardt, Rachel Bailey, Mojca Miklavec')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
         info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec')

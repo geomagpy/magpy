@@ -417,7 +417,18 @@ PYMAG_SUPPORTED_FORMATS = {
 """
 
 # ----------------------------------------------------------------------------
-#  Part 3: Main classes -- DataStream, LineStruct and
+#  Part 3: Example files for easy access and tests
+# ----------------------------------------------------------------------------
+
+from pkg_resources import resource_filename
+example1 = resource_filename('magpy', 'examples/example1.cdf')  #ImagCDF
+example2 = resource_filename('magpy', 'examples/example2.bin')  #IAF
+example3 = resource_filename('magpy', 'examples/2015-03-25_08-18-00_A2_WIC.txt')
+example4 = resource_filename('magpy', 'examples/example4.txt')  #MagPy Str with basevalues
+example5 = resource_filename('magpy', 'examples/example5.cdf')  #MagPy CDF
+
+# ----------------------------------------------------------------------------
+#  Part 4: Main classes -- DataStream, LineStruct and
 #      PyMagLog (To be removed)
 # ----------------------------------------------------------------------------
 
@@ -1085,7 +1096,7 @@ CALLED BY:
     def _take_columns(self, keys):
         """
         DEFINITION:
-            removes columns of the given keys
+            extract selected columns of the given keys (Old LineStruct format - decrapted) 
         """
 
         resultstream = DataStream()
@@ -2423,18 +2434,19 @@ CALLED BY:
             alpha/beta    (floats) provide rotation angles for the variometer data to be applied
                                    before correction - data is rotated back after correction
         """
-        print ("Performing baseline correction: Requiring HEZ data.")
-        print ("H magnetic North, E magnetic East, Z vertical downwards, all in nT.")
+        print ("BC: Performing baseline correction: Requires HEZ data.")
+        print ("    H magnetic North, E magnetic East, Z vertical downwards, all in nT.")
 
         absinfo = self.header.get('DataAbsInfo')
         absvalues = self.header.get('DataBaseValues')
         func = self.header.get('DataAbsFunctionObject')
 
-        print ("Components of stream:", self.header.get('DataComponents'))
+        print ("BC: Components of stream:", self.header.get('DataComponents'))
+        print ("BC: baseline adoption information:", absinfo)
 
         if absinfo and type(absvalues) in [list,np.ndarray,tuple]:
-            print("BC: Found basevalues in data stream - correcting")
-            print("BC: TODO repeat correction several times and check header info")
+            print("BC: Found baseline adoption information in meta data - correcting")
+            #print("BC: TODO repeat correction several times and check header info")
             # extract baseline data
             absstream = self.dict2stream()
             #print("BC", absstream.length())
@@ -3642,7 +3654,7 @@ CALLED BY:
                 v[nans]= interp(x(nans), x(~nans), v[~nans])
 
             # Make sure that we are dealing with numbers
-            v = np.array(map(float, v))
+            v = np.array(list(map(float, v)))
             if v.ndim != 1:
                 loggerstream.error("Filter: Only accepts 1 dimensional arrays.")
             if window_len<3:
@@ -7845,28 +7857,30 @@ CALLED BY:
         """
         noflags = kwargs.get('noflags')
 
+        stream = self.copy()
+
         if not 'time' in keys:
             ti = ['time']
             ti.extend(keys)
             keys = ti
 
-        if len(self.ndarray[0]) > 0:
+        if len(stream.ndarray[0]) > 0:
             # Check for flagging and comment column
             if not noflags:
                 flagidx = KEYLIST.index('flag')
                 commentidx = KEYLIST.index('comment')
-                if len(self.ndarray[flagidx]) > 0:
+                if len(stream.ndarray[flagidx]) > 0:
                     keys.append('flag')
-                if len(self.ndarray[commentidx]) > 0:
+                if len(stream.ndarray[commentidx]) > 0:
                     keys.append('comment')
 
             # Remove all missing
-            for idx, elem in enumerate(self.ndarray):
+            for idx, elem in enumerate(stream.ndarray):
                 if not KEYLIST[idx] in keys:
-                    self.ndarray[idx] = np.asarray([])
-            return self
+                    stream.ndarray[idx] = np.asarray([])
+            return stream
         else:
-            return self
+            return stream
 
     def smooth(self, keys=None, **kwargs):
         """
@@ -8888,6 +8902,7 @@ CALLED BY:
         - comment       (string) some comment, currently used in IYFV
         - kind          (string) one of 'A' (all), 'Q' quiet days, 'D' disturbed days,
                                  currently used in IYFV
+        - addflags      (BOOL) add flags to IMAGCDF output if True
        --- specific functions for IAGA file
         - useg          (Bool) use delta F (G) instead of F for output
 
@@ -8935,6 +8950,7 @@ CALLED BY:
         useg = kwargs.get('useg')
         skipcompression = kwargs.get('skipcompression')
         debug = kwargs.get('debug')
+        addflags = kwargs.get('addflags')
 
         success = True
 
@@ -9012,7 +9028,7 @@ CALLED BY:
                 # remove any eventually existing null byte
                 filename = filename.replace('\x00','')
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -9040,7 +9056,7 @@ CALLED BY:
                 filename = filename.replace('\x00','')
 
                 if len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags)
                 # get next endtime
                 starttime = endtime
                 cyear = cyear + 1
@@ -9098,7 +9114,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         loggerstream.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression)
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -9112,7 +9128,7 @@ CALLED BY:
             filename = filename.replace('\x00','')
             if debug:
                 print ("Writing file:", filename)
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags)
 
         return success
 
@@ -9900,6 +9916,9 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         st = st.trim(starttime=starttime)
     if endtime:
         st = st.trim(endtime=endtime)
+
+    ### Define some general header information TODO - This is done already in some format libs - clean up
+    st.header['DataSamplingRate'] = st.samplingrate()
 
     return st
 

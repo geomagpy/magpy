@@ -1803,6 +1803,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
+            # Check for the presence of f or df
+            fcol = KEYLIST.index('f')
+            dfcol = KEYLIST.index('df')
+            if not len(scalarstr.ndarray[fcol]) > 0 and not len(scalarstr.ndarray[dfcol]) > 0:
+                print ("absoluteAnalysis: No F data found")
+                pass
+            elif not len(scalarstr.ndarray[fcol]) > 0:
+                scalarstr = scalarstr.calc_f()
+            else:
+                pass
             print("Length of Scalardata:", scalarstr.length()[0])
             if db and not skipscalardb:
                 try:

@@ -217,12 +217,12 @@ def readIAF(filename, headonly=False, **kwargs):
             head = [el.decode('utf-8') if not isinstance(el,(int,basestring)) else el for el in head]
             date = datetime.strptime(str(head[1]),"%Y%j")
             datelist.append(date)
-            if starttime:
-                if date < begin:
-                    getline = False
-            if endtime:
-                if date > end:
-                    getline = False
+            #if starttime:  ## This does not work
+            #    if date < begin:
+            #        getline = False
+            #if endtime:
+            #    if date > end:
+            #        getline = False
             if getline:
                 # unpack header
                 if gethead:
@@ -813,7 +813,7 @@ def writeIAF(datastream, filename, **kwargs):
 
 def readIMAGCDF(filename, headonly=False, **kwargs):
     """
-    Reading Intermagnet CDF format (1.1)
+    Reading Intermagnet CDF format (1.0,1.1,1.2)
     """
 
     print("FOUND IMAGCDF")
@@ -828,6 +828,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     arraylist = []
     array = [[] for elem in KEYLIST]
     startdate = cdfdat[datalist[-1]][0]
+    flagruleversion  = ''
+    flagruletype = ''
+    flaglist = []
 
     #  #################################
     # Get header info:
@@ -881,6 +884,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         headers['SensorID'] = str(cdfdat.attrs['ParentIdentifier'])
     if 'ReferenceLinks' in attrslist:
         headers['StationWebInfo'] = str(cdfdat.attrs['ReferenceLinks'])
+    if 'FlagRulesetType' in attrslist:
+        flagruletype = str(cdfdat.attrs['FlagRulesetType'])
+    if 'FlagRulesetVersion' in attrslist:
+        flagruleversion = str(cdfdat.attrs['FlagRulesetVersion'])
+
 
     #  #################################
     # Get data:
@@ -897,7 +905,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     tllist = []
     indexarray = np.asarray([])
     for elem in datalist:
-        if elem.endswith('Times'):
+        if elem.endswith('Times') and not elem.startswith('Flag'):
             #print "Found Time Column"
             # Get length
             tl = int(str(cdfdat[elem]).split()[1].strip('[').strip(']'))
@@ -911,12 +919,12 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             st = str(cdfdat.attrs['StartTime'])
             sr = str(cdfdat.attrs['SamplingPeriod'])
         else:
-            print("No Time information available - aborting")
+            print("readIMAGCDF: No Time information available - aborting")
             return
     elif len(tllist) > 1:
         tl = [el[0] for el in tllist]
         if not max(tl) == min(tl):
-            print("Time columns of different length. Choosing longest as basis")
+            print("readIMAGCDF: Time columns of different length. Choosing longest as basis")
             newdatalist.append(['time',max(tllist)[1]])
             try:
                 indexarray = np.nonzero(np.in1d(date2num(cdfdat[max(tllist)[1]][...]),date2num(cdfdat[min(tllist)[1]][...])))[0]
@@ -924,7 +932,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 indexarray = np.asarray([])
             mutipletimerange = True
         else:
-            print("Equal length time axes found - assuming identical time")
+            print("readIMAGCDF: Equal length time axes found - assuming identical time")
             if 'GeomagneticVectorTimes' in datalist:
                 newdatalist.append(['time','GeomagneticVectorTimes'])
             else:
@@ -933,7 +941,25 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         #print "Single time axis found in file"
         newdatalist.append(['time',tllist[0][1]])
 
-    datalist = [elem for elem in datalist if not elem.endswith('Times')]
+    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion):
+        if flagruletype in ['Conrad', 'conrad', 'MagPy','magpy']:
+            if flagruleversion in ['1.0','1',1]:
+                flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
+                flaglisttmp = []
+                for elem in flagcolsconrad:
+                    flaglisttmp.append(cdfdat[elem][...])
+                flaglist = np.transpose(flaglisttmp)
+                flaglist = [list(elem) for elem in flaglist]
+                return list(flaglist)
+        else:
+            print ("readIMAGCDF: Could  not interprete Ruleset")
+
+    if not flagruletype == '':
+        print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(flagruletype,flagruleversion))
+        flagginglist = [elem for elem in datalist if elem.startswith('Flag')]
+        flaglist = Ruleset2Flaglist(flagginglist,flagruletype,flagruleversion)
+
+    datalist = [elem for elem in datalist if not elem.endswith('Times') and not elem.startswith('Flag')]
 
     # #########################################################
     # 2. Sort the datalist according to KEYLIST
@@ -957,7 +983,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 pass # for lines which have no Label
 
     if not len(datalist) == len(newdatalist)-1:
-        print("error encountered in key assignment - please check")
+        print("readIMAGCDF: error encountered in key assignment - please check")
 
     # 3. Create equal length array reducing all data to primary Times and filling nans for non-exist
     # (4. eventually completely drop time cols and just store start date and sampling period in header)
@@ -995,23 +1021,29 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     ndarray = np.array(array)
 
+
     stream = DataStream()
     stream = [LineStruct()]
-    #stream = array2stream(arraylist,'time,x,y,z')
 
+    result = DataStream(stream,headers,ndarray)
+
+    if not flagruletype == '' and len(flaglist) > 0:
+        result = result.flag(flaglist)
     #t2 = datetime.utcnow()
     #print "Duration for conventional stream assignment:", t2-t1
 
-    return DataStream(stream,headers,ndarray)
+    return result
 
 
 def writeIMAGCDF(datastream, filename, **kwargs):
     """
-    Writing Intermagnet CDF format (1.1)
+    Writing Intermagnet CDF format (currently: vers1.2) + optional flagging info
+    
     """
 
     print("Writing IMAGCDF Format", filename)
     mode = kwargs.get('mode')
+    addflags = kwargs.get('addflags')
     skipcompression = kwargs.get('skipcompression')
 
     cdf.lib.set_backward(False) ## necessary for time_tt2000 support
@@ -1048,6 +1080,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     headers = datastream.header
     head, line = [],[]
     success = False
+
+    # For test purposes: flagging
+    flaglist = []
 
     # check DataComponents for correctness
     dcomps = headers.get('DataComponents','')
@@ -1090,7 +1125,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             mycdf.attrs['StandardVersion'] = headers[key]
         if key == 'DataPartialStandDesc' or key == 'PartialStandDesc':
             if headers['DataStandardLevel'] in ['partial','Partial']:
-                print("writeIMAGCDF: Add PartialStandDesc items like IMOM-11,IMOM-12,IMOM-13")
+                pass
             mycdf.attrs['PartialStandDesc'] = headers[key]
         if key == 'DataTerms' or key == 'TermsOfUse':
             mycdf.attrs['TermsOfUse'] = headers[key]
@@ -1102,6 +1137,15 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             mycdf.attrs['ParentIdentifier'] = headers[key]
         if key == 'StationWebInfo' or key == 'ReferenceLinks':
             mycdf.attrs['ReferenceLinks'] = headers[key]
+
+    ## 3. Optional flagging information
+    ##    identify flags within the data set and if they are present then add an attribute to the header
+    if addflags:
+        flaglist = datastream.extractflags()
+        if len(flaglist) > 0:
+            mycdf.attrs['FlagRulesetVersion'] = '1.0'
+            mycdf.attrs['FlagRulesetType'] = 'Conrad'
+    
 
     #pubdate = cdf.lib.datetime_to_tt2000(datastream._testtime(headers.get('DataPublicationDate','')))
     if not headers.get('DataPublicationDate','') == '':
@@ -1138,9 +1182,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         else:
             print("writeIMAGCDF: StandardLevel not defined - please specify by yourdata.header['DataStandardLevel'] = ['None','Partial','Full']")
             mycdf.attrs['StandardLevel'] = 'None'
-        if headers[key] in ['partial','Partial']:
-            # if PartialStandDesc == '' write warning
-            print("writeIMAGCDF: Don't forget - Add PartialStandDesc items like IMOM-11,IMOM-12,IMOM-13")
+        if headers.get('DataStandardLevel','') in ['partial','Partial']:
+            # one could add a validity check whether provided list is aggreement with standards
+            if headers.get('DataPartialStandDesc','') == '':
+                print("writeIMAGCDF: PartialStandDesc is missing. Add items like IMOM-11,IMOM-12,IMOM-13 ...")
     else:
         print("writeIMAGCDF: StandardLevel not defined - please specify by yourdata.header['DataStandardLevel'] = ['None','Partial','Full']")
         mycdf.attrs['StandardLevel'] = 'None'
@@ -1185,6 +1230,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
+                    print ("writeIMAGCDF: converting coordinates to epsg 4326")
                     longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
                     longi = "{:.3f}".format(float(longi))
                     lati = "{:.3f}".format(float(lati))
@@ -1213,18 +1259,28 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         ndarray = True
 
     # Check F/S/G select either S or G, send out warning if presumably F (mean zero, stddeviation < resolution)
-    print ("writeIMAGCDF:", keylst)
-    print ("Select appropriate Components and keys and define vector and scalar")
-
     naninds = np.asarray([])
     ## Analyze F and dF columns:
+    fcolname = 'S'
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
-            print ("writeIMAGCDF: Found F/S column") # check whether F or S
+            if not 'df' in keylst:
+                 print ("writeIMAGCDF: Found F column") # check whether F or S
+                 comps = datastream.header.get('DataComponents')
+                 if not comps.endswith('S'):
+                     print ("writeIMAGCDF: given components are {}. Checking F column...".format(datastream.header.get('DataComponents')))
+                     #calculate delta F and determine average diff
+                     datastream = datastream.delta_f()
+                     dfmean, dfstd = datastream.mean('df',std=True, percentage=50)
+                     if dfmean < 0.0000000001 and dfstd < 0.0000000001:
+                         fcolname = 'F'
+                         print ("writeIMAGCDF: analyzed F column - values are apparently calculated from vector components - using column name 'F'")
+                     else:
+                         print ("writeIMAGCDF: analyzed F column - values are apparently independend from vector components - using column name 'S'")
             pos = KEYLIST.index('f')
             col = datastream.ndarray[pos]
         if 'df' in keylst:
-            print ("writeIMAGCDF: Found dF column")
+            #print ("writeIMAGCDF: Found dF column")
             pos = KEYLIST.index('df')
             col = datastream.ndarray[pos]
         col = col.astype(float)
@@ -1262,7 +1318,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 try: ## requires spacepy >= 1.5
                     mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
                     mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col]))
-                    print("Successfully used tt2000")
+                    #print("writeIMAGCDF: Datetimes successfully converted to TT2000")
                     if useScalarTimes:
                         key = 'GeomagneticScalarTimes'
                         mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
@@ -1290,7 +1346,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         elif key == 'z':
                             compsupper = comps[2].upper()
                         elif key == 'f':
-                            compsupper = 'S' ## hard coded S as F should not be used - MagPy requires independend F (denoted S)
+                            compsupper = fcolname ## MagPy requires independend F value
                         elif key == 'df':
                             compsupper = 'G'
                         else:
@@ -1362,6 +1418,54 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             except:
                                 pass
             success = True
+
+    if len(flaglist) > 0 and addflags == True:
+            flagstart = 'FlagBeginTimes'
+            flagend = 'FlagEndTimes'
+            flagcomponents = 'FlagComponents'
+            flagcode = 'FlagCode'
+            flagcomment = 'FlagDescription'
+            flagmodification = 'FlagModificationTimes'
+            flagsystemreference = 'FlagSystemReference'
+            flagobserver = 'FlagObserver'
+
+            trfl = np.transpose(flaglist)
+            #print ("Transposed flaglist", trfl)
+            ok =True
+            if ok:
+            #try:
+                mycdf.new(flagstart, type=cdf.const.CDF_TIME_TT2000)
+                mycdf[flagstart] = cdf.lib.v_datetime_to_tt2000(trfl[0])
+                mycdf.new(flagend, type=cdf.const.CDF_TIME_TT2000)
+                mycdf[flagend] = cdf.lib.v_datetime_to_tt2000(trfl[1])
+                mycdf.new(flagmodification, type=cdf.const.CDF_TIME_TT2000)
+                mycdf[flagmodification] = cdf.lib.v_datetime_to_tt2000(trfl[-1])
+
+                # Here we can select between different content
+                if len(flaglist[0]) == 7:
+                    #[st,et,key,flagnumber,commentarray[idx],sensorid,now]
+                    # eventually change flagcomponent in the future
+                    fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference] # , flagobserver]
+                elif len(flaglist[0]) == 8:  
+                    # Future version ??
+                    fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
+                for idx, cdfkey in enumerate(fllist):
+                    if not cdfkey == flagcode:
+                        ll = [el.encode('UTF8') for el in trfl[idx+2]]
+                    else:
+                        ll = trfl[idx+2]
+                    mycdf[cdfkey] = ll
+                    mycdf[cdfkey].attrs['DEPEND_0'] = "FlagBeginTimes"
+                    mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time_series"
+                    mycdf[cdfkey].attrs['LABLAXIS'] = cdfkey.strip('Flag')
+                    mycdf[cdfkey].attrs['FILLVAL'] = np.nan
+                    mycdf[cdfkey].attrs['FIELDNAM'] = cdfkey
+                    if cdfkey in ['flagcode']:
+                        mycdf[cdfkey].attrs['VALIDMIN'] = 0
+                        mycdf[cdfkey].attrs['VALIDMAX'] = 9
+            #except:
+            #    print ("writeIMAGCDF: error when adding flags. skipping this part")
+            print ("writeIMAGCDF: Flagging information added to file")
 
     if not skipcompression:
         try:
@@ -1765,7 +1869,7 @@ def readBLV(filename, headonly=False, **kwargs):
                 # data info
                 if mode == 'adopted':
                     block = line.split()
-                    if block[5]>998.0:
+                    if float(block[5])>998.0:
                         block[5] = np.nan
                     array[0].append(date2num(datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)))
                     array[1].append(float(block[1]))
@@ -1804,7 +1908,7 @@ def writeBLV(datastream, filename, **kwargs):
                           measurement position. If provided, this value is assumed to
                           represent the adopted value for all days: If not, then the baseline
                           function is assumed to be used.
-        diff            : (ndarray) array containing dayly averages of delta F values between
+        diff            : (ndarray) array containing daily averages of delta F values between
                           variometer and F measurement
     """
 

@@ -113,8 +113,12 @@ class Analysismonitor(dict):
     def load(self, path=None):
         if not path:
             path = self.dictfile
-        fi = io.open(path,'rb') # does not work in Py3  - requires an update of the saved pickle file
-        self = pickle.load(fi)
+        try:
+            fi = io.open(path,'rb') # does not work in Py3  - requires an update of the saved pickle file
+            self = pickle.load(fi)
+        except:
+            print ("analysismonitor: if you switch from python2 to python3 an update of the saved pickle file is necessary")
+            sys.exit()
         fi.close()
         return self
 

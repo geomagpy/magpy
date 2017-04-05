@@ -1767,7 +1767,7 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
 
         # A GridSizer will contain the other controls:
         cols = 6
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
