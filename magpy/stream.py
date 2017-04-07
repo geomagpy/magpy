@@ -10,6 +10,11 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 
+import logging
+import os
+import sys
+import tempfile
+
 # ----------------------------------------------------------------------------
 # Part 1: Import routines for packages
 # ----------------------------------------------------------------------------
@@ -18,10 +23,46 @@ logpygen = ''           # temporary loggerstream variable
 badimports = []         # List of missing packages
 nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 
-print("Initiating MagPy...")
+# Logging
+# ---------
+# Select the home directory of the user (platform independent)
+from os.path import expanduser
+home = expanduser("~")
+
+def setup_logger(name, warninglevel=logging.WARNING, logfilepath=tempfile.gettempdir(),
+                 logformat='%(asctime)s %(levelname)s - %(name)-6s - %(message)s'):
+    """Basic setup function to create a standard logging config. Default output
+    is to file in /tmp/dir."""
+    
+    logfile=os.path.join(logfilepath,'magpy.log')
+    logging.basicConfig(filename=logfile,
+                        filemode='w',
+                        format=logformat,
+                        level=logging.INFO)
+    logger = logging.getLogger(name)
+    # Define a Handler which writes "setLevel" messages or higher to the sys.stderr
+    console = logging.StreamHandler()
+    console.setLevel(warninglevel)
+    logger.addHandler(console)
+    
+    return logger
+
+# Package loggers to identify info/problem source
+basiclogger = setup_logger(__name__)
+loggerabs = logging.getLogger('abs')
+loggertransfer = logging.getLogger('transf')
+loggerdatabase = logging.getLogger('db')
+loggerstream = logging.getLogger('stream')
+loggerlib = logging.getLogger('lib')
+loggerplot = logging.getLogger('plot')
+
+# Special loggers for event notification
+stormlogger = logging.getLogger('stream')
+
+basiclogger.info("Initiating MagPy...")
 
 from magpy.version import __version__
-print("MagPy version", __version__)
+basiclogger.info("MagPy version "+str(__version__))
 magpyversion = __version__
 
 # Standard packages
@@ -31,8 +72,7 @@ try:
     import pickle
     import types
     import struct
-    import logging
-    import sys, re
+    import re
     import time, string, os, shutil
     import copy as cp
     import fnmatch
@@ -80,10 +120,10 @@ try:
     import matplotlib
     try:
         if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
-            print("No terminal connected - assuming cron job and using Agg for matplotlib")
+            basiclogger.info("No terminal connected - assuming cron job and using Agg for matplotlib")
             matplotlib.use('Agg') # For using cron
     except:
-        print("Problems with identfying cron job - windows system?")
+        basiclogger.warning("Problems with identfying cron job - windows system?")
         pass
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: problem with matplotlib.\n"
@@ -97,7 +137,7 @@ try:
     except:
         version = version.strip("rc")
         MATPLOTLIB_VERSION = version
-    print("Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION))
+    basiclogger.info("Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION))
     try:
         import matplotlib.pyplot as plt
     except: ## Workaround for anaconda PYQT4 patch error
@@ -119,7 +159,7 @@ except ImportError as e:
 # Numpy & SciPy
 # -------------
 try:
-    print("Loading Numpy and SciPy...")
+    basiclogger.info("Loading Numpy and SciPy...")
     import numpy as np
     import scipy as sp
     from scipy import interpolate
@@ -151,7 +191,7 @@ def findpath(name, path):
         if name in files:
             return root
 try:
-    print("Loading SpacePy package cdf support ...")
+    basiclogger.info("Loading SpacePy package cdf support ...")
     try:
         # check for windows
         nasacdfdir = findpath('libcdf.dll','C:\CDF_Distribution') ## new path since nasaCDF3.6
@@ -159,44 +199,41 @@ try:
             nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
         #print nasacdfdir
         os.putenv("CDF_LIB", nasacdfdir)
-        print("using CDF lib in %s" % nasacdfdir)
+        basiclogger.info("Using CDF lib in %s" % nasacdfdir)
         try:
             import spacepy.pycdf as cdf
-            print("... success")
+            basiclogger.info("... success")
         except KeyError as e:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("... Could not import spacepy")
+            basiclogger.info("... Could not import spacepy")
             pass
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
-        print("using CDF lib in /usr/local/cdf")
+        basiclogger.info("using CDF lib in /usr/local/cdf")
         try:
             import spacepy.pycdf as cdf
-            print("... success")
+            basiclogger.info("... success")
         except KeyError as e:
             # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
             badimports.append(e)
         except:
-            print("... Could not import spacepy")
+            basiclogger.info("... Could not import spacepy")
             pass
 except ImportError as e:
     logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
     logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
     badimports.append(e)
 
-
 if logpygen == '':
     logpygen = "OK"
 else:
-    print(logpygen)
-    print("Missing packages:")
+    basiclogger.info(logpygen)
+    basiclogger.info("Missing packages:")
     for item in badimports:
-        print(item)
-    print()
-    print("Moving on anyway...")
-    #check = raw_input("Do you want to continue anyway? ")
+        basiclogger.info(item)
+    basiclogger.info("Moving on anyway...")
 
 ### Some Python3/2 compatibility code
 ### taken from http://www.rfk.id.au/blog/entry/preparing-pyenchant-for-python-3/
@@ -213,33 +250,6 @@ except NameError:
     unicode = str
     bytes = bytes
     basestring = (str,bytes)
-
-# Logging
-# ---------
-# Select the home directory of the user (platform independent)
-from os.path import expanduser
-home = expanduser("~")
-logfile = os.path.join(home,'magpy.log')
-
-logging.basicConfig(filename=logfile,
-                        filemode='w',
-                        format='%(asctime)s %(levelname)-8s- %(name)-6s %(message)s',
-                        level=logging.INFO)
-
-# Define a Handler which writes "setLevel" messages or higher to the sys.stderr
-console = logging.StreamHandler()
-console.setLevel(logging.WARNING)
-
-# Package loggers to identify info/problem source
-loggerabs = logging.getLogger('abs')
-loggertransfer = logging.getLogger('transf')
-loggerdatabase = logging.getLogger('db')
-loggerstream = logging.getLogger('stream')
-loggerlib = logging.getLogger('lib')
-loggerplot = logging.getLogger('plot')
-
-# Special loggers for event notification
-stormlogger = logging.getLogger('stream')
 
 # Storing function - http://bytes.com/topic/python/answers/552476-why-cant-you-pickle-instancemethods#edit2155350
 # by Steven Bethard

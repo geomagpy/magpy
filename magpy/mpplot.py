@@ -220,6 +220,7 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
     #print stream.ndarray
     stream = stream._remove_nancolumns()
     availablekeys = stream._get_key_headers(numerical=True)
+    logger = logging.getLogger(__name__+".plot")
     #print stream.ndarray
 
     # if no variables are given, use all available:
@@ -228,24 +229,24 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
     else:
         variables = [var for var in variables if var in availablekeys]
     if len(variables) > 9:
-        print("More than 9 variables available - plotting only the first nine:", end=' ')
-        print("Available:", variables)
+        logger.info("More than 9 variables available - plotting only the first nine:", end=' ')
+        logger.info("Available: "+ str(variables))
         variables = variables[:9]
-        print("Plotting:", variables)
+        logger.info("Plotting: "+ str(variables))
     else:
-        print("Plotting:", variables)
+        logger.info("Plotting: "+ str(variables))
 
     # Check lists for variables have correct length:
     num_of_var = len(variables)
     if num_of_var > 9:
-        loggerplot.error("plot: Can't plot more than 9 variables, sorry.")
+        logger.error("Can't plot more than 9 variables, sorry.")
         raise Exception("Can't plot more than 9 variables!")
 
     if len(symbollist) < num_of_var:
-        loggerplot.error("plot: Length of symbol list does not match number of variables.")
+        logger.error("Length of symbol list does not match number of variables.")
         raise Exception("Length of symbol list does not match number of variables.")
     if len(colorlist) < num_of_var:
-        loggerplot.error("plot: Length of color list does not match number of variables.")
+        logger.error("Length of color list does not match number of variables.")
         raise Exception("Length of color list does not match number of variables.")
 
     plot_dict = []
@@ -387,6 +388,8 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         plot.title("New title.")
         plot.savefig("newfig.png")
     '''
+    
+    logger = logging.getLogger(__name__+".plotStreams")
 
     # Preselect only numerical values
     variables = [[el for el in lst if el in NUMKEYLIST] for lst in variables]
@@ -394,15 +397,15 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     for item in variables:
         num_of_var += len(item)
     if num_of_var > 9:
-        loggerplot.error("plotStreams: Can't plot more than 9 variables, sorry.")
+        logger.error("plotStreams: Can't plot more than 9 variables, sorry.")
         raise Exception("Can't plot more than 9 variables!")
 
     # Check lists for variables have correct length:
     if len(symbollist) < num_of_var:
-        loggerplot.error("plotStreams: Length of symbol list does not match number of variables.")
+        logger.error("plotStreams: Length of symbol list does not match number of variables.")
         raise Exception("Length of symbol list does not match number of variables.")
     if len(colorlist) < num_of_var:
-        loggerplot.error("plotStreams: Length of color list does not match number of variables.")
+        logger.error("plotStreams: Length of color list does not match number of variables.")
         raise Exception("Length of color list does not match number of variables.")
 
     plot_dict = []
@@ -421,23 +424,23 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             if not lentime > 0:
                 x=1/0
             if lentime > resolution:
-                loggerstream.info("plot: Reducing data resultion ...")
+                logger.info("Reducing data resultion ...")
                 stepwidth = int(len(t)/resolution)
                 t = t[::stepwidth]
                 # Redetermine lentime
                 lentime = len(t)
-            loggerstream.info("plot: Start plotting of stream with length %i" % len(stream.ndarray[0]))
+            logger.info("Start plotting of stream with length %i" % len(stream.ndarray[0]))
             ndtype = True
         except:
             t = np.asarray([row[0] for row in stream])
-            loggerstream.info("plot: Start plotting of stream with length %i" % len(stream))
+            logger.info("Start plotting of stream with length %i" % len(stream))
         #t = np.asarray([row[0] for row in stream])
         for j in range(len(variables[i])):
             data_dict = {}
             key = variables[i][j]
-            loggerplot.info("plotStreams: Determining plot properties for key %s." % key)
+            logger.info("Determining plot properties for key %s." % key)
             if not key in NUMKEYLIST:
-                loggerplot.error("plot: Column key (%s) not valid!" % key)
+                logger.error("Column key (%s) not valid!" % key)
                 raise Exception("Column key (%s) not valid!" % key)
             ind = KEYLIST.index(key)
             try:
@@ -449,14 +452,14 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     stepwidth = int(len(y)/resolution)
                     y = y[::stepwidth]
                 if len(y) != lentime:
-                    loggerplot.error("plotStreams: Dimensions of time and %s do not match!" % key)
+                    logger.error("Dimensions of time and %s do not match!" % key)
                     raise Exception("Dimensions of time and %s do not match!")
             except:
                 y = np.asarray([float(row[ind]) for row in stream])
             #y = np.asarray([row[ind] for row in stream])
 
             if len(y) == 0:
-                loggerplot.error("plotStreams: Cannot plot stream of zero length!")
+                logger.error("Cannot plot stream of zero length!")
 
             # eventually remove flagged:
             dropflagged = False
@@ -491,7 +494,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             #print len(t), len(y), np.asarray(y), np.asarray(t)
 
             if len(y) == 0:
-                loggerplot.error("plotStreams: Cannot plot stream without data - Filling with 9999999!")
+                logger.error("Cannot plot stream without data - Filling with 9999999!")
                 if len(stream.ndarray[0]) > 0:
                     y = np.asarray([9999999 for row in stream.ndarray[0]])
                 else:
@@ -524,7 +527,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                         data_dict['ymin'] = np.min(y) - ypadding
                         data_dict['ymax'] = np.max(y) + ypadding
                     else:
-                        loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
+                        logger.warning('Min and max of key %s are equal. Adjusting axes.' % key)
                         data_dict['ymin'] = np.min(y) - 0.05
                         data_dict['ymax'] = np.max(y) + 0.05
             else:
@@ -532,7 +535,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     data_dict['ymin'] = np.min(y) - ypadding
                     data_dict['ymax'] = np.max(y) + ypadding
                 else:
-                    loggerplot.warning('plot: Min and max of key %s are equal. Adjusting axes.' % key)
+                    logger.warning('Min and max of key %s are equal. Adjusting axes.' % key)
                     data_dict['ymin'] = np.min(y) - 0.5
                     data_dict['ymax'] = np.max(y) + 0.5
 
@@ -551,7 +554,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 yunit = re.sub('[#$%&~_^\{}]', '', yunit)
                 label = ylabel+' $['+yunit+']$'
             elif yunit == None:
-                loggerplot.warning("No units for key %s! Empty column?" % key)
+                logger.warning("No units for key %s! Empty column?" % key)
                 label = ylabel
             else:
                 label = ylabel
@@ -569,7 +572,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                         if len(errors) > 0:
                             data_dict['errors'] = errors
                         else:
-                            loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
+                            logger.warning("No errors for key %s. Leaving empty." % key)
                 else:
                     ind = KEYLIST.index('d'+key)
                     if ndtype:
@@ -579,7 +582,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     if len(errors) > 0:
                         data_dict['errors'] = errors
                     else:
-                        loggerplot.warning("plot: No errors for key %s. Leaving empty." % key)
+                        logger.warning("No errors for key %s. Leaving empty." % key)
 
             # Annotate flagged data points:
             if annotate:
@@ -623,10 +626,10 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             # Plot shaded storm phases:
             if stormphases:
                 if not t_stormphases:
-                    loggerplot.error("plotStreams: No variable t_stormphases for plotting phases.")
+                    logger.error("No variable t_stormphases for plotting phases.")
                     raise Exception("Require variable t_stormphases when stormphases=True!")
                 if len(t_stormphases) not in [1,2,3,4]:
-                    loggerplot.error("plotStreams: Length of variable t_stormphases incorrect.")
+                    logger.error("Length of variable t_stormphases incorrect.")
                     raise Exception("Something is wrong with length of variable t_stormphases!")
                 if type(stormphases) == list:
                     if stormphases[i][j]:
@@ -646,18 +649,18 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     sensor_id = stream.header['SensorID']
                     data_dict['sensorid'] = sensor_id
                 except:
-                    loggerplot.warning("plotStreams: No sensor ID to put into plot!")
+                    logger.warning("No sensor ID to put into plot!")
 
             plot_dict.append(data_dict)
             count += 1
 
-    loggerplot.info("plotStreams: Starting plotting function...")
+    logger.info("Starting plotting function...")
     if not noshow:
         _plot(plot_dict, **kwargs)
-        loggerplot.info("plotStreams: Plotting completed.")
+        logger.info("Plotting completed.")
     else:
         fig = _plot(plot_dict, noshow=True, **kwargs)
-        loggerplot.info("plotStreams: Plotting completed.")
+        logger.info("Plotting completed.")
         return fig
 
 
@@ -1344,20 +1347,21 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
                         outfile='ps.png')
     """
 
-    loggerplot.info("plotPS: Starting powerspectrum calculation.")
+    logger = logging.getLogger(__name__+".plotPS")
+    logger.info("Starting powerspectrum calculation.")
 
     if noshow == True:
         show = False
     elif noshow == False:
         show = True
     else:
-        loggerplot.error("plotPS: Incorrect value ({:s}) for variable noshow.".format(noshow))
+        logger.error("Incorrect value ({:s}) for variable noshow.".format(noshow))
         raise ValueError("Incorrect value ({:s}) for variable noshow.".format(noshow))
 
     dt = stream.get_sampling_period()*24*3600
 
     if not stream.length()[0] > 0:
-        loggerplot.error("plotPS: Stream of zero length -- aborting.")
+        logger.error("Stream of zero length -- aborting.")
         raise Exception("Can't analyse power spectrum of stream of zero length!")
 
     t_new, val_new, nfft = _extract_data_for_PSD(stream, key)
@@ -1406,7 +1410,7 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
     if plottitle:
         ax.set_title(plottitle)
 
-    loggerplot.info("Finished powerspectrum.")
+    logger.info("Finished powerspectrum.")
 
     if outfile:
         if fmt:
@@ -2127,6 +2131,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
     figure  -- for GUI
     fill = ['x']
     '''
+    logger = logging.getLogger(__name__+"._plot")
 
     if not figure:
         fig = plt.figure()
@@ -2163,7 +2168,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         datalabel = data[i]['datalabel']
 
         # CREATE SUBPLOT OBJECT & ADD TITLE:
-        loggerplot.info("_plot: Adding subplot for key %s..." % data[i]['ylabel'])
+        logger.info("Adding subplot for key %s..." % data[i]['ylabel'])
         if i == 0:
             ax = fig.add_subplot(subplt, axisbg=bgcolor)
             if plottitle:
@@ -2273,11 +2278,11 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                                     d_t.append(float(t[idx]))
                                     d_y.append(y[idx])
                           except:
-                            print ("Error when marking flags - check", flags[0][cnt0], indexflag)
+                            logger.error("Error when marking flags - check: {} {}".format(flags[0][cnt0], indexflag))
                         else:
-                            print("Found problem in flagging information - still to be solved")
-                            print("Flag at count and its index position", cnt0, indexflag)
-                            print("Flag and Comment (expected -000000000 and comment)", flags[0][cnt0], flags[1][cnt0])
+                            logger.info("Found problem in flagging information - still to be solved")
+                            logger.info("Flag at count and its index position {} {}".format(cnt0, indexflag))
+                            logger.info("Flag and Comment (expected -000000000 and comment) {} {}".format(flags[0][cnt0], flags[1][cnt0]))
                 linecrit = 2000
                 if len(a_t) > 0:
                     if len(a_t) > linecrit:
