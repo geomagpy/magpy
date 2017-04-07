@@ -179,7 +179,7 @@ class LoadDataDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -272,7 +272,7 @@ class ExportDataDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -416,7 +416,7 @@ class ExportModifyNameDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -489,7 +489,7 @@ class DatabaseConnectDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 4
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -553,7 +553,7 @@ class DatabaseContentDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -683,7 +683,7 @@ class OptionsInitDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 4
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -859,7 +859,7 @@ class OptionsDIDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 4
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -931,7 +931,7 @@ class StreamExtractValuesDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.comparelst[0],size=(160,-1))
         self.value3TextCtrl = wx.TextCtrl(self, value="")
         self.okButton = wx.Button(self, wx.ID_OK, label='Extract')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
 
     def doLayout(self):
@@ -968,7 +968,7 @@ class StreamExtractValuesDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 4
-        rows = int(len(elemlist)/cols)
+        rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -1092,7 +1092,8 @@ class StreamPlotOptionsDialog(wx.Dialog):
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
         cols = 4
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
+
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1166,7 +1167,7 @@ class StreamFlagOutlierDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 3
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1313,7 +1314,7 @@ class StreamFlagRangeDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 4
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1441,7 +1442,7 @@ class StreamFlagSelectionDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 3
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1508,7 +1509,7 @@ class StreamLoadFlagDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1544,7 +1545,7 @@ class StreamLoadFlagDialog(wx.Dialog):
         try:
             self.flaglist = loadflags(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
         except:
-            self.flaglist = [] 
+            self.flaglist = []
         openFileDialog.Destroy()
         self.Close(True)
 
@@ -1594,7 +1595,7 @@ class StreamSaveFlagDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1853,7 +1854,7 @@ class AnalysisFitDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 1
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -1944,7 +1945,7 @@ class AnalysisFilterDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -2065,7 +2066,7 @@ class AnalysisOffsetDialog(wx.Dialog):
         #print "Hello:", contlst
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -2142,7 +2143,7 @@ class AnalysisRotationDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
@@ -2229,7 +2230,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         # A GridSizer will contain the other controls:
         cols = 1
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
@@ -2318,7 +2319,7 @@ class LoadDIDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 1
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -2414,7 +2415,7 @@ class DefineVarioDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 1
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
@@ -2487,7 +2488,7 @@ class DefineScalarDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 1
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
             gridSizer.Add(control, **options)
@@ -2577,7 +2578,7 @@ class DISetParameterDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 3
-        rows = int(len(contlist)/cols)
+        rows = int(np.ceil(len(contlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -3373,7 +3374,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
         # A GridSizer will contain the other controls:
         cols = 5
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:
@@ -3679,7 +3680,7 @@ class AGetMARCOSDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlist)/cols)
+        rows = int(np.ceil(len(contlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -3740,7 +3741,7 @@ class BGetMARCOSDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlist)/cols)
+        rows = int(np.ceil(len(contlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -3813,7 +3814,7 @@ class AGetMARTASDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlist)/cols)
+        rows = int(np.ceil(len(contlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
@@ -3938,7 +3939,7 @@ class MultiStreamDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(len(contlst)/cols)
+        rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         for control, options in contlst:

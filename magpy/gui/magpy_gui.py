@@ -478,6 +478,7 @@ class PlotPanel(wx.Panel):
         stream = streams[-1]
         key = keys[-1]
         if not len(stream.ndarray[0])>0:
+            #print ("Here")
             t = [elem.time for elem in stream]
             flag = [elem.flag for elem in stream]
             k = [eval("elem."+keys[0]) for elem in stream]
@@ -1222,7 +1223,7 @@ class MainFrame(wx.Frame):
         if formattype == 'MagPyDI':
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
-        if deltas and not formattype == 'MagPyDI':
+        if deltas and not formattype == 'MagPyDI' and not sensorid.startswith('GP20S3'):
             self.menu_p.str_page.errorBarsCheckBox.Enable()   # activated if delta columns are present and not DI file
         if not absinfo == None:
             self.menu_p.str_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
@@ -1530,7 +1531,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         info = wx.AboutDialogInfo()
 
         try:
-            info.SetIcon(wx.Icon('magpy128.xpm', wx.BITMAP_TYPE_XPM))
+            script_dir = os.path.dirname(__file__)
+            iconimage = os.path.join(script_dir,'magpy128.xpm')
+            # Alternative:
+            #print ("Check", iconimage)
+            #if sys.platform.startswith('linux'):
+            info.SetIcon(wx.Icon(iconimage, wx.BITMAP_TYPE_XPM))
         except:
             pass
         info.SetName('MagPy')
@@ -2655,6 +2661,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 logic2 = dlg.logic2ComboBox.GetValue()
                 logic3 = dlg.logic3ComboBox.GetValue()
                 extractedstream = self.plotstream.extract(key1,val1,comp1)
+                if len(extractedstream) < 2 and extractedstream.length()[0] < 2:
+                    # Empty stream returned -- looks complex because of old LineStruct rubbish
+                    self.menu_p.rep_page.logMsg('Extract: criteria would return an empty data stream - skipping')
+                    extractedstream = self.plotstream
                 val2 = dlg.value2TextCtrl.GetValue()
                 if not val2 == '':
                     key2 = dlg.key2ComboBox.GetValue()
@@ -2663,7 +2673,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         extractedstream = extractedstream.extract(key2,val2,comp2)
                     else:
                         extractedstream2 = self.plotstream.extract(key2,val2,comp2)
-                        # TODO extractedstream = join(extractedstream,extractedstream2)
+                        extractedstream.extend(extractedstream2.container, extractedstream2.header,extractedstream2.ndarray)
+                        extractedstream = extractedstream.removeduplicates()
+                        extractedstream = extractedstream.sorting()
+                        extractedstream = extractedstream.get_gaps()
                     val3 = dlg.value3TextCtrl.GetValue()
                     if not val3 == '':
                         key3 = dlg.key3ComboBox.GetValue()
@@ -2672,7 +2685,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             extractedstream = extractedstream.extract(key3,val3,comp3)
                         else:
                             extractedstream3 = self.plotstream.extract(key3,val3,comp3)
-                            # TODO extractedstream = join(extractedstream,extractedstream3)
+                            extractedstream.extend(extractedstream3.container, extractedstream3.header,extractedstream3.ndarray)
+                            extractedstream = extractedstream.removeduplicates()
+                            extractedstream = extractedstream.sorting()
+                            extractedstream = extractedstream.get_gaps()
                 self.plotstream = extractedstream
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)

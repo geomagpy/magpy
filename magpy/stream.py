@@ -4,6 +4,8 @@ MagPy-General: Standard pymag package containing the following classes:
 Written by Roman Leonhardt, Rachel Bailey 2011/2012/2013/2014
 Written by Roman Leonhardt, Rachel Bailey, Mojca Miklavec 2015/2016
 Version 0.3 (starting May 2016)
+License:
+https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 """
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -3241,6 +3243,9 @@ CALLED BY:
             compare = '=='
         if not compare in [">=", "<=",">", "<", "==", "!=", 'like']:
             loggerstream.info('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==", "like" or "!=" ')
+            return self
+
+        if value in ['',None]:
             return self
 
         ndtype = False
@@ -10037,10 +10042,10 @@ def loadflags(path=None,sensorid=None,begin=None, end=None):
             print(" - extracting data for sensor {}".format(sensorid))
             mylist = [el for el in mylist if el[5] == sensorid]
             if begin:
-                mylist = [el for el in mylist if el[1] > start]
+                mylist = [el for el in mylist if el[1] > begin]
             if end:
                 mylist = [el for el in mylist if el[0] < end]
-            print(" -> remaining flags: {b}".format(b=len(mylist)))
+            #print(" -> remaining flags: {b}".format(b=len(mylist)))
         return mylist
     except:
         return []

@@ -563,7 +563,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             # Create array for errorbars:
             if errorbars:
                 if type(errorbars) == list:
-                    if errorbars[i][j]:
+                    if errorbars[i][j] and not key.startswith('d'):
                         ind = KEYLIST.index('d'+key)
                         if ndtype:
                             errors = stream.ndarray[ind]
