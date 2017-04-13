@@ -173,24 +173,11 @@ written by R. Leonhardt, R. Bailey (April 2017)
 ### 2.1 Getting started
 
 Start python.... 
-then import the basic read method form the stream object
+then import all steam methods and classes using
 
-    from magpy.stream import read
+    from magpy.stream import *
 
-You should get an output like:
-
-    MagPy version x.x.xxx
-    Loaded Matplotlib - Version [1, 1, 1]
-    Loading Numpy and SciPy...
-    Loading SpacePy package cdf support ...
-    trying CDF lib in /usr/local/cdf
-    SpacePy: Space Science Tools for Python
-    SpacePy is released under license.
-    See __licence__ for details, __citation__ for citation information,
-    and help() for HTML help.
-    ... success
-    Loading python's SQL support
-    ... success
+Please note that this import will shadow any already existing `read` method.
 
 
 ### 2.2 Reading and writing data

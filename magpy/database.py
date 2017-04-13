@@ -13,11 +13,11 @@ from magpy.stream import *
 from magpy.absolutes import *
 from magpy.transfer import *
 
-print("Loading python's SQL support")
+basiclogger.info("Loading python's SQL support")
 try:
     # Loading MySQL functionality
     import MySQLdb as mysql
-    print("... success")
+    basiclogger.info("... success")
 except ImportError:
     try:
         # Loading alternative MySQL functionality

@@ -185,7 +185,7 @@ def _timeToArray(timestring):
         datearray = splittedday + splittedtime
         datearray.append(splittedsec[1])
         datearray = map(int,datearray)
-        return datearray
+        return datetime(*datearray)
     except:
         log.msg('Error while extracting time array')
         return []
@@ -253,6 +253,7 @@ class Pos1Protocol(LineReceiver):
 
     def processPos1Data(self, data):
         """Convert raw ADC counts into SI units as per datasheets"""
+        #print (data)
         if len(data) != 44:
             log.err('POS1 - Protocol: Unable to parse data of length %i' % len(data))
 
@@ -278,16 +279,19 @@ class Pos1Protocol(LineReceiver):
             intensity = 0.0
             sigma_int = 0.0
             err_code = 0.0
+        #try:
+        # extract time data
+        datedt = _timeToArray(timestamp)        
+        # new line for time shift
+        datedt = datedt - timedelta(seconds=6.770)
+        gpsdt = _timeToArray(gps_time)
         try:
-            # extract time data
-            datearray = _timeToArray(timestamp)
-            # new line for time shift
-            datearray = datearray - timedelta(seconds=6.770)
-            gpsarray = _timeToArray(gps_time)
             try:
+                datearray = [datedt.year, datedt.month, datedt.day, datedt.hour, datedt.minute, datedt.second, datedt.microsecond]
                 datearray.append(int(intensity*1000))
                 datearray.append(int(sigma_int*1000))
                 datearray.append(err_code)
+                gpsarray = [gpsdt.year, gpsdt.month, gpsdt.day, gpsdt.hour, gpsdt.minute, gpsdt.second, gpsdt.microsecond]
                 datearray.extend(gpsarray)
                 data_bin = struct.pack(packcode,datearray[0],datearray[1],datearray[2],datearray[3],datearray[4],datearray[5],datearray[6],datearray[7],datearray[8],datearray[9],datearray[10],datearray[11],datearray[12],datearray[13],datearray[14],datearray[15],datearray[16])
                 # File Operations

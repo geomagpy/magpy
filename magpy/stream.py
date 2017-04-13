@@ -9961,7 +9961,11 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
                 foundapproptiate = True
                 break
         if not foundapproptiate:
-            print ("Could not identify a suitable data format")
+            temp = open(filename, 'rt').readline()
+            if temp.startswith('# MagPy Absolutes'):
+                print ("You apparently try to open a DI object - please use the absoluteAnalysis method")
+            else:
+                print ("Could not identify a suitable data format")
             return DataStream([LineStruct()],{},np.asarray([[] for el in KEYLIST]))
     else:
         # format given via argument
