@@ -44,6 +44,9 @@ from __future__ import print_function
 
 from magpy.stream import *
 
+import logging
+logger = logging.getLogger(__name__)
+
 # IMPORT INSTRUMENT SPECIFIC DATA FORMATS:
 from magpy.lib.format_gsm19 import *
 from magpy.lib.format_didd import *
@@ -238,7 +241,7 @@ def isFormat(filename, format_type):
     elif (format_type == "UNKOWN"): # Unkown
         return False
     else:
-        print ("Could not identify data format", filename,format_type)
+        logger.warning("isFormat: Could not identify data format for file {}. Is {} a valid type?".format(filename, format_type))
         return False
 
 
@@ -338,6 +341,7 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
     elif (format_type == "NEIC"):
         return readNEIC(filename, headonly, **kwargs)
     else:
+        logger.info("No valid format found ({}). Returning empty stream.".format(format_type))
         return DataStream(empty,empty.header)
 
 
@@ -380,5 +384,4 @@ def writeFormat(datastream, filename, format_type, **kwargs):
     elif (format_type == "LATEX"):
         return writeLATEX(datastream, filename, **kwargs)
     else:
-        print("magpy-formats: Writing not succesful - format not recognized")
-        logging.warning("magpy-formats: Writing not succesful - format not recognized")
+        logging.warning("writeFormat: Writing not succesful - format not recognized")

@@ -13,12 +13,14 @@ from __future__ import division
 from magpy.stream import *
 import ftplib
 import subprocess
+import logging
+logger = logging.getLogger(__name__)
 
 try:
     import pexpect
     ssh = True
 except:
-    print("SSH support not active - please install package pexpect to use this functionality")
+    logger.warning("SSH support not active - please install the pexpect package to use this functionality")
     ssh = False
 
 # Define defaults:

@@ -13,21 +13,24 @@ from magpy.stream import *
 from magpy.absolutes import *
 from magpy.transfer import *
 
-basiclogger.info("Loading python's SQL support")
+import logging
+logger = logging.getLogger(__name__)
+
+logger.info("Loading python's SQL support")
 try:
     # Loading MySQL functionality
     import MySQLdb as mysql
-    basiclogger.info("... success")
+    logger.info("... success")
 except ImportError:
     try:
         # Loading alternative MySQL functionality
         import pymysql as mysql
         mysql.install_as_MySQLdb()
-        print("... success")
+        logger.info("... success")
     except:
-        print("Failed to import SQL packages 'MySQLdb' or 'pymysql'")
+        logger.warning("Failed to import SQL packages 'MySQLdb' or 'pymysql'")
 except:
-    print("SQL package import failed")
+    logger.warning("MySQLdb package import failed")
     pass
 
 

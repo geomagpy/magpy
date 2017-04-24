@@ -44,6 +44,9 @@ from __future__ import unicode_literals
 from __future__ import division
 
 from magpy.stream import *
+
+import logging
+logger = logging.getLogger(__name__)
 '''
 try:
     import matplotlib
@@ -70,8 +73,8 @@ try:
     from pylab import *
     from datetime import datetime, timedelta
 except ImportError as e:
-    loggerplot.error("plot package: Matplotlib import error. If missing, please install to proceed.")
-    loggerplot.error("Error string: %s" % e)
+    logger.error("plot package: Matplotlib import error. If missing, please install to proceed.")
+    logger.error("Error string: %s" % e)
     raise Exception("CRITICAL IMPORT ERROR FOR PLOT PACKAGE: Matplotlib import error.")
 '''
 
@@ -131,7 +134,7 @@ def ploteasy(stream):
         datadate = datetime.strftime(num2date(stream.ndarray[0][0]),'%Y-%m-%d')
 
     plottitle = "%s (%s)" % (sensorid,datadate)
-    print("Plotting keys:", keys)
+    logger.info("Plotting keys:", keys)
     plot_new(stream, keys,
                 confinex = True,
                 plottitle = plottitle)
@@ -217,11 +220,9 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
     '''
 
     # Test whether columns really contain data or whether only nans are present:
-    #print stream.ndarray
     stream = stream._remove_nancolumns()
     availablekeys = stream._get_key_headers(numerical=True)
     logger = logging.getLogger(__name__+".plot")
-    #print stream.ndarray
 
     # if no variables are given, use all available:
     if len(variables) < 1:
@@ -397,15 +398,15 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
     for item in variables:
         num_of_var += len(item)
     if num_of_var > 9:
-        logger.error("plotStreams: Can't plot more than 9 variables, sorry.")
+        logger.error("Can't plot more than 9 variables, sorry.")
         raise Exception("Can't plot more than 9 variables!")
 
     # Check lists for variables have correct length:
     if len(symbollist) < num_of_var:
-        logger.error("plotStreams: Length of symbol list does not match number of variables.")
+        logger.error("Length of symbol list does not match number of variables.")
         raise Exception("Length of symbol list does not match number of variables.")
     if len(colorlist) < num_of_var:
-        logger.error("plotStreams: Length of color list does not match number of variables.")
+        logger.error("Length of color list does not match number of variables.")
         raise Exception("Length of color list does not match number of variables.")
 
     plot_dict = []
@@ -470,7 +471,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 flagarray =  np.asarray([list(el)[ind] for el in flags])
                 print("Flagarray", flagarray)
                 indicies = np.where(flagarray == '1')
-                print("Indicies", indicies)
+                print("Indicis", indicis)
                 #for index in indicies:
                 #    y[index] = NaN
                     #y[index] = float('nan')
@@ -705,7 +706,7 @@ class figFlagger():
             try:
                 self.data = self.analyzeData(self.orgkeylist)
             except:
-                print("plotFlag: You have to provide variables for this data set")
+                logger.warning("figFlagger.__init__: You have to provide variables for this data set")
 
 
         keylist = self.data._get_key_headers(numerical=True)
@@ -732,8 +733,8 @@ class figFlagger():
     def analyzeData(self,keylist):
         #keylist = self.data._get_key_headers()
         if not len(self.data.ndarray[0]) > 0:
-            print("No ndarrayfound:")
-            print(" -- stream will be converted to ndarray type")
+            logger.warning("figFlagger.analyzeData: No ndarray found:")
+            logger.warning("figFlagger.analyzeData: stream will be converted to ndarray type")
             self.data = self.data.linestruct2ndarray()
 
         if 'x' in keylist and 'y' in keylist and 'z' in keylist:
@@ -1066,19 +1067,16 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
     # - add a haeufigkeit plot perpendicular to the diagrams
     import magpy.opt.emd as emd # XXX: add this into main program when method is finalised
 
-    loggerplot.info("plotEMD: Starting EMD calculation.")
+    logger.info("plotEMD: Starting EMD calculation.")
 
     col = stream._get_column(key)
     timecol = stream._get_column('time')
-    if verbose:
-        print("Amount of values and standard deviation:", len(col), np.std(col))
+    logger.debug("plotEMD: Amount of values and standard deviation:", len(col), np.std(col))
 
     res = emd.emd(col,max_modes=max_modes)
-    if verbose:
-        print("Found the following amount of decomposed modes:", len(res))
+    logger.debug("plotEMD: Found the following amount of decomposed modes:", len(res))
     separate = int(np.round(len(res)*sratio,0))
-    if verbose:
-        print("Separating the last N curves as smooth. N =",separate)
+    logger.debug("plotEMD: Separating the last N curves as smooth. N =",separate)
     stdarray = []
     newcurve = [0]*len(res[0])
     noisecurve = [0]*len(res[0])
@@ -1105,16 +1103,13 @@ def plotEMD(stream,key,verbose=False,plottitle=None,
             noisecurve = [x + y for x, y in zip(noisecurve, elem)]
         """
         if i > stackvals[2]: # 14 - add stackvals = [2,8,14]
-            if verbose:
-                print("Smooth:", i)
+            logger.debug("plotEMD: Smooth: {}".format(i))
             smoothcurve = [x + y for x, y in zip(smoothcurve, elem)]
         if stackvals[1] <= i <= stackvals[2]:
-            if verbose:
-                print("Mid:", i)
+            logger.debug("plotEMD: Mid: {}".format(i))
             midcurve = [x + y for x, y in zip(midcurve, elem)]
         if stackvals[0] < i < stackvals[1]:
-            if verbose:
-                print("Noise:", i)
+            logger.debug("plotEMD: Noise: {}".format(i))
             noisecurve = [x + y for x, y in zip(noisecurve, elem)]
 
     plt.show()
@@ -1208,17 +1203,17 @@ def plotNormStreams(streamlist, key, normalize=True, normalizet=False,
 
     if labels:
         if len(labels) != len(streamlist):
-            loggerplot.warning("plotNormStreams: Number of labels does not match number of streams!")
+            logger.warning("plotNormStreams: Number of labels does not match number of streams!")
 
     for i, stream in enumerate(streamlist):
-        loggerplot.info("plotNormStreams: Adding stream %s of %s..." % ((i+1),len(streamlist)))
+        logger.info("plotNormStreams: Adding stream %s of %s..." % ((i+1),len(streamlist)))
         y = stream._get_column(key)
         t = stream._get_column('time')
         xlabel = "Time (UTC)"
         color = colorlist[i]
 
         if len(y) == 0:
-            loggerplot.error("plotNormStreams: stream with empty array!")
+            logger.error("plotNormStreams: stream with empty array!")
             return
         try:
             yunit = stream.header['unit-col-'+key]
@@ -1347,27 +1342,25 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
                         outfile='ps.png')
     """
 
-    logger = logging.getLogger(__name__+".plotPS")
-    logger.info("Starting powerspectrum calculation.")
+    logger.info("plotPS: Starting power spectrum calculation")
 
     if noshow == True:
         show = False
     elif noshow == False:
         show = True
     else:
-        logger.error("Incorrect value ({:s}) for variable noshow.".format(noshow))
-        raise ValueError("Incorrect value ({:s}) for variable noshow.".format(noshow))
+        logger.error("plotPS: Incorrect value ({:s}) for variable noshow.".format(noshow))
+        raise ValueError("plotPS: Incorrect value ({:s}) for variable noshow.".format(noshow))
 
     dt = stream.get_sampling_period()*24*3600
 
     if not stream.length()[0] > 0:
-        logger.error("Stream of zero length -- aborting.")
-        raise Exception("Can't analyse power spectrum of stream of zero length!")
+        logger.error("plotPS: Stream of zero length -- aborting.")
+        raise Exception("plotPS: Can't analyse power spectrum of stream of zero length!")
 
     t_new, val_new, nfft = _extract_data_for_PSD(stream, key)
 
-    if debugmode:
-        print("Extracted data for powerspectrum at %s" % datetime.utcnow())
+    logger.debug("plotPS: Extracted data for powerspectrum at %s" % datetime.utcnow())
 
     if not axes:
         fig = plt.figure()
@@ -1381,13 +1374,11 @@ def plotPS(stream,key,debugmode=False,outfile=None,noshow=False,
 
     ax.loglog(freqm, asdm,'b-')
 
-    if debugmode:
-        print("Maximum frequency:", max(freqm))
+    logger.debug("Maximum frequency: {}".format(max(freqm)))
 
     if freqlevel:
         val, idx = find_nearest(freqm, freqlevel)
-        if debugmode:
-            print("Maximum Noise Level at %s Hz: %s" % (val,asdm[idx]))
+        logger.debug("Maximum Noise Level at %s Hz: %s" % (val,asdm[idx]))
 
     if not marks:
         pass
@@ -1471,7 +1462,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
         >>>
     """
 
-    loggerplot.info("plotSatMag - Starting plotting of satellite and magnetic data...")
+    logger.info("plotSatMag - Starting plotting of satellite and magnetic data...")
 
     key_mag, key_sat = keys[0], keys[1]
     ind_mag, ind_sat, ind_t = KEYLIST.index(key_mag), KEYLIST.index(key_sat), KEYLIST.index('time')
@@ -1510,7 +1501,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
 
     if (len(y_sat) == 0 or len(y_mag)) == 0:
-        loggerplot.error("plotSatMag - Can't plot empty column! Full of nans?")
+        logger.error("plotSatMag - Can't plot empty column! Full of nans?")
         raise Exception("plotSatMag - Empty column!")
 
     # Define y-labels:
@@ -1632,10 +1623,10 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
     if outfile:
         plt.savefig(outfile,savedpi=80)
-        loggerplot.info("plotSatMag - Plot saved to %s." % outfile)
+        logger.info("plotSatMag - Plot saved to %s." % outfile)
     else:
         plt.show()
-        loggerplot.info("plotSatMag - Plot completed.")
+        logger.info("plotSatMag - Plot completed.")
 
 
 def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
@@ -1690,7 +1681,7 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         minfreq = 0.0001
 
     if not len(t) > 0:
-        loggerplot.error('plotSpectrogram: stream of zero length -- aborting')
+        logger.error('plotSpectrogram: stream of zero length -- aborting')
         return
 
     for key in keys:
@@ -1910,10 +1901,10 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
         >>>
     """
 
-    loggerplot.info('plotStereoplot: Starting plot of stereoplot.')
+    logger.info('plotStereoplot: Starting plot of stereoplot.')
 
     if not stream[0].typ == 'idff':
-        loggerplot.error('plotStereoplot: idf data required for stereoplot.')
+        logger.error('plotStereoplot: idf data required for stereoplot.')
         raise Exception("Idf data required for plotting a stereoplot!")
 
     inc = stream._get_column('x')
@@ -1927,7 +1918,7 @@ def plotStereoplot(stream,focus='all',colorlist = ['b','r','g','c','m','y','k'],
             col = col[:7]
 
     if not len(dec) == len(inc):
-        loggerplot.error('plotStereoplot: Check input file - unequal inc and dec data?')
+        logger.error('plotStereoplot: Check input file - unequal inc and dec data?')
         return
 
     if not figure:

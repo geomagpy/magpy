@@ -13,6 +13,9 @@ from io import open
 # Specify what methods are really needed
 from magpy.stream import *
 
+import logging
+logger = logging.getLogger(__name__)
+
 import gc
 
 
@@ -69,7 +72,7 @@ def isPYCDF(filename):
     except:
         return False
 
-    #loggerlib.debug("format_magpy: Found PYCDF file %s" % filename)
+    logger.debug("format_magpy: Found PYCDF file %s" % filename)
     return True
 
 
@@ -84,7 +87,7 @@ def isPYSTR(filename):
     if not temp.startswith(' # MagPy - ASCII'):
         return False
 
-    #loggerlib.debug("format_magpy: Found PYSTR file %s" % filename)
+    logger.debug("format_magpy: Found PYSTR file %s" % filename)
     return True
 
 
@@ -99,7 +102,7 @@ def isPYASCII(filename):
     if not temp.startswith(' # MagPy ASCII'):
         return False
 
-    #loggerlib.debug("format_magpy: Found PYSTR file %s" % filename)
+    logger.debug("format_magpy: Found PYASCII file %s" % filename)
     return True
 
 
@@ -114,7 +117,7 @@ def isPYBIN(filename):
     if not temp.startswith('# MagPyBin'):
         return False
 
-    #loggerlib.debug("format_magpy: Found PYBIN file %s" % filename)
+    logger.debug("format_magpy: Found PYBIN file %s" % filename)
     return True
 
 
@@ -133,7 +136,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
 
     headers = {}
 
-    loggerlib.info('readPYASCII: Reading %s' % (filename))
+    logger.info('readPYASCII: Reading %s' % (filename))
 
     qFile= open( filename, "r", newline='' )
 
@@ -230,7 +233,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
     # Check whether header infromation is already present
     headers={}
 
-    loggerlib.info('readPYSTR: Reading %s' % (filename))
+    logger.info('readPYSTR: Reading %s' % (filename))
     #qFile= file( filename, "rb" )
     qFile= open( filename, "rt", newline='' )
     csvReader= csv.reader( qFile )
@@ -367,7 +370,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         try:
             cdfformat = cdf_file.attrs['DataFormat']
         except:
-            logging.info("No format specification in CDF - passing")
+            logger.info("readPYCDF: No format specification in CDF - passing")
             cdfformat = 'Unknown'
             pass
         OMNIACE = False
@@ -383,18 +386,18 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
                     stream.header[key] = str(cdf_file.attrs[key])
                 else:
-                    print("Found Object - loading and unpickling")
+                    logger.debug("readPYCDF: Found object - loading and unpickling")
                     try:
                         func = pickle.loads(str(cdf_file.attrs[key]))
                         stream.header[key] = func
                     except:
-                        print("Failed to load Object - constructed before v0.2.000?")
+                        logger.debug("readPYCDF: Failed to load Object - constructed before v0.2.000?")
 
         #if headonly:
         #    cdf_file.close()
         #    return DataStream(stream, stream.header)
 
-        loggerlib.info('Read: %s Format: %s ' % (filename, cdfformat))
+        logger.info('readPYCDF: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
             #print key
@@ -730,9 +733,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     logbaddata = False
 
     if getfile:
-        loggerlib.info("read: %s Format: PYCDF" % filename)
-        if debug:
-            print ("PYBIN: Found pybin files")
+        logger.info("readPYBIN: %s Format: PYCDF" % filename)
 
         fh = open(filename, 'rb')
         #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
@@ -744,14 +745,12 @@ def readPYBIN(filename, headonly=False, **kwargs):
         header = header.replace(', ',',')
         header = header.replace('deg C','deg')
         h_elem = header.strip().split()
-        if debug:
-            print ("PYBIN: Header {}".format(header))
+        logger.debug("PYBIN: Header {}".format(header))
 
-        if debug:
-            print('readPYBIN- debug header type (len should be 9): ', h_elem, len(h_elem))
+        logger.debug('readPYBIN- debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
 
         if not h_elem[1] == 'MagPyBin':
-            print('readPYBIN: No MagPyBin format - aborting')
+            logger.error('readPYBIN: No MagPyBin format - aborting')
             return
         #print "Length ", len(h_elem), h_elem[2]
 
@@ -761,16 +760,16 @@ def readPYBIN(filename, headonly=False, **kwargs):
             nospecial = True
             try:
                 if not keylist:
-                    loggerlib.error('readPYBIN: keylist of length(elemlist) needs to be specified')
+                    logger.error('readPYBIN: keylist of length(elemlist) needs to be specified')
                     return stream
                 elemlist = h_elem[3].strip('[').strip(']').split(',')
                 unitlist = h_elem[4].strip('[').strip(']').split(',')
                 multilist = list(map(float,h_elem[5].strip('[').strip(']').split(',')))
             except:
-                print("readPYBIN: Could not extract lists from header - check format - aborting...")
+                logger.error("readPYBIN: Could not extract lists from header - check format - aborting...")
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
-                loggerlib.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
+                logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
                 return stream
         elif len(h_elem) == 9:
             #print "The current format"
@@ -781,16 +780,15 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 unitlist = h_elem[5].strip('[').strip(']').split(',')
                 multilist = list(map(float,h_elem[6].strip('[').strip(']').split(',')))
             except:
-                loggerlib.error("readPYBIN: Could not extract lists from header - check format - aborting...")
+                logger.error("readPYBIN: Could not extract lists from header - check format - aborting...")
                 return stream
             if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
                 if debug:
                     print('readPYBIN- header list error:', len(keylist), len(elemlist), len(unitlist), len(multilist))
-                loggerlib.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
+                logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
                 return stream
         elif len(h_elem) == 10:
-            #print "Special format"
-            loggerlib.debug("readPYBIN: Special format detected. May not be able to read file.")
+            logger.info("readPYBIN: Special format detected. May not be able to read file.")
             nospecial = False
             if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
                 keylist = h_elem[3].strip('[').strip(']').split(',')
@@ -799,11 +797,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 multilist = list(map(float,h_elem[7].strip('[').strip(']').split(',')))
                 nospecial = True
         else:
-            loggerlib.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
+            logger.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
             return stream
 
-        if debug:
-            print('readPYBIN- checking code')
+        logger.debug('readPYBIN: checking code')
 
         packstr = '<'+h_elem[-2]+'B'
         packstr = packstr.encode('ascii','ignore')
@@ -811,7 +808,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         lengthgiven = int(h_elem[-1])+1
         length = lengthgiven
         if not lengthcode == lengthgiven:
-            loggerlib.debug("readPYBIN: Check your packing code!")
+            logger.debug("readPYBIN: Check your packing code!")
             if lengthcode < lengthgiven:
                 missings = lengthgiven-lengthcode
                 for i in range(missings):
@@ -820,8 +817,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             else:
                 length = lengthcode
 
-        if debug:
-            print('readPYBIN- unpack info:', packstr, lengthcode, lengthgiven)
+        logger.debug('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
 
         #fh = open(filename, 'rb')
         line = fh.read(length)
@@ -835,8 +831,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         array = [[] for key in KEYLIST]
         if nospecial:
-            if debug:
-                print('readPYBIN- debug found line')
+            logger.debug('readPYBIN- debug found line')
 
             for idx, elem in enumerate(keylist):
                 stream.header['col-'+elem] = elemlist[idx]
@@ -849,7 +844,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 try:
                     data= struct.unpack(packstr, line)
                 except:
-                    print("readPYBIN: struct error", filename, len(line))
+                    logger.error("readPYBIN: struct error {} {}".format(filename, len(line)))
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:
@@ -884,22 +879,21 @@ def readPYBIN(filename, headonly=False, **kwargs):
                             exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
                         stream.add(row)
                     if logbaddata == True:
-                        loggerlib.error("readPYBIN: Good data resumes with: %s" % str(data))
+                        logger.error("readPYBIN: Good data resumes with: %s" % str(data))
                         logbaddata = False
                 except:
-                    loggerlib.error("readPYBIN: Error in line while reading data file. Last line at: %s" % str(lastdata))
+                    logger.error("readPYBIN: Error in line while reading data file. Last line at: %s" % str(lastdata))
                     logbaddata = True
                 lastdata = data
                 line = fh.read(length)
         else:
-            print("To be done ...")
+            print("Not implemented")
             pass
 
         array = np.asarray([np.asarray(el).astype(object) for el in array])
         stream.ndarray = array
         if len(stream.ndarray[0]) > 0:
-            if debug:
-                print("readPYBIN: Imported bin as ndarray")
+            logger.debug("readPYBIN: Imported bin as ndarray")
             stream.container = [LineStruct()]
             # if unequal lengths are found, then usually txt and bin files are loaded together
 
@@ -912,7 +906,7 @@ def writePYSTR(datastream, filename, **kwargs):
     """
 
     mode = kwargs.get('mode')
-    loggerlib.info("writePYSTR: Writing file to %s" % filename)
+    logger.info("writePYSTR: Writing file to %s" % filename)
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -920,7 +914,7 @@ def writePYSTR(datastream, filename, **kwargs):
                 exst = read(path_or_url=filename)
                 datastream = joinStreams(exst,datastream)
             except:
-                loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
+                logger.info("writePYSTR: Could not interprete existing file - replacing %s" % filename)
             if sys.version_info >= (3,0,0):
                 myFile= open( filename, "w", newline='' )
             else:
@@ -930,7 +924,7 @@ def writePYSTR(datastream, filename, **kwargs):
                 exst = read(path_or_url=filename)
                 datastream = joinStreams(datastream,exst)
             except:
-                loggerlib.info("writePYSTR: Could not interprete existing file - replacing" % filename)
+                logger.info("writePYSTR: Could not interprete existing file - replacing %s" % filename)
             if sys.version_info >= (3,0,0):
                 myFile= open( filename, "w", newline='' )
             else:
@@ -1057,7 +1051,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 exst = read(path_or_url=filename+'.cdf')
                 datastream = joinStreams(datastream,exst,extend=True)
             except:
-                print("Could not interprete existing data set - aborting")
+                logger.error("writePYCDF: Could not interprete existing data set - aborting")
                 sys.exit()
             os.remove(filename+'.cdf')
             mycdf = cdf.CDF(filename, '')
@@ -1097,7 +1091,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
                     mycdf.attrs[key] = headdict[key]
                 else:
-                    print("Found Object in header - pickle and dump ")
+                    logger.info("writePYCDF: Found Object in header - pickle and dump ")
                     pfunc = pickle.dumps(headdict[key])
                     mycdf.attrs[key] = pfunc
 
@@ -1138,7 +1132,7 @@ def writePYCDF(datastream, filename, **kwargs):
         except:
             pass
         if not False in checkEqual3(col) and len(col) > 0:
-            print("Found identical values only: %s" % key)
+            logger.warning("writePYCDF: Found identical values only for key: %s" % key)
             col = col[:1]
             #if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
             #- better not!!! 2015-10-14 --- if two files are loaded, one with flags, one without, then column lengths will not fit
@@ -1189,10 +1183,10 @@ def writePYCDF(datastream, filename, **kwargs):
         try:
             mycdf.compress(cdf.const.GZIP_COMPRESSION, compression)
         except:
-            print("format_magypy: compression of CDF failed - Trying to store uncompressed data")
-            print("format_magypy: please use option skipcompression=True if unreadable")
-            print("format_magypy: CDF: {}".format(mycdf))
-            print("format_magypy: attrs: {}".format(mycdf.attrs))
+            logger.warning("writePYCDF: : compression of CDF failed - Trying to store uncompressed data")
+            logger.warning("writePYCDF: please use option skipcompression=True if unreadable")
+            logger.info("writePYCDF: : CDF: {}".format(mycdf))
+            logger.info("writePYCDF: attrs: {}".format(mycdf.attrs))
             pass
 
     mycdf.close()
@@ -1205,7 +1199,7 @@ def writePYASCII(datastream, filename, **kwargs):
     """
 
     mode = kwargs.get('mode')
-    loggerlib.info("writePYASCII: Writing file to %s" % filename)
+    logger.info("writePYASCII: Writing file to %s" % filename)
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -1216,7 +1210,7 @@ def writePYASCII(datastream, filename, **kwargs):
             else:
                 myFile = open(filename, 'wb')
         elif mode == 'replace': # replace existing inputs
-            print("write ascii filename", filename)
+            logger.debug("write ascii filename", filename)
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst,extend=True)
             if sys.version_info >= (3,0,0):
