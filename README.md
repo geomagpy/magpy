@@ -725,25 +725,31 @@ The meta-information fields can hold much more information than required by most
 
 ### 2.10 Data transfer 
 
-MagPy contains a number of methods to simplify data transfer for observatory applications. Beside you can always use the basic python functionality. Using the implemented methods requires:
+MagPy contains a number of methods to simplify data transfer for observatory applications. Methods within the basic Python functionality can also be very useful. Using the implemented methods requires:
 
         from magpy import transfer as mt
 
 #### 2.10.1 Downloads
 
-Just use the read method as outlined in section a. No additional imports are required.
+Use the `read` method as outlined above. No additional imports are required.
 
-#### 2.10.2 Ftp upload
+#### 2.10.2 FTP upload
 
-The upload methods using ftp, scp and gin support logging. If the data file failed to upload correctly, the path is added to a log file and, when called again, upload is retried. This option is useful for remote locations with unstable network connections.
+Files can also be uploaded to an FTP server:
 
         mt.ftpdatatransfer(localfile='/path/to/data.cdf',ftppath='/remote/directory/',myproxy='ftpaddress or address of proxy',port=21,login='user',passwd='passwd',logfile='/path/mylog.log')
+        
+The upload methods using FTP, SCP and GIN support logging. If the data file failed to upload correctly, the path is added to a log file and, when called again, upload of the file is retried. This option is useful for remote locations with unstable network connections.
 
-#### 2.10.3 Secure communication
+#### 2.10.3 Secure communication protocol (SCP)
+
+To transfer via SCP:
 
         mt.scptransfer('user@address:/remote/directory/','/path/to/data.cdf',passwd,timeout=60)
 
 #### 2.10.4 Upload data to GIN
+
+Use the following command:
 
         mt.ginupload('/path/to/data.cdf', ginuser, ginpasswd, ginaddress, faillog=True, stdout=True)
 
@@ -753,38 +759,38 @@ In order to avoid using real-text password in scripts, MagPy comes along with a 
 
         from magpy.opt import cred as mpcred
 
-Adding encrypted passwd information for data transfer to a maschine called 'MyRemoteFTP' with an IP of 192.168.0.99:
+Credentials will be saved to a hidden file with encrypted passwords. To add information for data transfer to a machine called 'MyRemoteFTP' with an IP of 192.168.0.99:
 
         mpcred.cc('transfer', 'MyRemoteFTP', user='user', passwd='secure', address='192.168.0.99', port=21)
 
 Extracting passwd information within your data transfer scripts:
  
-        password=mpcred.lc('MyRemoteFTP','passwd')
-
+        user = mpcred.lc('MyRemoteFTP', 'user')
+        password = mpcred.lc('MyRemoteFTP','passwd')
 
 
 ### 2.11 DI measurements, basevalues and baselines 
 
-These procedures require an additional object
+These procedures require an additional import:
 
         from magpy import absolutes as di
 
 #### 2.11.1 Data structure of DI measurements
 
-Please check example3 which is an example DI file. You can create these DI files by using the input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, please contact the Observatory staff. Also supported are di-files from AUTODIF.
+Please check `example3`, which is an example DI file. You can create these DI files by using the input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, please contact the Observatory staff. Also supported are DI-files from the AUTODIF.
 
 #### 2.11.2 Reading DI data
 
-Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar informations needs to be provided as well. Checkout help(di.absoluteAnalysis) for all options. The analytical procedures are outlined in detail in the MagPy article (citation). A typical analysis looks like:
+Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field information needs to be provided as well. Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in the MagPy article (citation). A typical analysis looks like:
 
         diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
 
-Path to DI can either point to a single file, a directory or even use wildcards to select data fro a specific observatory/pillar. Using the examples provided along with MagPy the analysis line looks like
+Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, the analysis line looks like
 
         diresult = di.absoluteAnalysis(example3,example2,example2)
 
 
-Calling this method will provide an output the terminal as follows and a stream object 'diresult' which can be used further.
+Calling this method will provide terminal output as follows and a stream object `diresult` which can be used for further analyses.
 
         >>>...
         >>>Analyzing manual measurement from 2015-03-25
@@ -814,40 +820,41 @@ Adopted baseline:
 
 #### 2.11.4 Basevalues and baselines
 
-Basevalues as obtained in (2.11.2) or (2.11.3) are stored in a normal data stream object and therefore all methods outlined before can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example4` you will find some more di analysis results. To plot these basevalues we can use the following plot command, where we specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H and Z, +/- 0.05 deg for D.  
+Basevalues as obtained in (2.11.2) or (2.11.3) are stored in a normal data stream object, therefore all analysis methods outlined above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example4`, you will find some more DI analysis results. To plot these basevalues we can use the following plot command, where we specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H and Z, +/- 0.05 deg for D.
 
         basevalues = read(example4)
         mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5])
 
-Fitting a baseline can be easily accomplished with the fit method. Firstly we test a linear fit to the data, by fitting a polynom with degree 1.
+Fitting a baseline can be easily accomplished with the `fit` method. First we test a linear fit to the data by fitting a polynomial function with degree 1.
 
         func = basevalues.fit(['dx','dy','dz'],fitfunc='poly', fitdegree=1)
         mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
 
-The we fit a spline function using 3 knowsteps over the timerange (the knotstep option always relatively refers to the given timerange 1).
+We then fit a spline function using 3 knotsteps over the timerange (the knotstep option is always related to the given timerange).
 
         func = basevalues.fit(['dx','dy','dz'],fitfunc='spline', knotstep=0.33)
         mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
 
-Hint: a good estimate on the necessary fit complexity can be obtained by looking at delta F values. If delta F is rather constant, then also the baseline should not be complex either.
+Hint: a good estimate on the necessary fit complexity can be obtained by looking at delta F values. If delta F is mostly constant, then the baseline should also not be very complex.
 
 
 #### 2.11.5 Applying baselines
 
 
-The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. The basic building block of the baseline method is the fit function as discussed above. Lets first load vectorial geomagnetic raw data for which basevalues are contained in above example:
+The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. The basic building block of the baseline method is the fit function as discussed above. Lets first load raw vectorial geomagnetic data, the absevalues of which are contained in above example:
 
         rawdata = read(example5)
 
 Now we can apply the basevalue information and the spline function as tested above:
 
-        func = rawdata.baseline(basevalues, extradays=0, fitfunc='spline', knotstep=0.33,startabs='2015-09-01',endabs='2016-01-22')
+        func = rawdata.baseline(basevalues, extradays=0, fitfunc='spline',
+                                knotstep=0.33,startabs='2015-09-01',endabs='2016-01-22')
 
-The `baseline` method will determine and return a fit function between the two given timeranges, based on the provided basevalue data `blvdata`. The option extradays allows for adding days before and after start/endtime for which the baselinefunction will be extrapolated. This option is useful for providing quasidefinitive data. When applying this method, a number of new meta infomartion attributes will be added, containing basevalues and all functional parameter to describe the baseline. Thus, stream object still contains uncorrected raw data, but all baseline correction information is now contained within its meta data. To apply baseline correction you can issue the `bc` method.
+The `baseline` method will determine and return a fit function between the two given timeranges based on the provided basevalue data `blvdata`. The option `extradays` allows for adding days before and after start/endtime for which the baseline function will be extrapolated. This option is useful for providing quasi-definitive data. When applying this method, a number of new meta-information attributes will be added, containing basevalues and all functional parameters to describe the baseline. Thus, the stream object still contains uncorrected raw data, but all baseline correction information is now contained within its meta data. To apply baseline correction you can use the `bc` method:
 
         corrdata = rawdata.bc()
 
-If baseline jumps/breaks are necessary, you call the baseline function for each independend segment and then join the corrected streams:
+If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and then join the corrected streams:
 
         stream_a = read(mydata,starttime='2016-01-01',endtime='2016-02-01')
         func = stream_a.baseline(blvdata, extradays=0, fitfunc='spline', knotstep=0.3,startabs='2016-01-01',endabs='2016-02-01')
@@ -867,9 +874,11 @@ The combined baseline can be plotted accordingly. Extend the function parameters
 
 #### 2.11.6 Saving basevalue and baseline information
 
+The following will create a BLV file:
+
         diresult.write('/my/path',coverage='all',format_type='BLV',diff=meanstream,year='2016')
 
-will create a BLV file. Important is the `meanstream` data stream which is containing daily averages of delta F values between variometer and F measurement and the baseline adoption data within the meta information. You can, however, provide all this information manually as well. A typical way to obtain such a `meanstream` is scetched below: 
+The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched below: 
 
         finaldata = mergeStreams(vectordata_corr, scalardata, ['f'])
         finaldata = finaldata.delta_f()
@@ -878,25 +887,29 @@ will create a BLV file. Important is the `meanstream` data stream which is conta
 
 ### 2.12 Database support
 
-MagPy supports data base access and many methods for optimizing data treatment in connection with data bases. Among many other benefits, using a database simplifies many typical procedures related to meta information. Currently MagPy supports [MySQL] databases. To use these features you need to install MySQL on your system. In following we provide a brief outline on how to set up and use this optional addition. Please note that a proper usage of the database requires sensor specific information. Unlike the often used way in geomagnetism to combine data from different sensors into one file structure, such data needs to remain separate for database usage and is only combined when producing [IAGA]/[INTERMAGNET] outputs. Furthermore, unique sensor information is requires like its type and serial number. 
+MagPy supports database access and many methods for optimizing data treatment in connection with databases. Among many other benefits, using a database simplifies many typical procedures related to meta-information. Currently, MagPy supports [MySQL] databases. To use these features, you need to have MySQL installed on your system. In the following we provide a brief outline of how to set up and use this optional addition. Please note that a proper usage of the database requires sensor-specific information. In geomagnetism, it is common to combine data from different sensors into one file structure. In this case, such data needs to remain separate for database usage and is only combined when producing [IAGA]/[INTERMAGNET] definitive data. Furthermore, unique sensor information such as type and serial number is required. 
 
         import magpy import database as mdb
 
 
 #### 2.12.1 Setting up a MagPy database (using MySQL)
 
-Open mysql (e.g. linux: mysql -u root -p mysql) and create a new database. Replace `#DB-NAME` with your database name (e.g. MyDB). After creation you also need to grant priviledges to this database to a user of your choice. Please refer to official MySQL documentations for details and further commands. 
+Open mysql (e.g. Linux: `mysql -u root -p mysql`) and create a new database. Replace `#DB-NAME` with your database name (e.g. `MyDB`). After creation, you will need to grant priviledges to this database to a user of your choice. Please refer to official MySQL documentations for details and further commands. 
 
          mysql> CREATE DATABASE #DB-NAME; 
          mysql> GRANT ALL PRIVILEGES ON #DB-NAME.* TO '#USERNAME'@'%' IDENTIFIED BY '#PASSWORD';
 
 
-#### 2.12.2 Intializing a MagPy database
+#### 2.12.2 Initializing a MagPy database
+
+Connecting to a database using MagPy is done using following command:
         
         db = mdb.mysql.connect(host="localhost",user="#USERNAME",passwd="#PASSWORD",db="#DB-NAME")
         mdb.dbinit(db)
 
 #### 2.12.3 Adding data to the database
+
+Examples of useful meta-information:
 
         iagacode = 'WIC'
         data = read(example1)
@@ -909,10 +922,12 @@ Open mysql (e.g. linux: mysql -u root -p mysql) and create a new database. Repla
         mdb.writeDB(db,gsm)
         mdb.writeDB(db,fge)
 
-All available meta information will be added automatically to the related database tables. The SensorID scheme consists of three parts, instrument (GSM90), serial number (12345), and a revision number (0002) which might change in dependency of maintanance/calibration etc. As you see in the example above we separete data from different instruments, which we recommend particularly for high resolution data, as frequency and noise characteristics of sensor types will differ.
+All available meta-information will be added automatically to the relevant database tables. The SensorID scheme consists of three parts: instrument (GSM90), serial number (12345), and a revision number (0002) which might change in dependency of maintenance, calibration, etc. As you can see in the example above, we separate data from different instruments, which we recommend particularly for high resolution data, as frequency and noise characteristics of sensor types will differ.
 
 
 #### 2.12.4 Reading data
+
+To read data from an established database:
 
         data = mdb.readDB(db,'GSM90_12345_0002') 
 
@@ -920,7 +935,7 @@ Options e.g. starttime='' and endtime='' are similar as for normal `read`.
 
 #### 2.12.5 Meta data
 
-An often used application of database cnnectivity will be to apply meta information stored in the database to data files before submission. The following command wills demostrate how to extract all missing meta information from the database for the selected sensor and add it to the header dictionary of the data object.
+An often used application of database connectivity with MagPy will be to apply meta-information stored in the database to data files before submission. The following command demostrates how to extract all missing meta-information from the database for the selected sensor and add it to the header dictionary of the data object.
 
         rawdata = read('/path/to/rawdata.bin')
         rawdata.header = mdb.dbfields2dict(db,'FGE_22222_0001')
@@ -929,7 +944,7 @@ An often used application of database cnnectivity will be to apply meta informat
 
 ### 2.13 Monitoring scheduled scripts
 
-Automated analysis can e easily accomplished ba added a series of MagPy commands into a script. A typical script could be:
+Automated analysis can e easily accomplished by adding a series of MagPy commands into a script. A typical script could be:
 
         # read some data and get means
         data = read(example1)
@@ -942,17 +957,17 @@ Automated analysis can e easily accomplished ba added a series of MagPy commands
         # check some arbitray threshold
         analysisdict.check({'data_threshold_f_GSM90': [mean_f,'>',20000]})
 
-If given criteria are not valid, then the logfile is changed accordingly. This method can assist you particularly in for checking data actuality, data contents, data validity, upload success, etc. In combination with an independend monitoring tool like [Nagios] you can easily create mail/sms notfications of such changes, in addition to monitoring processes, live times, disks etc. [MARCOS] comes along with some instructions on how to use Nagios/MagPy for data acquisition monitoring. 
+If provided criteria are invalid, then the logfile is changed accordingly. This method can assist you particularly in checking data actuality, data contents, data validity, upload success, etc. In combination with an independent monitoring tool like [Nagios], you can easily create mail/SMS notfications of such changes, in addition to monitoring processes, live times, disks etc. [MARCOS] comes along with some instructions on how to use Nagios/MagPy for data acquisition monitoring. 
 
-### 2.14 Acquisition support
+### 2.14 Data acquisition support
 
-MagPy contains a couple of packages which could be used for data acquisition, collection and organization. These methods are basically used by two applications [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol) which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such realtime streams and also data from many other sources and supports the Obsever by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere. 
+MagPy contains a couple of packages which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere. 
 
 
 ### 2.15 Graphical user interface
 
 Many of the above mentioned methods are also available within the graphical user interface of MagPy.
-To use this check the installation instructions for your operating system. You will find Video Tutorials online (too be added) describing its usage for specific analyses.
+To use this check the installation instructions for your operating system. You will find Video Tutorials online (to be added) describing its usage for specific analyses.
 
 
 ### 2.16 Current developments
@@ -973,7 +988,7 @@ MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data 
         mp.plot(flaggeddata,['f'],annotate=True)
         flaggeddata.write(tmpdir,format_type='IMAGCDF',addflags=True)
 
-The `addflags` option denotes that flagging information will be added to the ImagCDF format. Please note that this is still under development and thus content and format specifications may change. So please use it only for test purposes and not for archiving. To read flagged ImagCDF data just use the normal read command, and activate annotation for plotting. 
+The `addflags` option denotes that flagging information will be added to the ImagCDF format. Please note that this is still under development and thus content and format specifications may change. So please use it only for test purposes and not for archiving. To read and view flagged ImagCDF data, just use the normal read command, and activate annotation for plotting. 
 
         new = read('/tmp/cnb_20120802_000000_PT1S_1.cdf')
         mp.plot(new,['f'],annotate=True)
