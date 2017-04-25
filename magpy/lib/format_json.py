@@ -29,6 +29,7 @@ def readJSON(filename, headonly=False, **kwargs):
     Reading JSON format data.
     """
     stream = DataStream()
+    header = {}
     array = [[] for key in KEYLIST]
 
     with open(filename, 'r') as jsonfile:
@@ -76,12 +77,12 @@ def readJSON(filename, headonly=False, **kwargs):
 
                 data = [np.nan if x[i] is None else float(x[i]) for x in dataset[1:]]
             array[KEYLIST.index(keydict[i])] = data
-            stream.header['col-'+keydict[i]] = key
-            stream.header['unit-col-'+keydict[i]] = ''
+            header['col-'+keydict[i]] = key
+            header['unit-col-'+keydict[i]] = ''
                 
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    stream = DataStream([],stream.header,np.asarray(array))
+    stream = DataStream([],header,np.asarray(array))
 
     return stream
