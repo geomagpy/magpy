@@ -230,7 +230,7 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
     else:
         variables = [var for var in variables if var in availablekeys]
     if len(variables) > 9:
-        logger.info("More than 9 variables available - plotting only the first nine:", end=' ')
+        logger.info("More than 9 variables available - plotting only the first nine!")
         logger.info("Available: "+ str(variables))
         variables = variables[:9]
         logger.info("Plotting: "+ str(variables))
