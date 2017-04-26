@@ -368,6 +368,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 #'BDV1':['r', 'Budkov GDAS data variant'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
+                'NETCDF':['r', 'NetCDF4 format, NOAA DSCOVR satellite data archive format'],
                 'LATEX':['w','LateX data'],
                 'CS':['r','Cesium G823'],
                 #'SFDMI':['r', 'San Fernando variometer'],
@@ -670,6 +671,32 @@ CALLED BY:
 
 *********************************************************************
     """
+    
+    KEYLIST = [ 'time',         # Timestamp (date2num object)
+                'x',            # X or I component of magnetic field (float)
+                'y',            # Y or D component of magnetic field (float)
+                'z',            # Z component of magnetic field (float)
+                'f',            # Magnetic field strength (float)
+                't1',           # Temperature variable (e.g. ambient temp) (float)
+                't2',           # Secondary temperature variable (e.g. sensor temp) (float)
+                'var1',         # Extra variable #1 (float)
+                'var2',         # Extra variable #2 (float)
+                'var3',         # Extra variable #3 (float)
+                'var4',         # Extra variable #4 (float)
+                'var5',         # Extra variable #5 (float)
+                'dx',           # Errors in X (float)
+                'dy',           # Errors in Y (float)
+                'dz',           # Errors in Z (float)
+                'df',           # Errors in F (float)
+                'str1',         # Extra string variable #1 (str)
+                'str2',         # Extra string variable #2 (str)
+                'str3',         # Extra string variable #3 (str)
+                'str4',         # Extra string variable #4 (str)
+                'flag',         # Variable for flags. (str='0000000000000000-')
+                'comment',      # Space for comments on flags (str)
+                'typ',          # Type of data (str='xyzf')
+                'sectime'       # Secondary time variable (date2num)
+                ]
 
     def __init__(self, container=None, header={},ndarray=None):
         if container is None:
@@ -3133,7 +3160,7 @@ CALLED BY:
 
         # Plot stream:
         if plot == True:
-            date = datetime.strftime(num2date(self[0].time),'%Y-%m-%d')
+            date = datetime.strftime(num2date(self.ndarray[0][0]),'%Y-%m-%d')
             logger.info('DWT_calc: Plotting data...')
             if outfile:
                 DWT_stream.plot(['x','var1','var2','var3'],
@@ -6596,7 +6623,7 @@ CALLED BY:
 
         # Plot stream:
         if plot == True:
-            date = datetime.strftime(num2date(self[0].time),'%Y-%m-%d')
+            date = datetime.strftime(num2date(self.ndarray[0][0]),'%Y-%m-%d')
             logger.info('MODWT_calc: Plotting data...')
             if outfile:
                 MODWT_stream.plot(['x','var1','var2','var3'],
@@ -6983,7 +7010,7 @@ CALLED BY:
                 bgcolor='white')
         """
 
-        import mpplot as mp
+        import magpy.mpplot as mp
         if keys == None:
             keys = []
         mp.plot(self, variables=keys, **kwargs)

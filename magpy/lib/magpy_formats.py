@@ -62,6 +62,7 @@ from magpy.lib.format_iaga02 import *
 from magpy.lib.format_wdc import *
 from magpy.lib.format_magpy import *
 from magpy.lib.format_noaa import *
+from magpy.lib.format_nc import isNETCDF, readNETCDF
 from magpy.lib.format_latex import *
 from magpy.lib.format_json import *
 
@@ -230,6 +231,9 @@ def isFormat(filename, format_type):
     elif (format_type == "NOAAACE"): # NOAA ACE Satellite data
         if (isNOAAACE(filename)):
             return True
+    elif (format_type == "NETCDF"): # NetCDF format, NOAA DSCOVR satellite data
+        if (isNETCDF(filename)):
+            return True
     elif (format_type == "NEIC"): # NEIC USGS data
         if (isNEIC(filename)):
             return True
@@ -338,6 +342,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGFZKP(filename, headonly, **kwargs)
     elif (format_type == "NOAAACE"):
         return readNOAAACE(filename, headonly, **kwargs)
+    elif (format_type == "NETCDF"):
+        return readNETCDF(filename, headonly, **kwargs)
     elif (format_type == "NEIC"):
         return readNEIC(filename, headonly, **kwargs)
     else:
