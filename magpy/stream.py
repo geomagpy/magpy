@@ -808,8 +808,11 @@ CALLED BY:
     def __repr__(self):
         return str(self.container)
 
-    def __getitem__(self, index):
-        return self.container.__getitem__(index)
+    def __getitem__(self, var):
+        try:
+            return self.ndarray[self.KEYLIST.index(var)]
+        except:
+            return self.container.__getitem__(var)
 
     def __len__(self):
         return len(self.container)
