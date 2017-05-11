@@ -739,7 +739,10 @@ CALLED BY:
             ll = [len(elem) for elem in self.ndarray]
             return ll
         else:
-            return [len(self)]
+            if len(self) == 1 and not self.time[0] > 0:
+                return [0]
+            else:
+                return [len(self)]
 
     def replace(self, datlst):
         # Replace in stream

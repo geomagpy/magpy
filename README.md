@@ -32,12 +32,12 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
   - all required packages are included in the installer
 
 #### 1.1.3 Post-installation information
-  - MagPy should have a sub-folder in the Start menu. Here you will find three items:
+  - MagPy should have a sub-folder in the Start menu. Here you will find two items:
 
         * python -> opens a python shell ready for MagPy
         * xmagpy -> opens the MagPy graphical user interface
 
-IMPORTANT: NASA CDF and SpacePy only support 32 bit operating systems.
+Note: NASA CDF and SpacePy only support 32 bit.
 
 
 ### 1.2 Linux/MacOs installation - Anaconda

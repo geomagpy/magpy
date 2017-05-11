@@ -261,6 +261,55 @@ class PlotPanel(wx.Panel):
         #    #msubs.storeData(li,parameterstring.split(','))
 
 
+    def startMQTTMonitor(self,**kwargs):
+        """
+        DEFINITION:
+            embbed matplotlib figure in canvas for mointoring
+
+        PARAMETERS:
+            kwargs:  - all plot args
+        """
+
+        dataid = self.datavars[0]
+        parameter = self.datavars[1]
+        period = self.datavars[2]
+        pad = self.datavars[3]
+        currentdate = self.datavars[4]
+        unitlist = self.datavars[5]
+        coverage = self.datavars[6]  # coverage
+        updatetime = self.datavars[7]
+        db = self.datavars[8]
+
+        """
+        # convert parameter list to a dbselect sql format
+        parameterstring = 'time,'+parameter
+
+        # Test whether data is available at all with selected keys and dataid
+        li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
+
+        if not len(li) > 0:
+            print("Parameter", parameterstring, dataid, coverage)
+            print("Did not find any data to display - aborting")
+            return
+        else:
+            valkeys = ['time']
+            valkeys = parameterstring.split(',')
+            for i,elem in enumerate(valkeys):
+                idx = KEYLIST.index(elem)
+                if elem == 'time':
+                    self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
+                else:
+                    self.array[idx] = [float(el[i]) for el in li]
+        """
+        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
+
+        self.figure.clear()
+        t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
+        t1.start()
+        # Display the plot
+        self.canvas.draw()
+
+
     def startMARCOSMonitor(self,**kwargs):
         """
         DEFINITION:
@@ -1997,6 +2046,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             order=dlg.sheetorderTextCtrl.GetValue()
             double=dlg.sheetdoubleCheckBox.GetValue()
             scalevalue=dlg.sheetscaleCheckBox.GetValue()
+            self.options['double'] = 'True'
+            self.options['scalevalue'] = 'True'
             if not double:
                 self.options['double'] = 'False'
             if not scalevalue:

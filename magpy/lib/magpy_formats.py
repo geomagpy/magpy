@@ -18,7 +18,7 @@ DEPENDENCIES:
                 .format_gdas
                 .format_lemi
                 .format_pos1
-                .format_env05
+                #.format_env05
                 .format_cr800
                 .format_iono
                 .format_iaga02
@@ -53,7 +53,7 @@ from magpy.lib.format_didd import *
 from magpy.lib.format_gdas import *
 from magpy.lib.format_lemi import *
 from magpy.lib.format_pos1 import *
-from magpy.lib.format_env05 import *
+#from magpy.lib.format_env05 import *
 from magpy.lib.format_cr800 import *
 from magpy.lib.format_iono import *
 
@@ -213,9 +213,9 @@ def isFormat(filename, format_type):
                 return True
         except:
             pass
-    elif (format_type == "ENV05"): # Binary Environmental data (1 Hz)
-        if (isENV05(filename)):
-            return True
+    #elif (format_type == "ENV05"): # Binary Environmental data (1 Hz)
+    #    if (isENV05(filename)):
+    #        return True
     elif (format_type == "SFDMI"): # San Fernando DMI(FGE) format
         if (isSFDMI(filename)):
             return True
@@ -305,8 +305,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPOS1TXT(filename, headonly, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return readAUTODIF_FREAD(filename, headonly, **kwargs)
-    elif (format_type == "ENV05"):
-        return readENV05(filename, headonly, **kwargs)
+    #elif (format_type == "ENV05"):
+    #    return readENV05(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "GRAVSG"):
