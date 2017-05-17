@@ -813,6 +813,9 @@ CALLED BY:
             return self.ndarray[self.KEYLIST.index(var)]
         except:
             return self.container.__getitem__(var)
+        
+    def __setitem__(self, var, value):
+        self.ndarray[self.KEYLIST.index(var)] = value
 
     def __len__(self):
         return len(self.container)
