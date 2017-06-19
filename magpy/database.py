@@ -3060,6 +3060,31 @@ def applyDeltas(db, stream):
     RETURNS:
        a data stream with offsets applied
     """
+    def calloffset(datastream, key, value, st=None, et=None):
+        #print ("Getting offset", key, value, st, et)
+        tst = True
+        tet = True
+        if st in ['',None]:
+            tst = False 
+        if et in ['',None]:
+            tet = False 
+        try:
+            st = float(st)
+            et = float(et)
+        except:
+            pass
+        #print (tst, tet)
+        if tst and tet :
+            #print ("st and et")
+            datastream = datastream.offset({key:value},starttime=st,endtime=et)
+        elif tst:
+            #print ("st")
+            datastream = datastream.offset({key:value},starttime=st)
+        else:
+            #print ("old")
+            datastream = datastream.offset({key:value})
+        return datastream
+
     dataid = stream.header.get('DataID','')
     if dataid == '':
         print ("applyDeltas: No dataid found in streams header - aborting")
@@ -3069,21 +3094,93 @@ def applyDeltas(db, stream):
     if deltas == '':
         print ("applyDeltas: No delta values found - returning unmodified stream")
         return stream
-
     try:
-        deltas = deltas.split(',')
-        for el in deltas:
-            dat = el.split('_')
-            print ("Correcting {a} offset: {b}".format(a=dat[0],b=dat[1]))
-            if dat[0] == 'time':
-                stream = stream.offset({'time': dat[1]})
-            if dat[0] in NUMKEYLIST:
-                stream = stream.offset({dat[0]: float(dat[1])})
+        deltalines = deltas.split(';')
+    except:
+        #print("Could not extract delta values for ", dataid)
+        pass
+
+    logger.info("applyDeltas: Running delta app")
+    try:
+        for delt in deltalines:
+            deltdict = {}
+            starttime = ''
+            endtime = ''
+            delts = delt.split(',')
+            for el in delts:
+                dat = el.split('_')
+                deltdict[dat[0]] = dat[1]
+            if not deltdict.get('st','') == '':
+                starttime = deltdict.get('st','')
+            if not deltdict.get('et','') == '':
+                endtime = deltdict.get('et','')
+            #logger.info("applyDeltas: {}, {}, {}".format(delts, starttime, endtime))
+            for key in deltdict:
+                if not key in ['st','et']:
+                    if key == 'time':
+                        stream = calloffset(stream,'time',deltdict[key],starttime,endtime)
+                    elif key in NUMKEYLIST:
+                        stream = calloffset(stream,key,float(deltdict[key]),starttime,endtime)
         stream.header['DataDeltaValues'] = ''
     except:
-        print("Could not extract delta values for ", dataid)
+        pass
 
     return stream
+
+
+def dbaddBLV2DATAINFO(db,blvname, stationid):
+     keylist = []
+     valuelist = []
+
+     existingblv = dbselect(db, 'DataID', 'DATAINFO', 'DataID = "{}"'.format(blvname))
+
+     try:
+         data = readDB(db,blvname)
+         tlimits = data._find_t_limits()
+         keylist.append('DataMinTime')
+         valuelist.append(datetime.strftime(tlimits[0],"%Y-%m-%d %H:%M:%S.%f"))
+         keylist.append('DataMaxTime')
+         valuelist.append(datetime.strftime(tlimits[1],"%Y-%m-%d %H:%M:%S.%f"))
+     except:
+         pass
+
+     if not len(existingblv) > 0:
+         keylist.append('DataID')
+         valuelist.append(blvname)
+         keylist.append('SensorID')
+         valuelist.append(blvname)
+         keylist.append('StationID')
+         valuelist.append(stationid)
+         keylist.append('ColumnContents')
+         valuelist.append('i,d,f,f,T,ScaleValueDI,Dec_S0,Dec_deltaH,Dec_epsilonZ,Inc_S0,Inc_epsilonZ,H-base,D-base,Z-base,,Person,DI-Inst,Mire,F-type,,,,')
+         keylist.append('ColumnUnits')
+         valuelist.append('deg,deg,nT,nT,deg C,deg/unit,,,,,,nT,deg,nT,,,,,,,,,')
+         keylist.append('DataFormat')
+         valuelist.append('MagPyDI')
+         keylist.append('DataComponents')
+         valuelist.append('IDFF')
+         keylist.append('DataPier')
+         valuelist.append(blvname.split('_')[-1])
+
+         sql = 'INSERT INTO DATAINFO (%s) VALUE (%s)' %  (', '.join(keylist), '"'+'", "'.join(valuelist)+'"')
+     else:
+         updatelst=[]
+         for idx,key in enumerate(keylist):
+             updatelst.append(key+"='"+valuelist[idx]+"'")
+         sql = "UPDATE DATAINFO SET {} WHERE DataID = '{}'".format(','.join(updatelst),blvname)
+
+     # Execute the sql statement
+     cursor = db.cursor()
+     try:
+         print ("Updating DATAINFO table with {}".format(blvname))
+         cursor.execute(sql)
+     except mysql.Error as e:
+         print ("Failed: {}".format(e))
+     except:
+         print ("Failed for unknown reason")
+     db.commit()
+     cursor.close()
+
 
 
 def getBaseline(db,sensorid, date=None):
