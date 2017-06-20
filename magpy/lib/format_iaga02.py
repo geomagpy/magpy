@@ -194,15 +194,20 @@ def readIAGA(filename, headonly=False, **kwargs):
             else:
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
+                # transl. row values contains a line
                 row=[]
                 # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
                 # da darin der Zeilenumbruch "\n" steht
+                # transl. Do not use the last character of "line", d.h. line [:-1],
+                # 				since this is the line break "\n"
                 for val in line[:-1].split():
                     # nur nicht-leere Spalten hinzufuegen
+                    # transl. Just add non-empty columns
                     if val.strip()!="":
                         row.append(val.strip())
 
                 # Baue zweidimensionales Array auf
+                # transl. Build two-dimensional array
                 array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
                 if float(row[3]) >= 88888.0:
                     row[3] = np.nan
