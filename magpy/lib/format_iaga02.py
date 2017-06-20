@@ -474,19 +474,19 @@ def writeIAGA(datastream, filename, **kwargs):
                 row = ''
                 pass
             if isnan(xval):
-                row += '%13.2f' % 88888.0
+                row += '%13.2f' % 99999.0
             else:
                 row += '%13.2f' % xval
             if isnan(yval):
-                row += '%10.2f' % 88888.0
+                row += '%10.2f' % 99999.0
             else:
                 row += '%10.2f' % yval
             if isnan(zval):
-                row += '%10.2f' % 88888.0
+                row += '%10.2f' % 99999.0
             else:
                 row += '%10.2f' % zval
             if isnan(fval):
-                row += '%10.2f' % 88888.0
+                row += '%10.2f' % 99999.0
             else:
                 row += '%10.2f' % fval
             line.append(row + '\n')
