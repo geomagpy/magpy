@@ -9,8 +9,10 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
 from io import open
+import json
 
 from magpy.stream import *
+from magpy.config import *
 
 def isIAGA(filename):
     """
@@ -252,7 +254,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                             raise ValueError
                     else:
                         array[4].append(float('nan'))
-              
+
                 except:
                     if not float(row[6]) >= 88888:
                         array[4].append(float(row[6]))
@@ -417,7 +419,8 @@ def writeIAGA(datastream, filename, **kwargs):
             ndtype = True
 
         fulllength = datastream.length()[0]
-
+        # Setting nan replacement value based on config file
+        drop = data['droppedValue']
         # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
         #datacomp = 'EHZ'
         #datacomp = 'DHZ'
@@ -479,19 +482,19 @@ def writeIAGA(datastream, filename, **kwargs):
                 row = ''
                 pass
             if isnan(xval):
-                row += '%13.2f' % 99999.0
+                row += '%13.2f' % drop
             else:
                 row += '%13.2f' % xval
             if isnan(yval):
-                row += '%10.2f' % 99999.0
+                row += '%10.2f' % drop
             else:
                 row += '%10.2f' % yval
             if isnan(zval):
-                row += '%10.2f' % 99999.0
+                row += '%10.2f' % drop
             else:
                 row += '%10.2f' % zval
             if isnan(fval):
-                row += '%10.2f' % 99999.0
+                row += '%10.2f' % drop
             else:
                 row += '%10.2f' % fval
             line.append(row + '\n')
