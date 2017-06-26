@@ -31,11 +31,16 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 from os.path import expanduser
 home = expanduser("~")
 
-def setup_logger(name, warninglevel=logging.WARNING, logfilepath=tempfile.gettempdir(),
+if not os.path.exists(home):
+    path_to_config = tempfile.gettempdir()
+else:
+    path_to_config = os.path.join(home, '.magpyFiles')
+
+def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_config,
                  logformat='%(asctime)s %(levelname)s - %(name)-6s - %(message)s'):
     """Basic setup function to create a standard logging config. Default output
     is to file in /tmp/dir."""
-    
+
     logfile=os.path.join(logfilepath,'magpy.log')
     logging.basicConfig(filename=logfile,
                         filemode='w',
@@ -46,7 +51,7 @@ def setup_logger(name, warninglevel=logging.WARNING, logfilepath=tempfile.gettem
     console = logging.StreamHandler()
     console.setLevel(warninglevel)
     logger.addHandler(console)
-    
+
     return logger
 
 # Package loggers to identify info/problem source
@@ -673,7 +678,7 @@ CALLED BY:
 
 *********************************************************************
     """
-    
+
     KEYLIST = [ 'time',         # Timestamp (date2num object)
                 'x',            # X or I component of magnetic field (float)
                 'y',            # Y or D component of magnetic field (float)
@@ -818,7 +823,7 @@ CALLED BY:
             return self.ndarray[self.KEYLIST.index(var)]
         except:
             return self.container.__getitem__(var)
-        
+
     def __setitem__(self, var, value):
         self.ndarray[self.KEYLIST.index(var)] = value
 
@@ -876,7 +881,7 @@ CALLED BY:
         DESCRIPTION:
             Identify duplicate time stamps and remove all data.
             Lines with first occurence are kept.
-            
+
        """
         # get duplicates in time column
         def list_duplicates(seq):
@@ -941,7 +946,7 @@ CALLED BY:
                 #indexes = [bisect(ticol, st)]   ## SELECTS ONLY INDEX WHERE VALUE SHOULD BE inserted
                 indexes = [i for i,x in enumerate(ticol) if x == st]    ### FASTER
                 #indexes = [ticol.index(st)]
-                #print("findtime", indexes) 
+                #print("findtime", indexes)
                 if not len(indexes) == 0:
                     if startidx:
                         retindex = indexes[0] + startidx
@@ -1150,7 +1155,7 @@ CALLED BY:
     def _take_columns(self, keys):
         """
         DEFINITION:
-            extract selected columns of the given keys (Old LineStruct format - decrapted) 
+            extract selected columns of the given keys (Old LineStruct format - decrapted)
         """
 
         resultstream = DataStream()
@@ -2228,7 +2233,7 @@ CALLED BY:
             #print ('HERE2c: First absolute value measured after beginning of stream')
             #logger.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
             #if fixstart:
-            #    
+            #
             #absolutestream.add(absolutestream[0])
             #absolutestream[-1].time = starttime
             #absolutestream.sorting()
@@ -2252,7 +2257,7 @@ CALLED BY:
         extrapolate = False
         # upper
         if fixend:
-            #absolutestream = absolutestream.trim(endtime=endabs)  # should I trim here already - leon ?? 
+            #absolutestream = absolutestream.trim(endtime=endabs)  # should I trim here already - leon ??
             # time range long enough
             baseendtime = endabs+extradays
             if baseendtime < orgendabs:
@@ -2347,7 +2352,7 @@ CALLED BY:
         minstarttime=100000000.0
         maxendtime=0.0
         for el in existingabsinfo:
-            ele = el.split('_') 
+            ele = el.split('_')
             mintime = float(ele[0])
             maxtime = float(ele[1])
             if minstarttime > mintime:
@@ -2382,7 +2387,7 @@ CALLED BY:
         """
         DESCRIPTION:
             Method to convert stream contents into a list and assign this to a dictionary.
-            You can use this method to directly store magnetic basevalues along with 
+            You can use this method to directly store magnetic basevalues along with
             data time series (e.g. using NasaCDF). Multilayer storage as supported by NetCDF
             might provide better options to combine both data sets in one file.
         PARAMETERS:
@@ -2398,7 +2403,7 @@ CALLED BY:
 
         if not self.length()[0] > 0:
             return {}
-        
+
         if not len(keys) > 0:
             return {}
 
@@ -2411,7 +2416,7 @@ CALLED BY:
             try:
                 pos = KEYLIST.index(key)
             except ValueError:
-                pos = -1   
+                pos = -1
             if pos in range(0,len(KEYLIST)):
                 headline.append(key)
                 if not key == 'time':
@@ -2464,7 +2469,7 @@ CALLED BY:
         for idx,key in enumerate(headerinfo):
             pos = KEYLIST.index(key)
             array[pos] = collst[idx]
-        
+
         return DataStream([LineStruct()], {}, np.asarray(array))
 
 
@@ -2615,7 +2620,7 @@ CALLED BY:
                 if len(parameter) >= 14:
                     #extract pier information
                     pierdata = True
-                    pierlon = float(parameter[9]) 
+                    pierlon = float(parameter[9])
                     pierlat = float(parameter[10])
                     pierlocref = parameter[11]
                     pierel = float(parameter[12])
@@ -2663,7 +2668,10 @@ CALLED BY:
                 self.header['DataElevationRef'] = pierelref
 
             return bcdata
-            
+
+                self.header['DataComponents'] = 'HDZ'
+            return self
+
         elif func:
             # 1.) move content of basevalue function to columns 'x','y','z'?
             try:
@@ -2745,7 +2753,7 @@ CALLED BY:
             sensorid = self.header.get('SensorID')
 
         if not len(self.ndarray[0]) > 0:
-            print ("bindetector: No ndarray data found - aborting") 
+            print ("bindetector: No ndarray data found - aborting")
             return self
 
         moddate = datetime.utcnow()
@@ -2869,13 +2877,13 @@ CALLED BY:
         Calculates daily means of xyz components and their standard deviations. By default
         numpy's mean and std methods are applied even if only two data sets are available.
 
-        TODO --- 
+        TODO ---
         If less then three data sets are provided, twice the difference between two values
         is used as an conservative proxy of uncertainty. I only on value is available, then
         the maximum uncertainty of the collection is assumed. This behavior can be changed
         by keyword arguments.
         TODO ---
- 
+
         An outputstream is generated which containes basevalues in columns
         x,y,z and uncertainty values in dx,dy,dz
         if only a single values is available, dx,dy,dz contain the average uncertainties
@@ -2883,9 +2891,9 @@ CALLED BY:
         time column contains the average time of the measurement
 
     PARAMETERS:
-    Variables:
-    	- keys: 	(list) provide up to four keys which are used in columns x,y,z	
-        - offset:       (float) offset in timeunit days (0 to 0.999) default is 0.5, some test might use 0 
+    Variables
+    	- keys: 	(list) provide up to four keys which are used in columns x,y,z
+        - offset:       (float) offset in timeunit days (0 to 0.999) default is 0.5, some test might use 0
     Kwargs:
         - none
 
@@ -3062,7 +3070,7 @@ CALLED BY:
     def f_from_df(self, **kwargs):
         """
         DESCRIPTION:
-            Calculates the f from the difference of x+y+z and df 
+            Calculates the f from the difference of x+y+z and df
 
         PARAMETER:
             keywords:
@@ -4020,9 +4028,9 @@ CALLED BY:
         tok = True
 
         fitstream = self.copy()
-        if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing 
+        if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing
             fitstream = fitstream.trim(starttime=starttime, endtime=endtime)
- 
+
         for key in keys:
             tmpst = fitstream._drop_nans(key)
             if ndtype:
@@ -4114,7 +4122,7 @@ CALLED BY:
     def extractflags(self):
         """
     DEFINITION:
-        Extracts flags asociated with the provided DataStream object 
+        Extracts flags asociated with the provided DataStream object
         (as obtained by flaggedstream = stream.flag_outlier())
 
     PARAMETERS:
@@ -4257,7 +4265,7 @@ CALLED BY:
     def flag_range(self, **kwargs):
         """
     DEFINITION:
-        Flags data within time range or data exceeding a certain threshold 
+        Flags data within time range or data exceeding a certain threshold
         Coding : 0 take, 1 remove, 2 force take, 3 force remove
 
     PARAMETERS:
@@ -4307,7 +4315,7 @@ CALLED BY:
             return flaglist
 
         if not len(keys) == 1:
-            if above or below: 
+            if above or below:
                 print ("flag_range: for using thresholds above and below only a single key needs to be provided")
                 print ("  -- ignoring given above and below values")
                 below = False
@@ -4337,7 +4345,7 @@ CALLED BY:
             # TODO create True/False list and then follow the bin detector example
             ind = KEYLIST.index(keys[0])
             trueindicies = (trimmedstream.ndarray[ind] > above) & (trimmedstream.ndarray[ind] < below)
-            
+
             d = np.diff(trueindicies)
             idx, = d.nonzero()
             idx += 1
@@ -4362,7 +4370,7 @@ CALLED BY:
             # TODO create True/False list and then follow the bin detector example
             ind = KEYLIST.index(keys[0])
             trueindicies = trimmedstream.ndarray[ind] > above
-            
+
             d = np.diff(trueindicies)
             idx, = d.nonzero()
             idx += 1
@@ -4387,7 +4395,7 @@ CALLED BY:
             # TODO create True/False the other way round
             ind = KEYLIST.index(keys[0])
             truefalse = trimmedstream.ndarray[ind] < below
-            
+
             d = np.diff(truefalse)
             idx, = d.nonzero()
             idx += 1
@@ -4654,11 +4662,11 @@ CALLED BY:
         # Sort flaglist accoring to startdate (used to speed up flagging procedure)
         flaglist.sort()
 
-        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
         ## (use only last input)
         #print("1",flaglist)
         def flagclean(flaglist):
-            ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+            ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
             ## (use only last input)
             indicies = []
             for line in flaglist:
@@ -4744,17 +4752,17 @@ CALLED BY:
                 uniquereasons = list(set(reasons))
                 intensiveinfo = []
                 for reason in uniquereasons:
-                    num = len([el for el in flagli if reason == el[4]]) 
-                    intensiveinfo.append([reason,num]) 
+                    num = len([el for el in flagli if reason == el[4]])
+                    intensiveinfo.append([reason,num])
                 intensiveinfo = sorted(intensiveinfo,key=lambda x: x[1])
                 intensiveinfo = ["{} : {}".format(e[0],e[1]) for e in intensiveinfo]
                 amountlist[-1].append(intensiveinfo)
         amountlist = sorted(amountlist,key=lambda x: x[1])
         for el in amountlist:
-            print ("Dataset: {} \t Amount: {}".format(el[0],el[1])) 
+            print ("Dataset: {} \t Amount: {}".format(el[0],el[1]))
             if intensive:
                 for ele in el[2]:
-                    print ("   {}".format(ele)) 
+                    print ("   {}".format(ele))
 
 
     def flaglistclean(self,flaglist):
@@ -4768,7 +4776,7 @@ CALLED BY:
             flaglist = db2flaglist(db,'all')
             flgalistwithoutduplicates = self.flaglistclean(flaglist)
         """
-        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
+        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
         ## (use only last input)
         indicies = []
         for line in flaglist:
@@ -4797,12 +4805,12 @@ CALLED BY:
         DESCRIPTION:
             Constructs a flaglist input dependent on the content of stream
         PARAMETER:
-            comment    (key or string) if key (or comma separted list of keys) are 
+            comment    (key or string) if key (or comma separted list of keys) are
                        found, then the content of this column is used (first input
             flagnumber (int) integer number between 0 and 4
-            userange   (bool) if False, each stream line results in a flag, 
+            userange   (bool) if False, each stream line results in a flag,
                               if True the full time range is marked
-            
+
         """
         ### identify any given gaps and flag time ranges regarding gaps
         if not comment:
@@ -4881,10 +4889,10 @@ CALLED BY:
             Extract/Replace/Delete information in flaglist
             , keys, flagnumber, comment, startdate, enddate=None
             mode delete: if only starttime and endtime are provided then all data inbetween is removed,
-                         if parameter and value are provided this data is removed, eventuall 
+                         if parameter and value are provided this data is removed, eventuall
                          only between start and endtime
         APPLICTAION
-    
+
         """
         num = 0
         # convert start and end to correct format
@@ -5034,7 +5042,7 @@ CALLED BY:
         else:
             enddate = self._testtime(enddate)
 
-        ### ######## IF STARTDATE == ENDDATE 
+        ### ######## IF STARTDATE == ENDDATE
         ### MODIFYED TO STARTDATE-Samplingrate/3, ENDDATE + Samplingrate/3
         ### Taking 1/3 is arbitrary.
         ### This helps to apply flagging info to any higher resolution record
@@ -5099,7 +5107,7 @@ CALLED BY:
             #    testls = nonzero(self.ndarray[0]==startdate)
             #    ti2 = datetime.utcnow()
             #    print ("Findtime duration -alternative", ti2-ti1)
-                
+
             if st == 0:
                 #print("Flag_stream: slowly start",st)
                 if not sr == 0:
@@ -5603,7 +5611,7 @@ CALLED BY:
                 # find values or projtime, which are not in sourcetime
                 #dif = setdiff1d(projtime,sourcetime, assume_unique=True)
                 #print (dif, len(dif))
-                #print (len(dif),len(sourcetime),len(projtime))                
+                #print (len(dif),len(sourcetime),len(projtime))
                 diff = sourcetime[1:] - sourcetime[:-1]
                 num_fills = np.round(diff / newsp) - 1
                 getdiffids = np.where(diff > newsp+accuracy)[0]
@@ -5611,7 +5619,7 @@ CALLED BY:
                 if debug:
                     print ("Here", diff, num_fills, newsp, getdiffids)
                 missingt = []
-                # Get critical differences and number of missing steps 
+                # Get critical differences and number of missing steps
                 for i in getdiffids:
                     #print (i,  sourcetime[i-1], sourcetime[i], sourcetime[i+1])
                     nf = num_fills[i]
@@ -5677,7 +5685,7 @@ CALLED BY:
     def get_rotationangle(self, xcompensation=0,keys=['x','y','z'],**kwargs):
         """
         DESCRIPTION:
-            "Estimating" the rotation angle towards a magnetic coordinate system 
+            "Estimating" the rotation angle towards a magnetic coordinate system
             assuming z to be vertical down. Please note: You need to provide a
             complete horizontal vector including either the x compensation field
             or if not available an annual estimate of the vector. This method can be used
@@ -5730,7 +5738,7 @@ CALLED BY:
         for time savings, this function only tests the first 1000 elements
         """
 
-        # For proper applictation - duplicates are removed 
+        # For proper applictation - duplicates are removed
         self = self.removeduplicates()
 
         if len(self.ndarray[0]) > 0:
@@ -6751,10 +6759,10 @@ CALLED BY:
         DESCRIPTION
             fills missing values either with means or interpolated values
         PARAMETER:
-            v: 			(np.array) single column of ndarray  
-            window_len: 	(int) length of window to check threshold   
-            threshold: 	        (float) minimum percentage of available data e.g. 0.9 - 90 precent 
-            fill: 	        (string) 'mean' or 'interpolation'  
+            v: 			(np.array) single column of ndarray
+            window_len: 	(int) length of window to check threshold
+            threshold: 	        (float) minimum percentage of available data e.g. 0.9 - 90 precent
+            fill: 	        (string) 'mean' or 'interpolation'
         RETURNS:
             ndarray - single column
         """
@@ -6789,7 +6797,7 @@ CALLED BY:
         """
     DEFINITION:
         Multiple Overlap Discrete wavelet transform (MODWT) method of analysing a magnetic signal
-        to pick out SSCs. This method was taken from Hafez (2013b): "Geomagnetic Sudden 
+        to pick out SSCs. This method was taken from Hafez (2013b): "Geomagnetic Sudden
         Commencement Automatic Detection via MODWT"
         (NOTE: PyWavelets package must be installed for this method. It should be applied
         to 1s data - otherwise the sample window and detection levels should be changed.)
@@ -6805,7 +6813,7 @@ CALLED BY:
     Variables:
         - key:          (str) Apply MODWT to this key. Default 'x' due to SSCs dominating
                         the horizontal component.
-        - wavelet:	(str) Type of filter to use. Default 'db4' (4th-order Daubechies 
+        - wavelet:	(str) Type of filter to use. Default 'db4' (4th-order Daubechies
                         wavelet filter) according to Hafez (2013).
         - level:	(int) Decomposition level. Will calculate details down to this level.
                         Default 3, also Hafez (2013).
@@ -6820,7 +6828,7 @@ CALLED BY:
                         'var2': D2 (second detail)
                         ...
                         'var3': D3 (third detail)
-                        ... 
+                        ...
 
     EXAMPLE:
         >>> DWT_stream = stream.DWT_calc(plot=True)
@@ -6842,8 +6850,8 @@ CALLED BY:
                 if duration >= Dp_min:
                     print "Storm detected!"
                     print duration, num2date(timepin)
-                detection = False 
-        """ 
+                detection = False
+        """
 
         # Import required package PyWavelets:
         # http://www.pybytes.com/pywavelets/index.html
@@ -6882,7 +6890,7 @@ CALLED BY:
 
         for i, item in enumerate(dcoeffs):
             dcoeffs[i] = [j**2 for j in item]
-        
+
         # 1b. Loop for sliding window
         while True:
             if i >= (len(data)-window):
@@ -6907,7 +6915,7 @@ CALLED BY:
                     elif j == 7:
                         key = 'dz'
                     array[KEYLIST.index(key)].append(sum(d_cut)/float(window))
-                    
+
             i += window
 
         logger.info("MODWT_calc: Finished MODWT.")
@@ -6942,7 +6950,7 @@ CALLED BY:
         for key in KEYLIST:
             array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
 
-        return DataStream([LineStruct()], headers, np.asarray(array))  
+        return DataStream([LineStruct()], headers, np.asarray(array))
 
 
     def multiply(self, factors, square=False):
@@ -7469,7 +7477,7 @@ CALLED BY:
     def randomdrop(self,percentage=None,fixed_indicies=None):
                 """
                 DESCRIPTION:
-                    Method to randomly drop one line from data. If percentage is 
+                    Method to randomly drop one line from data. If percentage is
                     given, then lines according to this percentage are dropped.
                     This corresponds to a jackknife and d-jackknife respectively.
                 PARAMETER:
@@ -8008,7 +8016,7 @@ CALLED BY:
                     if ndtype:
                         if int(ind*multiplicator) <= len(self.ndarray[index]):
                             #orgval = self.ndarray[index][int(ind*multiplicator)]
-                            estimate = False   
+                            estimate = False
                             # Please note: here a two techniques (exact and estimate)
                             # Speeddiff (example data set (500000 data points)
                             # Exact:    7.55 sec (including one minute filter)
@@ -8859,7 +8867,7 @@ CALLED BY:
             ##### THS METHOD IS USELESS....
             ##### Either select a certain time in absolute calculation (TODO)
             ##### or calculate daily means of basevalues which ar already corrected for
-            ##### variotion --- leon 2016-03 
+            ##### variotion --- leon 2016-03
 
             Function to perform a variometercorrection of an absresult stream
             towards the given datetime using the given variometer stream.
@@ -8874,7 +8882,7 @@ CALLED BY:
          Kwargs:
             - funckeys:    (list) keys of the variometerfile which are interpolated and used
             - nomagorient: (bool) indicates that variometerdata is NOT in magnetic
-                                  coordinates (hez) - Method will then use header info 
+                                  coordinates (hez) - Method will then use header info
                                   in DataRotationAlpha and Beta
 
         RETURNS:
@@ -9040,7 +9048,7 @@ CALLED BY:
                 #refvals = funcattime(variofunc,date)
                 # 5. Get variofunc data for selected date and each usedabsdata
                 #for abstime in usedabsdata.ndarray[0]:
-                #    if variost 
+                #    if variost
                 #absst, abset = usedabsdata._find_t_limits()
                 """
                 """
@@ -9103,7 +9111,7 @@ CALLED BY:
         """
         DEFINITION:
             Helper method to determine suggested write filenames.
-            Reads format_type and header info of self -> returns specifications 
+            Reads format_type and header info of self -> returns specifications
         RETURNS:
             filenamebegins
             filenameends
@@ -9232,7 +9240,7 @@ CALLED BY:
                 filenameends = ''
             else:
                 filenameends = '.txt'
-        
+
         return format_type, filenamebegins, filenameends, coverage, dateformat
 
 
@@ -10524,7 +10532,7 @@ def appendStreams(streamlist):
     if len(stream.ndarray[0]) > 0:
         stream = stream.removeduplicates()
         stream = stream.sorting()
-        return stream        
+        return stream
     else:
         return DataStream([LineStruct()],streamlist[0].header,np.asarray([np.asarray([]) for key in KEYLIST]))
 
@@ -10850,7 +10858,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 print("  b) getting indicies of stream_a with stream_b values in the vicinity")
                 mst = datetime.utcnow()
                 #indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/dti <= 1.]  # This selcetion requires most of the time
-                indtia = []  ### New and faster way by limiting the search range in stream_b by a factor of 10 
+                indtia = []  ### New and faster way by limiting the search range in stream_b by a factor of 10
                 check = [int(len(timea)*(100-el)/100.) for el in range(99,1,-10)]
                 lentimeb = len(timeb)
                 for idx, el in enumerate(timea):
@@ -12097,22 +12105,22 @@ def array2stream(listofarrays, keystring,starttime=None,sr=None):
 def obspy2magpy(opstream, keydict={}):
     """
     Function for converting obspy streams to magpy streams.
-    
+
     INPUT:
         - opstream          obspy.core.stream.Stream object
                             Obspy stream
         - keydict           dict
                             ID of obspy traces to assign to magpy keys
-                            
+
     OUTPUT:
         - mpstream          Stream in magpy format
-        
+
     EXAMPLE:
         >>> mpst = obspy2magpy(opst, keydict={'nn.e6046.11.p0': 'x', 'nn.e6046.11.p1': 'y'})
     """
     array = [[] for key in KEYLIST]
     mpstream = DataStream()
-    
+
     # Split into channels:
     datadict = {}
     for tr in opstream.traces:
@@ -12120,7 +12128,7 @@ def obspy2magpy(opstream, keydict={}):
             datadict[tr.id].append(tr)
         except:
             datadict[tr.id] = [tr]
-    
+
     twrite = False
     tind = KEYLIST.index("time")
     fillkeys = ['var1', 'var2', 'var3', 'var4', 'var5', 'x', 'y', 'z', 'f']
@@ -12128,7 +12136,7 @@ def obspy2magpy(opstream, keydict={}):
         data = datadict[channel]
         # Sort by time:
         data.sort(key=lambda x: x.stats.starttime)
-        
+
         # Assign magpy keys:
         if channel in keydict:
             ind = KEYLIST.index(keydict[channel])
@@ -12141,7 +12149,7 @@ def obspy2magpy(opstream, keydict={}):
             ind = KEYLIST.index(key)
         mpstream.header['col-'+key] = channel
         mpstream.header['unit-col-'+key] = ''
-        
+
         # Arrange in preparatory array:
         t = []
         for d in data:
@@ -12157,13 +12165,13 @@ def obspy2magpy(opstream, keydict={}):
                     raise Exception("Time arrays do not match!") # could be handled
             array[ind] += list(d.data)
         twrite = True
-            
+
     # Convert to ndarrays:
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
     mpstream = DataStream([], mpstream.header, np.asarray(array))
-    
+
     return mpstream
 
 
@@ -12173,7 +12181,7 @@ def extractDateFromString(datestring):
        Method to identify a date within a string (usually the filename).
        It is used by most file reading procedures
     RETURNS:
-       A list of datetimeobjects with first and last date (month, year) 
+       A list of datetimeobjects with first and last date (month, year)
        or the day (dailyfiles)
     APPLICATION:
        datelist = extractDateFromString(filename)
@@ -12261,7 +12269,7 @@ def extractDateFromString(datestring):
                 match = re.search(r'\d{4}-\d{2}-\d{2}', daystrpart)
                 date = datetime.strptime(match.group(), '%Y-%m-%d').date()
                 return [date]
-            except:  
+            except:
                 pass
 
         if not date:
@@ -12277,8 +12285,8 @@ def extractDateFromString(datestring):
         return [datetime.date(date)]
     except:
         return [date]
-    
-    
+
+
 def testTimeString(time):
     """
     Check the date/time input and returns a datetime object if valid:
@@ -12290,14 +12298,14 @@ def testTimeString(time):
     2) strings: 2011-11-22 or 2011-11-22T11:11:00
     3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
     """
-    
-    timeformats = ["%Y-%m-%d", 
-                   "%Y-%m-%dT%H:%M:%S", 
+
+    timeformats = ["%Y-%m-%d",
+                   "%Y-%m-%dT%H:%M:%S",
                    "%Y-%m-%d %H:%M:%S.%f",
                    "%Y-%m-%dT%H:%M:%S.%f",
                    "%Y-%m-%d %H:%M:%S"
                    ]
-                   
+
     if isinstance(time, float) or isinstance(time, int):
         try:
             timeobj = num2date(time).replace(tzinfo=None)
@@ -12476,7 +12484,7 @@ def convertGeoCoordinate(lon,lat,pro1,pro2):
     APLLICATION:
 
     USED BY:
-       writeIMAGCDF, 
+       writeIMAGCDF,
     """
     try:
         from pyproj import Proj, transform
@@ -12684,4 +12692,3 @@ if __name__ == '__main__':
 
 
 # That's all, folks!
-
