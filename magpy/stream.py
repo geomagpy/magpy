@@ -16,6 +16,9 @@ import logging
 import os
 import sys
 import tempfile
+import json
+
+from magpy.config import *
 
 # ----------------------------------------------------------------------------
 # Part 1: Import routines for packages
@@ -31,10 +34,10 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 from os.path import expanduser
 home = expanduser("~")
 
-if not os.path.exists(home):
+if not os.path.exists(data['logLocation']):
     path_to_config = tempfile.gettempdir()
 else:
-    path_to_config = os.path.join(home, '.magpyFiles')
+    path_to_config = data['logLocation']
 
 def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_config,
                  logformat='%(asctime)s %(levelname)s - %(name)-6s - %(message)s'):
