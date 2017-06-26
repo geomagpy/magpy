@@ -3,7 +3,7 @@ import os
 import json
 import io
 
-config_file_name = ".config.json"
+config_file_name = "config.json"
 
 from os.path import expanduser
 home = expanduser("~")
