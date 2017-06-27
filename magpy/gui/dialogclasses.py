@@ -49,6 +49,7 @@ class OpenWebAddressDialog(wx.Dialog):
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
+
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
@@ -908,7 +909,7 @@ class StreamExtractValuesDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.comparelst[0],size=(160,-1))
         self.value3TextCtrl = wx.TextCtrl(self, value="")
         self.okButton = wx.Button(self, wx.ID_OK, label='Extract')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+        self.closeButton = wx.Button(self, label='Cancel')
 
 
     def doLayout(self):
@@ -3069,7 +3070,7 @@ class InputSheetDialog(wx.Dialog):
         if closedlg.ShowModal() == wx.ID_YES:
             closedlg.Destroy()
             self.Close(True)
-
+            
 
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
