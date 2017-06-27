@@ -958,7 +958,7 @@ class StreamExtractValuesDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.comparelst[0],size=(160,-1))
         self.value3TextCtrl = wx.TextCtrl(self, value="")
         self.okButton = wx.Button(self, wx.ID_OK, label='Extract')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
 
     def doLayout(self):
