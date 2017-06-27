@@ -2020,6 +2020,7 @@ class AnalysisOffsetDialog(wx.Dialog):
     def bindControls(self):
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeRange, self.offsetRadioBox)
 
+
     def OnChangeRange(self, e):
         val = self.offsetRadioBox.GetStringSelection()
         if str(val) == 'all':
@@ -3068,7 +3069,6 @@ class InputSheetDialog(wx.Dialog):
         if closedlg.ShowModal() == wx.ID_YES:
             closedlg.Destroy()
             self.Close(True)
-
 
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
