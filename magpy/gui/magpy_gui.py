@@ -54,7 +54,7 @@ def pydate2wxdate(datum):
      dmy = (tt[2], tt[1]-1, tt[0])
      #print (tt, dmy)
      return wx.DateTimeFromDMY(*dmy)
- 
+
 def wxdate2pydate(date):
      assert isinstance(date, wx.DateTime)
      if date.IsValid():
@@ -651,7 +651,7 @@ class PlotPanel(wx.Panel):
                 # used for annotations and scaling the plot of data
                 min_val = np.min(rd)
                 max_val = np.max(rd)
-   
+
                 # Add annotations for minimum and maximum temperatures
                 self.axes.annotate(r'Min: %0.1f' % (min_val),
                     xy=(dt[rd.index(min_val)], min_val),
@@ -673,9 +673,9 @@ class PlotPanel(wx.Panel):
 
         # Set the axis limits to make the data more readable
         #self.axes.axis([0,len(temps), min_t - pad,max_t + pad])
-   
+
         self.figure.canvas.draw_idle()
-   
+
         # Repack variables that need to be persistent between
         # executions of this method
         self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
@@ -1060,7 +1060,7 @@ class MainFrame(wx.Frame):
         #self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.met_page.filterButton)
         # Contains General info on top - previously on analysis page
         # add sensor id, sensor name to general info
-        # add button with GetFromDB, WriteToDB (only active when DB connected) - WriteToDB only specific dataID or all sensorsID 
+        # add button with GetFromDB, WriteToDB (only active when DB connected) - WriteToDB only specific dataID or all sensorsID
         # provide text boxes with data, sensor and station related info
         #     Edit/Review Data related meta data
         #     button
@@ -1161,7 +1161,7 @@ class MainFrame(wx.Frame):
         #collist=['b','g','m','c','y','k','b','g','m','c','y','k']
 
         # please note: symbol and colorlists are defined in ActivateControls
-        
+
         #print ("colorlist", collist[:lenkeys])
         #self.plotopt = {'labels':'None' , 'padding': 'None', 'stormphases': False, 'specialdict': {}, 'bartrange':'None', 'bgcolor': 'white', 'colorlist': ",".join(collist[:lenkeys]) ,'fullday':'False', 'grid':'True','gridcolor':'#316931', 'includeid':'False', 'labelcolor':'0.2', 'legendposition':'upper left', 'plottitle':'', 'plottype':'discontinuous', 'symbollist':",".join(self.symbollist),'t_stormphases':'None', 'opacity':'0.0'}
 
@@ -1170,10 +1170,10 @@ class MainFrame(wx.Frame):
                         'confinex':False,
                         'annotate':False,
                         'padding': None,
-                        'stormphases': False, 
-                        'specialdict': {}, 
+                        'stormphases': False,
+                        'specialdict': {},
                         'bartrange':0.06,
-                        'bgcolor': 'white', 
+                        'bgcolor': 'white',
                         'colorlist': [],
                         'fullday':False,
                         'grid':True,
@@ -1196,7 +1196,7 @@ class MainFrame(wx.Frame):
         self.dirname = dictionary.get('dirname','')
         self.dipathlist = dictionary.get('dipathlist','')
         self.options = dictionary
-        self.options['passwd'] = base64.b64decode(pwd) 
+        self.options['passwd'] = base64.b64decode(pwd)
 
 
 
@@ -1232,7 +1232,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagRangeButton.Disable()     # always
         self.menu_p.str_page.flagLoadButton.Disable()      # always
         self.menu_p.str_page.flagDropButton.Disable()      # activated if annotation are present
-        self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present 
+        self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
         self.menu_p.str_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
         self.menu_p.str_page.annotateCheckBox.Disable()    # activated if annotation are present
@@ -1379,7 +1379,7 @@ class MainFrame(wx.Frame):
                  value = stream.header.get(key,'')
                  #try:  # python 3
                  if not isinstance(value, basestring): # p3: str
-                     try: 
+                     try:
                          if self.plotstream._is_number(value):
                              pass
                          else:
@@ -1405,9 +1405,9 @@ class MainFrame(wx.Frame):
                 check whether valid baseline info is existing
               PARAMETER:
                 use global self.baselinedictlist
-                set baselineidxlist 
+                set baselineidxlist
               RETURNS:
-                returns baselineidxlst e.g. [1,3,4] which contains currently 
+                returns baselineidxlst e.g. [1,3,4] which contains currently
             """
             # check self.baseline dictionary
             baselineidxlst  = []
@@ -1476,7 +1476,7 @@ class MainFrame(wx.Frame):
 
         if len(commcol) > 0:
             self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
-            self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
+            self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present
             self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
             if self.menu_p.str_page.annotateCheckBox.GetValue():
                 self.menu_p.str_page.annotateCheckBox.SetValue(True)
@@ -1507,7 +1507,7 @@ class MainFrame(wx.Frame):
                 self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime)
                 if len(self.baselineidxlst) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
-        
+
 
         # Update "information" fields
         # ----------------------------------------
@@ -1574,11 +1574,11 @@ class MainFrame(wx.Frame):
         #    #print ("specialdict length not fitting")
         #    self.plotopt['specialdict']= None
 
- 
+
     def UpdatePlotCharacteristics(self,stream):
         """
         DESCRIPTION
-            Checks and activates plot options, checks for correct lengths of all list options 
+            Checks and activates plot options, checks for correct lengths of all list options
         """
 
         # Some general Checks on Stream
@@ -1643,7 +1643,7 @@ class MainFrame(wx.Frame):
             typus = typus.lower()[:3]
         except:
             typus = ''
-        if typus in ['xyz','hdz','idf']:            
+        if typus in ['xyz','hdz','idf']:
             self.compselect = typus
             self.menu_p.str_page.compRadioBox.Enable()
             self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
@@ -1728,7 +1728,7 @@ class MainFrame(wx.Frame):
         """
         self.plot_p.guiPlot([stream],[keylist],padding=padding,specialdict=specialdict,errorbars=errorbars,
                             colorlist=colorlist,symbollist=symbollist,annotate=annotate,
-                            includeid=includeid, function=function,plottype=plottype,                 
+                            includeid=includeid, function=function,plottype=plottype,
                             labels=labels,resolution=resolution,confinex=confinex,plotopt=plotopt)
         """
         #print ("Keys", keylist)
@@ -1873,7 +1873,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
         else:
-                    dlg = wx.MessageDialog(self, "Could identfy appropriate files in directory!\n"
+                    dlg = wx.MessageDialog(self, "Could not identfy appropriate files in directory!\n"
                         "please check and/or try OpenFile\n",
                         "OpenDirectory", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
@@ -1883,33 +1883,45 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def OnOpenFile(self, event):
         #self.dirname = ''
         stream = DataStream()
+        success = False
         stream.header = {}
         filelist = []
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.changeStatusbar("Loading data ...")
             pathlist = dlg.GetPaths()
-            for path in pathlist:
-                elem = os.path.split(path)
-                self.dirname = elem[0]
-                filelist.append(elem[1])
-                self.changeStatusbar(path)
-                tmp = read(path)
-                self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
-                stream.extend(tmp.container,tmp.header,tmp.ndarray)
-            #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
-            #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-            self.filename = ' ,'.join(filelist)
-            self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
-            self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
-            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
-
+            try:
+                for path in pathlist:
+                    elem = os.path.split(path)
+                    self.dirname = elem[0]
+                    filelist.append(elem[1])
+                    self.changeStatusbar(path)
+                    tmp = read(path)
+                    self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
+                    stream.extend(tmp.container,tmp.header,tmp.ndarray)
+                #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
+                #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+                self.filename = ' ,'.join(filelist)
+                self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
+                self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+                self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
+                success = True
+            except:
+                sucess = False
         dlg.Destroy()
 
         # plot data
-        if self.InitialRead(stream):
-            #self.ActivateControls(self.plotstream)
-            self.OnInitialPlot(self.plotstream)
+        if success:
+            if self.InitialRead(stream):
+                #self.ActivateControls(self.plotstream)
+                self.OnInitialPlot(self.plotstream)
+        else:
+            dlg = wx.MessageDialog(self, "Could not identfy file!\n"
+                "please check and/or try OpenDirectory\n",
+                "OpenFile", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Loading from directory failed ... Ready")
+            dlg.Destroy()
 
 
     def OnOpenURL(self, event):
@@ -1956,7 +1968,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #if not bookmarks == dlg.favorites:
             #print ("Favorites have changed ...  can be saved in init")
 
-            
+
         if self.InitialRead(stream):
             #self.ActivateControls(self.plotstream)
             self.OnInitialPlot(self.plotstream)
@@ -3843,7 +3855,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
 
-        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys] 
+        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
         t_limits = teststream._find_t_limits()
         trange = '- mean - timerange: {} to {}'.format(t_limits[0],t_limits[1])
         self.menu_p.rep_page.logMsg(trange)
@@ -3874,7 +3886,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
 
-        maxi = [teststream._get_max(key,returntime=True) for key in keys] 
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
         t_limits = teststream._find_t_limits()
         trange = '- maxima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
         self.menu_p.rep_page.logMsg(trange)
@@ -3905,7 +3917,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
 
-        mini = [teststream._get_min(key,returntime=True) for key in keys] 
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
         t_limits = teststream._find_t_limits()
         trange = '- minima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
         self.menu_p.rep_page.logMsg(trange)
@@ -4062,7 +4074,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.changeStatusbar("Ready")
         else:
             self.changeStatusbar("Failure")
-        
+
 
     def onConfinexCheckBox(self,event):
         """
@@ -4196,7 +4208,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     unitlist.append(unit)
                 else:
                     unitlist.append('')
-        
+
         if len(self.plotstream.ndarray[0]) > 0:
             dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
             for elem in shownkeylist:
@@ -4334,7 +4346,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
         self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
- 
+
         self.ActivateControls(self.plotstream)
         self.errorbars = True
         self.OnPlot(self.plotstream,self.shownkeylist)
@@ -4584,7 +4596,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                      else:
                          flagval = False
                      if flagval:
-                         #print ("Above , Below:", above, below) 
+                         #print ("Above , Below:", above, below)
                          flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
                          self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
                 elif flagtype == 'time':
@@ -4886,10 +4898,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         open dialog to load DI data
         """
         if isinstance(self.dipathlist, str):
-            dipathlist = self.dipathlist            
+            dipathlist = self.dipathlist
         else:
             dipathlist = self.dipathlist[0]
-        if os.path.isfile(dipathlist): 
+        if os.path.isfile(dipathlist):
             dipathlist = os.path.split(dipathlist)[0]
 
         dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist)
@@ -4898,7 +4910,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg("- loaded DI data")
             self.menu_p.abs_page.diTextCtrl.SetValue(','.join(dlg.pathlist))
             self.dipathlist = dlg.pathlist
-            if os.path.isfile(dlg.pathlist[0]): 
+            if os.path.isfile(dlg.pathlist[0]):
                 dlgpath = os.path.split(dlg.pathlist[0])[0]
             else:
                 dlgpath = dlg.pathlist[0]
@@ -5064,7 +5076,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
 
         if isinstance(self.dipathlist, str):
-            dipath = self.dipathlist            
+            dipath = self.dipathlist
         else:
             dipath = self.dipathlist[0]
         if os.path.isfile(dipath):
@@ -5090,8 +5102,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             Save data of the logger to file
         """
         # TODO When starting ANalysis -> stout is redirected .. switch back to normal afterwards
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
-                                       "DI analysis report (*.txt)|*.txt", 
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "DI analysis report (*.txt)|*.txt",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
         savepath = saveFileDialog.GetPath()
@@ -5114,8 +5126,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def onSaveLogButton(self, event):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
-                                       "Log files (*.log)|*.log", 
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "Log files (*.log)|*.log",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
         saveFileDialog.GetPath()
@@ -5159,7 +5171,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         destsensfile = os.path.join(destpath,martasaddress+'_sensors.txt')
         destowfile = os.path.join(destpath,martasaddress+'_owlist.csv')
- 
+
         try:
             scptransfer(martasuser+'@'+martasaddress+':'+sensfile,destsensfile,martaspasswd)
         except:
@@ -5438,7 +5450,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             header = dbfields2dict(db,dataid)
         array[0] = date2num(array[0])
         stream = DataStream([LineStruct()],header,array)
-        return stream 
+        return stream
 
     def onStopMonitorButton(self, event):
         if  self.monitorSource=='MARCOS':
