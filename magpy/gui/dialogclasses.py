@@ -924,7 +924,7 @@ class StreamExtractValuesDialog(wx.Dialog):
         self.logic2lst = ['and','or']
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1008,11 +1008,11 @@ class StreamExtractValuesDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class StreamSelectKeysDialog(wx.Dialog):
@@ -1029,7 +1029,7 @@ class StreamSelectKeysDialog(wx.Dialog):
         self.namelist = namelist
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1042,7 +1042,7 @@ class StreamSelectKeysDialog(wx.Dialog):
                 colname = elem
             exec('self.'+elem+'CheckBox = wx.CheckBox(self,label="'+colname+'")')
         self.okButton = wx.Button(self, wx.ID_OK, label='Select')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1069,11 +1069,11 @@ class StreamSelectKeysDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class StreamPlotOptionsDialog(wx.Dialog):
@@ -1089,7 +1089,7 @@ class StreamPlotOptionsDialog(wx.Dialog):
         self.optdict = optdict
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1099,7 +1099,7 @@ class StreamPlotOptionsDialog(wx.Dialog):
             exec('self.'+elem+'Text = wx.StaticText(self,label="'+elem+'",size=(160,30))')
             exec('self.'+elem+'TextCtrl = wx.TextCtrl(self, value="'+val+'",size=(160,30))')
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1132,11 +1132,11 @@ class StreamPlotOptionsDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class StreamFlagOutlierDialog(wx.Dialog):
@@ -1153,7 +1153,7 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.timerange=str(timerange)
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1164,7 +1164,7 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.ThresholdTextCtrl = wx.TextCtrl(self, value=self.threshold)
         self.TimerangeTextCtrl = wx.TextCtrl(self, value=self.timerange)
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1206,11 +1206,11 @@ class StreamFlagOutlierDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class StreamFlagRangeDialog(wx.Dialog):
@@ -1267,7 +1267,7 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.CommentText = wx.StaticText(self,label="Comment:")
         self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.rangeRadioBox = wx.RadioBox(self,
             label="Select flagging range type:",
             choices=self.rangetype, majorDimension=2, style=wx.RA_SPECIFY_COLS)
@@ -1354,21 +1354,21 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        #self.okButton.Bind(wx.EVT_BUTTON, self.OnOK)
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #    self.okButton.Bind(wx.EVT_BUTTON, self.OnOK)
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeGroup, self.rangeRadioBox)
         self.Bind(wx.EVT_COMBOBOX, self.OnChangeSelection, self.SelectKeyComboBox)
 
-    def OnOK(self, e):
-        if self.comment == '':
+    #def OnOK(self, e):
+    #    if self.comment == '':
             # ask for comment
-            pass
-        else:
+    #        pass
+    #    else:
             # send OK
-            pass
+    #        pass
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
     def SetValue(self):
             self.UpperLimitTextCtrl.Enable()
@@ -1428,7 +1428,7 @@ class StreamFlagSelectionDialog(wx.Dialog):
         self.comment = ''
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1441,7 +1441,7 @@ class StreamFlagSelectionDialog(wx.Dialog):
         self.CommentText = wx.StaticText(self,label="Comment:")
         self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1481,11 +1481,11 @@ class StreamFlagSelectionDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class StreamLoadFlagDialog(wx.Dialog):
@@ -1510,7 +1510,7 @@ class StreamLoadFlagDialog(wx.Dialog):
         # countvariables for specific header blocks
         self.loadDBButton = wx.Button(self, label='Load from DB')
         self.loadFileButton = wx.Button(self, label='Load file')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         if not self.db:
             self.loadDBButton.Disable()
 
@@ -1549,12 +1549,12 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDB)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
     def OnLoadDB(self, e):
         self.flaglist = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
@@ -1596,7 +1596,7 @@ class StreamSaveFlagDialog(wx.Dialog):
         # countvariables for specific header blocks
         self.saveDBButton = wx.Button(self, label='Save to DB')
         self.saveFileButton = wx.Button(self, label='Save to file')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         if not self.db:
             self.saveDBButton.Disable()
 
@@ -1635,12 +1635,12 @@ class StreamSaveFlagDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.saveDBButton.Bind(wx.EVT_BUTTON, self.OnSaveDB)
         self.saveFileButton.Bind(wx.EVT_BUTTON, self.OnSaveFile)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
     def OnSaveDB(self, e):
         print ("Saving", self.flaglist[0])
@@ -1860,7 +1860,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.maxtime = num2date(stream.ndarray[0][-1])
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1880,7 +1880,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1925,11 +1925,11 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class AnalysisFilterDialog(wx.Dialog):
@@ -1957,7 +1957,7 @@ class AnalysisFilterDialog(wx.Dialog):
             self.buttonlabel = 'Filter'
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1975,7 +1975,7 @@ class AnalysisFilterDialog(wx.Dialog):
             label="Missing data:",
             choices=self.missing, majorDimension=1, style=wx.RA_SPECIFY_COLS)
         self.okButton = wx.Button(self, wx.ID_OK, label=self.buttonlabel)
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2016,11 +2016,11 @@ class AnalysisFilterDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class AnalysisOffsetDialog(wx.Dialog):
@@ -2084,7 +2084,7 @@ class AnalysisOffsetDialog(wx.Dialog):
             exec('self.'+elem+'Label = wx.StaticText(self,label="'+elem+'")')
             exec('self.'+elem+'TextCtrl = wx.TextCtrl(self,value="'+self.val.get(elem,'')+'")')
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
         self.StartDatePicker.Disable()
         self.StartTimeTextCtrl.Disable()
@@ -2139,10 +2139,10 @@ class AnalysisOffsetDialog(wx.Dialog):
 
     def bindControls(self):
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeRange, self.offsetRadioBox)
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        #self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
     def OnChangeRange(self, e):
         val = self.offsetRadioBox.GetStringSelection()
@@ -2169,7 +2169,7 @@ class AnalysisRotationDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -2178,7 +2178,7 @@ class AnalysisRotationDialog(wx.Dialog):
         self.betaLabel = wx.StaticText(self,label="Beta")
         self.betaTextCtrl = wx.TextCtrl(self,value="")
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2213,11 +2213,11 @@ class AnalysisRotationDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class AnalysisBaselineDialog(wx.Dialog):
@@ -2258,7 +2258,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.parameterButton = wx.Button(self, label='Change fit ...',size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Adopt baseline',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
         self.parameterTextCtrl.Disable()
         #self.funcLabel = wx.StaticText(self, label="Fit function:")
@@ -2301,11 +2301,11 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #   self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.parameterButton.Bind(wx.EVT_BUTTON, self.OnParameter)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
     def OnParameter(self, e):
         # open fit dlg
@@ -2676,7 +2676,7 @@ class DISetParameterDialog(wx.Dialog):
         self.abstypes = ['manual', 'autodif']
         self.createControls()
         self.doLayout()
-        self.bindControls()
+        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -2696,7 +2696,7 @@ class DISetParameterDialog(wx.Dialog):
         self.expDLabel = wx.StaticText(self, label="Expected D",size=(160,30))
         self.expDTextCtrl = wx.TextCtrl(self, value="2.0",size=(160,30))
 
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         self.okButton = wx.Button(self, wx.ID_OK, label='OK')
 
     def doLayout(self):
@@ -2741,11 +2741,11 @@ class DISetParameterDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #def bindControls(self):
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class InputSheetDialog(wx.Dialog):
