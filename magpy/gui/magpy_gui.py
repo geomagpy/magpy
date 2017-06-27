@@ -1916,7 +1916,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
         else:
-            dlg = wx.MessageDialog(self, "Could not identfy file!\n"
+            dlg = wx.MessageDialog(self, "Could not identify file!\n"
                 "please check and/or try OpenDirectory\n",
                 "OpenFile", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
