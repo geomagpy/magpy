@@ -5138,8 +5138,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                        "Log files (*.log)|*.log",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
-        saveFileDialog.GetPath()
+        savepath = saveFileDialog.GetPath()
+        text = self.menu_p.rep_page.logger.GetValue()
         saveFileDialog.Destroy()
+
+        logfile = open(savepath, "w")
+        logfile.write(text)
+        logfile.close()
 
 
     # ------------------------------------------------------------------------------------------
