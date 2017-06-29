@@ -4122,20 +4122,28 @@ Suite 330, Boston, MA  02111-1307  USA"""
         end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
         #print ("Range", start, end)
 
-        try:
-            self.changeStatusbar("Trimming stream ...")
-            newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
-            self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
-            self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
-        except:
-            self.menu_p.rep_page.logMsg('- Trimming failed')
+        if end > start:
+            try:
+                self.changeStatusbar("Trimming stream ...")
+                newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
+                self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
+                self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
+            except:
+                self.menu_p.rep_page.logMsg('- Trimming failed')
 
-        self.ActivateControls(self.plotstream)
-        if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist)
-            self.changeStatusbar("Ready")
+            self.ActivateControls(self.plotstream)
+            if self.plotstream.length()[0] > 0:
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
+            else:
+                self.changeStatusbar("Failure")
         else:
-            self.changeStatusbar("Failure")
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered dates are out of order.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
 
 
     def openStream(self,path='',mintime=None,maxtime=None,extension=None):
