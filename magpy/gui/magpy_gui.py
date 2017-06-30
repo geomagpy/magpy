@@ -1920,13 +1920,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 "please check and/or try OpenDirectory\n",
                 "OpenFile", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
-            self.changeStatusbar("Loading from directory failed ... Ready")
+            self.changeStatusbar("Loading file failed ... Ready")
             dlg.Destroy()
 
 
     def OnOpenURL(self, event):
         stream = DataStream()
-
+        success = False
         bookmarks = self.options.get('bookmarks',[])
         if bookmarks == []:
             bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
@@ -1935,46 +1935,55 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dlg.ShowModal() == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
             self.changeStatusbar("Loading data ... be patient")
-            if not url.endswith('/'):
-                self.menu_p.str_page.pathTextCtrl.SetValue(url)
-                self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
-                try:
-                    stream = read(path_or_url=url)
-                except:
-                    dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                        "please check address or your internet connection\n",
-                        "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    self.changeStatusbar("Loading url failed ... Ready")
-                    dlg.Destroy()
-            else:
-                self.menu_p.str_page.pathTextCtrl.SetValue(url)
-                mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
-                maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
-                try:
-                    stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
-                except:
-                    dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                        "please check address or your internet connection\n",
-                        "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    self.changeStatusbar("Loading url failed ... Ready")
-                    dlg.Destroy()
+            try:
+                if not url.endswith('/'):
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
+                    try:
+                        stream = read(path_or_url=url)
+                        success = True
+                    except:
+                        success = False
+                else:
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
+                    maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
+                    try:
+                        stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
+                        success = True
+                    except:
+                        success = False
+            except:
+                pass
+        dlg.Destroy()
 
+        if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
-
+            if self.InitialRead(stream):
+                #self.ActivateControls(self.plotstream)
+                self.OnInitialPlot(self.plotstream)
             self.options['bookmarks'] = dlg.favorites
             #print ("Here", dlg.favorites)
             #if not bookmarks == dlg.favorites:
             #print ("Favorites have changed ...  can be saved in init")
-
-
-        if self.InitialRead(stream):
-            #self.ActivateControls(self.plotstream)
-            self.OnInitialPlot(self.plotstream)
-
-        self.changeStatusbar("Ready")
-        dlg.Destroy()
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            self.changeStatusbar("Ready")
+        else:
+            self.options['bookmarks'] = dlg.favorites
+            #print ("Here", dlg.favorites)
+            #if not bookmarks == dlg.favorites:
+            #print ("Favorites have changed ...  can be saved in init")
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            dlg = wx.MessageDialog(self, "Could not access URL!\n"
+                "please check address or your internet connection\n",
+                "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Loading url failed ... Ready")
+            dlg.Destroy()
 
 
     def OnOpenDB(self, event):

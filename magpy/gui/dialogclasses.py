@@ -46,7 +46,7 @@ class OpenWebAddressDialog(wx.Dialog):
         self.dropFavsButton = wx.Button(self, label='Remove from favorites',size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -90,7 +90,7 @@ class OpenWebAddressDialog(wx.Dialog):
         self.addFavsButton.Bind(wx.EVT_BUTTON, self.AddFavs)
         self.dropFavsButton.Bind(wx.EVT_BUTTON, self.DropFavs)
         self.getFavsComboBox.Bind(wx.EVT_COMBOBOX, self.GetFavs)
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
 
     def GetFavs(self,e):
@@ -114,8 +114,8 @@ class OpenWebAddressDialog(wx.Dialog):
         for elem in self.favorites:
             self.getFavsComboBox.Append(elem)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class LoadDataDialog(wx.Dialog):
