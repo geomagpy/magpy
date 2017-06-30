@@ -90,7 +90,6 @@ class OpenWebAddressDialog(wx.Dialog):
         self.dropFavsButton.Bind(wx.EVT_BUTTON, self.DropFavs)
         self.getFavsComboBox.Bind(wx.EVT_COMBOBOX, self.GetFavs)
 
-
     def GetFavs(self,e):
         """
         http://www.intermagnet.org/test/ws/?id=BOU
