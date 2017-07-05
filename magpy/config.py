@@ -3,25 +3,36 @@ import os
 import json
 import io
 
-config_file_name = "config.json"
+config_dictionary = None
 
-from os.path import expanduser
-home = expanduser("~")
-directory = os.path.join(home, '.magpyFiles')
 
-if not os.path.exists(directory):
-    os.makedirs(directory)
+def get_config(path=None):
+    if path is None:
+        home = os.path.expanduser("~")
+        directory = os.path.join(home, '.magpyFiles')
+        CONFIG_FILE_NAME = "config.json"
+        default_path = os.path.join(directory, CONFIG_FILE_NAME)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        path = default_path
 
-path_to_config = os.path.join(directory, config_file_name)
-if not os.path.exists(path_to_config):
-    with open(path_to_config, "w") as cfg:
-        data = {
-            'droppedValue' : 99999,
-            'logLocation' : directory
-        }
-        json.dump(data, cfg, ensure_ascii=False)
-    with open(path_to_config, "r") as cfg:
-        data = json.load(cfg)
-else:
-    with open(path_to_config, "r") as cfg:
-        data = json.load(cfg)
+    dictionary = {}
+    global config_dictionary
+    if config_dictionary is None:
+        if not os.path.exists(path):
+            with open(path, "w") as cfg:
+                dictionary = {
+                    'droppedValue' : 99999,
+                    'logLocation' : directory
+                }
+                json.dump(dictionary, cfg, ensure_ascii=False)
+            with open(path, "r") as cfg:
+                dictionary = json.load(cfg)
+        else:
+            with open(path, "r") as cfg:
+                dictionary = json.load(cfg)
+        config_dictionary = dictionary
+    else:
+        dictionary = config_dictionary
+
+    return dictionary
