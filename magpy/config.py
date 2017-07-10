@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Method for creating and/or reading a configuration file."""
 #stdlib imports
-import os
-import json
 import io
+import json
+import os
 
 
 #global variables
