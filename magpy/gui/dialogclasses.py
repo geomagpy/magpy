@@ -2019,7 +2019,6 @@ class AnalysisOffsetDialog(wx.Dialog):
     def bindControls(self):
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeRange, self.offsetRadioBox)
 
-
     def OnChangeRange(self, e):
         val = self.offsetRadioBox.GetStringSelection()
         if str(val) == 'all':
