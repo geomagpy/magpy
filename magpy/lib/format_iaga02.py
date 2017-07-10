@@ -11,6 +11,7 @@ from __future__ import division
 from io import open
 
 from magpy.stream import *
+from magpy.config import get_config
 
 def isIAGA(filename):
     """
@@ -418,7 +419,11 @@ def writeIAGA(datastream, filename, **kwargs):
 
         fulllength = datastream.length()[0]
         # Setting nan replacement value based on config file
-        drop = data['droppedValue']
+        data = get_config()
+        if 'droppedValue' in data:
+            drop = data['droppedValue']
+        else:
+            drop = 99999
         # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
         #datacomp = 'EHZ'
         #datacomp = 'DHZ'

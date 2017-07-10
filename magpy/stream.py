@@ -29,11 +29,11 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 
 # Logging
 # ---------
-# Select the home directory of the user (platform independent)
-from os.path import expanduser
-home = expanduser("~")
+# Select the directory defined by the config file
 data = get_config()
-if not os.path.exists(data['logLocation']):
+if not 'logLocation' in data:
+    path_to_log = tempfile.gettempdir()
+elif not os.path.exists(data['logLocation']):
     path_to_log = tempfile.gettempdir()
 else:
     path_to_log = data['logLocation']
