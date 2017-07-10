@@ -90,7 +90,6 @@ class OpenWebAddressDialog(wx.Dialog):
         self.addFavsButton.Bind(wx.EVT_BUTTON, self.AddFavs)
         self.dropFavsButton.Bind(wx.EVT_BUTTON, self.DropFavs)
         self.getFavsComboBox.Bind(wx.EVT_COMBOBOX, self.GetFavs)
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
 
 
     def GetFavs(self,e):
@@ -114,9 +113,6 @@ class OpenWebAddressDialog(wx.Dialog):
         for elem in self.favorites:
             self.getFavsComboBox.Append(elem)
 
-    #def OnClose(self, e):
-    #    self.Close(True)
-
 
 class LoadDataDialog(wx.Dialog):
     """
@@ -132,7 +128,6 @@ class LoadDataDialog(wx.Dialog):
         self.extension = extension
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -149,7 +144,7 @@ class LoadDataDialog(wx.Dialog):
             self.extLabel = wx.StaticText(self, label="Files (*.min,*,WIC*):")
         self.fileExt = wx.TextCtrl(self, value=self.extension,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Load',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -194,12 +189,6 @@ class LoadDataDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
-
 
 class ExportDataDialog(wx.Dialog):
     """
@@ -240,7 +229,7 @@ class ExportDataDialog(wx.Dialog):
         self.filenameTextCtrl = wx.TextCtrl(self, value=self.filename, size=(300,30))
         self.modifyButton = wx.Button(self, label='Modify name(s)', size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Write', size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel', size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
 
         self.filenameTextCtrl.Disable()
         self.selectedTextCtrl.Disable()
@@ -286,7 +275,6 @@ class ExportDataDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.selectDirButton.Bind(wx.EVT_BUTTON, self.OnSelectDirButton)
         self.modifyButton.Bind(wx.EVT_BUTTON, self.OnModifyButton)
         self.formatComboBox.Bind(wx.EVT_COMBOBOX, self.OnFormatChange)
@@ -344,9 +332,6 @@ class ExportDataDialog(wx.Dialog):
         self.filename = self.GetFilename(self.stream, selformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
         self.filenameTextCtrl.SetValue(self.filename)
 
-    def OnClose(self, e):
-        #self.Close(True)
-        self.Close(True)
 
 class ExportModifyNameDialog(wx.Dialog):
     """
@@ -363,7 +348,6 @@ class ExportModifyNameDialog(wx.Dialog):
         self.year = year
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
 
     # Widgets
@@ -384,7 +368,7 @@ class ExportModifyNameDialog(wx.Dialog):
         self.yearLabel = wx.StaticText(self, label="Year (BLV export):", size=(160,30))
         self.yearTextCtrl = wx.TextCtrl(self, value=self.year, size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel', size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
 
 
     def doLayout(self):
@@ -429,12 +413,6 @@ class ExportModifyNameDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
-
 class DatabaseConnectDialog(wx.Dialog):
     """
     Dialog for Database Menu - Connect MySQL
@@ -445,7 +423,6 @@ class DatabaseConnectDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -460,7 +437,7 @@ class DatabaseConnectDialog(wx.Dialog):
         self.dbLabel = wx.StaticText(self, label="Database")
         self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_OK, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -502,12 +479,6 @@ class DatabaseConnectDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
-
 
 class DatabaseContentDialog(wx.Dialog):
     """
@@ -521,7 +492,6 @@ class DatabaseContentDialog(wx.Dialog):
         self.datalst = datalst
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -529,7 +499,7 @@ class DatabaseContentDialog(wx.Dialog):
         self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
             style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -566,12 +536,6 @@ class DatabaseContentDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
-
 
 class OptionsInitDialog(wx.Dialog):
     """
@@ -585,7 +549,6 @@ class OptionsInitDialog(wx.Dialog):
         self.funclist = ['spline','polynomial']
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -619,7 +582,7 @@ class OptionsInitDialog(wx.Dialog):
         bm = self.options.get('bookmarks',['http://www.intermagnet.org/test/ws/?id=BOU'])
         self.bookmarksComboBox = wx.ComboBox(self, choices=bm,style=wx.CB_DROPDOWN, value=bm[0],size=(160,-1))
 
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.saveButton = wx.Button(self, wx.ID_OK, label='Save',size=(160,30))
 
         #self.bookmarksComboBox.Disable()
@@ -696,12 +659,6 @@ class OptionsInitDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
-
 
 class OptionsDIDialog(wx.Dialog):
     """
@@ -730,7 +687,6 @@ class OptionsDIDialog(wx.Dialog):
             self.sheetscale = True
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -807,7 +763,7 @@ class OptionsDIDialog(wx.Dialog):
 
         self.sheetdoubleCheckBox.SetValue(self.sheetdouble)
         self.sheetscaleCheckBox.SetValue(self.sheetscale)
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         self.saveButton = wx.Button(self, wx.ID_OK, label='Save')
 
     def doLayout(self):
@@ -899,11 +855,6 @@ class OptionsDIDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
 
 # ###################################################
 #    Stream page
@@ -924,7 +875,6 @@ class StreamExtractValuesDialog(wx.Dialog):
         self.logic2lst = ['and','or']
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1008,12 +958,6 @@ class StreamExtractValuesDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
-
 
 class StreamSelectKeysDialog(wx.Dialog):
     """
@@ -1029,7 +973,6 @@ class StreamSelectKeysDialog(wx.Dialog):
         self.namelist = namelist
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1069,12 +1012,6 @@ class StreamSelectKeysDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
-
 
 class StreamPlotOptionsDialog(wx.Dialog):
     """
@@ -1089,7 +1026,6 @@ class StreamPlotOptionsDialog(wx.Dialog):
         self.optdict = optdict
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1132,12 +1068,6 @@ class StreamPlotOptionsDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
-
 
 class StreamFlagOutlierDialog(wx.Dialog):
     """
@@ -1153,7 +1083,6 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.timerange=str(timerange)
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1205,12 +1134,6 @@ class StreamFlagOutlierDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
 
 class StreamFlagRangeDialog(wx.Dialog):
@@ -1354,7 +1277,6 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
     #    self.okButton.Bind(wx.EVT_BUTTON, self.OnOK)
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeGroup, self.rangeRadioBox)
         self.Bind(wx.EVT_COMBOBOX, self.OnChangeSelection, self.SelectKeyComboBox)
@@ -1366,9 +1288,6 @@ class StreamFlagRangeDialog(wx.Dialog):
     #    else:
             # send OK
     #        pass
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
     def SetValue(self):
             self.UpperLimitTextCtrl.Enable()
@@ -1428,7 +1347,6 @@ class StreamFlagSelectionDialog(wx.Dialog):
         self.comment = ''
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1480,12 +1398,6 @@ class StreamFlagSelectionDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
 
 class StreamLoadFlagDialog(wx.Dialog):
@@ -1549,12 +1461,8 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDB)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
     def OnLoadDB(self, e):
         self.flaglist = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
@@ -1635,12 +1543,8 @@ class StreamSaveFlagDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.saveDBButton.Bind(wx.EVT_BUTTON, self.OnSaveDB)
         self.saveFileButton.Bind(wx.EVT_BUTTON, self.OnSaveFile)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
     def OnSaveDB(self, e):
         print ("Saving", self.flaglist[0])
@@ -1860,7 +1764,6 @@ class AnalysisFitDialog(wx.Dialog):
         self.maxtime = num2date(stream.ndarray[0][-1])
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1925,12 +1828,6 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
-
 
 class AnalysisFilterDialog(wx.Dialog):
     """
@@ -1957,7 +1854,6 @@ class AnalysisFilterDialog(wx.Dialog):
             self.buttonlabel = 'Filter'
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -2015,12 +1911,6 @@ class AnalysisFilterDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
 
 class AnalysisOffsetDialog(wx.Dialog):
@@ -2139,10 +2029,6 @@ class AnalysisOffsetDialog(wx.Dialog):
 
     def bindControls(self):
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeRange, self.offsetRadioBox)
-        #self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
     def OnChangeRange(self, e):
         val = self.offsetRadioBox.GetStringSelection()
@@ -2169,7 +2055,6 @@ class AnalysisRotationDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -2212,12 +2097,6 @@ class AnalysisRotationDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
 
 class AnalysisBaselineDialog(wx.Dialog):
@@ -2301,11 +2180,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-    #   self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.parameterButton.Bind(wx.EVT_BUTTON, self.OnParameter)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
     def OnParameter(self, e):
         # open fit dlg
@@ -2354,7 +2229,7 @@ class LoadDIDialog(wx.Dialog):
         self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(160,30))
         self.loadDBButton = wx.Button(self,-1,"Use DB Table",size=(160,30))
         self.loadRemoteButton = wx.Button(self,-1,"Get from Remote",size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         self.loadDBButton.Disable()
         self.loadRemoteButton.Disable()
 
@@ -2391,13 +2266,9 @@ class LoadDIDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadDIFiles)
         self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDIDB)
         self.loadRemoteButton.Bind(wx.EVT_BUTTON, self.OnLoadDIRemote)
-
-    def OnClose(self, e):
-        self.Close(True)
 
     def OnLoadDIFiles(self,e):
         self.difiledirname = ''
@@ -2451,7 +2322,7 @@ class DefineVarioDialog(wx.Dialog):
         self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Use',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2486,11 +2357,7 @@ class DefineVarioDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineVario)
-
-    def OnClose(self, e):
-        self.Close(True)
 
     def OnDefineVario(self,e):
         dialog = wx.DirDialog(None, "Choose a directory with variometer data:",self.variopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
@@ -2524,7 +2391,7 @@ class DefineScalarDialog(wx.Dialog):
         self.remoteLabel = wx.StaticText(self, label="3) Access remote files:")
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Use',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2559,11 +2426,7 @@ class DefineScalarDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnDefineScalar)
-
-    def OnClose(self, e):
-        self.Close(True)
 
 
     def OnDefineScalar(self,e):
@@ -2676,7 +2539,6 @@ class DISetParameterDialog(wx.Dialog):
         self.abstypes = ['manual', 'autodif']
         self.createControls()
         self.doLayout()
-        #self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -2740,12 +2602,6 @@ class DISetParameterDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    #def bindControls(self):
-    #    self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    #def OnClose(self, e):
-    #    self.Close(True)
 
 
 class InputSheetDialog(wx.Dialog):
@@ -4684,7 +4540,6 @@ class AGetMARCOSDialog(wx.Dialog):
         self.datalst = datalst
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -4692,7 +4547,7 @@ class AGetMARCOSDialog(wx.Dialog):
         self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
             style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -4726,12 +4581,6 @@ class AGetMARCOSDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
 
 class BGetMARCOSDialog(wx.Dialog):
     """
@@ -4745,7 +4594,6 @@ class BGetMARCOSDialog(wx.Dialog):
         self.datalst = datalst
         self.createControls()
         self.doLayout()
-        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -4753,7 +4601,7 @@ class BGetMARCOSDialog(wx.Dialog):
         self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
             style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -4787,12 +4635,6 @@ class BGetMARCOSDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Close(True)
 
 
 class AGetMARTASDialog(wx.Dialog):
@@ -4822,7 +4664,7 @@ class AGetMARTASDialog(wx.Dialog):
         self.pwdLabel = wx.StaticText(self, label="MARTAS pwd:",size=(160,30))
         self.pwdTextCtrl = wx.TextCtrl(self, value="",size=(160,30),style=wx.TE_PASSWORD)
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -4862,11 +4704,7 @@ class AGetMARTASDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.addButton.Bind(wx.EVT_BUTTON, self.OnAdd)
-
-    def OnClose(self, e):
-        self.Close(True)
 
     def OnAdd(self, e):
         self.Close(True)
@@ -4938,7 +4776,7 @@ class MultiStreamDialog(wx.Dialog):
         self.SubtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
         self.CombineButton = wx.Button(self,-1,"Combine",size=(160,30))
         self.AverageStackButton = wx.Button(self,-1,"Average",size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -4987,7 +4825,6 @@ class MultiStreamDialog(wx.Dialog):
 
     def bindControls(self):
         from functools import partial
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.MergeButton.Bind(wx.EVT_BUTTON, self.OnMergeButton)
         self.SubtractButton.Bind(wx.EVT_BUTTON, self.OnSubtractButton)
         self.AverageStackButton.Bind(wx.EVT_BUTTON, self.OnStackButton)
@@ -4995,9 +4832,6 @@ class MultiStreamDialog(wx.Dialog):
         for idx, elem in enumerate(self.streamlist):
             name = self.namelst[idx]
             exec('self.'+name+'KeyButton.Bind(wx.EVT_BUTTON, partial( self.OnGetKeys, name = idx ) )')
-
-    def OnClose(self, e):
-        self.Close(True)
 
     def OnGetKeys(self, e, name):
         print ("Stream", name)
