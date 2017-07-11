@@ -213,11 +213,11 @@ def readIAGA(filename, headonly=False, **kwargs):
                 # Baue zweidimensionales Array auf
                 # transl. Build two-dimensional array
                 array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
-                if float(row[3]) >= 88888.0:
+                if float(row[3]) >= NOT_REPORTED:
                     row[3] = np.nan
-                if float(row[4]) >= 88888.0:
+                if float(row[4]) >= NOT_REPORTED:
                     row[4] = np.nan
-                if float(row[5]) >= 88888.0:
+                if float(row[5]) >= NOT_REPORTED:
                     row[5] = np.nan
                 if varstr in ['dhzf','dhzg']:
                     array[1].append( float(row[4]) )
@@ -240,7 +240,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                     array[2].append( float(row[4]) )
                     array[3].append( float(row[5]) )
                 try:
-                    if float(row[6]) < 88888:
+                    if float(row[6]) < NOT_REPORTED:
                         if varstr[-1]=='f':
                             array[4].append(float(elem[6]))
                         elif varstr[-1]=='g' and varstr=='xyzg':
@@ -258,7 +258,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                         array[4].append(float('nan'))
 
                 except:
-                    if not float(row[6]) >= 88888:
+                    if not float(row[6]) >= NOT_REPORTED:
                         array[4].append(float(row[6]))
                     else:
                         array[4].append(float('nan'))

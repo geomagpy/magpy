@@ -29,9 +29,14 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 # Logging
 # ---------
 # Select the user's home directory (platform independent) or environment path
-try:
-    path_to_log = os.environ["MAGPY_LOG_PATH"]
-except:
+if "MAGPY_LOG_PATH" in os.environ:
+    env_path = os.environ["MAGPY_LOG_PATH"]
+    if os.path.exists(env_path):
+        path_to_log = env_path
+    else:
+        os.makedirs(env_path)
+        path_to_log = env_path
+else:
     path_to_log = tempfile.gettempdir()
 
 def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_log,
