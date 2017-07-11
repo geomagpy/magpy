@@ -2074,7 +2074,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             checkPath = os.path.join(path, dlg.filenameTextCtrl.GetValue())
             export = False
             if os.path.exists(checkPath):
-                msg = wx.MessageDialog(self, "The current file name will overwrite and existing file!\n"
+                msg = wx.MessageDialog(self, "The current export file will overwrite an existing file!\n"
                     "Choose 'Ok' to apply the overwrite or 'Cancel' to stop exporting.\n",
                     "VerifyOverwrite", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
                 if msg.ShowModal() == wx.ID_OK:
