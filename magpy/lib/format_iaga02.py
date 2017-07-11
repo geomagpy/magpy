@@ -14,6 +14,7 @@ from magpy.stream import *
 
 #global variables
 MISSING_DATA = 99999
+NOT_REPORTED = 88888
 
 def isIAGA(filename):
     """
@@ -278,6 +279,7 @@ def writeIAGA(datastream, filename, **kwargs):
     Writing IAGA2002 format data.
     """
     global MISSING_DATA
+    global NOT_REPORTED
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
@@ -452,24 +454,24 @@ def writeIAGA(datastream, filename, **kwargs):
                 if len(datastream.ndarray[xind]) > 0:
                     xval = datastream.ndarray[xind][i]*xmult
                 else:
-                    xval = 88888.0
+                    xval = NOT_REPORTED
                 if len(datastream.ndarray[yind]) > 0:
                     yval = datastream.ndarray[yind][i]
                     if order[1] == '3':
                         yval = datastream.ndarray[yind][i]*np.cos(datastream.ndarray[zind][i]*np.pi/180.)
                 else:
-                    yval = 88888.0
+                    yval = NOT_REPORTED
                 if len(datastream.ndarray[zind]) > 0:
                     zval = datastream.ndarray[zind][i]*zmult
                 else:
-                    zval = 88888.0
+                    zval = NOT_REPORTED
                 if len(datastream.ndarray[find]) > 0:
                     if not useg:
                         fval = datastream.ndarray[find][i]
                     else:
                         fval = np.sqrt(xval**2+yval**2+zval**2)-datastream.ndarray[find][i]
                 else:
-                    fval = 88888.0
+                    fval = NOT_REPORTED
                 timeval = datastream.ndarray[0][i]
             row = ''
             try:
