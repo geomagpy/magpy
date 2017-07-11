@@ -2071,7 +2071,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #print "Stream: ", len(self.stream), len(self.plotstream)
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
             #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
-            try:
+            checkPath = os.path.join(path, dlg.filenameTextCtrl.GetValue())
+            export = False
+            if os.path.exists(checkPath):
+                msg = wx.MessageDialog(self, "The current file name will overwrite and existing file!\n"
+                    "Choose 'Ok' to apply the overwrite or 'Cancel' to stop exporting.\n",
+                    "VerifyOverwrite", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+                if msg.ShowModal() == wx.ID_OK:
+                    export = True
+                msg.Destroy()
+            else:
+                export = True
+
+            if export == True:
                 if fileformat == 'BLV':
                     print ("Writing BLV data")  # add function here
                     print ("Function", self.plotopt['function'])
@@ -2098,7 +2110,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
                 self.changeStatusbar("Data written ... Ready")
             except:
-                self.menu_p.rep_page.logMsg("Writing failed - Permission?")
+                self.menu_p.rep_page.logMsg("Writing failed - Permission?")\
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()
@@ -2374,13 +2386,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             Step 1: directories and existance of files (obligatory)
             Step 2: file access and basic header information
             Step 3: data content and consistency of primary source
-            Step 4: checking secondary source and consistency with primary 
+            Step 4: checking secondary source and consistency with primary
             Step 5: basevalues and adopted baseline variation
             Step 6: yearly means, consistency of meta information
             Step 7: acitivity indicies
         """
         # 1. open a dialog with two input directories: 1) for IAF minute data and 2) (optional) for IamgCDF sec data
-        # 2. radio field with two selections (quick check, full check) 
+        # 2. radio field with two selections (quick check, full check)
         minutepath = ''
         secondpath = ''
         seconddata = 'None'
@@ -2397,8 +2409,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         def saveReport(label, report):
             if label == 'Save':
                 savepath = ''
-                saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
-                                       "Report (*.txt)|*.txt", 
+                saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "Report (*.txt)|*.txt",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
                 if saveFileDialog.ShowModal() == wx.ID_OK:
                     savepath = saveFileDialog.GetPath()
@@ -2464,7 +2476,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     loadpath = os.path.join(secondpath,cdfname)
                     secdata = read(loadpath,debug=True)
                 else:
-                    print ("please provide a sensorid") 
+                    print ("please provide a sensorid")
             elif seconddata == 'iaga':
                 loadpath = os.path.join(secondpath,'*.sec')
                 try:
@@ -2527,7 +2539,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         month = datetime(1900, rmonth, 1).strftime('%b')
         if checkchoice == 'quick':
             reportmsg += "Test type: {} . Random check month: {}\n".format(checkchoice, datetime(1900, rmonth, 1).strftime('%B'))
-        else: 
+        else:
             reportmsg += "Test type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, rmonth, 1).strftime('%B'))
 
         succlst = ['0','0','0','0','0','0','0']
@@ -2549,10 +2561,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             return
         if success == 1:
             succlst[0] = 1
-            reportmsg += "#######################################\n"            
+            reportmsg += "#######################################\n"
             reportmsg += "Step 1:\n"
-            reportmsg += "#######################################\n"         
-            reportmsg += "Def.: checking directories and for presence of files\n\n" 
+            reportmsg += "#######################################\n"
+            reportmsg += "Def.: checking directories and for presence of files\n\n"
             # check whether paths are existing and appropriate data is contained - if failing set success to 6
             # Provide a report dialog with summaries of each test and a continue button
             # You have selected the following options:
@@ -2572,7 +2584,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     # windows is not case-sensitive ....
                     iafcnt += len(glob.glob(os.path.join(minutepath,"*.bin")))
                     if iafcnt > 0 and iafpath == '':
-                        iafpath = os.path.join(minutepath,"*.bin")                    
+                        iafpath = os.path.join(minutepath,"*.bin")
                 if not iafcnt == 12:
                     succlst[0] = 6
                     errormsg += "Step 1: !!! IAF error: didn't find 12 monthly files\n"
@@ -2627,7 +2639,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         yldat = read(yearmeanpath)
                         year = num2date(yldat.ndarray[0][-1]).year
                     except:
-                        pass                        
+                        pass
                 if not readmecnt >= 1:
                     warningmsg += "Step 1: (warning)  No README present\n"
                     readmedata = False
@@ -2709,19 +2721,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
                 succlst[1] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 2:\n"
                 reportmsg += "#######################################\n"
-                reportmsg += "Def.: checking readability of main data files and header information\n\n"            
+                reportmsg += "Def.: checking readability of main data files and header information\n\n"
                 reportmsg += "Step 2:  IAF data:\n"
                 reportmsg += "-----------------------\n"
                 self.changeStatusbar("Step 2: Reading minute data ... ")
                 mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
-                
+
                 #print(log_stream.getvalue())
 
                 logger = setup_logger(__name__)
-                
+
                 if fail == 6 and not onlysec:
                     errormsg += "Step 2: Reading of IAF data failed - check file format\n"
                     succlst[1] = 6
@@ -2737,7 +2749,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
                 reportmsg += "\nStep 2:  IAF data  - checking meta information:\n"
                 reportmsg += "-----------------------\n"
-                headfailure = False 
+                headfailure = False
                 #for head in IMAGCDFMETA: # IMAGMETAMETA
                 for head in IAFBINMETA: # IMAGMETAMETA ##### need to select only meta information expected in iaf file, not the information needed to create all IAF output files
                     value = mindata.header.get(head,'')
@@ -2752,7 +2764,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         succlst[1] = 5
 
                 obscode = mindata.header.get('StationID')
-                # get year 
+                # get year
                 try:
                     year = num2date(mindata.ndarray[0][-1]).year
                 except:
@@ -2786,7 +2798,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         META = IMAGCDFMETA
                     elif seconddata == 'iaga':
                         META = IAGAMETA
-                    for head in META: 
+                    for head in META:
                         value = secdata.header.get(head,'')
                         if value == '':
                             warningmsg += "Step 2: (warning) !!! Second data: no meta information for {}\n".format(head)
@@ -2824,7 +2836,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step3']:
                 succlst[2] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 3:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: checking data content and consistency\n\n"
@@ -2910,7 +2922,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             ftest = ftest._drop_nans(scal)
                             fsamprate = ftest.samplingrate()
                             reportmsg += "Step 3: minute data with {} - sampling period: {} sec ... OK\n".format(scal, fsamprate)
-                            if scal=='f': 
+                            if scal=='f':
                                 ftest = ftest.delta_f()
                             fmean, fstd = ftest.mean('df',std=True)
                             reportmsg += "Step 3: found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
@@ -2926,7 +2938,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                 reportmsg += "Step 3: F seems not to be measured independently \n"
                                 warningmsg += "Step 3: F seems not to be measured independently\n"
                                 succlst[2] = 3
-                                
+
                 reportmsg += "\nStep 3: Checking hourly and daily mean data \n"
                 reportmsg += "-----------------------\n"
                 hourprob = False
@@ -2966,7 +2978,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             diff = subtractStreams(iafhour,minfiltdata, keys=['x','y','z'])
                             warningmsg +=  "Step 3: Could not get F/G differences between hourly data and filtered minute data. Please check data file whether hourly means are complete.\n"
                             succlst[2] = 3
-                            
+
                         if not diff.length()[0] > 0:
                             errormsg += "Step 3: Could not calculate difference between hourly mean values and filtered minute data.\n"
                             faileddiff = True
@@ -3013,7 +3025,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     errormsg += "Step 3: Did not find daily means in IAF file\n"
                     dayprob = True
                     succlst[2] = 6
-                
+
                 if not dayprob:
                     reportmsg += "Step 3: Extracting daily means ... OK\n"
                 else:
@@ -3075,19 +3087,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step4']:
                 succlst[3] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 4:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: checking one second data content and consistency\n\n"
                 if seconddata == 'None':
                     reportmsg += "Step 4: No second data available - continue with step 5\n"
                 else:
-                    self.changeStatusbar("Step 4: Checking one second data consistency (internally and with primary data) ")            
+                    self.changeStatusbar("Step 4: Checking one second data consistency (internally and with primary data) ")
                     # message box - Continuing with step 4 - consistency of one second data with IAF
 
                     if checkchoice == 'quick':
                         # use already existing data
-                        monthlist = [rmonth] 
+                        monthlist = [rmonth]
                     else:
                         # read data for each month
                         monthlist = range(1,13)
@@ -3136,7 +3148,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             ftest = ftest._drop_nans(scal)
                             fsamprate = ftest.samplingrate()
                             reportmsg += "Step 4: +++ found {} in one second data - sampling period: {} sec ... OK\n".format(scal, fsamprate)
-                            if scal=='f': 
+                            if scal=='f':
                                 ftest = ftest.delta_f()
                             fmean, fstd = ftest.mean('df',std=True)
                             reportmsg += "Step 4: +++ found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
@@ -3241,7 +3253,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step5']:
                 succlst[4] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 5:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: baseline variation and data quality\n\n"
@@ -3272,7 +3284,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     srmeans = means.get_sampling_period()
                     reportmsg += "Step 5: basevalues measured on average every {:.1f} days \n".format(srmeans)
                     # Average and maximum standard deviation
-                    means = means._drop_nans('dx') 
+                    means = means._drop_nans('dx')
                     #print ("means", means.mean('dx',percentage=1), means.amplitude('dx'))
                     reportmsg += "Step 5: average deviation of repeated measurements is: {:.2f}{} for {}, {:.4f}{} for {} and {:.2f}{} for {}\n".format(means.mean('dx',percentage=1), unitx, headx, means.mean('dy',percentage=1), unity, heady, means.mean('dz',percentage=1), unitz, headz)
                     if means.mean('dx',percentage=1) > 0.5 or means.mean('dz',percentage=1) > 0.5:
@@ -3317,7 +3329,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         reportmsg += "Step 5: !!! amplitude of adopted baseline exceeds INTERMAGNET threshold of 5 nT\n"
                         warningmsg += "Step 5: adopted baseline shows relatively high variations - could be related to baseline jumps - please review data\n"
                         succlst[4] = 3
-                    
+
                     # check baseline complexity
 
 
@@ -3348,7 +3360,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step6']:
                 succlst[5] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 6:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: yearly means, consistency of meta information in all files\n\n"
@@ -3360,7 +3372,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     repmsg = ''
                     warnmsg = ''
                     if not np.isnan(hmean1) and not np.isnan(hmean2):
-                        diffh = np.abs(hmean1-hmean2) 
+                        diffh = np.abs(hmean1-hmean2)
                         diffz = np.abs(zmean1-zmean2)
                         if diffh < threshold and diffz < threshold:
                             repmsg += "Step 6: yearly means between {} and {} files are consistent\n".format(source1, source2)
@@ -3422,10 +3434,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     reportmsg += rep
                     warningmsg += warn
                     reportmsg += "Step 6: yearlmean.imo contains data from {} until {} \n".format(num2date(yearmeandata.ndarray[0][0]).year,num2date(yearmeandata.ndarray[0][-1]).year)
-                    
+
                 if not seconddata == 'None':
                     primeheader = secdata.header
-                elif mindata: 
+                elif mindata:
                     primeheader = mindata.header
                 else:
                     primeheader = {}
@@ -3510,7 +3522,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step7']:
                 succlst[6] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 7:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: K values and Kp\n\n"
