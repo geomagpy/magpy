@@ -11,7 +11,9 @@ from __future__ import division
 from io import open
 
 from magpy.stream import *
-from magpy.config import get_config
+
+#global variables
+MISSING_DATA = 99999
 
 def isIAGA(filename):
     """
@@ -275,7 +277,7 @@ def writeIAGA(datastream, filename, **kwargs):
     """
     Writing IAGA2002 format data.
     """
-
+    global MISSING_DATA
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
@@ -418,12 +420,6 @@ def writeIAGA(datastream, filename, **kwargs):
             ndtype = True
 
         fulllength = datastream.length()[0]
-        # Setting nan replacement value based on config file
-        data = get_config()
-        if 'droppedValue' in data:
-            drop = data['droppedValue']
-        else:
-            drop = 99999
         # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
         #datacomp = 'EHZ'
         #datacomp = 'DHZ'
@@ -485,19 +481,19 @@ def writeIAGA(datastream, filename, **kwargs):
                 row = ''
                 pass
             if isnan(xval):
-                row += '%13.2f' % drop
+                row += '%13.2f' % MISSING_DATA
             else:
                 row += '%13.2f' % xval
             if isnan(yval):
-                row += '%10.2f' % drop
+                row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % yval
             if isnan(zval):
-                row += '%10.2f' % drop
+                row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % zval
             if isnan(fval):
-                row += '%10.2f' % drop
+                row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % fval
             line.append(row + '\n')
