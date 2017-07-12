@@ -30,12 +30,9 @@ nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 # ---------
 # Select the user's home directory (platform independent) or environment path
 if "MAGPY_LOG_PATH" in os.environ:
-    env_path = os.environ["MAGPY_LOG_PATH"]
-    if os.path.exists(env_path):
-        path_to_log = env_path
-    else:
-        os.makedirs(env_path)
-        path_to_log = env_path
+    path_to_log = os.environ["MAGPY_LOG_PATH"]
+    if not os.path.exists(path_to_log):
+        os.makedirs(path_to_log)
 else:
     path_to_log = tempfile.gettempdir()
 
