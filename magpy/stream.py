@@ -9953,6 +9953,12 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             # set starttime/endtime. Not sure what to do in this case.
             elif not 'starttime' in kwargs and not 'endtime' in kwargs:
                 logger.error("read: Cannot open file/files: %s" % pathname)
+            elif 'starttime' in kwargs or 'endtime' in kwargs:
+                logger.error("read: Cannot read data. Probably no data available in the time range provided!")
+                raise Exception("No data available in time range")
+            else:
+                logger.error("read: Unknown error occurred. No data in stream!")
+                raise Exception("Unknown error occurred during reading. No data in stream!")
 
     if headonly and (starttime or endtime):
         msg = "read: Keyword headonly cannot be combined with starttime or endtime."
