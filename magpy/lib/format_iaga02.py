@@ -278,8 +278,6 @@ def writeIAGA(datastream, filename, **kwargs):
     """
     Writing IAGA2002 format data.
     """
-    global MISSING_DATA
-    global NOT_REPORTED
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
