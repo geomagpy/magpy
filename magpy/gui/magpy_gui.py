@@ -151,6 +151,18 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('experimental','') == '':
         optionsdict['experimental'] = False
 
+    if optionsdict.get('edgeid','') == '':
+        optionsdict['edgeid'] = ['BDT', 'BOU', 'TST', 'BRW', 'BRT', 'BSL',
+                            'CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA',
+                            'HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS',
+                            'BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA',
+                            'OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD',
+                            'HER', 'KAK']
+    if optionsdict.get('edgetype','') == '':
+        optionsdict['edgetype'] = ['variation', 'adjusted', 'quasi-definitive',
+                                'definitive']
+    if optionsdict.get('edgeformat','') == '':
+        optionsdict['edgeformat'] = ['iaga2002', 'json']
     initpath = os.path.join(normalpath,'.magpyguiini')
 
     pwd = base64.b64encode(passwd)
@@ -1971,9 +1983,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         success = False
         bookmarks = self.options.get('bookmarks',[])
         if bookmarks == []:
-            bookmarks = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab','http://www.intermagnet.org/test/ws/?id=BOU']
-
-        dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
+            bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+        ids = self.options.get('edgeid',[])
+        types = self.options.get('edgetype',[])
+        formats = self.options.get('edgeformat',[])
+        dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks, ids=ids, types=types, formats=formats)
         if dlg.ShowModal() == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
             self.changeStatusbar("Loading data ... be patient")

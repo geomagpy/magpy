@@ -22,12 +22,15 @@ class OpenWebAddressDialog(wx.Dialog):
     Dialog for File Menu - Load URL
     """
 
-    def __init__(self, parent, title, favorites):
+    def __init__(self, parent, title, favorites, ids, types, formats):
         super(OpenWebAddressDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.favorites = favorites
         if self.favorites == None or len(self.favorites) == 0:
             self.favorites = ['http://www.intermagnet.org/test/ws/?id=BOU']
+        self.ids = ids
+        self.types = types
+        self.formats = formats
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -44,6 +47,7 @@ class OpenWebAddressDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.favorites[0],size=(160,-1))
         self.addFavsButton = wx.Button(self, label='Add to favorites',size=(160,30))
         self.dropFavsButton = wx.Button(self, label='Remove from favorites',size=(160,30))
+        self.connectEdgeButton = wx.Button(self, label='Connect to USGS WS', size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
@@ -53,7 +57,7 @@ class OpenWebAddressDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=6, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -74,6 +78,9 @@ class OpenWebAddressDialog(wx.Dialog):
                   emptySpace,
                   emptySpace,
                  (self.dropFavsButton, dict(flag=wx.ALIGN_CENTER)),
+                 emptySpace,
+                 emptySpace,
+                 (self.connectEdgeButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
@@ -89,6 +96,8 @@ class OpenWebAddressDialog(wx.Dialog):
         self.addFavsButton.Bind(wx.EVT_BUTTON, self.AddFavs)
         self.dropFavsButton.Bind(wx.EVT_BUTTON, self.DropFavs)
         self.getFavsComboBox.Bind(wx.EVT_COMBOBOX, self.GetFavs)
+        self.connectEdgeButton.Bind(wx.EVT_BUTTON, self.OnEdge)
+
 
     def GetFavs(self,e):
         """
@@ -111,6 +120,93 @@ class OpenWebAddressDialog(wx.Dialog):
         for elem in self.favorites:
             self.getFavsComboBox.Append(elem)
 
+
+    def OnEdge(self, e):
+        helpdlg = ConnectEdgeDialog(None, title='Create URL to USGS Geomag Web Service', ids=self.ids, types=self.types, formats=self.formats)
+        if helpdlg.ShowModal() == wx.ID_OK:
+            print('YAY')
+
+
+class ConnectEdgeDialog(wx.Dialog):
+    """
+    Helper method to connect to edge
+    Select shown keys
+    """
+    def __init__(self, parent, title, ids, types, formats):
+        super(ConnectEdgeDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.ids = ids
+        self.types = types
+        self.formats = formats
+        self.createControls()
+        self.doLayout()
+
+    def createControls(self):
+        #self.urlLabel = wx.StaticText(self, label="Insert address (e.g.'https://geomag.usgs.gov/ws/edge/?id=BOU')",size=(500,30))
+        #self.urlTextCtrl = wx.TextCtrl(self, value=self.url,size=(500,30))
+        self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,20))
+        self.idComboBox = wx.ComboBox(self, choices=self.ids,
+            style=wx.CB_DROPDOWN, value=self.ids[0],size=(400,-1))
+        self.formatLabel = wx.StaticText(self, label="Format: ",size=(400,20))
+        self.formatComboBox = wx.ComboBox(self, choices=self.formats,
+            style=wx.CB_DROPDOWN, value=self.formats[0],size=(400,-1))
+        self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,20))
+        self.typeComboBox = wx.ComboBox(self, choices=self.types,
+            style=wx.CB_DROPDOWN, value=self.types[0],size=(400,-1))
+        self.sampleLabel = wx.StaticText(self, label="Sampling Period (1, 6, or 3600)",size=(400,20))
+        self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,30))
+        self.startTimeLabel = wx.StaticText(self, label="Start Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
+        self.startTimeTextCtrl = wx.TextCtrl(self, value='2017-01-01T00:00:00Z',size=(400,30))
+        self.endTimeLabel = wx.StaticText(self, label="End Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
+        self.endTimeTextCtrl = wx.TextCtrl(self, value='2017-02-01T00:00:00Z',size=(400,30))
+        self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
+        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Create')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,30))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        elemlist = [(self.obsIDLabel, noOptions),
+                 (self.formatLabel, noOptions),
+                 (self.idComboBox, expandOption),
+                 (self.formatComboBox, expandOption),
+                 (self.typeLabel, noOptions),
+                 (self.sampleLabel, noOptions),
+                 (self.typeComboBox, expandOption),
+                 (self.sampleTextCtrl, expandOption),
+                 (self.startTimeLabel, noOptions),
+                 (self.endTimeLabel, noOptions),
+                 (self.startTimeTextCtrl, expandOption),
+                 (self.endTimeTextCtrl, expandOption),
+                 (self.elementsLabel, noOptions),
+                 emptySpace,
+                 (self.elementsTextCtrl, expandOption),
+                 emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=5, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
 
 class LoadDataDialog(wx.Dialog):
     """
