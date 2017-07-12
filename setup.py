@@ -16,7 +16,7 @@ setup(
     license='LICENSE.txt',
     description='Geomagnetic analysis tools.',
     long_description=open('README.txt').read(),
-    package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf']},
+    package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.bin','examples/*.txt']},
     install_requires=[
         "matplotlib >= 0.9.8",
         "numpy >= 1.5.0",

@@ -327,7 +327,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'IMF':['rw', 'Intermagnet Format'],
                 'IAF':['rw', 'Intermagnet archive Format'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
-                'BLV':['r','Baseline format Intermagnet'],
+                'BLV':['rw','Baseline format Intermagnet'],
                 'IYFV':['rw','Yearly mean format Intermagnet'],
                 'DKA':['rw', 'K value format Intermagnet'],
                 'DIDD':['rw','Output format from MinGeo DIDD'],

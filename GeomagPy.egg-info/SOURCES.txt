@@ -1,3 +1,4 @@
+README.rst
 README.txt
 setup.py
 GeomagPy.egg-info/PKG-INFO
@@ -60,7 +61,6 @@ magpy/lib/format_bdv.py
 magpy/lib/format_cr800.py
 magpy/lib/format_didd.py
 magpy/lib/format_dtu.py
-magpy/lib/format_env05.py
 magpy/lib/format_gdas.py
 magpy/lib/format_gfz.py
 magpy/lib/format_gsm19.py
@@ -71,6 +71,7 @@ magpy/lib/format_json.py
 magpy/lib/format_latex.py
 magpy/lib/format_lemi.py
 magpy/lib/format_magpy.py
+magpy/lib/format_nc.py
 magpy/lib/format_neic.py
 magpy/lib/format_noaa.py
 magpy/lib/format_pos1.py

@@ -252,9 +252,12 @@ def readIAF(filename, headonly=False, **kwargs):
                     keystr = ','.join([str(c) for c in head[5].lower()])
                     if len(keystr) < 6:
                         keystr = keystr + ',f'
+                    #print ("Test", keystr)
+                    keystr = keystr.replace('s','f')
                     keystr = keystr.replace('d','y')
                     keystr = keystr.replace('g','df')
                     keystr = keystr.replace('h','x')
+                    #print ("Test", keystr)
                     headers['StationInstitution'] = head[6]
                     headers['DataConversion'] = head[7]
                     headers['DataQuality'] = head[8]
@@ -262,7 +265,11 @@ def readIAF(filename, headonly=False, **kwargs):
                     headers['StationK9'] = head[10]
                     headers['DataDigitalSampling'] = float(head[11])/1000.
                     headers['DataSensorOrientation'] = head[12].lower()
-                    pubdate = datetime.strptime(str(head[13]),"%y%m")
+                    try:
+                        pubdate = datetime.strptime(str(head[13]),"%y%m")
+                    except:
+                        # Publications date not provided within the header - use current
+                        pubdate = datetime.strptime(datetime.strftime(datetime.utcnow(),"%y%m"),"%y%m")
                     headers['DataPublicationDate'] = pubdate
                     gethead = False
                 # get minute data
@@ -335,8 +342,8 @@ def readIAF(filename, headonly=False, **kwargs):
     fd[fd > 88880] = float(nan)
     with np.errstate(invalid='ignore'):
         fd[fd < -44440] = float(nan)
-    k = np.asarray(k).astype(float)
-    k[k > 880] = float(nan)
+    k = np.asarray(k).astype(float)/10.
+    k[k > 88] = float(nan)
     ir = np.asarray(ir)
 
     # ndarray
@@ -361,7 +368,8 @@ def readIAF(filename, headonly=False, **kwargs):
         ndarray = data2array([xho,yho,zho,fho],keystr.split(','),min(datelist)+timedelta(minutes=30),sr=3600)
         headers['DataSamplingRate'] = '3600 sec'
     elif resolution in ['k','K']:
-        ndarray = data2array([k,ir],['var1','var2'],min(datelist)+timedelta(minutes=90),sr=10800)
+        #ndarray = data2array([k,ir],['var1','var2'],min(datelist)+timedelta(minutes=90),sr=10800)
+        ndarray = data2array([k],['var1'],min(datelist)+timedelta(minutes=90),sr=10800)
         headers['DataSamplingRate'] = '10800 sec'
     else:
         logger.debug("Key and minimum: {} {}".format(keystr, min(datelist)))
@@ -414,6 +422,13 @@ def writeIAF(datastream, filename, **kwargs):
 
     # Check whether f is contained (or delta f)
     # if f calc delta f
+    #   a) replaceing s by f     
+    if datastream.header.get('DataComponents','') in ['HDZS','hdzs']:
+        datastream.header['DataComponents'] = 'HDZF'
+    if datastream.header.get('DataComponents','') in ['XYZS','xyzs']:
+        datastream.header['DataComponents'] = 'XYZF'
+    if datastream.header.get('DataSensorOrientation','') == '':
+        datastream.header.get['DataSensorOrientation'] = datastream.header.get('DataComponents','')
     dfpos = KEYLIST.index('df')
     fpos = KEYLIST.index('f')
     dflen = len(datastream.ndarray[dfpos])
@@ -425,12 +440,16 @@ def writeIAF(datastream, filename, **kwargs):
         else:
             datastream = datastream.delta_f()
             df=True
+            if len(datastream.header.get('DataComponents','')) == 4: 
+                datastream.header['DataComponents'] = datastream.header.get('DataComponents','')[:3]
             if datastream.header.get('DataComponents','') in ['HDZ','XYZ']:
                 datastream.header['DataComponents'] += 'G'
             if datastream.header.get('DataSensorOrientation','') in ['HDZ','XYZ','hdz','xyz']:
                 datastream.header['DataSensorOrientation'] += datastream.header.get('DataSensorOrientation','').upper() + 'F'
     else:
         df=True
+        if len(datastream.header.get('DataComponents','')) == 4: 
+            datastream.header['DataComponents'] = datastream.header.get('DataComponents','')[:3]
         if datastream.header.get('DataComponents','') in ['HDZ','XYZ']:
             datastream.header['DataComponents'] += 'G'
         if datastream.header.get('DataSensorOrientation','') in ['HDZ','XYZ','hdz','xyz']:
@@ -469,7 +488,7 @@ def writeIAF(datastream, filename, **kwargs):
         if not len(dayar[0]) == 1440:
             logger.info("format_IMF: found {} datapoints (expected are 1440) - assuming last value(s) to represent next month".format(len(dayar[0])))
             dayar = np.asarray([elem[:1440] for elem in dayar])
-        # get all indicies
+        # get all indices
         #minutest = DataStream([LineStruct],datastream.header,dayar)
         #temp = minutest.copy() ### Necessary so that dayar is not modified by the filtering process
         #temp = temp.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
@@ -653,18 +672,18 @@ def writeIAF(datastream, filename, **kwargs):
         if kvals:
             dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
             kdat = dayk[KEYLIST.index('var1')]
-            kdat = [el if not np.isnan(el) else 999 for el in kdat]
+            kdat = [el*10. if not np.isnan(el) else 999 for el in kdat]
             #print("kvals", len(kdat), t0+i,t0+i+1,kdat,dayk[0])
             packcode += '8l'
             if not len(kdat) == 8:
                 ks = [999]*8
             else:
                 ks = kdat
-            sumk = int(sum(ks))
-            if sumk > 999:
+            sumk = int(sum(ks))/10.
+            if sumk > 99:
                 sumk = 999
             linestr = "  {0}   {1}".format(datetime.strftime(num2date(t0+i),'%d-%b-%y'), datetime.strftime(num2date(t0+i),'%j'))
-            tup = tuple([str(int(elem)) for elem in ks])
+            tup = tuple([str(int(elem/10.)) if not elem==999 else 999 for elem in ks])
             linestr += "{0:>6}{1:>5}{2:>5}{3:>5}{4:>7}{5:>5}{6:>5}{7:>5}".format(*tup)
             linestr += "{0:>9}".format(str(sumk))
             kstr.append(linestr)
@@ -2057,10 +2076,12 @@ def writeBLV(datastream, filename, **kwargs):
         datastream = datastream.xyz2hdz()
         comps = 'HDZF'
 
+    meanstream = datastream.extract('f', 0.0, '>')  
+
     if not meanf:
-        meanf = datastream.mean('f')
+        meanf = meanstream.mean('f')
     if not meanh:
-        meanh = datastream.mean('x')
+        meanh = meanstream.mean('x')
 
     ##### ###########################################################################
     print("TODO: cycle through parameter baseparam here")
