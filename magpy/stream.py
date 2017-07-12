@@ -739,7 +739,7 @@ CALLED BY:
             ll = [len(elem) for elem in self.ndarray]
             return ll
         else:
-            if len(self) == 1 and not self.time[0] > 0:
+            if len(self) == 1 and np.isnan(self[0].time):
                 return [0]
             else:
                 return [len(self)]
@@ -7672,8 +7672,14 @@ CALLED BY:
         if not len(t_list) > 0:
             return DataStream()
         multiplicator = float(self.length()[0])/float(len(t_list))
+        logger.info("resample a: {},{},{}".format(float(self.length()[0]), float(len(t_list)),startperiod))
 
         stwithnan = self.copy()
+        #logger.info("stwithnan: {}".format(stwithnan.ndarray))
+
+        tmp = self.trim(starttime=736011.58337400458,endtime=736011.59721099539)
+        logger.info("resample test: {}".format(tmp.ndarray))
+
         res_stream = DataStream()
         res_stream.header = self.header
         array=[np.asarray([]) for elem in KEYLIST]
@@ -7705,7 +7711,28 @@ CALLED BY:
                     if ndtype:
                         if int(ind*multiplicator) <= len(self.ndarray[index]):
                             #orgval = self.ndarray[index][int(ind*multiplicator)]
-                            orgval = stwithnan.ndarray[index][int(ind*multiplicator+startperiod)] # + offset
+                            estimate = False   
+                            # Please note: here a two techniques (exact and estimate)
+                            # Speeddiff (example data set (500000 data points)
+                            # Exact:    7.55 sec (including one minute filter)
+                            # Estimate: 7.15 sec
+                            if estimate:
+                                orgval = stwithnan.ndarray[index][int(ind*multiplicator+startperiod)] # + offset
+                            else:
+                                # Exact solution:
+                                mv = int(ind*multiplicator+startperiod)
+                                stv = mv-int(20*multiplicator)
+                                if stv < 0:
+                                    stv = 0
+                                etv = mv+int(20*multiplicator)
+                                if etv >= len(self.ndarray[index]):
+                                    etv = len(self.ndarray[index])
+                                subar = stwithnan.ndarray[0][stv:etv]
+                                idx = (np.abs(subar-item)).argmin()
+                                #subar = stwithnan.ndarray[index][stv:etv]
+                                orgval = stwithnan.ndarray[index][stv+idx] # + offset
+                                #if item > 736011.58337400458 and item < 736011.59721099539:
+                                #   print ("Found", item, stv+idx, idx, orgval)
                         else:
                             print("Check Resampling method")
                             orgval = 1.0
@@ -10031,7 +10058,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
 
     return stream
 
-def saveflags(mylist=None,path=None):
+def saveflags(mylist=None,path=None, overwrite=False):
     """
     DEFINITION:
         Save list e.g. flaglist to file using pickle.
@@ -10052,12 +10079,16 @@ def saveflags(mylist=None,path=None):
         return False
     if not path:
         path = 'myfile.pkl'
+    if not overwrite:
+        existflag = loadflags(path)
+        existflag.extend(mylist)
+        mylist = existflag
     try:
         # TODO: check whether package is already loaded
         from pickle import dump
         dump(mylist,open(path,'wb'))
         print("saveflags: list saved to {}".format(path))
-        return true
+        return True
     except:
         return False
 
@@ -11018,6 +11049,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
 
     # non-destructive
+    print ("SA:", stream_a.length())
+    print ("SB:", stream_b.length())
     sa = stream_a.copy()
     sb = stream_b.copy()
 
@@ -11077,12 +11110,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # 5- b shorter and fully covered by a
 
     if ndtype:
-            print("Running ndtype subtraction")
+            logger.info('subtractStreams: Running ndtype subtraction')
             # Assuming similar time steps
             #t1s = datetime.utcnow()
             # Get indicies of stream_b of which times are present in stream_a
             array = [[] for key in KEYLIST]
-            try: # TODO Find a better solution here!
+            try: # TODO Find a better solution here! Roman 2017
                 # The try clause is not correct as searchsorted just finds
                 # positions independet of agreement (works well if data is similar)
                 idxB = np.argsort(timeb)
@@ -11093,11 +11126,11 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             except:
                 indtib = np.nonzero(np.in1d(timeb, timea))[0]
             #print timeb[pos]
-            #print timea
-            #print indtib
+            #print ("Here", timea)
+            #print (indtib)
             # If equal elements occur in time columns
             if len(indtib) > int(0.5*len(timeb)):
-                print("Found identical timesteps - using simple subtraction")
+                logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
                 # get tb times for all matching indicies
                 tb = np.asarray([timeb[ind] for ind in indtib])
                 # Get indicies of stream_a of which times are present in matching tbs

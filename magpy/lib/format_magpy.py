@@ -1185,9 +1185,9 @@ def writePYCDF(datastream, filename, **kwargs):
         except:
             logger.warning("writePYCDF: : compression of CDF failed - Trying to store uncompressed data")
             logger.warning("writePYCDF: please use option skipcompression=True if unreadable")
-            logger.info("writePYCDF: : CDF: {}".format(mycdf))
-            logger.info("writePYCDF: attrs: {}".format(mycdf.attrs))
-            pass
+            #logger.info("writePYCDF: : CDF: {}".format(mycdf))
+            #logger.info("writePYCDF: attrs: {}".format(mycdf.attrs))
+            #pass
 
     mycdf.close()
     return True
