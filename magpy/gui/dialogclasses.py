@@ -124,7 +124,42 @@ class OpenWebAddressDialog(wx.Dialog):
     def OnEdge(self, e):
         helpdlg = ConnectEdgeDialog(None, title='Create URL to USGS Geomag Web Service', ids=self.ids, types=self.types, formats=self.formats)
         if helpdlg.ShowModal() == wx.ID_OK:
-            print('YAY')
+            stday = helpdlg.startDatePicker.GetValue()
+            sttime = str(helpdlg.startTimePicker.GetValue())
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+            start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+            enday = helpdlg.endDatePicker.GetValue()
+            entime = str(helpdlg.endTimePicker.GetValue())
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+            end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+            if start < end:
+                obs_id = 'id=' + helpdlg.idComboBox.GetValue()
+                start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
+                end_time = '&endtime=' + ed + 'T' + entime + 'Z'
+                file_format = '&format=' + helpdlg.formatComboBox.GetValue()
+                elements = '&elements=' + helpdlg.elementsTextCtrl.GetValue()
+                data_type = '&type=' + helpdlg.typeComboBox.GetValue()
+                period = '&sampling_period=' + helpdlg.sampleTextCtrl.GetValue()
+                base = 'https://geomag.usgs.gov/ws/edge/?'
+                url = (base + obs_id + start_time + end_time + file_format +
+                      elements + data_type + period)
+                self.urlTextCtrl.SetValue(url)
+            else:
+                msg = wx.MessageDialog(self, "Invalid time range!\n"
+                    "The end time occurs before the start time.\n",
+                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
+                msg.ShowModal()
+                self.changeStatusbar("Loading from directory failed ... Ready")
+                msg.Destroy()
 
 
 class ConnectEdgeDialog(wx.Dialog):
@@ -156,9 +191,13 @@ class ConnectEdgeDialog(wx.Dialog):
         self.sampleLabel = wx.StaticText(self, label="Sampling Period (1, 6, or 3600)",size=(400,20))
         self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,30))
         self.startTimeLabel = wx.StaticText(self, label="Start Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
-        self.startTimeTextCtrl = wx.TextCtrl(self, value='2017-01-01T00:00:00Z',size=(400,30))
+        #self.startTimeTextCtrl = wx.TextCtrl(self, value='2017-01-01T00:00:00Z',size=(400,30))
+        self.startDatePicker = wx.DatePickerCtrl(self,size=(160,30))
+        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,30))
         self.endTimeLabel = wx.StaticText(self, label="End Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
-        self.endTimeTextCtrl = wx.TextCtrl(self, value='2017-02-01T00:00:00Z',size=(400,30))
+        #self.endTimeTextCtrl = wx.TextCtrl(self, value='2017-02-01T00:00:00Z',size=(400,30))
+        self.endDatePicker = wx.DatePickerCtrl(self,size=(160,30))
+        self.endTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,30))
         self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
         self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Create')
@@ -183,9 +222,13 @@ class ConnectEdgeDialog(wx.Dialog):
                  (self.typeComboBox, expandOption),
                  (self.sampleTextCtrl, expandOption),
                  (self.startTimeLabel, noOptions),
+                 emptySpace,
+                 (self.startDatePicker, expandOption),
+                 (self.startTimePicker, expandOption),
                  (self.endTimeLabel, noOptions),
-                 (self.startTimeTextCtrl, expandOption),
-                 (self.endTimeTextCtrl, expandOption),
+                 emptySpace,
+                 (self.endDatePicker, expandOption),
+                 (self.endTimePicker, expandOption),
                  (self.elementsLabel, noOptions),
                  emptySpace,
                  (self.elementsTextCtrl, expandOption),
