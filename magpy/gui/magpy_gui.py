@@ -1614,6 +1614,7 @@ class MainFrame(wx.Frame):
         self.symbollist = ['-'] * len(keylist)
         self.plotopt['symbollist'] =  ['-'] * len(keylist)
         self.plotopt['colorlist']=self.colorlist[:len(keylist)]
+        self.plotopt['plottitle'] = stream.header.get('StationID')
 
         self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
         self.menu_p.str_page.dailyMeansButton.Disable()
