@@ -654,6 +654,8 @@ class AbsoluteData(object):
         except:
             resultline.time = poslst[determinationindex].time
         resultline.y = dec
+        if dec_baseval > 270: # for display  TODO: daily means need to consider the vector!!
+            dec_baseval = dec_baseval-360.
         resultline.dy = dec_baseval
         resultline.typ = 'idff'
         resultline.var1 = s0d
@@ -818,7 +820,7 @@ class AbsoluteData(object):
             #return emptyline, 20000.0, 0.0
 
 
-        print("Running inc - meanF:", meanf)
+        #print("Running inc - meanF:", meanf)
 
         # ###################################
         # Getting variometer data for F values
@@ -1054,12 +1056,14 @@ class AbsoluteData(object):
         # ###################################################
         # #####      Calculating Collimation angles from average intensity and inc
         # ###################################################
+        #print ("CHECK:", meanf, S0I1, S0I2, S0I3)
 
         if not meanf == 0:
             ### Please Note: There is an observable difference in the first term of s0i calculation in
             ### comparison to Juergs excel sheet
             ### the reason is unclear S0I1 is perfectly OK and meanf as well
-            ### S0I1 however is usually very small wherefore rounding effects play an important role 
+            ### S0I1 however is usually very small wherefore rounding effects play an important role
+            #loggerabs.warning("S0I1 {}, {}, {}".format(S0I1,S0I2,S0I3))
             s0i = -S0I1/4.*meanf -  (S0I2*np.sin(inc*np.pi/180.) - S0I3*np.cos(inc*np.pi/180.))/4.
             epzi = (EZI1/4. - ( EZI2*np.sin(inc*np.pi/180.) - EZI3*np.cos(inc*np.pi/180.) )/(4.*meanf))* (meanf*np.sin(inc*np.pi/180.))
         else:
@@ -1290,7 +1294,6 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            print ("INCSTART", inc)
             outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             if debugmode:
@@ -1567,6 +1570,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if not diid:
         diid=".txt"
 
+    varioid = 'Unknown'
+    scalarid = 'Unknown'
     # ####################################
     # 2. Get absolute data
     # ####################################
@@ -1696,6 +1701,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             else:
                 variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
             print("Length of Variodata:", variostr.length()[0])
+            if not variostr.header.get('SensorID') == '':
+                 varioid = variostr.header.get('SensorID')
             if db and not skipvariodb:
                 try:
                     vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
@@ -1806,6 +1813,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
+            if not scalarstr.header.get('SensorID') == '':
+                 scalarid = scalarstr.header.get('SensorID')
             # Check for the presence of f or df
             fcol = KEYLIST.index('f')
             dfcol = KEYLIST.index('df')
@@ -1931,9 +1940,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #if readfile:
             try:
                 stream = absst[0].getAbsDIStruct()
+                filepier = absst[0].pier
             except:
                 stream = absst.getAbsDIStruct()
             # if usestep not given and AutoDIF measurement found
+            #print ("Identified pier in file:", stream[0])
+            if not pier == filepier:
+                loggerabs.info(" -- piers in data file(s) and filenames are different - using file content")
+                pier = filepier
+    
             #print ("Stream", stream)
             if stream[0].person == 'AutoDIF' and not usestep:
                 usestep = 2
@@ -2106,6 +2121,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['col-str3'] = 'Mire'
     resultstream.header['col-str4'] = 'F-type'
 
+    # Provide a SensorID
+    #resultstream.header['SensorID'] = 'BLV'
+    #print ("Vario:", varioid)
+    #print ("Scalar:", scalarid)
+    #print ("Pier:", pier)
+    resultstream.header['DataID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pier)
+    resultstream.header['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pier)
 
     #print "Files for archive:"
     #print "---------------------------"

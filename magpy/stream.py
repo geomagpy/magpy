@@ -77,6 +77,7 @@ try:
     import struct
     import re
     import time, string, os, shutil
+    import locale
     import copy as cp
     import fnmatch
     from tempfile import NamedTemporaryFile
@@ -116,6 +117,7 @@ try:
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)
+
 
 # Matplotlib
 # ----------
@@ -9948,6 +9950,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                         filename = fh.name
 
             theday = extractDateFromString(filename)
+
             try:
                 if starttime:
                     if not theday[-1] >= datetime.date(st._testtime(starttime)):
@@ -9957,14 +9960,22 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                         getfile = False
             except:
                 # Date format not recognised. Read all files
-                logger.warning("read: Unable to detect date string in filename. Reading all files...")
+                logger.info("read: Unable to detect date string in filename. Reading all files...")
+                #logger.warning("read: filename: {}, theday: {}".format(filename,theday))
                 getfile = True
+
             if getfile:
                 stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
-                stp = _read(filename, dataformat, headonly, **kwargs)
+                try:
+                    stp = _read(filename, dataformat, headonly, **kwargs)
+                except:
+                    stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
+                    logger.warning("read: File {} could not be read. Skipping ...".format(filename))
                 if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
                     st.extend(stp.container,stp.header,stp.ndarray)
+
             #del stp
+
         if st.length()[0] == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
@@ -11869,6 +11880,8 @@ def extractDateFromString(datestring):
     """
     date = False
     # get day from filename (platform independent)
+    localechanged = False
+
     try:
         splitpath = os.path.split(datestring)
         daystring = splitpath[1].split('.')[0]
@@ -11876,9 +11889,19 @@ def extractDateFromString(datestring):
         daystring = datestring
 
     try:
+        # IMPORTANT: when interpreting %b, then the local time format is very important (OKT vc OCT)
+        old_locale = locale.getlocale()
+        locale.setlocale(locale.LC_TIME, ('en_US', 'UTF-8'))
+        localechanged = True
+    except:
+        pass
+    try:
+        #logger.warning("Got Here2: {}".format(daystring[-7:]))
+        #logger.warning("Got Here3: {}".format(datetime.strptime(str(daystring[-7:]), '%b%d%y')))
         date = datetime.strptime(daystring[-7:], '%b%d%y')
         dateform = '%b%d%y'
-        # log ('Found Dateformat of type dateform
+        if localechanged:
+            locale.setlocale(locale.LC_TIME, old_locale)
     except:
         # test for day month year
         try:

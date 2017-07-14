@@ -64,7 +64,9 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     2010-06-11_12:08:30 273.25916666666666      90.     0.
 
 
-    IMPORTANT: in comparison to the new format, azimuth data (Miren) is stored the other way round
+    IMPORTANT: 
+    - in comparison to the new format, azimuth data (Miren) is stored the other way round
+    - before 2010-08, Miren were stored in two separate lines of length 4    
     """
 
     azimuth = kwargs.get('azimuth')
@@ -87,9 +89,11 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     dirow = DILineStruct(25)
     ang_fac = 1.
     count = 4
+    currentsection = "None"
     
     for line in fh:
         numelements = len(line.split())
+        #print ("NUM", numelements, line)
         if line.isspace():
             # blank line
             pass
@@ -133,7 +137,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             continue
         elif numelements == 1:
             # section titles mesurements - last one corresponds to variometer if no :
-            pass
+            currentsection = line.strip(':\n')
         elif numelements == 2:
             # Intensity mesurements
             row = AbsoluteDIStruct()
@@ -153,66 +157,67 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             stream.add(row)
         elif numelements == 4:
             # Position mesurements
-            row = AbsoluteDIStruct()
-            posstr = line.split()
-            # correct sorting for DIline
-            if count == 8:
-                count = 99
-            if count == 10:
-                count = 999
-            if count == 6:
-                count = 10
-            if count == 12:
-                count = 8
-            if count == 999:
-                count = 6
-            if count == 18:
-                count = 9999
-            if count == 14:
-                count = 999999
-            if count == 16:
-                count = 99999
-            if count == 99:
-                count = 18
-            if count == 20:
-                count = 16
-            if count == 9999:
-                count = 14
-            if count == 99999:
-                count = 12
-            if count == 999999:
-                count = 20
-            try:
-                dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
-            except:
-                if not posstr[0] == 'Variometer':
-                    logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
-                return stream
-            try:
-                row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
-            except:
-                if not posstr[0] == 'Variometer':
-                    loggerlib.error('%s : ReadAbsolute: Check date format of measurements positions in this file' % filename)
-                return stream
-            try:
-                row.hc = float(posstr[1])
-                row.vc = float(posstr[2])
-                row.res = float(posstr[3].replace(',','.'))
-                dirow.hc[count] = float(posstr[1])/ang_fac
-                dirow.vc[count] = float(posstr[2])/ang_fac
-                dirow.res[count] = float(posstr[3].replace(',','.'))
-                row.mu = mu
-                row.md = md
-                row.expectedmire = expectedmire
-                row.temp = temp
-                row.person = person
-                row.di_inst = di_inst
-                row.f_inst = f_inst
-            except:
-                loggerlib.error('%s : ReadAbsolute: Check general format of measurements positions in this file' % filename)
-                return stream
-            count = count +1
-            stream.add(row)
+            if currentsection.startswith("Position") or currentsection.startswith("position"): # very old data format
+                row = AbsoluteDIStruct()
+                posstr = line.split()
+                # correct sorting for DIline
+                if count == 8:
+                    count = 99
+                if count == 10:
+                    count = 999
+                if count == 6:
+                    count = 10
+                if count == 12:
+                    count = 8
+                if count == 999:
+                    count = 6
+                if count == 18:
+                    count = 9999
+                if count == 14:
+                    count = 999999
+                if count == 16:
+                    count = 99999
+                if count == 99:
+                    count = 18
+                if count == 20:
+                    count = 16
+                if count == 9999:
+                    count = 14
+                if count == 99999:
+                    count = 12
+                if count == 999999:
+                    count = 20
+                try:
+                    dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+                except:
+                    if not posstr[0] == 'Variometer':
+                        logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                    return stream
+                try:
+                    row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+                except:
+                    if not posstr[0] == 'Variometer':
+                        loggerlib.error('%s : ReadAbsolute: Check date format of measurements positions in this file' % filename)
+                    return stream
+                try:
+                    row.hc = float(posstr[1])
+                    row.vc = float(posstr[2])
+                    row.res = float(posstr[3].replace(',','.'))
+                    dirow.hc[count] = float(posstr[1])/ang_fac
+                    dirow.vc[count] = float(posstr[2])/ang_fac
+                    dirow.res[count] = float(posstr[3].replace(',','.'))
+                    row.mu = mu
+                    row.md = md
+                    row.expectedmire = expectedmire
+                    row.temp = temp
+                    row.person = person
+                    row.di_inst = di_inst
+                    row.f_inst = f_inst
+                except:
+                    loggerlib.error('%s : ReadAbsolute: Check general format of measurements positions in this file' % filename)
+                    return stream
+                count = count +1
+                stream.add(row)
         elif numelements == 8:
             # Miren mesurements
             mirestr = line.split()
