@@ -1250,12 +1250,13 @@ class MainFrame(wx.Frame):
 
         # Selective fields
         # ----------------------------------------
-        if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF','hez','HEZ']:
+        #print ("COMPONENTS", comps)
+        if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF','hez','HEZ','DIF','dif']:
             self.menu_p.str_page.compRadioBox.Enable()
             if comps in ['hdz','HDZ']:
                 self.menu_p.str_page.compRadioBox.SetStringSelection('hdz')
                 self.compselect = 'hdz'
-            elif comps in ['idf','IDF']:
+            elif comps in ['idf','IDF','DIF','dif']:
                 self.menu_p.str_page.compRadioBox.SetStringSelection('idf')
                 self.compselect = 'idf'
             else:

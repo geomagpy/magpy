@@ -1627,21 +1627,33 @@ CALLED BY:
         used by k_fmi, variocorrection
 
         """
+        ext = ''
+        if len(self.ndarray[4]) > 0:
+            ext = 'F'
+        if len(self.ndarray[KEYLIST.index('df')]) > 0:
+            ext = 'G'
+
         if len(self.ndarray[0]) > 0:
             if coordinate == 'xyz2hdz':
                 self = self.xyz2hdz()
+                self.header['DataComponents'] = 'HDZ'+ext
             elif coordinate == 'xyz2idf':
                 self = self.xyz2idf()
+                self.header['DataComponents'] = 'IDF'+ext
             elif coordinate == 'hdz2xyz':
                 self = self.hdz2xyz()
+                self.header['DataComponents'] = 'XYZ'+ext
             elif coordinate == 'idf2xyz':
                 self = self.idf2xyz()
+                self.header['DataComponents'] = 'XYZ'+ext
             elif coordinate == 'idf2hdz':
                 self = self.idf2xyz()
                 self = self.xyz2hdz()
+                self.header['DataComponents'] = 'HDZ'+ext
             elif coordinate == 'hdz2idf':
                 self = self.hdz2xyz()
                 self = self.xyz2idf()
+                self.header['DataComponents'] = 'IDF'+ext
             else:
                 print("_convertstream: unkown coordinate transform")
             return self

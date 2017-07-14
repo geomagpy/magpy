@@ -927,6 +927,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     # #########################################################
     #print "Analyzing file structure and returning values"
     #print datalist
+    zpos = KEYLIST.index('z') # used for idf records
     mutipletimerange = False
     newdatalist = []
     tllist = []
@@ -1045,6 +1046,12 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 else:
                     array[ind] = ar
                     arraylist.append(ar)
+                # if idf -> add f column also to z
+                if elem[0] in ['f','F'] and headers.get('DataComponents','') in ['DIF','dif','idf','IDF'] and not len(array[zpos]) > 0:
+                    array[zpos] = ar
+                    arraylist.append(ar)
+                    headers['col-z'] = cdfdat[elem[1]].attrs['LABLAXIS'].lower()
+                    headers['unit-col-z'] = cdfdat[elem[1]].attrs['UNITS']
 
     ndarray = np.array(array)
 
