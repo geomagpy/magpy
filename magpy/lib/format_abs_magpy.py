@@ -62,10 +62,17 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     2010-06-11_12:03:00 93.1836111111111        90.     0.
     2010-06-11_12:08:30 273.25916666666666      90.     0.
     2010-06-11_12:08:30 273.25916666666666      90.     0.
-    """
-    azimuth = kwargs.get('azimuth')
 
-    plog = PyMagLog()
+
+    IMPORTANT: in comparison to the new format, azimuth data (Miren) is stored the other way round
+    """
+
+    azimuth = kwargs.get('azimuth')
+    output = kwargs.get('output')
+
+    if not output:
+        output = 'AbsoluteDIStruct' # else 'DILineStruct'
+
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = AbsoluteData()
@@ -77,7 +84,10 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     expectedmire,temp = 0.0,0.0
     key = None
     headfound = False
-    #print "Reading data ..."
+    dirow = DILineStruct(25)
+    ang_fac = 1.
+    count = 4
+    
     for line in fh:
         numelements = len(line.split())
         if line.isspace():
@@ -89,6 +99,8 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             colsstr = line.split()
             person =  colsstr[0]
             di_inst = colsstr[1]
+            dirow.person = person
+            dirow.di_inst = di_inst
             # check whether mire is number or String
             try:
                 expectedmire = float(colsstr[2])
@@ -98,18 +110,24 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
                 except:
                     loggerlib.error('%s : ReadAbsolute: Mire not known in this file' % filename)
                     return stream
+            dirow.azimuth = expectedmire
             headers['pillar'] = colsstr[3]
+            dirow.pier = colsstr[3]
             if numelements > 4:
                 f_inst = colsstr[4]
+                dirow.f_inst = f_inst
             if numelements > 5:
                 try:
                     adate= datetime.strptime(colsstr[5],'%Y-%m-%d')
                     headers['analysisdate'] = adate
+                    dirow.inputdate = adate
                 except:
                     if colsstr[5].find('C') > 0:
                         temp = float(colsstr[5].strip('C'))
+                        dirow.t = temp
             if numelements > 6:
                 temp = float(colsstr[6].strip('C'))
+                dirow.t = temp
         elif headonly:
             # skip data for option headonly
             continue
@@ -122,11 +140,13 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             fstr = line.split()
             try:
                 row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
+                dirow.ftime.append(row.time)
             except:
                 loggerlib.error('%s : ReadAbsolute: Check date format of f measurements in this file' % filename)
                 return stream
             try:
                 row.f = float(fstr[1])
+                dirow.f.append(row.f)
             except:
                 loggerlib.error('%s : ReadAbsolute: Check data format in this file' % filename)
                 return stream
@@ -135,6 +155,39 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             # Position mesurements
             row = AbsoluteDIStruct()
             posstr = line.split()
+            # correct sorting for DIline
+            if count == 8:
+                count = 99
+            if count == 10:
+                count = 999
+            if count == 6:
+                count = 10
+            if count == 12:
+                count = 8
+            if count == 999:
+                count = 6
+            if count == 18:
+                count = 9999
+            if count == 14:
+                count = 999999
+            if count == 16:
+                count = 99999
+            if count == 99:
+                count = 18
+            if count == 20:
+                count = 16
+            if count == 9999:
+                count = 14
+            if count == 99999:
+                count = 12
+            if count == 999999:
+                count = 20
+            try:
+                dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
+            except:
+                if not posstr[0] == 'Variometer':
+                    logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                return stream
             try:
                 row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
@@ -145,6 +198,9 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
                 row.hc = float(posstr[1])
                 row.vc = float(posstr[2])
                 row.res = float(posstr[3].replace(',','.'))
+                dirow.hc[count] = float(posstr[1])/ang_fac
+                dirow.vc[count] = float(posstr[2])/ang_fac
+                dirow.res[count] = float(posstr[3].replace(',','.'))
                 row.mu = mu
                 row.md = md
                 row.expectedmire = expectedmire
@@ -155,10 +211,15 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             except:
                 loggerlib.error('%s : ReadAbsolute: Check general format of measurements positions in this file' % filename)
                 return stream
+            count = count +1
             stream.add(row)
         elif numelements == 8:
             # Miren mesurements
             mirestr = line.split()
+            dirow.hc[2] = float(mirestr[2])/ang_fac
+            dirow.hc[3] = float(mirestr[3])/ang_fac
+            dirow.hc[0] = float(mirestr[0])/ang_fac
+            dirow.hc[1] = float(mirestr[1])/ang_fac
             mu = np.mean([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
             md = np.mean([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
             mustd = np.std([float(mirestr[0]),float(mirestr[1]),float(mirestr[4]),float(mirestr[5])])
@@ -171,7 +232,31 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             pass
     fh.close()
 
-    return stream
+    dirow.hc.insert(12,float(mirestr[6])/ang_fac)
+    dirow.hc.insert(13,float(mirestr[7])/ang_fac)
+    dirow.hc.insert(14,float(mirestr[4])/ang_fac)
+    dirow.hc.insert(15,float(mirestr[5])/ang_fac)
+    dirow.vc.insert(12,float(nan))
+    dirow.vc.insert(13,float(nan))
+    dirow.vc.insert(14,float(nan))
+    dirow.vc.insert(15,float(nan))
+    dirow.time.insert(12,float(nan))
+    dirow.time.insert(13,float(nan))
+    dirow.time.insert(14,float(nan))
+    dirow.time.insert(15,float(nan))
+    dirow.res.insert(12,float(nan))
+    dirow.res.insert(13,float(nan))
+    dirow.res.insert(14,float(nan))
+    dirow.res.insert(15,float(nan))
+
+    if output == "DIListStruct":
+        # -- Return single row list ---- Works !!!!!!   Further Checks necessary
+        #print dirow
+        abslst = []
+        abslst.append(dirow)
+        return abslst
+    else:
+        return stream
 
 
 def readMAGPYNEWABS(filename, headonly=False, **kwargs):

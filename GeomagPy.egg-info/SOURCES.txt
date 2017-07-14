@@ -35,8 +35,11 @@ magpy/collector/collector-marcos.py
 magpy/collector/collector-martas.py
 magpy/collector/subscribe2client.py
 magpy/collector/subscribe2marcos.py
+magpy/examples/2015-03-25_08-18-00_A2_WIC.txt
 magpy/examples/__init__.py
 magpy/examples/example1.cdf
+magpy/examples/example2.bin
+magpy/examples/example4.txt
 magpy/examples/example5.cdf
 magpy/gui/__init__.py
 magpy/gui/absolutespage.py

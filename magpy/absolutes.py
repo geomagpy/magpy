@@ -172,7 +172,6 @@ class DILineStruct(object):
                 tmplist.append(row)
 
         #print tmplist
-
         # sortlist
         for idx,elem in enumerate(tmplist):
             if idx < 4:
@@ -457,7 +456,7 @@ class AbsoluteData(object):
         #hbasis = 3903.6
         if not hbasis:
             hbasis = hstart
-        #print "Running declination calc:", xstart, ystart, hstart, hbasis
+        #print ("Running declination calc:", xstart, ystart, hstart, hbasis)
 
 
         #drop NANs from input stream - positions
@@ -819,7 +818,7 @@ class AbsoluteData(object):
             #return emptyline, 20000.0, 0.0
 
 
-        #print("Running inc - meanF:", meanf)
+        print("Running inc - meanF:", meanf)
 
         # ###################################
         # Getting variometer data for F values
@@ -941,7 +940,7 @@ class AbsoluteData(object):
 
             # previous version -- I0 = (signum1*poslst[k].vc*np.pi/180.0 - signum2*rcorri - signum1*PiVal)
 
-            #print "Inc:", signum1*poslst[k].vc*200/180, quad, I0*200./np.pi, rcorri*200./np.pi, signum2, PiVal, ppmval[cnt]
+            #print ("Inc:", signum1*poslst[k].vc*200/180, quad, I0*200./np.pi, rcorri*200./np.pi, signum2, PiVal, ppmval[cnt])
 
             # S0I
             # (northern =-(H32-H33+H34-H35)/4/200*PI()*K35-((F15-F16+F17-F18)*SIN(H40/200*PI())-(H15-H16+H17-H18)*COS(H40/200*PI()))/4
@@ -1006,6 +1005,8 @@ class AbsoluteData(object):
         EZI2 = EZI2/2.
         EZI3 = EZI3/2.
 
+        i1list = [np.abs(elem) for elem in i1list]
+          
         #print "Collimation", S0I1, S0I2, S0I3, EZI1, EZI2, EZI3
         # Variometer correction to start time is missing for f value and inc ???
         inc = np.mean(i1list)*180.0/np.pi + deltaI
@@ -1261,14 +1262,16 @@ class AbsoluteData(object):
 
         #print "-----------------------------------------"
         #print self
-        #print "-----------------------------------------"
-        #print "Lines in file:", len(self)
+        #print ("-----------------------------------------")
+        #print ("Lines in file:", len(self))
 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
             #print ("STarting with", xstart, ystart)
+            #debugmode = True
             resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,debugmode=debugmode)
             # Calculate inclination value
+            #print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
             if debugmode:
                 print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
                 print("All results: " , resultline)
@@ -1287,9 +1290,9 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
+            print ("INCSTART", inc)
             outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
-
             if debugmode:
                 print("Calculated I (%f) - iteration step %d" %(outline[1],i))
 
@@ -1878,20 +1881,21 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             print ("Please provide pier name: pier='MyPier'")
                     if not deltaF:
                         deltaF = 0.0
-                    #print stationid, pier, deltaF, alpha, beta
                     #if deltaF != 0 or alpha != 0 or beta != 0:
                     #    print("Please note that any offsets defined in DataDeltaValues")
                     #    print("of the database have been applied already.")
                     #    print("Data from %s, pier %s: manually defined are deltaF=%.2f" % (stationid, pier, deltaF))
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
-                    #print "LENGTH:",len(absst)
-                    try:
-                        if not len(absst) > 1:
+                    #print ("LENGTH:",len(absst))
+                    #print ("ABSST:",absst)
+
+                    try: 
+                        if not len(absst) > 1: # Manual
                             stream = absst[0].getAbsDIStruct()
                             abslist.append(absst)
                             if db and dbadd:
                                 dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
-                        else:
+                        else: # AutoDIF
                             for a in absst:
                                 stream = a.getAbsDIStruct()
                                 abslist.append(a)
@@ -1921,7 +1925,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             except:
                 print("absoluteAnalysis: Problems when reading from database")
 
-
         for absst in abslist:
             print("-----------------")
             print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
@@ -1931,6 +1934,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             except:
                 stream = absst.getAbsDIStruct()
             # if usestep not given and AutoDIF measurement found
+            #print ("Stream", stream)
             if stream[0].person == 'AutoDIF' and not usestep:
                 usestep = 2
             #print "USESTEP:", usestep

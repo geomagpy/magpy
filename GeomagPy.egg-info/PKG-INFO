@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: GeomagPy
-Version: v0.3.93
+Version: 0.3.94
 Summary: Geomagnetic analysis tools.
 Home-page: http://pypi.python.org/pypi/GeomagPy/
 Author: R. Leonhardt, R. Bailey, M. Miklavec
@@ -11,7 +11,6 @@ Description: ===========
         ===========
         
         Version Info: (please note: this package is still in development state with frequent modifcations)
-        current: v0.3.91
         
         Please check Release version info on
         https://github.com/geomagpy/magpy/releases

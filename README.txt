@@ -3,7 +3,6 @@ MagPy
 ===========
 
 Version Info: (please note: this package is still in development state with frequent modifcations)
-current: v0.3.91
 
 Please check Release version info on
 https://github.com/geomagpy/magpy/releases
