@@ -2605,8 +2605,10 @@ class InputSheetDialog(wx.Dialog):
     """
 
     def __init__(self, parent, title, layout, path, defaults,cdate, db):
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(InputSheetDialog, self).__init__(parent=parent,
-            title=title, size=(1000, 800))
+            title=title, style=style) #size=(1000, 800), 
+
         self.path = path
         self.layout = layout
         self.defaults = defaults
@@ -2616,12 +2618,13 @@ class InputSheetDialog(wx.Dialog):
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
         self.panel = SettingsPanel(self, cdate, path, defaults, layout, db)
-        self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
+        self.panel.SetInitialSize((850, 400))
+        self.mainSizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 10)
         # Add Save/Cancel Buttons
         self.createWidgets()
         # Set sizer and window size
-        self.SetSizer(self.mainSizer)
-        self.mainSizer.Fit(self)
+        self.SetSizerAndFit(self.mainSizer)
+        #self.mainSizer.Fit(self)
 
     def createWidgets(self):
         """Create and layout the widgets in the dialog"""
@@ -2725,7 +2728,9 @@ class InputSheetDialog(wx.Dialog):
                         "Time checker", wx.OK|wx.ICON_INFORMATION)
                 checkdlg.ShowModal()
                 return "2233-12-12_13:21:23"
-            return time
+
+            return datetime.strftime(datetime.strptime(time, "%Y-%m-%d_%H:%M:%S"),"%Y-%m-%d_%H:%M:%S")
+            #return time
 
         # Get header
         opstring.append("# MagPy Absolutes")
@@ -2739,6 +2744,7 @@ class InputSheetDialog(wx.Dialog):
         pillar = self.panel.PillarTextCtrl.GetValue()
         temp = self.panel.TempTextCtrl.GetValue()
         finst = self.panel.FInstTextCtrl.GetValue()
+        comm = self.panel.CommentTextCtrl.GetValue()
 
         fluxorient = self.panel.ressignRadioBox.GetSelection()
         if fluxorient == 0:
@@ -2762,6 +2768,7 @@ class InputSheetDialog(wx.Dialog):
         opstring.append("# Abs-Scalar: {}".format(finst))
         opstring.append("# Abs-InputDate: {}".format(datetime.strftime(datetime.utcnow(),"%Y-%m-%d")))
         opstring.append("# Abs-Temperature: {}".format(temp))
+        opstring.append("# Abs-Notes: {}".format(comm.replace('\n',' ')))
 
         # Get Mire
         opstring.append("Miren:")
@@ -2903,16 +2910,26 @@ class InputSheetDialog(wx.Dialog):
             if dialog.ShowModal() == wx.ID_OK:
                 didirname = dialog.GetPath() # modify self.dirname
                 out = os.path.join(didirname,filename)
-                fo = open(out, "w+")
-                #print ("Name of the file: ", fo.name)
-                fo.writelines( opstring )
-                fo.close()
+                # Check box if file existing, overwrite cancel
+                writefile = True
+                if os.path.isfile(out):
+                    dlg = wx.MessageDialog(self, "A similar DI data set is already existing.\n"
+                                    "Overwrite?\n",
+                                    "File existing", wx.YES_NO|wx.ICON_INFORMATION)
+                    if dlg.ShowModal() == wx.ID_NO:
+                        writefile = False
+                    dlg.Destroy()
+                if writefile:
+                    fo = open(out, "w+")
+                    #print ("Name of the file: ", fo.name)
+                    fo.writelines( opstring )
+                    fo.close()
         
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
     def __init__(self, parent, cdate, path, defaults, layout, db):
-        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(950, 750))
-
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
+        #self.ShowFullScreen(True)
         self.cdate = cdate
         self.path = path
         self.db = db
@@ -2953,24 +2970,26 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.AzimuthTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
         self.PillarLabel = wx.StaticText(self, label="Pier:",size=(160,30))
         self.PillarTextCtrl = wx.TextCtrl(self, value=self.defaults['dipier'],size=(160,30))
-        self.TempLabel = wx.StaticText(self, label="Temperature [deg C]:",size=(160,30))
-        self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
         self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
         self.UnitComboBox = wx.ComboBox(self, choices=self.units,
             style=wx.CB_DROPDOWN, value=self.units[0],size=(160,-1))
+        self.TempLabel = wx.StaticText(self, label="Temperature [deg C]:",size=(160,30))
+        self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.CommentLabel = wx.StaticText(self, label="Optional notes:",size=(160,30))
+        self.CommentTextCtrl = wx.TextCtrl(self, value="",size=(160,80), style = wx.TE_MULTILINE)
+        self.ressignRadioBox = wx.RadioBox(self, label="Fluxgate orientation:",
+                     choices=self.ressign, majorDimension=2, style=wx.RA_SPECIFY_COLS)
 
         # - Mire A
         self.AmireLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
-        self.AmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
-        self.AmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.AmireDownLabel = wx.StaticText(self, label="Sensor Down:",size=(160,30))
         self.AmireDown1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.AmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.AmireDown2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.AmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
+        self.AmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.AmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
 
         # - Horizonatl Block
-        self.ressignRadioBox = wx.RadioBox(self, label="Fluxgate orientation:",
-                     choices=self.ressign, majorDimension=2, style=wx.RA_SPECIFY_COLS)
         self.HorizontalLabel = wx.StaticText(self, label="Horizontal:",size=(160,30))
         self.TimeLabel = wx.StaticText(self, label="Time:",size=(160,30))
         self.HAngleLabel = wx.StaticText(self, label="Hor. Angle:",size=(160,30))
@@ -3024,12 +3043,13 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
         # - Mire B
         self.BmireLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
-        self.BmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
-        self.BmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.BmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.BmireDownLabel = wx.StaticText(self, label="Sensor Down:",size=(160,30))
         self.BmireDown1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.BmireDown2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.BmireUpLabel = wx.StaticText(self, label="Sensor Up:",size=(160,30))
+        self.BmireUp1TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.BmireUp2TextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.calcButton = wx.Button(self,-1,"Check horiz. angle",size=(160,30))
 
         # - Vertical Block
         self.VerticalLabel = wx.StaticText(self, label="Vertical:",size=(160,30))
@@ -3042,24 +3062,6 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.NU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.NU2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
         self.NU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.SULabel = wx.StaticText(self, label="South(Sensor Up)",size=(160,30))
-        self.SU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.SU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.SU1GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
-        self.SU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.SU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.SU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.SU2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
-        self.SU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.NDLabel = wx.StaticText(self, label="North(Sensor Down)",size=(160,30))
-        self.ND1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.ND1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.ND1GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
-        self.ND1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
-        self.ND2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
-        self.ND2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
-        self.ND2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
-        self.ND2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
         self.SDLabel = wx.StaticText(self, label="South(Sensor Down)",size=(160,30))
         self.SD1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.SD1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
@@ -3069,6 +3071,24 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.SD2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
         self.SD2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
         self.SD2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.NDLabel = wx.StaticText(self, label="North(Sensor Down)",size=(160,30))
+        self.ND1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ND1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ND1GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+        self.ND1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.ND2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.ND2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.ND2GCTextCtrl = wx.TextCtrl(self, value="0deg/0gon",size=(160,30))
+        self.ND2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.SULabel = wx.StaticText(self, label="South(Sensor Up)",size=(160,30))
+        self.SU1TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.SU1AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.SU1GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+        self.SU1ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
+        self.SU2TimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
+        self.SU2AngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
+        self.SU2GCTextCtrl = wx.TextCtrl(self, value="180deg/200gon",size=(160,30))
+        self.SU2ResidualTextCtrl = wx.TextCtrl(self, value="0.0",size=(160,30))
         self.SCLabel = wx.StaticText(self, label="Scale Test (SSU + 0.2 gon)",size=(160,30))
         self.SCTimeTextCtrl = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.SCAngleTextCtrl = wx.TextCtrl(self, value="0.0000 or 00:00:00.0",size=(160,30))
@@ -3168,13 +3188,23 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         contlst.append((self.UnitComboBox, expandOption))
         contlst.append(emptySpace)
         contlst.append((self.TempTextCtrl, expandOption))
+        contlst.append((self.CommentLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.CommentTextCtrl, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.ressignRadioBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
 
         # Mire elements
         contlst.append((self.AmireLabel, noOptions))
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append(emptySpace)
-        contlst.append((self.ressignRadioBox, noOptions))
+        contlst.append(emptySpace)
         blMU = []
         blMU.append((self.AmireUpLabel, noOptions))
         blMU.append((self.AmireUp1TextCtrl, expandOption))
@@ -3195,6 +3225,11 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blMD.append(emptySpace)
         for el in self.layout['order'][0:2]:
             contlst.extend(eval('bl'+str(el)))
+        
+        miorder = self.layout['order'][0:2]
+        if miorder[0] == 'MU':  # default is MD, MU
+            self.AmireUp2TextCtrl.MoveBeforeInTabOrder(self.AmireDown1TextCtrl)
+            self.AmireUp1TextCtrl.MoveBeforeInTabOrder(self.AmireUp2TextCtrl)
 
         blEU = []
         blEU.append((self.EULabel, noOptions))
@@ -3253,6 +3288,23 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         for el in self.layout['order'][2:6]:
             contlst.extend(eval('bl'+str(el)))
 
+        hororder = self.layout['order'][2:6]  # default is EU,WU,ED,WD
+        if not hororder == ['EU','WU','ED','WD']:
+             prevel = hororder[0]
+             for idx, el in enumerate(reversed(hororder)):  # example WD,ED,WU,EU and EU,WD,ED,WU
+                 #print ("Test", el,prevel, idx, hororder) 
+                 if idx > 0:
+                     exec("self.{}2ResidualTextCtrl.MoveBeforeInTabOrder(self.{}1TimeTextCtrl)".format(el,prevel))
+                     exec("self.{}2GCTextCtrl.MoveBeforeInTabOrder(self.{}2ResidualTextCtrl)".format(el,el))
+                     exec("self.{}2AngleTextCtrl.MoveBeforeInTabOrder(self.{}2GCTextCtrl)".format(el,el))
+                     exec("self.{}2TimeTextCtrl.MoveBeforeInTabOrder(self.{}2AngleTextCtrl)".format(el,el))
+                     exec("self.{}1ResidualTextCtrl.MoveBeforeInTabOrder(self.{}2TimeTextCtrl)".format(el,el))
+                     exec("self.{}1GCTextCtrl.MoveBeforeInTabOrder(self.{}1ResidualTextCtrl)".format(el,el))
+                     exec("self.{}1AngleTextCtrl.MoveBeforeInTabOrder(self.{}1GCTextCtrl)".format(el,el))
+                     exec("self.{}1TimeTextCtrl.MoveBeforeInTabOrder(self.{}1AngleTextCtrl)".format(el,el))
+                 prevel = el
+                 
+
         # Mire elements
         contlst.append((self.BmireLabel, noOptions))
         contlst.append(emptySpace)
@@ -3267,7 +3319,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         else:
             blMU.append(emptySpace)
         blMU.append(emptySpace)
-        blMU.append(emptySpace)
+        blMU.append((self.calcButton, expandOption))
         blMD = []
         blMD.append((self.BmireDownLabel, noOptions))
         blMD.append((self.BmireDown1TextCtrl, expandOption))
@@ -3279,6 +3331,11 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blMD.append(emptySpace)
         for el in self.layout['order'][0:2]:
             contlst.extend(eval('bl'+str(el)))
+
+        miorder = self.layout['order'][0:2]
+        if miorder[0] == 'MU':  # default is MD, MU
+            self.BmireUp2TextCtrl.MoveBeforeInTabOrder(self.BmireDown1TextCtrl)
+            self.BmireUp1TextCtrl.MoveBeforeInTabOrder(self.BmireUp2TextCtrl)
 
         # Mire elements
         blNU = []
@@ -3338,6 +3395,24 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         for el in self.layout['order'][6:10]:
             contlst.extend(eval('bl'+str(el)))
 
+        # Tab order
+        verorder = self.layout['order'][6:10]  # default is NU,SD,ND,SU
+        if not verorder == ['NU','SD','ND','SU']:
+             prevel = verorder[0]
+             for idx, el in enumerate(reversed(verorder)):
+                 #print ("Test", el,prevel, idx, hororder) 
+                 if idx > 0:
+                     exec("self.{}2ResidualTextCtrl.MoveBeforeInTabOrder(self.{}1TimeTextCtrl)".format(el,prevel))
+                     exec("self.{}2GCTextCtrl.MoveBeforeInTabOrder(self.{}2ResidualTextCtrl)".format(el,el))
+                     exec("self.{}2AngleTextCtrl.MoveBeforeInTabOrder(self.{}2GCTextCtrl)".format(el,el))
+                     exec("self.{}2TimeTextCtrl.MoveBeforeInTabOrder(self.{}2AngleTextCtrl)".format(el,el))
+                     exec("self.{}1ResidualTextCtrl.MoveBeforeInTabOrder(self.{}2TimeTextCtrl)".format(el,el))
+                     exec("self.{}1GCTextCtrl.MoveBeforeInTabOrder(self.{}1ResidualTextCtrl)".format(el,el))
+                     exec("self.{}1AngleTextCtrl.MoveBeforeInTabOrder(self.{}1GCTextCtrl)".format(el,el))
+                     exec("self.{}1TimeTextCtrl.MoveBeforeInTabOrder(self.{}1AngleTextCtrl)".format(el,el))
+                 prevel = el
+
+
         # Scale test
         if not self.layout['scalevalue'] == 'False':
             contlst.append((self.SCLabel, noOptions))
@@ -3385,6 +3460,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
     def bindControls(self):
         self.loadButton.Bind(wx.EVT_BUTTON, self.OnLoad)
         self.Bind(wx.EVT_RADIOBOX, self.OnFlip, self.angleRadioBox)
+        self.calcButton.Bind(wx.EVT_BUTTON, self.OnCalc)
 
     def _degminsec2deg(self, string, back='decimal'):
         """
@@ -3427,6 +3503,41 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             return ":".join(map(str,_decdeg2dms(val)))
         else:
             return str(val)
+
+    def mean_angle(self, deg):   # rosettacode
+        from cmath import rect, phase
+        from math import radians, degrees
+        return degrees(phase(sum(rect(1, radians(d)) for d in deg)/len(deg)))
+
+    def OnCalc(self, e):
+        # Calculate angle if enough values are present:
+
+        message = "Please fill in all horizontal measurements first!\n"
+        #message = "You need to specify a unique Data ID\nfor which meta information is obtained.\n"
+        vallst = []
+        for el in self.layout['order'][2:6]:
+            for num in ['1','2']:
+                exec("valel = self.{}{}AngleTextCtrl.GetValue()".format(el,num))
+                try:
+                    valel = float(self._degminsec2deg(valel))
+                    if not valel == 0 and not np.isnan(valel):
+                        vallst.append(valel)
+                except:
+                    pass
+
+        deg = self.UnitComboBox.GetValue()
+        if deg in ['degree','deg']:
+            meanangle = (self.mean_angle(vallst))
+        else:
+            vallst = [el*360./400. for el in vallst] 
+            meanangle = np.mean(np.asarray(vallst))*400./360.
+        if len(vallst) >= 4:
+             typus = self.angleRadioBox.GetStringSelection()
+             message = "\n {} {}".format(self._degminsec2deg(meanangle,back=typus),deg)
+        dlg = wx.MessageDialog(self, "Average horizontal angle:\n"+message, "Horizontal angle", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+
 
     def OnFlip(self, e):
         # fields to be converted
@@ -3537,6 +3648,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                         self.PillarTextCtrl.SetValue(headline[1].strip())
                     if headline[0] == ('# Abs-Scalar'):
                         self.FInstTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Notes'):
+                        self.CommentTextCtrl.SetValue(headline[1].strip())
                         #datalist.append(headline[1].strip())
                     #if headline[0] == ('# Abs-DeltaF'):
                     #    datalist.append(headline[1].strip())
