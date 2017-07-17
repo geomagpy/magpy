@@ -1722,8 +1722,9 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
             else:
                 label = key
                 value = str(self.header.get(key,''))
+                value = value.replace('\r\n',' ').replace('\n','')
                 if not isinstance(value, str) or '[' in value:
-                     print ("not a string")
+                     #print ("not a string")
                      try:
                          try:
                              float(value)
@@ -1735,7 +1736,7 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
 
                 label = self.AppendLabel(key,label)
                 exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
-                exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,30))')
+                exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,30),style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)')
                 if value.startswith('object with complex'):
                     exec('self.'+key+'TextCtrl.Disable()')
         self.cnts = [colcnt, cnt]
@@ -2693,38 +2694,59 @@ class InputSheetDialog(wx.Dialog):
                         "Continue?\n".format(time),
                         "Closing DI sheet", wx.YES_NO|wx.ICON_INFORMATION)
         if closedlg.ShowModal() == wx.ID_YES:
+            closedlg.Destroy()
             self.Close(True)
+            #self.Destroy()
         else:
             pass
 
     def OnSave(self, event):
         opstring = []
         saving = True
+        angleerror = 0
+        timeerror = 0
 
-        def testangle(angle, primary, prevangle=None):
+        def testangle(angle, primary, prevangle=None, anglecount=0):
             mireproblem = False
             if angle in ["0.0000 or 00:00:00.0", ""]:
                 if primary == 1:
                     mireproblem = True
                 if primary == 0:
                     #angle = self.degminsec2deg(prevangle)
-                    angle = self.panel._degminsec2deg(prevangle)
+                    try:
+                        angle = self.panel._degminsec2deg(prevangle)
+                    except:
+                        mireproblem = True
+                        angle = 999
             else:
                 #angle = self.degminsec2deg(angle)
-                angle = self.panel._degminsec2deg(angle)
-            if angle == 999:
+                try:
+                    angle = self.panel._degminsec2deg(angle)
+                except:
+                    mireproblem = True
+                    angle = 999
+            try:
+                tangle = float(angle)
+            except:
+                mireproblem = True
+            if tangle == 999:
+                mireproblem = True
+            if tangle > 400:
+                mireproblem = True
+            if tangle < -400:
                 mireproblem = True
 
             if mireproblem:
-                checkdlg = wx.MessageDialog(self, "Provided angles:\n"
-                        "Please check your input data\n",
-                        "Angle checker", wx.OK|wx.ICON_INFORMATION)
-                checkdlg.ShowModal()
-                return 999.
-            return angle
+                #if anglecount == 0:
+                #    checkdlg = wx.MessageDialog(self, "Provided angles:\n"
+                #            "Please check your input data\n",
+                #            "Angle checker", wx.OK|wx.ICON_INFORMATION)
+                #    checkdlg.ShowModal()
+                return 999., 1
+            return angle, 0
 
 
-        def testtime(time, datestring, primary=1, prevtime=None):
+        def testtime(time, datestring, primary=1, prevtime=None, timecount=0):
             timeproblem = False
             if time in ["00:00:00", ""]:
                 if primary == 1:
@@ -2741,13 +2763,14 @@ class InputSheetDialog(wx.Dialog):
                 timeproblem = True
 
             if timeproblem:
-                checkdlg = wx.MessageDialog(self, "Provided times:\n"
-                        "Input data ' {} ' could not be interpreted\n".format(time),
-                        "Time checker", wx.OK|wx.ICON_INFORMATION)
-                checkdlg.ShowModal()
-                return "2233-12-12_13:21:23"
+                if timecount == 0:
+                     checkdlg = wx.MessageDialog(self, "Provided times:\n"
+                            "Input data ' {} ' could not be interpreted\n".format(time),
+                            "Time checker", wx.OK|wx.ICON_INFORMATION)
+                     checkdlg.ShowModal()
+                return "2233-12-12_13:21:23", 1
 
-            return datetime.strftime(datetime.strptime(time, "%Y-%m-%d_%H:%M:%S"),"%Y-%m-%d_%H:%M:%S")
+            return datetime.strftime(datetime.strptime(time, "%Y-%m-%d_%H:%M:%S"),"%Y-%m-%d_%H:%M:%S"), 0
             #return time
 
         # Get header
@@ -2763,6 +2786,10 @@ class InputSheetDialog(wx.Dialog):
         temp = self.panel.TempTextCtrl.GetValue()
         finst = self.panel.FInstTextCtrl.GetValue()
         comm = self.panel.CommentTextCtrl.GetValue()
+
+        self.panel.PillarTextCtrl.SetBackgroundColour(wx.NullColor)
+        self.panel.CodeTextCtrl.SetBackgroundColour(wx.NullColor)
+        self.panel.AzimuthTextCtrl.SetBackgroundColour(wx.NullColor)
 
         fluxorient = self.panel.ressignRadioBox.GetSelection()
         if fluxorient == 0:
@@ -2781,7 +2808,10 @@ class InputSheetDialog(wx.Dialog):
         opstring.append("# Abs-Theodolite: {}".format(theo))
         opstring.append("# Abs-TheoUnit: {}".format(unit[:3]))
         opstring.append("# Abs-FGSensor: {}".format(flux))
-        opstring.append("# Abs-AzimuthMark: {}".format(testangle(azimuth,1)))
+        azi,err = testangle(azimuth,1)
+        if not err == 0:
+            self.panel.AzimuthTextCtrl.SetBackgroundColour(wx.RED)
+        opstring.append("# Abs-AzimuthMark: {}".format(azi))
         opstring.append("# Abs-Pillar: {}".format(pillar))
         opstring.append("# Abs-Scalar: {}".format(finst))
         opstring.append("# Abs-InputDate: {}".format(datetime.strftime(datetime.utcnow(),"%Y-%m-%d")))
@@ -2798,14 +2828,54 @@ class InputSheetDialog(wx.Dialog):
         bmu2 = self.panel.BmireUp2TextCtrl.GetValue()
         bmd1 = self.panel.BmireDown1TextCtrl.GetValue()
         bmd2 = self.panel.BmireDown2TextCtrl.GetValue()
-        amu1 = testangle(amu1,1)
-        amu2 = testangle(amu2,0, amu1)
-        amd1 = testangle(amd1,1)
-        amd2 = testangle(amd2,0, amd1)
-        bmu1 = testangle(bmu1,1)
-        bmu2 = testangle(bmu2,0, bmu1)
-        bmd1 = testangle(bmd1,1)
-        bmd2 = testangle(bmd2,0, bmd1)
+        amu1,err = testangle(amu1,1,anglecount=angleerror)
+        if err == 0:
+            self.panel.AmireUp1TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.AmireUp1TextCtrl.SetForegroundColour(wx.RED)
+        angleerror += err
+        amu2,err = testangle(amu2,0,amu1,anglecount=angleerror)
+        if err == 0:
+            self.panel.AmireUp2TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.AmireUp2TextCtrl.SetForegroundColour(wx.RED)
+        angleerror += err
+        amd1,err = testangle(amd1,1,anglecount=angleerror)
+        angleerror += err
+        if err == 0:
+            self.panel.AmireDown1TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.AmireDown1TextCtrl.SetForegroundColour(wx.RED)
+        amd2,err = testangle(amd2,0, amd1,anglecount=angleerror)
+        angleerror += err
+        if err == 0:
+            self.panel.AmireDown2TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.AmireDown2TextCtrl.SetForegroundColour(wx.RED)
+        bmu1,err = testangle(bmu1,1,anglecount=angleerror)
+        angleerror += err
+        if err == 0:
+            self.panel.BmireUp1TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.BmireUp1TextCtrl.SetForegroundColour(wx.RED)
+        bmu2,err = testangle(bmu2,0, bmu1,anglecount=angleerror)
+        angleerror += err
+        if err == 0:
+            self.panel.BmireUp2TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.BmireUp2TextCtrl.SetForegroundColour(wx.RED)
+        bmd1,err = testangle(bmd1,1,anglecount=angleerror)
+        angleerror += err
+        if err == 0:
+            self.panel.BmireDown1TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.BmireDown1TextCtrl.SetForegroundColour(wx.RED)
+        bmd2,err = testangle(bmd2,0, bmd1,anglecount=angleerror)
+        angleerror += err
+        if err == 0:
+            self.panel.BmireDown2TextCtrl.SetForegroundColour(wx.BLACK)
+        else:
+            self.panel.BmireDown2TextCtrl.SetForegroundColour(wx.RED)
         mline = "{}  {}  {}  {}  {}  {}  {}  {}".format(amu1, amu2, amd1, amd2, bmu1, bmu2, bmd1, bmd2)
         opstring.append("{}".format(mline))
 
@@ -2827,10 +2897,20 @@ class InputSheetDialog(wx.Dialog):
                     na = comp+i
                     val.append(eval('self.panel.'+na+col+'TextCtrl.GetValue()'))
                     if col[0] == 'A' and i == '1':
-                        val[-1] = testangle(val[-1],1)
+                        val[-1], err = testangle(val[-1],1,anglecount=angleerror)
+                        angleerror += err
+                        if err == 0:
+                            eval('self.panel.{}{}TextCtrl.SetForegroundColour(wx.BLACK)'.format(na,col))
+                        else:
+                            eval('self.panel.{}{}TextCtrl.SetForegroundColour(wx.RED)'.format(na,col))
                         anglelist.append(val[-1])
                     elif col[0] == 'A' and i == '2':
-                        val[-1] = testangle(val[-1],0,val[-5])
+                        val[-1], err = testangle(val[-1],0,val[-5],anglecount=angleerror)
+                        angleerror += err
+                        if err == 0:
+                            eval('self.panel.'+na+col+'TextCtrl.SetForegroundColour(wx.BLACK)')
+                        else:
+                            eval('self.panel.'+na+col+'TextCtrl.SetForegroundColour(wx.RED)')
                         anglelist.append(val[-1])
                     if col[0] == 'G':
                         if len(val[-1].split('/')) > 1:
@@ -2840,10 +2920,20 @@ class InputSheetDialog(wx.Dialog):
                     if col[0] == 'R':
                         val[-1] = ressign*float(val[-1].replace(',','.'))
                     if col[0] == 'T' and i == '1':
-                        val[-1] = testtime(val[-1], datestring)
+                        val[-1], terr = testtime(val[-1], datestring,timecount=timeerror)
+                        timeerror += terr
+                        if terr == 0:
+                            eval('self.panel.'+na+col+'TextCtrl.SetForegroundColour(wx.BLACK)')
+                        else:
+                            eval('self.panel.'+na+col+'TextCtrl.SetForegroundColour(wx.RED)')
                         timelist.append(val[-1])
                     elif col[0] == 'T' and i == '2':
-                        val[-1] = testtime(val[-1], datestring, 0, val[-5])
+                        val[-1], terr = testtime(val[-1], datestring, 0, val[-5],timecount=timeerror)
+                        timeerror += terr
+                        if terr == 0:
+                            eval('self.panel.'+na+col+'TextCtrl.SetForegroundColour(wx.BLACK)')
+                        else:
+                            eval('self.panel.'+na+col+'TextCtrl.SetForegroundColour(wx.RED)')
                         timelist.append(val[-1])
             l1 = "  ".join(map(str, val[:4]))
             l2 = "  ".join(map(str, val[4:]))
@@ -2854,7 +2944,12 @@ class InputSheetDialog(wx.Dialog):
         for col in ellst:
             val.append(eval('self.panel.SC'+col+'TextCtrl.GetValue()'))
             if col[0] == 'A':
-                val[-1] = testangle(val[-1],0,val[-5])
+                val[-1], err = testangle(val[-1],0,val[-5], anglecount=angleerror)
+                angleerror += err
+                if err == 0:
+                    eval('self.panel.SC{}TextCtrl.SetForegroundColour(wx.BLACK)'.format(col))
+                else:
+                    eval('self.panel.SC{}TextCtrl.SetForegroundColour(wx.RED)'.format(col))
                 anglelist.append(val[-1])
             if col[0] == 'G':
                 if len(val[-1].split('/')) > 1:
@@ -2864,7 +2959,12 @@ class InputSheetDialog(wx.Dialog):
             if col[0] == 'R':
                 val[-1] = float(val[-1].replace(',','.'))
             if col[0] == 'T':
-                val[-1] = testtime(val[-1], datestring, 0, val[-5])
+                val[-1],terr = testtime(val[-1], datestring, 0, val[-5],timecount=timeerror)
+                timeerror += terr
+                if terr == 0:
+                    eval('self.panel.SC{}TextCtrl.SetForegroundColour(wx.BLACK)'.format(col))
+                else:
+                    eval('self.panel.SC{}TextCtrl.SetForegroundColour(wx.RED)'.format(col))
                 timelist.append(val[-1])
         l1 = "  ".join(map(str, val[-4:]))
         #print ("Values", l1, val)
@@ -2904,19 +3004,37 @@ class InputSheetDialog(wx.Dialog):
         # Check block
         if 999 in [amu1, amu2, amd1, amd2, bmu1, bmu2, bmd1, bmd2]:
             saving = False
-            print ("Failure in mire")
+            #if anglecount == 0:
+            checkdlg = wx.MessageDialog(self, "Azimuth measurements:\n"
+                            "Error within angles. Please check your input data\n",
+                            "Angle checker", wx.OK|wx.ICON_INFORMATION)
+            checkdlg.ShowModal()
         if 999 in anglelist:
             saving = False
-            print ("Failure in angles")
+            #if anglecount == 0:
+            checkdlg = wx.MessageDialog(self, "DI measurements:\n"
+                            "Error within angles. Please check your input data\n",
+                            "Angle checker", wx.OK|wx.ICON_INFORMATION)
+            checkdlg.ShowModal()
         if "2233-12-12_13:21:23" in timelist:
             saving = False
-            print ("Failure in times")
-        if pillar == '' or iagacode=='':
+            #checkdlg = wx.MessageDialog(self, "Provided times:\n"
+            #                "Input data ' {} ' could not be interpreted\n".format(time),
+            #                "Time checker", wx.OK|wx.ICON_INFORMATION)
+            #checkdlg.ShowModal()
+        if pillar == '' or iagacode=='' or azimuth=='':
             saving = False
             checkdlg = wx.MessageDialog(self, "Meta data:\n"
                         "You need to provide a pillar name and a station code\n",
                         "Meta data checker", wx.OK|wx.ICON_INFORMATION)
             checkdlg.ShowModal()
+            if pillar=='':
+                self.panel.PillarTextCtrl.SetBackgroundColour(wx.RED)
+            if iagacode=='':
+                self.panel.CodeTextCtrl.SetBackgroundColour(wx.RED)
+            if azimuth=='':
+                self.panel.AzimuthTextCtrl.SetBackgroundColour(wx.RED)
+
 
         filename = timelist[0].replace(':','-')+'_'+pillar+'_'+iagacode+'.txt'
 

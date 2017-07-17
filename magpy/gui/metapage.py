@@ -45,13 +45,13 @@ class MetaPage(wx.Panel):
         self.putDBButton = wx.Button(self,-1,"Write to DB",size=(160,30))
 
         self.MetaDataButton = wx.Button(self,-1,"Data related",size=(160,30))
-        self.dataTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,100),
+        self.dataTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,80),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.MetaSensorButton = wx.Button(self,-1,"Sensor related",size=(160,30))
-        self.sensorTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,100),
+        self.sensorTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,80),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.MetaStationButton = wx.Button(self,-1,"Station related",size=(160,30))
-        self.stationTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,100),
+        self.stationTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,80),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
 
 
