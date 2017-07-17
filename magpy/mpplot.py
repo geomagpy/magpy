@@ -901,7 +901,9 @@ class figFlagger():
 
         plt.subplots_adjust(left=0.2)
         axcolor = 'lightgoldenrodyellow'
-        rax = plt.axes([0.02, 0.8, 0.10, 0.15], axisbg=axcolor)
+        rax = plt.axes([0.02, 0.8, 0.10, 0.15])
+        rax.patch.set_facecolor(axcolor)
+
         # create dict and list
         numlst = ['plot '+str(idx+1) for idx,elem in enumerate(self.axlist)]
         ## python 2.7 and higher
@@ -2161,12 +2163,14 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         # CREATE SUBPLOT OBJECT & ADD TITLE:
         logger.info("Adding subplot for key %s..." % data[i]['ylabel'])
         if i == 0:
-            ax = fig.add_subplot(subplt, axisbg=bgcolor)
+            ax = fig.add_subplot(subplt)#, axisbg=bgcolor)
+            ax.patch.set_facecolor(bgcolor)
             if plottitle:
                 ax.set_title(plottitle)
             a = ax
         else:
-            ax = fig.add_subplot(subplt, sharex=a, axisbg=bgcolor)
+            ax = fig.add_subplot(subplt, sharex=a) #, axisbg=bgcolor)
+            ax.patch.set_facecolor(bgcolor)
 
         # PLOT DATA:
         # --> If bars are in the data (for e.g. k-index):

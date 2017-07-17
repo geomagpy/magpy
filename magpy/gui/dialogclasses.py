@@ -1645,8 +1645,9 @@ class MetaDataDialog(wx.Dialog):
     """
 
     def __init__(self, parent, title, header, layer):
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(MetaDataDialog, self).__init__(parent=parent,
-            title=title, size=(600, 600))
+            title=title, style=style) #, size=(600, 600))
         self.header = header
         self.list = []
         self.layer=layer
@@ -1654,12 +1655,13 @@ class MetaDataDialog(wx.Dialog):
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
         self.panel = MetaDataPanel(self, header, layer)
+        self.panel.SetInitialSize((400, 400))
         self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
         # Add Save/Cancel Buttons
         self.createWidgets()
         # Set sizer and window size
-        self.SetSizer(self.mainSizer)
-        self.mainSizer.Fit(self)
+        self.SetSizerAndFit(self.mainSizer)
+        #self.mainSizer.Fit(self)
 
     def createWidgets(self):
         """Create and layout the widgets in the dialog"""
@@ -1669,11 +1671,15 @@ class MetaDataDialog(wx.Dialog):
         #saveBtn.Bind(wx.EVT_BUTTON, self.OnSave)
         btnSizer.AddButton(saveBtn)
 
-        cancelBtn = wx.Button(self, wx.ID_CANCEL,size=(160,30))
+        cancelBtn = wx.Button(self, wx.ID_NO, label="Close",size=(160,30))
+        cancelBtn.Bind(wx.EVT_BUTTON, self.OnClose)
         btnSizer.AddButton(cancelBtn)
         btnSizer.Realize()
 
         self.mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+
+    def OnClose(self, event):
+        self.Close(True)
 
 
 class MetaDataPanel(scrolledpanel.ScrolledPanel):
@@ -2634,7 +2640,10 @@ class InputSheetDialog(wx.Dialog):
         saveBtn.Bind(wx.EVT_BUTTON, self.OnSave)
         btnSizer.AddButton(saveBtn)
 
-        cancelBtn = wx.Button(self, wx.ID_CANCEL,size=(160,30))
+        #cancelBtn = wx.Button(self, wx.ID_CANCEL,size=(160,30))
+        #btnSizer.AddButton(cancelBtn)
+        cancelBtn = wx.Button(self, wx.ID_NO, label='Close',size=(160,30))  # Using ID_NO as ID_CLOSE is not working with StdDialogButtonSizer
+        cancelBtn.Bind(wx.EVT_BUTTON, self.OnClose)
         btnSizer.AddButton(cancelBtn)
         btnSizer.Realize()
 
@@ -2678,6 +2687,15 @@ class InputSheetDialog(wx.Dialog):
             return ":".join(decdeg2dms(val))
         else:
             return str(val)
+
+    def OnClose(self, event):
+        closedlg = wx.MessageDialog(self, "Unsaved data will be lost\n"
+                        "Continue?\n".format(time),
+                        "Closing DI sheet", wx.YES_NO|wx.ICON_INFORMATION)
+        if closedlg.ShowModal() == wx.ID_YES:
+            self.Close(True)
+        else:
+            pass
 
     def OnSave(self, event):
         opstring = []
@@ -2969,12 +2987,12 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.AzimuthLabel = wx.StaticText(self, label="Azimuth:",size=(160,30))
         self.AzimuthTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
         self.PillarLabel = wx.StaticText(self, label="Pier:",size=(160,30))
-        self.PillarTextCtrl = wx.TextCtrl(self, value=self.defaults['dipier'],size=(160,30))
+        self.PillarTextCtrl = wx.TextCtrl(self, value=self.defaults['dipier'],size=(160,-1))
         self.UnitLabel = wx.StaticText(self, label="Select Units:",size=(160,30))
         self.UnitComboBox = wx.ComboBox(self, choices=self.units,
             style=wx.CB_DROPDOWN, value=self.units[0],size=(160,-1))
         self.TempLabel = wx.StaticText(self, label="Temperature [deg C]:",size=(160,30))
-        self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.TempTextCtrl = wx.TextCtrl(self, value="",size=(160,-1))
         self.CommentLabel = wx.StaticText(self, label="Optional notes:",size=(160,30))
         self.CommentTextCtrl = wx.TextCtrl(self, value="",size=(160,80), style = wx.TE_MULTILINE)
         self.ressignRadioBox = wx.RadioBox(self, label="Fluxgate orientation:",
