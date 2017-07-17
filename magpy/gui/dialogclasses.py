@@ -2787,9 +2787,14 @@ class InputSheetDialog(wx.Dialog):
         finst = self.panel.FInstTextCtrl.GetValue()
         comm = self.panel.CommentTextCtrl.GetValue()
 
-        self.panel.PillarTextCtrl.SetBackgroundColour(wx.NullColor)
-        self.panel.CodeTextCtrl.SetBackgroundColour(wx.NullColor)
-        self.panel.AzimuthTextCtrl.SetBackgroundColour(wx.NullColor)
+        try:
+            self.panel.PillarTextCtrl.SetBackgroundColour(wx.NullColor)
+            self.panel.CodeTextCtrl.SetBackgroundColour(wx.NullColor)
+            self.panel.AzimuthTextCtrl.SetBackgroundColour(wx.NullColor)
+        except: # for MacOs
+            self.panel.PillarTextCtrl.SetBackgroundColour(wx.WHITE)
+            self.panel.CodeTextCtrl.SetBackgroundColour(wx.WHITE)
+            self.panel.AzimuthTextCtrl.SetBackgroundColour(wx.WHITE)
 
         fluxorient = self.panel.ressignRadioBox.GetSelection()
         if fluxorient == 0:
