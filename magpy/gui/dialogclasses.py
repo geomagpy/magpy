@@ -2637,7 +2637,7 @@ class InputSheetDialog(wx.Dialog):
         """Create and layout the widgets in the dialog"""
         btnSizer = wx.StdDialogButtonSizer()
 
-        saveBtn = wx.Button(self, wx.ID_OK, label="Save",size=(160,30))
+        saveBtn = wx.Button(self, wx.ID_YES, label="Save",size=(160,30))
         saveBtn.Bind(wx.EVT_BUTTON, self.OnSave)
         btnSizer.AddButton(saveBtn)
 
@@ -2689,16 +2689,6 @@ class InputSheetDialog(wx.Dialog):
         else:
             return str(val)
 
-    def OnClose(self, event):
-        closedlg = wx.MessageDialog(self, "Unsaved data will be lost\n"
-                        "Continue?\n".format(time),
-                        "Closing DI sheet", wx.YES_NO|wx.ICON_INFORMATION)
-        if closedlg.ShowModal() == wx.ID_YES:
-            closedlg.Destroy()
-            self.Close(True)
-            #self.Destroy()
-        else:
-            pass
 
     def OnSave(self, event):
         opstring = []
@@ -2708,6 +2698,7 @@ class InputSheetDialog(wx.Dialog):
 
         def testangle(angle, primary, prevangle=None, anglecount=0):
             mireproblem = False
+            tangle = 999
             if angle in ["0.0000 or 00:00:00.0", ""]:
                 if primary == 1:
                     mireproblem = True
@@ -3065,6 +3056,16 @@ class InputSheetDialog(wx.Dialog):
                     #print ("Name of the file: ", fo.name)
                     fo.writelines( opstring )
                     fo.close()
+
+    def OnClose(self, event):
+        closedlg = wx.MessageDialog(self, "Unsaved data will be lost\n"
+                        "Continue?\n".format(time),
+                        "Closing DI sheet", wx.YES_NO|wx.ICON_INFORMATION)
+
+        if closedlg.ShowModal() == wx.ID_YES:
+            closedlg.Destroy()
+            self.Close(True)
+
         
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
