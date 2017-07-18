@@ -1941,13 +1941,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 stream = absst[0].getAbsDIStruct()
                 filepier = absst[0].pier
+                if not pier == filepier:
+                    loggerabs.info(" -- piers in data file(s) and filenames are different - using file content")
+                    pier = filepier
             except:
                 stream = absst.getAbsDIStruct()
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
-            if not pier == filepier:
-                loggerabs.info(" -- piers in data file(s) and filenames are different - using file content")
-                pier = filepier
     
             #print ("Stream", stream)
             if stream[0].person == 'AutoDIF' and not usestep:

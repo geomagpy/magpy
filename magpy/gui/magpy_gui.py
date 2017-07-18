@@ -98,9 +98,9 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('discalarpath','') == '':
         optionsdict['discalarpath'] = os.path.join(normalpath,'*')
     if optionsdict.get('diexpD','') == '':
-        optionsdict['diexpD'] = '3.0'
+        optionsdict['diexpD'] = '0.0'
     if optionsdict.get('diexpI','') == '':
-        optionsdict['diexpI'] = '64.0'
+        optionsdict['diexpI'] = '0.0'
     if optionsdict.get('stationid','') == '':
         optionsdict['stationid'] = 'WIC'
     if optionsdict.get('diid','') == '':
@@ -113,8 +113,16 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['dipier'] = 'A2'
     if optionsdict.get('dialpha','') == '':
         optionsdict['dialpha'] = '0.0'
+    if optionsdict.get('dibeta','') == '':
+        optionsdict['dibeta'] = '0.0'
     if optionsdict.get('dideltaF','') == '':
-        optionsdict['dideltaF'] = '2.1'
+        optionsdict['dideltaF'] = '0.0'
+    if optionsdict.get('dideltaD','') == '':
+        optionsdict['dideltaD'] = '0.0'
+    if optionsdict.get('dideltaI','') == '':
+        optionsdict['dideltaI'] = '0.0'
+    if optionsdict.get('diannualmean','') == '':
+        optionsdict['diannualmean'] = ''
     if optionsdict.get('didbadd','') == '':
         optionsdict['didbadd'] = 'False'
     if optionsdict.get('bookmarks','') == '':
@@ -1835,13 +1843,29 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
             #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
             try:
-                self.plotstream.write(path,
+                if fileformat == 'BLV':
+                    print ("Writing BLV data")  # add function here
+                    print ("Function", self.plotopt['function'])
+                    year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
+                    # use functionlist as kwarg in write method
+                    self.plotstream.write(path,
+                                filenamebegins=filenamebegins,
+                                filenameends=filenameends,
+                                dateformat=dateformat,
+                                mode=mode,
+                                year=year,
+                                coverage=coverage,
+                                format_type=fileformat)
+                    mode = 'replace'
+                else:
+                    self.plotstream.write(path,
                                 filenamebegins=filenamebegins,
                                 filenameends=filenameends,
                                 dateformat=dateformat,
                                 mode=mode,
                                 coverage=coverage,
                                 format_type=fileformat)
+
                 self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
                 self.changeStatusbar("Data written ... Ready")
             except:
@@ -2034,9 +2058,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['dipier']=dlg.dipierTextCtrl.GetValue()
             self.options['didbadd']=dlg.didbaddTextCtrl.GetValue()
             # TODO to be added
-            #self.options['dideltaD']=dlg.dideltaDTextCtrl.GetValue()
-            #self.options['dideltaI']=dlg.dideltaITextCtrl.GetValue()
-            #self.options['disign']=dlg.disignTextCtrl.GetValue()
+            self.options['diannualmean']=dlg.diannualmeanTextCtrl.GetValue()
+            self.options['dibeta']=dlg.dibetaTextCtrl.GetValue()
+            self.options['dideltaD']=dlg.dideltaDTextCtrl.GetValue()
+            self.options['dideltaI']=dlg.dideltaITextCtrl.GetValue()
 
             self.dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
             dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
@@ -2182,11 +2207,40 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #fitknots = str(0.5)
         #fitdegree = str(4)
         #fitfunc='spline'
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options)
+        self.xlimits = self.plot_p.xlimits
+
+
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+        startdate=self.xlimits[0]
+        enddate=self.xlimits[1]
+        starttime = num2date(startdate).strftime('%X')
+        endtime = num2date(enddate).strftime('%X')
+        dlg.startFitDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
+        dlg.endFitDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
+        dlg.startFitTimePicker.SetValue(starttime)
+        dlg.endFitTimePicker.SetValue(endtime)
         if dlg.ShowModal() == wx.ID_OK:
             fitfunc = dlg.funcComboBox.GetValue()
             knots = dlg.knotsTextCtrl.GetValue()
             degree = dlg.degreeTextCtrl.GetValue()
+            # Getting time information
+            stday = dlg.startFitDatePicker.GetValue()
+            sttime = str(dlg.startFitTimePicker.GetValue())
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+            starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+            enday = dlg.endFitDatePicker.GetValue()
+            entime = str(dlg.endFitTimePicker.GetValue())
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+            endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+
             self.options['fitfunction'] = fitfunc
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
@@ -2203,9 +2257,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitknotstep'] = str(knots)
             self.options['fitdegree'] = str(degree)
             if len(self.plotstream.ndarray[0]) > 0:
-                func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots)
-                self.function = func
-                self.plotopt['function'] = func
+                func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots, starttime=starttime, endtime=endtime)
+                if isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
+                    self.plotopt['function'].append(func)
+                else:
+                    self.plotopt['function'] = [func]
+                #self.function = func
+                #self.plotopt['function'] = func
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)
             else:
@@ -2578,11 +2636,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if entime.endswith('AM') or entime.endswith('am'):
             entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
         if entime.endswith('pm') or entime.endswith('PM'):
-            print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+            #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
             entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
         ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
         end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-        print ("Range", start, end)
+        #print ("Range", start, end)
 
         try:
             self.changeStatusbar("Trimming stream ...")
@@ -3438,9 +3496,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
             alpha = 0.0
         try:
+            beta= float(self.options.get('dibeta','0.0'))
+        except:
+            beta = 0.0
+        try:
             deltaF= float(self.options.get('dideltaF','0.0'))
         except:
             deltaF = 0.0
+        try:
+            deltaD= float(self.options.get('dideltaD','0.0'))
+        except:
+            deltaD = 0.0
+        try:
+            deltaI= float(self.options.get('dideltaI','0.0'))
+        except:
+            deltaI = 0.0
 
         if len(self.dipathlist) > 0:
             self.changeStatusbar("Processing DI data ... please be patient")
@@ -3449,11 +3519,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
 
+            # TODO include deltaD, deltaI, beta into the absoluteAnalysisCall
             if not azimuth == '':
                 azimuth = float(azimuth)
-                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,deltaF=deltaF)
+                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
             else:
-                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,deltaF=deltaF)
+                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
 
             sys.stdout=prev_redir
             # only if more than one point is selected

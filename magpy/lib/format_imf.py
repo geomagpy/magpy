@@ -2012,19 +2012,26 @@ def writeBLV(datastream, filename, **kwargs):
     else:
         myFile= open( filename, "wb" )
 
-    logger.info("writeBLV: file:", filename)
+    #print ("filename", filename)
+    logger.info("writeBLV: file: {}".format(filename))
 
     # 3. check whether datastream corresponds to an absolute file and remove unreasonable inputs
     #     - check whether F measurements were performed at the main pier - delta F's are available
 
-    try:
-        if not datastream.header['DataFormat'] == 'MagPyDI':
-            logger.error("writeBLV: Format not recognized - needs to be MagPyDI")
-            return False
-    except:
-        logger.error("writeBLV: Format not recognized - should be MagPyDI")
-        logger.error("writeBLV: is not yet assigned during database access")
-        #return False
+    if not datastream.header.get('DataFormat','') == 'MagPyDI':
+        logger.error("writeBLV: Unsupported format - convert to MagPyDI first")
+        logger.error("  -- export BLV data -- too be done")
+        logger.error("  -- eventually also not yet assigned when accessing database contents")
+        return False
+
+    #try:
+    #    if not datastream.header['DataFormat'] == 'MagPyDI':
+    #        logger.error("writeBLV: Format not recognized - needs to be MagPyDI")
+    #        return False
+    #except:
+    #    logger.error("writeBLV: Format not recognized - should be MagPyDI")
+    #    logger.error("writeBLV: is not yet assigned during database access")
+    #    #return False
 
     indf = KEYLIST.index('df')
     if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:

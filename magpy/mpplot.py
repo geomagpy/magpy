@@ -2306,13 +2306,18 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         # PLOT A GIVEN FUNCTION:
         if 'function' in data[i]:
             fkey = 'f'+key
-            function = data[i]['function']
-            for i in range(int(len(function)/3.)):
-                indexadd = i*3
-                if fkey in function[0+indexadd]:
-                    # --> Get the minimum and maximum relative times
-                    ttmp = arange(0,1,0.0001)
-                    ax.plot_date(denormalize(ttmp,function[1+indexadd],function[2+indexadd]),function[0+indexadd][fkey](ttmp),'r-')
+            funclist = data[i]['function']
+            if isinstance(funclist[0], dict):
+                 funct = [funclist]
+            else:
+                 funct = funclist   # TODO: cycle through list
+            for function in funct:
+                for i in range(int(len(function)/3.)):
+                    indexadd = i*3
+                    if fkey in function[0+indexadd]:
+                        # --> Get the minimum and maximum relative times
+                        ttmp = arange(0,1,0.0001)
+                        ax.plot_date(denormalize(ttmp,function[1+indexadd],function[2+indexadd]),function[0+indexadd][fkey](ttmp),'r-')
 
         # PLOT SHADED AND ANNOTATED STORM PHASES:
         if 'stormphases' in data[i]:

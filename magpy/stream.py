@@ -1828,9 +1828,14 @@ CALLED BY:
             for i,el in enumerate(ar):
                 if np.isnan(el) or np.isinf(el):
                     indicieslst.append(i)
-            for index,key in enumerate(NUMKEYLIST):
-                if len(self.ndarray[index])>0:
+            searchlist = ['time']
+            searchlist.extend(NUMKEYLIST)
+            for index,tkey in enumerate(searchlist):
+                if len(self.ndarray[index])>0:   # Time column !!! -> index+1
                     array[index] = np.delete(self.ndarray[index], indicieslst)
+                #elif len(self.ndarray[index+1])>0:
+                #    array[index+1] = self.ndarray[index+1]
+
             newst = [LineStruct()]
         else:
             newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
@@ -2164,6 +2169,7 @@ CALLED BY:
         absolutestream = absolutestream.remove_flagged()
         #print("Baseline", absolutestream.length())
         #print("Baseline", absolutestream.ndarray[0])
+        print ("HERE1")
 
         absndtype = False
         if len(absolutestream.ndarray[0]) > 0:
@@ -2187,6 +2193,8 @@ CALLED BY:
             startabs = absolutestream[0].time
             endabs = absolutestream[-1].time
 
+        print ("HERE2 {} {} {} {}".format(startabs, endabs, num2date(startabs), num2date(endabs)))
+        print ("HERE2 {} {}".format(starttime, endtime))
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
             #logger.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
@@ -2202,6 +2210,8 @@ CALLED BY:
 
         starttime = num2date(starttime).replace(tzinfo=None)
         endtime = num2date(endtime).replace(tzinfo=None)
+
+        print ("HERE2 {} {}".format(starttime, endtime))
 
         # 4) get standard time rang of one year and extradays at start and end
         #           test whether absstream covers this time range including extradays
@@ -2241,6 +2251,8 @@ CALLED BY:
 
         bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
 
+        print ("HERE3")
+
         if extrapolate and not extradays == 0:
             bas = bas.extrapolate(basestarttime,baseendtime)
 
@@ -2259,6 +2271,8 @@ CALLED BY:
         iz = KEYLIST.index(keys[2])
         # get the function in some readable equation
         #self.header['DataAbsDataT'] = bas.ndarray[0],bas.ndarray[ix],bas.ndarray[iy],bas.ndarray[iz]]
+
+        print ("HERE4")
 
         if plotbaseline:
             #check whether plotbaseline is valid path or bool
@@ -2287,6 +2301,8 @@ CALLED BY:
 
         #else:
         #    self = self.func_add(func)
+
+        print ("HERE5")
 
         logger.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
@@ -3850,12 +3866,24 @@ CALLED BY:
         fitfunc = kwargs.get('fitfunc')
         fitdegree = kwargs.get('fitdegree')
         knotstep = kwargs.get('knotstep')
+        starttime = kwargs.get('starttime')
+        endtime = kwargs.get('endtime')
         if not fitfunc:
             fitfunc = 'spline'
         if not fitdegree:
             fitdegree = 5
         if not knotstep:
             knotstep = 0.01
+
+        defaulttime = 0
+        if not starttime:
+            starttime = self._find_t_limits()[0]
+        if not endtime:
+            endtime = self._find_t_limits()[1]
+        if starttime == self._find_t_limits()[0]:
+            defaulttime += 1
+        if endtime == self._find_t_limits()[1]:
+            defaulttime += 1
 
         if knotstep >= 0.5:
             raise ValueError("Knotstep needs to be smaller than 0.5")
@@ -3867,8 +3895,13 @@ CALLED BY:
             ndtype=True
 
         tok = True
+
+        fitstream = self.copy()
+        if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing 
+            fitstream = fitstream.trim(starttime=starttime, endtime=endtime)
+ 
         for key in keys:
-            tmpst = self._drop_nans(key)
+            tmpst = fitstream._drop_nans(key)
             if ndtype:
                 t = tmpst.ndarray[0]
             else:
@@ -3877,7 +3910,7 @@ CALLED BY:
                 tok = False
                 break
 
-            nt,sv,ev = self._normalize(t)
+            nt,sv,ev = fitstream._normalize(t)
 
             #newlist = []
             #for kkk in nt:
@@ -3888,7 +3921,7 @@ CALLED BY:
             #nt = newlist
             #nt = np.sort(np.asarray(nt))
             #print "NT", nt
-            sp = self.get_sampling_period()
+            sp = fitstream.get_sampling_period()
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256
             if not key in KEYLIST[1:16]:
@@ -3913,17 +3946,15 @@ CALLED BY:
             #print len(x)
             if len(val)>1 and fitfunc == 'spline':
                 try:
-                    #print val, sp, knotstep
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
-                    #print knots, len(knots), len(val)
                     if len(knots) > len(val):
                         knotstep = knotstep*4
                         knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
                         logger.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
-                    #print nt, len(knots), len(val)
                     ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
                 except:
                     logger.error('Value error in fit function - likely reason: no valid numbers or too few numbers for fit')
+                    print ("Checking", key, len(val), val, sp, knotstep)
                     raise ValueError("Value error in fit function - not enough data or invalid numbers")
                     return
                 #print nt, val, len(knots), knots
@@ -3941,8 +3972,9 @@ CALLED BY:
                 # Don't use resampled list for harmonic time series
                 x = nt
             elif len(val)<=1:
-                logger.warning('Fit: No valid data')
-                return
+                logger.warning('Fit: No valid data for key {}'.format(key))
+                break
+                #return
             else:
                 logger.warning('Fit: function not valid')
                 return
@@ -5034,7 +5066,7 @@ CALLED BY:
         return DataStream(self,self.header,np.asarray(array))
 
 
-    def func2stream(self,function,**kwargs):
+    def func2stream(self,funclist,**kwargs):
         """
       DESCRIPTION:
         combine data stream and functions obtained by fitting and interpolation. Possible combination
@@ -5042,7 +5074,8 @@ CALLED BY:
         function values can replace the original values at the given timesteps of the stream
 
       PARAMETERS:
-        function        (function): required - output of stream.fit or stream.interpol
+        funclist        (list of functions): required - each function is an output of stream.fit or stream.interpol
+        #function        (function): required - output of stream.fit or stream.interpol
         keys            (list): default = 'x','y','z'
         mode            (string): one of 'add','sub','div','multiply','values' - default = 'add'
 
@@ -5057,61 +5090,68 @@ CALLED BY:
         if not mode:
             mode = 'add'
 
-        # Changed that - 49 sec before, no less then 2 secs
-        if not len(self.ndarray[0]) > 0:
-            print("func2stream: requires ndarray - trying old LineStruct functions")
-            if mode == 'add':
-                return self.func_add(function, keys=keys)
-            elif mode == 'sub':
-                return self.func_subtract(function, keys=keys)
-            else:
-                return self
+        if isinstance(funclist[0], dict):
+            funct = [funclist]
+        else:
+            funct = funclist   # TODO: cycle through list
 
-        #1. calculate function value for each data time step
-        array = [[] for key in KEYLIST]
-        array[0] = self.ndarray[0]
-        # get x array for baseline
-        #indx = KEYLIST.index('x')
-        #arrayx = self.ndarray[indx].astype(float)
-        functimearray = (self.ndarray[0].astype(float)-function[1])/(function[2]-function[1])
-        #print functimearray
-        for key in KEYLIST:
-            ind = KEYLIST.index(key)
-            if key in keys: # new
-                ar = self.ndarray[ind].astype(float)
+        for function in funct:
+            # Changed that - 49 sec before, no less then 2 secs
+            if not len(self.ndarray[0]) > 0:
+                print("func2stream: requires ndarray - trying old LineStruct functions")
                 if mode == 'add':
-                    array[ind] = ar + function[0]['f'+key](functimearray)
-                elif mode == 'addbaseline':
-                    if key == 'y':
-                        #indx = KEYLIST.index('x')
-                        #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
-                        #print type(self.ndarray[ind]), key, self.ndarray[ind]
-                        array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functimearray)
-                        self.header['col-y'] = 'd'
-                        self.header['unit-col-y'] = 'deg'
-                    else:
-                        #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
-                        array[ind] = ar + function[0]['f'+key](functimearray)
-                        if key == 'x': # remember this for correct y determination
-                            arrayx = array[ind]
+                    return self.func_add(function, keys=keys)
                 elif mode == 'sub':
-                    array[ind] = ar - function[0]['f'+key](functimearray)
-                elif mode == 'values':
-                    array[ind] = function[0]['f'+key](functimearray)
-                elif mode == 'div':
-                    array[ind] = ar / function[0]['f'+key](functimearray)
-                elif mode == 'multiply':
-                    array[ind] = ar * function[0]['f'+key](functimearray)
+                    return self.func_subtract(function, keys=keys)
                 else:
-                    print("func2stream: mode not recognized")
-            else: # new
-                if len(self.ndarray[ind]) > 0:
-                    array[ind] = self.ndarray[ind].astype(object)
+                    return self
+
+
+            #1. calculate function value for each data time step
+            array = [[] for key in KEYLIST]
+            array[0] = self.ndarray[0]
+            # get x array for baseline
+            #indx = KEYLIST.index('x')
+            #arrayx = self.ndarray[indx].astype(float)
+            functimearray = (self.ndarray[0].astype(float)-function[1])/(function[2]-function[1])
+            #print functimearray
+            for key in KEYLIST:
+                ind = KEYLIST.index(key)
+                if key in keys: # new
+                    ar = self.ndarray[ind].astype(float)
+                    if mode == 'add':
+                        array[ind] = ar + function[0]['f'+key](functimearray)
+                    elif mode == 'addbaseline':
+                        if key == 'y':
+                            #indx = KEYLIST.index('x')
+                            #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
+                            #print type(self.ndarray[ind]), key, self.ndarray[ind]
+                            array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functimearray)
+                            self.header['col-y'] = 'd'
+                            self.header['unit-col-y'] = 'deg'
+                        else:
+                            #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
+                            array[ind] = ar + function[0]['f'+key](functimearray)
+                            if key == 'x': # remember this for correct y determination
+                                arrayx = array[ind]
+                    elif mode == 'sub':
+                        array[ind] = ar - function[0]['f'+key](functimearray)
+                    elif mode == 'values':
+                        array[ind] = function[0]['f'+key](functimearray)
+                    elif mode == 'div':
+                        array[ind] = ar / function[0]['f'+key](functimearray)
+                    elif mode == 'multiply':
+                        array[ind] = ar * function[0]['f'+key](functimearray)
+                    else:
+                        print("func2stream: mode not recognized")
+                else: # new
+                    if len(self.ndarray[ind]) > 0:
+                        array[ind] = self.ndarray[ind].astype(object)
 
         return DataStream(self,self.header,np.asarray(array))
 
 
-    def func_add(self,function,**kwargs):
+    def func_add(self,funclist,**kwargs):
         """
         Add a function to the selected values of the data stream -> e.g. get baseline
         Optional:
@@ -5123,6 +5163,12 @@ CALLED BY:
             keys = ['x','y','z']
         if not mode:
             mode = 'add'
+
+        if isinstance(funclist[0], dict):
+            funct = [funclist]
+        else:
+            funct = funclist
+        function = funct[0]  # Direct call of old version only accepts single function
 
         # Changed that - 49 sec before, no less then 2 secs
         if len(self.ndarray[0]) > 0:
@@ -5171,7 +5217,7 @@ CALLED BY:
         return self
 
 
-    def func_subtract(self,function,**kwargs):
+    def func_subtract(self,funclist,**kwargs):
         """
         Subtract a function from the selected values of the data stream -> e.g. obtain Residuals
         Optional:
@@ -5184,6 +5230,12 @@ CALLED BY:
 
         st = DataStream()
         st = self.copy()
+
+        if isinstance(funclist[0], dict):
+            funct = [funclist]
+        else:
+            funct = funclist
+        function = funct[0]  # Direct call of old version only accepts single function
 
         """
         for el in self:

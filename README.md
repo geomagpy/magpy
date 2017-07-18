@@ -25,6 +25,7 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
   - enables CDF support for formats like ImagCDF
   - package details and files at http://cdf.gsfc.nasa.gov/
   - download and install a recent version of CDF e.g. cdf36_2_1-setup-32.exe
+  - Note: please use 32 bit installer.
 
 #### 1.1.2 Install MagPy for Windows
   - find the MagPy Windows installer here (under Downloads): http://www.conrad-observatory.at
@@ -36,8 +37,6 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
 
         * python -> opens a python shell ready for MagPy
         * xmagpy -> opens the MagPy graphical user interface
-
-Note: NASA CDF and SpacePy only support 32 bit.
 
 
 ### 1.2 Linux/MacOs installation - Anaconda
@@ -51,19 +50,26 @@ Note: NASA CDF and SpacePy only support 32 bit.
   - download and install the latest cdf version for your operating system
 
 #### 1.2.3 Install MagPy and SpacePy (required for CDF support)
-  - open the anaconda prompt or change to the anaconda2/bin directory (if not set as default)
+  - open a Terminal
+  - ... known issues: eventually change to the anaconda2/bin directory before running python (if not set as default)
+  - ...               check by starting python in the terminal
   - run './pip install spacepy' 
   - ... known issues: installation of spacepy eventually requires a fortran compiler
+  - ...               e.g. Linux: install gcc
+  - ...               e.g. MacOs: install gcc and gfortran
   - run './pip install geomagpy'
-  - ...possible issues: MySQL-python problem -> install libmysqlclient-dev on linux (e.g. debian/ubuntu: sudo apt-get install libmysqlclient-dev)
+  - ... known issues: e.g. Linux: MySQL-python problem -> install libmysqlclient-dev on linux (e.g. debian/ubuntu: sudo apt-get install libmysqlclient-dev)
 
 #### 1.2.4 Post-installation information
   - please note that anaconda provides a full python environment with many packages not used by MagPy 
   - for a "slim" installation follow the "from scratch" instructions below (for experienced users)
-  - for upgrades: run './pip install geomagpy --upgrade'. Installation provides both shell based magpy and the graphical user interface xmagpy 
+  - for upgrades: run './pip install geomagpy version==new-version'. Installation provides both shell based magpy and the graphical user interface xmagpy 
 
-        * type "python" -> opens a python shell ready for MagPy
-        * type "xmagpy" in a shell -> open the graphical user interface of MagPy
+  - running magpy:
+        * type "python" in a terminal -> opens a python shell ready for MagPy
+        * type "xmagpy" in a terminal -> open the graphical user interface of MagPy
+        * !! MacOS: !! type "xmagpyw" in a terminal -> open the graphical user interface of MagPy (since v0.3.95)
+
   - adding a shortcut for xmagpy: coming soon
 
 

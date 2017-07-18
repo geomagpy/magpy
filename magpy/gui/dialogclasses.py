@@ -763,6 +763,25 @@ class OptionsDIDialog(wx.Dialog):
         dipier = str(self.options.get('dipier',''))
         dialpha = str(self.options.get('dialpha',''))
         dideltaF = str(self.options.get('dideltaF',''))
+        self.diannualmeanLabel = wx.StaticText(self, label="AnnualMean (*)",size=(160,30))
+        self.dibetaLabel = wx.StaticText(self, label="Beta",size=(160,30))
+        self.dideltaDLabel = wx.StaticText(self, label="Delta D",size=(160,30))
+        self.dideltaILabel = wx.StaticText(self, label="Delta I",size=(160,30))
+        diannualmean = str(self.options.get('diannualmean',''))
+        dibeta = str(self.options.get('dibeta',''))
+        dideltaD = str(self.options.get('dideltaD',''))
+        dideltaI = str(self.options.get('dideltaI',''))
+        self.dibetaTextCtrl = wx.TextCtrl(self, value=dibeta,size=(160,30))
+        self.dideltaDTextCtrl = wx.TextCtrl(self, value=dideltaD,size=(160,30))
+        self.diannualmeanTextCtrl = wx.TextCtrl(self, value=diannualmean,size=(160,30))
+        self.dideltaITextCtrl = wx.TextCtrl(self, value=dideltaI,size=(160,30))
+        """ add
+        - beta:         (float) orientation angle 2 in deg
+        - deltaD:       (float) = kwargs.get('deltaD')
+        - deltaI:       (float) = kwargs.get('deltaI')
+        - outputformat: (string) one of 'idf', 'xyz', 'hdf'
+        - annualmeans:  (list) provide annualmean for x,y,z as [x,y,z] with floats
+        """
         self.diexpDTextCtrl = wx.TextCtrl(self, value=diexpD,size=(160,30))
         self.diexpITextCtrl = wx.TextCtrl(self, value=diexpI,size=(160,30))
         self.diidTextCtrl = wx.TextCtrl(self, value=self.options.get('diid',''),size=(160,30))
@@ -835,6 +854,14 @@ class OptionsDIDialog(wx.Dialog):
                  (self.dipierTextCtrl, expandOption),
                  (self.dialphaTextCtrl, expandOption),
                  (self.dideltaFTextCtrl, expandOption),
+                 (self.dideltaDLabel, noOptions),
+                 (self.dideltaILabel, noOptions),
+                 (self.dibetaLabel, noOptions),
+                 (self.diannualmeanLabel, noOptions),
+                 (self.dideltaDTextCtrl, expandOption),
+                 (self.dideltaITextCtrl, expandOption),
+                 (self.dibetaTextCtrl, expandOption),
+                 (self.diannualmeanTextCtrl, expandOption),
                  (self.didbaddLabel, noOptions),
                   emptySpace,
                   emptySpace,
@@ -1815,14 +1842,22 @@ class AnalysisFitDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, options):
+    def __init__(self, parent, title, options, stream, shownkeylist, keylist):
         super(AnalysisFitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
+
+        self.shownkeys=shownkeylist
+        self.selectedkey = shownkeylist[0]
+        self.keys2flag = ",".join(shownkeylist)
+        self.keys=keylist
+        self.stream = stream
         self.options = options
         self.fitfunc = self.options.get('fitfunction','spline')
         self.funclist = ['spline','polynomial']
         self.fitknots = self.options.get('fitknotstep','0.3')
         self.fitdegree = self.options.get('fitdegree','5')
+        self.mintime = num2date(stream.ndarray[0][0])
+        self.maxtime = num2date(stream.ndarray[0][-1])
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1836,6 +1871,14 @@ class AnalysisFitDialog(wx.Dialog):
         self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots,size=(160,30))
         self.degreeLabel = wx.StaticText(self, label="Degree [e.g. 1, 2, 345, etc.] (polynomial only):")
         self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree,size=(160,30))
+
+        self.UpperTimeText = wx.StaticText(self,label="Fit data before:")
+        self.LowerTimeText = wx.StaticText(self,label="Fit data after:")
+        self.startFitDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
+        self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
+        self.endFitDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
+        self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
+
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
@@ -1856,6 +1899,15 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.knotsTextCtrl, expandOption))
         contlst.append((self.degreeLabel, noOptions))
         contlst.append((self.degreeTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.LowerTimeText, noOptions))
+        contlst.append((self.startFitDatePicker, expandOption))
+        contlst.append((self.startFitTimePicker, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.UpperTimeText, noOptions))
+        contlst.append((self.endFitDatePicker, expandOption))
+        contlst.append((self.endFitTimePicker, expandOption))
+        contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
@@ -2522,6 +2574,97 @@ class DefineScalarDialog(wx.Dialog):
         dialog.Destroy()
 
 
+class DISaveDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+
+    def __init__(self, parent, title):
+        super(DISaveDialog, self).__init__(parent=parent,
+            title=title, size=(200, 300))
+        self.choice = ''
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.yesButton = wx.Button(self, wx.ID_OK, label="Overwrite",size=(160,30))
+        self.noButton = wx.Button(self, wx.ID_OK,label="Cancel",size=(160,30))
+        self.alternativeButton = wx.Button(self, wx.ID_OK,label="Write as alternative",size=(160,30))
+        self.sourceLabel = wx.StaticText(self, label="A file with similar name is already existing. You can:")
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst=[]
+        contlst.append((self.noButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.alternativeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.yesButton, dict(flag=wx.ALIGN_CENTER)))
+
+
+        mainSizer.Add(self.sourceLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+        """
+        labellst=[]
+        labellst.append((self.sourceLabel, noOptions))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridlabelSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in labellst:
+            gridlabelSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridlabelSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+        """
+
+        # A GridSizer will contain the other controls:
+        cols = 3
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        rows = 2
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        mainSizer.Add(boxSizer, 1, wx.EXPAND)
+
+        self.SetSizerAndFit(mainSizer)
+
+    def bindControls(self):
+        self.noButton.Bind(wx.EVT_BUTTON, self.OnNo)
+        self.yesButton.Bind(wx.EVT_BUTTON, self.OnYes)
+        self.alternativeButton.Bind(wx.EVT_BUTTON, self.OnAlternative)
+
+    def OnNo(self, e):
+        self.choice = 'no'
+        self.Close(True)
+
+    def OnYes(self, e):
+        self.choice = 'yes'
+        self.Close(True)
+
+    def OnAlternative(self, e):
+        self.choice = 'alternative'
+        self.Close(True)
+
+
 class DISetParameterDialog(wx.Dialog):
     """
     Dialog for Parameter selection - Di analysis
@@ -2641,8 +2784,6 @@ class InputSheetDialog(wx.Dialog):
         saveBtn.Bind(wx.EVT_BUTTON, self.OnSave)
         btnSizer.AddButton(saveBtn)
 
-        #cancelBtn = wx.Button(self, wx.ID_CANCEL,size=(160,30))
-        #btnSizer.AddButton(cancelBtn)
         cancelBtn = wx.Button(self, wx.ID_NO, label='Close',size=(160,30))  # Using ID_NO as ID_CLOSE is not working with StdDialogButtonSizer
         cancelBtn.Bind(wx.EVT_BUTTON, self.OnClose)
         btnSizer.AddButton(cancelBtn)
@@ -3045,10 +3186,22 @@ class InputSheetDialog(wx.Dialog):
                 # Check box if file existing, overwrite cancel
                 writefile = True
                 if os.path.isfile(out):
-                    dlg = wx.MessageDialog(self, "A similar DI data set is already existing.\n"
-                                    "Overwrite?\n",
-                                    "File existing", wx.YES_NO|wx.ICON_INFORMATION)
-                    if dlg.ShowModal() == wx.ID_NO:
+                    dlg = DISaveDialog(None, title='File Existing')
+                    dlg.ShowModal()
+                    if dlg.choice == 'alternative':
+                        # creating a new file name with one second plus
+                        filealreadyexisting = True
+                        newtime0 = timelist[0]
+                        while filealreadyexisting: 
+                            newtime0 = datetime.strftime((datetime.strptime(newtime0,'%Y-%m-%d_%H:%M:%S')+timedelta(seconds=1)),'%Y-%m-%d_%H:%M:%S')
+                            filename = newtime0.replace(':','-')+'_'+pillar+'_'+iagacode+'.txt'
+                            out = os.path.join(didirname,filename)
+                            if not os.path.isfile(out):
+                                filealreadyexisting = False
+                        writefile = True
+                    elif  dlg.choice == 'yes':
+                        writefile = True
+                    else:
                         writefile = False
                     dlg.Destroy()
                 if writefile:
@@ -3056,6 +3209,10 @@ class InputSheetDialog(wx.Dialog):
                     #print ("Name of the file: ", fo.name)
                     fo.writelines( opstring )
                     fo.close()
+                    dlg = wx.MessageDialog(self, "Data set {} successfully written.\n".format(filename),
+                                    "File written", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    #dlg.Destroy()
 
     def OnClose(self, event):
         closedlg = wx.MessageDialog(self, "Unsaved data will be lost\n"
