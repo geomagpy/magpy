@@ -51,6 +51,12 @@ class StreamPage(wx.Panel):
         self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
         self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
+        self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
+        self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,30))
+        self.xCheckBox = wx.CheckBox(self,label="x")
+        self.yCheckBox = wx.CheckBox(self,label="y")
+        self.zCheckBox = wx.CheckBox(self,label="z")
+        self.fCheckBox = wx.CheckBox(self,label="f")
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
         self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
@@ -74,7 +80,7 @@ class StreamPage(wx.Panel):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=24, cols=2, vgap=5, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=27, cols=2, vgap=5, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -118,8 +124,14 @@ class StreamPage(wx.Panel):
                  'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.flagMinButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.flagMaxButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.xCheckBox, noOptions',
+                 'self.yCheckBox, noOptions',
+                 'self.zCheckBox, noOptions',
+                 'self.fCheckBox, noOptions',
+                 'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
                  '(0,0), noOptions']
