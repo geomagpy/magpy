@@ -2301,9 +2301,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     if not float(offset) == 0:
                         offsetdict[key] = float(offset)
             val = dlg.offsetRadioBox.GetStringSelection()
-            print ("Offset", val)
+            #print ("Offset", val)
             if str(val) == 'all':
                 toffset = dlg.timeshiftTextCtrl.GetValue()
+                if not self.plotstream._is_number(toffset):
+                    toffset = 0
                 if not float(toffset) == 0:
                     offsetdict['time'] = timedelta(seconds=float(toffset))
                 self.plotstream = self.plotstream.offset(offsetdict)
