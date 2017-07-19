@@ -1058,6 +1058,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.str_page.flagLoadButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.str_page.flagSaveButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.str_page.flagDropButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.str_page.flagMinButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.str_page.flagMaxButton)
+
         #        Meta Page
         # --------------------------
         #self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.met_page.filterButton)
@@ -1234,6 +1237,12 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagSelectionButton.Disable() # always
         self.menu_p.str_page.flagRangeButton.Disable()     # always
         self.menu_p.str_page.flagLoadButton.Disable()      # always
+        self.menu_p.str_page.flagMinButton.Disable()       # always
+        self.menu_p.str_page.flagMaxButton.Disable()       # always
+        self.menu_p.str_page.xCheckBox.Disable()           # always
+        self.menu_p.str_page.yCheckBox.Disable()           # always
+        self.menu_p.str_page.zCheckBox.Disable()           # always
+        self.menu_p.str_page.fCheckBox.Disable()           # always
         self.menu_p.str_page.flagDropButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
@@ -1444,6 +1453,12 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagSelectionButton.Enable() # always
         self.menu_p.str_page.flagRangeButton.Enable()     # always
         self.menu_p.str_page.flagLoadButton.Enable()      # always
+        self.menu_p.str_page.flagMinButton.Enable()       # always
+        self.menu_p.str_page.flagMaxButton.Enable()       # always
+        self.menu_p.str_page.xCheckBox.Enable()           # always
+        self.menu_p.str_page.yCheckBox.Enable()           # always
+        self.menu_p.str_page.zCheckBox.Enable()           # always
+        self.menu_p.str_page.fCheckBox.Enable()           # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
         self.menu_p.met_page.MetaDataButton.Enable()      # always
         self.menu_p.met_page.MetaSensorButton.Enable()    # always
@@ -4823,7 +4838,77 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.changeStatusbar("Ready")
 
+    def onFlagMinButton(self,event):
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged minimum'
+        for idx,me in enumerate(mini):
+            flag = False
+            if keys[idx] == 'x' and self.menu_p.str_page.xCheckBox.IsChecked():
+                flag = True
+            elif keys[idx] == 'y' and self.menu_p.str_page.yCheckBox.IsChecked():
+                flag = True
+            elif keys[idx] == 'z' and self.menu_p.str_page.zCheckBox.IsChecked():
+                flag = True
+            elif keys[idx] == 'f' and self.menu_p.str_page.fCheckBox.IsChecked():
+                flag = True
+            if flag is True:
+                starttime = num2date(me[1] - xtol)
+                endtime = num2date(me[1] + xtol)
+                flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=3,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+                self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+        if len(flaglist) > 0:
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
+    def onFlagMaxButton(self,event):
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged maximum'
+        for idx,me in enumerate(maxi):
+            flag = False
+            if keys[idx] == 'x' and self.menu_p.str_page.xCheckBox.IsChecked():
+                flag = True
+            elif keys[idx] == 'y' and self.menu_p.str_page.yCheckBox.IsChecked():
+                flag = True
+            elif keys[idx] == 'z' and self.menu_p.str_page.zCheckBox.IsChecked():
+                flag = True
+            elif keys[idx] == 'f' and self.menu_p.str_page.fCheckBox.IsChecked():
+                flag = True
+            if flag is True:
+                starttime = num2date(me[1] - xtol)
+                endtime = num2date(me[1] + xtol)
+                flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=3,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+                self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+        if len(flaglist) > 0:
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
     # ------------------------------------------------------------------------------------------
     # ################
