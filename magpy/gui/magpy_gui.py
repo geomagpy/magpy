@@ -722,15 +722,15 @@ class PlotPanel(wx.Panel):
         key = keys[-1]
         if not len(stream.ndarray[0])>0:
             #print ("Here")
-            t = [elem.time for elem in stream]
+            self.t = [elem.time for elem in stream]
             flag = [elem.flag for elem in stream]
-            k = [eval("elem."+keys[0]) for elem in stream]
+            self.k = [eval("elem."+keys[0]) for elem in stream]
         else:
-            t = stream.ndarray[0]
+            self.t = stream.ndarray[0]
             flagpos = KEYLIST.index('flag')
             firstcol = KEYLIST.index(key[0])
             flag = stream.ndarray[flagpos]
-            k = stream.ndarray[firstcol]
+            self.k = stream.ndarray[firstcol]
         #self.axes.af2 = self.AnnoteFinder(t,yplt,flag,self.axes)
         #self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
         #af2 = self.AnnoteFinder(t,k,flag,self.axes)
@@ -886,6 +886,10 @@ class MainFrame(wx.Frame):
 
         # The Status Bar
         self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
+        # Update Status Bar with plot values
+        self.plot_p.canvas.mpl_connect('motion_notify_event', self.UpdateCursorStatus)
+        # Allow flagging with double click
+        self.plot_p.canvas.mpl_connect('button_press_event', self.OnFlagClick)
 
         self.streamlist = []
         self.headerlist = []
@@ -2353,6 +2357,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def changeStatusbar(self,msg):
         self.SetStatusText(msg)
 
+    def UpdateCursorStatus(self, event):
+        """Motion event for displaying values under cursor."""
+        if not event.inaxes:
+            self.changeStatusbar("Ready")
+            return
+        time, val = event.xdata, event.ydata
+        try:
+            time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S.%f %Z")
+        except:
+            if self.menu_p.str_page.trimStreamButton.IsEnabled():
+                time = num2date(time)
+            else:
+                time = ''
+                val = ''
+        self.changeStatusbar("x: " + str(time) + "  |  y: " + str(val))
 
     def OnCheckOpenLog(self, event):
         """
@@ -4440,6 +4459,49 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
+    def OnFlagClick(self, event):
+        """Mouse event for flagging with double click."""
+        if not event.inaxes or not event.dblclick:
+            return
+        else:
+            sensid = self.plotstream.header.get('SensorID','')
+            dataid = self.plotstream.header.get('DataID','')
+            if sensid == '' and not dataid == '':
+                sensid = dataid[:-5]
+            if sensid == '':
+                dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                                "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+            else:
+                flaglist = []
+                xdata = self.plot_p.t
+                xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+                pickX = event.xdata
+                for x in xdata:
+                    if  pickX-xtol < x < pickX+xtol :
+                        starttime = num2date(x - xtol)
+                        endtime = num2date(x + xtol)
+                        dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+                        if dlg.ShowModal() == wx.ID_OK:
+                            keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                            keys2flag = keys2flag.split(',')
+                            keys2flag = [el for el in keys2flag if el in KEYLIST]
+                            flagid = dlg.FlagIDComboBox.GetValue()
+                            flagid = int(flagid[0])
+                            comment = dlg.CommentTextCtrl.GetValue()
+                            if comment == '' and flagid != 0:
+                                comment = 'Point flagged with unspecified reason'
+                            flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                            self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                if len(flaglist) > 0:
+                    self.flaglist.extend(flaglist)
+                    self.plotstream = self.plotstream.flag(flaglist)
+                    self.ActivateControls(self.plotstream)
+                    self.plotopt['annotate'] = True
+                    self.menu_p.str_page.annotateCheckBox.SetValue(True)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
 
     def onFlagSelectionButton(self,event):
         """
