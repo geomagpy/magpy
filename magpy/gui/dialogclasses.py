@@ -437,7 +437,7 @@ class DatabaseConnectDialog(wx.Dialog):
         self.dbLabel = wx.StaticText(self, label="Database")
         self.dbTextCtrl = wx.TextCtrl(self, value="MyDB")
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
-        self.closeButton = wx.Button(self, wx.ID_OK, label='Cancel')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1277,17 +1277,8 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-    #    self.okButton.Bind(wx.EVT_BUTTON, self.OnOK)
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeGroup, self.rangeRadioBox)
         self.Bind(wx.EVT_COMBOBOX, self.OnChangeSelection, self.SelectKeyComboBox)
-
-    #def OnOK(self, e):
-    #    if self.comment == '':
-            # ask for comment
-    #        pass
-    #    else:
-            # send OK
-    #        pass
 
     def SetValue(self):
             self.UpperLimitTextCtrl.Enable()
