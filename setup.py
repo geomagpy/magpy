@@ -18,7 +18,7 @@ setup(
     long_description=open('README.rst').read(),
     package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.bin','examples/*.txt']},
     install_requires=[
-        "matplotlib >= 0.9.8",
+        "matplotlib >= 2.0.2",
         "numpy >= 1.5.0",
         "scipy >= 0.8.6",
         #"MySQL-python >= 1.2.3",
