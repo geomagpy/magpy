@@ -4482,22 +4482,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 xdata = self.plot_p.t
                 xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
                 pickX = event.xdata
-                for x in xdata:
-                    if  pickX-xtol < x < pickX+xtol :
-                        starttime = num2date(x - xtol)
-                        endtime = num2date(x + xtol)
-                        dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
-                        if dlg.ShowModal() == wx.ID_OK:
-                            keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                            keys2flag = keys2flag.split(',')
-                            keys2flag = [el for el in keys2flag if el in KEYLIST]
-                            flagid = dlg.FlagIDComboBox.GetValue()
-                            flagid = int(flagid[0])
-                            comment = dlg.CommentTextCtrl.GetValue()
-                            if comment == '' and flagid != 0:
-                                comment = 'Point flagged with unspecified reason'
-                            flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
-                            self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                idx = (np.abs(xdata - pickX)).argmin()
+                time = self.plotstream.ndarray[KEYLIST.index('time')][idx]
+                starttime = num2date(time - xtol)
+                endtime = num2date(time + xtol)
+                dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+                if dlg.ShowModal() == wx.ID_OK:
+                    keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                    keys2flag = keys2flag.split(',')
+                    keys2flag = [el for el in keys2flag if el in KEYLIST]
+                    flagid = dlg.FlagIDComboBox.GetValue()
+                    flagid = int(flagid[0])
+                    comment = dlg.CommentTextCtrl.GetValue()
+                    if comment == '' and flagid != 0:
+                        comment = 'Point flagged with unspecified reason'
+                    flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                    self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
                 if len(flaglist) > 0:
                     self.flaglist.extend(flaglist)
                     self.plotstream = self.plotstream.flag(flaglist)
