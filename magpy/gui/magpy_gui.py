@@ -735,7 +735,6 @@ class PlotPanel(wx.Panel):
         #self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
         #af2 = self.AnnoteFinder(t,k,flag,self.axes)
         #self.figure.canvas.mpl_connect('button_press_event', af2)
-
         self.canvas.draw()
 
     def initialPlot(self):
@@ -2359,19 +2358,24 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def UpdateCursorStatus(self, event):
         """Motion event for displaying values under cursor."""
-        if not event.inaxes:
+        if not event.inaxes or not self.menu_p.str_page.trimStreamButton.IsEnabled():
             self.changeStatusbar("Ready")
             return
-        time, val = event.xdata, event.ydata
+        pickX, pickY = event.xdata, event.ydata
+        xdata = self.plot_p.t
+        idx = (np.abs(xdata - pickX)).argmin()
+        time = self.plotstream.ndarray[KEYLIST.index('time')][idx]
         try:
-            time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S.%f %Z")
+            time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S %Z")
         except:
-            if self.menu_p.str_page.trimStreamButton.IsEnabled():
-                time = num2date(time)
-            else:
-                time = ''
-                val = ''
-        self.changeStatusbar("x: " + str(time) + "  |  y: " + str(val))
+            time = num2date(time)
+        for elem in self.shownkeylist:
+            ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
+            ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
+            if ll < pickY < ul:
+                key = elem
+                val = self.plotstream.ndarray[KEYLIST.index(elem)][idx]
+                self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
 
     def OnCheckOpenLog(self, event):
         """
