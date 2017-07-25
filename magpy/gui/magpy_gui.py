@@ -4852,21 +4852,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         flaglist = []
         comment = 'Flagged minimum'
         for idx,me in enumerate(mini):
-            flag = False
-            if keys[idx] == 'x' and self.menu_p.str_page.xCheckBox.IsChecked():
-                flag = True
-            elif keys[idx] == 'y' and self.menu_p.str_page.yCheckBox.IsChecked():
-                flag = True
-            elif keys[idx] == 'z' and self.menu_p.str_page.zCheckBox.IsChecked():
-                flag = True
-            elif keys[idx] == 'f' and self.menu_p.str_page.fCheckBox.IsChecked():
-                flag = True
-            if flag is True:
+            if eval('self.menu_p.str_page.'+keys[idx]+'CheckBox.IsChecked()'):
                 starttime = num2date(me[1] - xtol)
                 endtime = num2date(me[1] + xtol)
                 flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=3,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-                self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
         if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
             self.flaglist.extend(flaglist)
             self.plotstream = self.plotstream.flag(flaglist)
             self.ActivateControls(self.plotstream)
@@ -4888,21 +4879,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         flaglist = []
         comment = 'Flagged maximum'
         for idx,me in enumerate(maxi):
-            flag = False
-            if keys[idx] == 'x' and self.menu_p.str_page.xCheckBox.IsChecked():
-                flag = True
-            elif keys[idx] == 'y' and self.menu_p.str_page.yCheckBox.IsChecked():
-                flag = True
-            elif keys[idx] == 'z' and self.menu_p.str_page.zCheckBox.IsChecked():
-                flag = True
-            elif keys[idx] == 'f' and self.menu_p.str_page.fCheckBox.IsChecked():
-                flag = True
-            if flag is True:
+            if eval('self.menu_p.str_page.'+keys[idx]+'CheckBox.IsChecked()'):
                 starttime = num2date(me[1] - xtol)
                 endtime = num2date(me[1] + xtol)
                 flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=3,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-                self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
         if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
             self.flaglist.extend(flaglist)
             self.plotstream = self.plotstream.flag(flaglist)
             self.ActivateControls(self.plotstream)
