@@ -4855,6 +4855,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         comment = 'Flagged minimum'
         flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
+        if flagid is 0:
+            comment = ''
         for idx,me in enumerate(mini):
             if eval('self.menu_p.str_page.'+keys[idx]+'CheckBox.IsChecked()'):
                 starttime = num2date(me[1] - xtol)
@@ -4884,6 +4886,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         comment = 'Flagged maximum'
         flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
+        if flagid is 0:
+            comment = ''
         for idx,me in enumerate(maxi):
             if eval('self.menu_p.str_page.'+keys[idx]+'CheckBox.IsChecked()'):
                 starttime = num2date(me[1] - xtol)
