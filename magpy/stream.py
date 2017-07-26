@@ -1533,8 +1533,8 @@ CALLED BY:
         t_ind = KEYLIST.index('time')
 
         if len(self.ndarray[0]) > 0:
-            result = np.max(self.ndarray[key_ind].astype(float))
-            ind = np.argmax(self.ndarray[key_ind].astype(float))
+            result = np.nanmax(self.ndarray[key_ind].astype(float))
+            ind = np.nanargmax(self.ndarray[key_ind].astype(float))
             tresult = self.ndarray[t_ind][ind]
         else:
             elem = max(self, key=lambda tmp: eval('tmp.'+key))
@@ -1554,8 +1554,8 @@ CALLED BY:
         t_ind = KEYLIST.index('time')
 
         if len(self.ndarray[0]) > 0:
-            result = np.min(self.ndarray[key_ind].astype(float))
-            ind = np.argmin(self.ndarray[key_ind].astype(float))
+            result = np.nanmin(self.ndarray[key_ind].astype(float))
+            ind = np.nanargmin(self.ndarray[key_ind].astype(float))
             tresult = self.ndarray[t_ind][ind]
         else:
             elem = min(self, key=lambda tmp: eval('tmp.'+key))
