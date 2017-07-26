@@ -1456,10 +1456,6 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagLoadButton.Enable()      # always
         self.menu_p.str_page.flagMinButton.Enable()       # always
         self.menu_p.str_page.flagMaxButton.Enable()       # always
-        self.menu_p.str_page.xCheckBox.Enable()           # always
-        self.menu_p.str_page.yCheckBox.Enable()           # always
-        self.menu_p.str_page.zCheckBox.Enable()           # always
-        self.menu_p.str_page.fCheckBox.Enable()           # always
         self.menu_p.str_page.FlagIDComboBox.Enable()      # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
         self.menu_p.met_page.MetaDataButton.Enable()      # always
@@ -1732,7 +1728,15 @@ class MainFrame(wx.Frame):
             self.plotoptlist.append(self.plotopt)
 
         self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
-
+        boxes = ['x','y','z','f']
+        for box in boxes:
+            if box in self.shownkeylist:
+                exec('self.menu_p.str_page.'+box+'CheckBox.Enable()')
+                colname = self.plotstream.header.get('col-'+box, '')
+                if not colname == '':
+                    exec('self.menu_p.str_page.'+box+'CheckBox.SetLabel(colname)')
+            else:
+                exec('self.menu_p.str_page.'+box+'CheckBox.SetValue(False)')
         self.changeStatusbar("Ready")
 
 
@@ -1759,6 +1763,15 @@ class MainFrame(wx.Frame):
         #self.plot_p.guiPlot(stream,keylist,**kwargs)
         if stream.length()[0] > 1 and len(keylist) > 0:
             self.ExportData.Enable(True)
+        boxes = ['x','y','z','f']
+        for box in boxes:
+            if box in self.shownkeylist:
+                exec('self.menu_p.str_page.'+box+'CheckBox.Enable()')
+                colname = self.plotstream.header.get('col-'+box, '')
+                if not colname == '':
+                    exec('self.menu_p.str_page.'+box+'CheckBox.SetLabel(colname)')
+            else:
+                exec('self.menu_p.str_page.'+box+'CheckBox.SetValue(False)')
         self.changeStatusbar("Ready")
 
 
