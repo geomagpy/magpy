@@ -1876,7 +1876,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
         else:
-                    dlg = wx.MessageDialog(self, "Could not identfy appropriate files in directory!\n"
+                    dlg = wx.MessageDialog(self, "Could not identify appropriate files in directory!\n"
                         "please check and/or try OpenFile\n",
                         "OpenDirectory", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
@@ -2365,6 +2365,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         xdata = self.plot_p.t
         idx = (np.abs(xdata - pickX)).argmin()
         time = self.plotstream.ndarray[KEYLIST.index('time')][idx]
+        possible_val = []
+        possible_key = []
         try:
             time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S %Z")
         except:
@@ -2373,9 +2375,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
             ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
             ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
             if ll < pickY < ul:
-                key = elem
-                val = self.plotstream.ndarray[KEYLIST.index(elem)][idx]
-                self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
+                possible_key += elem
+                possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
+        idy = (np.abs(possible_val - pickY)).argmin()
+        key = possible_key[idy]
+        val = possible_val[idy]
+        colname = self.plotstream.header.get('col-'+key, '')
+        if not colname == '':
+            key = colname
+        self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
 
     def OnCheckOpenLog(self, event):
         """
