@@ -20,6 +20,7 @@ class StreamPage(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.comp = ['xyz', 'hdz', 'idf']
         self.symbol = ['line', 'point']
+        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
         self.createControls()
         self.doLayout()
 
@@ -57,6 +58,9 @@ class StreamPage(wx.Panel):
         self.yCheckBox = wx.CheckBox(self,label="y")
         self.zCheckBox = wx.CheckBox(self,label="z")
         self.fCheckBox = wx.CheckBox(self,label="f")
+        self.FlagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
+        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
         self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
@@ -80,7 +84,7 @@ class StreamPage(wx.Panel):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=27, cols=2, vgap=5, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=28, cols=2, vgap=5, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -131,6 +135,8 @@ class StreamPage(wx.Panel):
                  'self.yCheckBox, noOptions',
                  'self.zCheckBox, noOptions',
                  'self.fCheckBox, noOptions',
+                 'self.FlagIDText, noOptions',
+                 'self.FlagIDComboBox, expandOption',
                  'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',

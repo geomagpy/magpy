@@ -1243,6 +1243,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.yCheckBox.Disable()           # always
         self.menu_p.str_page.zCheckBox.Disable()           # always
         self.menu_p.str_page.fCheckBox.Disable()           # always
+        self.menu_p.str_page.FlagIDComboBox.Disable()      # always
         self.menu_p.str_page.flagDropButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
@@ -1459,6 +1460,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.yCheckBox.Enable()           # always
         self.menu_p.str_page.zCheckBox.Enable()           # always
         self.menu_p.str_page.fCheckBox.Enable()           # always
+        self.menu_p.str_page.FlagIDComboBox.Enable()      # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
         self.menu_p.met_page.MetaDataButton.Enable()      # always
         self.menu_p.met_page.MetaSensorButton.Enable()    # always
@@ -4851,11 +4853,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         mini = [teststream._get_min(key,returntime=True) for key in keys]
         flaglist = []
         comment = 'Flagged minimum'
+        flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
         for idx,me in enumerate(mini):
             if eval('self.menu_p.str_page.'+keys[idx]+'CheckBox.IsChecked()'):
                 starttime = num2date(me[1] - xtol)
                 endtime = num2date(me[1] + xtol)
-                flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=3,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+                flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
         if len(flaglist) > 0:
             self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
             self.flaglist.extend(flaglist)
@@ -4878,11 +4882,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         maxi = [teststream._get_max(key,returntime=True) for key in keys]
         flaglist = []
         comment = 'Flagged maximum'
+        flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
         for idx,me in enumerate(maxi):
             if eval('self.menu_p.str_page.'+keys[idx]+'CheckBox.IsChecked()'):
                 starttime = num2date(me[1] - xtol)
                 endtime = num2date(me[1] + xtol)
-                flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=3,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+                flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
         if len(flaglist) > 0:
             self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
             self.flaglist.extend(flaglist)
