@@ -564,7 +564,21 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
             # Create array for errorbars:
             if errorbars:
                 if type(errorbars) == list:
-                    if errorbars[i][j] and not key.startswith('d'):
+                    try:
+                        if errorbars[i][j] and not key.startswith('d'):
+                            ind = KEYLIST.index('d'+key)
+                            if ndtype:
+                                errors = stream.ndarray[ind]
+                            else:
+                                errors = np.asarray([row[ind] for row in stream])
+                            if len(errors) > 0:
+                                data_dict['errors'] = errors
+                            else:
+                                logger.warning("No errors for key %s. Leaving empty." % key)
+                    except:
+                        logger.warning("No errors for key %s. Leaving empty." % key)
+                else:
+                    try:
                         ind = KEYLIST.index('d'+key)
                         if ndtype:
                             errors = stream.ndarray[ind]
@@ -574,15 +588,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                             data_dict['errors'] = errors
                         else:
                             logger.warning("No errors for key %s. Leaving empty." % key)
-                else:
-                    ind = KEYLIST.index('d'+key)
-                    if ndtype:
-                        errors = stream.ndarray[ind]
-                    else:
-                        errors = np.asarray([row[ind] for row in stream])
-                    if len(errors) > 0:
-                        data_dict['errors'] = errors
-                    else:
+                    except:
                         logger.warning("No errors for key %s. Leaving empty." % key)
 
             # Annotate flagged data points:

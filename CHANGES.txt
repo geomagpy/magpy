@@ -1,1 +1,165 @@
-v<0.1.0>, <2013-06-06> -- Initial release.
+MagPy provides a tool set for geomagnetic data analysis.
+Installation instructions can be found on the main download page.
+
+
+-------------------------------------------------
+####v<0.3.95>, <2017-07-??> -- On the way to beta.
+
+v0.3.95 fixes:
+DI analysis:
+    GUI: tab order corrected in DI sheet
+    GUI: DI sheet - times saved correctly for single digit inputs
+General:
+    GUI: small screen fixes - large dialogs are resizeable
+    GUI: large ComboBox issues on Mac removed
+    GUI: cmd+C won't close DI entry sheet dialog on Mac any more
+    GUI: select components works now
+
+v0.3.95 additions:
+DI analysis:
+    GUI: added additional fields to DI input sheet (Comments)
+    DI pier location will be used (if provided) after baselione correction 
+    GUI: updated feedback information on DI sheet
+    GUI: overwrite warnings
+    BLV output supports multiple baselinelines and jumps inbetween
+General:
+    multiple functions can be fitted to one stream
+
+v0.3.95 removals:
+None
+
+v0.3.95 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.94>, <2017-07-12> -- On the way to beta.
+
+v0.3.94 fixes:
+IAF export can include k values in correct format
+updated examples
+error message if selected time range does not contain data
+minor bug fixes
+
+v0.3.94 additions:
+examples 2 and 3 now included, added DI example file
+
+v0.3.94 removals:
+None
+
+v0.3.94 other changes:
+None
+
+-------------------------------------------------
+####v<0.3.81>, <2017-02-16> -- On the way to beta.
+
+v0.3.8.1 fixes:
+corrections on mergeStreams method and Unicode conversion in database methods
+
+v0.3.8.1 additions:
+None
+
+v0.3.8.1 removals:
+None
+
+v0.3.8.1 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.8>, <2017-02-01> -- On the way to beta.
+
+v0.3.8 fixes:
+corrections on mergeStreams method
+
+v0.3.8 additions:
+added fluxgate orientation selection for residual correction in xmagpy
+
+v0.3.8 removals:
+None
+
+v0.3.8 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.7>, <2017-01-10> -- On the way to beta.
+
+v0.3.7 fixes:
+serveral format issus
+many additions for flagging and flag treatment
+speeded up flag operations
+improvements on database methods
+
+v0.3.7 additions:
+added MARCOS support for live streaming and real time submission
+
+v0.3.7 removals:
+removed old invalid/unused acquisition libraries
+
+v0.3.7 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.6>, <2016-12-16> -- On the way to beta.
+
+v0.3.6 additions:
+MagPy is now Python 3 compatible !
+An Exception is the GUI as this is based on wx, which is not properly supported on py3.
+If you are using the graphical user interface, then you should run MagPy with Py2.7 
+
+Minor adds:
+- added a analysis monitoring method for logging information on automated analyses
+- added database initialization on GUI
+
+v0.3.6 fixes:
+IMAG CDF: added "S" variable for independent scalar data ("F" before)
+Improvments on corrections on flagging particulary affecting GUI
+several minor enhancements for speed and stability
+
+v0.3.6 removals:
+None
+
+v0.3.6 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.5>, <2016-10-08> -- On the way to beta.
+
+v0.3.5 fixes:
+    MySQL requirements removed from setup.py
+    PM/AM issues in GUI
+    format issues in CDF, JSON corrected
+    MARCOS monitoring improved
+    several minor enhancements for speed and stability
+
+v0.3.5 additions:
+added support for GWR-SG5 TSF files
+
+v0.3.5 removals:
+None
+
+v0.3.5 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.4>, <2016-09-17> -- On the way to beta.
+
+v0.3.4 fixes:
+    meta data changes related to sensors and stations are now accepted
+    GUI initialization file is automatically updated
+
+v0.3.4 additions:
+None
+
+v0.3.4 removals:
+None
+
+v0.3.4 other changes:
+None
+
+-------------------------------------------------
+####v<0.1.0>, <2013-06-06> -- Initial release.

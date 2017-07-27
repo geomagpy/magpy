@@ -56,6 +56,7 @@ magpy/gui/reportpage.py
 magpy/gui/streampage.py
 magpy/gui/xmagpy
 magpy/gui/xmagpy.py
+magpy/gui/xmagpyw
 magpy/lib/__init__.py
 magpy/lib/format_abs_magpy.py
 magpy/lib/format_autodif.py

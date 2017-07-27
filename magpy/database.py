@@ -3144,7 +3144,8 @@ def dbaddBLV2DATAINFO(db,blvname, stationid):
      except:
          pass
 
-     if not len(existingblv) > 0:
+     OK = True
+     if OK:
          keylist.append('DataID')
          valuelist.append(blvname)
          keylist.append('SensorID')
@@ -3161,12 +3162,34 @@ def dbaddBLV2DATAINFO(db,blvname, stationid):
          valuelist.append('IDFF')
          keylist.append('DataPier')
          valuelist.append(blvname.split('_')[-1])
+         # Insert Pier location from PIERS list
+         try:
+             pierdata = dbselect(db, 'PierLong, PierLat, PierAltitude, PierCoordinateSystem', 'PIERS', 'PierID = "{}"'.format(blvname.split('_')[-1]))[0]
+             print ("Found Pier data in PIERS table:", pierdata)
+             if len(pierdata) > 0:
+                 keylist.append('DataAcquisitionLongitude')
+                 valuelist.append(float(pierdata[0].replace(',','.')))
+                 keylist.append('DataAcquisitionLatitude')
+                 valuelist.append(float(pierdata[1].replace(',','.')))
+                 keylist.append('DataElevation')
+                 valuelist.append(float(pierdata[2].replace(',','.')))
+                 keylist.append('DataLocationReference')
+                 valuelist.append(pierdata[3])
+                 keylist.append('DataElevationRef')
+                 valuelist.append('m NN')
+         except:
+             pass
 
+     if not len(existingblv) > 0:
          sql = 'INSERT INTO DATAINFO (%s) VALUE (%s)' %  (', '.join(keylist), '"'+'", "'.join(valuelist)+'"')
      else:
+         ds = DataStream()
          updatelst=[]
          for idx,key in enumerate(keylist):
-             updatelst.append(key+"='"+valuelist[idx]+"'")
+             if ds._is_number(valuelist[idx]):
+                 updatelst.append(key+"="+str(valuelist[idx]))
+             else:
+                 updatelst.append(key+"='"+valuelist[idx]+"'")
          sql = "UPDATE DATAINFO SET {} WHERE DataID = '{}'".format(','.join(updatelst),blvname)
 
      # Execute the sql statement

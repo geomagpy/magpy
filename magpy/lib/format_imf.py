@@ -1912,7 +1912,10 @@ def readBLV(filename, headonly=False, **kwargs):
                     else:
                         array[2].append(float(block[2]))
                     array[3].append(float(block[3]))
-                #print block
+                else:
+                    # can we put adopted value into a function ??
+                    # read that data and interpolate
+                    pass
             elif line.startswith('*'):  # comment block startsnow
                 # data info
                 starfound.append('*')
@@ -1939,28 +1942,70 @@ def writeBLV(datastream, filename, **kwargs):
 
       Optional:
         deltaF          : (float) average field difference in nT between DI pier and F
-                          measurement position. If provided, this value is assumed to
-                          represent the adopted value for all days: If not, then the baseline
-                          function is assumed to be used.
+                                   measurement position.
+                          OR
+                          (string) which is either 'mean', 'median', or an absinfo string 
+                                   providing fitting methods.
+                          Mean or median require deltaF values in basevalue file.
+                          DeltaF represents the adopted value for all days 
         diff            : (ndarray) array containing daily averages of delta F values between
                           variometer and F measurement
     """
 
-    baselinefunction = kwargs.get('baselinefunction')
-    fitfunc = kwargs.get('fitfunc')
-    fitdegree = kwargs.get('fitdegree')
-    knotstep = kwargs.get('knotstep')
-    extradays = kwargs.get('extradays')
+    absinfo = kwargs.get('absinfo')   # new in v0.3.95
+    fitfunc = kwargs.get('fitfunc')   # replaced by absinfo 
+    fitdegree = kwargs.get('fitdegree')   # replaced by absinfo
+    knotstep = kwargs.get('knotstep')   # replaced by absinfo
+    extradays = kwargs.get('extradays')   # replaced by absinfo
     mode = kwargs.get('mode')
     year = kwargs.get('year')
     meanh = kwargs.get('meanh')
     meanf = kwargs.get('meanf')
-    keys = kwargs.get('keys')
+    keys = kwargs.get('keys')   # replaced by absinfo
     deltaF = kwargs.get('deltaF')
     diff = kwargs.get('diff')
-    # add list for baseline data/jumps -> extract from db
-    #  list contains time ranges and parameters for baselinecalc
-    baseparam =  kwargs.get('baseparam')
+
+    def getAbsInfo(absinfostring):
+        """
+        # extract parameter from DataAbsInfo list
+        """
+        # 1. remove komma from elements
+        absinfostring = absinfostring.replace(', EPSG',' EPSG')
+        absinfostring = absinfostring.replace(',EPSG',' EPSG')
+        absinfostring = absinfostring.replace(', epsg',' EPSG')
+        absinfostring = absinfostring.replace(',epsg',' EPSG')
+        # 2. split absinfo list
+        absinfolist = absinfostring.split(',')
+        if not absinfolist[0].startswith('7') and not len(absinfolist) > 5:
+            return None
+        funclist = []
+        for absinfo in absinfolist:
+            parameter = absinfo.split('_')
+            startabs=float(parameter[0])
+            endabs=float(parameter[1])
+            extradays=int(parameter[2])
+            fitfunc=parameter[3]
+            try:
+                fitdegree=int(parameter[4])
+            except:
+                fitdegree=5
+            try:
+                knotstep=float(parameter[5])
+            except:
+                knotstep=0.1
+            keys = parameter[6:9]
+            line = [startabs,endabs,extradays,fitfunc,fitdegree,knotstep,keys]
+            if len(parameter) >= 14:
+                    #extract pier information
+                    pierdata = True
+                    pierlon = float(parameter[9]) 
+                    pierlat = float(parameter[10])
+                    pierlocref = parameter[11]
+                    pierel = float(parameter[12])
+                    pierelref =  parameter[13]
+                    line.extend([pierlon,pierlat,pierlocref,pierel,pieelref])
+            funclist.append(line)
+        return funclist
 
     if not year:
         year = datetime.strftime(datetime.utcnow(),'%Y')
@@ -1970,29 +2015,38 @@ def writeBLV(datastream, filename, **kwargs):
         t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
         t2 = date2num(datetime.strptime(str(int(year)+1)+'-01-01','%Y-%m-%d'))
 
-    absinfoline = []
+    #absinfoline = []
+    absinfodiff = ''
     if diff:
         if diff.length()[0] > 1:
-            absinfo = diff.header.get('DataAbsInfo','')
-            if not absinfo == '':
-                logger.info("writeBLV: Getting Absolute info from header of provided dailymean file") 
-                absinfoline = absinfo.split('_')
-                extradays= int(absinfoline[2])
-                fitfunc = absinfoline[3]
-                fitdegree = int(absinfoline[4])
-                knotstep = float(absinfoline[5])
-                keys = ['dx','dy','dz']#,'df'] # absinfoline[6]
+            if not absinfo:
+                absinfodiff = diff.header.get('DataAbsInfo','')
+            if not absinfodiff == '':
+                logger.info("writeBLV: Getting Absolute info from header of provided dailymean file")
+                absinfo = absinfodiff
+                #absinfoline = absinfo.split('_')
+                #extradays= int(absinfoline[2])
+                #fitfunc = absinfoline[3]
+                #fitdegree = int(absinfoline[4])
+                #knotstep = float(absinfoline[5])
+                #keys = ['dx','dy','dz']#,'df'] # absinfoline[6]
 
-    if not extradays:
-        extradays = 15
-    if not fitfunc:
-        fitfunc = 'spline'
-    if not fitdegree:
-        fitdegree = 5
-    if not knotstep:
-        knotstep = 0.1
-    if not keys:
-        keys = ['dx','dy','dz']#,'df']
+    if not absinfo:
+        if not extradays:
+            extradays = 15
+        if not fitfunc:
+            fitfunc = 'spline'
+        if not fitdegree:
+            fitdegree = 5
+        if not knotstep:
+            knotstep = 0.1
+        if not keys:
+            keys = ['dx','dy','dz']#,'df']
+        parameterlist = [[t1,t2,extradays,fitfunc,fitdegree,knotstep,keys]]
+    else:
+        parameterlist = getAbsInfo(absinfo)
+
+    logger.info("writeBLV: Extracted baseline parameter: {}".format(parameterlist))
 
     # 2. check whether file exists and according to mode either create, append, replace
     if os.path.isfile(filename):
@@ -2033,16 +2087,6 @@ def writeBLV(datastream, filename, **kwargs):
     #    logger.error("writeBLV: is not yet assigned during database access")
     #    #return False
 
-    indf = KEYLIST.index('df')
-    if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:
-        keys = ['dx','dy','dz','df']
-    else:
-        if not deltaF:
-            array = np.asarray([88888.00]*len(datastream.ndarray[0]))
-            datastream = datastream._put_column(array, 'df')
-        else:
-            array = np.asarray([deltaF]*len(datastream.ndarray[0]))
-            datastream = datastream._put_column(array, 'df')
 
     # 4. create dummy stream with time range
     dummystream = DataStream()
@@ -2076,6 +2120,44 @@ def writeBLV(datastream, filename, **kwargs):
         backupabsstream = backupabsstream.linestruct2ndarray()
 
     datastream = datastream.trim(starttime=t1, endtime=t2)
+
+    indf = KEYLIST.index('df')
+    fbase = False
+    if len([elem for elem in datastream.ndarray[indf] if not np.isnan(float(elem))]) > 0:
+        keys = ['dx','dy','dz','df']
+    else:
+        if not deltaF:
+            array = np.asarray([88888.00]*len(datastream.ndarray[0]))
+            datastream = datastream._put_column(array, 'df')
+        else:
+            try:
+                # TODO provided values can only be used as adopted scalar baseline
+                # Should work
+                delf = float(deltaF)
+                array = np.asarray([delf]*len(datastream.ndarray[0]))
+                datastream = datastream._put_column(array, 'df')
+            except:
+                fbase = getAbsInfo(deltaF)
+                if fbase:
+                    fbasefunc = True
+
+    if keys == ['dx','dy','dz','df'] and datastream._is_number(deltaF):
+        logger.info("writeBLV: found deltaF values, but using provided deltaF {} for adopted scalar baseline ".format(deltaF))
+
+    fbasefunc = False
+    if keys == ['dx','dy','dz','df'] and not datastream._is_number(deltaF):
+        #print ("writeBLV: found string in deltaF")
+        if deltaF in ['mean','MEAN','Mean']:
+            logger.info("writeBLV: MEAN deltaF: {}".format(datastream.mean('df',percentage=1)))
+            deltaF = datastream.mean('df',percentage=1)
+        elif deltaF in ['median','MEDIAN','Median']:
+            logger.info("writeBLV: MEDIAN deltaF: {}".format(datastream.mean('df',percentage=1, meanfunction='median')))
+            deltaF = datastream.mean('df',percentage=1, meanfunction='median')
+        else:
+            fbase = getAbsInfo(deltaF)
+            if fbase:
+                fbasefunc = True
+
     try:
         comps = datastream.header['DataComponents']
         if comps in ['IDFF','idff','idf','IDF']:
@@ -2090,22 +2172,27 @@ def writeBLV(datastream, filename, **kwargs):
         datastream = datastream.xyz2hdz()
         comps = 'HDZF'
 
-    meanstream = datastream.extract('f', 0.0, '>')  
+    meanstream = datastream.extract('f', 0.0, '>')
+    meanstream = meanstream.flag_outlier()
+    meanstream = meanstream.remove_flagged()
 
     if not meanf:
         meanf = meanstream.mean('f')
     if not meanh:
         meanh = meanstream.mean('x')
 
-    ##### ###########################################################################
-    print("TODO: cycle through parameter baseparam here")
-    print(" baseparam contains time ranges their valid baseline function parameters")
-    print(" -> necessary for discontiuous fits")
-    print(" join the independent year stream, and create datelist for marking jumps with d")
-    ##### ###########################################################################
-
     # 6. calculate baseline function
-    basefunction = dummystream.baseline(backupabsstream,keys=keys, fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,extradays=extradays)
+    basefunctionlist =[]
+    keys = []
+    for parameter in parameterlist:
+        # check whether timerange is fitting
+        if (parameter[0] >= t1 and parameter[0] <= t2) or (parameter[1] >= t1 and parameter[1] <= t2) or (parameter[0] < t1 and parameter[1] > t2):
+            keys = parameter[6]
+            #print ("writeBLV: Using line", parameter)
+            basefunctionlist.append(dummystream.baseline(backupabsstream,startabs=parameter[0],endabs=parameter[1],keys=parameter[6], fitfunc=parameter[3],fitdegree=parameter[4],knotstep=parameter[5],extradays=parameter[2]))
+
+    #print ("writeBLV: Extracted parameter", basefunctionlist)
+    #basefunction = dummystream.baseline(backupabsstream,keys=keys, fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep,extradays=extradays)
 
     yar = [[] for key in KEYLIST]
     datelist = [day+0.5 for day in range(int(t1),int(t2))]
@@ -2119,9 +2206,20 @@ def writeBLV(datastream, filename, **kwargs):
 
 
     yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar))
-    yearstream = yearstream.func2stream(basefunction,mode='addbaseline',keys=keys)
+    yearstream = yearstream.func2stream(basefunctionlist,mode='addbaseline',keys=keys)
 
     #print("writeBLV:", yearstream.length())
+
+    if fbasefunc:
+        logger.info("Adding adopted scalar from function {}".format(fbase))
+        fbasefunclist = []
+        for parameter in fbase:
+            # check whether timerange is fitting
+            if (parameter[0] >= t1 and parameter[0] <= t2) or (parameter[1] >= t1 and parameter[1] <= t2) or (parameter[0] < t1 and parameter[1] > t2):
+                fbasefunclist.append(dummystream.baseline(backupabsstream,startabs=parameter[0],endabs=parameter[1],keys=parameter[6], fitfunc=parameter[3],fitdegree=parameter[4],knotstep=parameter[5],extradays=parameter[2]))
+        yearstream = yearstream.func2stream(fbasefunclist,mode='values',keys=['df'])
+        #print("writeBLV:", yearstream.length())
+
 
     #print "writeBLV: Testing deltaF (between Pier and F):"
     #print "adopted diff is yearly average"
@@ -2198,11 +2296,17 @@ def writeBLV(datastream, filename, **kwargs):
 
     # 9. adopted basevalues
     myFile.writelines( '*\r\n' )
-    #TODO: deltaf and continuity parameter from db
-    parameter = 'c' # corresponds to m
+    posstr = KEYLIST.index('str1')
+    #print ("LENGTH", len(yearstream.ndarray[posstr]))
+    if not len(yearstream.ndarray[posstr]) > 0:
+        parameterlst = ['c']*len(yearstream.ndarray[0])
+    else:
+        parameterlst = yearstream.ndarray[posstr]
+
     for idx, t in enumerate(yearstream.ndarray[0]):
         #001_AAAAAA.AA_BBBBBB.BB_ZZZZZZ.ZZ_SSSSSS.SS_DDDD.DD_mCrLf
         day = datetime.strftime(num2date(t),'%j')
+        parameter = parameterlst[idx]
         if np.isnan(yearstream.ndarray[indx][idx]):
             x = 99999.00
         else:
@@ -2221,15 +2325,19 @@ def writeBLV(datastream, filename, **kwargs):
             z = 99999.00
         else:
             z = yearstream.ndarray[indz][idx]
-        if deltaF:
+        if deltaF and dummystream._is_number(deltaF):
             f = deltaF
+        elif deltaF: # and dummystream._is_number(deltaF):
+            f = yearstream.ndarray[indf][idx]
         elif np.isnan(yearstream.ndarray[indf][idx]):
             f = 99999.00
         else:
             f = yearstream.ndarray[indf][idx]
         if diff:
+            #print ("writeBLV: Here", t, diff.length()[0])
             posdf = KEYLIST.index('df')
-            indext = [i for i,tpos in enumerate(diff.ndarray[0]) if num2date(tpos).date() == num2date(t).date()]
+            indext = [np.abs(diff.ndarray[0]-t).argmin()]
+            #indext = [i for i,tpos in enumerate(diff.ndarray[0]) if num2date(tpos).date() == num2date(t).date()]
             #print("Hello", posdf, diff.ndarray[0], diff.ndarray[posdf], len(diff.ndarray[0]),indext, t)
             #                                                     []       365           [0] 735599.5
             if len(indext) > 0:
@@ -2246,12 +2354,24 @@ def writeBLV(datastream, filename, **kwargs):
     # 9. comments
     myFile.writelines( '*\r\n'.encode('utf-8') )
     myFile.writelines( 'Comments:\r\n'.encode('utf-8') )
-    absinfoline = dummystream.header.get('DataAbsInfo','').split('_')
-    logger.info("Infoline {}".format(absinfoline))
-    funcline1 = 'Baselinefunction: %s\r\n' % absinfoline[3]
-    funcline2 = 'Degree: %s, Knots: %s\r\n' % (absinfoline[4],absinfoline[5])
-    funcline3 = 'For adopted values the fit has been applied between\r\n'
-    funcline4 = '%s and %s\r\n' % (str(num2date(float(absinfoline[0])).replace(tzinfo=None)),str(num2date(float(absinfoline[1])).replace(tzinfo=None)))
+    myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
+    absinfostring = dummystream.header.get('DataAbsInfo','')
+    parameterlist = getAbsInfo(absinfostring)
+    #print ("writeBLV", absinfostring, parameterlist)
+    if not absinfostring == '':
+        for parameter in parameterlist:
+            funcline1 = '+++++++\r\n'
+            funcline2 = 'Adopted baseline between {} and {}\r\n'.format(str(num2date(float(parameter[0])).replace(tzinfo=None)),str(num2date(float(parameter[1])).replace(tzinfo=None)))
+            if parameter[3].startswith('poly'):
+                funcline3 = 'Baselinefunction: {}, Degree: {}\r\n'.format(parameter[3],parameter[4])
+            else:
+                funcline3 = 'Baselinefunction: {}, relative knot distance: {}, keys: {}\r\n'.format(parameter[3],parameter[5],parameter[6])
+            funcline4 = 'Comment: please add\r\n'
+            myFile.writelines( funcline1.encode('utf-8') )
+            myFile.writelines( funcline2.encode('utf-8') )
+            myFile.writelines( funcline3.encode('utf-8') )
+            myFile.writelines( funcline4.encode('utf-8') )
+
     # get some data:
     infolist = [] # contains all provided information for comment section
     db = False
@@ -2268,10 +2388,6 @@ def writeBLV(datastream, filename, **kwargs):
     # additional text with pier, instrument, how f difference is defined, which are the instruments etc
     summaryline = '-- analysis supported by MagPy\r\n'
     myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
-    myFile.writelines( funcline1.encode('utf-8') )
-    myFile.writelines( funcline2.encode('utf-8') )
-    myFile.writelines( funcline3.encode('utf-8') )
-    myFile.writelines( funcline4.encode('utf-8') )
     myFile.writelines( funcline5.encode('utf-8') )
     myFile.writelines( funcline6.encode('utf-8') )
     myFile.writelines( funcline7.encode('utf-8') )

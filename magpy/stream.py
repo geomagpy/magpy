@@ -2121,6 +2121,9 @@ CALLED BY:
         startabs =  kwargs.get('startabs')
         endabs =  kwargs.get('endabs')
 
+        orgstartabs = None
+        orgendabs = None
+
         #if not extradays:
         #    extradays = 15
         if not fitfunc:
@@ -2149,11 +2152,18 @@ CALLED BY:
         fixstart,fixend = False,False
         if startabs:
             startabs = date2num(self._testtime(startabs))
+            orgstartabs = startabs
             fixstart = True
         if endabs:
             endabs = date2num(self._testtime(endabs))
+            orgendabs = endabs
             fixend = True
 
+        pierlong = absolutedata.header.get('DataAcquisitionLongitude','')
+        pierlat = absolutedata.header.get('DataAcquisitionLatitude','')
+        pierel = absolutedata.header.get('DataElevation','')
+        pierlocref = absolutedata.header.get('DataAcquisitionReference','')
+        pierelref = absolutedata.header.get('DataElevationRef','')
         #self.header['DataAbsFunc'] = fitfunc
         #self.header['DataAbsDegree'] = fitdegree
         #self.header['DataAbsKnots'] = knotstep
@@ -2169,10 +2179,10 @@ CALLED BY:
         absolutestream = absolutestream.remove_flagged()
         #print("Baseline", absolutestream.length())
         #print("Baseline", absolutestream.ndarray[0])
-        print ("HERE1")
 
         absndtype = False
         if len(absolutestream.ndarray[0]) > 0:
+            #print ("HERE1: adopting time range absolutes - before {} {}".format(startabs, endabs))
             absolutestream.ndarray[0] = absolutestream.ndarray[0].astype(float)
             absndtype = True
             if not np.min(absolutestream.ndarray[0]) < endtime:
@@ -2193,11 +2203,21 @@ CALLED BY:
             startabs = absolutestream[0].time
             endabs = absolutestream[-1].time
 
-        print ("HERE2 {} {} {} {}".format(startabs, endabs, num2date(startabs), num2date(endabs)))
-        print ("HERE2 {} {}".format(starttime, endtime))
+        # Initialze orgstartabd and orgendabs if not yet provided: orgabs values will be added to DataAbsInfo
+        if not orgstartabs:
+            orgstartabs = startabs
+        if not orgendabs:
+            orgendabs = endabs
+
+        #print ("HERE2a: Time range absolutes  - {} {} {} {}".format(startabs, endabs, num2date(startabs), num2date(endabs)))
+        #print ("HERE2b: Time range datastream - {} {}".format(starttime, endtime))
+
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
+            #print ('HERE2c: First absolute value measured after beginning of stream')
             #logger.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
+            #if fixstart:
+            #    
             #absolutestream.add(absolutestream[0])
             #absolutestream[-1].time = starttime
             #absolutestream.sorting()
@@ -2206,12 +2226,12 @@ CALLED BY:
             logger.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
             if num2date(endabs).replace(tzinfo=None) + timedelta(days=extradays) < num2date(endtime).replace(tzinfo=None):
                 usestepinbetween = True
-                logger.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
+                if not fixend:
+                    logger.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
 
         starttime = num2date(starttime).replace(tzinfo=None)
         endtime = num2date(endtime).replace(tzinfo=None)
 
-        print ("HERE2 {} {}".format(starttime, endtime))
 
         # 4) get standard time rang of one year and extradays at start and end
         #           test whether absstream covers this time range including extradays
@@ -2221,9 +2241,11 @@ CALLED BY:
         extrapolate = False
         # upper
         if fixend:
-            absolutestream = absolutestream.trim(endtime=endabs)
+            #absolutestream = absolutestream.trim(endtime=endabs)  # should I trim here already - leon ?? 
             # time range long enough
             baseendtime = endabs+extradays
+            if baseendtime < orgendabs:
+                baseendtime = orgendabs
             extrapolate = True
         else:
             baseendtime = date2num(endtime+timedelta(days=1))
@@ -2233,9 +2255,10 @@ CALLED BY:
         #    baseendtime = date2num(endtime)+extradays
         # lower
         if fixstart:
-            absolutestream = absolutestream.trim(starttime=startabs)
+            #absolutestream = absolutestream.trim(starttime=startabs)  # should I trim here already - leon ??
             basestarttime = startabs-extradays
-            #print "baseline2", num2date(basestarttime)
+            if basestarttime > orgstartabs:
+                basestarttime = orgstartabs
             extrapolate = True
         else:
             # not long enough
@@ -2249,30 +2272,35 @@ CALLED BY:
         baseendtime = num2date(baseendtime).replace(tzinfo=None)
         basestarttime = num2date(basestarttime).replace(tzinfo=None)
 
-        bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
+        #print ("HERE3a: basestart and end", basestarttime, baseendtime)
 
-        print ("HERE3")
+        # Don't use trim here
+        #bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
+        basarray = absolutestream._select_timerange(starttime=basestarttime,endtime=baseendtime)
+        bas = DataStream([LineStruct()],absolutestream.header,basarray)
 
-        if extrapolate and not extradays == 0:
+        #print ("HERE3b: length of selected absolutes: ", bas.length()[0])
+
+        if extrapolate: # and not extradays == 0:
             bas = bas.extrapolate(basestarttime,baseendtime)
 
         #keys = ['dx','dy','dz']
         try:
-            print ("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
-            print ("Baseline", bas.length(), keys)
+            logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
+            #print ("Baseline", bas.length(), keys)
             #for elem in bas.ndarray:
             #    print elem
             func = bas.fit(keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
         except:
             print ("Baseline: Error when determining fit - Enough data point to satisfy fit complexity?")
             raise
-        ix = KEYLIST.index(keys[0])
-        iy = KEYLIST.index(keys[1])
-        iz = KEYLIST.index(keys[2])
+
+        #if len(keys) == 3:
+        #    ix = KEYLIST.index(keys[0])
+        #    iy = KEYLIST.index(keys[1])
+        #    iz = KEYLIST.index(keys[2])
         # get the function in some readable equation
         #self.header['DataAbsDataT'] = bas.ndarray[0],bas.ndarray[ix],bas.ndarray[iy],bas.ndarray[iz]]
-
-        print ("HERE4")
 
         if plotbaseline:
             #check whether plotbaseline is valid path or bool
@@ -2289,11 +2317,39 @@ CALLED BY:
                 print("using the internal plotting routine requires mpplot to be imported as mp")
 
         keystr = '_'.join(keys)
-        #print("Baseline", startabs)
-        absinfostring = '_'.join(map(str,[startabs,endabs,extradays,fitfunc,fitdegree,knotstep,keystr]))
-        #print("Baseline", absinfostring)
-        self.header['DataAbsInfo'] = absinfostring  # 735582.0_735978.0_0_spline_5_0.3_dx_dy_dz
-        tmpdict = bas.stream2dict()
+        pierlong = absolutedata.header.get('DataAcquisitionLongitude','')
+        pierlat = absolutedata.header.get('DataAcquisitionLatitude','')
+        pierel = absolutedata.header.get('DataElevation','')
+        pierlocref = absolutedata.header.get('DataLocationReference','')
+        pierelref = absolutedata.header.get('DataElevationRef','')
+        if not pierlong == '' and not pierlat == '' and not pierel == '':
+            absinfostring = '_'.join(map(str,[orgstartabs,orgendabs,extradays,fitfunc,fitdegree,knotstep,keystr,pierlong,pierlat,pierlocref,pierel,pierelref]))
+        else:
+            absinfostring = '_'.join(map(str,[orgstartabs,orgendabs,extradays,fitfunc,fitdegree,knotstep,keystr]))
+        existingabsinfo = self.header.get('DataAbsInfo','').replace(', EPSG',' EPSG').split(',')
+        if not existingabsinfo[0] == '':
+            existingabsinfo.append(absinfostring)
+        else:
+            existingabsinfo = [absinfostring]
+
+        # Get minimum and maximum times out of existing absinfostream
+        minstarttime=100000000.0
+        maxendtime=0.0
+        for el in existingabsinfo:
+            ele = el.split('_') 
+            mintime = float(ele[0])
+            maxtime = float(ele[1])
+            if minstarttime > mintime:
+                minstarttime = mintime
+            if maxendtime < maxtime:
+                maxendtime = maxtime
+        exabsstring = ','.join(existingabsinfo)
+        self.header['DataAbsInfo'] = exabsstring  # 735582.0_735978.0_0_spline_5_0.3_dx_dy_dz
+
+        #print ("HERE5a:", minstarttime, maxendtime, absolutestream.length()[0])
+        bas2save = absolutestream.trim(starttime=minstarttime,endtime=maxendtime)
+        tmpdict = bas2save.stream2dict()
+        #print ("HERE5b:", bas2save.length()[0])
         self.header['DataBaseValues'] = tmpdict['DataBaseValues']
         #self.header['DataAbsMinTime'] = func[1] #num2date(func[1]).replace(tzinfo=None)
         #self.header['DataAbsMaxTime'] = func[2] #num2date(func[2]).replace(tzinfo=None)
@@ -2302,13 +2358,11 @@ CALLED BY:
         #else:
         #    self = self.func_add(func)
 
-        print ("HERE5")
-
         logger.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
-        for key in self.header:
-            if key.startswith('DataAbs'):
-                print(key, self.header[key])
+        #for key in self.header:
+        #    if key.startswith('DataAbs'):
+        #        print(key, self.header[key])
 
         return func
 
@@ -2513,54 +2567,91 @@ CALLED BY:
             alpha/beta    (floats) provide rotation angles for the variometer data to be applied
                                    before correction - data is rotated back after correction
         """
-        print ("BC: Performing baseline correction: Requires HEZ data.")
-        print ("    H magnetic North, E magnetic East, Z vertical downwards, all in nT.")
+        logger.debug("BC: Performing baseline correction: Requires HEZ data.")
+        logger.debug("    H magnetic North, E magnetic East, Z vertical downwards, all in nT.")
 
-        absinfo = self.header.get('DataAbsInfo')
+        pierdata = False
+        absinfostring = self.header.get('DataAbsInfo')
         absvalues = self.header.get('DataBaseValues')
         func = self.header.get('DataAbsFunctionObject')
+        datatype = self.header.get('DataType')
 
-        print ("BC: Components of stream:", self.header.get('DataComponents'))
-        print ("BC: baseline adoption information:", absinfo)
-
-        if absinfo and type(absvalues) in [list,np.ndarray,tuple]:
-            print("BC: Found baseline adoption information in meta data - correcting")
-            #print("BC: TODO repeat correction several times and check header info")
-            # extract baseline data
-            absstream = self.dict2stream()
-            #print("BC", absstream.length())
-            parameter = absinfo.split('_')
-            #print("BC:", parameter)
-            funckeys = parameter[6:]
-            #print("BC:", funckeys, absstream._get_column('dx'))
-            #print("BC", num2date(float(parameter[0])))
-            func = self.baseline(absstream, startabs=float(parameter[0]), endabs=float(parameter[1]), extradays=int(parameter[2]), fitfunc=parameter[3], fitdegree=int(parameter[4]), knotstep=float(parameter[5]), keys=funckeys)
-            #print(func)
-            #print(self.length())
-            if 'dx' in funckeys:
-                func[0]['fx'] = func[0]['fdx']
-                func[0]['fy'] = func[0]['fdy']
-                func[0]['fz'] = func[0]['fdz']
-                func[0].pop('fdx', None)
-                func[0].pop('fdy', None)
-                func[0].pop('fdz', None)
-                keys = ['x','y','z']
-            elif 'x' in funckeys:
-                keys = ['x','y','z']
-            else:
-                print("BC: could not interpret BaseLineFunctionObject - returning")
-                return self
-            self = self.func2stream(func,mode='addbaseline',keys=keys)
-            self.header['col-x'] = 'H'
-            self.header['unit-col-x'] = 'nT'
-            self.header['col-y'] = 'D'
-            self.header['unit-col-y'] = 'deg'
-            datacomp = self.header.get('DataComponents','')
-            if len(datacomp) == 4:
-                self.header['DataComponents'] = 'HDZ'+datacomp[3]
-            else:
-                self.header['DataComponents'] = 'HDZ'
+        if datatype == 'BC':
+            print ("BC: dataset is already baseline corrected - returning")
             return self
+
+        bcdata = self.copy()
+
+        logger.debug("BC: Components of stream: {}".format(self.header.get('DataComponents')))
+        logger.debug("BC: baseline adoption information: {}".format(absinfostring))
+
+        if absinfostring and type(absvalues) in [list,np.ndarray,tuple]:
+            #print("BC: Found baseline adoption information in meta data - correcting")
+            absinfostring = absinfostring.replace(', EPSG',' EPSG')
+            absinfostring = absinfostring.replace(',EPSG',' EPSG')
+            absinfostring = absinfostring.replace(', epsg',' EPSG')
+            absinfostring = absinfostring.replace(',epsg',' EPSG')
+            absinfolist = absinfostring.split(',')
+            funclist = []
+            for absinfo in absinfolist:
+                #print("BC: TODO repeat correction several times and check header info")
+                # extract baseline data
+                absstream = bcdata.dict2stream()
+                #print("BC: abstream length", absstream.length()[0])
+                parameter = absinfo.split('_')
+                #print("BC:", parameter, len(parameter))
+                funckeys = parameter[6:9]
+                if len(parameter) >= 14:
+                    #extract pier information
+                    pierdata = True
+                    pierlon = float(parameter[9]) 
+                    pierlat = float(parameter[10])
+                    pierlocref = parameter[11]
+                    pierel = float(parameter[12])
+                    pierelref =  parameter[13]
+                #print("BC", num2date(float(parameter[0])))
+                #print("BC", num2date(float(parameter[1])))
+                if not funckeys == ['df']:
+                    func = bcdata.baseline(absstream, startabs=float(parameter[0]), endabs=float(parameter[1]), extradays=int(parameter[2]), fitfunc=parameter[3], fitdegree=int(parameter[4]), knotstep=float(parameter[5]), keys=funckeys)
+                    if 'dx' in funckeys:
+                        func[0]['fx'] = func[0]['fdx']
+                        func[0]['fy'] = func[0]['fdy']
+                        func[0]['fz'] = func[0]['fdz']
+                        func[0].pop('fdx', None)
+                        func[0].pop('fdy', None)
+                        func[0].pop('fdz', None)
+                        keys = ['x','y','z']
+                    elif 'x' in funckeys:
+                        keys = ['x','y','z']
+                    else:
+                        print("BC: could not interpret BaseLineFunctionObject - returning")
+                        return self
+                    funclist.append(func)
+
+            #print ("BC: Found a list of functions:", funclist)
+            bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
+            bcdata.header['col-x'] = 'H'
+            bcdata.header['unit-col-x'] = 'nT'
+            bcdata.header['col-y'] = 'D'
+            bcdata.header['unit-col-y'] = 'deg'
+            datacomp = bcdata.header.get('DataComponents','')
+            if len(datacomp) == 4:
+                bcdata.header['DataComponents'] = 'HDZ'+datacomp[3]
+            else:
+                bcdata.header['DataComponents'] = 'HDZ'
+
+            # Add BC mark to datatype - data is baseline corrected
+            bcdata.header['DataType'] = 'BC'
+
+            # Update location data from absinfo
+            if pierdata:
+                self.header['DataAcquisitionLongitude'] = pierlon
+                self.header['DataAcquisitionLatitude'] = pierlat
+                self.header['DataLocationReference'] = pierlocref
+                self.header['DataElevation'] = pierel
+                self.header['DataElevationRef'] = pierelref
+
+            return bcdata
             
         elif func:
             # 1.) move content of basevalue function to columns 'x','y','z'?
@@ -2597,13 +2688,13 @@ CALLED BY:
             #self = self._drop_nans('y')
             #print len(self.ndarray[0])
 
-            self = self.func2stream(func,mode='addbaseline',keys=['x','y','z'])
-            self.header['col-x'] = 'H'
-            self.header['unit-col-x'] = 'nT'
-            self.header['col-y'] = 'D'
-            self.header['unit-col-y'] = 'deg'
-            self.header['DataComponents'] = 'HDZ'
-            return self
+            bcdata = bcdata.func2stream(func,mode='addbaseline',keys=['x','y','z'])
+            bcdata.header['col-x'] = 'H'
+            bcdata.header['unit-col-x'] = 'nT'
+            bcdata.header['col-y'] = 'D'
+            bcdata.header['unit-col-y'] = 'deg'
+            bcdata.header['DataComponents'] = 'HDZ'
+            return bcdata
 
         else:
             print("BC: No data for correction available - header needs to contain DataAbsFunctionObject")
@@ -2798,6 +2889,7 @@ CALLED BY:
 
         """
 
+        percentage = 90
         keys = keys[:4]
         poslst,deltaposlst = [],[]
         deltakeys = ['dx','dy','dz','df']
@@ -2817,15 +2909,32 @@ CALLED BY:
         tmpdatelst = np.asarray(list(set(list(timecol))))
         for day in tmpdatelst:
             sel = data._select_timerange(starttime=day,endtime=day+1)
+            """
+        #for idx,day in enumerate(daylst):
+            #sel = final._select_timerange(starttime=np.round(day), endtime=np.round(day)+1)
+            """
+            sttmp = DataStream([LineStruct()],{},sel)
             array[0].append(day+0.5)
-            for idx,pos in enumerate(poslst):
-                array[idx+1].append(np.mean(sel[pos]))
+            #print ("Day", day)
+            for idx, pos in enumerate(poslst):
+                #if len(sttmp.ndarray[idx+1]) > 0:
+                array[idx+1].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
+                #print ("Check", KEYLIST[pos], idx+1, sttmp._get_column(KEYLIST[pos]),sttmp.mean(KEYLIST[pos],percentage=percentage))
+                """
+            #array[0].append(day+0.5)
+            #for idx,pos in enumerate(poslst):
+                array[idx+1].append(np.mean(sel[pos],percentage=percentage))
+                """
                 data.header['col-'+KEYLIST[idx+1]] = self.header.get('col-'+KEYLIST[pos])
                 data.header['unit-col-'+KEYLIST[idx+1]] = self.header.get('unit-col-'+KEYLIST[pos])
                 diff = pos-idx
             for idx,dpos in enumerate(deltaposlst):
-                array[dpos].append(np.std(sel[idx+diff]))
-                #data.header['col-'+KEYLIST[dpos]] = 'sigma '+self.header.get('col-'+KEYLIST[idx+diff])
+                #if len(sttmp.ndarray[idx]) > 0:
+                me,std = sttmp.mean(KEYLIST[idx+diff],percentage=percentage, std=True)
+                array[dpos].append(std)
+                #array[dpos].append(np.std(sel[idx+diff]))
+                data.header['col-'+KEYLIST[dpos]] = 'sigma '+self.header.get('col-'+KEYLIST[idx+diff])
+                data.header['unit-col-'+KEYLIST[dpos]] = self.header.get('unit-col-'+KEYLIST[idx+diff])
         data.header['DataFormat'] = 'MagPyDailyMean'
 
         array = [np.asarray(el) for el in array]
@@ -3434,8 +3543,8 @@ CALLED BY:
         is used by stream.baseline
         """
 
-        ltime = date2num(end + timedelta(days=1))
-        ftime = date2num(start - timedelta(days=1))
+        ltime = date2num(end) # + timedelta(days=1))
+        ftime = date2num(start) # - timedelta(days=1))
         array = [[] for key in KEYLIST]
 
         ndtype = False
@@ -4395,79 +4504,80 @@ CALLED BY:
                 selcol = self.ndarray[flagpos][idxst:idxat].astype(float)
                 selcol = selcol[~np.isnan(selcol)]
 
-                try:
-                    q1 = stats.scoreatpercentile(selcol,16)
-                    q3 = stats.scoreatpercentile(selcol,84)
-                    iqd = q3-q1
-                    md = np.median(selcol)
-                    if iqd == 0:
-                        iqd = 0.000001
-                    whisker = threshold*iqd
-                    #print key, md, iqd, whisker
-                except:
+                if len(selcol) > 0:
                     try:
+                        q1 = stats.scoreatpercentile(selcol,16)
+                        q3 = stats.scoreatpercentile(selcol,84)
+                        iqd = q3-q1
                         md = np.median(selcol)
-                        whisker = md*0.005
+                        if iqd == 0:
+                            iqd = 0.000001
+                        whisker = threshold*iqd
+                        #print key, md, iqd, whisker
                     except:
-                        logger.warning("remove_outlier: Eliminate outliers produced a problem: please check.")
-                        pass
-
-                #print md, whisker, np.asarray(selcol)
-                for elem in range(idxst,idxat):
-                    #print flagpos, elem
-                    if not md-whisker < self.ndarray[flagpos][elem] < md+whisker and not np.isnan(self.ndarray[flagpos][elem]):
-                        #print "Found:", key, self.ndarray[flagpos][elem]
-                        #if key == 'df':
-                        #    x = 1/0
                         try:
-                            if not self.ndarray[flagidx][elem] == '':
-                                #print "Got here", self.ndarray[flagidx][elem]
-                                newflagls = list(self.ndarray[flagidx][elem])
-                                #print newflagls
-                                if newflagls[flagpos] == '-':
-                                    newflagls[flagpos] = 0
-                                if not int(newflagls[flagpos]) > 1:
-                                    newflagls[flagpos] = '1'
+                            md = np.median(selcol)
+                            whisker = md*0.005
+                        except:
+                            logger.warning("remove_outlier: Eliminate outliers produced a problem: please check.")
+                            pass
+
+                    #print md, whisker, np.asarray(selcol)
+                    for elem in range(idxst,idxat):
+                        #print flagpos, elem
+                        if not md-whisker < self.ndarray[flagpos][elem] < md+whisker and not np.isnan(self.ndarray[flagpos][elem]):
+                            #print "Found:", key, self.ndarray[flagpos][elem]
+                            #if key == 'df':
+                            #    x = 1/0
+                            try:
+                                if not self.ndarray[flagidx][elem] == '':
+                                    #print "Got here", self.ndarray[flagidx][elem]
+                                    newflagls = list(self.ndarray[flagidx][elem])
+                                    #print newflagls
+                                    if newflagls[flagpos] == '-':
+                                        newflagls[flagpos] = 0
+                                    if not int(newflagls[flagpos]) > 1:
+                                        newflagls[flagpos] = '1'
+                                    if markall:
+                                        for p in flagposls:
+                                            if not newflagls[p] > 1:
+                                                newflagls[p] = '1'
+                                    newflag = ''.join(newflagls)
+                                    #print(newflag)
+                                else:
+                                    x=1/0 # Force except
+                            except:
+                                newflagls = []
+                                for idx,el in enumerate(FLAGKEYLIST): # Only key column
+                                    if idx == flagpos:
+                                        newflagls.append('1')
+                                    else:
+                                        newflagls.append('-')
                                 if markall:
                                     for p in flagposls:
-                                        if not newflagls[p] > 1:
-                                            newflagls[p] = '1'
+                                        newflagls[p] = '1'
                                 newflag = ''.join(newflagls)
-                                #print(newflag)
-                            else:
-                                x=1/0 # Force except
-                        except:
-                            newflagls = []
-                            for idx,el in enumerate(FLAGKEYLIST): # Only key column
-                                if idx == flagpos:
-                                    newflagls.append('1')
-                                else:
-                                    newflagls.append('-')
-                            if markall:
-                                for p in flagposls:
-                                    newflagls[p] = '1'
-                            newflag = ''.join(newflagls)
 
-                        self.ndarray[flagidx][elem] = newflag
-                        #print self.ndarray[flagidx][elem]
-                        commline = "aof - threshold: {a}, window: {b} sec".format(a=str(threshold), b=str(timerange.total_seconds()))
-                        self.ndarray[commentidx][elem] = commline
-                        infoline = "flag_outlier: at {a} - removed {b} (= {c})".format(a=str(self.ndarray[0][elem]), b=key, c=self.ndarray[flagpos][elem])
-                        logger.info(infoline)
-                        #[starttime,endtime,key,flagid,flagcomment]
-                        flagtime = self.ndarray[0][elem]
-                        flaglist.append([flagtime,flagtime,key,1,commline])
-                        if stdout:
-                            print(infoline)
-                    else:
-                        try:
-                            if not self.ndarray[flagidx][elem] == '':
-                                pass
-                            else:
-                                x=1/0 # Well not elegant but working
-                        except:
-                            self.ndarray[flagidx][elem] = ''
-                            self.ndarray[commentidx][elem] = ''
+                            self.ndarray[flagidx][elem] = newflag
+                            #print self.ndarray[flagidx][elem]
+                            commline = "aof - threshold: {a}, window: {b} sec".format(a=str(threshold), b=str(timerange.total_seconds()))
+                            self.ndarray[commentidx][elem] = commline
+                            infoline = "flag_outlier: at {a} - removed {b} (= {c})".format(a=str(self.ndarray[0][elem]), b=key, c=self.ndarray[flagpos][elem])
+                            logger.info(infoline)
+                            #[starttime,endtime,key,flagid,flagcomment]
+                            flagtime = self.ndarray[0][elem]
+                            flaglist.append([flagtime,flagtime,key,1,commline])
+                            if stdout:
+                                print(infoline)
+                        else:
+                            try:
+                                if not self.ndarray[flagidx][elem] == '':
+                                    pass
+                                else:
+                                    x=1/0 # Not elegant but working
+                            except:
+                                self.ndarray[flagidx][elem] = ''
+                                self.ndarray[commentidx][elem] = ''
 
         self.ndarray[flagidx] = np.asarray(self.ndarray[flagidx])
         self.ndarray[commentidx] = np.asarray(self.ndarray[commentidx])
@@ -5084,16 +5194,24 @@ CALLED BY:
 
         """
         keys = kwargs.get('keys')
+        fkeys = kwargs.get('fkeys')
         mode = kwargs.get('mode')
         if not keys:
             keys = ['x','y','z']
         if not mode:
             mode = 'add'
+        if fkeys and not len(fkeys) == len(keys):
+            fkeys=None
+            logger.warning("func2stream: provided fkeys do not match keys")
 
         if isinstance(funclist[0], dict):
             funct = [funclist]
         else:
             funct = funclist   # TODO: cycle through list
+
+        totalarray = [[] for key in KEYLIST]
+        posstr = KEYLIST.index('str1')
+        testx = []
 
         for function in funct:
             # Changed that - 49 sec before, no less then 2 secs
@@ -5106,49 +5224,93 @@ CALLED BY:
                 else:
                     return self
 
-
             #1. calculate function value for each data time step
             array = [[] for key in KEYLIST]
             array[0] = self.ndarray[0]
+            dis_done = False
             # get x array for baseline
             #indx = KEYLIST.index('x')
             #arrayx = self.ndarray[indx].astype(float)
             functimearray = (self.ndarray[0].astype(float)-function[1])/(function[2]-function[1])
             #print functimearray
+            validkey = False
             for key in KEYLIST:
                 ind = KEYLIST.index(key)
                 if key in keys: # new
-                    ar = self.ndarray[ind].astype(float)
-                    if mode == 'add':
-                        array[ind] = ar + function[0]['f'+key](functimearray)
-                    elif mode == 'addbaseline':
+                    keyind = keys.index(key)
+                    if fkeys:
+                        fkey = fkeys[keyind]
+                    else:
+                        fkey = key
+                    ar = np.asarray(self.ndarray[ind]).astype(float)
+                    validkey = True
+                    #try:
+                    #    test = function[0]['f'+key](functimearray)
+                    #    validkey = True
+                    #except:
+                    #    validkey = False
+                    #    array[ind] = ar
+                    if mode == 'add' and validkey:
+                        print ("here", ar, function[0]['f'+fkey](functimearray))
+                        array[ind] = ar + function[0]['f'+fkey](functimearray)
+                    elif mode == 'addbaseline' and validkey:
                         if key == 'y':
                             #indx = KEYLIST.index('x')
                             #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
                             #print type(self.ndarray[ind]), key, self.ndarray[ind]
-                            array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functimearray)
+                            array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+fkey](functimearray)
                             self.header['col-y'] = 'd'
                             self.header['unit-col-y'] = 'deg'
                         else:
                             #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
-                            array[ind] = ar + function[0]['f'+key](functimearray)
+                            array[ind] = ar + function[0]['f'+fkey](functimearray)
+                            if len(array[posstr]) == 0:
+                                #print ("Assigned values to str1: function {}".format(function[1]))
+                                array[posstr] = ['c']*len(ar)
+                            if len(testx) > 0 and not dis_done:
+                                # identify change from number to nan
+                                # add discontinuity marker there
+                                #print ("Here", testx)
+                                prevel = np.nan
+                                for idx, el in enumerate(testx):
+                                    if not np.isnan(prevel) and np.isnan(el):
+                                        array[posstr][idx] = 'd'
+                                        #print ("Modified str1 at {}".format(idx))
+                                        break
+                                    prevel = el
+                                dis_done = True
                             if key == 'x': # remember this for correct y determination
                                 arrayx = array[ind]
-                    elif mode == 'sub':
-                        array[ind] = ar - function[0]['f'+key](functimearray)
-                    elif mode == 'values':
-                        array[ind] = function[0]['f'+key](functimearray)
-                    elif mode == 'div':
-                        array[ind] = ar / function[0]['f'+key](functimearray)
-                    elif mode == 'multiply':
-                        array[ind] = ar * function[0]['f'+key](functimearray)
+                                testx = function[0]['f'+fkey](functimearray)
+                            if key == 'dx': # use this column to test if delta values are already provided
+                                testx = function[0]['f'+fkey](functimearray)
+                    elif mode in ['sub','subtract'] and validkey:
+                        array[ind] = ar - function[0]['f'+fkey](functimearray)
+                    elif mode == 'values' and validkey:
+                        array[ind] = function[0]['f'+fkey](functimearray)
+                    elif mode == 'div' and validkey:
+                        array[ind] = ar / function[0]['f'+fkey](functimearray)
+                    elif mode == 'multiply' and validkey:
+                        array[ind] = ar * function[0]['f'+fkey](functimearray)
                     else:
                         print("func2stream: mode not recognized")
                 else: # new
                     if len(self.ndarray[ind]) > 0:
-                        array[ind] = self.ndarray[ind].astype(object)
+                        array[ind] = np.asarray(self.ndarray[ind]).astype(object)
 
-        return DataStream(self,self.header,np.asarray(array))
+            #print ("Check", array[posstr])
+            for idx, col in enumerate(array):
+                if len(totalarray[idx]) > 0 and not idx == 0:
+                    totalcol = totalarray[idx]
+                    for j,el in enumerate(col):
+                        if idx < len(NUMKEYLIST)+1 and not np.isnan(el) and np.isnan(totalcol[j]):
+                            totalarray[idx][j] = array[idx][j]
+                        if idx > len(NUMKEYLIST) and not el == 'c' and totalcol[j] == 'c':
+                            totalarray[idx][j] = 'd'
+                else:
+                    totalarray[idx] = array[idx]
+
+        return DataStream(self,self.header,np.asarray(totalarray))
 
 
     def func_add(self,funclist,**kwargs):
@@ -6508,8 +6670,7 @@ CALLED BY:
             else:
                 return eval('np.'+meanfunction+'(ar)')
         else:
-            print ('mean: Too many nans in column, exceeding %d percent' % percentage)
-            logger.warning('mean: Too many nans in column, exceeding %d percent' % percentage)
+            logger.info('mean: Too many nans in column {}, exceeding {} percent'.format(key,percentage))
             if std:
                 return float("NaN"), float("NaN")
             else:
@@ -9030,6 +9191,7 @@ CALLED BY:
         [--> Where is this?]
         - wformat:      (str) outputformat.
        --- specific functions for baseline file
+        - absinfo       (str) parameter of DataAbsInfo
         - fitfunc       (str) fit function for baselinefit
         - fitdegree
         - knotstep
@@ -9076,6 +9238,7 @@ CALLED BY:
         #period = kwargs.get('period')          # TODO
         #offsets = kwargs.get('offsets')        # retired? TODO
         keys = kwargs.get('keys')
+        absinfo = kwargs.get('absinfo')
         fitfunc = kwargs.get('fitfunc')
         fitdegree = kwargs.get('fitdegree')
         knotstep = kwargs.get('knotstep')
@@ -9273,7 +9436,7 @@ CALLED BY:
             filename = filename.replace('\x00','')
             if debug:
                 print ("Writing file:", filename)
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags)
 
         return success
 
