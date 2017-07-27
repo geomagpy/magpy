@@ -1076,7 +1076,7 @@ CALLED BY:
         indexarray = []
         for ind,elem in enumerate(self.ndarray):
             if len(elem) > 0:
-               newndarray.append(elem)
+               newndarray.append(np.asarray(elem).astype(object))
                indexarray.append(ind)
         keylist = [el for ind,el in enumerate(KEYLIST) if ind in indexarray]
         return np.asarray(newndarray), keylist
@@ -10232,6 +10232,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     # Sort the input data regarding time
     if not skipsorting:
         st = st.sorting()
+
     # eventually trim data
     if starttime:
         st = st.trim(starttime=starttime)

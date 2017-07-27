@@ -626,7 +626,12 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 
             #print "plotStreams2", data_dict['flags']
 
-            # Plot a function:
+            # Get an existing function object from header:
+            funclist = stream.header.get('DataFunction',[])
+            if len(funclist) > 0:
+                data_dict['function'] = funclist
+
+            # Plot a function (overwrite any existing object):
             if function:
                 data_dict['function'] = function
 
@@ -2318,8 +2323,8 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
             else:
                  funct = funclist   # TODO: cycle through list
             for function in funct:
-                for i in range(int(len(function)/3.)):
-                    indexadd = i*3
+                for nu in range(int(len(function)/3.)):
+                    indexadd = nu*3
                     if fkey in function[0+indexadd]:
                         # --> Get the minimum and maximum relative times
                         ttmp = arange(0,1,0.0001)

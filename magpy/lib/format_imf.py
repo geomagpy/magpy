@@ -1866,6 +1866,17 @@ def readBLV(filename, headonly=False, **kwargs):
         getfile = True
 
     array = [[] for key in KEYLIST]
+    farray = [[] for key in KEYLIST]
+    funclist = []
+    xpos = KEYLIST.index('dx')
+    ypos = KEYLIST.index('dy')
+    zpos = KEYLIST.index('dz')
+    fpos = KEYLIST.index('df')
+    dfpos = KEYLIST.index('f')
+    strpos = KEYLIST.index('str1')
+    scalarid = 'None'
+    varioid = 'None'
+    pierid = 'None'
 
     starfound = []
     if getfile:
@@ -1876,11 +1887,23 @@ def readBLV(filename, headonly=False, **kwargs):
             elif len(line) in [26,27] and not len(starfound) > 0:
                 # data info
                 block = line.split()
-                #print block
                 year = block[-1]
                 headers['DataComponents'] = block[0]
-                #headers['DataSensorAzimuth'] = float(block[1])
-                #headers['DataSensorAzimuth'] = float(block[2])
+                headers['col-{}'.format(KEYLIST[fpos])] = 'f base'
+                headers['unit-col-{}'.format(KEYLIST[fpos])] = 'nT'
+                headers['col-{}'.format(KEYLIST[zpos])] = 'z base'
+                headers['unit-col-{}'.format(KEYLIST[zpos])] = 'nT'
+                headers['unit-col-{}'.format(KEYLIST[xpos])] = 'nT'
+                if headers['DataComponents'].startswith('HDZ') or headers['DataComponents'].startswith('hdz'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'h base'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'd base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'deg'
+                if headers['DataComponents'].startswith('XYZ') or headers['DataComponents'].startswith('xyz'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'x base'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'y base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
+                headers['DataScaleX'] = float(block[1])
+                headers['DataScaleZ'] = float(block[2])
                 headers['StationID'] = block[3]
                 headers['StationIAGAcode'] = block[3]
             elif headonly:
@@ -1890,43 +1913,85 @@ def readBLV(filename, headonly=False, **kwargs):
                 # data info
                 if not mode == 'adopted':
                     block = line.split()
-                    block = [el if not float(el) > 99998.00 else np.nan for el in block] 
+                    block = [el if not float(el) > 99998.00 else np.nan for el in block]
                     array[0].append(date2num(datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)))
-                    array[1].append(float(block[1]))
-                    if headers['DataComponents'][:3] == 'HDZ':
-                        array[2].append(float(block[2])/60.0)
+                    array[xpos].append(float(block[1]))
+                    if headers.get('DataComponents').startswith('HDZ') or headers.get('DataComponents').startswith('hdz'):
+                        array[ypos].append(float(block[2])/60.0)
                     else:
-                        array[2].append(float(block[2]))
-                    array[3].append(float(block[3]))
+                        array[ypos].append(float(block[2]))
+                    array[zpos].append(float(block[3]))
+                    array[fpos].append(float(block[4]))
                 #print block
             elif len(line) in [54,55] and not len(starfound) > 1:  # block 2 - adopted basevalues
                 # data info
-                if mode == 'adopted':
-                    block = line.split()
-                    if float(block[5])>998.0:
-                        block[5] = np.nan
-                    array[0].append(date2num(datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)))
-                    array[1].append(float(block[1]))
-                    if headers['DataComponents'][:3] == 'HDZ':
-                        array[2].append(float(block[2])/60.0)
-                    else:
-                        array[2].append(float(block[2]))
-                    array[3].append(float(block[3]))
+                block = line.split()
+                if float(block[5])>998.0:
+                    block[5] = np.nan
+                dt = date2num(datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12))
+                xval = float(block[1])
+                if headers['DataComponents'][:3] == 'HDZ':
+                    yval = float(block[2])/60.0
                 else:
-                    # can we put adopted value into a function ??
-                    # read that data and interpolate
-                    pass
-            elif line.startswith('*'):  # comment block startsnow
+                    yval = float(block[2])
+                zval = float(block[3])
+                fval = float(block[4])
+                dfval = float(block[5])
+                strval = block[6]
+                if mode == 'adopted':
+                    if strval in ['d','D']:
+                        print ("Found break at {}".format(block[0]))
+                        print ("Adding nan column for jumps in plot")
+                        array[0].append(dt-0.5)
+                        array[xpos].append(np.nan)
+                        array[ypos].append(np.nan)
+                        array[zpos].append(np.nan)
+                        array[fpos].append(np.nan)
+                        array[dfpos].append(np.nan)
+                        array[strpos].append('a')
+                    array[0].append(dt)
+                    array[xpos].append(xval)
+                    array[ypos].append(yval)
+                    array[zpos].append(zval)
+                    array[fpos].append(fval)
+                    array[dfpos].append(dfval)
+                    array[strpos].append(strval)
+                else:
+                    if strval in ['d','D']:
+                        tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray]))
+                        funclist.append(tempstream.fit([KEYLIST[xpos],KEYLIST[ypos],KEYLIST[zpos],KEYLIST[fpos]],fitfunc='spline'))
+                        farray = [[] for key in KEYLIST]
+                    farray[0].append(dt)
+                    farray[xpos].append(xval)
+                    farray[ypos].append(yval)
+                    farray[zpos].append(zval)
+                    farray[fpos].append(fval)
+                    farray[dfpos].append(dfval)
+                    farray[strpos].append(strval)
+            elif line.startswith('*'):
                 # data info
                 starfound.append('*')
+                if len(starfound) > 1: # Comment section starts here
+                    tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray]))
+                    funclist.append(tempstream.fit([KEYLIST[xpos],KEYLIST[ypos],KEYLIST[zpos],KEYLIST[fpos]],fitfunc='spline'))
+            elif len(starfound) > 1: # Comment section starts here
                 logger.debug("Found comment section", starfound)
                 block = line.split()
-                #print block
+                if block[0].startswith('Scalar') and len(block) > 1:
+                    scalarid = block[1]
+                if block[0].startswith('Vario') and len(block) > 1:
+                    varioid = block[1]
+                if block[0].startswith('Pier') and len(block) > 1:
+                    pierid = block[1]
             else:
                 pass
     fh.close()
 
     array = [np.asarray(el) for el in array]
+    if len(funclist) > 0:
+        headers['DataFunction'] = funclist
+    headers['DataFormat'] = 'MagPyDI'
+    headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)
 
     return DataStream([LineStruct()], headers, np.asarray(array))
 
@@ -2053,18 +2118,18 @@ def writeBLV(datastream, filename, **kwargs):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream)
-            myFile= open( filename, "wb" )
+            myFile= open( filename, "wt" )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst)
-            myFile= open( filename, "wb" )
+            myFile= open( filename, "wt" )
         elif mode == 'append':
-            myFile= open( filename, "ab" )
+            myFile= open( filename, "at" )
         else: # overwrite mode
             #os.remove(filename)  ?? necessary ??
-            myFile= open( filename, "wb" )
+            myFile= open( filename, "wt" )
     else:
-        myFile= open( filename, "wb" )
+        myFile= open( filename, "wt" )
 
     #print ("filename", filename)
     logger.info("writeBLV: file: {}".format(filename))
@@ -2236,10 +2301,8 @@ def writeBLV(datastream, filename, **kwargs):
     except:
         logging.error("formatBLV: No station code specified. Aborting ...")
         return False
-    headerline = '%s %5.f %5.f %s %s' % (comps.upper(),meanh,meanf,idc,year)
-    myFile.writelines( headerline+'\r\n'.encode('utf-8') )
-
-    #print "writeBLV:", headerline
+    headerline = '%s %5.f %5.f %s %s\r\n' % (comps.upper(),meanh,meanf,idc,year)
+    myFile.writelines( headerline ) #.decode('ascii').encode('utf-8') )
 
     # 8. Basevalues
     if len(datastream.ndarray[0]) > 0:
@@ -2263,7 +2326,7 @@ def writeBLV(datastream, filename, **kwargs):
                 if np.isnan(df) or ftype.startswith('Fext'):
                     df = 99999.00
                 line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
-                myFile.writelines( line.encode('utf-8') )
+                myFile.writelines( line ) #.encode('utf-8') )
     else:
         datastream = datastream.trim(starttime=t1, endtime=t2)
         for elem in datastream:
@@ -2292,7 +2355,7 @@ def writeBLV(datastream, filename, **kwargs):
             else:
                 f = elem.df
             line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,f)
-            myFile.writelines( line.encode('utf-8') )
+            myFile.writelines( line ) #.encode('utf-8') )
 
     # 9. adopted basevalues
     myFile.writelines( '*\r\n' )
@@ -2349,12 +2412,12 @@ def writeBLV(datastream, filename, **kwargs):
         else:
             df = 888.00
         line = '%s %9.2f %9.2f %9.2f %9.2f %7.2f %s\r\n' % (day,x,y,z,f,df,parameter)
-        myFile.writelines( line.encode('utf-8') )
+        myFile.writelines( line ) #.encode('utf-8') )
 
     # 9. comments
-    myFile.writelines( '*\r\n'.encode('utf-8') )
-    myFile.writelines( 'Comments:\r\n'.encode('utf-8') )
-    myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
+    myFile.writelines( '*\r\n' ) #.encode('utf-8') )
+    myFile.writelines( 'Comments:\r\n' ) #.encode('utf-8') )
+    myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
     absinfostring = dummystream.header.get('DataAbsInfo','')
     parameterlist = getAbsInfo(absinfostring)
     #print ("writeBLV", absinfostring, parameterlist)
@@ -2363,14 +2426,14 @@ def writeBLV(datastream, filename, **kwargs):
             funcline1 = '+++++++\r\n'
             funcline2 = 'Adopted baseline between {} and {}\r\n'.format(str(num2date(float(parameter[0])).replace(tzinfo=None)),str(num2date(float(parameter[1])).replace(tzinfo=None)))
             if parameter[3].startswith('poly'):
-                funcline3 = 'Baselinefunction: {}, Degree: {}\r\n'.format(parameter[3],parameter[4])
+                funcline3 = 'Baselinefunction: {}, Degree: {}, keys: {}\r\n'.format(parameter[3],parameter[4],','.join(parameter[6]))
             else:
-                funcline3 = 'Baselinefunction: {}, relative knot distance: {}, keys: {}\r\n'.format(parameter[3],parameter[5],parameter[6])
+                funcline3 = 'Baselinefunction: {}, relative knot distance: {}, keys: {}\r\n'.format(parameter[3],parameter[5],','.join(parameter[6]))
             funcline4 = 'Comment: please add\r\n'
-            myFile.writelines( funcline1.encode('utf-8') )
-            myFile.writelines( funcline2.encode('utf-8') )
-            myFile.writelines( funcline3.encode('utf-8') )
-            myFile.writelines( funcline4.encode('utf-8') )
+            myFile.writelines( funcline1 ) #.encode('utf-8') )
+            myFile.writelines( funcline2 ) #.encode('utf-8') )
+            myFile.writelines( funcline3 ) #.encode('utf-8') )
+            myFile.writelines( funcline4 ) #.encode('utf-8') )
 
     # get some data:
     infolist = [] # contains all provided information for comment section
@@ -2381,18 +2444,22 @@ def writeBLV(datastream, filename, **kwargs):
         infolist.append(datastream[-1].str3)
         infolist.append(datastream[-1].str4)
         #
+
     funcline5 = 'Measurements conducted primarily with:\r\n'
     funcline6 = 'DI: %s\r\n' % infolist[0]
     funcline7 = 'Scalar: %s\r\n' % infolist[1]
     funcline8 = 'Variometer: %s\r\n' % infolist[2]
+    funcline9 = 'Pier: %s\r\n' % datastream.header.get('DataPier','-')
     # additional text with pier, instrument, how f difference is defined, which are the instruments etc
     summaryline = '-- analysis supported by MagPy\r\n'
-    myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
-    myFile.writelines( funcline5.encode('utf-8') )
-    myFile.writelines( funcline6.encode('utf-8') )
-    myFile.writelines( funcline7.encode('utf-8') )
-    myFile.writelines( '-'*40 + '\r\n'.encode('utf-8') )
-    myFile.writelines( summaryline.encode('utf-8') )
+    myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
+    myFile.writelines( funcline5 ) #.encode('utf-8') )
+    myFile.writelines( funcline6 ) #.encode('utf-8') )
+    myFile.writelines( funcline7 ) #.encode('utf-8') )
+    myFile.writelines( funcline8 ) #.encode('utf-8') )
+    myFile.writelines( funcline9 ) #.encode('utf-8') )
+    myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
+    myFile.writelines( summaryline ) #.encode('utf-8') )  changed open to 'wt' -> no encoding to binary necessary
 
     myFile.close()
     return True

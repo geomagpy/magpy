@@ -1410,7 +1410,10 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.symbolRadioBox.Enable()
             self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
             self.shownkeylist = keylist
-            keylist = ['x','y','z','dx','dy','dz']
+            if len(stream.ndarray[KEYLIST.index('x')]) > 0:
+                keylist = ['x','y','z','dx','dy','dz']
+            else:
+                keylist = ['dx','dy','dz']
             self.symbollist = ['o'] * len(keylist)
             self.plotopt['symbollist'] =  ['o'] * len(keylist)
             self.plotopt['colorlist']=self.colorlist[:len(keylist)]

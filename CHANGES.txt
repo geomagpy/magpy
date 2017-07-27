@@ -13,7 +13,7 @@ General:
     GUI: small screen fixes - large dialogs are resizeable
     GUI: large ComboBox issues on Mac removed
     GUI: cmd+C won't close DI entry sheet dialog on Mac any more
-    GUI: select components works now
+    GUI: selecting components corrected
 
 v0.3.95 additions:
 DI analysis:
@@ -21,7 +21,9 @@ DI analysis:
     DI pier location will be used (if provided) after baselione correction 
     GUI: updated feedback information on DI sheet
     GUI: overwrite warnings
-    BLV output supports multiple baselinelines and jumps inbetween
+    IBFV2.00 export supports multiple baselinelines and jumps inbetween
+    IBFV2.00 export supports adopted scalar baseline techniques
+    when opening IBFV2.00 data, adopted baseline are imported and displayed as functions 
 General:
     multiple functions can be fitted to one stream
 
@@ -29,7 +31,7 @@ v0.3.95 removals:
 None
 
 v0.3.95 other changes:
-None
+README updated
 
 
 -------------------------------------------------
