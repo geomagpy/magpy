@@ -3,7 +3,7 @@ Installation instructions can be found on the main download page.
 
 
 -------------------------------------------------
-####v<0.3.95>, <2017-07-??> -- On the way to beta.
+####v<0.3.95>, <2017-07-28> -- On the way to beta.
 
 v0.3.95 fixes:
 DI analysis:

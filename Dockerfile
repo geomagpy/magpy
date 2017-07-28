@@ -1,7 +1,7 @@
 FROM debian:jessie
 
 MAINTAINER Roman Leonhardt <roman.leonhardt@zamg.ac.at>
-LABEL geomagpy.magpy.version=0.3.9
+LABEL geomagpy.magpy.version=0.3.95
 
 # update os
 RUN apt-get update --fix-missing && \
@@ -53,8 +53,8 @@ COPY . /magpy
 
 # install cdf, spacepy, and magpy
 RUN cd /tmp && \ 
-    wget http://cdaweb.gsfc.nasa.gov/pub/software/cdf/dist/cdf36_2/linux/cdf36_2_1-dist-all.tar.gz && \
-    tar zxvf cdf36_2_1-dist-all.tar.gz && \
+    wget http://cdaweb.gsfc.nasa.gov/pub/software/cdf/dist/cdf36_4/linux/cdf36_4-dist-all.tar.gz && \
+    tar zxvf cdf36_4-dist-all.tar.gz && \
     cd cdf36* && \
     make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all && \
     make INSTALLDIR=/usr/local/cdf install && \
