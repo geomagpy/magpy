@@ -1730,13 +1730,14 @@ class MainFrame(wx.Frame):
         self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
         boxes = ['x','y','z','f']
         for box in boxes:
+            checkbox = getattr(self.menu_p.str_page, box + 'CheckBox')
             if box in self.shownkeylist:
-                exec('self.menu_p.str_page.'+box+'CheckBox.Enable()')
+                checkbox.Enable()
                 colname = self.plotstream.header.get('col-'+box, '')
                 if not colname == '':
-                    exec('self.menu_p.str_page.'+box+'CheckBox.SetLabel(colname)')
+                    checkbox.SetLabel(colname)
             else:
-                exec('self.menu_p.str_page.'+box+'CheckBox.SetValue(False)')
+                checkbox.SetValue(False)
         self.changeStatusbar("Ready")
 
 
@@ -1765,13 +1766,14 @@ class MainFrame(wx.Frame):
             self.ExportData.Enable(True)
         boxes = ['x','y','z','f']
         for box in boxes:
+            checkbox = getattr(self.menu_p.str_page, box + 'CheckBox')
             if box in self.shownkeylist:
-                exec('self.menu_p.str_page.'+box+'CheckBox.Enable()')
+                checkbox.Enable()
                 colname = self.plotstream.header.get('col-'+box, '')
                 if not colname == '':
-                    exec('self.menu_p.str_page.'+box+'CheckBox.SetLabel(colname)')
+                    checkbox.SetLabel(colname)
             else:
-                exec('self.menu_p.str_page.'+box+'CheckBox.SetValue(False)')
+                checkbox.SetValue(False)
         self.changeStatusbar("Ready")
 
 

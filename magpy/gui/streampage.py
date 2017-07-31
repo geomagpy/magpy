@@ -20,7 +20,11 @@ class StreamPage(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.comp = ['xyz', 'hdz', 'idf']
         self.symbol = ['line', 'point']
-        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.flagidlist = ['0: normal data',
+                        '1: automatically flagged',
+                        '2: keep data in any case',
+                        '3: remove data', 
+                        '4: special flag']
         self.createControls()
         self.doLayout()
 
