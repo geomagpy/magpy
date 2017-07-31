@@ -1759,6 +1759,9 @@ class MainFrame(wx.Frame):
         #print ("Keys", keylist)
         if stream.length()[0] > 200000:
             self.plotopt['symbollist']= ['.'] * len(keylist)
+        # Update Delta F if plotted
+        if 'df' in keylist:
+            stream = stream.delta_f()
 
         self.plot_p.guiPlot([stream],[keylist],plotopt=self.plotopt)
         #self.plot_p.guiPlot(stream,keylist,**kwargs)
