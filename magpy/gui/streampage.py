@@ -23,7 +23,7 @@ class StreamPage(wx.Panel):
         self.flagidlist = ['0: normal data',
                         '1: automatically flagged',
                         '2: keep data in any case',
-                        '3: remove data', 
+                        '3: remove data',
                         '4: special flag']
         self.createControls()
         self.doLayout()
@@ -58,10 +58,10 @@ class StreamPage(wx.Panel):
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
         self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
         self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,30))
-        self.xCheckBox = wx.CheckBox(self,label="X")
-        self.yCheckBox = wx.CheckBox(self,label="Y")
-        self.zCheckBox = wx.CheckBox(self,label="Z")
-        self.fCheckBox = wx.CheckBox(self,label="F")
+        self.xCheckBox = wx.CheckBox(self,label="X             ")
+        self.yCheckBox = wx.CheckBox(self,label="Y             ")
+        self.zCheckBox = wx.CheckBox(self,label="Z             ")
+        self.fCheckBox = wx.CheckBox(self,label="F             ")
         self.FlagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
         self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
             style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
