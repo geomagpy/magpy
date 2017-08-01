@@ -4101,6 +4101,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.changeStatusbar("Delta F ...")
 
         self.plotstream = self.plotstream.delta_f()
+        self.streamlist[self.currentstreamindex].delta_f()
         #print (self.plotstream._get_key_headers())
         if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
             self.shownkeylist.append('df')
