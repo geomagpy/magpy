@@ -1912,9 +1912,9 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                     addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
                     cursor.execute(addsql)
                 else:
-                    print ("writeDB: unkown MySQL error when checking for existing tables: %s" %e)
+                    print ("writeDB: unknown MySQL error when checking for existing tables: %s" %e)
             except:
-                print ("writeDB: unkown error when checking for existing tables")
+                print ("writeDB: unknown error when checking for existing tables")
 
         if not key=='time':
             collst.append(colstr)
@@ -2190,7 +2190,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
                 pass
             else:
                 #key not transferred to DB
-                loggerdatabase.debug("stream2DB: --- unkown key: %s, %s" % (key, headdict[key]))
+                loggerdatabase.debug("stream2DB: --- unknown key: %s, %s" % (key, headdict[key]))
 
         # If no sensorid is available then report error and return:
         try:
@@ -3382,8 +3382,11 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
             elem[3] = unicode(elem[3],'utf-8')
             elem[3] = elem[3].encode('ascii',errors='ignore')
         except:
-            print ('flag_stream id {}: non-ascii characters in comment. Replacing by unkown reason'.format(flagid))
-            elem[3] = 'Unkown reason'
+            try:  # data is already unicode
+                elem[3] = elem[3].encode('ascii',errors='ignore')
+            except:
+                print ('flag_stream id {}: non-ascii characters in comment. Replacing by unknown reason'.format(flagid))
+                elem[3] = 'Unknown reason'
         ne = [str(flagid)]
         ne.extend(elem)
         #try:

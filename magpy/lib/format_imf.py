@@ -190,9 +190,13 @@ def readIAF(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     resolution = kwargs.get('resolution')
+    debug = kwargs.get('debug')
 
     getfile = True
     gethead = True
+
+    if debug:
+        logger.info("Found IAF file ...")
 
     if not resolution:
         resolution = u'minutes'
@@ -238,7 +242,7 @@ def readIAF(filename, headonly=False, **kwargs):
                     stream.header['StationIAGAcode'] = head[0].strip()
                     headers['StationID'] = head[0].strip()
                     #
-                    headers['DataAcquisitionLatitude'] = (90-float(head[2]))/1000.
+                    headers['DataAcquisitionLatitude'] = 90-(float(head[2])/1000.)
                     headers['DataAcquisitionLongitude'] = float(head[3])/1000.
                     headers['DataElevation'] = head[4]
                     headers['DataComponents'] = head[5].lower()
@@ -371,6 +375,7 @@ def readIAF(filename, headonly=False, **kwargs):
         #ndarray = data2array([k,ir],['var1','var2'],min(datelist)+timedelta(minutes=90),sr=10800)
         ndarray = data2array([k],['var1'],min(datelist)+timedelta(minutes=90),sr=10800)
         headers['DataSamplingRate'] = '10800 sec'
+        headers['DataFormat'] = 'MagPyK'
     else:
         logger.debug("Key and minimum: {} {}".format(keystr, min(datelist)))
         ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
@@ -843,9 +848,16 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     Reading Intermagnet CDF format (1.0,1.1,1.2)
     """
 
-    logger.info("readIMAGCDF: FOUND IMAGCDF file")
+    debug = kwargs.get('debug')
+
+    if debug:
+        logger.info("readIMAGCDF: FOUND IMAGCDF file")
 
     cdfdat = cdf.CDF(filename)
+    if debug:
+        for line in cdfdat:
+            logger.info("{}".format(line))
+
     # get Attribute list
     attrslist = [att for att in cdfdat.attrs]
     # get Data list
@@ -1914,7 +1926,10 @@ def readBLV(filename, headonly=False, **kwargs):
                 if not mode == 'adopted':
                     block = line.split()
                     block = [el if not float(el) > 99998.00 else np.nan for el in block]
-                    array[0].append(date2num(datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)))
+                    dttime = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
+                    if date2num(dttime) in array[0]:
+                        dttime = dttime+timedelta(seconds=1)
+                    array[0].append(date2num(dttime))
                     array[xpos].append(float(block[1]))
                     if headers.get('DataComponents').startswith('HDZ') or headers.get('DataComponents').startswith('hdz'):
                         array[ypos].append(float(block[2])/60.0)
@@ -2522,21 +2537,22 @@ def readIYFV(filename, headonly=False, **kwargs):
                 pass
             elif cnt == 3:
                 # station info
-                block = line.split()
+                block = line.split(',')
                 #print(block)
-                headers['StationName'] = block[0]
-                headers['StationID'] = block[1]
-                headers['StationCountry'] = block[2]
+                headers['StationName'] = block[0].strip()
+                headers['StationID'] = block[1].strip()
+                headers['StationCountry'] = block[2].strip()
             elif line.find('COLATITUDE') > 0:
                 loc = line.split()
                 headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
                 headers['DataAcquisitionLongitude'] = float(loc[3])
-                headers['DataElevation'] = float(loc[3])
-            elif line.find('COLATITUDE') > 0:
-                loc = line.split()
-                headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
-                headers['DataAcquisitionLongitude'] = float(loc[3])
-                headers['DataElevation'] = float(loc[3])
+                ele = line.split('ELEVATION:')[1]
+                headers['DataElevation'] = float(ele.split()[0])
+                #elif line.find('COLATITUDE') > 0:
+                #    loc = line.split()
+                #    headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
+                #    headers['DataAcquisitionLongitude'] = float(loc[3])
+                #    headers['DataElevation'] = float(loc[3])
             elif line.find(' YEAR ') > 0:
                 paracnt = cnt
                 para = line.split()
@@ -2754,7 +2770,7 @@ def writeIYFV(datastream,filename, **kwargs):
         content.append(empty)
         content.append("{:^70}\r\n".format(locationname))
         content.append(empty)
-        content.append("  COLATITUDE: {a:.2f}   LONGITUDE: {b:.2f} E   ELEVATION: {c:.0f} m\r\n".format(a=coordlist[0],b=coordlist[1],c=coordlist[2]))
+        content.append("  COLATITUDE: {a:.2f}   LONGITUDE: {b:.2f} E   ELEVATION: {c:.0f} m\r\n".format(a=90.0-coordlist[0],b=coordlist[1],c=coordlist[2]))
         content.append(empty)
         content.append("  YEAR        D        I       H      X      Y      Z      F   * ELE Note\r\n")
         content.append("           deg min  deg min    nT     nT     nT     nT     nT\r\n")
@@ -2933,6 +2949,7 @@ def readDKA(filename, headonly=False, **kwargs):
     fh.close()
     headers['col-var1'] = 'K'
     headers['unit-col-var1'] = ''
+    headers['DataFormat'] = 'MagPyK'
 
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))

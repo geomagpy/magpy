@@ -33,6 +33,7 @@ magpy/acquisition/pos1protocol.py
 magpy/collector/__init__.py
 magpy/collector/collector-marcos.py
 magpy/collector/collector-martas.py
+magpy/collector/collectormethods.py
 magpy/collector/subscribe2client.py
 magpy/collector/subscribe2marcos.py
 magpy/examples/2015-03-25_08-18-00_A2_WIC.txt

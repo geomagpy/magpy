@@ -42,7 +42,8 @@ class AnalysisPage(wx.Panel):
         self.head3Label = wx.StaticText(self, label="Manipulation:")
         # filter, smooth, offset
         self.head4Label = wx.StaticText(self, label="Geomagnetic methods:")
-        # baseline, k_fmi, delta_f
+        # frequency range
+        self.head5Label = wx.StaticText(self, label="Frequency range:")
         #self.head5Label = wx.StaticText(self, label="Multiple streams:")
         # merge, subtract, stack
 
@@ -64,6 +65,10 @@ class AnalysisPage(wx.Panel):
         self.activityButton = wx.Button(self,-1,"Activity",size=(160,30))
         self.deltafButton = wx.Button(self,-1,"Delta F",size=(160,30))
         self.baselineButton = wx.Button(self,-1,"Baseline",size=(160,30))
+
+        # 5 Line
+        self.powerButton = wx.Button(self,-1,"Power",size=(160,30))
+        self.spectrumButton = wx.Button(self,-1,"Spectrum",size=(160,30))
 
         # 5 Line
         #self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
@@ -128,7 +133,11 @@ class AnalysisPage(wx.Panel):
                  (self.deltafButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.baselineButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace]:
+                  emptySpace,
+                 (self.head5Label, noOptions),
+                  emptySpace,
+                 (self.powerButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.spectrumButton, dict(flag=wx.ALIGN_CENTER))]:
             gridSizer.Add(control, **options)
 
         for control, options in \

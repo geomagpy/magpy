@@ -2852,7 +2852,7 @@ CALLED BY:
         return self
 
 
-    def dailymeans(self, keys=['x','y','z','f'], **kwargs):
+    def dailymeans(self, keys=['x','y','z','f'], offset = 0.5, **kwargs):
         """
     DEFINITION:
         Calculates daily means of xyz components and their standard deviations. By default
@@ -2874,8 +2874,9 @@ CALLED BY:
     PARAMETERS:
     Variables:
     	- keys: 	(list) provide up to four keys which are used in columns x,y,z	
+        - offset:       (float) offset in timeunit days (0 to 0.999) default is 0.5, some test might use 0 
     Kwargs:
-        - None
+        - none
 
     RETURNS:
         - stream:       (DataStream object) with daily means and standard deviation
@@ -2913,13 +2914,13 @@ CALLED BY:
         #for idx,day in enumerate(daylst):
             #sel = final._select_timerange(starttime=np.round(day), endtime=np.round(day)+1)
             """
+            #print (len(sel))
             sttmp = DataStream([LineStruct()],{},sel)
-            array[0].append(day+0.5)
-            #print ("Day", day)
+            array[0].append(day+offset)
             for idx, pos in enumerate(poslst):
                 #if len(sttmp.ndarray[idx+1]) > 0:
                 array[idx+1].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
-                #print ("Check", KEYLIST[pos], idx+1, sttmp._get_column(KEYLIST[pos]),sttmp.mean(KEYLIST[pos],percentage=percentage))
+                #print ("Check", KEYLIST[pos], idx+1, len(sttmp._get_column(KEYLIST[pos])),sttmp._get_column(KEYLIST[pos]),sttmp.mean(KEYLIST[pos],percentage=percentage))
                 """
             #array[0].append(day+0.5)
             #for idx,pos in enumerate(poslst):
@@ -2938,7 +2939,9 @@ CALLED BY:
         data.header['DataFormat'] = 'MagPyDailyMean'
 
         array = [np.asarray(el) for el in array]
-        return DataStream([LineStruct()],data.header,np.asarray(array))
+        retstream = DataStream([LineStruct()],data.header,np.asarray(array))
+        retstream = retstream.sorting()
+        return retstream
 
 
     def date_offset(self, offset):
@@ -11288,8 +11291,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
 
     # non-destructive
-    print ("SA:", stream_a.length())
-    print ("SB:", stream_b.length())
+    #print ("SA:", stream_a.length())
+    #print ("SB:", stream_b.length())
     sa = stream_a.copy()
     sb = stream_b.copy()
 

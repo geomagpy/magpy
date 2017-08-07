@@ -84,6 +84,9 @@ except:
 
 IAFMETA = {'StationInstitution':'word', 'StationName':'word', 'StationIAGAcode':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataFormat':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataSamplingFilter':'word', 'Data Type':'word', 'DataPublicationLevel':'word', 'DataConversion':'word', 'StationK9':'word', 'DataQuality':'word', 'SensorType':'word', 'StationStreet':'word', 'StationCity':'word', 'StationPostalCode':'word', 'StationCountry':'word', 'StationWebInfo':'word', 'StationEmail':'word'}
 
+IAFBINMETA = {'StationInstitution':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataConversion':'word', 'StationK9':'word', 'DataQuality':'word', 'SensorType':'word', 'StationID':'word'}
+
+
 IAGAMETA = {'StationInstitution':'word', 'StationName':'word', 'StationIAGAcode':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataFormat':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataSamplingFilter':'word', 'DataPublicationLevel':'word'}
 
 IMAGCDFMETA = {'StationInstitution':'word', 'DataPublicationLevel':'number', 'DataStandardLevel':'word', 'StationIAGAcode':'word', 'StationName':'word', 'StationInstitution':'word', 'DataReferences':'word', 'DataTerms':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataComponents':'word', 'DataSensorOrientation':'word'}

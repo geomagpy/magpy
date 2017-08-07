@@ -4045,10 +4045,547 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
 
 
+# ###################################################
+#    Data Checker page
+# ###################################################
+
+
+class CheckDefinitiveDataDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select directories for data checking
+    """
+
+    def __init__(self, parent, title):
+        super(CheckDefinitiveDataDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.checkchoices = ['quick','full']
+        self.checkchoice = 'quick'
+        self.laststep = 7
+        self.minutedirname = ''
+        self.seconddirname = ''
+        self.checkparameter = {'step2':True, 'step3':True, 'step4':True, 'step5':True, 'step6':True, 'step7':True }  # modified by checkOptions
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.checkRadioBox = wx.RadioBox(self, label="Choose check type:",  choices=self.checkchoices,
+                       majorDimension=2, style=wx.RA_SPECIFY_COLS ) #,size=(160,-1))
+        self.minuteLabel = wx.StaticText(self, label="Select minute data:",size=(160,30))
+        self.minuteButton = wx.Button(self, label='Choose IAF directory',size=(160,30))
+        self.minuteTextCtrl = wx.TextCtrl(self, value=self.minutedirname ,size=(160,30))
+        self.secondLabel = wx.StaticText(self, label="(Optional) Select second data:",size=(160,30))
+        self.secondButton = wx.Button(self, label='Choose ImagCDF/IAGA02 directory',size=(160,30))
+        self.secondTextCtrl = wx.TextCtrl(self, value=self.seconddirname ,size=(160,30))
+        self.checkOptionsButton = wx.Button(self, label='Specify check options',size=(160,30))
+        self.checkButton = wx.Button(self, wx.ID_OK, label='Run check', size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.note1Label = wx.StaticText(self, label="*quick: 4 min with second data",size=(160,30))
+        self.note2Label = wx.StaticText(self, label="*full: 50 min with second data",size=(160,30))
+
+        self.minuteTextCtrl.Disable()
+        self.secondTextCtrl.Disable()
+        #self.checkOptionsButton.Disable()
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        contlist = [(self.minuteLabel, noOptions),
+                  emptySpace,
+                 (self.minuteButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.minuteTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.secondLabel, noOptions),
+                  emptySpace,
+                 (self.secondButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.secondTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.checkRadioBox, noOptions),
+                 (self.checkOptionsButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.note1Label, noOptions),
+                  emptySpace,
+                 (self.note2Label, noOptions),
+                  emptySpace,
+                 (self.checkButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.minuteButton.Bind(wx.EVT_BUTTON, self.OnMinute)
+        self.secondButton.Bind(wx.EVT_BUTTON, self.OnSecond)
+        self.checkOptionsButton.Bind(wx.EVT_BUTTON, self.OnCheckOptions)
+        self.Bind(wx.EVT_RADIOBOX, self.OnDeep, self.checkRadioBox)
+
+    def OnClose(self, e):
+        self.Close(True)
+
+    def OnMinute(self, e):
+        dialog = wx.DirDialog(None, "Choose IAF directory:",self.minutedirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.minutedirname = dialog.GetPath() # modify self.dirname
+            self.minuteTextCtrl.SetValue(self.minutedirname)
+        dialog.Destroy()
+
+    def OnSecond(self, e):
+        dialog = wx.DirDialog(None, "Choose ImagCDF/IAGA02 directory:",self.seconddirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            self.seconddirname = dialog.GetPath() # modify self.dirname
+            self.secondTextCtrl.SetValue(self.seconddirname)
+        dialog.Destroy()
+
+    def OnCheckOptions(self, e):
+        dlg = CheckDataSelectDialog(None, title='Select checking steps', checkparameter=self.checkparameter)
+        if dlg.ShowModal() == wx.ID_OK:
+            #print ("HEEREE", dlg.step2CheckBox.GetValue())
+            for key in self.checkparameter:
+                val = eval('dlg.'+key+'CheckBox.GetValue()')
+                self.checkparameter[key] = val
+        else:
+            dlg.Destroy()
+        steplist = [key.strip('step') for key in self.checkparameter if self.checkparameter.get(key)]
+        if len(steplist) == 0:
+            steplist=[1]
+        self.laststep = np.max(list(map(int,steplist)))
+
+    def OnDeep(self, e):
+        self.checkchoice = self.checkRadioBox.GetStringSelection()
+
+
+class CheckDataReportDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to show report of data check
+    """
+
+    def __init__(self, parent, title, report, rating, step=['0','0','0','0','0','0','0'],laststep=7):
+        super(CheckDataReportDialog, self).__init__(parent=parent,
+            title=title, size=(600, 400))
+        self.rating = np.max(list(map(int,step)))
+        self.report = report
+        self.laststep = laststep
+        self.step = step
+        currentstep = (np.max([idx for idx, val in enumerate(step) if not val == '0']))+1
+        if laststep == currentstep:
+            self.contlabel = 'Save'
+        else:
+            self.contlabel = 'Continue'
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+
+    def putColor(self, rating, step):
+        if rating in ['1','2']:
+            exec("self.step{}TextCtrl.SetBackgroundColour(wx.GREEN)".format(step))
+        elif rating in ['3','4']:
+            exec("self.step{}TextCtrl.SetBackgroundColour(wx.Colour(255,165,0))".format(step))
+        elif rating in ['5','6']:
+            exec("self.step{}TextCtrl.SetBackgroundColour(wx.RED)".format(step))
+        else:
+            pass
+
+
+    # Widgets
+    def createControls(self):
+        self.reportLabel = wx.StaticText(self, label="Data checking report:",size=(300,30))
+        self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
+        self.ratingTextCtrl = wx.TextCtrl(self, value="Overall rating: {}".format(self.rating), size=(30,30))
+        self.continueButton = wx.Button(self, wx.ID_OK, label=self.contlabel, size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+
+        self.step1TextCtrl = wx.TextCtrl(self, value=self.step[0], size=(30,30))
+        self.step2TextCtrl = wx.TextCtrl(self, value=self.step[1], size=(30,30))
+        self.step3TextCtrl = wx.TextCtrl(self, value=self.step[2], size=(30,30))
+        self.step4TextCtrl = wx.TextCtrl(self, value=self.step[3], size=(30,30))
+        self.step5TextCtrl = wx.TextCtrl(self, value=self.step[4], size=(30,30))
+        self.step6TextCtrl = wx.TextCtrl(self, value=self.step[5], size=(30,30))
+        self.step7TextCtrl = wx.TextCtrl(self, value=self.step[6], size=(30,30))
+        self.step1Label = wx.StaticText(self, label="Step 1",size=(80,30))
+        self.step2Label = wx.StaticText(self, label="Step 2",size=(80,30))
+        self.step3Label = wx.StaticText(self, label="Step 3",size=(80,30))
+        self.step4Label = wx.StaticText(self, label="Step 4",size=(80,30))
+        self.step5Label = wx.StaticText(self, label="Step 5",size=(80,30))
+        self.step6Label = wx.StaticText(self, label="Step 6",size=(80,30))
+        self.step7Label = wx.StaticText(self, label="Step 7",size=(80,30))
+
+        self.ratingTextCtrl.Disable()
+        self.reportTextCtrl.Disable()
+        self.step1TextCtrl.Disable()
+        self.step2TextCtrl.Disable()
+        self.step3TextCtrl.Disable()
+        self.step4TextCtrl.Disable()
+        self.step5TextCtrl.Disable()
+        self.step6TextCtrl.Disable()
+        self.step7TextCtrl.Disable()
+        
+        for idx, rating in enumerate(self.step):
+            self.putColor(rating, idx+1)
+
+        if self.rating in ['1','2',1,2]:
+            self.ratingTextCtrl.SetBackgroundColour(wx.GREEN)
+        elif self.rating in ['3','4',3,4]:
+            self.ratingTextCtrl.SetBackgroundColour(wx.Colour(255,165,0))
+        elif self.rating in ['5','6',5,6]:
+            self.ratingTextCtrl.SetBackgroundColour(wx.RED)
+        else:
+            pass
+
+
+    def doLayout(self):
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlist = [(self.reportLabel, noOptions),
+                 (self.reportTextCtrl, expandOption),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.continueButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.ratingTextCtrl, expandOption)]
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        mainSizer.Add(boxSizer, 1, wx.EXPAND)
+
+        contlist = [(self.step1TextCtrl, expandOption),
+                 (self.step2TextCtrl, expandOption),
+                 (self.step3TextCtrl, expandOption),
+                 (self.step4TextCtrl, expandOption),
+                 (self.step5TextCtrl, expandOption),
+                 (self.step6TextCtrl, expandOption),
+                 (self.step7TextCtrl, expandOption),
+                 (self.step1Label, noOptions),
+                 (self.step2Label, noOptions),
+                 (self.step3Label, noOptions),
+                 (self.step4Label, noOptions),
+                 (self.step5Label, noOptions),
+                 (self.step6Label, noOptions),
+                 (self.step7Label, noOptions)]
+        cols = 7
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            mainSizer.Add(control, **options)
+
+        #mainSizer.Add(self.sourceLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+
+        self.SetSizerAndFit(mainSizer)
+
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Close(True)
+
+
+class CheckDataSelectDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select steps for data check
+    """
+
+    def __init__(self, parent, title, checkparameter):
+        super(CheckDataSelectDialog, self).__init__(parent=parent,
+            title=title, size=(600, 400))
+        self.checkparameter = checkparameter #{'step2':True, 'step3':True, 'step4':True, 'step5':True, 'step6':True, 'step7':True }
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.selectLabel = wx.StaticText(self, label="Choose steps to be used in data checking:",size=(400,30))
+
+        self.step1CheckBox = wx.CheckBox(self, label="Step 1: directories and existance of files (obligatory)",size=(400,30))
+        self.step2CheckBox = wx.CheckBox(self, label="Step 2: file access and basic header information",size=(400,30))
+        self.step3CheckBox = wx.CheckBox(self, label="Step 3: data content and consistency of primary source",size=(400,30))
+        self.step4CheckBox = wx.CheckBox(self, label="Step 4: secondary source and consistency with primary",size=(400,30))
+        self.step5CheckBox = wx.CheckBox(self, label="Step 5: basevalues and adopted baseline variation",size=(400,30))
+        self.step6CheckBox = wx.CheckBox(self, label="Step 6: yearly means, consistency of meta information",size=(400,30))
+        self.step7CheckBox = wx.CheckBox(self, label="Step 7: activity indicies",size=(400,30))
+
+        self.continueButton = wx.Button(self, wx.ID_OK, label='OK', size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+
+        self.step1CheckBox.SetValue(True)
+        self.step2CheckBox.SetValue(self.checkparameter.get('step2'))
+        self.step3CheckBox.SetValue(self.checkparameter.get('step3'))
+        self.step4CheckBox.SetValue(self.checkparameter.get('step4'))
+        self.step5CheckBox.SetValue(self.checkparameter.get('step5'))
+        self.step6CheckBox.SetValue(self.checkparameter.get('step6'))
+        self.step7CheckBox.SetValue(self.checkparameter.get('step7'))
+
+        self.step1CheckBox.Disable()
+        
+
+    def doLayout(self):
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlist = [(self.selectLabel, noOptions),
+                 (self.step1CheckBox, noOptions),
+                 (self.step2CheckBox, noOptions),
+                 (self.step3CheckBox, noOptions),
+                 (self.step4CheckBox, noOptions),
+                 (self.step5CheckBox, noOptions),
+                 (self.step6CheckBox, noOptions),
+                 (self.step7CheckBox, noOptions)]
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        mainSizer.Add(boxSizer, 1, wx.EXPAND)
+
+        contlist = [(self.closeButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.continueButton, dict(flag=wx.ALIGN_CENTER))]
+        cols = 2
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            mainSizer.Add(control, **options)
+
+        #mainSizer.Add(self.sourceLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+
+        self.SetSizerAndFit(mainSizer)
+
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Close(True)
+
+
+class CheckOpenLogDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to show log file content
+    """
+
+    def __init__(self, parent, title, report):
+        super(CheckOpenLogDialog, self).__init__(parent=parent,
+            title=title, size=(600, 400))
+        self.report = report
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.reportLabel = wx.StaticText(self, label="Logging content:",size=(300,30))
+        self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
+        self.closeButton = wx.Button(self, label='Close',size=(160,30))
+
+        self.reportTextCtrl.Disable()
+        
+
+    def doLayout(self):
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlist = [(self.reportLabel, noOptions),
+                 (self.reportTextCtrl, expandOption),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Close(True)
+
 
 # ###################################################
 #    Monitor page
 # ###################################################
+
+class SelectMARTASDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select table for MARCOS monitoring
+    """
+
+    def __init__(self, parent, title, options):
+        super(SelectMARTASDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.options = options
+        self.protocol = 'mqtt'
+        self.stationid = 'WIC'               # should be extracted from options
+        self.user = 'cobs'               # should be extracted from options
+        self.protocollist = ['wamp','mqtt']
+        self.portlist = ['8080','1883']
+        self.selector = 1                    # list number of protocol
+        self.favoritemartas = ['192.168.0.14','192.168.178.84']
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.protocolRadioBox = wx.RadioBox(self, label="Communication protocol:",  choices=self.protocollist,
+                       majorDimension=2, style=wx.RA_SPECIFY_COLS ) #,size=(160,-1))
+        self.addressLabel = wx.StaticText(self, label="Select MARTAS:",size=(160,30))
+        self.addressComboBox = wx.ComboBox(self, choices=self.favoritemartas,
+                       style=wx.CB_DROPDOWN, value=self.favoritemartas[1],size=(160,-1))
+        self.newLabel = wx.StaticText(self, label="Input new MARTAS IP:",size=(160,30))
+        self.newTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.newButton = wx.Button(self, label='Add to favorites',size=(160,30))
+        self.portLabel = wx.StaticText(self, label="Communication port:",size=(160,30))
+        self.portTextCtrl = wx.TextCtrl(self, value=self.portlist[self.selector],size=(160,30))
+        self.stationidLabel = wx.StaticText(self, label="Station ID (e.g. IAGA code):",size=(160,30))
+        self.stationidTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.userLabel = wx.StaticText(self, label="*User:",size=(160,30))
+        self.userTextCtrl = wx.TextCtrl(self, value=self.user,size=(160,30))
+        self.pwdLabel = wx.StaticText(self, label="*Password:",size=(160,30))
+        self.pwdTextCtrl = wx.TextCtrl(self, value="",size=(160,30),style=wx.TE_PASSWORD)
+        self.authLabel = wx.StaticText(self, label="* if authentication is required",size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        contlist = [(self.addressLabel, noOptions),
+                 (self.addressComboBox, expandOption),
+                 (self.newLabel, noOptions),
+                 (self.newTextCtrl, expandOption),
+                  emptySpace,
+                 (self.newButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                 (self.protocolRadioBox, noOptions),
+                 (self.portLabel, noOptions),
+                 (self.portTextCtrl, expandOption),
+                 (self.stationidLabel, noOptions),
+                 (self.stationidTextCtrl, expandOption),
+                 (self.userLabel, noOptions),
+                 (self.userTextCtrl, expandOption),
+                 (self.pwdLabel, noOptions),
+                 (self.pwdTextCtrl, expandOption),
+                 (self.authLabel, noOptions),
+                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.newButton.Bind(wx.EVT_BUTTON, self.OnNew)
+        self.Bind(wx.EVT_RADIOBOX, self.OnProtocol, self.protocolRadioBox)
+
+    def OnClose(self, e):
+        self.Close(True)
+
+    def OnNew(self, e):
+        self.Close(True)
+
+    def OnProtocol(self, e):
+        self.protocol = self.protocolRadioBox.GetStringSelection()
+
 
 class AGetMARCOSDialog(wx.Dialog):
     """

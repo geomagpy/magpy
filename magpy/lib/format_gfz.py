@@ -144,6 +144,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
     headers['col-var3'] = 'Ap'
     headers['col-var4'] = 'Cp'
     headers['DataSource'] = 'GFZ Potsdam'
+    headers['DataFormat'] = 'MagPyK'
     headers['DataReferences'] = 'http://www-app3.gfz-potsdam.de/kp_index/'
 
     return DataStream([LineStruct()], headers, np.asarray(array))

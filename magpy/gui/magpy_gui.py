@@ -219,7 +219,10 @@ class PlotPanel(wx.Panel):
 
     def timer(self, arg1, stop_event):
         while(not stop_event.is_set()):
-            self.update(self.array)
+            if arg1 == 1:
+                self.update(self.array)
+            else:
+                self.update_mqtt(arg1,self.array)
             print ("Running ...")
             stop_event.wait(self.datavars[7])
             pass
@@ -268,6 +271,45 @@ class PlotPanel(wx.Panel):
         #    #line = row[2]
         #    #msubs.storeData(li,parameterstring.split(','))
 
+    def update_mqtt(self,client,array):
+        """
+        DESCRIPTION
+            Update array with new data and plot it.
+            If log file is chosen the this method makes use of collector.subscribe method:
+            storeData to save binary file
+        """
+        from magpy.collector import collectormethods as colsup
+
+        sumtime = 0
+        #        while sumtime<self.datavars[7] and (not self.t1_stop.is_set()):
+        #step = 0.1
+        print ("HEERE", self.datavars[7], self.datavars[2])
+        pos = KEYLIST.index('t1')
+
+        while sumtime<self.datavars[2]:
+            client.loop(1)
+            sumtime = sumtime+1
+            li = colsup.stream.ndarray   # li is an ndarray
+            for idx,el in enumerate(self.array):
+                el.extend(li[idx])
+            self.array = [el[-int(self.datavars[6]):] for el in self.array]
+            print (self.array[0],self.array[pos])
+        if len(self.array[0]) > 2:
+            array = self.array
+            self.monitorPlot(array)
+
+        """
+        client.loop(10) #blocks for period in seconds
+        #sumtime += step
+        li = colsup.stream.ndarray   # li is an ndarray
+        for idx,el in enumerate(self.array):
+            el.extend(li[idx])
+        self.array = [el[-int(self.datavars[6]):] for el in self.array]
+
+        if len(self.array[0]) > 2:
+                    array = self.array
+                    self.monitorPlot(array)
+        """
 
     def startMQTTMonitor(self,**kwargs):
         """
@@ -366,13 +408,81 @@ class PlotPanel(wx.Panel):
         self.canvas.draw()
 
 
-    def startMARTASMonitor(self,**kwargs):
+    def startMARTASMonitor(self, protocol, **kwargs):
         """
         DEFINITION:
             embbed matplotlib figure in canvas for mointoring
 
         PARAMETERS:
             kwargs:  - all plot args
+        """
+
+        dataid = self.datavars[0]
+        parameter = self.datavars[1]
+        period = self.datavars[2]
+        pad = self.datavars[3]
+        currentdate = self.datavars[4]
+        unitlist = self.datavars[5]
+        coverage = self.datavars[6]  # coverage
+        updatetime = self.datavars[7]
+        db = self.datavars[8]
+        martasaddress = self.datavars[9]  # coverage
+        martasport = self.datavars[10]
+        martasdelay = self.datavars[11]
+
+        # convert parameter list to a dbselect sql format
+        #parameterstring = 'time,'+','.join(parameter)
+
+        if protocol == 'mqtt':
+            try:
+                import paho.mqtt.client as mqtt
+                from magpy.collector import collectormethods as colsup
+                mqttimport = True
+            except:
+                mqttimport = False
+            if mqttimport:
+                client = mqtt.Client()
+                client.on_connect = colsup.on_connect
+                client.on_message = colsup.on_message
+
+                print (martasaddress)
+                #client.connect("192.168.178.84", 1883, 60)
+                client.connect(martasaddress, int(martasport), int(martasdelay))
+
+                self.figure.clear()
+
+                t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
+                t1.start()
+                # Display the plot
+                self.canvas.draw()
+
+        """
+        # Test whether data is available at all with selected keys and dataid
+        li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
+
+        if not len(li) > 0:
+            print("Parameter", parameterstring, dataid, coverage)
+            print("Did not find any data to display - aborting")
+            return
+        else:
+            valkeys = ['time']
+            valkeys = parameterstring.split(',')
+            for i,elem in enumerate(valkeys):
+                idx = KEYLIST.index(elem)
+                if elem == 'time':
+                    self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
+                else:
+                    self.array[idx] = [float(el[i]) for el in li]
+
+        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db, 9: martasaddress, 10: martasport, 11: martasdelay}
+
+        self.figure.clear()
+        t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
+        t1.start()
+        # Display the plot
+        self.canvas.draw()
+        """
+
         """
         #clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst
         #dataid = self.datavars[0]
@@ -416,6 +526,7 @@ class PlotPanel(wx.Panel):
         connectWS(factory)
 
         reactor.run()
+        """
 
 
     def monitorPlot(self,array,**kwargs):
@@ -720,6 +831,7 @@ class MainFrame(wx.Frame):
         self.baselineidxlst = []
 
         self.InitPlotParameter()
+        datacheck = True
 
         # Try to load ini-file
         # located within home directory
@@ -788,6 +900,14 @@ class MainFrame(wx.Frame):
         self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Select active Strea&m...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.AppendItem(self.StreamListSelect)
         self.MainMenu.Append(self.StreamOperationsMenu, "StreamO&perations")
+        # ## Data Checker
+        if datacheck:
+            self.CheckDataMenu = wx.Menu()
+            self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "Check &definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
+            self.CheckDataMenu.AppendItem(self.CheckDefinitiveDataSelect)
+            self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagPy &log...\tCtrl+L", "Open log", wx.ITEM_NORMAL)
+            self.CheckDataMenu.AppendItem(self.OpenLogFileSelect)
+            self.MainMenu.Append(self.CheckDataMenu, "C&heck Data")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic initialisation parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
@@ -835,6 +955,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnHelpReadFormats, self.HelpReadFormatsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpWriteFormats, self.HelpWriteFormatsItem)
         self.Bind(wx.EVT_CLOSE, self.OnFileQuit)  #Bind the EVT_CLOSE event to FileQuit()
+        if datacheck:
+            self.Bind(wx.EVT_MENU, self.OnCheckDefinitiveData, self.CheckDefinitiveDataSelect)
+            self.Bind(wx.EVT_MENU, self.OnCheckOpenLog, self.OpenLogFileSelect)
         # BindingControls on the notebooks
         #       Stream Page
         # ------------------------
@@ -889,6 +1012,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.onDeltafButton, self.menu_p.ana_page.deltafButton)
+        self.Bind(wx.EVT_BUTTON, self.onPowerButton, self.menu_p.ana_page.powerButton)
+        self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -1077,6 +1202,8 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.activityButton.Disable()      # if xyz, hdz magnetic data
         self.menu_p.ana_page.baselineButton.Disable()      # if absstream in streamlist
         self.menu_p.ana_page.deltafButton.Disable()        # if xyzf available
+        self.menu_p.ana_page.powerButton.Disable()         # always
+        self.menu_p.ana_page.spectrumButton.Disable()      # always
         #self.menu_p.ana_page.mergeButton.Disable()         # if len(self.streamlist) > 1
         #self.menu_p.ana_page.subtractButton.Disable()      # if len(self.streamlist) > 1
         #self.menu_p.ana_page.stackButton.Disable()         # if len(self.streamlist) > 1
@@ -1254,7 +1381,8 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.offsetButton.Enable()        # always
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
-
+        self.menu_p.ana_page.powerButton.Enable()         # always
+        self.menu_p.ana_page.spectrumButton.Enable()      # always
 
         # Selective fields
         # ----------------------------------------
@@ -1412,8 +1540,10 @@ class MainFrame(wx.Frame):
             self.shownkeylist = keylist
             if len(stream.ndarray[KEYLIST.index('x')]) > 0:
                 keylist = ['x','y','z','dx','dy','dz']
+                self.plotopt['padding'] = [[0,0,0,5,0.05,5]]
             else:
                 keylist = ['dx','dy','dz']
+                self.plotopt['padding'] = [[5,0.05,5]]
             self.symbollist = ['o'] * len(keylist)
             self.plotopt['symbollist'] =  ['o'] * len(keylist)
             self.plotopt['colorlist']=self.colorlist[:len(keylist)]
@@ -1421,8 +1551,8 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.dailyMeansButton.Enable()
 
         # 4. If K values are shown: preselect bar chart
-        if 'var1' in keylist and stream.header.get('col-var1','').startswith('K'):
-            print ("Found K values - apply self.plotopt")
+        if stream.header.get('DataFormat') == 'MagPyK' or ('var1' in keylist and stream.header.get('col-var1','').startswith('K')):
+            #print ("Found K values - apply self.plotopt")
             self.plotopt['specialdict']=[{'var1':[0,9]}]
             pos = keylist.index('var1')
             self.plotopt['symbollist'][pos] = 'z'
@@ -2116,6 +2246,1225 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.SetStatusText(msg)
 
 
+    def OnCheckOpenLog(self, event):
+        """
+        Definition:
+            open and display magpy log file
+        """
+
+        logfile=os.path.join(tempfile.gettempdir(),'magpy.log')
+        reportlst = []
+        if os.path.exists(logfile):
+            with open(logfile) as fobj:
+                for line in fobj:
+                    reportlst.append(line)
+        else:
+            # TODO create message box
+            pass
+        report = ''.join(reportlst)
+
+        dlg = CheckOpenLogDialog(None, title='MagPy Logging data', report = report)
+        if dlg.ShowModal() == wx.ID_OK:
+            pass
+        else:
+            dlg.Destroy()
+            return
+
+
+    def OnCheckDefinitiveData(self, event):
+        """
+        Definition:
+            Tool set for data checking. Organized in a step wise application:
+            Step 1: directories and existance of files (obligatory)
+            Step 2: file access and basic header information
+            Step 3: data content and consistency of primary source
+            Step 4: checking secondary source and consistency with primary 
+            Step 5: basevalues and adopted baseline variation
+            Step 6: yearly means, consistency of meta information
+            Step 7: acitivity indicies
+        """
+        # 1. open a dialog with two input directories: 1) for IAF minute data and 2) (optional) for IamgCDF sec data
+        # 2. radio field with two selections (quick check, full check) 
+        minutepath = ''
+        secondpath = ''
+        seconddata = 'None'
+        iafpath = ''
+        blvpath = ''
+        dkapath = ''
+        yearmeanpath = ''
+        checkchoice = 'quick'
+        reportmsg = ''
+        errormsg = ''
+        warningmsg = ''
+        year = 1777
+
+        def saveReport(label, report):
+            if label == 'Save':
+                savepath = ''
+                saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
+                                       "Report (*.txt)|*.txt", 
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+                if saveFileDialog.ShowModal() == wx.ID_OK:
+                    savepath = saveFileDialog.GetPath()
+                saveFileDialog.Destroy()
+                if not savepath == '':
+                    with open(savepath, "wb") as myfile:
+                        myfile.write(report)
+                    return True
+                    #self.Close(True)
+                return False
+            else:
+                return False
+
+        def createReport(reportmsg, warningmsg, errormsg):
+            """
+             Definition:
+                  create report for dialog
+            """
+            warninghead = "\n++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+            warninghead += "     Warnings: You need to solve these issues\n"
+            warninghead += "++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+
+            errorhead = "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+            errorhead += "     Critical errors: please check\n"
+            errorhead += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+
+            if not warningmsg == '':
+                warnrep = warninghead + warningmsg
+            else:
+                warnrep = " - no warnings\n"
+            if not errormsg == '':
+                errorrep = errorhead + errormsg
+            else:
+                errorrep = " - no errors\n"
+            report = reportmsg+'\n'+warnrep+'\n'+errorrep
+            return report
+
+
+        def readSecData(secondpath,seconddata,rmonth,year,dataid=None):
+            """
+            Definition:
+                  reading one second data from ImagCDF or IAGA02 formats (or MagPy)
+            """
+            starttime=str(year)+'-'+str(rmonth).zfill(2)+'-01'
+            endmonth = rmonth+1
+            endyear = year
+            success = 1
+            if endmonth == 13:
+                endyear = year+1
+                endmonth = 1
+            endtime=str(endyear)+'-'+str(endmonth).zfill(2)+'-01'
+            if seconddata == 'cdf':
+                cdfname = '*'+str(rmonth).zfill(2)+'_000000_PT1S_4.cdf'
+                loadpath = os.path.join(secondpath,cdfname)
+                try:
+                    secdata = read(loadpath,debug=True)
+                except:
+                    secdata = DataStream()
+                    success = 6
+            elif seconddata == 'pycdf':
+                if dataid:
+                    cdfname = dataid+'_vario_sec_'+str(year)+str(rmonth).zfill(2)+'.cdf'
+                    loadpath = os.path.join(secondpath,cdfname)
+                    secdata = read(loadpath,debug=True)
+                else:
+                    print ("please provide a sensorid") 
+            elif seconddata == 'iaga':
+                loadpath = os.path.join(secondpath,'*.sec')
+                try:
+                    secdata = read(loadpath,starttime=starttime,endtime=endtime,debug=True)
+                except:
+                    secdata = DataStream()
+                    success = 6
+
+            return secdata, success
+
+        def readMinData(checkchoice,minutedata,minutepath,month,rmonth,year=1900,resolution=None):
+            """
+            Definition:
+                  reading one minute data from IAF formats (and others)
+            """
+            starttime=str(year)+'-'+str(rmonth).zfill(2)+'-01'
+            endmonth = rmonth+1
+            endyear = year
+            success = 1
+            if endmonth == 13:
+                endyear = year+1
+                endmonth = 1
+            endtime=str(endyear)+'-'+str(endmonth).zfill(2)+'-01'
+
+            if minutedata == 'iaf':
+                if checkchoice == 'quick':
+                    iafpath1 = minutepath.replace('*.','*'+month.lower()+'.')
+                    iafpath2 = minutepath.replace('*.','*'+month.upper()+'.')
+                    if len(glob.glob(iafpath1)) > 0:
+                        path = iafpath1
+                    else:
+                        path = iafpath2
+                else:
+                    path = minutepath
+                try:
+                    if resolution:
+                        mindata = read(path, resolution=resolution, debug=True)
+                    else:
+                        mindata = read(path, debug=True)
+                except:
+                    mindata = DataStream()
+                    success = 6
+
+            return mindata, success
+
+
+
+        self.changeStatusbar("Checking data ... ")
+
+        ## get random month for quick check
+        from random import randint
+        import locale  # to get english month descriptions
+        old_loc = locale.getlocale(locale.LC_TIME)
+        try:
+            locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
+        except:
+            pass
+
+        rmonth = randint(1,11) ## Not 12 as this would unnecessarily complicate start and endtime selection
+        month = datetime(1900, rmonth, 1).strftime('%b')
+        if checkchoice == 'quick':
+            reportmsg += "Test type: {} . Random check month: {}\n".format(checkchoice, datetime(1900, rmonth, 1).strftime('%B'))
+        else: 
+            reportmsg += "Test type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, rmonth, 1).strftime('%B'))
+
+        succlst = ['0','0','0','0','0','0','0']
+        onlysec = False
+        success = 6  # integer from 1 to 6 - 1 everything perfect, 6 bad
+        laststep = 7 # used to switch from coninue to save
+        dlg = CheckDefinitiveDataDialog(None, title='Checking defintive data')
+        if dlg.ShowModal() == wx.ID_OK:
+            checkchoice = dlg.checkchoice
+            minutepath = dlg.minuteTextCtrl.GetValue()
+            secondpath = dlg.secondTextCtrl.GetValue()
+            checkparameter = dlg.checkparameter
+            laststep = dlg.laststep
+            success = 1
+        else:
+            dlg.Destroy()
+            return
+        if minutepath =='' and secondpath =='':
+            return
+        if success == 1:
+            succlst[0] = 1
+            reportmsg += "#######################################\n"            
+            reportmsg += "Step 1:\n"
+            reportmsg += "#######################################\n"         
+            reportmsg += "Def.: checking directories and for presence of files\n\n" 
+            # check whether paths are existing and appropriate data is contained - if failing set success to 6
+            # Provide a report dialog with summaries of each test and a continue button
+            # You have selected the following options:
+
+            #if checkchoice == 'quick':
+            #    print("Randomly selecting month for full data validity checks: Using {}").format(datetime(1900, rmonth, 1).strftime('%B'))
+            # Step 1: # test directory structure, and presence of files
+            if not minutepath == '' and os.path.isdir(minutepath):
+                reportmsg += "Step 1: minute data\n"
+                reportmsg += "-----------------------\n"
+                reportmsg += "Step 1: Using selected IAF path: {}\n".format(minutepath)
+                #import glob
+                iafcnt = len(glob.glob(os.path.join(minutepath,"*.BIN")))
+                if iafcnt > 0 and iafpath == '':
+                    iafpath = os.path.join(minutepath,"*.BIN")                    
+                iafcnt += len(glob.glob(os.path.join(minutepath,"*.bin")))
+                if iafcnt > 0 and iafpath == '':
+                    iafpath = os.path.join(minutepath,"*.bin")                    
+                if not iafcnt == 12:
+                    succlst[0] = 6
+                    errormsg += "Step 1: !!! IAF error: didn't find 12 monthly files\n"
+                else:
+                    reportmsg += "Step 1: +++ Correct amount of binary files\n"
+                blvcnt = len(glob.glob(os.path.join(minutepath,"*.blv")))
+                if blvcnt > 0 and blvpath == '':
+                    blvpath = os.path.join(minutepath,"*.blv")                    
+                blvcnt += len(glob.glob(os.path.join(minutepath,"*.BLV")))
+                if blvcnt > 0 and blvpath == '':
+                    blvpath = os.path.join(minutepath,"*.BLV")
+                readmecnt = len(glob.glob(os.path.join(minutepath,"README*")))
+                readmecnt += len(glob.glob(os.path.join(minutepath,"readme*")))
+                readmecnt += len(glob.glob(os.path.join(minutepath,"Readme*")))
+                dkacnt = len(glob.glob(os.path.join(minutepath,"*.dka")))
+                if dkacnt > 0 and dkapath == '':
+                    dkapath = os.path.join(minutepath,"*.dka")
+                dkacnt += len(glob.glob(os.path.join(minutepath,"*.DKA")))
+                if dkacnt > 0 and dkapath == '':
+                    dkapath = os.path.join(minutepath,"*.DKA")
+                yearmeancnt = len(glob.glob(os.path.join(minutepath,"YEARMEAN*")))
+                if yearmeancnt > 0 and yearmeanpath == '':
+                    yearmeanpath = os.path.join(minutepath,"YEARMEAN*")
+                yearmeancnt += len(glob.glob(os.path.join(minutepath,"yearmean*")))
+                if yearmeancnt > 0 and yearmeanpath == '':
+                    yearmeanpath = os.path.join(minutepath,"yearmean*")
+                pngcnt = len(glob.glob(os.path.join(minutepath,"*.png")))
+                pngcnt += len(glob.glob(os.path.join(minutepath,"*.PNG")))
+                if not blvcnt == 1:
+                    warningmsg += "Step 1: (warning)  No BLV data present\n"
+                    blvdata = False
+                    succlst[0] = 5
+                else:
+                    blvdata = True
+                if not dkacnt == 1:
+                    reportmsg += "Step 1: No DKA data present (file is recommended but not obligatory)\n"
+                    dkadata = False
+                    #succlst[0] = 5   # File is not obligatory - no change to succlst
+                else:
+                    dkadata = True
+                if not yearmeancnt >= 1:
+                    warningmsg += "Step 1: (warning)  No YEARMEAN data present\n"
+                    yearmeandata = False
+                    succlst[0] = 5
+                else:
+                    yearmeandata = True
+                    try:
+                        yldat = read(yearmeanpath)
+                        year = num2date(yldat.ndarray[0][-1]).year
+                    except:
+                        pass                        
+                if not readmecnt >= 1:
+                    warningmsg += "Step 1: (warning)  No README present\n"
+                    readmedata = False
+                    succlst[0] = 5
+                else:
+                    readmedata = True
+                if not pngcnt == 1:
+                    warningmsg += "Step 1: (warning)  No PNG present\n"
+                    pngdata = False
+                    succlst[0] = 3
+                else:
+                    pngdata = True
+                if blvdata and dkadata and readmedata and yearmeandata and pngdata:
+                    reportmsg += "Step 1: +++ Auxiliary files are present\n"
+            else:
+                if not minutepath == '':
+                    errormsg = "Step 1: Can not access directory {}\n".format(minutepath)
+                    succlst[0] = 6
+
+            reportmsg += "\nStep 1: one second data\n"
+            reportmsg += "-----------------------\n"
+            if secondpath == '':
+                reportmsg += "Step 1: Skipping one second data checks. No path selected.\n"
+            elif os.path.isdir(secondpath):
+                reportmsg += "Step 1: Using selected path for one second data: {}\n".format(secondpath)
+                #import glob
+                cdfcnt = len(glob.glob(os.path.join(secondpath,"*.cdf")))
+                cdfcnt += len(glob.glob(os.path.join(secondpath,"*.CDF")))
+                iagacnt = len(glob.glob(os.path.join(secondpath,"*.sec")))
+                iagacnt += len(glob.glob(os.path.join(secondpath,"*.SEC")))
+                if cdfcnt >= 12:
+                    seconddata = 'cdf'
+                elif iagacnt >= 365:
+                    seconddata = 'iaga'
+                if not seconddata in ['cdf','iaga']:
+                    warningmsg += "Step 1: !!! one second error: didn't find either ImagCDF (*.cdf) or IAGA02 (*.sec) files\n"
+                else:
+                    reportmsg += "Step 1: +++ Found appropriate amount of one second data files\n"
+                    #print ("Here", minutepath, succlst)
+                    if minutepath == '':
+                        onlysec = True
+                        #print ("Checkparameter")
+                        checkparameter['step3'] = False
+                        checkparameter['step5'] = False
+                        checkparameter['step7'] = False
+                    succlst[0]=1
+            else:
+                warningmsg += "Step 1: Could not access provided directory of one second data {}\n".format(secondpath)
+
+            if succlst[0] <= 2:
+                if onlysec:
+                    reportmsg += "\n----> Step 1: successfully passed - found only secondary data however\n"
+                else:
+                    reportmsg += "\n----> Step 1: successfully passed\n"
+            elif succlst[0] <= 4:
+                reportmsg += "\n----> Step 1: passed with some issues to be reviewed\n"
+        self.changeStatusbar("Step 1: directories and files ... Done")
+
+        report = createReport(reportmsg, warningmsg, errormsg)
+        opendlg = True
+        if opendlg:
+            dlg = CheckDataReportDialog(None, title='Data check step 1 - report', report=report, rating=succlst[0], step=list(map(str,succlst)), laststep=laststep)
+            if dlg.ShowModal() == wx.ID_OK:
+                saveReport(dlg.contlabel, dlg.report)
+            else:
+                dlg.Destroy()
+                locale.setlocale(locale.LC_TIME, old_loc)
+                return
+
+        if succlst[0] < 6:
+            if checkparameter['step2']:
+
+                logger = setup_logger(__name__)
+                logger.info("-------------------------------")
+                logger.info("Starting Step 2 of Data checker")
+                logger.info("-------------------------------")
+
+                succlst[1] = 1
+                reportmsg += "\n"
+                reportmsg += "#######################################\n"            
+                reportmsg += "Step 2:\n"
+                reportmsg += "#######################################\n"
+                reportmsg += "Def.: checking readability of main data files and header information\n\n"            
+                reportmsg += "Step 2:  IAF data:\n"
+                reportmsg += "-----------------------\n"
+                self.changeStatusbar("Step 2: Reading minute data ... ")
+                mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
+                
+                #print(log_stream.getvalue())
+
+                logger = setup_logger(__name__)
+                
+                if fail == 6 and not onlysec:
+                    errormsg += "Step 2: Reading of IAF data failed - check file format\n"
+                    succlst[1] = 6
+                self.changeStatusbar("Step 2: Reading minute data ... Done")
+
+                if mindata.length()[0] > 1:
+                    reportmsg += "Step 2:  +++ Minute data readable - checked example for {}\n".format(month)
+                else:
+                    if not onlysec:
+                        print (" !!! Could not read data - checked example for {}".format(month))
+                        errormsg += 'Step 2: Reading of IAF data failed - no data extracted for {} - check file format\n'.format(month)
+                        succlst[1] = 6
+
+                reportmsg += "\nStep 2:  IAF data  - checking meta information:\n"
+                reportmsg += "-----------------------\n"
+                headfailure = False 
+                #for head in IMAGCDFMETA: # IMAGMETAMETA
+                for head in IAFBINMETA: # IMAGMETAMETA ##### need to select only meta information expected in iaf file, not the information needed to create all IAF output files
+                    value = mindata.header.get(head,'')
+                    if value == '' and not onlysec:
+                        warningmsg += "Step 2: (warning) !!! IAF: no meta information for {}\n".format(head)
+                        headfailure = True
+                if not onlysec:
+                    if not headfailure:
+                        reportmsg += "Step 2: +++ IAF: each required header is present. IMPORTANT: did not check content !!\n"
+                    else:
+                        reportmsg += "Step 2: !!! IAF: got meta information warnings\n"
+                        succlst[1] = 5
+
+                obscode = mindata.header.get('StationID')
+                # get year 
+                try:
+                    year = num2date(mindata.ndarray[0][-1]).year
+                except:
+                    year = 1777
+
+                if not seconddata == 'None':
+                    reportmsg += "\nStep 2:  Secondary data:\n"
+                    reportmsg += "-----------------------\n"
+                    self.changeStatusbar("Step 2: Reading one second data - please be patient ... ")
+                    secdata, fail = readSecData(secondpath,seconddata,rmonth,year)
+                    if fail == 6:
+                        errormsg += "Step 2: Reading of one second data failed - check file format\n"
+                        succlst[1] = 5
+                    self.changeStatusbar("Step 2: Reading one second data ... Done ")
+                    if secdata.length()[0] > 1:
+                        reportmsg += "Step 2: +++ Second data readable - checked example for {}\n".format(month)
+                    else:
+                        print (" !!! Could not read data - checked example for {}".format(month))
+                        warningmsg += 'Step 2: !!! Reading of one second data failed - no data extracted for {} - check file format\n'.format(month)
+                        warningmsg += 'Step 2: Skipping analysis of one second data\n'.format(month)
+                        seconddata = 'None'
+
+                if not seconddata == 'None':
+                    headfailure = False
+                    reportmsg += "\nStep 2:  Secondary data  - checking meta information:\n"
+                    reportmsg += "-----------------------\n"
+                    sr = secdata.samplingrate()
+                    reportmsg += "Step 2: data period corresponds to {} second(s)\n".format(sr)
+                    reportmsg += "Step 2: SamplingFilter: {} \n".format(secdata.header.get('DataSamplingFilter',''))
+                    if seconddata == 'cdf':
+                        META = IMAGCDFMETA
+                    elif seconddata == 'iaga':
+                        META = IAGAMETA
+                    for head in META: 
+                        value = secdata.header.get(head,'')
+                        if value == '':
+                            warningmsg += "Step 2: (warning) !!! Second data: no meta information for {}\n".format(head)
+                            headfailure = True
+                    if not headfailure:
+                        reportmsg += "Step 2: +++ Second data: each required header is present. IMPORTANT: did not check content !!\n"
+                    else:
+                        reportmsg += "Step 2: !!! Second data: meta information warnings found\n"
+                        succlst[1] = 5
+
+
+                if succlst[1] <= 2:
+                    reportmsg += "\n----> Step 2: successfully passed\n"
+                elif succlst[1] <= 4:
+                    reportmsg += "\n----> Step 2: passed with some issues to be reviewed\n"
+                self.changeStatusbar("Step 2: readability check ... Done")
+
+                logger.info("-------------------------------")
+                logger.info("Step 2 of Data checker finished")
+                logger.info("-------------------------------")
+
+                report = createReport(reportmsg, warningmsg, errormsg)
+                opendlg = True
+                if opendlg:
+                    dlg = CheckDataReportDialog(None, title='Data check step 2 - report', report=report, rating=max(list(map(int,succlst))), step=list(map(str,succlst)), laststep=laststep)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        saveReport(dlg.contlabel, dlg.report)
+                    else:
+                        dlg.Destroy()
+                        self.changeStatusbar("Ready")
+                        locale.setlocale(locale.LC_TIME, old_loc)
+                        return
+
+            if checkparameter['step3']:
+                succlst[2] = 1
+                reportmsg += "\n"
+                reportmsg += "#######################################\n"            
+                reportmsg += "Step 3:\n"
+                reportmsg += "#######################################\n"
+                reportmsg += "Def.: checking data content and consistency\n\n"
+                reportmsg += "Step 3: consistency of minute data:\n"
+                reportmsg += "-----------------------\n"
+                self.changeStatusbar("Step 3: Checking data consistency ... ")
+                if checkchoice == 'quick':
+                    starttime=str(year)+'-'+str(rmonth).zfill(2)+'-01'
+                    endtime=str(year)+'-'+str(rmonth+1).zfill(2)+'-01'
+                    days = int(date2num(datetime.strptime(endtime,'%Y-%m-%d')) - date2num(datetime.strptime(starttime,'%Y-%m-%d')))
+                    #print ("Lenght", mindata.length()[0])
+                    if not mindata.length()[0] > 0:
+                         mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
+                else:
+                    starttime=str(year)+'-01-01'
+                    endtime=str(year+1)+'-01-01'
+                    days = int(date2num(datetime.strptime(str(year+1)+'-01-01','%Y-%m-%d')) - date2num(datetime.strptime(str(year)+'-01-01','%Y-%m-%d')))
+                    mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
+
+                if not days*24*60 - mindata.length()[0] == 0:
+                    reportmsg += "Step 3: Checking coverage failed. Expected data points ({}) differs from observerd ({})\n".format(days*24*60, mindata.length()[0])
+                    succlst[2] = 5
+                else:
+                    reportmsg += "Step 3: Checking coverage ... OK\n"
+
+                ## Check f values ( f or df, sampling frequency, if f check delta F, get standard dev)
+                if mindata.length()[0] > 0:
+                        if self.InitialRead(mindata):
+                            self.OnInitialPlot(self.plotstream)
+                        """
+                        #Test for vector completeness is not working yet
+                        colx = mindata.ndarray[1]
+                        coly = mindata.ndarray[2]
+                        colz = mindata.ndarray[3]
+                        colxt = [[mindata.ndarray[0][idx],el] for idx,el in enumerate(colx) if not np.isnan(el)]
+                        colyt = [[mindata.ndarray[0][idx],el] for idx,el in enumerate(coly) if not np.isnan(el)]
+                        colzt = [[mindata.ndarray[0][idx],el] for idx,el in enumerate(colz) if not np.isnan(el)]
+                        t1 = np.transpose(colxt)[0]
+                        t2 = np.transpose(colyt)[0]
+                        t3 = np.transpose(colzt)[0]
+                        s = set(t1)
+                        res = []
+                        res.extend([x for x in t3 if x not in s])
+                        s = set(t3)
+                        res.extend([x for x in t1 if x not in s])
+                        s = set(t2)
+                        res.extend([x for x in t1 if x not in s])
+                        s = set(t1)
+                        res.extend([x for x in t2 if x not in s])
+                        s = set(t2)
+                        res.extend([x for x in t3 if x not in s])
+                        s = set(t3)
+                        res.extend([x for x in t2 if x not in s])
+                        print (len(res))
+                        res = list(set(res))
+                        print (len(res))
+                        if not len(res) > 0:
+                            reportmsg += "Step 3: Found consistent vector components\n"
+                        else:
+                            reportmsg += "Step 3: different amount of valid values in vector components: X: {}, Y: {}, Z: {}\n".format(len(t1),len(t2),len(t3))
+                            for el in res:
+                                warningmsg += "Step 3: found incomplete vector at time step {}\n".format(num2date(el).replace(tzinfo=None))
+                            succlst[2] = 3
+                        """
+
+                        # create a backup of minutedata
+                        mindataback = mindata.copy()
+                        reportmsg += "\nStep 3: Analyzing F, dF \n"
+                        reportmsg += "-----------------------\n"
+
+                        # Get f data for f criteria check:
+                        fcol = mindata._get_column('f')
+                        dfcol = mindata._get_column('df')
+                        if len(fcol) == 0 and len(dfcol) == 0:
+                            reportmsg += "Step 3: minute data: failed to find scalar (F, dF) data ... Failed\n"
+                            succlst[2] = 2
+                        else:
+                            if len(fcol) > 0:
+                                scal = 'f'
+                            elif len(dfcol) > 0:
+                                scal = 'df'
+                            ftest = mindata.copy()
+                            ftest = ftest._drop_nans(scal)
+                            fsamprate = ftest.samplingrate()
+                            reportmsg += "Step 3: minute data with {} - sampling period: {} sec ... OK\n".format(scal, fsamprate)
+                            if scal=='f': 
+                                ftest = ftest.delta_f()
+                            fmean, fstd = ftest.mean('df',std=True)
+                            reportmsg += "Step 3: found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
+                            if fmean >= 1.0:
+                                reportmsg += "Step 3: large deviation of mean delta F\n"
+                                warningmsg += "Step 3: large deviation of mean delta F - might be related to adopted baseline calcuation \n"
+                                succlst[2] = 3
+                            if fstd >= 3.0:
+                                reportmsg += "Step 3: large scatter about mean\n"
+                                warningmsg += "Step 3: dF shows a realtively large scatter - please check\n"
+                                succlst[2] = 4
+                            if fmean < 0.001 and fstd < 0.001:
+                                reportmsg += "Step 3: F seems not to be measured independently \n"
+                                warningmsg += "Step 3: F seems not to be measured independently\n"
+                                succlst[2] = 3
+                                
+                reportmsg += "\nStep 3: Checking hourly and daily mean data \n"
+                reportmsg += "-----------------------\n"
+                hourprob = False
+                try:
+                    iafhour, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth,resolution='hour')
+                    #iafhour = read(iafpath,resolution='hour')
+                except:
+                    errormsg += "Step 3: Could not extract hourly data from IAF file\n"
+                    hourprob = True
+                    succlst[2] = 6
+
+                if not iafhour.length()[0] > 0:
+                    errormsg += "Step 3: Did not find hourly data in IAF file\n"
+                    hourprob = True
+                    succlst[2] = 6
+
+                if not days*24 - iafhour.length()[0] == 0:
+                    errormsg += "Step 3: Did not find expected amount () of hourly data. Found {}.\n".format(days*24,iafhour.length()[0])
+                    hourprob = True
+                    succlst[2] = 5
+
+                if not hourprob:
+                    reportmsg += "Step 3: Extracting hourly data ... OK\n"
+                else:
+                    reportmsg += "Step 3: Extracting hourly data ... Failed\n"
+
+                if not hourprob:
+                    try:
+                        minfiltdata = mindata.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat', missingdata='iaga')
+                    except:
+                        errormsg += "Step 3: Filtering hourly data failed.\n"
+
+                    faileddiff = False
+                    try:
+                        diff = subtractStreams(iafhour,minfiltdata)
+                        if not diff.length()[0] > 0:
+                            diff = subtractStreams(iafhour,minfiltdata, keys=['x','y','z'])
+                            warningmsg +=  "Step 3: Could not get F/G differences between hourly data and filtered minute data. Please check data file whether hourly means are complete.\n"
+                            succlst[2] = 3
+                            
+                        if not diff.length()[0] > 0:
+                            errormsg += "Step 3: Could not calculate difference between hourly mean values and filtered minute data.\n"
+                            faileddiff = True
+                        incon = False
+                        for col in ['x','y','z']:
+                            if not diff.amplitude(col) < 0.2:
+                                warningmsg += "Step 3: found differences between expected hourly mean values and filtered minute data for component {}\n".format(col)
+                                incon = True
+                        inconcount = 0
+                        if incon:
+                            for idx,ts in enumerate(iafhour.ndarray[0]):
+                                add = ''
+                                for col in ['x','y','z']:
+                                    colnum = KEYLIST.index(col)
+                                    if not diff.ndarray[colnum][idx] < 0.2:
+                                        add += ' -- component {}: expected = {:.1f}; observed = {}'.format(col,minfiltdata.ndarray[colnum][idx], iafhour.ndarray[colnum][idx])
+                                if not add == '':
+                                    inconcount += 1
+                                    warningmsg += 'Step 3: inconsistence at {} {}\n'.format(num2date(ts).replace(tzinfo=None),add)
+                    except:
+                        errormsg += "Step 3: Failed to obtain difference between hourly data and filtered minute data.\n"
+
+                    if not faileddiff:
+                        if not incon:
+                            reportmsg += "Step 3:  +++ IAF: hourly data is consistent\n"
+                        else:
+                            reportmsg += "Step 3:  !!! IAF: found inconsistencies in hourly data at {} time steps\n".format(inconcount)
+                            succlst[2] = 5
+                    else:
+                            reportmsg += "Step 3:  !!! IAF: failed to obtain differences\n"
+                            succlst[2] = 5
+
+                dayprob = False
+                try:
+                    iafday, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth,resolution='day')
+                    #minute, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
+                    #iafhour = read(iafpath,resolution='hour')
+                except:
+                    errormsg += "Step 3: Could not extract daily means from IAF file\n"
+                    dayprob = True
+                    succlst[2] = 6
+
+                if not iafday.length()[0] > 0:
+                    errormsg += "Step 3: Did not find daily means in IAF file\n"
+                    dayprob = True
+                    succlst[2] = 6
+                
+                if not dayprob:
+                    reportmsg += "Step 3: Extracting daily means ... OK\n"
+                else:
+                    reportmsg += "Step 3: Extracting daily means ... Failed\n"
+
+                if not dayprob:
+                    testmindata = mindataback.copy()
+                    testday = testmindata.dailymeans(['x','y','z'],offset=0.0)
+                    ddiff = subtractStreams(iafday,testday)
+                    try:
+                        if not ddiff.length()[0] > 0:
+                            errormsg += "Step 3: Could not calculate difference between daily means and average minute data.\n"
+                        incon = False
+                        for col in ['x','y','z']:
+                            if not ddiff.amplitude(col) < 1.0:
+                                print ("Hello", col, ddiff.amplitude(col))
+                                warningmsg += "Step 3: found differences between expected daily means and filtered minute data for component {}\n".format(col)
+                                incon = True
+
+                        inconcount = 0
+                        if incon:
+                            for idx,ts in enumerate(ddiff.ndarray[0]):
+                                add = ''
+                                for col in ['x','y','z']:
+                                    colnum = KEYLIST.index(col)
+                                    if not np.abs(ddiff.ndarray[colnum][idx]) < 1.0:
+                                        add += ' -- component {}: expected = {:.1f}; observed = {}'.format(col,testday.ndarray[colnum][idx], iafday.ndarray[colnum][idx])
+                                if not add == '':
+                                    inconcount += 1
+                                    warningmsg += 'Step 3: inconsistence at {} {}\n'.format(num2date(ts).replace(tzinfo=None),add)
+                    except:
+                        errormsg += "Step 3: Failed to obtain difference between daily means and filtered minute data.\n"
+
+                    if not incon:
+                        reportmsg += "Step 3:  +++ IAF: daily means are consistent\n"
+                    else:
+                        reportmsg += "Step 3:  !!! IAF: found inconsistencies in daily means at {} time steps\n".format(inconcount)
+                        succlst[2] = 5
+
+                if succlst[2] <= 2:
+                    reportmsg += "\n----> Step 3: successfully passed\n"
+                elif succlst[2] <= 4:
+                    reportmsg += "\n----> Step 3: passed with some issues to be reviewed\n"
+                self.changeStatusbar("Step 3: Checking data consistency ... Done")
+
+                report = createReport(reportmsg, warningmsg, errormsg)
+                opendlg = True
+                if opendlg:
+                    dlg = CheckDataReportDialog(None, title='Data check step 3 - report', report=report, rating=max(list(map(int,succlst))), step=list(map(str,succlst)), laststep=laststep)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        saveReport(dlg.contlabel, dlg.report)
+                    else:
+                        dlg.Destroy()
+                        self.changeStatusbar("Ready")
+                        locale.setlocale(locale.LC_TIME, old_loc)
+                        return
+
+            if checkparameter['step4']:
+                succlst[3] = 1
+                reportmsg += "\n"
+                reportmsg += "#######################################\n"            
+                reportmsg += "Step 4:\n"
+                reportmsg += "#######################################\n"
+                reportmsg += "Def.: checking one second data content and consistency\n\n"
+                if seconddata == 'None':
+                    reportmsg += "Step 4: No second data available - continue with step 5\n"
+                else:
+                    self.changeStatusbar("Step 4: Checking one second data consistency (internally and with primary data) ")            
+                    # message box - Continuing with step 4 - consistency of one second data with IAF
+
+                    if checkchoice == 'quick':
+                        # use already existing data
+                        monthlist = [rmonth] 
+                    else:
+                        # read data for each month
+                        monthlist = range(1,13)
+                    readnew = False # Data needs only to be read again for full analysis
+                    for checkmonth in monthlist:
+                        if (checkmonth == rmonth) and secdata.length()[0] > 0 and not readnew:
+                            secdata = secdata
+                        else:
+                            self.changeStatusbar("Step 4: Reading one second data for month {} ... be patient".format(checkmonth))
+                            secdata, fail = readSecData(secondpath,seconddata,rmonth,year)
+                            readnew = True
+
+                        if not onlysec:
+                            if (checkmonth == rmonth) and mindataback.length()[0] > 0:
+                                mindata = mindataback.copy()
+                            else:
+                                mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
+                        else:
+                            mindata = DataStream()
+
+                        reportmsg += "\nStep 4: Checking secondary data for month {} \n".format(checkmonth)
+                        reportmsg += "-----------------------\n"
+                        #reportmsg += "+++++++++++++++++++++++\n"
+
+                        sr = secdata.samplingrate()
+                        if sr == 1:
+                            reportmsg += "Step 4: Checking coverage - found vectorial 1 second data ... OK\n"
+                        else:
+                            reportmsg += "Step 4: Checking coverage - found vectorial data every {} second(s)\n".format(sr)
+
+                        #reportmsg += "Step 4: Analyzing F, dF \n"
+                        #reportmsg += "-----------------------\n"
+                        # Get f data for f criteria check:
+                        fcol = secdata._get_column('f')
+                        dfcol = secdata._get_column('df')
+                        if len(fcol) == 0 and len(dfcol) == 0:
+                            reportmsg += "Step 4: !!! One second data: failed to find scalar (F, dF) data ... Failed\n"
+                            succlst[3] = 2
+                        else:
+                            scal=''
+                            if len(fcol) > 0:
+                                scal = 'f'
+                            elif len(dfcol) > 0:
+                                scal = 'df'
+                            ftest = secdata.copy()
+                            ftest = ftest._drop_nans(scal)
+                            fsamprate = ftest.samplingrate()
+                            reportmsg += "Step 4: +++ found {} in one second data - sampling period: {} sec ... OK\n".format(scal, fsamprate)
+                            if scal=='f': 
+                                ftest = ftest.delta_f()
+                            fmean, fstd = ftest.mean('df',std=True)
+                            reportmsg += "Step 4: +++ found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
+                            if fmean >= 1.0:
+                                reportmsg += "Step 4: !!! large deviation of mean delta F - check baseline corr\n"
+                                warningmsg += "Step 4: large deviation of mean delta F - check baseline corr\n"
+                                succlst[3] = 3
+                            if fstd >= 3.0:
+                                reportmsg += "Step 4: !!! large scatter about mean\n"
+                                warningmsg += "Step 4: dF/G shows large scatter about mean\n"
+                                succlst[3] = 4
+                            if fmean < 0.001 and fstd < 0.001:
+                                reportmsg += "Step 4: !!! F seems not to be measured independently \n"
+                                warningmsg += "Step 4: F seems not to be measured independently\n"
+                                succlst[2] = 3
+
+                        #reportmsg += "\nStep 4: Filtering second data and comparing it to minute IAF data \n"
+                        #reportmsg += "-----------------------\n"
+
+                        self.changeStatusbar("Step 4: Filtering second data ...")
+                        highresfilt = secdata.filter(missingdata='iaga')
+
+                        """
+                        #Test for vector completeness is not working yet
+                        colx = highresfilt._get_column('x')
+                        coly = highresfilt._get_column('y')
+                        colz = highresfilt._get_column('z')
+                        colx = [el for el in colx if not np.isnan(el)]
+                        coly = [el for el in coly if not np.isnan(el)]
+                        colz = [el for el in colz if not np.isnan(el)]
+                        if len(colx) == len(coly) and len(coly) == len(colz):
+                            reportmsg += "Step 4: +++ Found consistent vector components\n"
+                        else:
+                            warningmsg += "Step 4: different amount of valid values in vector components: X: {}, Y: {}, Z: {}\n".format(len(colx),len(coly),len(colz))
+                            succlst[3] = 3
+                        if not minutepath == '':
+                            mcolx = mindata._get_column('x')
+                            mcoly = mindata._get_column('y')
+                            mcolz = mindata._get_column('z')
+                            mcolx = [el for el in mcolx if not np.isnan(el)]
+                            mcoly = [el for el in mcoly if not np.isnan(el)]
+                            mcolz = [el for el in mcolz if not np.isnan(el)]
+                            print (checkmonth, len(colx),len(coly),len(colz),len(mcolx),len(mcoly),len(mcolz))
+                        """
+                        self.changeStatusbar("Step 4: Filtering second data ... Done")
+
+                        #if not scal == '':
+                        #    diff = subtractStreams(highresfilt,mindata,keys=['x','y','z',scal])
+                        #else:
+                        #    diff = subtractStreams(highresfilt,mindata,keys=['x','y','z'])
+                        if not onlysec:
+                            diff = subtractStreams(highresfilt,mindata,keys=['x','y','z'])
+
+                            incon = False
+                            if not diff.amplitude('x') < 0.11:
+                                warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in x/h component ({}) exceed numerical uncertainty\n".format(diff.amplitude('x'))
+                                incon = True
+                            if not diff.amplitude('y') < 0.11:
+                                warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in y/d component ({}) exceed numerical uncertainty\n".format(diff.amplitude('y'))
+                                incon = True
+                            if not diff.amplitude('z') < 0.11:
+                                warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in z component ({}) exceed numerical uncertainty\n".format(diff.amplitude('z'))
+                                incon = True
+                            if len(diff._get_column(scal)) > 0:
+                                if not diff.amplitude(scal) < 0.30: ## uncertainty is larger because of df conversion (2 times rounding error)
+                                    warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in f component ({}) exceed numerical uncertainty -- PLEASE NOTE: COBS standard procedure is to use mean F for minute and single best F for second\n".format(diff.amplitude('f'))
+                                    try:
+                                        ttf, ttstd = diff.mean('f',std=True)
+                                        warningmsg += "Step 4: !!! IAF/Filtered(Sec): mean f = {} +/- {}\n".format(ttf,ttstd)
+                                        incon = True
+                                    except:
+                                        pass
+                            if not incon:
+                                reportmsg += "Step 4: +++ IAF/Filtered(Sec): IAF data and filtered second data is consistent\n"
+                            else:
+                                reportmsg += "Step 4: !!! IAF/Filtered(Sec): found inconsistencies\n"
+                                succlst[3] = 4
+                                if self.InitialRead(diff):
+                                    self.OnInitialPlot(self.plotstream)
+
+
+                if succlst[3] <= 2:
+                    reportmsg += "\n----> Step 4: successfully passed\n"
+                elif succlst[3] <= 4:
+                    reportmsg += "\n----> Step 4: passed with some issues to be reviewed\n"
+                self.changeStatusbar("Step 4: Checking secondary data ... Done")
+
+                report = createReport(reportmsg, warningmsg, errormsg)
+                opendlg = True
+                if opendlg:
+                    dlg = CheckDataReportDialog(None, title='Data check step 4 - report', report=report, rating=max(list(map(int,succlst))), step=list(map(str,succlst)), laststep=laststep)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        saveReport(dlg.contlabel, dlg.report)
+                    else:
+                        dlg.Destroy()
+                        self.changeStatusbar("Ready")
+                        locale.setlocale(locale.LC_TIME, old_loc)
+                        return
+
+
+            if checkparameter['step5']:
+                succlst[4] = 1
+                reportmsg += "\n"
+                reportmsg += "#######################################\n"            
+                reportmsg += "Step 5:\n"
+                reportmsg += "#######################################\n"
+                reportmsg += "Def.: baseline variation and data quality\n\n"
+
+                if not blvpath == '':
+                    reportmsg += "Step 5: baseline data \n"
+                    reportmsg += "-----------------------\n"
+                    blvdata = read(blvpath)
+                    if self.InitialRead(blvdata):
+                        #self.ActivateControls(self.plotstream)
+                        self.OnInitialPlot(self.plotstream)
+                    self.changeStatusbar("Step 5: checking basline ...")
+                    """
+                    self.plotstream = blvdata
+                    self.ActivateControls(self.plotstream)
+                    # set padding and plotsymbols to points
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                    """
+
+                    headx = blvdata.header.get("col-dx","")
+                    heady = blvdata.header.get("col-dy","")
+                    headz = blvdata.header.get("col-dz","")
+                    unitx = blvdata.header.get("unit-col-dx","")
+                    unity = blvdata.header.get("unit-col-dy","")
+                    unitz = blvdata.header.get("unit-col-dz","")
+                    # get average sampling rate
+                    means = blvdata.dailymeans(keys=['dx','dy','dz'])
+                    srmeans = means.get_sampling_period()
+                    reportmsg += "Step 5: basevalues measured on average every {:.1f} days \n".format(srmeans)
+                    # Average and maximum standard deviation
+                    means = means._drop_nans('dx') 
+                    #print ("means", means.mean('dx',percentage=1), means.amplitude('dx'))
+                    reportmsg += "Step 5: average deviation of repeated measurements is: {:.2f}{} for {}, {:.4f}{} for {} and {:.2f}{} for {}\n".format(means.mean('dx',percentage=1), unitx, headx, means.mean('dy',percentage=1), unity, heady, means.mean('dz',percentage=1), unitz, headz)
+                    if means.mean('dx',percentage=1) > 0.5 or means.mean('dz',percentage=1) > 0.5:
+                        reportmsg += "Step 5: consistent variations between repeated measurements are present\n"
+                        succlst[4] = 2
+                    if means.mean('dx',percentage=1) > 3.0 or means.mean('dz',percentage=1) > 3.0:
+                        reportmsg += "Step 5: !!! found relatively large variations for repeated measurements\n"
+                        warningmsg += "Step 5: check basevalues\n"
+                        succlst[4] = 4
+
+                    # analyse residuum between baseline and basevalues
+                    func = blvdata.header.get('DataFunction',[])
+                    residual = blvdata.func2stream(func,mode='sub',keys=['dx','dy','dz'])
+                    #print ("Here", residual.ndarray)
+                    resDIx,resDIstdx = residual.mean('dx',std=True,percentage=10)
+                    resDIy,resDIstdy = residual.mean('dy',std=True,percentage=10)
+                    resDIz,resDIstdz = residual.mean('dz',std=True,percentage=10)
+                    reportmsg += "Step 5: average residual between baseline and basevalues is: {}={:.3f}{}, {}={:.5f}{}, {}={:.3f}{} \n".format(headx, resDIx, unitx, heady, resDIy, unity, headz, resDIz, unitz)
+                    if resDIx > 0.1 or resDIz > 0.1:
+                        reportmsg += "Step 5: -> found minor deviations between baseline and basevalues\n"
+                        succlst[4] = 2
+                    if resDIx > 0.5 or resDIz > 0.5:
+                        reportmsg += "Step 5: !!! found relatively large deviations between baseline and basevalues\n"
+                        warningmsg += "Step 5: check deviations between baseline and basevalues\n"
+                        succlst[4] = 3
+
+                    # overall baseline variation
+                    # get maximum and minimum of the function for x and z
+                    amplitude = blvdata.func2stream(func,mode='values',keys=['dx','dy','dz'])
+                    #amplitude = amplitude._convertstream('hdz2xyz') ## TODO this is not correct !!!
+                    ampx = amplitude.amplitude('dx')
+                    ampy = amplitude.amplitude('dy')
+                    ampz = amplitude.amplitude('dz')
+                    maxamp = np.max([ampx,ampy,ampz])  # TODO declination!!!
+                    reportmsg += "Step 5: maximum amplitude of baseline is {:.1f}{} \n".format(maxamp, unitx)
+                    amplitude = amplitude._move_column('dx','x')
+                    amplitude = amplitude._move_column('dy','y')
+                    amplitude = amplitude._move_column('dz','z')
+                    # PLEASE note: amplitude test is currently, effectively only testing x and z component
+                    #              this is still useful as maximum amplitudes are expected in these components
+                    if maxamp > 5:
+                        reportmsg += "Step 5: !!! amplitude of adopted baseline exceeds INTERMAGNET threshold of 5 nT\n"
+                        warningmsg += "Step 5: adopted baseline shows relatively high variations - could be related to baseline jumps - please review data\n"
+                        succlst[4] = 3
+                    
+                    # check baseline complexity
+
+
+                else:
+                    reportmsg += "Step 5: could not open baseline data \n"
+                    errormsg += "Step 5: failed to open baseline data\n"
+                    succlst[4] = 6
+
+                if succlst[4] <= 2:
+                    reportmsg += "\n----> Step 5: successfully passed\n"
+                elif succlst[4] <= 4:
+                    reportmsg += "\n----> Step 5: passed with some issues to be reviewed\n"
+                self.changeStatusbar("Step 5: measured and adopted basevalues ... Done")
+
+                report = createReport(reportmsg, warningmsg, errormsg)
+                opendlg = True
+                if opendlg:
+                    dlg = CheckDataReportDialog(None, title='Data check step 5 - report', report=report, rating=succlst[4], step=list(map(str,succlst)), laststep=laststep)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        saveReport(dlg.contlabel, dlg.report)
+                    else:
+                        dlg.Destroy()
+                        self.changeStatusbar("Ready")
+                        locale.setlocale(locale.LC_TIME, old_loc)
+                        return
+
+            if checkparameter['step6']:
+                succlst[5] = 1
+                reportmsg += "\n"
+                reportmsg += "#######################################\n"            
+                reportmsg += "Step 6:\n"
+                reportmsg += "#######################################\n"
+                reportmsg += "Def.: yearly means, consistency of meta information in all files\n\n"
+
+                # internally check yearmean  (Not yet)
+                # check whether all data files contain the same means
+
+                def diffs (success, hmean1,zmean1,hmean2,zmean2,source1='blv',source2='iaf',threshold=0.5):
+                    repmsg = ''
+                    warnmsg = ''
+                    if not np.isnan(hmean1) and not np.isnan(hmean2):
+                        diffh = np.abs(hmean1-hmean2) 
+                        diffz = np.abs(zmean1-zmean2)
+                        if diffh < threshold and diffz < threshold:
+                            repmsg += "Step 6: yearly means between {} and {} files are consistent\n".format(source1, source2)
+                        else:
+                            repmsg += "Step 6: yearly means differ between {} and {} files. BLV: H={}nT,Z={}nT; IAF: H={}nT, Z={}nT \n".format(source1, source2, hmean1,zmean1,hmean2,zmean2)
+                            warnmsg += "Step 6: yearly means differ between {} and {} files\n".format(source1, source2)
+                            success = 5
+                    else:
+                        repmsg += "Step 6: did not compare yearly means of {} and {} data - select step 3 and full to perform this check \n".format(source1, source2)
+                    return repmsg, warnmsg, success
+
+                reportmsg += "Step 6: yearly means \n"
+                reportmsg += "-----------------------\n"
+                #blv yearly means
+                blvhmean = np.nan
+                blvfmean = np.nan
+                if not blvpath == '':
+                    try:
+                        le = blvdata.length()[0]
+                    except:
+                        blvdata = read(blvpath)
+                    blvhmean = blvdata.header.get('DataScaleX')
+                    blvfmean = blvdata.header.get('DataScaleZ')
+
+                #iaf yearly means
+                minhmean = np.nan
+                minfmean = np.nan
+                try:
+                    if mindataback.header.get('DataComponents','').startswith('hdz'):
+                        mindataback = mindataback._convertstream('hdz2xyz')
+                    if checkchoice == 'full' and mindataback.length()[0] > 0:
+                        minxmean = mindataback.mean('x',percentage=50)
+                        minymean = mindataback.mean('y',percentage=50)
+                        minzmean = mindataback.mean('z',percentage=50)
+                        minhmean = np.sqrt(minxmean*minxmean + minymean*minymean)
+                        minfmean = np.sqrt(minxmean*minxmean + minymean*minymean + minzmean*minzmean)
+
+                    rep, warn, succlst[5] = diffs(succlst[5],blvhmean,blvfmean,minhmean,minfmean)
+                    reportmsg += rep
+                    warningmsg += warn
+                except:
+                    reportmsg += "Step 6: could not determine yearly means from IAF - data not availbale \n"
+
+                #yearmean yearly means
+                yearmeanh = np.nan
+                yearmeanf = np.nan
+                if not yearmeanpath == '':
+                    yearmeandata = read(yearmeanpath)
+                    yearmeanx = yearmeandata.ndarray[1][-1]
+                    yearmeany = yearmeandata.ndarray[2][-1]
+                    yearmeanz = yearmeandata.ndarray[3][-1]
+                    yearmeanh = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany)
+                    yearmeanf = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany + yearmeanz*yearmeanz)
+                    # extract data for year
+                    rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,minhmean,minfmean,source1='yearmean',source2='iaf',threshold=0.5)
+                    reportmsg += rep
+                    warningmsg += warn
+                    rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,blvhmean,blvfmean,source1='yearmean',source2='blv',threshold=1.0)
+                    reportmsg += rep
+                    warningmsg += warn
+                    reportmsg += "Step 6: yearlmean.imo contains data from {} until {} \n".format(num2date(yearmeandata.ndarray[0][0]).year,num2date(yearmeandata.ndarray[0][-1]).year)
+                    
+                if not seconddata == 'None':
+                    primeheader = secdata.header
+                elif mindata: 
+                    primeheader = mindata.header
+                else:
+                    primeheader = {}
+
+                reportmsg += "\nStep 6: meta information \n"
+                reportmsg += "-----------------------\n"
+                excludelist = ['DataComponents','DataSamplingRate','DataPublicationDate','col-f','col-x','col-y','col-z','col-df','unit-col-f','unit-col-x','unit-col-y','unit-col-z','unit-col-df','DataSamplingFilter']
+                floatlist = {'DataElevation':0,'DataAcquisitionLongitude':2,'DataAcquisitionLatitude':2}
+                secmsg = ''
+                minmsg = ''
+                yearmsg = ''
+                if not primeheader == {}:
+                    if not seconddata == 'None' and mindata and yearmeandata:
+                        for key in secdata.header:
+                            refvalue = secdata.header.get(key)
+                            compvalue1 = mindata.header.get(key,'')
+                            compvalue2 = yearmeandata.header.get(key,'')
+                            if not key.startswith('col') and not key.startswith('unit'):
+                                keyname = key.replace('Data','').replace('station','')
+                                secmsg += "Step 6: (Secondary (ImagCDF/IAGA) meta) {}: {}\n".format(keyname,refvalue)
+                            if key in floatlist:
+                                refvalue = np.round(float(refvalue),floatlist.get(key))
+                                if not compvalue1 == '':
+                                    compvalue1 = np.round(float(compvalue1),floatlist.get(key))
+                                if not compvalue2 == '':
+                                    compvalue2 = np.round(float(compvalue2),floatlist.get(key))
+                            if not compvalue1 == '' and not key in excludelist:
+                                if not refvalue == compvalue1:
+                                    OK = False
+                                    try:
+                                        if refvalue.lower()[:3] == compvalue1.lower()[:3]: #check capitals
+                                            OK=True
+                                    except:
+                                        pass
+                                    if not OK:
+                                        reportmsg += "Step 6: !!! Found differences for {} between {} and {}: {} unequal {}\n".format(key,'sec','min',refvalue,compvalue1)
+                                        succlst[5] = 3
+                            if not compvalue2 == '' and not key in excludelist:
+                                if not refvalue == compvalue2:
+                                    reportmsg += "Step 6: !!! Found differences for {} between {} and {}: {} unequal {}\n".format(key,'sec','year',refvalue,compvalue2)
+                                    succlst[5] = 3
+                    if mindata and yearmeandata:
+                        for key in mindata.header:
+                            refvalue = mindata.header.get(key)
+                            compvalue1 = yearmeandata.header.get(key,'')
+                            if not key.startswith('col') and not key.startswith('unit'):
+                                keyname = key.replace('Data','').replace('station','')
+                                minmsg += "Step 6: (Primary (IAF) meta) {}: {}\n".format(keyname,refvalue)
+                                if not compvalue1 == '':
+                                    yearmsg += "Step 6: (yearmean meta) {}: {}\n".format(keyname,compvalue1)
+                            if key in floatlist:
+                                refvalue = np.round(float(refvalue),floatlist.get(key))
+                                if not compvalue1 == '':
+                                    compvalue1 = np.round(float(compvalue1),floatlist.get(key))
+                            if not compvalue1 == '' and not key in excludelist:
+                                if not refvalue == compvalue1:
+                                    reportmsg += "Step 6: !!! Found differences for {} between {} and {}: {} unequal {}\n".format(key,'min','year',refvalue,compvalue1)
+                                    succlst[5] = 3
+
+                    metamsg = secmsg+minmsg+yearmsg
+                    reportmsg += metamsg
+
+                if succlst[5] <= 2:
+                    reportmsg += "\n----> Step 6: successfully passed\n"
+                elif succlst[5] <= 4:
+                    reportmsg += "\n----> Step 6: passed with some issues to be reviewed\n"
+                self.changeStatusbar("Step 6: yearly means and meta information ... Done")
+
+                report = createReport(reportmsg, warningmsg, errormsg)
+                opendlg = True
+                if opendlg:
+                    dlg = CheckDataReportDialog(None, title='Data check step 6 - report', report=report, rating=succlst[5], step=list(map(str,succlst)), laststep=laststep)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        saveReport(dlg.contlabel, dlg.report)
+                    else:
+                        dlg.Destroy()
+                        self.changeStatusbar("Ready")
+                        locale.setlocale(locale.LC_TIME, old_loc)
+                        return
+
+            if checkparameter['step7']:
+                succlst[6] = 1
+                reportmsg += "\n"
+                reportmsg += "#######################################\n"            
+                reportmsg += "Step 7:\n"
+                reportmsg += "#######################################\n"
+                reportmsg += "Def.: K values and Kp\n\n"
+
+                posk = KEYLIST.index('var1')
+                # compare content of dka and iaf
+                if dkadata:
+                    dkadata = read(dkapath)
+                    if dkadata.amplitude('var1') > 9:
+                        warningmsg += 'Step 7: k values in DKA file exceed 9 !!!\n'
+                        succlst[6] = 5
+
+                try:
+                    iafk, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth,resolution='k')
+                    if iafk.amplitude('var1') > 9:
+                        warningmsg += 'Step 7: k values in IAF exceed 9 !!!\n'
+                        succlst[6] = 5
+                    if self.InitialRead(iafk):
+                        self.OnInitialPlot(self.plotstream)
+                except:
+                    errormsg += "Step 7: Could not extract k values from IAF file\n"
+                    dayprob = True
+                    succlst[6] = 5
+
+                if dkadata and succlst[6] < 5:
+                    kdiffs = subtractStreams(iafk, dkadata)
+                    if kdiffs.length()[0] > 0:
+                        posk = KEYLIST.index('var1')
+                        for el in kdiffs.ndarray[posk]:
+                            if el >= 0.1:
+                                warningmsg += 'Step 7: difference between k in IAF and DKA files at {}: IAF: {}, DKA: {}\n'.format(num2date(kdiffs.ndarray[0][idx]).replace(tzinfo=None), iafk.ndarray[posk][idx], dkadata.ndarray[posk][idx])
+                                succlst[6] = 4
+                    else:
+                        warningmsg += 'Step 7: k value check could not be performed\n'
+                        succlst[6] = 3
+                else:
+                    warningmsg += 'Step 7: k value check could not be performed\n'
+                    succlst[6] = 3
+
+                if succlst[6] <= 2:
+                    reportmsg += "Step 7: k values ... OK\n"
+                    reportmsg += "\n----> Step 7: successfully passed\n"
+                elif succlst[6] <= 4:
+                    reportmsg += "\n----> Step 7: passed with some issues to be reviewed\n"
+                self.changeStatusbar("Step 7: k values OK ... Done")
+
+                report = createReport(reportmsg, warningmsg, errormsg)
+                opendlg = True
+                if opendlg:
+                    dlg = CheckDataReportDialog(None, title='Data check step 6 - report', report=report, rating=succlst[6], step=list(map(str,succlst)), laststep=laststep)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        saveReport(dlg.contlabel, dlg.report)
+                    else:
+                        dlg.Destroy()
+                        self.changeStatusbar("Ready")
+                        locale.setlocale(locale.LC_TIME, old_loc)
+                        return
+
+
+        locale.setlocale(locale.LC_TIME, old_loc)
+        self.changeStatusbar("Check data finished - Ready")
+
+
     # ################
     # page methods:
 
@@ -2570,6 +3919,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
+
+
+    def onPowerButton(self, event):
+        """
+        DESCRIPTION
+             Calculates Power spectrum of one component
+        """
+        self.changeStatusbar("Power spectrum ...")
+
+        # Open a dialog for paramater selction
+        import magpy.mpplot as mp
+        mp.plotPS(self.plotstream, 'x')
+
+
+    def onSpectrumButton(self, event):
+        """
+        DESCRIPTION
+             Calculates Power spectrum of one component
+        """
+        self.changeStatusbar("Spectral plot ...")
+
+        # Open a dialog for paramater selction
+        import magpy.mpplot as mp
+        mp.plotSpectrogram(self.plotstream, 'x')
+
 
     # ------------------------------------------------------------------------------------------
     # ################
@@ -3829,17 +5203,101 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def onConnectMQTTButton(self, event):
-        dlg = wx.MessageDialog(self, "MQTT protocol not yet implemented!\n"
-                        "... coming soon\n",
-                        "MQTT connection", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
 
-        #success = False
-        #if success:
-        #    self.menu_p.com_page.startMonitorButton.Enable()
-        #    self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-        #    self.menu_p.com_page.frequSlider.Enable()         # always
+        success = False
+        dlg = SelectMARTASDialog(None, title='Select MARTAS - MQTT',options=self.options)
+        if dlg.ShowModal() == wx.ID_OK:
+            martasaddress1 = dlg.addressComboBox.GetValue()
+            martasaddress = dlg.newTextCtrl.GetValue()
+            if martasaddress == '':
+                martasaddress = martasaddress1
+            martasport = dlg.portTextCtrl.GetValue()
+            #martasdelay = dlg.delayTextCtrl.GetValue()
+            martasstationid = dlg.stationidTextCtrl.GetValue()
+            martasuser = dlg.userTextCtrl.GetValue()
+            martaspasswd = dlg.pwdTextCtrl.GetValue()
+            martasdelay = 60
+            martasprotocol = 'mqtt' # dlg.pwdTextCtrl.GetValue()
+            success = True
+        else:
+            dlg.Destroy()
+            return
+
+        self.menu_p.rep_page.logMsg('- Selected MARTAS maschine ({},{}) for monitoring ...'.format(martasaddress,martasprotocol))
+
+        pad = 5
+        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+        # start monitoring parameters
+        unitlist = []
+
+        # get header information from data stream
+        try:
+            import paho.mqtt.client as mqtt
+            from magpy.collector import collectormethods as colsup
+            mqttimport = True
+        except:
+            mqttimport = False
+        print ("TEST", colsup.identifier)
+
+        if mqttimport:
+            client = mqtt.Client()
+            client.on_connect = colsup.on_connect
+            client.on_message = colsup.on_message
+
+            print (martasaddress)
+            #client.connect("192.168.178.84", 1883, 60)
+            client.connect(martasaddress, int(martasport), int(martasdelay))
+
+            loopcnt = 0
+            success = True
+            while loopcnt < 200: #colsup.identifier == {} and loopcnt < 100:
+                loopcnt += 1
+                client.loop(.1) #blocks for 100ms
+                print (loopcnt)
+                if loopcnt > 600:
+                    success = False
+                    break
+
+            if success:
+                self.menu_p.com_page.startMonitorButton.Enable()
+                self.menu_p.com_page.getMARTASButton.Disable()
+                self.menu_p.com_page.getMQTTButton.Disable()
+                self.menu_p.com_page.mqttLabel.SetBackgroundColour(wx.GREEN)
+                self.menu_p.com_page.mqttLabel.SetValue('connected to {}'.format(martasaddress))
+                self.menu_p.com_page.logMsg('Begin monitoring...')
+                self.menu_p.com_page.logMsg(' - Selected MARTAS {} protocol'.format(martasprotocol))
+                self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+                self.menu_p.com_page.frequSlider.Enable()         # always
+
+                sensorlist = []
+                for key in colsup.identifier:
+                    print ("key", key)
+                    sensorid = key.split(':')[0]
+                    if not sensorid in sensorlist:
+                        sensorlist.append(sensorid)
+
+                print ("Sensorlist", sensorlist)
+                # TODO open a dialog to select the sensor to be monitored
+                sensorid = 'ENV05_3_0001'
+                self.menu_p.com_page.logMsg(' - Sensors: {}'.format(sensorid))
+
+
+                pad = 5
+                currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+                parameter = colsup.identifier.get(sensorid+':keylist')
+                parameter = ','.join(parameter)
+                unitlist = colsup.identifier.get(sensorid+':unitlist')
+                period = float(self.menu_p.com_page.frequSlider.GetValue())
+                covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+                sr = 1
+                coverage = covval/sr
+                limit = period/sr
+                datainfoid = sensorid+'_0001'
+
+                self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol}
+                self.monitorSource='MARTAS'
+            else:
+                self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
 
 
     def onStartMonitorButton(self, event):
@@ -3871,10 +5329,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         elif self.monitorSource=='MARTAS':
             self.plot_p.t1_stop.clear()
             self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
-            self.plot_p.startMARTASMonitor()
+            self.plot_p.startMARTASMonitor(self.plot_p.datavars.get(12))
             # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
-            #self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
-            #self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format('- address -'))
+            self.menu_p.com_page.mqttLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.mqttLabel.SetValue('connected to {}'.format(self.plot_p.datavars.get(9)))
 
     def _monitor2stream(self,array, db=None, dataid=None,header = {}):
         """
