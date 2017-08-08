@@ -51,6 +51,7 @@ import paho.mqtt.client as mqtt
 
 global identifier
 identifier = {}
+streamdict = {}
 stream = DataStream()
 
 def analyse_meta(header,sensorid):
@@ -111,19 +112,22 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     sensorid = msg.topic.strip('wic').replace('/','').strip('meta').strip('data')
-    print ("SensorID", sensorid)
+    print ("Receiving message for", sensorid)
     # define a new data stream for each non-existing sensor
 
     metacheck = identifier.get(sensorid+':packingcode','')
-    print ("Too be done: separate sensors ... and Data stream for each sensor")
+    #print ("Too be done: separate sensors ... and Data stream for each sensor")
 
     if msg.topic.endswith('meta') and metacheck == '':
-        print ("Found header:", str(msg.payload))
+        #print ("Found header:", str(msg.payload))
         analyse_meta(str(msg.payload),sensorid)
     elif msg.topic.endswith('data'):
         if not metacheck == '':
             stream.ndarray = interprete_data(msg.payload, identifier, stream, sensorid)
-            print("Now I know... ", sensorid, stream.ndarray)
+            streamdict[sensorid] = stream.ndarray  # to store data from different sensors
+            post1 = KEYLIST.index('t1')
+            posvar1 = KEYLIST.index('var1')
+            #print(" - Meta info existing:", sensorid, num2date(stream.ndarray[0][0]),stream.ndarray[post1],stream.ndarray[posvar1])
             # create a magpy ndarray from payload (with lenght 1 if only one line is send)
             #coverage = 3
             #array = [ar[-coverage:] if len(ar) > coverage else ar for ar in array ]

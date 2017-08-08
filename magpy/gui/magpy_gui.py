@@ -283,20 +283,41 @@ class PlotPanel(wx.Panel):
         sumtime = 0
         #        while sumtime<self.datavars[7] and (not self.t1_stop.is_set()):
         #step = 0.1
-        print ("HEERE", self.datavars[7], self.datavars[2])
+        print ("Updating", self.datavars[0][:-5], self.datavars[7], self.datavars[2])
         pos = KEYLIST.index('t1')
+        posvar1 = KEYLIST.index('var1')
+        #OK = True
+        #if OK:
+        while sumtime<self.datavars[2]:
+            client.loop(1)
+            sumtime = sumtime+1
+            #client.loop_start()
+            print ('Dict:', self.datavars[0][:-5])
+            li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
+            for idx,el in enumerate(self.array):
+                el.extend(li[idx])
+            self.array = [el[-int(self.datavars[6]):] for el in self.array]
+            #removeduplicates()
+            print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
+            #client.loop_stop()
+        if len(self.array[0]) > 2:
+            array = self.array
+            self.monitorPlot(array)
 
+        """
         while sumtime<self.datavars[2]:
             client.loop(1)
             sumtime = sumtime+1
             li = colsup.stream.ndarray   # li is an ndarray
+            print ("Found data", li)
             for idx,el in enumerate(self.array):
                 el.extend(li[idx])
             self.array = [el[-int(self.datavars[6]):] for el in self.array]
-            print (self.array[0],self.array[pos])
+            #print (self.array[0],self.array[pos])
         if len(self.array[0]) > 2:
             array = self.array
             self.monitorPlot(array)
+        """
 
         """
         client.loop(10) #blocks for period in seconds
@@ -319,6 +340,7 @@ class PlotPanel(wx.Panel):
         PARAMETERS:
             kwargs:  - all plot args
         """
+        from magpy.collector import collectormethods as colsup
 
         dataid = self.datavars[0]
         parameter = self.datavars[1]
@@ -354,11 +376,36 @@ class PlotPanel(wx.Panel):
         self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
 
         self.figure.clear()
-        t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
-        t1.start()
+        stop_command_send = False
+        pos = KEYLIST.index('t1')
+        posvar1 = KEYLIST.index('var1')
+        print ("Running MQTT...")
+        while not stop_command_send:
+            client.loop_forever()
+
+            """
+            step = 0.1
+            client.loop(step)
+            sumtime = sumtime+step
+            print ('Dict:', self.datavars[0][:-5])
+            # if data coming
+            li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
+            for idx,el in enumerate(self.array):
+                el.extend(li[idx])
+            self.array = [el[-int(self.datavars[6]):] for el in self.array]
+            #removeduplicates()
+            print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
+            #client.loop_stop()
+            if sumtime/10. == self.datavars[7]:
+                sumtime = 0
+                array = self.array
+                self.monitorPlot(array)
+
+        #t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
+        #t1.start()
         # Display the plot
         self.canvas.draw()
-
+            """
 
     def startMARCOSMonitor(self,**kwargs):
         """
@@ -451,10 +498,38 @@ class PlotPanel(wx.Panel):
 
                 self.figure.clear()
 
-                t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
-                t1.start()
-                # Display the plot
-                self.canvas.draw()
+                stop_command_send = False
+                sumtime = 0
+                pos = KEYLIST.index('t1')
+                posvar1 = KEYLIST.index('var1')
+                print ("Running MQTT...")
+                while not stop_command_send:
+                    #client.loop_forever()
+
+                    step = 0.1
+                    client.loop(step)
+                    sumtime = sumtime+step
+                    print ('Dict:', self.datavars[0][:-5])
+                    # if data coming
+                    li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
+                    for idx,el in enumerate(self.array):
+                        if not el[0] == li[0]:
+                            el.extend(li[idx])
+                    self.array = [el[-int(self.datavars[6]):] for el in self.array]
+                    #removeduplicates()
+                    print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
+                    #client.loop_stop()
+                    if sumtime/10. == self.datavars[7]:
+                        print ("YIPHIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+                        sumtime = 0
+                        array = self.array
+                        self.monitorPlot(array)
+                    self.canvas.draw()
+
+                        #t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
+                        #t1.start()
+                        # Display the plot
+                        #self.canvas.draw()
 
         """
         # Test whether data is available at all with selected keys and dataid
@@ -5248,6 +5323,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #client.connect("192.168.178.84", 1883, 60)
             client.connect(martasaddress, int(martasport), int(martasdelay))
 
+            self.changeStatusbar("Scanning for MQTT broadcasts ... approx 20 sec")
+
             loopcnt = 0
             success = True
             while loopcnt < 200: #colsup.identifier == {} and loopcnt < 100:
@@ -5259,6 +5336,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     break
 
             if success:
+                self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
                 self.menu_p.com_page.startMonitorButton.Enable()
                 self.menu_p.com_page.getMARTASButton.Disable()
                 self.menu_p.com_page.getMQTTButton.Disable()
@@ -5297,6 +5375,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol}
                 self.monitorSource='MARTAS'
             else:
+                self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
                 self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
 
 
@@ -5318,6 +5397,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.plot_p.datavars[6] = coverage
         self.plot_p.datavars[7] = period
 
+        self.changeStatusbar("Running monitor ...")
         # Obtain the last values from the data base with given dataid and limit
         # A DB query for 10 min 10Hz data needs approx 0.3 sec
         if  self.monitorSource=='MARCOS':
@@ -5376,6 +5456,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.com_page.marcosLabel.SetValue('not connected')
         self.menu_p.com_page.martasLabel.SetValue('not connected')
         self.menu_p.com_page.mqttLabel.SetValue('not connected')
+        self.changeStatusbar("Ready")
 
 
     def onLogDataButton(self, event):
