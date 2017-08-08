@@ -2123,33 +2123,34 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 export = True
 
             if export == True:
-                if fileformat == 'BLV':
-                    print ("Writing BLV data")  # add function here
-                    print ("Function", self.plotopt['function'])
-                    year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
-                    # use functionlist as kwarg in write method
-                    self.plotstream.write(path,
-                                filenamebegins=filenamebegins,
-                                filenameends=filenameends,
-                                dateformat=dateformat,
-                                mode=mode,
-                                year=year,
-                                coverage=coverage,
-                                format_type=fileformat)
-                    mode = 'replace'
-                else:
-                    self.plotstream.write(path,
-                                filenamebegins=filenamebegins,
-                                filenameends=filenameends,
-                                dateformat=dateformat,
-                                mode=mode,
-                                coverage=coverage,
-                                format_type=fileformat)
+                try:
+                    if fileformat == 'BLV':
+                        print ("Writing BLV data")  # add function here
+                        print ("Function", self.plotopt['function'])
+                        year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
+                        # use functionlist as kwarg in write method
+                        self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    year=year,
+                                    coverage=coverage,
+                                    format_type=fileformat)
+                        mode = 'replace'
+                    else:
+                        self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    coverage=coverage,
+                                    format_type=fileformat)
 
-                self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
-                self.changeStatusbar("Data written ... Ready")
-            except:
-                self.menu_p.rep_page.logMsg("Writing failed - Permission?")\
+                    self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
+                    self.changeStatusbar("Data written ... Ready")
+                except:
+                    self.menu_p.rep_page.logMsg("Writing failed - Permission?")
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()

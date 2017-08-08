@@ -2669,9 +2669,6 @@ CALLED BY:
 
             return bcdata
 
-                self.header['DataComponents'] = 'HDZ'
-            return self
-
         elif func:
             # 1.) move content of basevalue function to columns 'x','y','z'?
             try:
