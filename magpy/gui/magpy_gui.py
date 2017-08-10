@@ -2546,10 +2546,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #import glob
                 iafcnt = len(glob.glob(os.path.join(minutepath,"*.BIN")))
                 if iafcnt > 0 and iafpath == '':
-                    iafpath = os.path.join(minutepath,"*.BIN")                    
-                iafcnt += len(glob.glob(os.path.join(minutepath,"*.bin")))
-                if iafcnt > 0 and iafpath == '':
-                    iafpath = os.path.join(minutepath,"*.bin")                    
+                    iafpath = os.path.join(minutepath,"*.BIN")
+                else:
+                    # windows is not case-sensitive ....
+                    iafcnt += len(glob.glob(os.path.join(minutepath,"*.bin")))
+                    if iafcnt > 0 and iafpath == '':
+                        iafpath = os.path.join(minutepath,"*.bin")                    
                 if not iafcnt == 12:
                     succlst[0] = 6
                     errormsg += "Step 1: !!! IAF error: didn't find 12 monthly files\n"
@@ -2557,27 +2559,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     reportmsg += "Step 1: +++ Correct amount of binary files\n"
                 blvcnt = len(glob.glob(os.path.join(minutepath,"*.blv")))
                 if blvcnt > 0 and blvpath == '':
-                    blvpath = os.path.join(minutepath,"*.blv")                    
-                blvcnt += len(glob.glob(os.path.join(minutepath,"*.BLV")))
-                if blvcnt > 0 and blvpath == '':
-                    blvpath = os.path.join(minutepath,"*.BLV")
+                    blvpath = os.path.join(minutepath,"*.blv")
+                else:
+                    blvcnt += len(glob.glob(os.path.join(minutepath,"*.BLV")))
+                    if blvcnt > 0 and blvpath == '':
+                        blvpath = os.path.join(minutepath,"*.BLV")
                 readmecnt = len(glob.glob(os.path.join(minutepath,"README*")))
                 readmecnt += len(glob.glob(os.path.join(minutepath,"readme*")))
                 readmecnt += len(glob.glob(os.path.join(minutepath,"Readme*")))
                 dkacnt = len(glob.glob(os.path.join(minutepath,"*.dka")))
                 if dkacnt > 0 and dkapath == '':
                     dkapath = os.path.join(minutepath,"*.dka")
-                dkacnt += len(glob.glob(os.path.join(minutepath,"*.DKA")))
-                if dkacnt > 0 and dkapath == '':
-                    dkapath = os.path.join(minutepath,"*.DKA")
+                else:
+                    dkacnt += len(glob.glob(os.path.join(minutepath,"*.DKA")))
+                    if dkacnt > 0 and dkapath == '':
+                        dkapath = os.path.join(minutepath,"*.DKA")
                 yearmeancnt = len(glob.glob(os.path.join(minutepath,"YEARMEAN*")))
                 if yearmeancnt > 0 and yearmeanpath == '':
                     yearmeanpath = os.path.join(minutepath,"YEARMEAN*")
-                yearmeancnt += len(glob.glob(os.path.join(minutepath,"yearmean*")))
-                if yearmeancnt > 0 and yearmeanpath == '':
-                    yearmeanpath = os.path.join(minutepath,"yearmean*")
+                else:
+                    yearmeancnt += len(glob.glob(os.path.join(minutepath,"yearmean*")))
+                    if yearmeancnt > 0 and yearmeanpath == '':
+                        yearmeanpath = os.path.join(minutepath,"yearmean*")
                 pngcnt = len(glob.glob(os.path.join(minutepath,"*.png")))
-                pngcnt += len(glob.glob(os.path.join(minutepath,"*.PNG")))
+                if pngcnt < 1:
+                    pngcnt += len(glob.glob(os.path.join(minutepath,"*.PNG")))
                 if not blvcnt == 1:
                     warningmsg += "Step 1: (warning)  No BLV data present\n"
                     blvdata = False
@@ -2663,11 +2669,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         opendlg = True
         if opendlg:
             dlg = CheckDataReportDialog(None, title='Data check step 1 - report', report=report, rating=succlst[0], step=list(map(str,succlst)), laststep=laststep)
-            if dlg.ShowModal() == wx.ID_OK:
+            dlg.ShowModal()
+            if dlg.moveon:
                 saveReport(dlg.contlabel, dlg.report)
             else:
                 dlg.Destroy()
                 locale.setlocale(locale.LC_TIME, old_loc)
+                self.changeStatusbar("Ready")
                 return
 
         if succlst[0] < 6:
@@ -2783,12 +2791,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 opendlg = True
                 if opendlg:
                     dlg = CheckDataReportDialog(None, title='Data check step 2 - report', report=report, rating=max(list(map(int,succlst))), step=list(map(str,succlst)), laststep=laststep)
-                    if dlg.ShowModal() == wx.ID_OK:
+                    dlg.ShowModal()
+                    if dlg.moveon:
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        self.changeStatusbar("Ready")
                         locale.setlocale(locale.LC_TIME, old_loc)
+                        self.changeStatusbar("Ready")
                         return
 
             if checkparameter['step3']:
@@ -3033,12 +3042,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 opendlg = True
                 if opendlg:
                     dlg = CheckDataReportDialog(None, title='Data check step 3 - report', report=report, rating=max(list(map(int,succlst))), step=list(map(str,succlst)), laststep=laststep)
-                    if dlg.ShowModal() == wx.ID_OK:
+                    dlg.ShowModal()
+                    if dlg.moveon:
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        self.changeStatusbar("Ready")
                         locale.setlocale(locale.LC_TIME, old_loc)
+                        self.changeStatusbar("Ready")
                         return
 
             if checkparameter['step4']:
@@ -3197,12 +3207,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 opendlg = True
                 if opendlg:
                     dlg = CheckDataReportDialog(None, title='Data check step 4 - report', report=report, rating=max(list(map(int,succlst))), step=list(map(str,succlst)), laststep=laststep)
-                    if dlg.ShowModal() == wx.ID_OK:
+                    dlg.ShowModal()
+                    if dlg.moveon:
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        self.changeStatusbar("Ready")
                         locale.setlocale(locale.LC_TIME, old_loc)
+                        self.changeStatusbar("Ready")
                         return
 
 
@@ -3304,12 +3315,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 opendlg = True
                 if opendlg:
                     dlg = CheckDataReportDialog(None, title='Data check step 5 - report', report=report, rating=succlst[4], step=list(map(str,succlst)), laststep=laststep)
-                    if dlg.ShowModal() == wx.ID_OK:
+                    dlg.ShowModal()
+                    if dlg.moveon:
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        self.changeStatusbar("Ready")
                         locale.setlocale(locale.LC_TIME, old_loc)
+                        self.changeStatusbar("Ready")
                         return
 
             if checkparameter['step6']:
@@ -3465,12 +3477,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 opendlg = True
                 if opendlg:
                     dlg = CheckDataReportDialog(None, title='Data check step 6 - report', report=report, rating=succlst[5], step=list(map(str,succlst)), laststep=laststep)
-                    if dlg.ShowModal() == wx.ID_OK:
+                    dlg.ShowModal()
+                    if dlg.moveon:
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        self.changeStatusbar("Ready")
                         locale.setlocale(locale.LC_TIME, old_loc)
+                        self.changeStatusbar("Ready")
                         return
 
             if checkparameter['step7']:
@@ -3527,12 +3540,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 opendlg = True
                 if opendlg:
                     dlg = CheckDataReportDialog(None, title='Data check step 6 - report', report=report, rating=succlst[6], step=list(map(str,succlst)), laststep=laststep)
-                    if dlg.ShowModal() == wx.ID_OK:
+                    dlg.ShowModal()
+                    if dlg.moveon:
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        self.changeStatusbar("Ready")
                         locale.setlocale(locale.LC_TIME, old_loc)
+                        self.changeStatusbar("Ready")
                         return
 
 

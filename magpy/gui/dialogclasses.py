@@ -4196,6 +4196,7 @@ class CheckDataReportDialog(wx.Dialog):
             self.contlabel = 'Save'
         else:
             self.contlabel = 'Continue'
+        self.moveon = False
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -4217,7 +4218,7 @@ class CheckDataReportDialog(wx.Dialog):
         self.reportLabel = wx.StaticText(self, label="Data checking report:",size=(300,30))
         self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
         self.ratingTextCtrl = wx.TextCtrl(self, value="Overall rating: {}".format(self.rating), size=(30,30))
-        self.continueButton = wx.Button(self, wx.ID_OK, label=self.contlabel, size=(160,30))
+        self.continueButton = wx.Button(self, label=self.contlabel, size=(160,30))
         self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
         self.step1TextCtrl = wx.TextCtrl(self, value=self.step[0], size=(30,30))
@@ -4235,16 +4236,24 @@ class CheckDataReportDialog(wx.Dialog):
         self.step6Label = wx.StaticText(self, label="Step 6",size=(80,30))
         self.step7Label = wx.StaticText(self, label="Step 7",size=(80,30))
 
-        self.ratingTextCtrl.Disable()
-        self.reportTextCtrl.Disable()
-        self.step1TextCtrl.Disable()
-        self.step2TextCtrl.Disable()
-        self.step3TextCtrl.Disable()
-        self.step4TextCtrl.Disable()
-        self.step5TextCtrl.Disable()
-        self.step6TextCtrl.Disable()
-        self.step7TextCtrl.Disable()
-        
+        #self.reportTextCtrl.Disable()
+        #self.step1TextCtrl.Disable()
+        #self.step2TextCtrl.Disable()
+        #self.step3TextCtrl.Disable()
+        #self.step4TextCtrl.Disable()
+        #self.step5TextCtrl.Disable()
+        #self.step6TextCtrl.Disable()
+        #self.step7TextCtrl.Disable()
+        #self.ratingTextCtrl.Disable()
+        self.ratingTextCtrl.SetEditable(False)
+        self.step1TextCtrl.SetEditable(False)
+        self.step2TextCtrl.SetEditable(False)
+        self.step3TextCtrl.SetEditable(False)
+        self.step4TextCtrl.SetEditable(False)
+        self.step5TextCtrl.SetEditable(False)
+        self.step6TextCtrl.SetEditable(False)
+        self.step7TextCtrl.SetEditable(False)
+
         for idx, rating in enumerate(self.step):
             self.putColor(rating, idx+1)
 
@@ -4318,8 +4327,14 @@ class CheckDataReportDialog(wx.Dialog):
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        self.continueButton.Bind(wx.EVT_BUTTON, self.OnContinue)
 
     def OnClose(self, e):
+        self.moveon = False
+        self.Close(True)
+
+    def OnContinue(self, e):
+        self.moveon = True
         self.Close(True)
 
 
