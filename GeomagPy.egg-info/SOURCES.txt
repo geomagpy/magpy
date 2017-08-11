@@ -16,6 +16,7 @@ magpy/version.py
 magpy/acquisition/STANDARD_KEYS.py
 magpy/acquisition/__init__.py
 magpy/acquisition/acquisition.py
+magpy/acquisition/acquisitionsupport.py
 magpy/acquisition/arduinoprotocol.py
 magpy/acquisition/bm35protocol.py
 magpy/acquisition/callprotocol.py

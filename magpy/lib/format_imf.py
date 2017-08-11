@@ -2414,7 +2414,7 @@ def writeBLV(datastream, filename, **kwargs):
         if diff:
             #print ("writeBLV: Here", t, diff.length()[0])
             posdf = KEYLIST.index('df')
-            indext = [np.abs(diff.ndarray[0]-t).argmin()]
+            indext = [np.abs(np.asarray(diff.ndarray[0])-t).argmin()]
             #indext = [i for i,tpos in enumerate(diff.ndarray[0]) if num2date(tpos).date() == num2date(t).date()]
             #print("Hello", posdf, diff.ndarray[0], diff.ndarray[posdf], len(diff.ndarray[0]),indext, t)
             #                                                     []       365           [0] 735599.5
