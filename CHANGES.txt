@@ -1,8 +1,23 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
+
 -------------------------------------------------
-####v<0.3.96>, <2017-08-xx> -- On the way to beta.
+####v<0.3.97>, <2017-09-26> -- On the way to beta.
+
+v0.3.97 fixes:
+
+v0.3.97 additions:
+
+v0.3.97 removals:
+None
+
+v0.3.97 other changes:
+None
+
+
+-------------------------------------------------
+####v<0.3.96>, <2017-08-26> -- On the way to beta.
 
 v0.3.96 fixes:
     + Flags always stored with comment 'unknown reason' in data base - fixed
