@@ -741,10 +741,13 @@ CALLED BY:
             ll = [len(elem) for elem in self.ndarray]
             return ll
         else:
-            if len(self) == 1 and np.isnan(self[0].time):
+            try: ## might fail if LineStruct is empty (no time)
+                if len(self) == 1 and np.isnan(self[0].time):
+                    return [0]
+                else:
+                    return [len(self)]
+            except:
                 return [0]
-            else:
-                return [len(self)]
 
     def replace(self, datlst):
         # Replace in stream
@@ -2107,6 +2110,14 @@ CALLED BY:
           func  = data.baseline(didata,knotstep=0.1,plotbaseline=True)
           # fixed time range
           func  = data.baseline(didata,startabs='2015-02-01',endabs='2015-08-24',extradays=0)
+        OR:
+          funclist = []
+          funclist.append(rawdata.baseline(basevalues, extradays=0, fitfunc='poly',
+                          fitdegree=1,startabs='2009-01-01',endabs='2009-03-22'))
+          funclist.append(rawdata.baseline(basevalues, extradays=0, fitfunc='poly',
+                          fitdegree=1,startabs='2009-03-22',endabs='2009-06-27'))
+          funclist.append(rawdata.baseline(basevalues, extradays=0, fitfunc='spline',
+                          knotstep=0.2,startabs='2009-06-27',endabs='2010-02-01'))
 
         stabilitytest (bool)
         """
@@ -4058,6 +4069,7 @@ CALLED BY:
             #print len(x)
             if len(val)>1 and fitfunc == 'spline':
                 try:
+                    logger.error('Interpolation: Testing knots (knotsteps = {}), (len(val) = {}'.format(knotstep, len(val)))
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
                     if len(knots) > len(val):
                         knotstep = knotstep*4
@@ -4065,8 +4077,8 @@ CALLED BY:
                         logger.warning('Too many knots in spline for available data. Please check amount of fitted data in time range. Trying to reduce resolution ...')
                     ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
                 except:
-                    logger.error('Value error in fit function - likely reason: no valid numbers or too few numbers for fit')
-                    print ("Checking", key, len(val), val, sp, knotstep)
+                    logger.error('Value error in fit function - likely reason: no valid numbers or too few numbers for fit: len(knots)={} > len(val)={}? '.format(len(knots),len(val)))
+                    print ("Checking", key, len(val), val, sp, knotstep, len(knots))
                     raise ValueError("Value error in fit function - not enough data or invalid numbers")
                     return
                 #print nt, val, len(knots), knots
@@ -4699,7 +4711,7 @@ CALLED BY:
 
         return self
 
-    def flagliststats(self,flaglist):
+    def flagliststats(self,flaglist, intensive=False):
         """
         DESCRIPTION:
             Provides some information on flag statistics
@@ -4717,16 +4729,32 @@ CALLED BY:
         print ('A) Total contents: {}'.format(len(flaglist)))
         print ('')
         print ('B) Content for each ID:')
-        print (flaglist[0], len(flaglist[0]))
+        #print (flaglist[0], len(flaglist[0]))
         if len(flaglist[0]) > 6:
             ids = [el[5] for el in flaglist]
             uniquenames = list(set(ids))
         for name in uniquenames:
             amount = len([el[0] for el in flaglist if el[5] == name])
             amountlist.append([name,amount])
+            if intensive:
+                flagli = [el for el in flaglist if el[5] == name]
+                index = [el[3] for el in flagli]
+                uniqueindicies = list(set(index))
+                reasons = [el[4] for el in flagli]
+                uniquereasons = list(set(reasons))
+                intensiveinfo = []
+                for reason in uniquereasons:
+                    num = len([el for el in flagli if reason == el[4]]) 
+                    intensiveinfo.append([reason,num]) 
+                intensiveinfo = sorted(intensiveinfo,key=lambda x: x[1])
+                intensiveinfo = ["{} : {}".format(e[0],e[1]) for e in intensiveinfo]
+                amountlist[-1].append(intensiveinfo)
         amountlist = sorted(amountlist,key=lambda x: x[1])
         for el in amountlist:
             print ("Dataset: {} \t Amount: {}".format(el[0],el[1])) 
+            if intensive:
+                for ele in el[2]:
+                    print ("   {}".format(ele)) 
 
 
     def flaglistclean(self,flaglist):
@@ -4847,13 +4875,18 @@ CALLED BY:
         return res
 
 
-    def flaglistmod(self, mode='select', flaglist=[], parameter='key', value=None, newvalue=None):
+    def flaglistmod(self, mode='select', flaglist=[], parameter='key', value=None, newvalue=None, starttime=None, endtime=None):
         """
         DEFINITION:
-            Extract/Replace information in flaglist
+            Extract/Replace/Delete information in flaglist
             , keys, flagnumber, comment, startdate, enddate=None
+            mode delete: if only starttime and endtime are provided then all data inbetween is removed,
+                         if parameter and value are provided this data is removed, eventuall 
+                         only between start and endtime
         APPLICTAION
+    
         """
+        num = 0
         # convert start and end to correct format
         if parameter == 'key':
             num = 2
@@ -4862,12 +4895,46 @@ CALLED BY:
         elif parameter == 'comment':
             num = 4
 
+        if mode in ['select','replace'] or (mode=='delete' and value):
+            if starttime:
+                starttime = self._testtime(starttime)
+                flaglist = [elem for elem in flaglist if elem[1] > starttime]
+            if endtime:
+                endtime = self._testtime(endtime)
+                flaglist = [elem for elem in flaglist if elem[0] < endtime]
+        elif mode == 'delete' and not value:
+            print ("Only deleting")
+            flaglist1, flaglist2 = [],[]
+            if starttime:
+                starttime = self._testtime(starttime)
+                flaglist1 = [elem for elem in flaglist if elem[1] < starttime]
+            if endtime:
+                endtime = self._testtime(endtime)
+                flaglist2 = [elem for elem in flaglist if elem[0] > endtime]
+            flaglist1.extend(flaglist2)
+            flaglist = flaglist1
+
         if mode == 'select':
-            flaglist = [elem for elem in flaglist if elem[num] == value]
+            if num>0 and value:
+                if num == 4:
+                    flaglist = [elem for elem in flaglist if elem[num].find(value) > 0]
+                else:
+                    flaglist = [elem for elem in flaglist if elem[num] == value]
         elif mode == 'replace':
-            for idx, elem in enumerate(flaglist):
-                if elem[num] == value:
-                    flaglist[idx][num] = newvalue
+            if num>0 and value:
+                for idx, elem in enumerate(flaglist):
+                    if num == 4:
+                        if elem[num].find(value) > 0:
+                            flaglist[idx][num] = newvalue
+                    else:
+                        if elem[num] == value:
+                            flaglist[idx][num] = newvalue
+        elif mode == 'delete':
+            if num>0 and value:
+                if num == 4:
+                    flaglist = [elem for elem in flaglist if elem[num].find(value) < 0]
+                else:
+                    flaglist = [elem for elem in flaglist if not elem[num] == value]
 
         return flaglist
 
@@ -10263,9 +10330,11 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
-            logger.debug("_read: Checking format:", format_type)
+            if debug:
+                logger.info("_read: Testing format: {} ...".format(format_type))
             if isFormat(filename, format_type):
-                logger.debug("  -- found: {}".format(format_type))
+                if debug:
+                    logger.info("      -- found: {}".format(format_type))
                 foundapproptiate = True
                 break
         if not foundapproptiate:

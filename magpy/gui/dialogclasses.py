@@ -3124,10 +3124,10 @@ class InputSheetDialog(wx.Dialog):
 
             if len(fvals) > 0 and len(fvals[0]) == 2:
                 for el in fvals:
-                    if len(el) > 1 and not el in [' ','  ']:
+                    if len(el) > 1 and not el in [' ','  '] and not el[0] == '00:00:00':
                         t = testtime(el[0], datestring)
                         f = float(el[1])+fbase
-                        fline = "{} {}".format(t,f)
+                        fline = "{} {}".format(t[0],f)
                         opstring.append("{}".format(fline))
             else:
                 checkdlg = wx.MessageDialog(self, "F values:\n"
@@ -3420,6 +3420,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.FBaseTextCtrl = wx.TextCtrl(self, value="48000",size=(160,30))
         self.FValsLabel = wx.StaticText(self, label="Time,Value(+Base):",size=(160,30))
         self.FValsTextCtrl = wx.TextCtrl(self, value="time,value",size=(160,100), style = wx.TE_MULTILINE)
+        self.FLoadFromFileButton = wx.Button(self, wx.ID_YES, label="Load F Data",size=(160,30))
 
 
         f = self.VerticalLabel.GetFont()
@@ -3729,7 +3730,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         contlst.append(emptySpace)
         contlst.append((self.FInstLabel, noOptions))
         contlst.append((self.FBaseLabel, noOptions))
-        contlst.append(emptySpace)
+        contlst.append((self.FLoadFromFileButton, expandOption))
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append((self.FInstTextCtrl, noOptions))
@@ -3760,6 +3761,73 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.loadButton.Bind(wx.EVT_BUTTON, self.OnLoad)
         self.Bind(wx.EVT_RADIOBOX, self.OnFlip, self.angleRadioBox)
         self.calcButton.Bind(wx.EVT_BUTTON, self.OnCalc)
+        self.FLoadFromFileButton.Bind(wx.EVT_BUTTON, self.OnLoadF)
+
+    def OnLoadF(self, e):
+        self.dirname = os.path.expanduser('~')
+        dlg = wx.FileDialog(self, "Choose a data file with", self.dirname, "", "*.*")
+        path = ''
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+        if path == '':
+            return
+
+        def wxdate2pydate(date):
+            assert isinstance(date, wx.DateTime)
+            if date.IsValid():
+                ymd = list(map(int, date.FormatISODate().split('-')))
+                return datetime(*ymd)
+            else:
+                return None
+
+        import time
+        datet = wxdate2pydate(self.DatePicker.GetValue())
+        mintime  = wx.DateTimeFromTimeT(time.mktime(datet.timetuple()))
+        maxdate = datet+timedelta(days=1)
+        maxtime  = wx.DateTimeFromTimeT(time.mktime(maxdate.timetuple()))
+        extension = '*.*'
+        dlg = LoadDataDialog(None, title='Select timerange:',mintime=mintime,maxtime=maxtime, extension=extension)
+        if dlg.ShowModal() == wx.ID_OK:
+            stday = dlg.startDatePicker.GetValue()
+            sttime = dlg.startTimePicker.GetValue()
+            enday = dlg.endDatePicker.GetValue()
+            entime = dlg.endTimePicker.GetValue()
+            ext = dlg.fileExt.GetValue()
+
+            sd = datetime.fromtimestamp(stday.GetTicks())
+            ed = datetime.fromtimestamp(enday.GetTicks())
+            st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
+            start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
+            et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
+            end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
+
+            if isinstance(path, basestring):
+                if not path=='':
+                    #self.changeStatusbar("Loading data ... please be patient")
+                    stream = read(path_or_url=path, starttime=start, endtime=end)
+            else:
+                # assume Database
+                try:
+                    #self.changeStatusbar("Loading data ... please be patient")
+                    stream = readDB(path[0],path[1], starttime=start, endtime=end)
+                except:
+                    pass
+                    #logger.info ("Reading failed")
+        else:
+            stream = DataStream()
+
+        #self.changeStatusbar("Ready")
+        if stream.length()[0] > 0:
+            dataid = stream.header.get('DataID')
+            self.FInstTextCtrl.SetValue(dataid)
+            basevalue = 0.0
+            self.FBaseTextCtrl.SetValue(str(basevalue))
+            posf = KEYLIST.index('f')
+            ftext = ''
+            for idx, elem in enumerate(stream.ndarray[0]):
+                time = datetime.strftime(num2date(elem).replace(tzinfo=None), "%H:%M:%S")
+                ftext += "{},{:.2f}\n".format(time,stream.ndarray[posf][idx])
+            self.FValsTextCtrl.SetValue(ftext)
 
     def _degminsec2deg(self, string, back='decimal'):
         """
@@ -3922,6 +3990,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             ffield = []
             self.CodeTextCtrl.SetValue(iagacode)
             for line in datalist:
+                print ("Here", line)
                 numelements = len(line.split())
                 if line.isspace():
                     # blank line
@@ -3979,6 +4048,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                         lineel = ['Time','Angle','GC','Residual']
                     for idx,el in enumerate(posstr):
                         col = lineel[idx]
+                        #print ("Here", el, col)
                         if col == 'Time':
                             try:
                                 mdate = datetime.strptime(el,"%Y-%m-%d_%H:%M:%S")

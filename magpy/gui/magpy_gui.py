@@ -4139,7 +4139,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             stday = dlg.startDatePicker.GetValue()
             sttime = dlg.startTimePicker.GetValue()
             enday = dlg.endDatePicker.GetValue()
-            entime = dlg.startTimePicker.GetValue()
+            entime = dlg.endTimePicker.GetValue()
             ext = dlg.fileExt.GetValue()
 
             sd = datetime.fromtimestamp(stday.GetTicks())

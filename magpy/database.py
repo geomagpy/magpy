@@ -3436,6 +3436,8 @@ def db2flaglist(db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, 
 
     if sensorid in ['all','All','ALL']:
         searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS'
+        if begin or end:
+            searchsql += ' WHERE'
     else:
         searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS WHERE SensorID = "%s"' % sensorid
     if begin:
@@ -3458,8 +3460,11 @@ def db2flaglist(db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, 
         pass
     if key:
         addsql += ' AND FlagComponents LIKE "%{}%"'.format(key)
-    #print ("SQL", searchsql + addbeginsql + addendsql + addsql)
-    cursor.execute (searchsql + addbeginsql + addendsql + addsql)
+
+    sqlcommand = searchsql + addbeginsql + addendsql + addsql
+    if sensorid in ['all','All','ALL']:
+        sqlcommand = sqlcommand.replace('WHERE AND','WHERE')
+    cursor.execute (sqlcommand)
     rows = cursor.fetchall()
 
     tmp = DataStream()

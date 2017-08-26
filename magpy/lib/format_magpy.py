@@ -1097,6 +1097,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mycdf.attrs['DataFormat'] = 'MagPyCDF'
 
+    #print ("Check", mycdf.attrs)
     #def checkEqualIvo(lst):
     #    # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
     #    return not lst or lst.count(lst[0]) == len(lst)

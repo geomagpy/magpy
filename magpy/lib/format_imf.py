@@ -1087,7 +1087,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     
     """
 
-    logger.info("Writing IMAGCDF Format", filename)
+    logger.info("Writing IMAGCDF Format {}".format(filename))
     mode = kwargs.get('mode')
     addflags = kwargs.get('addflags')
     skipcompression = kwargs.get('skipcompression')

@@ -8,12 +8,15 @@ v0.3.96 fixes:
     + Flags always stored with comment 'unknown reason' in data base - fixed
     + BLV read: all values from one day stored at the same time step - was problematic for duplicate identification
     + fixed colatitude of IYFV output
+    + GUI: fixed end time input in load files
 
 v0.3.96 additions:
     + GUI: added menu item for data checkers and definitive data check option
       Data check currently supports minute (IAF) and one second (ImagCDF/IAGA02) data 
     + Added preliminary MQTT acquisition and collection support
     + GUI: added power spectrum and spectrogram plots - preliminary - options not yet available
+    + GUI: DI sheet - added possibility to load F data from file
+    + added JSON format support for DI measurements (preliminary)
 
 v0.3.96 removals:
 None

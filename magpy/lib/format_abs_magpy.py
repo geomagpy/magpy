@@ -6,6 +6,7 @@ Written by Roman Leonhardt June 2012
 """
 
 from magpy.absolutes import *
+#import magpy.absolutes as di
 
 
 def isMAGPYABS(filename):
@@ -47,6 +48,26 @@ def isAUTODIF(filename):
     except:
         return False
     if not line.startswith('AUTODIF') and not line.startswith('auto'):
+        return False
+    return True
+
+
+def isJSONABS(filename):
+    """
+    Checks whether a file is AUTODIF format.
+    """
+    try:
+        jsonfile = open(filename, 'r')
+        dataset = json.load(jsonfile)
+    except:
+        return False
+    try:
+        for idx, elem in enumerate(dataset):
+            if idx==0:
+                datadict = dataset[elem][0]
+                if not 'readings' in datadict:
+                    return False
+    except:
         return False
     return True
 
@@ -637,6 +658,150 @@ def readAUTODIF(filename, headonly=False, **kwargs):
     row.azimuth = azimuth
     row.pier = pier
     abslist.append(row)
+
+    return abslist
+
+
+def readJSONABS(filename, headonly=False, **kwargs):
+    """
+    Reading JSON Absolute format data.
+
+    Declination 1       2013-10-17      00:17:23        NaN     55      -183    90.0    281.0448
+    Declination 1       2013-10-17      00:17:31        NaN     -1      -183    90.0    281.0304
+    Declination 2       2013-10-17      00:17:54        NaN     128     -183    269.9991        280.0551
+    Declination 2       2013-10-17      00:18:02        NaN     3       -183    269.9991        280.0883
+    Declination 3       2013-10-17      00:18:17        NaN     -19     -192    269.9999        100.7341
+    Declination 3       2013-10-17      00:18:25        NaN     -15     -192    269.9999        100.7352
+    Declination 4       2013-10-17      00:18:49        NaN     193     -194    90.0007 100.9456
+    Declination 4       2013-10-17      00:18:59        NaN     12      -194    90.0007 100.9947
+
+    """
+
+    jsonfile = open(filename, 'r')
+    dataset = json.load(jsonfile)
+    stream = AbsoluteData()
+    #dirow = DILineStruct(25) ## if scale values would be provided
+    dirow = DILineStruct(24)
+
+    abslist = []
+
+    disorting = ['WestDown','EastDown','WestUp','EastUp','SouthDown','NorthUp','SouthUp','NorthDown']
+    marksorting = ['FirstMarkUp','FirstMarkDown','SecondMarkUp','SecondMarkDown']
+    measorder = ['FirstMarkUp','FirstMarkUp','FirstMarkDown','FirstMarkDown', 'EastUp','EastUp','WestUp','WestUp','EastDown','EastDown','WestDown','WestDown', 'SecondMarkUp','SecondMarkUp','SecondMarkDown','SecondMarkDown', 'SouthUp','SouthUp','NorthDown','NorthDown','SouthDown','SouthDown','NorthUp','NorthUp']
+
+    takef = True
+    flist = []
+    fcorr = 0.0
+
+    for idx, elem in enumerate(dataset):
+            #print ("New element: {} : {}".format(idx, elem))
+            if idx==0:
+                #print (dataset[elem][0])
+                datadict = dataset[elem][0]
+                for el in datadict:
+                    if not el == 'readings':
+                        # get readings after all other infos have been initialized
+                        if el == 'theodolite': #{u'serial': u'109648', u'id': 2}
+                            valdict = datadict[el]
+                            di_inst = 'theodolite{}_{}_{}'.format(valdict.get('id',''),valdict.get('serial',''),'0001')
+                        if el == 'proton_temperature':
+                            # not yet contained in dirow
+                            pass
+                        if el == 'observer': # Teresa
+                            person = datadict[el]
+                        if el == 'elect_temperature': # None
+                            # not yet contained in dirow
+                            pass
+                        if el == 'outside_temperature': # None
+                            # not yet contained in dirow
+                            pass
+                        if el == 'mark': # {u'id': 1, u'name': u'AZ', u'azimuth': 199.1383}
+                            valdict = datadict[el]
+                            azimuth = float('{}'.format(valdict.get('azimuth','')))
+                        if el == 'time': # 2016-01-29T19:48:52Z
+                            inputdate = date2num(datetime.strptime(datadict[el].strip('Z'),"%Y-%m-%dT%H:%M:%S"))
+                            #headers['analysisdate'] = adate
+                        if el == 'pier_temperature': # 22.7
+                            t = datadict[el]
+                        if el == 'reviewer': # Jake Morris
+                            # not yet contained in dirow
+                            pass
+                        if el == 'electronics': # {u'serial': u'0110', u'id': 1}
+                            valdict = datadict[el]
+                            fluxgatesensor = 'electronics{}_{}'.format(valdict.get('id',''),valdict.get('serial',''))
+                        if el == 'reviewed': # True
+                            # not yet contained in dirow
+                            pass
+                        if el == 'pier': # {u'correction': -22, u'id': 214, u'name': u'MainPCDCP'}
+                            valdict = datadict[el]
+                            pier = '{}'.format(valdict.get('name',''))
+                            fcorr = valdict.get('correction',0.0)
+                        if el == 'id':
+                            # not yet contained in dirow
+                            pass
+                        if el == 'flux_temperature': # None
+                            # not yet contained in dirow
+                            pass
+                for el in datadict: # Now only extract readings
+                    if el == 'readings':
+                        valdict = datadict[el]
+                        #print ("Length",len(valdict))
+                        for setcount, dataset in enumerate(valdict):
+                            # for each set add a new di row structure to abslist
+                            if not setcount==0:
+                                abslist.append(dirow)
+                            dirow = DILineStruct(24)
+                            dirow.pier = pier
+                            dirow.di_inst = di_inst
+                            dirow.fluxgatesensor = fluxgatesensor
+                            dirow.inputdate = inputdate
+                            dirow.azimuth = azimuth
+                            dirow.person = person
+                            dirow.t = t
+                            if setcount > -1:   # only for testing purposes 
+                                for ds in dataset:
+                                    #print (ds, dataset[ds])
+                                    if ds == 'measurements':
+                                        measurements = dataset[ds]
+                                        for meas in measurements:
+                                            #print ("Here", meas.get('type',''))
+                                            typ = meas.get('type','')
+                                            if typ in marksorting:
+                                                for idx,check in enumerate(measorder):
+                                                    if typ == check:
+                                                        dirow.hc[idx] = meas.get('angle','')
+                                            if typ in disorting:
+                                                angle = meas.get('angle','')
+                                                time = meas.get('time','')
+                                                dtime = datetime.fromtimestamp(int(time))
+                                                for idx,check in enumerate(measorder):
+                                                    if typ == check:
+                                                        # TODO Get hy and vc correctly
+                                                        if typ.startswith('South') or typ.startswith('North'):
+                                                            dirow.vc[idx] = float(meas.get('angle',0.0))
+                                                            if typ.endswith('Up'):
+                                                                dirow.hc[idx] = 90.0
+                                                            else:
+                                                                dirow.hc[idx] = 270.0
+                                                        if typ.startswith('East') or typ.startswith('West'):
+                                                            if typ.startswith('South'):
+                                                                dirow.vc[idx] = 180.0
+                                                            else:
+                                                                dirow.vc[idx] = 0.0
+                                                            dirow.hc[idx] = float(meas.get('angle',0.0))
+                                                        dirow.res[idx] = float(meas.get('residual',0.0))
+                                                        dirow.time[idx] = date2num(dtime)
+                                                if takef:
+                                                    flist.append([date2num(dtime),float(meas.get('f',''))+fcorr])
+
+                            if takef and len(flist) > 0:
+                                # sort flist
+                                for fl in flist:
+                                    dirow.ftime.append(fl[0])
+                                    dirow.f.append(fl[1])
+                                flist = [] # cleanup
+
+    abslist.append(dirow)
 
     return abslist
 

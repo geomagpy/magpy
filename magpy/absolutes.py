@@ -50,7 +50,7 @@ from magpy.transfer import *
 
 import dateutil.parser as dparser
 
-MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','AUTODIF','UNKNOWN']
+MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','AUTODIF','JSONABS','UNKNOWN']
 ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
 
 miredict = {'UA': 290.0, 'MireTower':41.80333,'MireChurch':51.1831,'MireCobenzl':353.698}
@@ -1874,6 +1874,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 difiles = [di for di in filelist if datestr2 in di]
             else:
                 difiles = [di for di in filelist if datestr in di]
+
+            if not len(difiles) > 0:
+                # could not find dates in filenames
+                difiles = [di for di in filelist]
+
+            #print ("Here", difiles, filelist)
+
             if len(difiles) > 0:
                 for elem in difiles:
                     # Get stationid and pier from name (if not provided)
