@@ -12,6 +12,10 @@ from io import open
 
 from magpy.stream import *
 
+#global variables
+MISSING_DATA = 99999
+NOT_REPORTED = 88888
+
 def isIAGA(filename):
     """
     Checks whether a file is ASCII IAGA 2002 format.
@@ -194,25 +198,35 @@ def readIAGA(filename, headonly=False, **kwargs):
             else:
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
+                # transl. row values contains a line
                 row=[]
                 # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
                 # da darin der Zeilenumbruch "\n" steht
+                # transl. Do not use the last character of "line", d.h. line [:-1],
+                # 				since this is the line break "\n"
                 for val in line[:-1].split():
                     # nur nicht-leere Spalten hinzufuegen
+                    # transl. Just add non-empty columns
                     if val.strip()!="":
                         row.append(val.strip())
 
                 # Baue zweidimensionales Array auf
+<<<<<<< HEAD
 
                 timestring = row[0]+'T'+row[1]
                 #t = '2012-06-30T23:59:60.209215'
                 array[0].append( date2num(LeapTime(timestring)) )
                 #array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
                 if float(row[3]) >= 88888.0:
+=======
+                # transl. Build two-dimensional array
+                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
+                if float(row[3]) >= NOT_REPORTED:
+>>>>>>> usgs-master-copy
                     row[3] = np.nan
-                if float(row[4]) >= 88888.0:
+                if float(row[4]) >= NOT_REPORTED:
                     row[4] = np.nan
-                if float(row[5]) >= 88888.0:
+                if float(row[5]) >= NOT_REPORTED:
                     row[5] = np.nan
                 if varstr in ['dhzf','dhzg']:
                     array[1].append( float(row[4]) )
@@ -235,7 +249,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                     array[2].append( float(row[4]) )
                     array[3].append( float(row[5]) )
                 try:
-                    if float(row[6]) < 88888:
+                    if float(row[6]) < NOT_REPORTED:
                         if varstr[-1]=='f':
                             array[4].append(float(elem[6]))
                         elif varstr[-1]=='g' and varstr=='xyzg':
@@ -251,9 +265,9 @@ def readIAGA(filename, headonly=False, **kwargs):
                             raise ValueError
                     else:
                         array[4].append(float('nan'))
-              
+
                 except:
-                    if not float(row[6]) >= 88888:
+                    if not float(row[6]) >= NOT_REPORTED:
                         array[4].append(float(row[6]))
                     else:
                         array[4].append(float('nan'))
@@ -273,7 +287,6 @@ def writeIAGA(datastream, filename, **kwargs):
     """
     Writing IAGA2002 format data.
     """
-
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
@@ -416,7 +429,6 @@ def writeIAGA(datastream, filename, **kwargs):
             ndtype = True
 
         fulllength = datastream.length()[0]
-
         # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
         #datacomp = 'EHZ'
         #datacomp = 'DHZ'
@@ -449,24 +461,24 @@ def writeIAGA(datastream, filename, **kwargs):
                 if len(datastream.ndarray[xind]) > 0:
                     xval = datastream.ndarray[xind][i]*xmult
                 else:
-                    xval = 88888.0
+                    xval = NOT_REPORTED
                 if len(datastream.ndarray[yind]) > 0:
                     yval = datastream.ndarray[yind][i]
                     if order[1] == '3':
                         yval = datastream.ndarray[yind][i]*np.cos(datastream.ndarray[zind][i]*np.pi/180.)
                 else:
-                    yval = 88888.0
+                    yval = NOT_REPORTED
                 if len(datastream.ndarray[zind]) > 0:
                     zval = datastream.ndarray[zind][i]*zmult
                 else:
-                    zval = 88888.0
+                    zval = NOT_REPORTED
                 if len(datastream.ndarray[find]) > 0:
                     if not useg:
                         fval = datastream.ndarray[find][i]
                     else:
                         fval = np.sqrt(xval**2+yval**2+zval**2)-datastream.ndarray[find][i]
                 else:
-                    fval = 88888.0
+                    fval = NOT_REPORTED
                 timeval = datastream.ndarray[0][i]
             row = ''
             try:
@@ -478,19 +490,19 @@ def writeIAGA(datastream, filename, **kwargs):
                 row = ''
                 pass
             if isnan(xval):
-                row += '%13.2f' % 88888.0
+                row += '%13.2f' % MISSING_DATA
             else:
                 row += '%13.2f' % xval
             if isnan(yval):
-                row += '%10.2f' % 88888.0
+                row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % yval
             if isnan(zval):
-                row += '%10.2f' % 88888.0
+                row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % zval
             if isnan(fval):
-                row += '%10.2f' % 88888.0
+                row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % fval
             line.append(row + '\n')

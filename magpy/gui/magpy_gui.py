@@ -54,7 +54,7 @@ def pydate2wxdate(datum):
      dmy = (tt[2], tt[1]-1, tt[0])
      #print (tt, dmy)
      return wx.DateTimeFromDMY(*dmy)
- 
+
 def wxdate2pydate(date):
      assert isinstance(date, wx.DateTime)
      if date.IsValid():
@@ -684,7 +684,7 @@ class PlotPanel(wx.Panel):
                 # used for annotations and scaling the plot of data
                 min_val = np.min(rd)
                 max_val = np.max(rd)
-   
+
                 # Add annotations for minimum and maximum temperatures
                 self.axes.annotate(r'Min: %0.1f' % (min_val),
                     xy=(dt[rd.index(min_val)], min_val),
@@ -706,9 +706,9 @@ class PlotPanel(wx.Panel):
 
         # Set the axis limits to make the data more readable
         #self.axes.axis([0,len(temps), min_t - pad,max_t + pad])
-   
+
         self.figure.canvas.draw_idle()
-   
+
         # Repack variables that need to be persistent between
         # executions of this method
         self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
@@ -755,20 +755,19 @@ class PlotPanel(wx.Panel):
         key = keys[-1]
         if not len(stream.ndarray[0])>0:
             #print ("Here")
-            t = [elem.time for elem in stream]
+            self.t = [elem.time for elem in stream]
             flag = [elem.flag for elem in stream]
-            k = [eval("elem."+keys[0]) for elem in stream]
+            self.k = [eval("elem."+keys[0]) for elem in stream]
         else:
-            t = stream.ndarray[0]
+            self.t = stream.ndarray[0]
             flagpos = KEYLIST.index('flag')
             firstcol = KEYLIST.index(key[0])
             flag = stream.ndarray[flagpos]
-            k = stream.ndarray[firstcol]
+            self.k = stream.ndarray[firstcol]
         #self.axes.af2 = self.AnnoteFinder(t,yplt,flag,self.axes)
         #self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
         #af2 = self.AnnoteFinder(t,k,flag,self.axes)
         #self.figure.canvas.mpl_connect('button_press_event', af2)
-
         self.canvas.draw()
 
     def initialPlot(self):
@@ -919,6 +918,10 @@ class MainFrame(wx.Frame):
 
         # The Status Bar
         self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
+        # Update Status Bar with plot values
+        self.plot_p.canvas.mpl_connect('motion_notify_event', self.UpdateCursorStatus)
+        # Allow flagging with double click
+        self.plot_p.canvas.mpl_connect('button_press_event', self.OnFlagClick)
 
         self.streamlist = []
         self.headerlist = []
@@ -1088,12 +1091,15 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.str_page.flagLoadButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.str_page.flagSaveButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.str_page.flagDropButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.str_page.flagMinButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.str_page.flagMaxButton)
+
         #        Meta Page
         # --------------------------
         #self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.met_page.filterButton)
         # Contains General info on top - previously on analysis page
         # add sensor id, sensor name to general info
-        # add button with GetFromDB, WriteToDB (only active when DB connected) - WriteToDB only specific dataID or all sensorsID 
+        # add button with GetFromDB, WriteToDB (only active when DB connected) - WriteToDB only specific dataID or all sensorsID
         # provide text boxes with data, sensor and station related info
         #     Edit/Review Data related meta data
         #     button
@@ -1194,7 +1200,7 @@ class MainFrame(wx.Frame):
         #collist=['b','g','m','c','y','k','b','g','m','c','y','k']
 
         # please note: symbol and colorlists are defined in ActivateControls
-        
+
         #print ("colorlist", collist[:lenkeys])
         #self.plotopt = {'labels':'None' , 'padding': 'None', 'stormphases': False, 'specialdict': {}, 'bartrange':'None', 'bgcolor': 'white', 'colorlist': ",".join(collist[:lenkeys]) ,'fullday':'False', 'grid':'True','gridcolor':'#316931', 'includeid':'False', 'labelcolor':'0.2', 'legendposition':'upper left', 'plottitle':'', 'plottype':'discontinuous', 'symbollist':",".join(self.symbollist),'t_stormphases':'None', 'opacity':'0.0'}
 
@@ -1203,10 +1209,10 @@ class MainFrame(wx.Frame):
                         'confinex':False,
                         'annotate':False,
                         'padding': None,
-                        'stormphases': False, 
-                        'specialdict': {}, 
+                        'stormphases': False,
+                        'specialdict': {},
                         'bartrange':0.06,
-                        'bgcolor': 'white', 
+                        'bgcolor': 'white',
                         'colorlist': [],
                         'fullday':False,
                         'grid':True,
@@ -1229,7 +1235,7 @@ class MainFrame(wx.Frame):
         self.dirname = dictionary.get('dirname','')
         self.dipathlist = dictionary.get('dipathlist','')
         self.options = dictionary
-        self.options['passwd'] = base64.b64decode(pwd) 
+        self.options['passwd'] = base64.b64decode(pwd)
 
 
 
@@ -1264,8 +1270,15 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagSelectionButton.Disable() # always
         self.menu_p.str_page.flagRangeButton.Disable()     # always
         self.menu_p.str_page.flagLoadButton.Disable()      # always
+        self.menu_p.str_page.flagMinButton.Disable()       # always
+        self.menu_p.str_page.flagMaxButton.Disable()       # always
+        self.menu_p.str_page.xCheckBox.Disable()           # always
+        self.menu_p.str_page.yCheckBox.Disable()           # always
+        self.menu_p.str_page.zCheckBox.Disable()           # always
+        self.menu_p.str_page.fCheckBox.Disable()           # always
+        self.menu_p.str_page.FlagIDComboBox.Disable()      # always
         self.menu_p.str_page.flagDropButton.Disable()      # activated if annotation are present
-        self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present 
+        self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
         self.menu_p.str_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
         self.menu_p.str_page.annotateCheckBox.Disable()    # activated if annotation are present
@@ -1412,7 +1425,7 @@ class MainFrame(wx.Frame):
                  value = stream.header.get(key,'')
                  #try:  # python 3
                  if not isinstance(value, basestring): # p3: str
-                     try: 
+                     try:
                          if self.plotstream._is_number(value):
                              pass
                          else:
@@ -1438,9 +1451,9 @@ class MainFrame(wx.Frame):
                 check whether valid baseline info is existing
               PARAMETER:
                 use global self.baselinedictlist
-                set baselineidxlist 
+                set baselineidxlist
               RETURNS:
-                returns baselineidxlst e.g. [1,3,4] which contains currently 
+                returns baselineidxlst e.g. [1,3,4] which contains currently
             """
             # check self.baseline dictionary
             baselineidxlst  = []
@@ -1474,6 +1487,9 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagSelectionButton.Enable() # always
         self.menu_p.str_page.flagRangeButton.Enable()     # always
         self.menu_p.str_page.flagLoadButton.Enable()      # always
+        self.menu_p.str_page.flagMinButton.Enable()       # always
+        self.menu_p.str_page.flagMaxButton.Enable()       # always
+        self.menu_p.str_page.FlagIDComboBox.Enable()      # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
         self.menu_p.met_page.MetaDataButton.Enable()      # always
         self.menu_p.met_page.MetaSensorButton.Enable()    # always
@@ -1509,7 +1525,7 @@ class MainFrame(wx.Frame):
 
         if len(commcol) > 0:
             self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
-            self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present 
+            self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present
             self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
             if self.menu_p.str_page.annotateCheckBox.GetValue():
                 self.menu_p.str_page.annotateCheckBox.SetValue(True)
@@ -1540,7 +1556,7 @@ class MainFrame(wx.Frame):
                 self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime)
                 if len(self.baselineidxlst) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
-        
+
 
         # Update "information" fields
         # ----------------------------------------
@@ -1607,11 +1623,11 @@ class MainFrame(wx.Frame):
         #    #print ("specialdict length not fitting")
         #    self.plotopt['specialdict']= None
 
- 
+
     def UpdatePlotCharacteristics(self,stream):
         """
         DESCRIPTION
-            Checks and activates plot options, checks for correct lengths of all list options 
+            Checks and activates plot options, checks for correct lengths of all list options
         """
 
         # Some general Checks on Stream
@@ -1631,6 +1647,7 @@ class MainFrame(wx.Frame):
         self.symbollist = ['-'] * len(keylist)
         self.plotopt['symbollist'] =  ['-'] * len(keylist)
         self.plotopt['colorlist']=self.colorlist[:len(keylist)]
+        self.plotopt['plottitle'] = stream.header.get('StationID')
 
         self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
         self.menu_p.str_page.dailyMeansButton.Disable()
@@ -1676,7 +1693,7 @@ class MainFrame(wx.Frame):
             typus = typus.lower()[:3]
         except:
             typus = ''
-        if typus in ['xyz','hdz','idf']:            
+        if typus in ['xyz','hdz','idf']:
             self.compselect = typus
             self.menu_p.str_page.compRadioBox.Enable()
             self.menu_p.str_page.compRadioBox.SetStringSelection(self.compselect)
@@ -1745,7 +1762,16 @@ class MainFrame(wx.Frame):
             self.plotoptlist.append(self.plotopt)
 
         self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
-
+        boxes = ['x','y','z','f']
+        for box in boxes:
+            checkbox = getattr(self.menu_p.str_page, box + 'CheckBox')
+            if box in self.shownkeylist:
+                checkbox.Enable()
+                colname = self.plotstream.header.get('col-'+box, '')
+                if not colname == '':
+                    checkbox.SetLabel(colname)
+            else:
+                checkbox.SetValue(False)
         self.changeStatusbar("Ready")
 
 
@@ -1761,17 +1787,30 @@ class MainFrame(wx.Frame):
         """
         self.plot_p.guiPlot([stream],[keylist],padding=padding,specialdict=specialdict,errorbars=errorbars,
                             colorlist=colorlist,symbollist=symbollist,annotate=annotate,
-                            includeid=includeid, function=function,plottype=plottype,                 
+                            includeid=includeid, function=function,plottype=plottype,
                             labels=labels,resolution=resolution,confinex=confinex,plotopt=plotopt)
         """
         #print ("Keys", keylist)
         if stream.length()[0] > 200000:
             self.plotopt['symbollist']= ['.'] * len(keylist)
+        # Update Delta F if plotted
+        if 'df' in keylist:
+            stream = stream.delta_f()
 
         self.plot_p.guiPlot([stream],[keylist],plotopt=self.plotopt)
         #self.plot_p.guiPlot(stream,keylist,**kwargs)
         if stream.length()[0] > 1 and len(keylist) > 0:
             self.ExportData.Enable(True)
+        boxes = ['x','y','z','f']
+        for box in boxes:
+            checkbox = getattr(self.menu_p.str_page, box + 'CheckBox')
+            if box in self.shownkeylist:
+                checkbox.Enable()
+                colname = self.plotstream.header.get('col-'+box, '')
+                if not colname == '':
+                    checkbox.SetLabel(colname)
+            else:
+                checkbox.SetValue(False)
         self.changeStatusbar("Ready")
 
 
@@ -1906,7 +1945,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
         else:
-                    dlg = wx.MessageDialog(self, "Could identfy appropriate files in directory!\n"
+                    dlg = wx.MessageDialog(self, "Could not identify appropriate files in directory!\n"
                         "please check and/or try OpenFile\n",
                         "OpenDirectory", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
@@ -1916,38 +1955,50 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def OnOpenFile(self, event):
         #self.dirname = ''
         stream = DataStream()
+        success = False
         stream.header = {}
         filelist = []
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.changeStatusbar("Loading data ...")
             pathlist = dlg.GetPaths()
-            for path in pathlist:
-                elem = os.path.split(path)
-                self.dirname = elem[0]
-                filelist.append(elem[1])
-                self.changeStatusbar(path)
-                tmp = read(path)
-                self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
-                stream.extend(tmp.container,tmp.header,tmp.ndarray)
-            #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
-            #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
-            self.filename = ' ,'.join(filelist)
-            self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
-            self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
-            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
-
+            try:
+                for path in pathlist:
+                    elem = os.path.split(path)
+                    self.dirname = elem[0]
+                    filelist.append(elem[1])
+                    self.changeStatusbar(path)
+                    tmp = read(path)
+                    self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
+                    stream.extend(tmp.container,tmp.header,tmp.ndarray)
+                #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
+                #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
+                self.filename = ' ,'.join(filelist)
+                self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
+                self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+                self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
+                success = True
+            except:
+                sucess = False
         dlg.Destroy()
 
         # plot data
-        if self.InitialRead(stream):
-            #self.ActivateControls(self.plotstream)
-            self.OnInitialPlot(self.plotstream)
+        if success:
+            if self.InitialRead(stream):
+                #self.ActivateControls(self.plotstream)
+                self.OnInitialPlot(self.plotstream)
+        else:
+            dlg = wx.MessageDialog(self, "Could not identify file!\n"
+                "please check and/or try OpenDirectory\n",
+                "OpenFile", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Loading file failed ... Ready")
+            dlg.Destroy()
 
 
     def OnOpenURL(self, event):
         stream = DataStream()
-
+        success = False
         bookmarks = self.options.get('bookmarks',[])
         if bookmarks == []:
             bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
@@ -1956,46 +2007,55 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dlg.ShowModal() == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
             self.changeStatusbar("Loading data ... be patient")
-            if not url.endswith('/'):
-                self.menu_p.str_page.pathTextCtrl.SetValue(url)
-                self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
-                try:
-                    stream = read(path_or_url=url)
-                except:
-                    dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                        "please check address or your internet connection\n",
-                        "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    self.changeStatusbar("Loading url failed ... Ready")
-                    dlg.Destroy()
-            else:
-                self.menu_p.str_page.pathTextCtrl.SetValue(url)
-                mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
-                maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
-                try:
-                    stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
-                except:
-                    dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                        "please check address or your internet connection\n",
-                        "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    self.changeStatusbar("Loading url failed ... Ready")
-                    dlg.Destroy()
+            try:
+                if not url.endswith('/'):
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
+                    try:
+                        stream = read(path_or_url=url)
+                        success = True
+                    except:
+                        success = False
+                else:
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
+                    maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
+                    try:
+                        stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
+                        success = True
+                    except:
+                        success = False
+            except:
+                pass
+        dlg.Destroy()
 
+        if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
-
+            if self.InitialRead(stream):
+                #self.ActivateControls(self.plotstream)
+                self.OnInitialPlot(self.plotstream)
             self.options['bookmarks'] = dlg.favorites
             #print ("Here", dlg.favorites)
             #if not bookmarks == dlg.favorites:
             #print ("Favorites have changed ...  can be saved in init")
-
-            
-        if self.InitialRead(stream):
-            #self.ActivateControls(self.plotstream)
-            self.OnInitialPlot(self.plotstream)
-
-        self.changeStatusbar("Ready")
-        dlg.Destroy()
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            self.changeStatusbar("Ready")
+        else:
+            self.options['bookmarks'] = dlg.favorites
+            #print ("Here", dlg.favorites)
+            #if not bookmarks == dlg.favorites:
+            #print ("Favorites have changed ...  can be saved in init")
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            dlg = wx.MessageDialog(self, "Could not access URL!\n"
+                "please check address or your internet connection\n",
+                "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Loading url failed ... Ready")
+            dlg.Destroy()
 
 
     def OnOpenDB(self, event):
@@ -2083,6 +2143,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #print "Stream: ", len(self.stream), len(self.plotstream)
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
             #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
+<<<<<<< HEAD
             try:
                 if fileformat == 'BLV':
                     print ("Writing BLV data")  # add function here
@@ -2128,6 +2189,49 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.changeStatusbar("Data written ... Ready")
             except:
                 self.menu_p.rep_page.logMsg("Writing failed - Permission?")
+=======
+            checkPath = os.path.join(path, dlg.filenameTextCtrl.GetValue())
+            export = False
+            if os.path.exists(checkPath):
+                msg = wx.MessageDialog(self, "The current export file will overwrite an existing file!\n"
+                    "Choose 'Ok' to apply the overwrite or 'Cancel' to stop exporting.\n",
+                    "VerifyOverwrite", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
+                if msg.ShowModal() == wx.ID_OK:
+                    export = True
+                msg.Destroy()
+            else:
+                export = True
+
+            if export == True:
+                try:
+                    if fileformat == 'BLV':
+                        print ("Writing BLV data")  # add function here
+                        print ("Function", self.plotopt['function'])
+                        year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
+                        # use functionlist as kwarg in write method
+                        self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    year=year,
+                                    coverage=coverage,
+                                    format_type=fileformat)
+                        mode = 'replace'
+                    else:
+                        self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    coverage=coverage,
+                                    format_type=fileformat)
+
+                    self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
+                    self.changeStatusbar("Data written ... Ready")
+                except:
+                    self.menu_p.rep_page.logMsg("Writing failed - Permission?")
+>>>>>>> usgs-master-copy
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()
@@ -2370,6 +2474,34 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def changeStatusbar(self,msg):
         self.SetStatusText(msg)
 
+    def UpdateCursorStatus(self, event):
+        """Motion event for displaying values under cursor."""
+        if not event.inaxes or not self.menu_p.str_page.trimStreamButton.IsEnabled():
+            self.changeStatusbar("Ready")
+            return
+        pickX, pickY = event.xdata, event.ydata
+        xdata = self.plot_p.t
+        idx = (np.abs(xdata - pickX)).argmin()
+        time = self.plotstream.ndarray[KEYLIST.index('time')][idx]
+        possible_val = []
+        possible_key = []
+        try:
+            time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S %Z")
+        except:
+            time = num2date(time)
+        for elem in self.shownkeylist:
+            ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
+            ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
+            if ll < pickY < ul:
+                possible_key += elem
+                possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
+        idy = (np.abs(possible_val - pickY)).argmin()
+        key = possible_key[idy]
+        val = possible_val[idy]
+        colname = self.plotstream.header.get('col-'+key, '')
+        if not colname == '':
+            key = colname
+        self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
 
     def OnCheckOpenLog(self, event):
         """
@@ -2403,13 +2535,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             Step 1: directories and existance of files (obligatory)
             Step 2: file access and basic header information
             Step 3: data content and consistency of primary source
-            Step 4: checking secondary source and consistency with primary 
+            Step 4: checking secondary source and consistency with primary
             Step 5: basevalues and adopted baseline variation
             Step 6: yearly means, consistency of meta information
             Step 7: acitivity indicies
         """
         # 1. open a dialog with two input directories: 1) for IAF minute data and 2) (optional) for IamgCDF sec data
-        # 2. radio field with two selections (quick check, full check) 
+        # 2. radio field with two selections (quick check, full check)
         minutepath = ''
         secondpath = ''
         seconddata = 'None'
@@ -2426,8 +2558,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         def saveReport(label, report):
             if label == 'Save':
                 savepath = ''
-                saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
-                                       "Report (*.txt)|*.txt", 
+                saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "Report (*.txt)|*.txt",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
                 if saveFileDialog.ShowModal() == wx.ID_OK:
                     savepath = saveFileDialog.GetPath()
@@ -2493,7 +2625,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     loadpath = os.path.join(secondpath,cdfname)
                     secdata = read(loadpath,debug=True)
                 else:
-                    print ("please provide a sensorid") 
+                    print ("please provide a sensorid")
             elif seconddata == 'iaga':
                 loadpath = os.path.join(secondpath,'*.sec')
                 try:
@@ -2556,7 +2688,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         month = datetime(1900, rmonth, 1).strftime('%b')
         if checkchoice == 'quick':
             reportmsg += "Test type: {} . Random check month: {}\n".format(checkchoice, datetime(1900, rmonth, 1).strftime('%B'))
-        else: 
+        else:
             reportmsg += "Test type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, rmonth, 1).strftime('%B'))
 
         succlst = ['0','0','0','0','0','0','0']
@@ -2578,10 +2710,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             return
         if success == 1:
             succlst[0] = 1
-            reportmsg += "#######################################\n"            
+            reportmsg += "#######################################\n"
             reportmsg += "Step 1:\n"
-            reportmsg += "#######################################\n"         
-            reportmsg += "Def.: checking directories and for presence of files\n\n" 
+            reportmsg += "#######################################\n"
+            reportmsg += "Def.: checking directories and for presence of files\n\n"
             # check whether paths are existing and appropriate data is contained - if failing set success to 6
             # Provide a report dialog with summaries of each test and a continue button
             # You have selected the following options:
@@ -2601,7 +2733,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     # windows is not case-sensitive ....
                     iafcnt += len(glob.glob(os.path.join(minutepath,"*.bin")))
                     if iafcnt > 0 and iafpath == '':
-                        iafpath = os.path.join(minutepath,"*.bin")                    
+                        iafpath = os.path.join(minutepath,"*.bin")
                 if not iafcnt == 12:
                     succlst[0] = 6
                     errormsg += "Step 1: !!! IAF error: didn't find 12 monthly files\n"
@@ -2656,7 +2788,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         yldat = read(yearmeanpath)
                         year = num2date(yldat.ndarray[0][-1]).year
                     except:
-                        pass                        
+                        pass
                 if not readmecnt >= 1:
                     warningmsg += "Step 1: (warning)  No README present\n"
                     readmedata = False
@@ -2738,19 +2870,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
                 succlst[1] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 2:\n"
                 reportmsg += "#######################################\n"
-                reportmsg += "Def.: checking readability of main data files and header information\n\n"            
+                reportmsg += "Def.: checking readability of main data files and header information\n\n"
                 reportmsg += "Step 2:  IAF data:\n"
                 reportmsg += "-----------------------\n"
                 self.changeStatusbar("Step 2: Reading minute data ... ")
                 mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
-                
+
                 #print(log_stream.getvalue())
 
                 logger = setup_logger(__name__)
-                
+
                 if fail == 6 and not onlysec:
                     errormsg += "Step 2: Reading of IAF data failed - check file format\n"
                     succlst[1] = 6
@@ -2766,7 +2898,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
                 reportmsg += "\nStep 2:  IAF data  - checking meta information:\n"
                 reportmsg += "-----------------------\n"
-                headfailure = False 
+                headfailure = False
                 #for head in IMAGCDFMETA: # IMAGMETAMETA
                 for head in IAFBINMETA: # IMAGMETAMETA ##### need to select only meta information expected in iaf file, not the information needed to create all IAF output files
                     value = mindata.header.get(head,'')
@@ -2781,7 +2913,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         succlst[1] = 5
 
                 obscode = mindata.header.get('StationID')
-                # get year 
+                # get year
                 try:
                     year = num2date(mindata.ndarray[0][-1]).year
                 except:
@@ -2815,7 +2947,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         META = IMAGCDFMETA
                     elif seconddata == 'iaga':
                         META = IAGAMETA
-                    for head in META: 
+                    for head in META:
                         value = secdata.header.get(head,'')
                         if value == '':
                             warningmsg += "Step 2: (warning) !!! Second data: no meta information for {}\n".format(head)
@@ -2853,7 +2985,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step3']:
                 succlst[2] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 3:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: checking data content and consistency\n\n"
@@ -2939,7 +3071,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             ftest = ftest._drop_nans(scal)
                             fsamprate = ftest.samplingrate()
                             reportmsg += "Step 3: minute data with {} - sampling period: {} sec ... OK\n".format(scal, fsamprate)
-                            if scal=='f': 
+                            if scal=='f':
                                 ftest = ftest.delta_f()
                             fmean, fstd = ftest.mean('df',std=True)
                             reportmsg += "Step 3: found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
@@ -2955,7 +3087,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                 reportmsg += "Step 3: F seems not to be measured independently \n"
                                 warningmsg += "Step 3: F seems not to be measured independently\n"
                                 succlst[2] = 3
-                                
+
                 reportmsg += "\nStep 3: Checking hourly and daily mean data \n"
                 reportmsg += "-----------------------\n"
                 hourprob = False
@@ -2995,7 +3127,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             diff = subtractStreams(iafhour,minfiltdata, keys=['x','y','z'])
                             warningmsg +=  "Step 3: Could not get F/G differences between hourly data and filtered minute data. Please check data file whether hourly means are complete.\n"
                             succlst[2] = 3
-                            
+
                         if not diff.length()[0] > 0:
                             errormsg += "Step 3: Could not calculate difference between hourly mean values and filtered minute data.\n"
                             faileddiff = True
@@ -3042,7 +3174,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     errormsg += "Step 3: Did not find daily means in IAF file\n"
                     dayprob = True
                     succlst[2] = 6
-                
+
                 if not dayprob:
                     reportmsg += "Step 3: Extracting daily means ... OK\n"
                 else:
@@ -3104,19 +3236,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step4']:
                 succlst[3] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 4:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: checking one second data content and consistency\n\n"
                 if seconddata == 'None':
                     reportmsg += "Step 4: No second data available - continue with step 5\n"
                 else:
-                    self.changeStatusbar("Step 4: Checking one second data consistency (internally and with primary data) ")            
+                    self.changeStatusbar("Step 4: Checking one second data consistency (internally and with primary data) ")
                     # message box - Continuing with step 4 - consistency of one second data with IAF
 
                     if checkchoice == 'quick':
                         # use already existing data
-                        monthlist = [rmonth] 
+                        monthlist = [rmonth]
                     else:
                         # read data for each month
                         monthlist = range(1,13)
@@ -3165,7 +3297,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             ftest = ftest._drop_nans(scal)
                             fsamprate = ftest.samplingrate()
                             reportmsg += "Step 4: +++ found {} in one second data - sampling period: {} sec ... OK\n".format(scal, fsamprate)
-                            if scal=='f': 
+                            if scal=='f':
                                 ftest = ftest.delta_f()
                             fmean, fstd = ftest.mean('df',std=True)
                             reportmsg += "Step 4: +++ found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
@@ -3270,7 +3402,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step5']:
                 succlst[4] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 5:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: baseline variation and data quality\n\n"
@@ -3301,7 +3433,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     srmeans = means.get_sampling_period()
                     reportmsg += "Step 5: basevalues measured on average every {:.1f} days \n".format(srmeans)
                     # Average and maximum standard deviation
-                    means = means._drop_nans('dx') 
+                    means = means._drop_nans('dx')
                     #print ("means", means.mean('dx',percentage=1), means.amplitude('dx'))
                     reportmsg += "Step 5: average deviation of repeated measurements is: {:.2f}{} for {}, {:.4f}{} for {} and {:.2f}{} for {}\n".format(means.mean('dx',percentage=1), unitx, headx, means.mean('dy',percentage=1), unity, heady, means.mean('dz',percentage=1), unitz, headz)
                     if means.mean('dx',percentage=1) > 0.5 or means.mean('dz',percentage=1) > 0.5:
@@ -3346,7 +3478,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         reportmsg += "Step 5: !!! amplitude of adopted baseline exceeds INTERMAGNET threshold of 5 nT\n"
                         warningmsg += "Step 5: adopted baseline shows relatively high variations - could be related to baseline jumps - please review data\n"
                         succlst[4] = 3
-                    
+
                     # check baseline complexity
 
 
@@ -3377,7 +3509,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step6']:
                 succlst[5] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 6:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: yearly means, consistency of meta information in all files\n\n"
@@ -3389,7 +3521,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     repmsg = ''
                     warnmsg = ''
                     if not np.isnan(hmean1) and not np.isnan(hmean2):
-                        diffh = np.abs(hmean1-hmean2) 
+                        diffh = np.abs(hmean1-hmean2)
                         diffz = np.abs(zmean1-zmean2)
                         if diffh < threshold and diffz < threshold:
                             repmsg += "Step 6: yearly means between {} and {} files are consistent\n".format(source1, source2)
@@ -3451,10 +3583,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     reportmsg += rep
                     warningmsg += warn
                     reportmsg += "Step 6: yearlmean.imo contains data from {} until {} \n".format(num2date(yearmeandata.ndarray[0][0]).year,num2date(yearmeandata.ndarray[0][-1]).year)
-                    
+
                 if not seconddata == 'None':
                     primeheader = secdata.header
-                elif mindata: 
+                elif mindata:
                     primeheader = mindata.header
                 else:
                     primeheader = {}
@@ -3539,7 +3671,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if checkparameter['step7']:
                 succlst[6] = 1
                 reportmsg += "\n"
-                reportmsg += "#######################################\n"            
+                reportmsg += "#######################################\n"
                 reportmsg += "Step 7:\n"
                 reportmsg += "#######################################\n"
                 reportmsg += "Def.: K values and Kp\n\n"
@@ -3893,7 +4025,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
 
-        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys] 
+        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
         t_limits = teststream._find_t_limits()
         trange = '- mean - timerange: {} to {}'.format(t_limits[0],t_limits[1])
         self.menu_p.rep_page.logMsg(trange)
@@ -3924,7 +4056,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
 
-        maxi = [teststream._get_max(key,returntime=True) for key in keys] 
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
         t_limits = teststream._find_t_limits()
         trange = '- maxima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
         self.menu_p.rep_page.logMsg(trange)
@@ -3955,7 +4087,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
             teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
 
-        mini = [teststream._get_min(key,returntime=True) for key in keys] 
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
         t_limits = teststream._find_t_limits()
         trange = '- minima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
         self.menu_p.rep_page.logMsg(trange)
@@ -4051,6 +4183,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.changeStatusbar("Delta F ...")
 
         self.plotstream = self.plotstream.delta_f()
+        self.streamlist[self.currentstreamindex].delta_f()
         #print (self.plotstream._get_key_headers())
         if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
             self.shownkeylist.append('df')
@@ -4112,7 +4245,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.changeStatusbar("Ready")
         else:
             self.changeStatusbar("Failure")
-        
+
 
     def onConfinexCheckBox(self,event):
         """
@@ -4160,20 +4293,28 @@ Suite 330, Boston, MA  02111-1307  USA"""
         end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
         #print ("Range", start, end)
 
-        try:
-            self.changeStatusbar("Trimming stream ...")
-            newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
-            self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
-            self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
-        except:
-            self.menu_p.rep_page.logMsg('- Trimming failed')
+        if end > start:
+            try:
+                self.changeStatusbar("Trimming stream ...")
+                newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
+                self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
+                self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
+            except:
+                self.menu_p.rep_page.logMsg('- Trimming failed')
 
-        self.ActivateControls(self.plotstream)
-        if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist)
-            self.changeStatusbar("Ready")
+            self.ActivateControls(self.plotstream)
+            if self.plotstream.length()[0] > 0:
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
+            else:
+                self.changeStatusbar("Failure")
         else:
-            self.changeStatusbar("Failure")
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered dates are out of order.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
 
 
     def openStream(self,path='',mintime=None,maxtime=None,extension=None):
@@ -4246,7 +4387,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     unitlist.append(unit)
                 else:
                     unitlist.append('')
-        
+
         if len(self.plotstream.ndarray[0]) > 0:
             dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
             for elem in shownkeylist:
@@ -4384,7 +4525,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
         self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
- 
+
         self.ActivateControls(self.plotstream)
         self.errorbars = True
         self.OnPlot(self.plotstream,self.shownkeylist)
@@ -4449,6 +4590,49 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
+    def OnFlagClick(self, event):
+        """Mouse event for flagging with double click."""
+        if not event.inaxes or not event.dblclick:
+            return
+        else:
+            sensid = self.plotstream.header.get('SensorID','')
+            dataid = self.plotstream.header.get('DataID','')
+            if sensid == '' and not dataid == '':
+                sensid = dataid[:-5]
+            if sensid == '':
+                dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                                "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+            else:
+                flaglist = []
+                xdata = self.plot_p.t
+                xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+                pickX = event.xdata
+                idx = (np.abs(xdata - pickX)).argmin()
+                time = self.plotstream.ndarray[KEYLIST.index('time')][idx]
+                starttime = num2date(time - xtol)
+                endtime = num2date(time + xtol)
+                dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+                if dlg.ShowModal() == wx.ID_OK:
+                    keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                    keys2flag = keys2flag.split(',')
+                    keys2flag = [el for el in keys2flag if el in KEYLIST]
+                    flagid = dlg.FlagIDComboBox.GetValue()
+                    flagid = int(flagid[0])
+                    comment = dlg.CommentTextCtrl.GetValue()
+                    if comment == '' and flagid != 0:
+                        comment = 'Point flagged with unspecified reason'
+                    flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                    self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                if len(flaglist) > 0:
+                    self.flaglist.extend(flaglist)
+                    self.plotstream = self.plotstream.flag(flaglist)
+                    self.ActivateControls(self.plotstream)
+                    self.plotopt['annotate'] = True
+                    self.menu_p.str_page.annotateCheckBox.SetValue(True)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
 
     def onFlagSelectionButton(self,event):
         """
@@ -4634,7 +4818,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                      else:
                          flagval = False
                      if flagval:
-                         #print ("Above , Below:", above, below) 
+                         #print ("Above , Below:", above, below)
                          flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
                          self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
                 elif flagtype == 'time':
@@ -4758,7 +4942,79 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.changeStatusbar("Ready")
 
+    def onFlagMinButton(self,event):
+        """
+        DESCRIPTION
+            Flags minimum value in zoomed region
+        """
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged minimum'
+        flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid is 0:
+            comment = ''
+        for idx,me in enumerate(mini):
+            if keys[idx] is not 'df':
+                checkbox = getattr(self.menu_p.str_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
+    def onFlagMaxButton(self,event):
+        """
+        DESCRIPTION
+            Flags maximum value in zoomed region
+        """
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged maximum'
+        flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid is 0:
+            comment = ''
+        for idx,me in enumerate(maxi):
+            if keys[idx] is not 'df':
+                checkbox = getattr(self.menu_p.str_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
     # ------------------------------------------------------------------------------------------
     # ################
@@ -4936,10 +5192,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         open dialog to load DI data
         """
         if isinstance(self.dipathlist, str):
-            dipathlist = self.dipathlist            
+            dipathlist = self.dipathlist
         else:
             dipathlist = self.dipathlist[0]
-        if os.path.isfile(dipathlist): 
+        if os.path.isfile(dipathlist):
             dipathlist = os.path.split(dipathlist)[0]
 
         dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist)
@@ -4948,7 +5204,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg("- loaded DI data")
             self.menu_p.abs_page.diTextCtrl.SetValue(','.join(dlg.pathlist))
             self.dipathlist = dlg.pathlist
-            if os.path.isfile(dlg.pathlist[0]): 
+            if os.path.isfile(dlg.pathlist[0]):
                 dlgpath = os.path.split(dlg.pathlist[0])[0]
             else:
                 dlgpath = dlg.pathlist[0]
@@ -5115,7 +5371,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
 
         if isinstance(self.dipathlist, str):
-            dipath = self.dipathlist            
+            dipath = self.dipathlist
         else:
             dipath = self.dipathlist[0]
         if os.path.isfile(dipath):
@@ -5141,8 +5397,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             Save data of the logger to file
         """
         # TODO When starting ANalysis -> stout is redirected .. switch back to normal afterwards
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
-                                       "DI analysis report (*.txt)|*.txt", 
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "DI analysis report (*.txt)|*.txt",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
         savepath = saveFileDialog.GetPath()
@@ -5165,12 +5421,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
 
     def onSaveLogButton(self, event):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "", 
-                                       "Log files (*.log)|*.log", 
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "Log files (*.log)|*.log",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
-        saveFileDialog.GetPath()
+        savepath = saveFileDialog.GetPath()
+        text = self.menu_p.rep_page.logger.GetValue()
         saveFileDialog.Destroy()
+
+        logfile = open(savepath, "w")
+        logfile.write(text)
+        logfile.close()
 
 
     # ------------------------------------------------------------------------------------------
@@ -5210,7 +5471,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         destsensfile = os.path.join(destpath,martasaddress+'_sensors.txt')
         destowfile = os.path.join(destpath,martasaddress+'_owlist.csv')
- 
+
         try:
             scptransfer(martasuser+'@'+martasaddress+':'+sensfile,destsensfile,martaspasswd)
         except:
@@ -5489,7 +5750,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             header = dbfields2dict(db,dataid)
         array[0] = date2num(array[0])
         stream = DataStream([LineStruct()],header,array)
-        return stream 
+        return stream
 
     def onStopMonitorButton(self, event):
         if  self.monitorSource=='MARCOS':
