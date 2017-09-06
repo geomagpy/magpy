@@ -294,9 +294,24 @@ class PlotPanel(wx.Panel):
             #client.loop_start()
             print ('Dict:', self.datavars[0][:-5])
             li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
-            for idx,el in enumerate(self.array):
-                el.extend(li[idx])
+
+            for idx,el in enumerate(li):
+                        print ("Got", idx, el)
+                        if len(self.array[0]) > 0 and not li[0][0] == self.array[0][-1]:
+                            print ("Here")
+                            self.array[idx].extend(el)
+                        elif len(self.array[0]) == 0:
+                            self.array[idx].extend(el)
+
+                    #for idx,el in enumerate(self.array):
+                    #    if not el[0] == li[0]:
+                    #        el.extend(li[idx])
             self.array = [el[-int(self.datavars[6]):] for el in self.array]
+
+
+            #for idx,el in enumerate(self.array):
+            #    el.extend(li[idx])
+            #self.array = [el[-int(self.datavars[6]):] for el in self.array]
             #removeduplicates()
             print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
             #client.loop_stop()
@@ -455,6 +470,9 @@ class PlotPanel(wx.Panel):
         self.canvas.draw()
 
 
+    def mqttloop(self):
+        pass
+
     def startMARTASMonitor(self, protocol, **kwargs):
         """
         DEFINITION:
@@ -498,6 +516,12 @@ class PlotPanel(wx.Panel):
 
                 self.figure.clear()
 
+                t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
+                t1.start()
+                # Display the plot
+                self.canvas.draw()
+
+                """
                 stop_command_send = False
                 sumtime = 0
                 pos = KEYLIST.index('t1')
@@ -512,12 +536,20 @@ class PlotPanel(wx.Panel):
                     print ('Dict:', self.datavars[0][:-5])
                     # if data coming
                     li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
-                    for idx,el in enumerate(self.array):
-                        if not el[0] == li[0]:
-                            el.extend(li[idx])
+                    for idx,el in enumerate(li):
+                        print ("Got", idx, el)
+                        if len(self.array[0]) > 0 and not li[0][0] == self.array[0][-1]:
+                            print ("Here")
+                            self.array[idx].extend(el)
+                        elif len(self.array[0]) == 0:
+                            self.array[idx].extend(el)
+
+                    #for idx,el in enumerate(self.array):
+                    #    if not el[0] == li[0]:
+                    #        el.extend(li[idx])
                     self.array = [el[-int(self.datavars[6]):] for el in self.array]
                     #removeduplicates()
-                    print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
+                    print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0], self.array )
                     #client.loop_stop()
                     if sumtime/10. == self.datavars[7]:
                         print ("YIPHIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
@@ -530,6 +562,7 @@ class PlotPanel(wx.Panel):
                         #t1.start()
                         # Display the plot
                         #self.canvas.draw()
+                """
 
         """
         # Test whether data is available at all with selected keys and dataid
@@ -1258,7 +1291,7 @@ class MainFrame(wx.Frame):
         self.menu_p.abs_page.varioTextCtrl.Disable()       # remain disabled
         self.menu_p.abs_page.defineScalarButton.Enable()   # remain enabled
         self.menu_p.abs_page.scalarTextCtrl.Disable()      # remain disabled
-        self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled
+        #self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled -- WINDOWS Prob - scrolling will not work
         self.menu_p.abs_page.ClearLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.SaveLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
@@ -2065,6 +2098,23 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                 coverage=coverage,
                                 format_type=fileformat)
                     mode = 'replace'
+                elif fileformat == 'IMAGCDF':
+                    # Open Yes/No message box and to select whether flags should be stored or not
+                    print ("Writing IMAGCDF data")  # add function here
+                    addflags = False
+                    # Test whether flags are present at all
+                    dlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+                    if dlg.ShowModal() == wx.ID_YES:
+                        addflags = True
+                    dlg.Destroy()
+                    self.plotstream.write(path,
+                                filenamebegins=filenamebegins,
+                                filenameends=filenameends,
+                                dateformat=dateformat,
+                                mode=mode,
+                                addflags = addflags,
+                                coverage=coverage,
+                                format_type=fileformat)
                 else:
                     self.plotstream.write(path,
                                 filenamebegins=filenamebegins,
@@ -4997,7 +5047,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             sys.stdout=prev_redir
             # only if more than one point is selected
             self.changeStatusbar("Ready")
-            if len(absstream.length()) > 1 and absstream.length()[0] > 0:
+            if absstream and len(absstream.length()) > 1 and absstream.length()[0] > 0:
                 # Convert absstream
                 array = [[] for el in KEYLIST]
                 for idx,el in enumerate(absstream.ndarray):
@@ -5017,10 +5067,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.OnInitialPlot(self.plotstream)
                 #self.plotoptlist.append(self.plotopt)
             else:
-                self.ActivateControls(self.plotstream)
-                if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
-                    self.menu_p.abs_page.ClearLogButton.Enable()
-                    self.menu_p.abs_page.SaveLogButton.Enable()
+                if absstream:
+                    self.ActivateControls(self.plotstream)
+                    if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
+                        self.menu_p.abs_page.ClearLogButton.Enable()
+                        self.menu_p.abs_page.SaveLogButton.Enable()
                 # set load di to something useful (seems to be empty now)
 
 
@@ -5371,8 +5422,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 print ("Sensorlist", sensorlist)
                 # TODO open a dialog to select the sensor to be monitored
                 sensorid = 'ENV05_3_0001'
+                sensorid = sensorlist[0]
                 self.menu_p.com_page.logMsg(' - Sensors: {}'.format(sensorid))
-
 
                 pad = 5
                 currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")

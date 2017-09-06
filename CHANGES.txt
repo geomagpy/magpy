@@ -6,8 +6,13 @@ Installation instructions can be found on the main download page.
 ####v<0.3.97>, <2017-09-26> -- On the way to beta.
 
 v0.3.97 fixes:
+    + numerous flagging issues with GUI
+    + absolute analysis: long file names are now correctly supported
 
 v0.3.97 additions:
+    + GUI: IMAGCDF export - flagging information can be attached
+    + absolute analysis GUI: notificatzion for missing Azimuth of AutoDIF
+    + absolute analysis GUI: Log window now scrollable in windows
 
 v0.3.97 removals:
 None

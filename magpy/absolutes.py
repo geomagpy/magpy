@@ -1656,8 +1656,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 date = dparser.parse(tail,fuzzy=True)
                 datelist.append(datetime.strftime(date,"%Y-%m-%d"))
             except:
-                print("absoluteAnalysis: Found date problem in file: %s" % tail)
-                failinglist.append(elem)
+                try:
+                    date = dparser.parse(tail[:19],fuzzy=True)
+                    datelist.append(datetime.strftime(date,"%Y-%m-%d"))
+                except:
+                    print("absoluteAnalysis: Found date problem in file: %s" % tail)
+                    failinglist.append(elem)
 
         datelist = list(set(datelist))
 
@@ -1956,10 +1960,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
     
-            #print ("Stream", stream)
             if stream[0].person == 'AutoDIF' and not usestep:
                 usestep = 2
-            #print "USESTEP:", usestep
+
+            if stream[0].person == 'AutoDIF' and not azimuth:
+                print("absoluteAnalysis: AUTODIF but no azimuth provided --- this will not work")
+
             if variofound:
                 valuetest = stream._check_coverage(variostr)
                 if valuetest:
@@ -1976,20 +1982,24 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     print ("Warning! Scalar data missing at DI time range")
             try:
                 # get delta D and delta I values here
-                #print ("Checking database")
-                if not deltaD:
+                if not deltaD and db:
                     try:
                         val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
-                        deltaD = float(val.split('_')[2])
+                        deltainputs = val.split(',')
+                        lastval = deltainputs[-1] 
+                        deltaD = float(lastval.split('_')[2])
                     except:
                         deltaD = 0.0
-                if not deltaI:
+                if not deltaI and db:
                     try:
                         val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
-                        deltaI = float(val.split('_')[3])
+                        deltainputs = val.split(',')
+                        lastval = deltainputs[-1]
+                        deltaI = float(lastval.split('_')[3])
                     except:
                         deltaI = 0.0
                 #print("here", deltaD, deltaI, scalevalue)
+                #print ("Running calc", usestep, annualmeans, deltaD, deltaI)
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue)
                 print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
                 print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))

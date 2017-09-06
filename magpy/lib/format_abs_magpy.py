@@ -665,16 +665,6 @@ def readAUTODIF(filename, headonly=False, **kwargs):
 def readJSONABS(filename, headonly=False, **kwargs):
     """
     Reading JSON Absolute format data.
-
-    Declination 1       2013-10-17      00:17:23        NaN     55      -183    90.0    281.0448
-    Declination 1       2013-10-17      00:17:31        NaN     -1      -183    90.0    281.0304
-    Declination 2       2013-10-17      00:17:54        NaN     128     -183    269.9991        280.0551
-    Declination 2       2013-10-17      00:18:02        NaN     3       -183    269.9991        280.0883
-    Declination 3       2013-10-17      00:18:17        NaN     -19     -192    269.9999        100.7341
-    Declination 3       2013-10-17      00:18:25        NaN     -15     -192    269.9999        100.7352
-    Declination 4       2013-10-17      00:18:49        NaN     193     -194    90.0007 100.9456
-    Declination 4       2013-10-17      00:18:59        NaN     12      -194    90.0007 100.9947
-
     """
 
     jsonfile = open(filename, 'r')
@@ -693,6 +683,9 @@ def readJSONABS(filename, headonly=False, **kwargs):
     flist = []
     fcorr = 0.0
 
+
+    ## cycling though data set, metadata is not yet considered
+    ## #######################################################
     for idx, elem in enumerate(dataset):
             #print ("New element: {} : {}".format(idx, elem))
             if idx==0:
@@ -700,7 +693,8 @@ def readJSONABS(filename, headonly=False, **kwargs):
                 datadict = dataset[elem][0]
                 for el in datadict:
                     if not el == 'readings':
-                        # get readings after all other infos have been initialized
+                        # get readings only after all other infos have been initialized
+                        # ######################################################## 
                         if el == 'theodolite': #{u'serial': u'109648', u'id': 2}
                             valdict = datadict[el]
                             di_inst = 'theodolite{}_{}_{}'.format(valdict.get('id',''),valdict.get('serial',''),'0001')
@@ -744,10 +738,13 @@ def readJSONABS(filename, headonly=False, **kwargs):
                             pass
                 for el in datadict: # Now only extract readings
                     if el == 'readings':
+                        # get readings now
+                        # ######################################################## 
                         valdict = datadict[el]
                         #print ("Length",len(valdict))
                         for setcount, dataset in enumerate(valdict):
                             # for each set add a new di row structure to abslist
+                            # ######################################################## 
                             if not setcount==0:
                                 abslist.append(dirow)
                             dirow = DILineStruct(24)

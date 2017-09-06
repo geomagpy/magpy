@@ -1147,6 +1147,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     mycdf.attrs['FormatDescription'] = 'INTERMAGNET CDF format'
     mycdf.attrs['FormatVersion'] = '1.2'
+    if addflags:
+        mycdf.attrs['FormatVersion'] = '1.x'
     mycdf.attrs['Title'] = 'Geomagnetic time series data'
 
     ## 2. Check for required info
