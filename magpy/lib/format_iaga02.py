@@ -203,7 +203,11 @@ def readIAGA(filename, headonly=False, **kwargs):
                         row.append(val.strip())
 
                 # Baue zweidimensionales Array auf
-                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
+
+                timestring = row[0]+'T'+row[1]
+                #t = '2012-06-30T23:59:60.209215'
+                array[0].append( date2num(LeapTime(timestring)) )
+                #array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
                 if float(row[3]) >= 88888.0:
                     row[3] = np.nan
                 if float(row[4]) >= 88888.0:

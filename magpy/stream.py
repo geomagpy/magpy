@@ -12462,6 +12462,17 @@ def test_time(time):
     return timeobj
 
 
+def LeapTime(t):
+    """
+    converts strings to datetime, considering leap seconds
+    """ 
+    nofrag, frag = t.split('.')
+    nofrag_dt = time.strptime(nofrag, "%Y-%m-%dT%H:%M:%S")
+    ts = datetime.fromtimestamp(time.mktime(nofrag_dt))
+    dt = ts.replace(microsecond=int(frag))
+    return dt
+
+
 def convertGeoCoordinate(lon,lat,pro1,pro2):
     """
     DESCRIPTION:

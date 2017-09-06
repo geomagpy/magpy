@@ -3,11 +3,14 @@ Installation instructions can be found on the main download page.
 
 
 -------------------------------------------------
-####v<0.3.97>, <2017-09-26> -- On the way to beta.
+####v<0.3.97>, <2017-09-15> -- On the way to beta.
+
+v0.3.97 general:
+    +++++  numerous additions, fixes and improvements in GUI (flagging, value)
 
 v0.3.97 fixes:
-    + numerous flagging issues with GUI
     + absolute analysis: long file names are now correctly supported
+    + Leap seconds are now considered like (2015-06-30T23:59:60 -> 2015-07-01T00:00:00)
 
 v0.3.97 additions:
     + GUI: IMAGCDF export - flagging information can be attached
