@@ -74,7 +74,7 @@ def analyse_meta(header,sensorid):
     keylist = h_elem[3].strip('[').strip(']').split(',')
     elemlist = h_elem[4].strip('[').strip(']').split(',')
     unitlist = h_elem[5].strip('[').strip(']').split(',')
-    multilist = list(map(float,h_elem[7].strip('[').strip(']').split(',')))
+    multilist = list(map(float,h_elem[6].strip('[').strip(']').split(',')))
     print ("Packing code", packstr)
     print ("keylist", keylist)
     identifier[sensorid+':packingcode'] = packstr
@@ -112,7 +112,7 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     sensorid = msg.topic.strip('wic').replace('/','').strip('meta').strip('data')
-    print ("Receiving message for", sensorid)
+    #print ("Receiving message for", sensorid)
     # define a new data stream for each non-existing sensor
 
     metacheck = identifier.get(sensorid+':packingcode','')

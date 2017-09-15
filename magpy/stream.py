@@ -123,6 +123,12 @@ except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)
 
+# operating system
+try:
+    PLATFORM = sys.platform
+    logger.info("Running on platform: {}".format(PLATFORM))
+except:
+    PLATFORM = 'unkown'
 
 # Matplotlib
 # ----------

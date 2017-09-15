@@ -26,7 +26,7 @@ def connect(parameter):
     print ("------------------------------------------")
     print ("Establishing connection to serial port:")
     try:
-        print ("TEST", baudrate,parity,bytesize,stopbits,timeout)
+        #print ("TEST", baudrate,parity,bytesize,stopbits,timeout)
         ser = serial.Serial(port, baudrate=baudrate, parity=parity, bytesize=bytesize, stopbits=stopbits, timeout=timeout)
         print('.... Connection made.')
     except: 

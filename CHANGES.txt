@@ -10,12 +10,14 @@ v0.3.97 general:
 
 v0.3.97 fixes:
     + absolute analysis: long file names are now correctly supported
-    + Leap seconds are now considered like (2015-06-30T23:59:60 -> 2015-07-01T00:00:00)
+    + Leap seconds in IAGA files are now considered like (2015-06-30T23:59:60 -> 2015-07-01T00:00:00)
+      while reading
 
 v0.3.97 additions:
     + GUI: IMAGCDF export - flagging information can be attached
     + absolute analysis GUI: notificatzion for missing Azimuth of AutoDIF
-    + absolute analysis GUI: Log window now scrollable in windows
+    + absolute analysis GUI: Log window now scrollable in WinXP and more recent
+    + preliminary module for mqtt support included in monitoring
 
 v0.3.97 removals:
 None

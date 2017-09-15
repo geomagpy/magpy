@@ -3995,7 +3995,7 @@ class CheckDefinitiveDataDialog(wx.Dialog):
         self.secondTextCtrl = wx.TextCtrl(self, value=self.seconddirname ,size=(160,30))
         self.checkOptionsButton = wx.Button(self, label='Specify check options',size=(160,30))
         self.checkButton = wx.Button(self, wx.ID_OK, label='Run check', size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.note1Label = wx.StaticText(self, label="*quick: 4 min with second data",size=(160,30))
         self.note2Label = wx.StaticText(self, label="*full: 50 min with second data",size=(160,30))
 
@@ -4051,14 +4051,14 @@ class CheckDefinitiveDataDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        #self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.minuteButton.Bind(wx.EVT_BUTTON, self.OnMinute)
         self.secondButton.Bind(wx.EVT_BUTTON, self.OnSecond)
         self.checkOptionsButton.Bind(wx.EVT_BUTTON, self.OnCheckOptions)
         self.Bind(wx.EVT_RADIOBOX, self.OnDeep, self.checkRadioBox)
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
     def OnMinute(self, e):
         dialog = wx.DirDialog(None, "Choose IAF directory:",self.minutedirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
@@ -4133,7 +4133,7 @@ class CheckDataReportDialog(wx.Dialog):
         self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
         self.ratingTextCtrl = wx.TextCtrl(self, value="Overall rating: {}".format(self.rating), size=(30,30))
         self.continueButton = wx.Button(self, label=self.contlabel, size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
         self.step1TextCtrl = wx.TextCtrl(self, value=self.step[0], size=(30,30))
         self.step2TextCtrl = wx.TextCtrl(self, value=self.step[1], size=(30,30))
@@ -4279,7 +4279,7 @@ class CheckDataSelectDialog(wx.Dialog):
         self.step7CheckBox = wx.CheckBox(self, label="Step 7: activity indicies",size=(400,30))
 
         self.continueButton = wx.Button(self, wx.ID_OK, label='OK', size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
         self.step1CheckBox.SetValue(True)
         self.step2CheckBox.SetValue(self.checkparameter.get('step2'))
@@ -4341,10 +4341,11 @@ class CheckDataSelectDialog(wx.Dialog):
 
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        #self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        pass
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 class CheckOpenLogDialog(wx.Dialog):
@@ -4365,7 +4366,7 @@ class CheckOpenLogDialog(wx.Dialog):
     def createControls(self):
         self.reportLabel = wx.StaticText(self, label="Logging content:",size=(300,30))
         self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
-        self.closeButton = wx.Button(self, label='Close',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Close',size=(160,30))
 
         self.reportTextCtrl.Disable()
 
@@ -4401,10 +4402,11 @@ class CheckOpenLogDialog(wx.Dialog):
 
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        #self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        pass
 
-    def OnClose(self, e):
-        self.Close(True)
+    #def OnClose(self, e):
+    #    self.Close(True)
 
 
 # ###################################################
@@ -4452,7 +4454,7 @@ class SelectMARTASDialog(wx.Dialog):
         self.pwdTextCtrl = wx.TextCtrl(self, value="",size=(160,30),style=wx.TE_PASSWORD)
         self.authLabel = wx.StaticText(self, label="* if authentication is required",size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
-        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
 
     def doLayout(self):
@@ -4502,12 +4504,9 @@ class SelectMARTASDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
-        self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
         self.newButton.Bind(wx.EVT_BUTTON, self.OnNew)
         self.Bind(wx.EVT_RADIOBOX, self.OnProtocol, self.protocolRadioBox)
 
-    def OnClose(self, e):
-        self.Close(True)
 
     def OnNew(self, e):
         self.Close(True)
@@ -4696,6 +4695,61 @@ class AGetMARTASDialog(wx.Dialog):
 
     def OnAdd(self, e):
         self.Close(True)
+
+
+class SelectFromListDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select data from any provided list
+    """
+
+    def __init__(self, parent, title, selectlist, name):
+        super(SelectFromListDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.selectlist = selectlist
+        self.name = name
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.selectLabel = wx.StaticText(self, label="Choose {}:".format(self.name),size=(160,30))
+        self.selectComboBox = wx.ComboBox(self, choices=self.selectlist,
+                       style=wx.CB_DROPDOWN, value=self.selectlist[0],size=(160,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Select',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        contlist = [(self.selectLabel, noOptions),
+                 (self.selectComboBox, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
 
 class MultiStreamDialog(wx.Dialog):
     """

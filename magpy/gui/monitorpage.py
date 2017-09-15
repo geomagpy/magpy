@@ -33,13 +33,13 @@ class MonitorPage(wx.Panel):
         # all buttons open dlg to add parameters (e.g. IP, 
         self.getMARTASButton = wx.Button(self,-1,"Connect to MARTAS", size=(160,30))
         self.getMARCOSButton = wx.Button(self,-1,"Connect to MARCOS", size=(160,30))
-        self.getMQTTButton = wx.Button(self,-1,"Connect to MQTT", size=(160,30))
+        #self.getMQTTButton = wx.Button(self,-1,"Connect to MQTT", size=(160,30))
         self.martasLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
         self.marcosLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
-        self.mqttLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
+        #self.mqttLabel = wx.TextCtrl(self, value="not connected", size=(160,30), style=wx.TE_RICH)  # red bg
         self.marcosLabel.SetEditable(False)
         self.martasLabel.SetEditable(False)
-        self.mqttLabel.SetEditable(False)
+        #self.mqttLabel.SetEditable(False)
         # Parameters if connection is established
         # 
         self.coverageLabel = wx.StaticText(self, label="Plot coverage (sec):", size=(160,30))
@@ -82,8 +82,8 @@ class MonitorPage(wx.Panel):
                  (self.martasLabel, noOptions),
                  (self.getMARCOSButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.marcosLabel, noOptions),
-                 (self.getMQTTButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.mqttLabel, noOptions),
+                 #(self.getMQTTButton, dict(flag=wx.ALIGN_CENTER)),
+                 #(self.mqttLabel, noOptions),
                   emptySpace,
                   emptySpace,
                  (self.coverageLabel, noOptions),

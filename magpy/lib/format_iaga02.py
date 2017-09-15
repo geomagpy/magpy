@@ -210,19 +210,12 @@ def readIAGA(filename, headonly=False, **kwargs):
                     if val.strip()!="":
                         row.append(val.strip())
 
-                # Baue zweidimensionales Array auf
-<<<<<<< HEAD
-
+                # Build two-dimensional array
                 timestring = row[0]+'T'+row[1]
                 #t = '2012-06-30T23:59:60.209215'
                 array[0].append( date2num(LeapTime(timestring)) )
                 #array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
-                if float(row[3]) >= 88888.0:
-=======
-                # transl. Build two-dimensional array
-                array[0].append( date2num(datetime.strptime(row[0]+'-'+row[1],"%Y-%m-%d-%H:%M:%S.%f")) )
                 if float(row[3]) >= NOT_REPORTED:
->>>>>>> usgs-master-copy
                     row[3] = np.nan
                 if float(row[4]) >= NOT_REPORTED:
                     row[4] = np.nan

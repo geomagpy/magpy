@@ -225,8 +225,13 @@ class PlotPanel(wx.Panel):
                 self.update_mqtt(arg1,self.array)
             print ("Running ...")
             stop_event.wait(self.datavars[7])
-            pass
-
+        ###
+        # Eventually stop client
+        if not arg1 == 1:
+            #try:
+            arg1.loop_stop()
+            #except:
+            #pass
 
     def update(self,array):
         """
@@ -275,15 +280,16 @@ class PlotPanel(wx.Panel):
         """
         DESCRIPTION
             Update array with new data and plot it.
-            If log file is chosen the this method makes use of collector.subscribe method:
-            storeData to save binary file
         """
         from magpy.collector import collectormethods as colsup
 
         sumtime = 0
         #        while sumtime<self.datavars[7] and (not self.t1_stop.is_set()):
         #step = 0.1
-        print ("Updating", self.datavars[0][:-5], self.datavars[7], self.datavars[2])
+        #print ("Updating", self.datavars[0][:-5], self.datavars[7], self.datavars[2])
+        #print ("Parameter", self.datavars[1])
+        #print ("Units", self.datavars[5])
+
         pos = KEYLIST.index('t1')
         posvar1 = KEYLIST.index('var1')
         #OK = True
@@ -291,61 +297,19 @@ class PlotPanel(wx.Panel):
         while sumtime<self.datavars[2]:
             client.loop(1)
             sumtime = sumtime+1
-            #client.loop_start()
-            print ('Dict:', self.datavars[0][:-5])
             li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
 
-            for idx,el in enumerate(li):
-                        print ("Got", idx, el)
-                        if len(self.array[0]) > 0 and not li[0][0] == self.array[0][-1]:
-                            print ("Here")
-                            self.array[idx].extend(el)
-                        elif len(self.array[0]) == 0:
-                            self.array[idx].extend(el)
-
-                    #for idx,el in enumerate(self.array):
-                    #    if not el[0] == li[0]:
-                    #        el.extend(li[idx])
+            if len(self.array[0]) > 0 and li[0][0] == self.array[0][-1]:
+                pass
+            else:
+                for idx,el in enumerate(li):
+                        self.array[idx].extend(el)
             self.array = [el[-int(self.datavars[6]):] for el in self.array]
 
-
-            #for idx,el in enumerate(self.array):
-            #    el.extend(li[idx])
-            #self.array = [el[-int(self.datavars[6]):] for el in self.array]
-            #removeduplicates()
-            print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
-            #client.loop_stop()
         if len(self.array[0]) > 2:
             array = self.array
             self.monitorPlot(array)
 
-        """
-        while sumtime<self.datavars[2]:
-            client.loop(1)
-            sumtime = sumtime+1
-            li = colsup.stream.ndarray   # li is an ndarray
-            print ("Found data", li)
-            for idx,el in enumerate(self.array):
-                el.extend(li[idx])
-            self.array = [el[-int(self.datavars[6]):] for el in self.array]
-            #print (self.array[0],self.array[pos])
-        if len(self.array[0]) > 2:
-            array = self.array
-            self.monitorPlot(array)
-        """
-
-        """
-        client.loop(10) #blocks for period in seconds
-        #sumtime += step
-        li = colsup.stream.ndarray   # li is an ndarray
-        for idx,el in enumerate(self.array):
-            el.extend(li[idx])
-        self.array = [el[-int(self.datavars[6]):] for el in self.array]
-
-        if len(self.array[0]) > 2:
-                    array = self.array
-                    self.monitorPlot(array)
-        """
 
     def startMQTTMonitor(self,**kwargs):
         """
@@ -355,72 +319,9 @@ class PlotPanel(wx.Panel):
         PARAMETERS:
             kwargs:  - all plot args
         """
-        from magpy.collector import collectormethods as colsup
+        # moved to MARTAS 
+        pass
 
-        dataid = self.datavars[0]
-        parameter = self.datavars[1]
-        period = self.datavars[2]
-        pad = self.datavars[3]
-        currentdate = self.datavars[4]
-        unitlist = self.datavars[5]
-        coverage = self.datavars[6]  # coverage
-        updatetime = self.datavars[7]
-        db = self.datavars[8]
-
-        """
-        # convert parameter list to a dbselect sql format
-        parameterstring = 'time,'+parameter
-
-        # Test whether data is available at all with selected keys and dataid
-        li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
-
-        if not len(li) > 0:
-            print("Parameter", parameterstring, dataid, coverage)
-            print("Did not find any data to display - aborting")
-            return
-        else:
-            valkeys = ['time']
-            valkeys = parameterstring.split(',')
-            for i,elem in enumerate(valkeys):
-                idx = KEYLIST.index(elem)
-                if elem == 'time':
-                    self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
-                else:
-                    self.array[idx] = [float(el[i]) for el in li]
-        """
-        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
-
-        self.figure.clear()
-        stop_command_send = False
-        pos = KEYLIST.index('t1')
-        posvar1 = KEYLIST.index('var1')
-        print ("Running MQTT...")
-        while not stop_command_send:
-            client.loop_forever()
-
-            """
-            step = 0.1
-            client.loop(step)
-            sumtime = sumtime+step
-            print ('Dict:', self.datavars[0][:-5])
-            # if data coming
-            li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
-            for idx,el in enumerate(self.array):
-                el.extend(li[idx])
-            self.array = [el[-int(self.datavars[6]):] for el in self.array]
-            #removeduplicates()
-            print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0] )
-            #client.loop_stop()
-            if sumtime/10. == self.datavars[7]:
-                sumtime = 0
-                array = self.array
-                self.monitorPlot(array)
-
-        #t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
-        #t1.start()
-        # Display the plot
-        self.canvas.draw()
-            """
 
     def startMARCOSMonitor(self,**kwargs):
         """
@@ -470,9 +371,6 @@ class PlotPanel(wx.Panel):
         self.canvas.draw()
 
 
-    def mqttloop(self):
-        pass
-
     def startMARTASMonitor(self, protocol, **kwargs):
         """
         DEFINITION:
@@ -495,8 +393,13 @@ class PlotPanel(wx.Panel):
         martasport = self.datavars[10]
         martasdelay = self.datavars[11]
 
-        # convert parameter list to a dbselect sql format
-        #parameterstring = 'time,'+','.join(parameter)
+        # convert unitlist to [[],[]]
+        plist = parameter.split(',')
+        if len(unitlist) == len(plist):
+            for idx, el in enumerate(plist):
+                unitlist[idx] = [el,unitlist[idx]]
+            self.datavars[5] = unitlist
+
 
         if protocol == 'mqtt':
             try:
@@ -521,48 +424,6 @@ class PlotPanel(wx.Panel):
                 # Display the plot
                 self.canvas.draw()
 
-                """
-                stop_command_send = False
-                sumtime = 0
-                pos = KEYLIST.index('t1')
-                posvar1 = KEYLIST.index('var1')
-                print ("Running MQTT...")
-                while not stop_command_send:
-                    #client.loop_forever()
-
-                    step = 0.1
-                    client.loop(step)
-                    sumtime = sumtime+step
-                    print ('Dict:', self.datavars[0][:-5])
-                    # if data coming
-                    li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
-                    for idx,el in enumerate(li):
-                        print ("Got", idx, el)
-                        if len(self.array[0]) > 0 and not li[0][0] == self.array[0][-1]:
-                            print ("Here")
-                            self.array[idx].extend(el)
-                        elif len(self.array[0]) == 0:
-                            self.array[idx].extend(el)
-
-                    #for idx,el in enumerate(self.array):
-                    #    if not el[0] == li[0]:
-                    #        el.extend(li[idx])
-                    self.array = [el[-int(self.datavars[6]):] for el in self.array]
-                    #removeduplicates()
-                    print ("Check:", num2date(li[0]), len(self.array[0]), li[pos], li[posvar1], self.array[0], self.array )
-                    #client.loop_stop()
-                    if sumtime/10. == self.datavars[7]:
-                        print ("YIPHIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
-                        sumtime = 0
-                        array = self.array
-                        self.monitorPlot(array)
-                    self.canvas.draw()
-
-                        #t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
-                        #t1.start()
-                        # Display the plot
-                        #self.canvas.draw()
-                """
 
         """
         # Test whether data is available at all with selected keys and dataid
@@ -678,7 +539,7 @@ class PlotPanel(wx.Panel):
                 l, = self.axes.plot_date(dt,rd,'b-')
                 #l, = a.plot_date(dt,td,'g-')
                 plt.xlabel("Time")
-                plt.ylabel(r'%s [%s]' % (unitlist[idx-1][0],unitlist[idx-1][1]))
+                plt.ylabel(r'{} [{}]'.format(unitlist[idx-1][0],unitlist[idx-1][1]))
 
                 # Get the minimum and maximum temperatures these are
                 # used for annotations and scaling the plot of data
@@ -1148,7 +1009,7 @@ class MainFrame(wx.Frame):
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onConnectMARCOSButton, self.menu_p.com_page.getMARCOSButton)
         self.Bind(wx.EVT_BUTTON, self.onConnectMARTASButton, self.menu_p.com_page.getMARTASButton)
-        self.Bind(wx.EVT_BUTTON, self.onConnectMQTTButton, self.menu_p.com_page.getMQTTButton)
+        #self.Bind(wx.EVT_BUTTON, self.onConnectMQTTButton, self.menu_p.com_page.getMQTTButton)
         self.Bind(wx.EVT_BUTTON, self.onStartMonitorButton, self.menu_p.com_page.startMonitorButton)
         self.Bind(wx.EVT_BUTTON, self.onStopMonitorButton, self.menu_p.com_page.stopMonitorButton)
         self.Bind(wx.EVT_BUTTON, self.onLogDataButton, self.menu_p.com_page.saveMonitorButton)
@@ -1293,18 +1154,20 @@ class MainFrame(wx.Frame):
         self.menu_p.met_page.MetaDataButton.Disable()      # remain disabled
         self.menu_p.met_page.MetaSensorButton.Disable()    # remain disabled
         self.menu_p.met_page.MetaStationButton.Disable()   # remain disabled
-        self.menu_p.met_page.stationTextCtrl.Disable()     # remain disabled
-        self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
-        self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
+        if PLATFORM.startswith('linux'):
+            self.menu_p.met_page.stationTextCtrl.Disable()     # remain disabled
+            self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
+            self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
         # DI
         self.menu_p.abs_page.AnalyzeButton.Disable()       # activate if DI data is present i.e. diTextCtrl contains data
         self.menu_p.abs_page.loadDIButton.Enable()         # remain enabled
-        self.menu_p.abs_page.diTextCtrl.Disable()          # remain disabled
         self.menu_p.abs_page.defineVarioButton.Enable()    # remain enabled
-        self.menu_p.abs_page.varioTextCtrl.Disable()       # remain disabled
         self.menu_p.abs_page.defineScalarButton.Enable()   # remain enabled
-        self.menu_p.abs_page.scalarTextCtrl.Disable()      # remain disabled
-        #self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled -- WINDOWS Prob - scrolling will not work
+        if PLATFORM.startswith('linux'):
+            self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled -- WINDOWS Prob - scrolling will not work
+            self.menu_p.abs_page.scalarTextCtrl.Disable()      # remain disabled
+            self.menu_p.abs_page.varioTextCtrl.Disable()       # remain disabled
+            self.menu_p.abs_page.diTextCtrl.Disable()          # remain disabled
         self.menu_p.abs_page.ClearLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.SaveLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
@@ -1330,10 +1193,12 @@ class MainFrame(wx.Frame):
         #self.menu_p.ana_page.stackButton.Disable()         # if len(self.streamlist) > 1
 
         # Report
-        self.menu_p.rep_page.logger.Disable()              # remain disabled
+        if PLATFORM.startswith('linux'):
+            self.menu_p.rep_page.logger.Disable()              # remain disabled
 
         # Monitor
-        self.menu_p.com_page.connectionLogTextCtrl.Disable()  # remain disabled
+        if PLATFORM.startswith('linux'):
+            self.menu_p.com_page.connectionLogTextCtrl.Disable()  # remain disabled
         self.menu_p.com_page.startMonitorButton.Disable()  # always
         self.menu_p.com_page.stopMonitorButton.Disable()   # always
         self.menu_p.com_page.saveMonitorButton.Disable()   # always
@@ -1341,10 +1206,10 @@ class MainFrame(wx.Frame):
         self.menu_p.com_page.frequSlider.Disable()         # always
         self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
         self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
-        self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
+        #self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
         self.menu_p.com_page.marcosLabel.SetValue('not connected')
         self.menu_p.com_page.martasLabel.SetValue('not connected')
-        self.menu_p.com_page.mqttLabel.SetValue('not connected')
+        #self.menu_p.com_page.mqttLabel.SetValue('not connected')
 
     def ActivateControls(self,stream):
         """
@@ -2143,53 +2008,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #print "Stream: ", len(self.stream), len(self.plotstream)
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
             #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
-<<<<<<< HEAD
-            try:
-                if fileformat == 'BLV':
-                    print ("Writing BLV data")  # add function here
-                    print ("Function", self.plotopt['function'])
-                    year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
-                    # use functionlist as kwarg in write method
-                    self.plotstream.write(path,
-                                filenamebegins=filenamebegins,
-                                filenameends=filenameends,
-                                dateformat=dateformat,
-                                mode=mode,
-                                year=year,
-                                coverage=coverage,
-                                format_type=fileformat)
-                    mode = 'replace'
-                elif fileformat == 'IMAGCDF':
-                    # Open Yes/No message box and to select whether flags should be stored or not
-                    print ("Writing IMAGCDF data")  # add function here
-                    addflags = False
-                    # Test whether flags are present at all
-                    dlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-                    if dlg.ShowModal() == wx.ID_YES:
-                        addflags = True
-                    dlg.Destroy()
-                    self.plotstream.write(path,
-                                filenamebegins=filenamebegins,
-                                filenameends=filenameends,
-                                dateformat=dateformat,
-                                mode=mode,
-                                addflags = addflags,
-                                coverage=coverage,
-                                format_type=fileformat)
-                else:
-                    self.plotstream.write(path,
-                                filenamebegins=filenamebegins,
-                                filenameends=filenameends,
-                                dateformat=dateformat,
-                                mode=mode,
-                                coverage=coverage,
-                                format_type=fileformat)
 
-                self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
-                self.changeStatusbar("Data written ... Ready")
-            except:
-                self.menu_p.rep_page.logMsg("Writing failed - Permission?")
-=======
             checkPath = os.path.join(path, dlg.filenameTextCtrl.GetValue())
             export = False
             if os.path.exists(checkPath):
@@ -2218,6 +2037,23 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                     coverage=coverage,
                                     format_type=fileformat)
                         mode = 'replace'
+                    elif fileformat == 'IMAGCDF':
+                        # Open Yes/No message box and to select whether flags should be stored or not
+                        print ("Writing IMAGCDF data")  # add function here
+                        addflags = False
+                        # Test whether flags are present at all
+                        dlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+                        if dlg.ShowModal() == wx.ID_YES:
+                            addflags = True
+                        dlg.Destroy()
+                        self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    addflags = addflags,
+                                    coverage=coverage,
+                                    format_type=fileformat)
                     else:
                         self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
@@ -2231,7 +2067,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     self.changeStatusbar("Data written ... Ready")
                 except:
                     self.menu_p.rep_page.logMsg("Writing failed - Permission?")
->>>>>>> usgs-master-copy
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()
@@ -4201,8 +4036,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.changeStatusbar("Power spectrum ...")
 
         # Open a dialog for paramater selction
+        dlg = SelectFromListDialog(None, title='Select sensor', selectlist=self.shownkeylist, name='Component')
+        if dlg.ShowModal() == wx.ID_OK:
+            comp = dlg.selectComboBox.GetValue()
+        else:
+            comp = self.compselect[0]
+
         import magpy.mpplot as mp
-        mp.plotPS(self.plotstream, 'x')
+        mp.plotPS(self.plotstream, comp)
 
 
     def onSpectrumButton(self, event):
@@ -4212,9 +4053,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         self.changeStatusbar("Spectral plot ...")
 
+        dlg = SelectFromListDialog(None, title='Select sensor', selectlist=self.shownkeylist, name='Component')
+        if dlg.ShowModal() == wx.ID_OK:
+            comp = dlg.selectComboBox.GetValue()
+        else:
+            comp = self.compselect[0]
+
         # Open a dialog for paramater selction
         import magpy.mpplot as mp
-        mp.plotSpectrogram(self.plotstream, 'x')
+        mp.plotSpectrogram(self.plotstream, comp)
 
 
     # ------------------------------------------------------------------------------------------
@@ -5440,7 +5287,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
     # ################
     # ------------------------------------------------------------------------------------------
 
-    def onConnectMARTASButton(self, event):
+    """     
+    def onConnectMQTTButton(self, event):
         # start a subscribe to client call
         success = True
 
@@ -5540,7 +5388,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.logMsg(' - IP: {}'.format(martasaddress))
             self.menu_p.com_page.coverageTextCtrl.Enable()    # always
             self.menu_p.com_page.frequSlider.Enable()         # always
-
+    """     
 
     def onConnectMARCOSButton(self, event):
         # active if database is connected
@@ -5593,7 +5441,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if success:
             self.menu_p.com_page.startMonitorButton.Enable()
             self.menu_p.com_page.getMARTASButton.Disable()
-            self.menu_p.com_page.getMQTTButton.Disable()
+            #self.menu_p.com_page.getMQTTButton.Disable()
             self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
             self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
             self.menu_p.com_page.logMsg('Begin monitoring...')
@@ -5603,10 +5451,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.frequSlider.Enable()         # always
 
 
-    def onConnectMQTTButton(self, event):
+    def onConnectMARTASButton(self, event):
 
         success = False
-        dlg = SelectMARTASDialog(None, title='Select MARTAS - MQTT',options=self.options)
+        dlg = SelectMARTASDialog(None, title='Select MARTAS',options=self.options)
         if dlg.ShowModal() == wx.ID_OK:
             martasaddress1 = dlg.addressComboBox.GetValue()
             martasaddress = dlg.newTextCtrl.GetValue()
@@ -5638,7 +5486,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             mqttimport = True
         except:
             mqttimport = False
-        print ("TEST", colsup.identifier)
+        #print ("TEST", colsup.identifier)
 
         if mqttimport:
             client = mqtt.Client()
@@ -5651,23 +5499,28 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
             self.changeStatusbar("Scanning for MQTT broadcasts ... approx 20 sec")
 
+            
+
             loopcnt = 0
             success = True
-            while loopcnt < 200: #colsup.identifier == {} and loopcnt < 100:
+            maxloop = 200
+            self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
+            while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
                 loopcnt += 1
                 client.loop(.1) #blocks for 100ms
-                print (loopcnt)
+                self.progress.Update(loopcnt)
                 if loopcnt > 600:
                     success = False
                     break
+            self.progress.Destroy()
 
             if success:
                 self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
                 self.menu_p.com_page.startMonitorButton.Enable()
                 self.menu_p.com_page.getMARTASButton.Disable()
-                self.menu_p.com_page.getMQTTButton.Disable()
-                self.menu_p.com_page.mqttLabel.SetBackgroundColour(wx.GREEN)
-                self.menu_p.com_page.mqttLabel.SetValue('connected to {}'.format(martasaddress))
+                #self.menu_p.com_page.getMQTTButton.Disable()
+                self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+                self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
                 self.menu_p.com_page.logMsg('Begin monitoring...')
                 self.menu_p.com_page.logMsg(' - Selected MARTAS {} protocol'.format(martasprotocol))
                 self.menu_p.com_page.coverageTextCtrl.Enable()    # always
@@ -5680,11 +5533,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     if not sensorid in sensorlist:
                         sensorlist.append(sensorid)
 
-                print ("Sensorlist", sensorlist)
-                # TODO open a dialog to select the sensor to be monitored
-                sensorid = 'ENV05_3_0001'
-                sensorid = sensorlist[0]
-                self.menu_p.com_page.logMsg(' - Sensors: {}'.format(sensorid))
+                dlg = SelectFromListDialog(None, title='Select sensor', selectlist=sensorlist, name='Sensor')
+                if dlg.ShowModal() == wx.ID_OK:
+                    sensorid = dlg.selectComboBox.GetValue()
+                else:
+                    sensorid = sensorlist[0]
+
+                self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
 
                 pad = 5
                 currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
@@ -5702,14 +5557,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.monitorSource='MARTAS'
             else:
                 self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
-                self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
+                #self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
 
 
     def onStartMonitorButton(self, event):
         self.DeactivateAllControls()
         self.menu_p.com_page.getMARTASButton.Disable()
         self.menu_p.com_page.getMARCOSButton.Disable()
-        self.menu_p.com_page.getMQTTButton.Disable()
+        #self.menu_p.com_page.getMQTTButton.Disable()
         self.menu_p.com_page.stopMonitorButton.Enable()
         self.menu_p.com_page.saveMonitorButton.Enable()
 
@@ -5737,8 +5592,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
             self.plot_p.startMARTASMonitor(self.plot_p.datavars.get(12))
             # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
-            self.menu_p.com_page.mqttLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.mqttLabel.SetValue('connected to {}'.format(self.plot_p.datavars.get(9)))
+            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(self.plot_p.datavars.get(9)))
 
     def _monitor2stream(self,array, db=None, dataid=None,header = {}):
         """
@@ -5748,23 +5603,24 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #header = {}
         if db:
             header = dbfields2dict(db,dataid)
-        array[0] = date2num(array[0])
+        if len(array[0]) > 0:
+            if isinstance(array[0][-1], datetime):
+                array[0] = date2num(array[0])
         stream = DataStream([LineStruct()],header,array)
         return stream
 
     def onStopMonitorButton(self, event):
-        if  self.monitorSource=='MARCOS':
-            dataid = self.plot_p.datavars[0]
-            self.plot_p.t1_stop.set()
-            self.menu_p.com_page.logMsg(' > Read cycle stopped')
-            self.menu_p.com_page.logMsg('MARCOS disconnected')
-            self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
-            self.plotstream = self.stream.copy()
-            currentstreamindex = len(self.streamlist)
-            self.streamlist.append(self.plotstream)
-            self.streamkeylist.append(self.plotstream._get_key_headers())
-            self.headerlist.append(self.plotstream.header)
-            self.currentstreamindex = currentstreamindex
+        dataid = self.plot_p.datavars[0]
+        self.plot_p.t1_stop.set()
+        self.menu_p.com_page.logMsg(' > Read cycle stopped')
+        self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.monitorSource))
+        self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
+        self.plotstream = self.stream.copy()
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.plotstream)
+        self.streamkeylist.append(self.plotstream._get_key_headers())
+        self.headerlist.append(self.plotstream.header)
+        self.currentstreamindex = currentstreamindex
 
         self.menu_p.com_page.stopMonitorButton.Disable()
         self.menu_p.com_page.saveMonitorButton.Disable()
@@ -5775,13 +5631,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         self.menu_p.com_page.getMARTASButton.Enable()
         self.menu_p.com_page.getMARCOSButton.Enable()
-        self.menu_p.com_page.getMQTTButton.Enable()
+        #self.menu_p.com_page.getMQTTButton.Enable()
         self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
         self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
-        self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
+        #self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
         self.menu_p.com_page.marcosLabel.SetValue('not connected')
         self.menu_p.com_page.martasLabel.SetValue('not connected')
-        self.menu_p.com_page.mqttLabel.SetValue('not connected')
+        #self.menu_p.com_page.mqttLabel.SetValue('not connected')
         self.changeStatusbar("Ready")
 
 
