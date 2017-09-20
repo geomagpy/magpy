@@ -347,7 +347,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         PARAMETERS:
             kwargs:  - all plot args
         """
-        # moved to MARTAS 
+        # moved to MARTAS
         pass
 
 
@@ -1063,6 +1063,7 @@ class MainFrame(wx.Frame):
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
+        self.Bind(wx.EVT_BUTTON, self.onLoadUSGS, self.menu_p.abs_page.loadUSGSButton)
         self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
         self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
@@ -1233,6 +1234,7 @@ class MainFrame(wx.Frame):
         # DI
         self.menu_p.abs_page.AnalyzeButton.Disable()       # activate if DI data is present i.e. diTextCtrl contains data
         self.menu_p.abs_page.loadDIButton.Enable()         # remain enabled
+        self.menu_p.abs_page.loadUSGSButton.Enable()       # remain enabled
         self.menu_p.abs_page.defineVarioButton.Enable()    # remain enabled
         self.menu_p.abs_page.defineScalarButton.Enable()   # remain enabled
         if PLATFORM.startswith('linux'):
@@ -4260,7 +4262,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
-            
+
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("BC function available - Ready")
@@ -5421,6 +5423,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.abs_page.AnalyzeButton.Enable()
         dlg.Destroy()
 
+    def onLoadUSGS(self,event):
+        print('Start')
 
     def onDefineVario(self,event):
         """
@@ -5680,7 +5684,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
     # ################
     # ------------------------------------------------------------------------------------------
 
-    """     
+    """
     def onConnectMQTTButton(self, event):
         # start a subscribe to client call
         success = True
@@ -5781,7 +5785,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.com_page.logMsg(' - IP: {}'.format(martasaddress))
             self.menu_p.com_page.coverageTextCtrl.Enable()    # always
             self.menu_p.com_page.frequSlider.Enable()         # always
-    """     
+    """
 
     def onConnectMARCOSButton(self, event):
         # active if database is connected
