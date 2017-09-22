@@ -12,6 +12,7 @@ v0.3.97 fixes:
     + absolute analysis: long file names are now correctly supported
     + Leap seconds in IAGA files are now considered like (2015-06-30T23:59:60 -> 2015-07-01T00:00:00)
       while reading
+    + reading multiple files in windos corrected
 
 v0.3.97 additions:
     + GUI: IMAGCDF export - flagging information can be attached

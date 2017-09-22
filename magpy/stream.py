@@ -863,15 +863,16 @@ CALLED BY:
             for idx,elem in enumerate(self.ndarray):
                 if len(ndarray[idx]) > 0:
                     if len(self.ndarray[idx]) > 0 and len(self.ndarray[0]) > 0:
-                        array[idx] = np.append(self.ndarray[idx], ndarray[idx],1).astype(object)
+                        array[idx] = np.append(self.ndarray[idx], ndarray[idx]).astype(object)
+                        #array[idx] = np.append(self.ndarray[idx], ndarray[idx],1).astype(object)
                     elif len(self.ndarray[0]) > 0: # only time axis present so far but no data within this elem
                         fill = ['-']
                         key = KEYLIST[idx]
                         if key in NUMKEYLIST or key=='sectime':
                             fill = [float('nan')]
                         nullvals = np.asarray(fill * len(self.ndarray[0]))
-                        #print nullvals
-                        array[idx] = np.append(nullvals, ndarray[idx],1).astype(object)
+                        #array[idx] = np.append(nullvals, ndarray[idx],1).astype(object)
+                        array[idx] = np.append(nullvals, ndarray[idx]).astype(object)
                     else:
                         array[idx] = ndarray[idx].astype(object)
             self.ndarray = np.asarray(array)
