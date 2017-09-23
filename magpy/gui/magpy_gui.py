@@ -2970,6 +2970,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     except:
                         errormsg += "Step 3: Filtering hourly data failed.\n"
 
+                    incon = False
                     faileddiff = False
                     try:
                         diff = subtractStreams(iafhour,minfiltdata)
@@ -3986,7 +3987,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif missingdata == 'interpolate':
                 miss = 'interpolate'
 
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_length=filterlength,missingdata=miss,noresample=True)
+            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),missingdata=miss,resample=False,noresample=True)
             self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
 
             self.ActivateControls(self.plotstream)

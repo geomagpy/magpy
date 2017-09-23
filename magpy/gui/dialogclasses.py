@@ -4193,7 +4193,7 @@ class CheckDataReportDialog(wx.Dialog):
         self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
         self.ratingTextCtrl = wx.TextCtrl(self, value="Overall rating: {}".format(self.rating), size=(30,30))
         self.continueButton = wx.Button(self, label=self.contlabel, size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+        self.closeButton = wx.Button(self, label='Cancel',size=(160,30))
 
         self.step1TextCtrl = wx.TextCtrl(self, value=self.step[0], size=(30,30))
         self.step2TextCtrl = wx.TextCtrl(self, value=self.step[1], size=(30,30))
@@ -4297,7 +4297,6 @@ class CheckDataReportDialog(wx.Dialog):
         #mainSizer.Add(self.sourceLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
 
         self.SetSizerAndFit(mainSizer)
-
 
     def bindControls(self):
         self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)

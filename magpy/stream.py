@@ -3881,14 +3881,15 @@ CALLED BY:
                 print("Treating k:", key, v.size)
 
             if v.size >= window_len:
-                s=np.r_[v[window_len-1:0:-1],v,v[-1:-window_len:-1]]
+                #print ("Check:", v, len(v), window_len)
+                s=np.r_[v[int(window_len)-1:0:-1],v,v[-1:-int(window_len):-1]]
 
                 if filter_type == 'gaussian':
                     w = signal.gaussian(window_len, std=std)
                     y=np.convolve(w/w.sum(),s,mode='valid')
                     res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
                 elif filter_type == 'wiener':
-                    res = signal.wiener(v, window_len, noise=0.5)
+                    res = signal.wiener(v, int(window_len), noise=0.5)
                 elif filter_type == 'butterworth':
                     dt = 800./float(len(v))
                     nyf = 0.5/dt
@@ -3897,7 +3898,7 @@ CALLED BY:
                 elif filter_type == 'spline':
                     res = UnivariateSpline(t, v, s=240)
                 elif filter_type == 'flat':
-                    w=np.ones(window_len,'d')
+                    w=np.ones(int(window_len),'d')
                     s = np.ma.masked_invalid(s)
                     y=np.convolve(w/w.sum(),s,mode='valid') #'valid')
                     res = y[(int(window_len/2)-1):(len(v)+int(window_len/2)-1)]
