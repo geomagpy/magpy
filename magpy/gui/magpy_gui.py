@@ -2082,17 +2082,26 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.db.close()
         except:
             pass
-        try:
-            self.db = mysql.connect (host=host,user=user,passwd=passwd,db=dbname)
-        except:
+        # check whether host can be pinged (faster)
+        response = os.system("ping -c 1 -w2 {} > /dev/null 2>&1".format(host))
+        if response == 0:
+            try:
+                self.db = mysql.connect (host=host,user=user,passwd=passwd,db=dbname)
+            except:
+                self.db = False
+        else:
             self.db = False
         if self.db:
             self.DBOpen.Enable(True)
-            self.menu_p.rep_page.logMsg('- MySQL Database selected.')
+            self.menu_p.rep_page.logMsg('- MySQL Database {} on {} connected.'.format(dbname,host))
             self.changeStatusbar("Database %s successfully connected" % (dbname))
+            # enable MARCOS button
+            self.menu_p.com_page.getMARCOSButton.Enable()
         else:
             self.menu_p.rep_page.logMsg('- MySQL Database access failed.')
             self.changeStatusbar("Database connection failed")
+            # disable MARCOS button
+            self.menu_p.com_page.getMARCOSButton.Disable()
 
     def OnDBConnect(self, event):
         """
