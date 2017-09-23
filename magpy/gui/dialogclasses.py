@@ -1575,7 +1575,7 @@ class MetaDataDialog(wx.Dialog):
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
         self.panel = MetaDataPanel(self, header, layer)
-        self.panel.SetInitialSize((400, 400))
+        self.panel.SetInitialSize((400, 500))
         self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
         # Add Save/Cancel Buttons
         self.createWidgets()
@@ -1607,7 +1607,7 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
     Dialog for MetaData panel
     """
     def __init__(self, parent, header, layer):
-        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(1000, 600))
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(1000, 800))
 
         self.header = header
         self.list = []
@@ -1655,8 +1655,14 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
                 cnt += 1
 
                 label = self.AppendLabel(key,label)
+                # DYNAMICSIZE
+                if PLATFORM.startswith('linux'):
+                    dynsize = '30'
+                else:
+                    dynsize = '50'
+
                 exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
-                exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,30),style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)')
+                exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,'+dynsize+'),style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)')
                 if value.startswith('object with complex'):
                     exec('self.'+key+'TextCtrl.Disable()')
         self.cnts = [colcnt, cnt]
@@ -2094,11 +2100,16 @@ class AnalysisBaselineDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, idxlst, dictlst, options):
+    def __init__(self, parent, title, idxlst, dictlst, options, stream, shownkeylist, keylist):
         super(AnalysisBaselineDialog, self).__init__(parent=parent,
-            title=title, size=(400, 600))
+            title=title, size=(600, 600))
         self.options = options
+        self.plotstream = stream
+        self.shownkeylist = shownkeylist
+        self.keylist = keylist
         self.idxlst = idxlst
+        self.dictlst = dictlst
+        #self.fitlist = ['time1','time2']
         self.absstreamlist = []
         for idx in idxlst:
             currentname = [el['filename'] for el in dictlst if str(el['streamidx']) == str(idx)][0]
@@ -2114,21 +2125,35 @@ class AnalysisBaselineDialog(wx.Dialog):
         #self.fitknots = fitknots
         #self.fitdegree = fitdegree
 
+
+    def _pydate2wxdate(self,date):
+        assert isinstance(date, (datetime, datetime.date))
+        tt = date.timetuple()
+        dmy = (tt[2], tt[1]-1, tt[0])
+        return wx.DateTimeFromDMY(*dmy)
+
     # Widgets
     def createControls(self):
         self.absstreamLabel = wx.StaticText(self, label="Select basevalue data:",size=(160,30))
         self.absstreamComboBox = wx.ComboBox(self, choices=self.absstreamlist,
             style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(160,-1))
 
+        #self.fitlistLabel = wx.StaticText(self, label="Adoption parameter:",size=(160,30))
+        # RadioButton with fitting list (eventually updated from DB)
+        #self.fitlistRadioBox = wx.RadioBox(self, label="Adoption parameter:",
+        #             choices=self.fitlist, majorDimension=len(fitlist), style=wx.RA_SPECIFY_COLS)
+        
+
         self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(160,30))
-        self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(160,60),
+        self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(300,90),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.parameterButton = wx.Button(self, label='Change fit ...',size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Adopt baseline',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
-        self.parameterTextCtrl.Disable()
+        if PLATFORM.startswith('linux'):
+            self.parameterTextCtrl.Disable()
         #self.funcLabel = wx.StaticText(self, label="Fit function:")
         #self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
         #    style=wx.CB_DROPDOWN, value=self.fitfunc)
@@ -2150,6 +2175,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         # Add the controls to the sizers:
         contlst=[(self.absstreamLabel, noOptions)]
         contlst.append((self.absstreamComboBox, expandOption))
+        contlst.append((self.fitlistRadioBox, noOptions))
         contlst.append((self.parameterLabel, noOptions))
         contlst.append((self.parameterTextCtrl, expandOption))
         contlst.append((self.parameterButton, dict(flag=wx.ALIGN_CENTER)))
@@ -2173,12 +2199,45 @@ class AnalysisBaselineDialog(wx.Dialog):
 
     def OnParameter(self, e):
         # open fit dlg
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options)
+        idx = int(self.absstreamComboBox.GetValue().split(':')[0])
+
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+        startdate=self.dictlst[idx].get('startdate')
+        enddate=self.dictlst[idx].get('enddate')
+        starttime = num2date(startdate).strftime('%X')
+        endtime = num2date(enddate).strftime('%X')
+        dlg.startFitDatePicker.SetValue(self._pydate2wxdate(num2date(startdate)))
+        dlg.endFitDatePicker.SetValue(self._pydate2wxdate(num2date(enddate)))
+        dlg.startFitTimePicker.SetValue(starttime)
+        dlg.endFitTimePicker.SetValue(endtime)
+
         if dlg.ShowModal() == wx.ID_OK:
             fitfunc = dlg.funcComboBox.GetValue()
             knots = dlg.knotsTextCtrl.GetValue()
             degree = dlg.degreeTextCtrl.GetValue()
+            # Getting time information
+            stday = dlg.startFitDatePicker.GetValue()
+            sttime = str(dlg.startFitTimePicker.GetValue())
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+            starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+            enday = dlg.endFitDatePicker.GetValue()
+            entime = str(dlg.endFitTimePicker.GetValue())
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+            endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+
+            if fitfunc.startswith('poly'):
+                fitfunc = 'poly'
             self.options['fitfunction'] = fitfunc
+
+            #self.menu_p.rep_page.logMsg('Fitting base values with %s, %s, %s' % (fitfunc, knots, degree))
             if not 0<float(knots)<1:
                 knots = 0.5
             else:
@@ -2189,7 +2248,8 @@ class AnalysisBaselineDialog(wx.Dialog):
                 degree = int(degree)
             self.options['fitknotstep'] = str(knots)
             self.options['fitdegree'] = str(degree)
-            self.parameterstring = "Function: {}\nKnotstep: {}\nDegree: {}\n".format(self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''))
+
+            self.parameterstring = "Adopted Baseline 1: \nStarttime: {}, Function: {}, Knotstep: {}, Degree: {}, Endtime: {}\n".format(starttime,self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),endtime)
             self.parameterTextCtrl.SetValue(self.parameterstring)
         dlg.Destroy()
 
@@ -4796,7 +4856,7 @@ class MultiStreamDialog(wx.Dialog):
         # 1. Section
         tmpnamelst = []
         for idx, elem in enumerate(self.streamlist):
-            print ("Multi - check this if DI analysis has been conducted before",idx, elem.length())
+            #print ("Multi - check this if DI analysis has been conducted before",idx, elem.length())
             name = elem.header.get('DataID','stream'+str(idx))
             #if not len(self.keylist[idx]) > 0:
             #    keys = elem._get_key_headers()

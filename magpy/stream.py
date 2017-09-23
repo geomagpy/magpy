@@ -11438,6 +11438,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             #t1s = datetime.utcnow()
             # Get indicies of stream_b of which times are present in stream_a
             array = [[] for key in KEYLIST]
+            """
             try: # TODO Find a better solution here! Roman 2017
                 # The try clause is not correct as searchsorted just finds
                 # positions independet of agreement (works well if data is similar)
@@ -11446,11 +11447,14 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 idxA = np.searchsorted(sortedB, timea)
                 #print timea, timeb,len(idxA), len(idxB)
                 indtib = idxB[idxA]
+                print ("solution1")
             except:
                 indtib = np.nonzero(np.in1d(timeb, timea))[0]
+                print ("solution2")
+            """
+            indtib = np.nonzero(np.in1d(timeb, timea))[0]
             #print timeb[pos]
             #print ("Here", timea)
-            #print (indtib)
             # If equal elements occur in time columns
             if len(indtib) > int(0.5*len(timeb)):
                 logger.info('subtractStreams: Found identical timesteps - using simple subtraction')

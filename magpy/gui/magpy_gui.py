@@ -1326,10 +1326,16 @@ class MainFrame(wx.Frame):
             for basedict in baselinedictlst:
                 startdate = basedict['startdate']
                 enddate = basedict['enddate']
+                # Take all baslines, let the user choose whether its the correct instrument
+                # -- extrapolation needs to be tested
+                #if mintime <= startdate <= maxtime or mintime <= enddate <= maxtime or (startdate <= mintime and enddate >= maxtime):
+                baselineidxlst.append(basedict['streamidx'])
+                """
                 if sensorid in basedict['filename']:
                     #print ("found filename")
                     if mintime <= startdate <= maxtime or mintime <= enddate <= maxtime or (startdate <= mintime and enddate >= maxtime):
                         baselineidxlst.append(basedict['streamidx'])
+                """
             return baselineidxlst
 
         # Activate "always" fields
@@ -3984,11 +3990,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
              Calculates baseline correction
         """
         self.changeStatusbar("Baseline adoption ...")
-        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options)
+        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
         # open dlg which allows to choose baseline data stream, function and parameters
         # Drop down for baseline data stream (idx: filename)
         # Text window describing baseline parameter
         # button to modify baseline parameter
+        #print ("BASELINEDICT CoNTENTS:", self.baselinedictlst,self.baselineidxlst)
+
         if dlg.ShowModal() == wx.ID_OK:
             # return active stream idx ()
             #print ("Here", dlg.absstreamComboBox.GetStringSelection())
@@ -3998,12 +4006,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
             absstream = self.streamlist[idx]
             tmpbasedict = [el for el in self.baselinedictlst if el['streamidx']==idx]
             basedict = tmpbasedict[0]
+            ## TODO extract all baseline parameters here
             fitfunc = self.options.get('fitfunction','spline')
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
             baselinefunc = self.plotstream.baseline(absstream,fitfunc=self.options.get('fitfunction','spline'), knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
+            # add new stream, with baselinecorr
+            # BASECORR
+            dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
+                        "Baseline parameters added to meta information and option 'Baseline Corr' on 'Stream' panel now enabled.\n",
+                        "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("BC function available - Ready")
@@ -4385,9 +4402,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Apply baselinecorrection
         """
-        print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.plotstream = self.plotstream.bc()
-        print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.plotstream)
+        self.streamkeylist.append(self.shownkeylist)
+        self.headerlist.append(self.plotstream.header)
+        self.currentstreamindex = currentstreamindex
+        self.plotoptlist.append(self.plotopt)
+
+        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
