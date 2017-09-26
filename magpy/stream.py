@@ -214,7 +214,8 @@ try:
         if not nasacdfdir:
             nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
         #print nasacdfdir
-        os.putenv("CDF_LIB", nasacdfdir)
+        #os.putenv("CDF_LIB", nasacdfdir)
+        os.environ["CDF_LIB"] =str(nasacdfdir)
         logger.info("Using CDF lib in %s" % nasacdfdir)
         try:
             import spacepy.pycdf as cdf

@@ -1751,10 +1751,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2017 Roman Leonhardt, Rachel Bailey, Mojca Miklavec')
+        info.SetCopyright('(C) 2011 - 2017 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
-        info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec')
+        info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec')
         info.AddDocWriter('Leonhardt,Bailey,Miklavec,Matzka')
         info.AddArtist('Leonhardt')
         info.AddTranslator('Bailey')
@@ -2043,6 +2043,24 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                     coverage=coverage,
                                     format_type=fileformat)
                         mode = 'replace'
+                    elif fileformat == 'PYCDF':
+                        # Open Yes/No message box and to select whether flags should be stored or not
+                        print ("Writing PYCDF data")  # add function here
+                        addflags = False
+                        # Test whether flags are present at all
+                        dlg = wx.MessageDialog(self, 'Compress? (selecting "NO" improves compatibility between different operating systems', 'Compression', wx.YES_NO | wx.ICON_QUESTION)
+                        compression = 0
+                        if dlg.ShowModal() == wx.ID_YES:
+                            compression = 5
+                        dlg.Destroy()
+                        self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    compression = compression,
+                                    coverage=coverage,
+                                    format_type=fileformat)
                     elif fileformat == 'IMAGCDF':
                         # Open Yes/No message box and to select whether flags should be stored or not
                         print ("Writing IMAGCDF data")  # add function here
