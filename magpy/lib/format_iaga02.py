@@ -34,6 +34,35 @@ def isIAGA(filename):
     return True
 
 
+def splittexttolines(text, linelength):
+    """
+    DESCRIPTION:
+        Internal method which splits provided comments into IAGA 2002 conform lines.
+        Returns a list of individual lines which do not exceed the given linelength.
+    EXAMPLE:
+        comment = "De Bello Gallico\nJulius Caesar\nGallia est omnis divisa in partes tres, quarum unam incolunt Belgae, aliam Aquitani, tertiam qui ipsorum lingua Celtae, nostra Galli appellantur. Hi omnes lingua, institutis, legibus inter se differunt. Gallos ab Aquitanis Garumna flumen, a Belgis Matrona et Sequana dividit. Horum omnium fortissimi sunt Belgae, propterea quod a cultu atque humanitate provinciae longissime absunt, minimeque ad eos mercatores saepe commeant atque ea quae ad effeminandos animos pertinent important, proximique sunt Germanis, qui trans Rhenum incolunt, quibuscum continenter bellum gerunt. Qua de causa Helvetii quoque reliquos Gallos virtute praecedunt, quod fere cotidianis proeliis cum Germanis contendunt, cum aut suis finibus eos prohibent aut ipsi in eorum finibus bellum gerunt. Eorum una, pars, quam Gallos obtinere dictum est, initium capit a flumine Rhodano, continetur Garumna flumine, Oceano, finibus Belgarum, attingit etiam ab Sequanis et Helvetiis flumen Rhenum, vergit ad septentriones."
+        output = splittexttolines(comment, 64)
+    """ 
+    newline = ''
+    linelst = text.split('\n')
+    output = []
+    for line in linelst:
+        wordlst = line.split()
+        for word in wordlst:
+            if len(newline+word)+1 < linelength:
+                if newline == '':
+                    newline = word
+                else:
+                    newline = newline+" "+word
+            else:
+                output.append(newline)
+                newline = word
+                if not len(newline) < linelength:
+                    newline = word[:linelength-1]
+        output.append(newline)
+        newline = ''
+    return output
+
 
 def readIAGA(filename, headonly=False, **kwargs):
     """
@@ -73,6 +102,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     if getfile:
         loggerlib.info('Read: %s Format: %s ' % (filename, "IAGA2002"))
         dfpos = KEYLIST.index('df')
+        comment = ''
 
         for line in fh:
             if line.isspace():
@@ -83,62 +113,70 @@ def readIAGA(filename, headonly=False, **kwargs):
                 infoline = line[:-4]
                 key = infoline[:23].strip()
                 val = infoline[23:].strip()
-                if key.find('Source') > -1:
-                    if not val == '':
-                        stream.header['StationInstitution'] = val
-                if key.find('Station') > -1:
-                    if not val == '':
-                        stream.header['StationName'] = val
-                if key.find('IAGA') > -1:
-                    if not val == '':
-                        stream.header['StationIAGAcode'] = val
-                        stream.header['StationID'] = val
-                if key.find('Latitude') > -1:
-                    if not val == '':
-                        stream.header['DataAcquisitionLatitude'] = val
-                if key.find('Longitude') > -1:
-                    if not val == '':
-                        stream.header['DataAcquisitionLongitude'] = val
-                if key.find('Elevation') > -1:
-                    if not val == '':
-                        stream.header['DataElevation'] = val
-                if key.find('Format') > -1:
-                    if not val == '':
-                        stream.header['DataFormat'] = val
-                if key.find('Reported') > -1:
-                    if not val == '':
-                        stream.header['DataComponents'] = val
-                if key.find('Orientation') > -1:
-                    if not val == '':
-                        stream.header['DataSensorOrientation'] = val
-                if key.find('Digital') > -1:
-                    if not val == '':
-                        stream.header['DataDigitalSampling'] = val
-                if key.find('Interval') > -1:
-                    if not val == '':
-                        stream.header['DataSamplingFilter'] = val
-                if key.startswith(' #'):
+                if not line.startswith(' #'):
+                    # main part
+                    if key.find('Source') > -1:
+                        if not val == '':
+                            stream.header['StationInstitution'] = val
+                    if key.find('Station') > -1:
+                        if not val == '':
+                            stream.header['StationName'] = val
+                    if key.find('IAGA') > -1:
+                        if not val == '':
+                            stream.header['StationIAGAcode'] = val
+                            stream.header['StationID'] = val
+                    if key.find('Latitude') > -1:
+                        if not val == '':
+                            stream.header['DataAcquisitionLatitude'] = val
+                    if key.find('Longitude') > -1:
+                        if not val == '':
+                            stream.header['DataAcquisitionLongitude'] = val
+                    if key.find('Elevation') > -1:
+                        if not val == '':
+                            stream.header['DataElevation'] = val
+                    if key.find('Format') > -1:
+                        if not val == '':
+                            stream.header['DataFormat'] = val
+                    if key.find('Reported') > -1:
+                        if not val == '':
+                            stream.header['DataComponents'] = val
+                    if key.find('Orientation') > -1:
+                        if not val == '':
+                            stream.header['DataSensorOrientation'] = val
+                    if key.find('Digital') > -1:
+                        if not val == '':
+                            stream.header['DataDigitalSampling'] = val
+                    if key.find('Interval') > -1:
+                        if not val == '':
+                            stream.header['DataSamplingFilter'] = val
+                    if key.find('Data Type') > -1:
+                        if not val == '':
+                            if val[0] in ['d','D']:
+                                stream.header['DataPublicationLevel'] = '4'
+                            elif val[0] in ['q','Q']:
+                                stream.header['DataPublicationLevel'] = '3'
+                            elif val[0] in ['p','P']:
+                                stream.header['DataPublicationLevel'] = '2'
+                            else:
+                                stream.header['DataPublicationLevel'] = '1'
+                    if key.find('Publication Date') > -1:
+                        if not val == '':
+                            stream.header['DataPublicationDate'] = val
+                else:
+                    # optional comment part
                     if key.find('# V-Instrument') > -1:
                         if not val == '':
                             stream.header['SensorID'] = val
                     elif key.find('# PublicationDate') > -1:
                         if not val == '':
                             stream.header['DataPublicationDate'] = val
+                    elif key.find('# F-Instrument') > -1:
+                        pass
+                    elif key.find('# File created') > -1:
+                        pass
                     else:
-                        print ("formatIAGA: did not import optional header info {a}".format(a=key))
-                if key.find('Data Type') > -1:
-                    if not val == '':
-                        if val[0] in ['d','D']:
-                            stream.header['DataPublicationLevel'] = '4'
-                        elif val[0] in ['q','Q']:
-                            stream.header['DataPublicationLevel'] = '3'
-                        elif val[0] in ['p','P']:
-                            stream.header['DataPublicationLevel'] = '2'
-                        else:
-                            stream.header['DataPublicationLevel'] = '1'
-                if key.find('Publication Date') > -1:
-                    if not val == '':
-                        stream.header['DataPublicationDate'] = val
+                        comment += line.strip(' #').replace('|','').strip()+' '
+                        #print ("formatIAGA: did not import optional header info {a}".format(a=key))
             elif line.startswith('DATE'):
                 # data header
                 colsstr = line.lower().split()
@@ -267,6 +305,8 @@ def readIAGA(filename, headonly=False, **kwargs):
                 #data.append(row)
 
     fh.close()
+    if not comment == '':
+        stream.header['DataComments'] = comment
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
@@ -355,8 +395,10 @@ def writeIAGA(datastream, filename, **kwargs):
         publ = 'Quasi-definitive'
     elif publevel == '4':
         publ = 'Definitive'
-    else:
+    elif publevel in ['0','','1',None]:
         publ = 'Variation'
+    else:
+        publ = publevel
 
     proj = header.get('DataLocationReference','')
     longi = header.get('DataAcquisitionLongitude',' ')
@@ -391,10 +433,14 @@ def writeIAGA(datastream, filename, **kwargs):
         # Optional header part:
         skipopt = False
         if not skipopt:
+            if not header.get('DataComments','') == '':
+                output = splittexttolines(header.get('DataComments',''), 64)
+                for el in output:
+                    line.append(' # {a:<66s}|\n'.format(a=el))
             if not header.get('SensorID','') == '':
-                line.append(' #{a:<20}  {b:<45s}|\n'.format(a='V-Instrument',b=header.get('SensorID')[:44]))
+                line.append(' # {a:<19}  {b:<45s}|\n'.format(a='V-Instrument',b=header.get('SensorID')[:44]))
             if not header.get('SecondarySensorID','') == '':
-                line.append(' #{a:<20}  {b:<45s}|\n'.format(a='F-Instrument',b=header.get('SecondarySensorID')[:44]))
+                line.append(' # {a:<19}  {b:<45s}|\n'.format(a='F-Instrument',b=header.get('SecondarySensorID')[:44]))
             if not header.get('StationMeans','') == '':
                 try:
                     meanlist = header.get('StationMeans') # Assume something like H:xxxx,D:xxx,Z:xxxx
@@ -402,10 +448,10 @@ def writeIAGA(datastream, filename, **kwargs):
                     for me in meanlist:
                         if me.startswith('H'):
                             hval = me.split(':')
-                            line.append(' #{a:<20}  {b:<45s}|\n'.format(a='Approx H',b=hval[1]))
+                            line.append(' # {a:<19}  {b:<45s}|\n'.format(a='Approx H',b=hval[1]))
                 except:
                     pass
-        line.append(' #{a:<20}  {b:<45s}|\n'.format(a='File created by',b='MagPy '+magpyversion))
+        line.append(' # {a:<19}  {b:<45s}|\n'.format(a='File created by',b='MagPy '+magpyversion))
         iagacode = header.get('StationIAGAcode',"")
         line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (iagacode+datacomp[0],iagacode+datacomp[1],iagacode+datacomp[2],iagacode+datacomp[3]))
 
