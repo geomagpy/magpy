@@ -389,8 +389,6 @@ def writeIAGA(datastream, filename, **kwargs):
 
     find = KEYLIST.index('f')
     findg = KEYLIST.index('df')
-    print ("HERE", datastream._get_key_headers())
-    print (len(datastream.ndarray[findg]))
 
     gavail, favail = False, False
     if len(datastream.ndarray[findg]) > 0:
@@ -419,8 +417,6 @@ def writeIAGA(datastream, filename, **kwargs):
     else:
         datacomp = datacomp+'F'
     """
-
-    print ("HERE", datacomp, useg)
 
     publevel = str(header.get('DataPublicationLevel',""))
     if publevel in ['2','Provisional','provisional']:
