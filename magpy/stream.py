@@ -9284,7 +9284,7 @@ CALLED BY:
             (define by stream.header[key]):
             - Obligatory: StationInstitution, StationName, StationIAGAcode (or StationID),
                         DataElevation, DataSensorOrientation, DataDigitalSampling
-            - Optional:   SensorID, DataPublicationDate, DataComments, 
+            - Optional:   SensorID, DataPublicationDate, DataComments, DataConversion, StationK9, 
                           SecondarySensorID (F sensor), StationMeans (used for 'Approx H') 
             - Header input "IntervalType": can either be provided by using key 'DataIntervalType'
                           or is automatically created from DataSamplingRate.
@@ -9294,10 +9294,11 @@ CALLED BY:
                           - defined with keys 'DataAcquisitionLatitude','DataAcquisitionLongitude'
                           - if an EPSG code is provided in key 'DataLocationReference'
                             this code is used to convert Lat and Long into the WGS84 system
-                            e.g. stream.header['DataLocationReference'] = 'M34, epsg: ' 
+                            e.g. stream.header['DataLocationReference'] = 'M34, EPSG: ' 
 
            *Specific parameters:
-            - useg          (Bool) use delta F (G) instead of F for output
+            - useg          (Bool) if F is available, and G not yet caluclated: calculate G (deltaF) and
+                                   use it within the IAGA output file
 
            *Example:
 

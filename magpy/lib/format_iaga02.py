@@ -389,6 +389,23 @@ def writeIAGA(datastream, filename, **kwargs):
 
     find = KEYLIST.index('f')
     findg = KEYLIST.index('df')
+    print ("HERE", datastream._get_key_headers())
+    print (len(datastream.ndarray[findg]))
+
+    gavail, favail = False, False
+    if len(datastream.ndarray[findg]) > 0:
+        gavail = True
+    if len(datastream.ndarray[find]) > 0:
+        favail = True
+
+    if gavail:
+        datacomp = datacomp+'G'
+    elif favail and useg:
+        datacomp = datacomp+'G'
+    else: 
+        datacomp = datacomp+'F'
+
+    """
     if len(datastream.ndarray[findg]) > 0:
         useg = True
 
@@ -397,8 +414,13 @@ def writeIAGA(datastream, filename, **kwargs):
             datacomp = datacomp+'F'
         else:
             datacomp = datacomp+'G'
+    elif len(datastream.ndarray[findg]) > 0:
+        datacomp = datacomp+'G'
     else:
         datacomp = datacomp+'F'
+    """
+
+    print ("HERE", datacomp, useg)
 
     publevel = str(header.get('DataPublicationLevel',""))
     if publevel in ['2','Provisional','provisional']:
@@ -579,6 +601,15 @@ def writeIAGA(datastream, filename, **kwargs):
                     zval = datastream.ndarray[zind][i]*zmult
                 else:
                     zval = NOT_REPORTED
+                if gavail:
+                    fval = datastream.ndarray[findg][i]
+                elif favail and useg:
+                    fval = np.sqrt(xval**2+yval**2+zval**2)-datastream.ndarray[find][i]
+                elif favail:
+                    fval = datastream.ndarray[find][i]
+                else:
+                    fval = NOT_REPORTED
+                """
                 if len(datastream.ndarray[find]) > 0:
                     if not useg:
                         fval = datastream.ndarray[find][i]
@@ -586,6 +617,7 @@ def writeIAGA(datastream, filename, **kwargs):
                         fval = np.sqrt(xval**2+yval**2+zval**2)-datastream.ndarray[find][i]
                 else:
                     fval = NOT_REPORTED
+                """
                 timeval = datastream.ndarray[0][i]
             row = ''
             try:
