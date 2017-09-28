@@ -3928,7 +3928,7 @@ CALLED BY:
             if debugmode:
                 print("Resampling: ", keys)
             self = self.resample(keys,period=resample_period,fast=resamplefast,offset=resampleoffset)
-            self.header['DataSamplingRate'] = str(window_period) + ' sec'
+            self.header['DataSamplingRate'] = str(resample_period) + ' sec'
 
         # ########################
         # Update header information
@@ -9256,9 +9256,9 @@ CALLED BY:
         Code for simple application: write Stream to a file.
 
     PARAMETERS:
-    Variables:
+      Variables:
         - filepath:     (str) Providing path/filename for saving.
-    Kwargs:
+      Kwargs:
         - coverage:     (str/timedelta) day files or hour or month or year or all - default day.
                         'month','year','all',etc., otherwise timedelta object
         - dateformat:   (str) outformat of date in filename (e.g. "%Y-%m-%d" -> "2011-11-22".
@@ -9274,41 +9274,71 @@ CALLED BY:
         [- period:      (str) Supports hour, day, month, year, all - default day.]
         [--> Where is this?]
         - wformat:      (str) outputformat.
-       --- specific functions for baseline file
-        - absinfo       (str) parameter of DataAbsInfo
-        - fitfunc       (str) fit function for baselinefit
-        - fitdegree
-        - knotstep
-        - extradays
-        - year          (int) year
-        - meanh         (float) annual mean of H component
-        - meanf         (float) annual mean of F component
-        - deltaF        (float) given deltaF value between pier and f position
-        - diff          (DataStream) diff (deltaF) between vario and scalar
-       --- specific functions for intermagnet file
-        - version       (str) file version
-        - gin           (gin) information node code
-        - datatype      (str) R: reported, A: adjusted, Q: quasi-definit, D: definite
-        - kvals         (Datastream) contains K value for iaf storage
-        - comment       (string) some comment, currently used in IYFV
-        - kind          (string) one of 'A' (all), 'Q' quiet days, 'D' disturbed days,
+
+    SPECIFIC FORMAT INSTRUCTIONS:
+        format_type='IAGA'
+        ------------------
+           *General:
+            The meta information provided within the header of each IAGA file is automatically 
+            generated from the header information provided along with the following keys 
+            (define by stream.header[key]):
+            - Obligatory: StationInstitution, StationName, StationIAGAcode (or StationID),
+                        DataElevation, DataSensorOrientation, DataDigitalSampling
+            - Optional:   SensorID, DataPublicationDate, DataComments, 
+                          SecondarySensorID (F sensor), StationMeans (used for 'Approx H') 
+            - Header input "IntervalType": can either be provided by using key 'DataIntervalType'
+                          or is automatically created from DataSamplingRate.
+                          Filter details as contained in DataSamplingFilter are added to the 
+                          commentary part
+            - Header input "Geodetic Longitude and Latitude":
+                          - defined with keys 'DataAcquisitionLatitude','DataAcquisitionLongitude'
+                          - if an EPSG code is provided in key 'DataLocationReference'
+                            this code is used to convert Lat and Long into the WGS84 system
+                            e.g. stream.header['DataLocationReference'] = 'M34, epsg: ' 
+
+           *Specific parameters:
+            - useg          (Bool) use delta F (G) instead of F for output
+
+           *Example:
+
+        format_type='IMF'
+        ------------------
+           *Specific parameters:
+            - version       (str) file version
+            - gin           (gin) information node code
+            - datatype      (str) R: reported, A: adjusted, Q: quasi-definit, D: definite
+            - kvals         (Datastream) contains K value for iaf storage
+            - comment       (string) some comment, currently used in IYFV
+            - kind          (string) one of 'A' (all), 'Q' quiet days, 'D' disturbed days,
                                  currently used in IYFV
-        - addflags      (BOOL) add flags to IMAGCDF output if True
-       --- specific functions for IAGA file
-        - useg          (Bool) use delta F (G) instead of F for output
+        format_type='IMAGCDF'
+        ------------------
+           *General:
+            - Header input "Geodetic Longitude and Latitude": see format_type='IAGA'
 
-
+           *Specific parameters:
+            - addflags      (BOOL) add flags to IMAGCDF output if True
+                    
+        format_type='BLV'
+        ------------------
+           *Specific parameters:
+            - absinfo       (str) parameter of DataAbsInfo
+            - fitfunc       (str) fit function for baselinefit
+            - fitdegree
+            - knotstep
+            - extradays
+            - year          (int) year
+            - meanh         (float) annual mean of H component
+            - meanf         (float) annual mean of F component
+            - deltaF        (float) given deltaF value between pier and f position
+            - diff          (DataStream) diff (deltaF) between vario and scalar
 
     RETURNS:
         - ...           (bool) True if successful.
 
     EXAMPLE:
         >>> stream.write('/home/user/data',
-                        filenamebegins='WIK_',
-                        filenameends='.min',
-                        dateformat='%Y-%m-%d',
                         format_type='IAGA')
-        (Output file = 'WIK_2013-08-10.min')
 
     APPLICATION:
 

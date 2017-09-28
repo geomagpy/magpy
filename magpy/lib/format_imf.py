@@ -267,8 +267,10 @@ def readIAF(filename, headonly=False, **kwargs):
                     headers['DataQuality'] = head[8]
                     headers['SensorType'] = head[9]
                     headers['StationK9'] = head[10]
-                    headers['DataDigitalSampling'] = float(head[11])/1000.
+                    #headers['DataDigitalSampling'] = float(head[11])/1000.
+                    headers['DataDigitalSampling'] = str(float(head[11])/1000.) + ' sec'
                     headers['DataSensorOrientation'] = head[12].lower()
+                    headers['DataPublicationLevel'] = '4'
                     try:
                         pubdate = datetime.strptime(str(head[13]),"%y%m")
                     except:
@@ -555,10 +557,13 @@ def writeIAF(datastream, filename, **kwargs):
                             misslist.append(elem)
                     except:
                         value = datastream.header.get('DataDigitalSampling','')
-                        print ("writeIAF: DataDigitialSampling info needs to be an integer")
-                        print ("          - extracting integers from provided string")
+                        #print ("writeIAF: DataDigitialSampling info needs to be an integer")
+                        #print ("          - extracting integers from provided string")
                         valtmp = re.findall(r'\d+', value)
-                        value = int(valtmp[-1])*1000
+                        if 'hz' in value or 'Hz' in value or 'Hertz' in value:
+                            value = 1/int(valtmp[-1])*1000
+                        else:
+                            value = int(valtmp[-1])*1000
                         print ("          extracted: {}".format(value))
                 elif elem == 'Reserved':
                     value = 0
