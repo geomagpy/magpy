@@ -239,7 +239,7 @@ def readIAF(filename, headonly=False, **kwargs):
             if getline:
                 # unpack header
                 if gethead:
-                    stream.header['StationIAGAcode'] = head[0].strip()
+                    headers['StationIAGAcode'] = head[0].strip()
                     headers['StationID'] = head[0].strip()
                     #
                     headers['DataAcquisitionLatitude'] = 90-(float(head[2])/1000.)
