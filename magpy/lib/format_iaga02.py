@@ -335,6 +335,8 @@ def writeIAGA(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
 
+    returnstring = False
+
     def OpenFile(filename, mode='w'):
         if sys.version_info >= (3,0,0):
             f = open(filename, mode, newline='')
@@ -356,6 +358,10 @@ def writeIAGA(datastream, filename, **kwargs):
         else: # overwrite mode
             #os.remove(filename)  ?? necessary ??
             myFile= OpenFile(filename)
+    elif filename.find('StringIO') > -1 and not os.path.exists(filename):
+        import StringIO
+        myFile = StringIO.StringIO()
+        returnstring = True
     else:
         myFile= OpenFile(filename)
 
@@ -645,9 +651,12 @@ def writeIAGA(datastream, filename, **kwargs):
             myFile.writelines( line )
             pass
         finally:
+            if returnstring:
+                return myFile
             myFile.close()
     except IOError:
         return False
         pass
+
 
     return True
