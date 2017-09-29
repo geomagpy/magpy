@@ -1253,10 +1253,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 stdadd = 'INTERMAGNET_1-Second'
             elif int(samprate) == 60:
                 stdadd = 'INTERMAGNET_1-Minute'
-            if int(headers.get('DataPublicationLevel',0)) == 3:
+            if headers.get('DataPublicationLevel',0) in [3,'3','Q','quasi-definitive','Quasi-definitive']:
                 stdadd += '_QD'
                 mycdf.attrs['StandardName'] = stdadd
-            elif int(headers.get('DataPublicationLevel',0)) == 4:
+            elif headers.get('DataPublicationLevel',0) in [4,'4','D','definitive','Definitive']:
                 mycdf.attrs['StandardName'] = stdadd
             else:
                 print ("writeIMAGCDF: current Publication level {} does not allow to set StandardName".format(headers.get('DataPublicationLevel',0)))
@@ -1684,6 +1684,15 @@ def writeIMF(datastream, filename, **kwargs):
     if not gin:
         gin = 'EDI'
     if not datatype:
+        if header.get('DataPublicationLevel') in [4,'4','D','definitive','Definitive']:
+            datatype = 'D' # reported; can also be 'A', 'Q', 'D'
+        elif header.get('DataPublicationLevel') in [3,'3','Q','quasi-definitive','Quasi-definitive']:
+            datatype = 'Q'
+        elif header.get('DataPublicationLevel') in [2,'2','P','provisional','Provisional']:
+            datatype = 'A'
+        else:
+            datatype = 'R'
+    elif not datatype in ['A','Q','D']:
         datatype = 'R' # reported; can also be 'A', 'Q', 'D'
     try:
         idc = header['StationID']

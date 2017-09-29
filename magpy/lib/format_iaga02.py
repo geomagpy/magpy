@@ -336,7 +336,6 @@ def writeIAGA(datastream, filename, **kwargs):
     useg = kwargs.get('useg')
 
     returnstring = False
-
     def OpenFile(filename, mode='w'):
         if sys.version_info >= (3,0,0):
             f = open(filename, mode, newline='')
@@ -425,13 +424,13 @@ def writeIAGA(datastream, filename, **kwargs):
     """
 
     publevel = str(header.get('DataPublicationLevel',""))
-    if publevel in ['2','Provisional','provisional']:
+    if publevel in ['2','P','Provisional','provisional']:
         publ = 'provisional'
-    elif publevel in ['3','Quasi-definitive','quasi-definitive','Quasidefinitive','quasidefinitive']:
+    elif publevel in ['3','Q','Quasi-definitive','quasi-definitive','Quasidefinitive','quasidefinitive']:
         publ = 'quasi-definitive'
-    elif publevel in ['4','Definitive','definitive']:
+    elif publevel in ['4','D','Definitive','definitive']:
         publ = 'definitive'
-    elif publevel in ['0','','1',None]:
+    elif publevel in ['0','','1','V','variation','Variation',None]:
         publ = 'variation'
     else:
         publ = publevel
@@ -500,39 +499,39 @@ def writeIAGA(datastream, filename, **kwargs):
     if not mode == 'append':
         #if header.get('Elevation') > 0:
         #    print(header)
-        line.append(' Format %-15s IAGA-2002 %-34s |\n' % (' ',' '))
-        line.append(' Source of Data %-7s %-44s |\n' % (' ',header.get('StationInstitution'," ")[:44]))
-        line.append(' Station Name %-9s %-44s |\n' % (' ', header.get('StationName'," ")[:44]))
-        line.append(' IAGA Code %-12s %-44s |\n' % (' ',iagacode[:44]))
-        line.append(' Geodetic Latitude %-4s %-44s |\n' % (' ',str(lati)[:44]))
-        line.append(' Geodetic Longitude %-3s %-44s |\n' % (' ',str(longi)[:44]))
-        line.append(' Elevation %-12s %-44s |\n' % (' ',str(header.get('DataElevation'," "))[:44]))
-        line.append(' Reported %-13s %-44s |\n' % (' ',datacomp))
-        line.append(' Sensor Orientation %-3s %-44s |\n' % (' ',header.get('DataSensorOrientation'," ").upper()[:44]))
-        line.append(' Digital Sampling %-5s %-44s |\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
-        line.append(' Data Interval Type %-3s %-44s |\n' % (' ',intervaltype[:44]))
-        line.append(' Data Type %-12s %-44s |\n' % (' ',publ[:44]))
+        line.append(' Format %-15s IAGA-2002 %-34s |\r\n' % (' ',' '))
+        line.append(' Source of Data %-7s %-44s |\r\n' % (' ',header.get('StationInstitution'," ")[:44]))
+        line.append(' Station Name %-9s %-44s |\r\n' % (' ', header.get('StationName'," ")[:44]))
+        line.append(' IAGA Code %-12s %-44s |\r\n' % (' ',iagacode[:44]))
+        line.append(' Geodetic Latitude %-4s %-44s |\r\n' % (' ',str(lati)[:44]))
+        line.append(' Geodetic Longitude %-3s %-44s |\r\n' % (' ',str(longi)[:44]))
+        line.append(' Elevation %-12s %-44s |\r\n' % (' ',str(header.get('DataElevation'," "))[:44]))
+        line.append(' Reported %-13s %-44s |\r\n' % (' ',datacomp))
+        line.append(' Sensor Orientation %-3s %-44s |\r\n' % (' ',header.get('DataSensorOrientation'," ").upper()[:44]))
+        line.append(' Digital Sampling %-5s %-44s |\r\n' % (' ',str(header.get('DataDigitalSampling'," "))[:44]))
+        line.append(' Data Interval Type %-3s %-44s |\r\n' % (' ',intervaltype[:44]))
+        line.append(' Data Type %-12s %-44s |\r\n' % (' ',publ[:44]))
         if not header.get('DataPublicationDate','') == '':
-            line.append(' {a:<20}   {b:<45s}|\n'.format(a='Publication date',b=str(header.get('DataPublicationDate'))[:10]))
+            line.append(' {a:<20}   {b:<45s}|\r\n'.format(a='Publication date',b=str(header.get('DataPublicationDate'))[:10]))
         # Optional header part:
         skipopt = False
         if not skipopt:
             if not filtercomment == '':
                 output = splittexttolines(filtercomment, 64)
                 for el in output:
-                    line.append(' # {a:<66s}|\n'.format(a=el))
+                    line.append(' # {a:<66s}|\r\n'.format(a=el))
             if not header.get('DataConversion','') == '':
-                line.append(' # {a:<19}  {b:<45s}|\n'.format(a='D-conversion factor',b=str(header.get('DataConversion'))[:44]))
+                line.append(' # {a:<19}  {b:<45s}|\r\n'.format(a='D-conversion factor',b=str(header.get('DataConversion'))[:44]))
             if not header.get('StationK9','') == '':
-                line.append(' # {a:<19}  {b:<45s}|\n'.format(a='K9-limit',b=str(header.get('StationK9'))[:44]))
+                line.append(' # {a:<19}  {b:<45s}|\r\n'.format(a='K9-limit',b=str(header.get('StationK9'))[:44]))
             if not header.get('DataComments','') == '':
                 output = splittexttolines(header.get('DataComments',''), 64)
                 for el in output:
-                    line.append(' # {a:<66s}|\n'.format(a=el))
+                    line.append(' # {a:<66s}|\r\n'.format(a=el))
             if not header.get('SensorID','') == '':
-                line.append(' # {a:<19}  {b:<45s}|\n'.format(a='V-Instrument',b=header.get('SensorID')[:44]))
+                line.append(' # {a:<19}  {b:<45s}|\r\n'.format(a='V-Instrument',b=header.get('SensorID')[:44]))
             if not header.get('SecondarySensorID','') == '':
-                line.append(' # {a:<19}  {b:<45s}|\n'.format(a='F-Instrument',b=header.get('SecondarySensorID')[:44]))
+                line.append(' # {a:<19}  {b:<45s}|\r\n'.format(a='F-Instrument',b=header.get('SecondarySensorID')[:44]))
             if not header.get('StationMeans','') == '':
                 try:
                     meanlist = header.get('StationMeans') # Assume something like H:xxxx,D:xxx,Z:xxxx
@@ -540,12 +539,12 @@ def writeIAGA(datastream, filename, **kwargs):
                     for me in meanlist:
                         if me.startswith('H'):
                             hval = me.split(':')
-                            line.append(' # {a:<19}  {b:<45s}|\n'.format(a='Approx H',b=hval[1]))
+                            line.append(' # {a:<19}  {b:<45s}|\r\n'.format(a='Approx H',b=hval[1]))
                 except:
                     pass
-        line.append(' # {a:<19}  {b:<45s}|\n'.format(a='File created by',b='MagPy '+magpyversion))
+        line.append(' # {a:<19}  {b:<45s}|\r\n'.format(a='File created by',b='MagPy '+magpyversion))
         #iagacode = header.get('StationIAGAcode',"")
-        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\n' % (iagacode+datacomp[0],iagacode+datacomp[1],iagacode+datacomp[2],iagacode+datacomp[3]))
+        line.append('DATE       TIME         DOY %8s %9s %9s %9s   |\r\n' % (iagacode+datacomp[0],iagacode+datacomp[1],iagacode+datacomp[2],iagacode+datacomp[3]))
 
 
     try:
@@ -646,7 +645,7 @@ def writeIAGA(datastream, filename, **kwargs):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % fval
-            line.append(row + '\n')
+            line.append(row + '\r\n')
         try:
             myFile.writelines( line )
             pass
