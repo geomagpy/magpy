@@ -542,7 +542,7 @@ def writeIAF(datastream, filename, **kwargs):
                     try:
                         value = datetime.strftime(datastream._testtime(da),'%y%m')
                     except:
-                        print("writeIAF: DataPublicationDate --  appending current date")
+                        #print("writeIAF: DataPublicationDate --  appending current date")
                         value = datetime.strftime(datetime.utcnow(),'%y%m')
                 elif elem == 'FormatVersion':
                     value = 3
@@ -557,14 +557,24 @@ def writeIAF(datastream, filename, **kwargs):
                             misslist.append(elem)
                     except:
                         value = datastream.header.get('DataDigitalSampling','')
+                        #print ("writeIAF: ", value)
                         #print ("writeIAF: DataDigitialSampling info needs to be an integer")
                         #print ("          - extracting integers from provided string")
                         valtmp = re.findall(r'\d+', value)
-                        if 'hz' in value or 'Hz' in value or 'Hertz' in value:
-                            value = 1/int(valtmp[-1])*1000
+                        #print ("writeIAF: ", valtmp)
+                        try:
+                            val = float(".".join(valtmp))
+                        except:
+                            try:
+                                val = int(valtmp[0])
+                            except:
+                                val = 0
+                                #val = int(valtmp[-1])  ## OLD version, does not make sense to me now (leon)
+                        if 'hz' in value or 'Hz' in value or 'Hertz' in value and not val == 0:
+                            value = int(1./val*1000.)
                         else:
-                            value = int(valtmp[-1])*1000
-                        print ("          extracted: {}".format(value))
+                            value = int(val*1000.)
+                        #print ("          extracted: {}".format(value))
                 elif elem == 'Reserved':
                     value = 0
                 else:
@@ -618,6 +628,7 @@ def writeIAF(datastream, filename, **kwargs):
         #print ("0c:", len(head))
         packcode += '1440l' # fh.read(64)
         if df:
+            #print ([elem for elem in dayar[dfpos]])
             dfvals = np.asarray([np.round(elem*10.,0) if not isnan(elem) else 999999 for elem in dayar[dfpos]])
             #print ("dfmin",dfvals)
             #dfvals = np.asarray(dfvals*10.).astype(int)

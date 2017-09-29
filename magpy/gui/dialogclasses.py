@@ -327,6 +327,10 @@ class ExportDataDialog(wx.Dialog):
     def OnFormatChange(self, event):
         # call stream._write_format to determine self.filename
         selformat = self.formatComboBox.GetValue()
+        self.filenamebegins = None
+        self.filenameends = None
+        self.coverage = None
+        self.dateformat = None
         self.filename = self.GetFilename(self.stream, selformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
         self.filenameTextCtrl.SetValue(self.filename)
 

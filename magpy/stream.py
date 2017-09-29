@@ -1130,7 +1130,7 @@ CALLED BY:
                 if len(el) == len(ind):
                     self.ndarray[i] = el[ind]
                 else:
-                    print("Sorting: key %s has the wrong length - replacing row with NaNs" % KEYLIST[i])
+                    #print("Sorting: key %s has the wrong length - replacing row with NaNs" % KEYLIST[i])
                     logger.warning("Sorting: key %s has the wrong length - replacing row with NaNs" % KEYLIST[i])
                     logger.warning("len(t-axis)=%d len(%s)=%d" % (len(self.ndarray[0]), KEYLIST[i], len(self.ndarray[i])))
                     self.ndarray[i] = np.empty(len(self.ndarray[0])) * np.nan
@@ -9133,6 +9133,7 @@ CALLED BY:
             except:
                 extension = 'txt'
             filenameends = '.'+extension
+            coverage = 'day'
         if format_type == 'IAF':
             try:
                 filenamebegins = (self.header.get('StationIAGAcode','')).upper()
@@ -9140,6 +9141,7 @@ CALLED BY:
                 filenamebegins = 'XXX'
             dateformat = '%y%b'
             extension = 'BIN'
+            coverage = 'month'
             filenameends = '.'+extension
         if format_type == 'IYFV':
             if not filenameends or filenameends=='.cdf':
@@ -9155,11 +9157,14 @@ CALLED BY:
             coverage = 'year'
         if format_type == 'IAGA':
             dateformat = '%Y%m%d'
+            coverage = 'day'
             head = self.header
             if not filenamebegins:
                 code = head.get('StationIAGAcode','')
+                if code == '':
+                    code = head.get('StationID','')
                 if not code == '':
-                    filenamebegins = code.lower()
+                    filenamebegins = code.lower()[:3]
             if not filenameends or filenameends=='.cdf':
                 samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
                 plevel = head.get('DataPublicationLevel',0)

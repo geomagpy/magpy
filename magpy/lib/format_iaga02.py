@@ -308,7 +308,8 @@ def readIAGA(filename, headonly=False, **kwargs):
                             raise ValueError
                     else:
                         array[4].append(float('nan'))
-
+                        if varstr[-1] in ['g']:
+                            array[dfpos].append(float('nan'))
                 except:
                     if not float(row[6]) >= NOT_REPORTED:
                         array[4].append(float(row[6]))
