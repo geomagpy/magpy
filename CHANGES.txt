@@ -12,8 +12,9 @@ v0.3.97 fixes:
     + absolute analysis: long file names are now correctly supported
     + Leap seconds in IAGA files are now considered like (2015-06-30T23:59:60 -> 2015-07-01T00:00:00)
       while reading
-    + reading multiple files in windos corrected
+    + reading multiple files in windows is now working
     + corrected stream subtraction method for similar, but non-identical time steps in both timeseries
+    + output format for IAGA 2002 files: corrected several issues with header and compatibility
 
 
 v0.3.97 additions:
@@ -21,12 +22,13 @@ v0.3.97 additions:
     + absolute analysis GUI: notificatzion for missing Azimuth of AutoDIF
     + absolute analysis GUI: Log window now scrollable in WinXP and more recent
     + preliminary module for mqtt support included in monitoring
+    + better documentation of write method
 
 v0.3.97 removals:
 None
 
 v0.3.97 other changes:
-None
+    + updated windows installer and fixed some installation issues
 
 
 -------------------------------------------------

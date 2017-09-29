@@ -155,7 +155,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                                 stream.header['DataPublicationLevel'] = '4'
                             elif val[0] in ['q','Q','3']:
                                 stream.header['DataPublicationLevel'] = '3'
-                            elif val[0] in ['p','P','2']:
+                            elif val[0] in ['p','P','2','a','A']:
                                 stream.header['DataPublicationLevel'] = '2'
                             else:
                                 stream.header['DataPublicationLevel'] = '1'
