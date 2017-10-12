@@ -1354,6 +1354,7 @@ class MainFrame(wx.Frame):
         # Essential header info
         comps = stream.header.get('DataComponents','')[:3]
         sensorid = stream.header.get('SensorID','')
+        stationid = stream.header.get('StationID', '')
         dataid = self.plotstream.header.get('DataID','')
         formattype = self.plotstream.header.get('DataFormat','')
         absinfo = self.plotstream.header.get('DataAbsInfo',None)
@@ -1386,7 +1387,7 @@ class MainFrame(wx.Frame):
             basedict = {'startdate':mintime,'enddate':maxtime, 'filename':filename, 'streamidx':len(self.streamlist)-1}
             self.baselinedictlst.append(basedict)
 
-        def checkbaseline(baselinedictlst, sensorid, mintime, maxtime):
+        def checkbaseline(baselinedictlst, sensorid, mintime, maxtime, stationid=None):
             """
               DESCRIPTION:
                 check whether valid baseline info is existing
@@ -1459,6 +1460,10 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
 
+        # ----------------------------------------
+        # absolutes page
+        self.menu_p.abs_page.loadUSGSButton.Enable()      # always
+
         # Selective fields
         # ----------------------------------------
         #print ("COMPONENTS", comps)
@@ -1503,9 +1508,9 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.calcfButton.Enable()    # activate if vector present
             if 'f' in keys and not 'df' in keys:
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
-            if not formattype == 'MagPyDI':
+            if formattype == 'MagPyDI':
                 #print ("Checking baseline info")
-                self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime)
+                self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime, stationid)
                 if len(self.baselineidxlst) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
 
@@ -2465,13 +2470,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S %Z")
         except:
             time = num2date(time)
-        for elem in self.shownkeylist:
-            ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
-            ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
-            if ll < pickY < ul:
-                possible_key += elem
-                possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
         try:
+            for elem in self.shownkeylist:
+                ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
+                ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
+                if ll < pickY < ul:
+                    possible_key += elem
+                    possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
             idy = (np.abs(possible_val - pickY)).argmin()
             key = possible_key[idy]
             val = possible_val[idy]
@@ -2480,7 +2485,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 key = colname
             self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
         except:
-            pass
+            self.changeStatusbar("time: " + str(time) + "  |  ? data value: ?")
 
     def OnCheckOpenLog(self, event):
         """
@@ -4252,7 +4257,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             fitfunc = self.options.get('fitfunction','spline')
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
-            baselinefunc = self.plotstream.baseline(absstream,fitfunc=self.options.get('fitfunction','spline'), knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
+            baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
             # add new stream, with baselinecorr
@@ -5424,7 +5429,46 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.Destroy()
 
     def onLoadUSGS(self,event):
-        print('Start')
+        startdate = self.plotstream.ndarray[KEYLIST.index('time')][0]
+        enddate = self.plotstream.ndarray[KEYLIST.index('time')][-1]
+        starttime = num2date(startdate)
+        endtime = num2date(enddate)
+        #if endtime - starttime < timedelta(days=5):
+        #    endtime = endtime+timedelta(days=5)
+        di_db = []
+        time = starttime - timedelta(days = 4)
+        base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
+        observatory = self.plotstream.header.get('StationID')
+        while time < endtime + timedelta(days = 7):
+            called_date = time.strftime('%Y-%m-%d')
+            time = time + timedelta(days=1)
+            url = base + 'observatory=' + observatory + '&starttime=' + \
+                    called_date + '&includemeasurements=true'
+            di_db += [url]
+        self.menu_p.rep_page.logMsg("- loaded DI data")
+        self.menu_p.abs_page.diTextCtrl.SetValue('  '.join(di_db))
+        self.dipathlist = di_db
+        self.options['dipathlist'] = di_db
+        vario_scalar = self.menu_p.str_page.pathTextCtrl.GetValue()
+        self.menu_p.abs_page.varioTextCtrl.SetValue(vario_scalar)
+        self.options['divariopath'] = vario_scalar
+        self.menu_p.abs_page.scalarTextCtrl.SetValue(vario_scalar)
+        self.options['discalarpath'] = vario_scalar
+        self.menu_p.abs_page.AnalyzeButton.Enable()
+        # remove defaults
+        dlg = DISetParameterDialog(None, title='Set Parameter')
+        dlg.expDTextCtrl.SetValue('')
+        dlg.azimuthTextCtrl.SetValue('')
+        dlg.pierTextCtrl.SetValue('')
+        dlg.alphaTextCtrl.SetValue('')
+        dlg.deltaFTextCtrl.SetValue('')
+        self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
+        self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
+        self.options['dipier'] = dlg.pierTextCtrl.GetValue()
+        self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
+        self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
+        self.options['diexpI']=''
+
 
     def onDefineVario(self,event):
         """
@@ -5511,7 +5555,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             deltaI= float(self.options.get('dideltaI','0.0'))
         except:
             deltaI = 0.0
-
         if len(self.dipathlist) > 0:
             self.changeStatusbar("Processing DI data ... please be patient")
             #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,diid=self.diid,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,pier=self.dipier,alpha=self.dialpha,deltaF=self.dideltaF, dbadd=self.didbadd)
@@ -5566,6 +5609,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
                 #self.plotoptlist.append(self.plotopt)
+                if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
+                    self.menu_p.abs_page.ClearLogButton.Enable()
+                    self.menu_p.abs_page.SaveLogButton.Enable()
             else:
                 if absstream:
                     self.ActivateControls(self.plotstream)
