@@ -154,7 +154,6 @@ class DILineStruct(object):
 
         # The order needs to be changed according to the file list
 
-
         for i, elem in enumerate(self.time):
             if 4 <= i < 12 or 16 <= i < 25:
                 row = AbsoluteDIStruct()
@@ -326,14 +325,12 @@ class AbsoluteData(object):
             return False
         # 2. Get time column
         timea = np.asarray(datastream._get_column('time'))
-
         # 3. Get time column of DI data
         timeb = np.asarray([el.time for el in self])
         # 4. search
         #print(len(timea), len(timeb), samprate)
         #print(timea, timeb)
         indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs(timea-float(el)))/(samprate/24./3600.)*2 <= 1.]
-
         if not len(indtia) == len(timeb):
             return False
 
@@ -1578,8 +1575,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     varioid = 'Unknown'
     scalarid = 'Unknown'
-
-
     # ####################################
     # 2. Get absolute data
     # ####################################
@@ -1620,7 +1615,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         except:
             print("absoluteAnalysis:  getting DI data from files")
             pass
-
 
     if readfile:
         # Get list of files
@@ -1832,7 +1826,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         except:
             print("absoluteAnalysis: reading variometer data failed")
             variostr = DataStream()
-
         if (len(variostr) > 3 and not np.isnan(variostr.mean('time'))) or len(variostr.ndarray[0]) > 0: # can contain ([], 'File not specified')
             if offset:
                 variostr = variostr.offset(offset)

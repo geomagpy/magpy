@@ -2523,6 +2523,66 @@ class LoadDIDialog(wx.Dialog):
         dlg.Destroy()
         self.Close(True)
 
+class LoadUSGSDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Dialog for loading USGS absolutes data.
+    """
+
+    def __init__(self, parent, title):
+        super(LoadUSGSDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        extension_options = ['0 days', '1 day', '2 days', '3 days', '4 days',
+                '5 days', '6 days', '1 week', '2 weeks',  '3 weeks',
+                '4 weeks', '8 weeks']
+        info = ('Extending the beginning and end of the time range will ensure'
+                ' that the scalar and variometer data is covered by the available'
+                ' baseline data. (4 days recommended)')
+        self.extensionText = wx.StaticText(self,-1,"Extension amount:",size=(500,20))
+        self.infoText = wx.StaticText(self,-1,info,size=(500,50))
+        self.extensionComboBox = wx.ComboBox(self, choices=extension_options,
+            style=wx.CB_DROPDOWN, value=extension_options[0],size=(500,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(500,20))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Ok',size=(500,20))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        controls = [(self.infoText, noOptions),
+        (self.extensionText, noOptions),
+        (self.extensionComboBox,  dict(flag=wx.ALIGN_CENTER)),
+        (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+        (self.closeButton, dict(flag=wx.ALIGN_CENTER)),
+        ]
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(controls)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        for control, options in controls:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
 
 class DefineVarioDialog(wx.Dialog):
     """
