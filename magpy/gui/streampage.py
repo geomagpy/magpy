@@ -20,11 +20,6 @@ class StreamPage(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.comp = ['xyz', 'hdz', 'idf']
         self.symbol = ['line', 'point']
-        self.flagidlist = ['0: normal data',
-                        '1: automatically flagged',
-                        '2: keep data in any case',
-                        '3: remove data',
-                        '4: special flag']
         self.createControls()
         self.doLayout()
 
@@ -47,29 +42,12 @@ class StreamPage(wx.Panel):
         self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
         self.trimStreamButton = wx.Button(self,-1,"Trim timerange",size=(160,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
-        #self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(160,30))
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(160,30))
         self.restoreButton = wx.Button(self,-1,"Restore data",size=(160,30))
         self.changePlotButton = wx.Button(self,-1,"Plot Options",size=(160,30))
         self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(160,30))
         self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
-        #self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
-        #self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
-        #self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
-        #self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,30))
-        #self.xCheckBox = wx.CheckBox(self,label="X             ")
-        #self.yCheckBox = wx.CheckBox(self,label="Y             ")
-        #self.zCheckBox = wx.CheckBox(self,label="Z             ")
-        #self.fCheckBox = wx.CheckBox(self,label="F             ")
-        #self.FlagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
-        #self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
-        #    style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
-        #self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
-        #self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
-        #self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
-        #self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
-        #self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(160,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
@@ -85,6 +63,12 @@ class StreamPage(wx.Panel):
 
 
     def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        gridSizer = wx.FlexGridSizer(rows=16, cols=2, vgap=5, hgap=10)
+
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
@@ -121,25 +105,7 @@ class StreamPage(wx.Panel):
                  'self.errorBarsCheckBox, noOptions',
                  '(0,0), noOptions',
                  'self.lineLabel3, noOptions',
-                 'self.lineLabel4, noOptions']
-                 #'self.flagOptionsLabel, noOptions',
-                 #'(0,0), noOptions',
-                 #'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagMinButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagMaxButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.xCheckBox, noOptions',
-                 #'self.yCheckBox, noOptions',
-                 #'self.zCheckBox, noOptions',
-                 #'self.fCheckBox, noOptions',
-                 #'self.FlagIDText, noOptions',
-                 #'self.FlagIDComboBox, expandOption',
-                 #'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'(0,0), noOptions'
+                 'self.lineLabel4, noOptions',]
 
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
