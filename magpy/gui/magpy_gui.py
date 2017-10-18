@@ -26,7 +26,7 @@ from magpy.transfer import *
 from magpy.database import *
 from magpy.version import __version__
 from magpy.gui.streampage import *
-from magpy.gui.flagpage import *
+from magpy.gui.flaggingpage import *
 from magpy.gui.metapage import *
 from magpy.gui.dialogclasses import *
 from magpy.gui.absolutespage import *
@@ -823,14 +823,14 @@ class MenuPanel(scrolled.ScrolledPanel):
         # Create pages on MenuPanel
         nb = wx.Notebook(self,-1)
         self.str_page = StreamPage(nb)
-        self.fla_page = FlagPage(nb)
+        self.flg_page = FlaggingPage(nb)
         self.met_page = MetaPage(nb)
         self.ana_page = AnalysisPage(nb)
         self.abs_page = AbsolutePage(nb)
         self.rep_page = ReportPage(nb)
         self.com_page = MonitorPage(nb)
         nb.AddPage(self.str_page, "Stream")
-        nb.AddPage(self.fla_page, "Flags")
+        nb.AddPage(self.flg_page, "Flagging")
         nb.AddPage(self.met_page, "Meta")
         nb.AddPage(self.ana_page, "Analysis")
         nb.AddPage(self.abs_page, "DI")
