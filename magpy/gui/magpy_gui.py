@@ -16,6 +16,7 @@ except:
     pass
 from wx.lib.pubsub import pub
 from wx.lib.dialogs import ScrolledMessageDialog
+import wx.lib.scrolledpanel as scrolled
 
 from magpy.stream import read
 import magpy.mpplot as mp
@@ -195,13 +196,13 @@ class RedirectText(object):
     def write(self,string):
         self.out.WriteText(string)
 
-class PlotPanel(wx.Panel):
+class PlotPanel(scrolled.ScrolledPanel):
     """
     DESCRIPTION
         comtains all methods for the left plot panel
     """
     def __init__(self, *args, **kwds):
-        wx.Panel.__init__(self, *args, **kwds)
+        scrolled.ScrolledPanel.__init__(self, *args, **kwds)
         self.figure = plt.figure()
         self.plt = plt
         scsetmp = ScreenSelections()
@@ -223,6 +224,7 @@ class PlotPanel(wx.Panel):
         self.vbox.Add(self.toolbar, 0, wx.EXPAND)
         self.SetSizer(self.vbox)
         self.vbox.Fit(self)
+        self.SetupScrolling()
 
 
     def timer(self, arg1, stop_event):
@@ -805,14 +807,14 @@ class PlotPanel(wx.Panel):
                 self.drawAnnote(self.axis, x, y, a)
 
 
-class MenuPanel(wx.Panel):
+class MenuPanel(scrolled.ScrolledPanel):
     """
     DESCRIPTION
         comtains all methods for the right menu panel and their insets
         All methods are listed in the MainFrame class
     """
     def __init__(self, *args, **kwds):
-        wx.Panel.__init__(self, *args, **kwds)
+        scrolled.ScrolledPanel.__init__(self, *args, **kwds)
         # Create pages on MenuPanel
         nb = wx.Notebook(self,-1)
         self.str_page = StreamPage(nb)
@@ -833,6 +835,7 @@ class MenuPanel(wx.Panel):
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
+        self.SetupScrolling()
 
 
 class MainFrame(wx.Frame):

@@ -2231,7 +2231,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         # RadioButton with fitting list (eventually updated from DB)
         #self.fitlistRadioBox = wx.RadioBox(self, label="Adoption parameter:",
         #             choices=self.fitlist, majorDimension=len(fitlist), style=wx.RA_SPECIFY_COLS)
-        
+
 
         self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(160,30))
         self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(300,90),
@@ -3367,7 +3367,6 @@ class InputSheetDialog(wx.Dialog):
         if closedlg.ShowModal() == wx.ID_YES:
             closedlg.Destroy()
             self.Close(True)
-
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
     def __init__(self, parent, cdate, path, defaults, layout, db):
