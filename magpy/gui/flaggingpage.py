@@ -37,8 +37,8 @@ class FlaggingPage(wx.Panel):
         self.yCheckBox = wx.CheckBox(self,label="Y             ")
         self.zCheckBox = wx.CheckBox(self,label="Z             ")
         self.fCheckBox = wx.CheckBox(self,label="F             ")
-        self.FlagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
-        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
+        self.flagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
+        self.flagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
             style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
         self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
@@ -70,8 +70,8 @@ class FlaggingPage(wx.Panel):
                  'self.yCheckBox, noOptions',
                  'self.zCheckBox, noOptions',
                  'self.fCheckBox, noOptions',
-                 'self.FlagIDText, noOptions',
-                 'self.FlagIDComboBox, expandOption',
+                 'self.flagIDText, noOptions',
+                 'self.flagIDComboBox, expandOption',
                  'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',]
 
