@@ -22,15 +22,12 @@ class OpenWebAddressDialog(wx.Dialog):
     Dialog for File Menu - Load URL
     """
 
-    def __init__(self, parent, title, favorites, ids, types, formats):
+    def __init__(self, parent, title, favorites):
         super(OpenWebAddressDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.favorites = favorites
         if self.favorites == None or len(self.favorites) == 0:
             self.favorites = ['http://www.intermagnet.org/test/ws/?id=BOU']
-        self.ids = ids
-        self.types = types
-        self.formats = formats
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -47,7 +44,6 @@ class OpenWebAddressDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.favorites[0],size=(160,-1))
         self.addFavsButton = wx.Button(self, label='Add to favorites',size=(160,30))
         self.dropFavsButton = wx.Button(self, label='Remove from favorites',size=(160,30))
-        self.connectEdgeButton = wx.Button(self, label='Connect to USGS WS', size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
@@ -80,7 +76,7 @@ class OpenWebAddressDialog(wx.Dialog):
                  (self.dropFavsButton, dict(flag=wx.ALIGN_CENTER)),
                  emptySpace,
                  emptySpace,
-                 (self.connectEdgeButton, dict(flag=wx.ALIGN_CENTER)),
+                 emptySpace,
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
@@ -96,8 +92,6 @@ class OpenWebAddressDialog(wx.Dialog):
         self.addFavsButton.Bind(wx.EVT_BUTTON, self.AddFavs)
         self.dropFavsButton.Bind(wx.EVT_BUTTON, self.DropFavs)
         self.getFavsComboBox.Bind(wx.EVT_COMBOBOX, self.GetFavs)
-        self.connectEdgeButton.Bind(wx.EVT_BUTTON, self.OnEdge)
-
 
     def GetFavs(self,e):
         """
@@ -121,54 +115,13 @@ class OpenWebAddressDialog(wx.Dialog):
             self.getFavsComboBox.Append(elem)
 
 
-    def OnEdge(self, e):
-        helpdlg = ConnectEdgeDialog(None, title='Create URL to USGS Geomag Web Service', ids=self.ids, types=self.types, formats=self.formats)
-        if helpdlg.ShowModal() == wx.ID_OK:
-            stday = helpdlg.startDatePicker.GetValue()
-            sttime = str(helpdlg.startTimePicker.GetValue())
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-            start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-            enday = helpdlg.endDatePicker.GetValue()
-            entime = str(helpdlg.endTimePicker.GetValue())
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-            end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-            if start < end:
-                obs_id = 'id=' + helpdlg.idComboBox.GetValue()
-                start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
-                end_time = '&endtime=' + ed + 'T' + entime + 'Z'
-                file_format = '&format=' + helpdlg.formatComboBox.GetValue()
-                elements = '&elements=' + helpdlg.elementsTextCtrl.GetValue()
-                data_type = '&type=' + helpdlg.typeComboBox.GetValue()
-                period = '&sampling_period=' + helpdlg.sampleTextCtrl.GetValue()
-                base = 'https://geomag.usgs.gov/ws/edge/?'
-                url = (base + obs_id + start_time + end_time + file_format +
-                      elements + data_type + period)
-                self.urlTextCtrl.SetValue(url)
-            else:
-                msg = wx.MessageDialog(self, "Invalid time range!\n"
-                    "The end time occurs before the start time.\n",
-                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
-                msg.ShowModal()
-                self.changeStatusbar("Loading from directory failed ... Ready")
-                msg.Destroy()
-
-
-class ConnectEdgeDialog(wx.Dialog):
+class ConnectWebServiceDialog(wx.Dialog):
     """
-    Helper method to connect to edge
+    Helper method to generate urls and connect to a WebService
     Select shown keys
     """
     def __init__(self, parent, title, ids, types, formats):
-        super(ConnectEdgeDialog, self).__init__(parent=parent,
+        super(ConnectWebServiceDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.ids = ids
         self.types = types
@@ -177,31 +130,34 @@ class ConnectEdgeDialog(wx.Dialog):
         self.doLayout()
 
     def createControls(self):
-        #self.urlLabel = wx.StaticText(self, label="Insert address (e.g.'https://geomag.usgs.gov/ws/edge/?id=BOU')",size=(500,30))
-        #self.urlTextCtrl = wx.TextCtrl(self, value=self.url,size=(500,30))
+        example = "Example: https://geomag.usgs.gov/ws/edge/?id=BOU&starttime=" \
+                "2016-04-22H00:00:00Z&endtime=2016-04-30H23:59:00Z&sampling_period=60" \
+                "&type=variation&format=iaga2002"
+        disclaimer = "Please note: At this time json format is limited to 172800" \
+                " samples, and iaga2002 format is limited to 345600 samples."
+        #self.exampleText = wx.StaticText(self, label=example,size=(500,60))
+        self.disclaimerText = wx.StaticText(self, label=disclaimer,size=(500,40))
         self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,20))
         self.idComboBox = wx.ComboBox(self, choices=self.ids,
-            style=wx.CB_DROPDOWN, value=self.ids[0],size=(400,-1))
+            style=wx.CB_DROPDOWN, value=self.ids[1],size=(400,25))
         self.formatLabel = wx.StaticText(self, label="Format: ",size=(400,20))
         self.formatComboBox = wx.ComboBox(self, choices=self.formats,
-            style=wx.CB_DROPDOWN, value=self.formats[0],size=(400,-1))
+            style=wx.CB_DROPDOWN, value=self.formats[0],size=(400,25))
         self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,20))
         self.typeComboBox = wx.ComboBox(self, choices=self.types,
-            style=wx.CB_DROPDOWN, value=self.types[0],size=(400,-1))
+            style=wx.CB_DROPDOWN, value=self.types[0],size=(400,25))
         self.sampleLabel = wx.StaticText(self, label="Sampling Period (1, 6, or 3600)",size=(400,20))
-        self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,30))
+        self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,25))
         self.startTimeLabel = wx.StaticText(self, label="Start Time: ",size=(400,20))
-        #self.startTimeTextCtrl = wx.TextCtrl(self, value='2017-01-01T00:00:00Z',size=(400,30))
-        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(), size=(160,30))
-        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,30))
+        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(), size=(160,25))
+        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,25))
         self.endTimeLabel = wx.StaticText(self, label="End Time: ",size=(400,20))
-        #self.endTimeTextCtrl = wx.TextCtrl(self, value='2017-02-01T00:00:00Z',size=(400,30))
-        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(), size=(160,30))
-        self.endTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,30))
+        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(), size=(160,25))
+        self.endTimePicker = wx.TextCtrl(self, value='23:59:00',size=(160,25))
         self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
-        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,30))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Create')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,30))
+        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,25))
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK',size=(400,25))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,25))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -213,31 +169,34 @@ class ConnectEdgeDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        elemlist = [(self.obsIDLabel, noOptions),
-                 (self.formatLabel, noOptions),
-                 (self.idComboBox, expandOption),
-                 (self.formatComboBox, expandOption),
-                 (self.typeLabel, noOptions),
-                 (self.sampleLabel, noOptions),
-                 (self.typeComboBox, expandOption),
-                 (self.sampleTextCtrl, expandOption),
-                 (self.startTimeLabel, noOptions),
-                 emptySpace,
-                 (self.startDatePicker, expandOption),
-                 (self.startTimePicker, expandOption),
-                 (self.endTimeLabel, noOptions),
-                 emptySpace,
-                 (self.endDatePicker, expandOption),
-                 (self.endTimePicker, expandOption),
-                 (self.elementsLabel, noOptions),
-                 emptySpace,
-                 (self.elementsTextCtrl, expandOption),
-                 emptySpace,
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+        elemlist = [(self.disclaimerText, noOptions),
+                (self.obsIDLabel, noOptions),
+                (self.idComboBox, expandOption),
+                emptySpace,
+                (self.formatLabel, noOptions),
+                (self.formatComboBox, expandOption),
+                emptySpace,
+                (self.typeLabel, noOptions),
+                (self.typeComboBox, expandOption),
+                emptySpace,
+                (self.sampleLabel, noOptions),
+                (self.sampleTextCtrl, expandOption),
+                emptySpace,
+                (self.startTimeLabel, noOptions),
+                (self.startDatePicker, expandOption),
+                (self.startTimePicker, expandOption),
+                emptySpace,
+                (self.endTimeLabel, noOptions),
+                (self.endDatePicker, expandOption),
+                (self.endTimePicker, expandOption),
+                emptySpace,
+                (self.elementsLabel, noOptions),
+                (self.elementsTextCtrl, expandOption),
+                (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
         # A GridSizer will contain the other controls:
-        cols = 2
+        cols = 1
         rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=5, hgap=10)
 

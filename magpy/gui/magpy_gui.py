@@ -910,11 +910,13 @@ class MainFrame(wx.Frame):
         self.FileMenu.AppendItem(self.DirOpen)
         self.WebOpen = wx.MenuItem(self.FileMenu, 103, "Open &URL...\tCtrl+U", "Get data from the internet", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.WebOpen)
-        self.DBOpen = wx.MenuItem(self.FileMenu, 104, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
+        self.WebServiceOpen = wx.MenuItem(self.FileMenu, 104, "Open Connection to Web Service...\tCtrl+G", "Get data from a web service", wx.ITEM_NORMAL)
+        self.FileMenu.AppendItem(self.WebServiceOpen)
+        self.DBOpen = wx.MenuItem(self.FileMenu, 105, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DBOpen)
         self.DBOpen.Enable(False)
         self.FileMenu.AppendSeparator()
-        self.ExportData = wx.MenuItem(self.FileMenu, 105, "&Export data...\tCtrl+E", "Export data to a file", wx.ITEM_NORMAL)
+        self.ExportData = wx.MenuItem(self.FileMenu, 106, "&Export data...\tCtrl+E", "Export data to a file", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.ExportData)
         self.ExportData.Enable(False)
         self.FileMenu.AppendSeparator()
@@ -986,6 +988,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnOpenDir, self.DirOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenFile, self.FileOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenURL, self.WebOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenWebService, self.WebServiceOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenDB, self.DBOpen)
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
@@ -1984,10 +1987,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         bookmarks = self.options.get('bookmarks',[])
         if bookmarks == []:
             bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
-        ids = self.options.get('edgeid',[])
-        types = self.options.get('edgetype',[])
-        formats = self.options.get('edgeformat',[])
-        dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks, ids=ids, types=types, formats=formats)
+        dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
         if dlg.ShowModal() == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
             self.changeStatusbar("Loading data ... be patient")
@@ -2017,6 +2017,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
                 pass
 
+
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
             if self.InitialRead(stream):
@@ -2044,6 +2045,88 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.ShowModal()
             self.changeStatusbar("Loading url failed ... Ready")
             dlg.Destroy()
+
+    def OnOpenWebService(self, event):
+        stream = DataStream()
+        success = False
+        bookmarks = self.options.get('bookmarks',[])
+        ids = self.options.get('edgeid',[])
+        types = self.options.get('edgetype',[])
+        formats = self.options.get('edgeformat',[])
+        dlg = ConnectWebServiceDialog(None, title='Create and Open URL for Geomag Web Service', ids=ids, types=types, formats=formats)
+        if dlg.ShowModal() == wx.ID_OK:
+            stday = dlg.startDatePicker.GetValue()
+            sttime = str(dlg.startTimePicker.GetValue())
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+            start = datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+            startstr = datetime.strftime(start, "%Y-%m-%dH%H:%M:%SZ")
+            enday = dlg.endDatePicker.GetValue()
+            entime = str(dlg.endTimePicker.GetValue())
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+            end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+            endstr = datetime.strftime(end, "%Y-%m-%dH%H:%M:%SZ")
+            if start < end:
+                obs_id = 'id=' + dlg.idComboBox.GetValue()
+                start_time = '&starttime=' + startstr
+                end_time = '&endtime=' + endstr
+                file_format = '&format=' + dlg.formatComboBox.GetValue()
+                elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
+                data_type = '&type=' + dlg.typeComboBox.GetValue()
+                period = '&sampling_period=' + dlg.sampleTextCtrl.GetValue()
+                base = 'https://geomag.usgs.gov/ws/edge/?'
+                url = (base + obs_id + start_time + end_time + file_format +
+                      elements + data_type + period)
+            else:
+                msg = wx.MessageDialog(self, "Invalid time range!\n"
+                    "The end time occurs before the start time.\n",
+                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
+                msg.ShowModal()
+                self.changeStatusbar("Loading from web service failed ... Ready")
+                msg.Destroy()
+            self.changeStatusbar("Loading data ... be patient")
+            try:
+                if not url.endswith('/'):
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
+                    try:
+                        stream = read(path_or_url=url)
+                        success = True
+                    except:
+                        success = False
+                else:
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
+                    maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
+                    try:
+                        stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
+                        success = True
+                    except:
+                        success = False
+            except:
+                success = False
+            dlg.Destroy()
+
+            if success:
+                self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
+                if self.InitialRead(stream):
+                    self.OnInitialPlot(self.plotstream)
+                self.changeStatusbar("Ready")
+            else:
+                dlg = wx.MessageDialog(self, "Could not access URL!\n"
+                    "please check paramaters or your internet connection\n",
+                    "OpenWebService", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                self.changeStatusbar("Loading from web service failed ... Ready")
+                dlg.Destroy()
 
 
     def OnOpenDB(self, event):
