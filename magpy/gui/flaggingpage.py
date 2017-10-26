@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from magpy.stream import *
 from magpy.absolutes import *
 from magpy.transfer import *
@@ -29,10 +27,10 @@ class FlaggingPage(wx.Panel):
     # Widgets
     def createControls(self):
         self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
-        self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
-        self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
-        self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
-        self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,30))
+        self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,25))
+        self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,25))
+        self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,25))
+        self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,25))
         self.xCheckBox = wx.CheckBox(self,label="X             ")
         self.yCheckBox = wx.CheckBox(self,label="Y             ")
         self.zCheckBox = wx.CheckBox(self,label="Z             ")
@@ -40,46 +38,47 @@ class FlaggingPage(wx.Panel):
         self.flagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
         self.flagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
             style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
-        self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
-        self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
-        self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
-        self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
+        self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,25))
+        self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,25))
+        self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,25))
+        self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,25))
 
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=8, cols=2, vgap=5, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
-        emptySpace = '(0,0), noOptions'
+        emptySpace = ((0,0), noOptions)
 
-        elemlist = ['self.flagOptionsLabel, noOptions',
-                 '(0,0), noOptions',
-                 'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagMinButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagMaxButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.xCheckBox, noOptions',
-                 'self.yCheckBox, noOptions',
-                 'self.zCheckBox, noOptions',
-                 'self.fCheckBox, noOptions',
-                 'self.flagIDText, noOptions',
-                 'self.flagIDComboBox, expandOption',
-                 'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',]
+        elemlist = [(self.flagOptionsLabel, noOptions),
+                 ((0,0), noOptions),
+                 (self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagDropButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagMinButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagMaxButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.xCheckBox, noOptions),
+                 (self.yCheckBox, noOptions),
+                 (self.zCheckBox, noOptions),
+                 (self.fCheckBox, noOptions),
+                 (self.flagIDText, noOptions),
+                 (self.flagIDComboBox, expandOption),
+                 (self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)),]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
-        for elem in elemlist:
-            control = elem.split(', ')[0]
-            options = elem.split(', ')[1]
-            gridSizer.Add(eval(control), **eval(options))
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
 
         for control, options in \
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:
