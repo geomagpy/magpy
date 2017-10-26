@@ -1661,7 +1661,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             head, tail = os.path.split(elem)
             if "starttime=" in elem:
                 pos = elem.find("starttime=")+10
-                epos = pos + 10
+                epos = elem.find('&',pos)
                 datelist += [elem[pos:epos]]
             if len(datelist) == 0:
                 try:

@@ -5429,52 +5429,49 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.Destroy()
 
     def onLoadUSGS(self,event):
-        startdate = self.plotstream.ndarray[KEYLIST.index('time')][0]
-        enddate = self.plotstream.ndarray[KEYLIST.index('time')][-1]
-        starttime = num2date(startdate)
-        endtime = num2date(enddate)
         di_db = []
-        dlg = LoadUSGSDialog(None, title='Get USGS data')
+        dlg = LoadUSGSDialog(None, title='Get USGS data', stream=self.plotstream)
         if dlg.ShowModal() == wx.ID_OK:
-            extension = dlg.extensionComboBox.GetValue()
-            dt = extension[0]
-            dttype = extension[2]
-            if dttype == 'd':
-                dt = int(dt)
-            if dttype == 'w':
-                dt = int(dt) * 7
-            time = starttime - timedelta(days = dt)
-            base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
-            observatory = self.plotstream.header.get('StationID')
-            while time < endtime + timedelta(days = dt):
-                called_date = time.strftime('%Y-%m-%d')
-                time = time + timedelta(days=1)
-                url = base + 'observatory=' + observatory + '&starttime=' + \
-                        called_date + '&includemeasurements=true'
-                di_db += [url]
-            self.menu_p.rep_page.logMsg("- loaded DI data")
-            self.menu_p.abs_page.diTextCtrl.SetValue('  '.join(di_db))
-            self.dipathlist = di_db
-            self.options['dipathlist'] = di_db
-            vario_scalar = self.menu_p.str_page.pathTextCtrl.GetValue()
-            self.menu_p.abs_page.varioTextCtrl.SetValue(vario_scalar)
-            self.options['divariopath'] = vario_scalar
-            self.menu_p.abs_page.scalarTextCtrl.SetValue(vario_scalar)
-            self.options['discalarpath'] = vario_scalar
-            self.menu_p.abs_page.AnalyzeButton.Enable()
-            # remove defaults
-            dlg = DISetParameterDialog(None, title='Set Parameter')
-            dlg.expDTextCtrl.SetValue('')
-            dlg.azimuthTextCtrl.SetValue('')
-            dlg.pierTextCtrl.SetValue('')
-            dlg.alphaTextCtrl.SetValue('')
-            dlg.deltaFTextCtrl.SetValue('')
-            self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
-            self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
-            self.options['dipier'] = dlg.pierTextCtrl.GetValue()
-            self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
-            self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
-            self.options['diexpI']=''
+            di_db = dlg.urls
+            startvalue = dlg.startDatePicker.GetValue()
+            starttime = datetime.fromtimestamp(startvalue.GetTicks())
+            endvalue = dlg.endDatePicker.GetValue()
+            endtime = datetime.fromtimestamp(endvalue.GetTicks())
+            if endtime >= starttime:
+                self.menu_p.rep_page.logMsg("- loaded DI data")
+                try:
+                    self.menu_p.abs_page.diTextCtrl.SetValue('  '.join(di_db))
+                except:
+                    self.menu_p.abs_page.diTextCtrl.SetValue(di_db[0])
+                self.dipathlist = di_db
+                self.options['dipathlist'] = di_db
+                vario_scalar = self.menu_p.str_page.pathTextCtrl.GetValue()
+                self.menu_p.abs_page.varioTextCtrl.SetValue(vario_scalar)
+                self.options['divariopath'] = vario_scalar
+                self.menu_p.abs_page.scalarTextCtrl.SetValue(vario_scalar)
+                self.options['discalarpath'] = vario_scalar
+                self.menu_p.abs_page.AnalyzeButton.Enable()
+                # remove defaults
+                dlg = DISetParameterDialog(None, title='Set Parameter')
+                dlg.expDTextCtrl.SetValue('')
+                dlg.azimuthTextCtrl.SetValue('')
+                dlg.pierTextCtrl.SetValue('')
+                dlg.alphaTextCtrl.SetValue('')
+                dlg.deltaFTextCtrl.SetValue('')
+                self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
+                self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
+                self.options['dipier'] = dlg.pierTextCtrl.GetValue()
+                self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
+                self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
+                self.options['diexpI']=''
+            else:
+                dlg = wx.MessageDialog(self, "Could not load data!\n"
+                            "Entered dates are out of order.\n"
+                            "Reverting to original dates.\n",
+                            "LoadUSGSData", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+
 
     def onDefineVario(self,event):
         """

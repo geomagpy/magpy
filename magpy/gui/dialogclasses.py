@@ -2529,26 +2529,46 @@ class LoadUSGSDialog(wx.Dialog):
     Dialog for loading USGS absolutes data.
     """
 
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, stream):
         super(LoadUSGSDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
+        self.stream = stream
+        self.urls = []
         self.createControls()
         self.doLayout()
+        self.bindControls()
+        self.createUrls()
 
     # Widgets
     def createControls(self):
+        dateinfo = ('Specify a date range of absolutes data to be obtain from the'
+                ' USGS absolutes web service. The start and end dates should'
+                ' encompass the plotted data. Note: the default start and end'
+                ' dates correspond to thhe beginning and end of the plotted'
+                ' data.')
         extension_options = ['0 days', '1 day', '2 days', '3 days', '4 days',
                 '5 days', '6 days', '1 week', '2 weeks',  '3 weeks',
                 '4 weeks', '8 weeks']
-        info = ('Extending the beginning and end of the time range will ensure'
+        extinfo = ('Extending the beginning and end of the time range will ensure'
                 ' that the scalar and variometer data is covered by the available'
-                ' baseline data. (4 days recommended)')
-        self.extensionText = wx.StaticText(self,-1,"Extension amount:",size=(500,20))
-        self.infoText = wx.StaticText(self,-1,info,size=(500,50))
-        self.extensionComboBox = wx.ComboBox(self, choices=extension_options,
-            style=wx.CB_DROPDOWN, value=extension_options[0],size=(500,-1))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(500,20))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Ok',size=(500,20))
+                ' baseline data. (3 days recommended)')
+        starttime = self.stream.ndarray[KEYLIST.index('time')][0]
+        endtime = self.stream.ndarray[KEYLIST.index('time')][-1]
+        starttime = num2date(starttime)
+        endtime = num2date(endtime)
+        start = wx.DateTimeFromTimeT(time.mktime(starttime.timetuple()))
+        end = wx.DateTimeFromTimeT(time.mktime(endtime.timetuple()))
+        self.dateInfoText = wx.StaticText(self,-1,dateinfo,size=(500,65))
+        self.startText = wx.StaticText(self,-1,"Start Date:",size=(500,15))
+        self.startDatePicker = wx.DatePickerCtrl(self, dt=start,size=(500,25))
+        self.endText = wx.StaticText(self,-1,"End Date:",size=(500,15))
+        self.endDatePicker = wx.DatePickerCtrl(self, dt=end,size=(500,25))
+        self.extensionText = wx.StaticText(self,-1,"Extension amount:",size=(500,15))
+        self.extInfoText = wx.StaticText(self,-1,extinfo,size=(500,35))
+        self.extensionComboBox = wx.Choice(self, choices=extension_options,
+            style=wx.CB_READONLY,size=(500,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(500,25))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Ok',size=(500,25))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2561,12 +2581,20 @@ class LoadUSGSDialog(wx.Dialog):
         emptySpace = ((0, 0), noOptions)
 
         # Add the controls to the sizers:
-        controls = [(self.infoText, noOptions),
-        (self.extensionText, noOptions),
-        (self.extensionComboBox,  dict(flag=wx.ALIGN_CENTER)),
-        (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-        (self.closeButton, dict(flag=wx.ALIGN_CENTER)),
-        ]
+        controls = [(self.dateInfoText, noOptions),
+                (self.startText, noOptions),
+                (self.startDatePicker, dict(flag=wx.ALIGN_CENTER)),
+                (self.endText, noOptions),
+                (self.endDatePicker, dict(flag=wx.ALIGN_CENTER)),
+                emptySpace,
+                emptySpace,
+                (self.extInfoText, noOptions),
+                (self.extensionText, noOptions),
+                (self.extensionComboBox,  dict(flag=wx.ALIGN_CENTER)),
+                emptySpace,
+                emptySpace,
+                (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
         # A GridSizer will contain the other controls:
         cols = 1
@@ -2581,6 +2609,66 @@ class LoadUSGSDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.extensionComboBox.Bind(wx.EVT_CHOICE, self.onExtend)
+        self.startDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChangeDate)
+        self.endDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChangeDate)
+
+    def onChangeDate(self, e):
+        self.createUrls()
+
+    def onExtend(self, e):
+        startvalue = self.startDatePicker.GetValue()
+        starttime = datetime.fromtimestamp(startvalue.GetTicks())
+        endvalue = self.endDatePicker.GetValue()
+        endtime = datetime.fromtimestamp(endvalue.GetTicks())
+        extension = self.extensionComboBox.GetString(self.extensionComboBox.GetSelection())
+        dt = extension[0]
+        dttype = extension[2]
+        if dttype == 'd':
+            dt = int(dt)
+        if dttype == 'w':
+            dt = int(dt) * 7
+        starttime = starttime - timedelta(days = dt)
+        endtime = endtime + timedelta(days = dt)
+        start = wx.DateTimeFromTimeT(time.mktime(starttime.timetuple()))
+        end = wx.DateTimeFromTimeT(time.mktime(endtime.timetuple()))
+        self.startDatePicker.SetValue(start)
+        self.endDatePicker.SetValue(end)
+        self.createUrls()
+
+    def createUrls(self):
+        self.urls = []
+        obsid = self.stream.header.get('StationID', '')
+        extension = self.extensionComboBox.GetString(self.extensionComboBox.GetSelection())
+        dt = extension[0]
+        # Dates from pickers
+        startvalue = self.startDatePicker.GetValue()
+        startvalue = datetime.fromtimestamp(startvalue.GetTicks()).replace(tzinfo=None)
+        endvalue = self.endDatePicker.GetValue()
+        endvalue = datetime.fromtimestamp(endvalue.GetTicks()).replace(tzinfo=None)
+        # Dates from stream
+        streamstart = self.stream.ndarray[KEYLIST.index('time')][0]
+        streamend = self.stream.ndarray[KEYLIST.index('time')][-1]
+        streamstart = num2date(streamstart).replace(tzinfo=None)
+        streamend = num2date(streamend).replace(tzinfo=None)
+        if streamstart == startvalue and streamend == endvalue:
+            starttime = streamstart
+            endtime = streamend
+        else:
+            starttime = startvalue
+            endtime = endvalue
+        base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
+        time = starttime
+        while time < endtime:
+            start = time.strftime('%Y-%m-%d')
+            time = time + timedelta(days=1)
+            end = time.strftime('%Y-%m-%d')
+            url = base + 'observatory=' + obsid + '&starttime=' + \
+                start + '&includemeasurements=true'
+            self.urls += [url]
+
 
 
 
