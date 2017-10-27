@@ -2055,46 +2055,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         formats = self.options.get('edgeformat',[])
         dlg = ConnectWebServiceDialog(None, title='Create and Open URL for Geomag Web Service', ids=ids, types=types, formats=formats)
         if dlg.ShowModal() == wx.ID_OK:
-            stday = dlg.startDatePicker.GetValue()
-            sttime = str(dlg.startTimePicker.GetValue())
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-            start = datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-            startstr = datetime.strftime(start, "%Y-%m-%dH%H:%M:%SZ")
-            enday = dlg.endDatePicker.GetValue()
-            entime = str(dlg.endTimePicker.GetValue())
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-            end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-            endstr = datetime.strftime(end, "%Y-%m-%dH%H:%M:%SZ")
+            url = dlg.url
+            start = dlg.starttime
+            end = dlg.endtime
             if start < end:
-                obs_id = 'id=' + dlg.idComboBox.GetValue()
-                start_time = '&starttime=' + startstr
-                end_time = '&endtime=' + endstr
-                file_format = '&format=' + dlg.formatComboBox.GetValue()
-                elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
-                data_type = '&type=' + dlg.typeComboBox.GetValue()
-                period = '&sampling_period=' + dlg.sampleTextCtrl.GetValue()
-                base = 'https://geomag.usgs.gov/ws/edge/?'
-                url = (base + obs_id + start_time + end_time + file_format +
-                      elements + data_type + period)
-            else:
-                msg = wx.MessageDialog(self, "Invalid time range!\n"
-                    "The end time occurs before the start time.\n",
-                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
-                msg.ShowModal()
-                self.changeStatusbar("Loading from web service failed ... Ready")
-                msg.Destroy()
-            self.changeStatusbar("Loading data ... be patient")
-            try:
-                if not url.endswith('/'):
+                self.changeStatusbar("Loading data ... be patient")
+                try:
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                     try:
@@ -2102,31 +2068,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = True
                     except:
                         success = False
+                except:
+                    success = False
+
+                if success:
+                    self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
+                    if self.InitialRead(stream):
+                        self.OnInitialPlot(self.plotstream)
+                    self.changeStatusbar("Ready")
                 else:
-                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
-                    mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
-                    maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
-                    try:
-                        stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
-                        success = True
-                    except:
-                        success = False
-            except:
-                success = False
+                    dlg = wx.MessageDialog(self, "Could not access URL!\n"
+                        "please check paramaters or your internet connection\n",
+                        "OpenWebService", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    self.changeStatusbar("Loading from web service failed ... Ready")
+                    dlg.Destroy()
+            else:
+                msg = wx.MessageDialog(self, "Invalid time range!\n"
+                    "The end time occurs before the start time.\n",
+                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
+                msg.ShowModal()
+                self.changeStatusbar("Loading from web service failed ... Ready")
+                msg.Destroy()
+
             dlg.Destroy()
 
-            if success:
-                self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
-                if self.InitialRead(stream):
-                    self.OnInitialPlot(self.plotstream)
-                self.changeStatusbar("Ready")
-            else:
-                dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                    "please check paramaters or your internet connection\n",
-                    "OpenWebService", wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                self.changeStatusbar("Loading from web service failed ... Ready")
-                dlg.Destroy()
 
 
     def OnOpenDB(self, event):
