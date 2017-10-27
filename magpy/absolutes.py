@@ -1959,7 +1959,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     #    print("of the database have been applied already.")
                     #    print("Data from %s, pier %s: manually defined are deltaF=%.2f" % (stationid, pier, deltaF))
                     if dataformat == 'JSONABS':
-                        absst = absRead(elem,dataformat=dataformat,azimuth=azimuth,pier=pier,output='DIListStruct')
+                        try:
+                            absst = absRead(elem,dataformat=dataformat,azimuth=azimuth,pier=pier,output='DIListStruct')
+                        except:
+                            print("Unable to read DI data for " + date.strftime("%Y-%m-%d"))
                     else:
                         absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     #print ("LENGTH:",len(absst))

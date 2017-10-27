@@ -2648,28 +2648,18 @@ class LoadUSGSDialog(wx.Dialog):
         startvalue = datetime.fromtimestamp(startvalue.GetTicks()).replace(tzinfo=None)
         endvalue = self.endDatePicker.GetValue()
         endvalue = datetime.fromtimestamp(endvalue.GetTicks()).replace(tzinfo=None)
-        # Dates from stream
-        streamstart = self.stream.ndarray[KEYLIST.index('time')][0]
-        streamend = self.stream.ndarray[KEYLIST.index('time')][-1]
-        streamstart = num2date(streamstart).replace(tzinfo=None)
-        streamend = num2date(streamend).replace(tzinfo=None)
-        if streamstart == startvalue and streamend == endvalue:
-            starttime = streamstart
-            endtime = streamend
-        else:
-            starttime = startvalue
-            endtime = endvalue
+        starttime = startvalue
+        endtime = endvalue + timedelta(days=1)
         base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
         time = starttime
-        while time < endtime:
+        while time <= endtime:
             start = time.strftime('%Y-%m-%d')
             time = time + timedelta(days=1)
-            end = time.strftime('%Y-%m-%d')
+            end = endtime + timedelta(days=5)
+            end = end.strftime('%Y-%m-%d')
             url = base + 'observatory=' + obsid + '&starttime=' + \
-                start + '&includemeasurements=true'
+                start + '&endtime=' + end + '&includemeasurements=true'
             self.urls += [url]
-
-
 
 
 class DefineVarioDialog(wx.Dialog):
