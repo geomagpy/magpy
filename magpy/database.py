@@ -1332,7 +1332,7 @@ def dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
         cursor.execute(createsensortablesql)
 
     if len(rows) > 0:
-        print ("SensorID is existing in Table SENSORS")
+        loggerdatabase.debug("SensorID is existing in Table SENSORS")
         # SensorID is existing in Table
         loggerdatabase.info("dbsensorinfo: Sensorid already existing in SENSORS")
         loggerdatabase.info("dbsensorinfo: rows: {}".format(rows))
@@ -1462,24 +1462,32 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         DataMaxTime CHAR(50)
     """
 
-    # Define keys here which do not trigger a new revision number in the table
-    SKIPKEYS = ['DataID', 'SensorID', 'ColumnContents','ColumnUnits', 'DataFormat','DataTerms','DataDeltaF','DataDeltaT1','DataDeltaT2', 'DataFlagModification', 'DataAbsFunc', 'DataAbsInfo', 'DataBaseValues', 'DataFlagList',
+    # 1. Define keys here which do not trigger a new revision number in the table
+    SKIPKEYS = ['DataID', 'SensorID', 'ColumnContents','ColumnUnits', 'DataFormat','DataTerms','DataDeltaF','DataDeltaT1','DataDeltaT2', 'DataFlagModification', 'DataAbsFunc', 'DataAbsInfo', 'DataBaseValues', 'DataFlagList', 
 'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate', 'DataRating','DataComments','DataSource','DataAbsFunctionObject', 'DataDeltaValues', 'DataTerms', 'DataReferences', 'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel','DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta']
 
+    # 2. Scan through header and modify/cleanup formats (e.g. StationID to upper case)
+    datakeydict['StationID'] = datakeydict.get('StationID','').upper()
+
+    # 3. extract keys to be checked and create a searchlist of them
     searchlst = ' '
     datainfohead,datainfovalue=[],[]
     novalues = False
     if datakeydict:
-        sm = ''
-        sm = datakeydict.get('SensorModule')
-        if sm in ['OW','RCS','ow','rcs']:
+        # add some expections for DataSamplingRate
+        sm = datakeydict.get('SensorModule','')
+        #if sm in ['OW','RCS','ow','rcs'] or 'Status' in sensorid or 'status' in sensorid:
+        if sm in ['OW','ow','Ow','RCS','rcs','Rcs'] or 'Status' in sensorid or 'status' in sensorid:
+            # Avoid sampling rate criteria for data revision for rcs and one wire sensors, as well
+            # as any sensorid containing Status information
             print ("dbdatainfo: Skipping SamplingRate for data revision")
             SKIPKEYS.append('DataSamplingRate')
 
         for key in datakeydict:
-            if key in DATAINFOKEYLIST and not key == 'DataMaxTime' and not key == 'DataMinTime':
+            if key in DATAINFOKEYLIST and not key in ['DataMaxTime', 'DataMinTime']:
+                # All keys are tested and added to infohead and infovalue to be updated or
                 # MinTime and Maxtime are changing and therefore are excluded from check
-                if not str(datakeydict[key]) == '':
+                if not str(datakeydict[key]) in ['',None,'Null']:
                     datainfohead.append(key)
                     ind = DATAINFOKEYLIST.index(key)
                     ### if key in ['DataFlagList']:
@@ -1493,7 +1501,8 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                         except:
                             loggerdatabase.warning("dbdatainfo: Trying to read FLOAT value failed")
                             datainfovalue.append(str(datakeydict[key]))
-                    elif DATAVALUEKEYLIST[ind].startswith('DEC') or DATAVALUEKEYLIST[ind].startswith('FLO'):
+                    elif DATAVALUEKEYLIST[ind].startswith('INT'):
+                        # This was wrong until 0.3.98
                         try:
                             datainfovalue.append(int(datakeydict[key]))
                         except:
@@ -1501,11 +1510,19 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                             datainfovalue.append(str(datakeydict[key]))
                     else:
                         datainfovalue.append(str(datakeydict[key]))
-                    #if key == 'DataID' or key.startswith('Column') or key == 'DataFormat' or key == 'DataTerms' or key == 'DataFlagModification' or key.startswith('DataPubli'):
-                    if key in SKIPKEYS:
-                        pass
-                    else:
-                        searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
+                    #Extend searchlist to identify revision numbers only with critical info
+                    if not key in SKIPKEYS:
+                        # For SamplingRate add a range to searchlist allowing for 10percent variation
+                        # This is sensible if as minor variation are expected due to rounding in 
+                        # in arrays of different lengths
+                        # "datainfovalue" is not affected
+                        if key in ['DataSamplingRate']:
+                            #Also regard for not-yet-existing db inputs
+                            searchlst += 'AND (({a} > "{b:.2f}" AND {a} < "{c:.2f}") OR {a} IS NULL) '.format(a=key, b=float(datakeydict[key])*0.9, c=float(datakeydict[key])*1.1)
+                        else:
+                            #Also regard for not-yet-existing db inputs
+                            #searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
+                            searchlst += 'AND ({} = "{}" or {} IS NULL) '.format(key,str(datakeydict[key]),key)
 
     datainfonum = '0001'
     numlst,intnumlst = [],[]
@@ -1535,7 +1552,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
     # Check STATIONS
     # ##############
     if datakeydict:
-        checkstation = 'SELECT StationID FROM STATIONS WHERE StationID = "' + datakeydict["StationID"] +'"'
+        checkstation = 'SELECT StationID FROM STATIONS WHERE StationID = "' + datakeydict.get("StationID",'') +'"'
         try:
             cursor.execute(checkstation)
             rows = cursor.fetchall()
@@ -1575,6 +1592,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         datainfostr = ', '.join(FULLDATAKEYLIST)
 
         createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
+
         cursor.execute(createdatainfotablesql)
 
     def joindatainfovalues(head,lst):
@@ -1589,8 +1607,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         return ','.join(dst)
 
     # check whether input in DATAINFO with sensorid is existing already
+    nullnames = []
     if len(rows) > 0:
-        print ("dbdatainfo: Found existing tables")
+        loggerdatabase.debug("dbdatainfo: Found existing tables")
         # Get maximum number
         for i in range(len(rows)):
             rowval = rows[i][0].replace(sensorid + '_','')
@@ -1605,7 +1624,6 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: Maxnum: %i" % maxnum)
         # Perform intensive search using any given meta info
         intensivesearch = 'SELECT DataID FROM DATAINFO WHERE SensorID = "'+sensorid+'"' + searchlst
-        #print ("dbdatainfo: Searchlist: %s" % intensivesearch)
         loggerdatabase.info("dbdatainfo: Searchlist: %s" % intensivesearch)
         cursor.execute(intensivesearch)
         intensiverows = cursor.fetchall()
@@ -1614,7 +1632,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: using searchlist %s"% intensivesearch)
         loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
         if len(intensiverows) > 0:
-            print ("dbdatainfo: DataID existing - updating {}".format(intensiverows[0]))
+            loggerdatabase.debug("dbdatainfo: DataID existing - updating {}".format(intensiverows[0]))
             selectupdate = True
             for i in range(len(intensiverows)):
                 # if more than one record is existing select the latest (highest) number
@@ -1626,9 +1644,25 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             intmaxnum = max(intnumlst)
             datainfonum = '{0:04}'.format(intmaxnum)
             #print datainfonum, intmaxnum
+            # get a NULL list (identify all keys with input zero)
+            #selectedline = [elem for elem in intensiverows if intensiverows[i][0].endswith(datainfonum)][0]
+            # Get all fields not in SKIPKEYS with zero values
+            #   too be updated as well
+            try:
+                getallfields = 'SELECT column_name FROM information_schema.columns WHERE table_name = "DATAINFO" AND column_name NOT IN ("{}")'.format('","'.join(SKIPKEYS)) 
+                cursor.execute(getallfields)
+                fieldrows = cursor.fetchall()            
+                notskipcolumns = (list(set([el[0] for el in fieldrows])))
+                valselect = 'SELECT {} FROM DATAINFO WHERE DataID = "{}"'.format(','.join(notskipcolumns), sensorid+'_'+datainfonum)
+                cursor.execute(valselect)
+                fieldrows = cursor.fetchall()
+                valscolumns = [el for el in fieldrows[0]]
+                nullnames = [el for ii,el in enumerate(notskipcolumns) if valscolumns[ii] == None]
+            except:
+                nullnames = []
         else:
-            print ("dbdatainfo: Creating new DataID")
-            print ("dbdatainfo: because - {}".format(intensiverows))
+            loggerdatabase.debug("dbdatainfo: Creating new DataID")
+            loggerdatabase.debug("dbdatainfo: because - {}".format(intensiverows))
             #print (intensivesearch)
             selectupdate = False
             datainfonum = '{0:04}'.format(maxnum+1)
@@ -1643,8 +1677,9 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             datainfostring = joindatainfovalues(datainfohead, datainfovalue)
             #print "dbdatainfo", datainfohead, datainfostring
         if selectupdate:
-            #print "Here", datainfohead
-            sqllst = [key + " ='" + str(datainfovalue[idx]) +"'" for idx, key in enumerate(datainfohead) if key in SKIPKEYS and not key == 'DataAbsFunctionObject' and not key == 'DataBaseValues' and not key == 'DataFlagList' and not key=='DataID']
+            sqllst = [key + " ='" + str(datainfovalue[idx]) +"'" for idx, key in enumerate(datainfohead) if (key in SKIPKEYS or key in nullnames) and not key == 'DataAbsFunctionObject' and not key == 'DataBaseValues' and not key == 'DataFlagList' and not key=='DataID']
+            # Add also values if existing input is NULL
+
             if 'DataAbsFunctionObject' in datainfohead: ### Tested Text and Binary so far. No quotes is OK.
                 print ("dbdatainfo: adding DataAbsFunctionObjects to DATAINFO is not yet working")
                 #pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataAbsFunctionObject')])
@@ -1653,7 +1688,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
                     #datainfosql = 'INSERT INTO DATAINFO(DataAbsFunctionObject) VALUES (%s)' % (pfunc)
                     #cursor.execute(datainfosql)
             if 'DataBaseValues' in datainfohead: ### Tested Text and Binary so far. No quotes is OK.
-                print ("dbdatainfo: adding DataBaseValues to DATAINFO is not yet working")
+                loggerdatabase.debug("dbdatainfo: adding DataBaseValues to DATAINFO is not yet working")
                 #pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataBaseValues')])
                 #TODO convert pfunc to string
                 #sqllst.append('DataBaseValues' + '=' + pfunc)
@@ -1663,7 +1698,6 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             if not len(sqllst) > 0:
                 novalues = True
             datainfosql = "UPDATE DATAINFO SET " + ", ".join(sqllst) +  " WHERE DataID = '" + sensorid + "_" + datainfonum + "'"
-            #print datainfosql
         else:
             #print "No, Here"
             datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
@@ -1672,7 +1706,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
             cursor.execute(datainfosql)
         datainfoid = sensorid + '_' + datainfonum
     else:
-        print ("dbdatainfo: Creating new table")
+        loggerdatabase.debug("dbdatainfo: Creating new table")
         # return 0001
         datainfoid = sensorid + '_' + datainfonum
         if not 'DataID' in datainfohead:
@@ -1685,16 +1719,15 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         loggerdatabase.debug("dbdatainfo: %s, %s" % (datainfohead, datainfovalue))
         datainfostring = joindatainfovalues(datainfohead, datainfovalue)
         datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
-        #print datainfosql
+
         if updatedb:
             try:
-                print ("Updating DATAINFO table")
+                #print ("Updating DATAINFO table with {}".format(datainfosql))
                 cursor.execute(datainfosql)
             except mysql.Error as e:
                 print ("Failed: {}".format(e))
             except:
                 print ("Failed for unknown reason")
-
 
     db.commit()
     cursor.close ()
@@ -1779,10 +1812,43 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             print ("writeDB: No StationID provided - use option StationID='MyStationID'")
             return
 
-        datastream.header['DataSamplingRate'] = datastream.samplingrate()
+        # Check data sampling rate:
+        # #########################
+        # 1. Get sampling rate of sequence to be written (will be 0 if only one record is provided)
+        rsr = datastream.samplingrate()
+        #print ("Samplingrate of sequence == ", rsr)
+        # 2. get eventually provided sampling rate
+        try:
+            psr = float(datastream.header.get('DataSamplingRate','').replace('sec').strip())
+        except:
+            psr = None
+        #print ("Samplingrate provided with stream", psr)
+        if not psr in [None,'','Null',0,'0'] and not rsr==0.0:
+            # 3. Both values are existing - check consistency
+            # if this value is not considerably different from the psr then use it
+            try:
+                # get relative diff
+                #print ("Determining diff")
+                rdiff = np.abs(float(psr)-float(rsr))/float(rsr)
+                print ("Found sampling rate difference of {}".format(rdiff))
+                if rdiff > 0.1:
+                    datastream.header['DataSamplingRate'] = rsr
+                else:
+                    datastream.header['DataSamplingRate'] = psr
+            except:
+                datastream.header['DataSamplingRate'] = rsr
+        elif not psr in [None,'','Null',0,'0'] and rsr==0.0:
+            # 4. information is provided and no value can be determined from stream
+            datastream.header['DataSamplingRate'] = psr
+        elif psr in [None,'','Null',0,'0'] and not rsr==0.0:
+            # 5. use calculated rsr (eventually add a validity flag?)
+            datastream.header['DataSamplingRate'] = rsr
+        elif psr in [None,'','Null',0,'0'] and rsr==0.0:
+            datastream.header['DataSamplingRate'] = ''
+        else:
+            print ("Well, I forgot something obviously - check writeDB sampling rate determination")
 
         # Updating DATAINFO, SENSORS and STATIONS
-        #print "Before", datastream.header['SensorID']
         # TODO: Abolute function object
         # Current solution: remove it
         datastream.header['DataAbsFunctionObject'] = ''
@@ -1818,19 +1884,13 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     array = [[] for key in KEYLIST]
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
+        nosingleelem = True
         if len(col) > 0 and not False in checkEqual3(col):
-            print ("Found only identical values of {} in column {}".format(col[0],idx))
+            #print ("Found only identical values of {} in column {}".format(col[0],idx))
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
-            else: # add as usual
-                array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
-                #array[idx] = datastream.ndarray[idx]
-                try:
-                    array[idx][np.isnan(array[idx].astype(float))] = None
-                except:
-                    pass # will fail for strings
-        elif key.endswith('time') and len(col) > 0:
-            #if col[0]
+                nosingleelem = False
+        if key.endswith('time') and len(col) > 0 and nosingleelem:
             try:
                 tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
             except:
@@ -1841,14 +1901,10 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                     tcol = np.asarray([])
             tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
             array[idx]=np.asarray(tcol)
-        elif len(col) > 0: # and KEYLIST[idx] in NUMKEYLIST:
-            #array[idx] = datastream.ndarray[idx]
+        elif len(col) > 0 and nosingleelem: # and KEYLIST[idx] in NUMKEYLIST:
             array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
-            #print ("idx1", type(array[idx][0]))
-            #print ("idx1", array[idx][0], type(array[idx][0]))
             try:
                 array[idx] = [None if np.isnan(el) else el for el in array[idx]]
-                #array[idx][np.isnan(tarray[idx].astype(float))] = None
             except:
                 pass # will fail for strings
         #elif len(col) > 0:
@@ -1859,11 +1915,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     array = np.asarray([elem for elem in array if len(elem)>0], dtype=object)
     dollarstring = ['%s' for elem in keys]
 
-    
     values = array.transpose()
-
-    #print ("Test0", values[0])
-    #print ("Type: ", [type(el) for el in values[0]])
 
     insertmanysql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename, ', '.join(keys), ', '.join(dollarstring))
 
@@ -1896,7 +1948,6 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 elif key == hkey.replace('unit-col-',''):
                     unitstr = datastream.header[hkey]
 
-            #print "Checking key", key
             try:
                 sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                 cursor.execute(sql)
@@ -1920,14 +1971,17 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             collst.append(colstr)
             unitlst.append(unitstr)
 
+    # override collst/unitlst with contents in header (ColumnContents, UnitContents)
+    if not datastream.header.get('ColumnContents','') == '':
+        collst = datastream.header.get('ColumnContents').split(',')
+    if not datastream.header.get('ColumnUnits','') == '':
+        unitlst = datastream.header.get('ColumnUnits').split(',')
 
     if count == 0:
         print ("Table not existing - creating it")
         # Creating table
         createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,', '.join(dataheads))
         cursor.execute(createdatatablesql)
-
-    #print "Table created/altered"
 
     # ----------------------------------------------
     #   upload data

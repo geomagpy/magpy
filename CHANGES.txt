@@ -1,6 +1,17 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
+-------------------------------------------------
+####v<0.3.98>, <2017-12-15> -- On the way to beta.
+
+v0.3.98 general:
+
+v0.3.98 fixes:
+    + stream2flaglist: float error - converted to strings
+    + database: writeDB - numerical times problem solved
+    + database: dbdatainfo - int values treated as int now
+    + database: dbdatainfo - improved new revision numbering
+
 
 -------------------------------------------------
 ####v<0.3.97>, <2017-09-15> -- On the way to beta.

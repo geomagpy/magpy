@@ -4864,7 +4864,7 @@ CALLED BY:
                     for pos in poslst:
                         resultarray.append(self.ndarray[pos])
                     resultarray = np.transpose(np.asarray(resultarray))
-                    commentarray = [' : '.join(lst) for lst in resultarray]
+                    commentarray = [' : '.join(str(lst)) for lst in resultarray]
             except:
                 #comment remains unchanged
                 pass
