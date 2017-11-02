@@ -42,7 +42,6 @@ import threading
 
 import wx.py
 
-
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
         pickle.dump(obj,f,pickle.HIGHEST_PROTOCOL)
@@ -1063,7 +1062,7 @@ class MainFrame(wx.Frame):
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
-        self.Bind(wx.EVT_BUTTON, self.onLoadUSGS, self.menu_p.abs_page.loadUSGSButton)
+        self.Bind(wx.EVT_BUTTON, self.onLoadUSGSBaselines, self.menu_p.abs_page.loadUSGSButton)
         self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
         self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
@@ -5428,8 +5427,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.abs_page.AnalyzeButton.Enable()
         dlg.Destroy()
 
-    def onLoadUSGS(self,event):
+    def onLoadUSGSBaselines(self,event):
         di_db = []
+        # remove defaults
+        dlg = DISetParameterDialog(None, title='Set Parameter')
+        dlg.expDTextCtrl.SetValue('')
+        dlg.azimuthTextCtrl.SetValue('')
+        dlg.pierTextCtrl.SetValue('')
+        dlg.alphaTextCtrl.SetValue('')
+        dlg.deltaFTextCtrl.SetValue('')
+        self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
+        self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
+        self.options['dipier'] = dlg.pierTextCtrl.GetValue()
+        self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
+        self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
+        self.options['diexpI']=''
+        dlg.Destroy()
         dlg = LoadUSGSDialog(None, title='Get USGS data', stream=self.plotstream)
         if dlg.ShowModal() == wx.ID_OK:
             di_db = dlg.urls
@@ -5451,19 +5464,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.abs_page.scalarTextCtrl.SetValue(vario_scalar)
                 self.options['discalarpath'] = vario_scalar
                 self.menu_p.abs_page.AnalyzeButton.Enable()
-                # remove defaults
-                dlg = DISetParameterDialog(None, title='Set Parameter')
-                dlg.expDTextCtrl.SetValue('')
-                dlg.azimuthTextCtrl.SetValue('')
-                dlg.pierTextCtrl.SetValue('')
-                dlg.alphaTextCtrl.SetValue('')
-                dlg.deltaFTextCtrl.SetValue('')
-                self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
-                self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
-                self.options['dipier'] = dlg.pierTextCtrl.GetValue()
-                self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
-                self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
-                self.options['diexpI']=''
+                self.options['usgsdata'] = True
+                if dlg.analyzeCheckBox.IsChecked():
+                    self.onDIAnalyze()
             else:
                 dlg = wx.MessageDialog(self, "Could not load data!\n"
                             "Entered dates are out of order.\n"
@@ -5471,7 +5474,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             "LoadUSGSData", wx.OK|wx.ICON_INFORMATION)
                 dlg.ShowModal()
                 dlg.Destroy()
-
 
     def onDefineVario(self,event):
         """
@@ -5508,7 +5510,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['discalarpath'] = path
         dialog.Destroy()
 
-    def onDIAnalyze(self,event):
+    def onDIAnalyze(self,event=None):
         """
         open dialog to load DI data
         """
@@ -5530,6 +5532,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         stationid= self.options.get('stationid','')
         abstype= self.options.get('ditype','')
         azimuth= self.options.get('diazimuth','')
+        usgsdata= self.options.get('usgsdata',False)
         try:
             expD= float(self.options.get('diexpD','0.0'))
         except:
@@ -5565,11 +5568,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
 
-            if not azimuth == '':
-                azimuth = float(azimuth)
-                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+            # TODO include deltaD, deltaI, beta into the absoluteAnalysisCall
+            if usgsdata == True:
+                if not azimuth == '':
+                    azimuth = float(azimuth)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF, usgsdata=True)
+                else:
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF, usgsdata=True)
             else:
-                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+                if not azimuth == '':
+                    azimuth = float(azimuth)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+                else:
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
 
             try:
                 if not divariopath == '' and not discalapath == '': 

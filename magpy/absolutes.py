@@ -1496,6 +1496,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         - expI:         (float) expected Inclination - failure produced when I differs by more than expT deg
         - expT:         (float) expected value threshold - default 1 deg
         - movetoarchive:(string) define a local directory to store archived data (only works when reading files)
+        - usgsstream:   ((DataStream object) provides vario and scalar data as an alternative to reading files
     RETURNS:
         --
     EXAMPLE:
@@ -1549,6 +1550,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     expD = kwargs.get('expD')
     meantime = kwargs.get('meantime')
     movetoarchive = kwargs.get('movetoarchive')
+    usgsdata = kwargs.get('usgsdata')
 
     if not outputformat:
         outputformat='idf'
@@ -1672,7 +1674,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     failinglist.append(elem)
 
         datelist = list(set(datelist))
-
     datetimelist = [datetime.strptime(elem,'%Y-%m-%d') for elem in datelist]
 
     empty = DataStream()
@@ -1684,7 +1685,18 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print("absoluteAnalysis: No matching dates found - aborting")
         return
 
-
+    if usgsdata:
+        starttime = sorted(datetimelist)[0]
+        endtime = sorted(datetimelist)[-1] + timedelta(days=1)
+        parsed = variodata.split('&')
+        parsed = [el for el in parsed if not "starttime=" in el and not "endtime=" in el]
+        parsed.append('starttime=' + datetime.strftime(starttime,"%Y-%m-%d"))
+        parsed.append('endtime=' + datetime.strftime(endtime,"%Y-%m-%d"))
+        variodata = "&".join(parsed)
+        try:
+            usgsstream = read(variodata)
+        except:
+            print('Unable to load USGS scalar and vario data from: ' + variodata)
         # Please Note for pier information always the existing pier in the file is used
 
     # 2.2 Cycle through datetimelist
@@ -1709,15 +1721,21 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variodbtest = variodata.split(',')
             else:
                 variodbtest = [variodata]
-            if "starttime=" in variodata:
-                parsed = variodata.split('&')
-                parsed = [el for el in parsed if not "starttime=" in el and not "endtime=" in el]
-                parsed.append('starttime=' + datetime.strftime(date,"%Y-%m-%d"))
-                variodata = "&".join(parsed)
-            if len(variodbtest) > 1:
-                variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
+            if usgsstream:
+                starttime = usgsstream.ndarray[KEYLIST.index('time')][0]
+                endtime = usgsstream.ndarray[KEYLIST.index('time')][-1]
+                starttime = num2date(starttime).replace(tzinfo=None)
+                endtime = num2date(endtime).replace(tzinfo=None)
+                if date+timedelta(days=1) > endtime:
+                    newarray = usgsstream._select_timerange(starttime=date, endtime=endtime)
+                else:
+                    newarray = usgsstream._select_timerange(starttime=date, endtime=date+timedelta(days=1))
+                variostr = DataStream([LineStruct()],usgsstream.header,newarray)
             else:
-                variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
+                if len(variodbtest) > 1:
+                    variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
+                else:
+                    variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
             print("Length of Variodata ({}): {}".format(variodata,variostr.length()[0]))
             if not variostr.header.get('SensorID', '') == '':
                 varioid = variostr.header.get('SensorID')
@@ -1859,15 +1877,21 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 scalardbtest = scalardata.split(',')
             else:
                 scalardbtest = [scalardata]
-            if "starttime=" in variodata:
-                parsed = scalardata.split('&')
-                parsed = [el for el in parsed if not "starttime=" in el and not "endtime=" in el]
-                parsed.append('starttime=' + datetime.strftime(date,"%Y-%m-%d"))
-                scalardata = "&".join(parsed)
-            if len(scalardbtest) > 1:
-                scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
+            if usgsstream:
+                starttime = usgsstream.ndarray[KEYLIST.index('time')][0]
+                endtime = usgsstream.ndarray[KEYLIST.index('time')][-1]
+                starttime = num2date(starttime).replace(tzinfo=None)
+                endtime = num2date(endtime).replace(tzinfo=None)
+                if date+timedelta(days=1) > endtime:
+                    newarray = usgsstream._select_timerange(starttime=date, endtime=endtime)
+                else:
+                    newarray = usgsstream._select_timerange(starttime=date, endtime=date+timedelta(days=1))
+                scalarstr = DataStream([LineStruct()],usgsstream.header,newarray)
             else:
-                scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
+                if len(scalardbtest) > 1:
+                    scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
+                else:
+                    scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
             if not scalarstr.header.get('SensorID', '') == '':
                 scalarid = scalarstr.header.get('SensorID')
             elif not scalarstr.header.get('StationID', '') == '':

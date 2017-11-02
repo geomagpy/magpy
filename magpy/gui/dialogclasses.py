@@ -2567,8 +2567,10 @@ class LoadUSGSDialog(wx.Dialog):
         self.extInfoText = wx.StaticText(self,-1,extinfo,size=(500,35))
         self.extensionComboBox = wx.Choice(self, choices=extension_options,
             style=wx.CB_READONLY,size=(500,-1))
+        self.analyzeCheckBox = wx.CheckBox(self, label='Run Analysis Automatically',size=(500,25))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(500,25))
         self.okButton = wx.Button(self, wx.ID_OK, label='Ok',size=(500,25))
+        self.analyzeCheckBox.SetValue(True)
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2591,6 +2593,7 @@ class LoadUSGSDialog(wx.Dialog):
                 (self.extInfoText, noOptions),
                 (self.extensionText, noOptions),
                 (self.extensionComboBox,  dict(flag=wx.ALIGN_CENTER)),
+                (self.analyzeCheckBox, dict(flag=wx.ALIGN_CENTER)),
                 emptySpace,
                 emptySpace,
                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
