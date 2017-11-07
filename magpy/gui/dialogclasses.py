@@ -135,10 +135,10 @@ class ConnectWebServiceDialog(wx.Dialog):
         example = "Example: https://geomag.usgs.gov/ws/edge/?id=BOU&starttime=" \
                 "2016-04-22H00:00:00Z&endtime=2016-04-30H23:59:00Z&sampling_period=60" \
                 "&type=variation&format=iaga2002"
-        disclaimer = "Please note: At this time json format is limited to 172800" \
-                " samples, and iaga2002 format is limited to 345600 samples."
+        base = 'https://geomag.usgs.gov/ws/edge/?'
         #self.exampleText = wx.StaticText(self, label=example,size=(500,60))
-        self.disclaimerText = wx.StaticText(self, label=disclaimer,size=(500,40))
+        self.baseLabel = wx.StaticText(self, label='Base URL:',size=(500,20))
+        self.baseTextCtrl = wx.TextCtrl(self, value=base,size=(400,25))
         self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,20))
         self.idComboBox = wx.Choice(self, choices=self.ids,
             style=wx.CB_READONLY,size=(400,25))
@@ -158,6 +158,8 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.endTimePicker = wx.TextCtrl(self, value='23:59:00',size=(160,25))
         self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
         self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,25))
+        self.generatedLabel = wx.StaticText(self, label="Generated URL:",size=(400,20))
+        self.generatedTextCtrl = wx.TextCtrl(self, value='',size=(400,25))
         self.okButton = wx.Button(self, wx.ID_OK, label='OK',size=(400,25))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,25))
 
@@ -171,7 +173,9 @@ class ConnectWebServiceDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        elemlist = [(self.disclaimerText, noOptions),
+        elemlist = [(self.baseLabel, noOptions),
+                emptySpace,
+                (self.baseTextCtrl, expandOption),
                 (self.obsIDLabel, noOptions),
                 (self.idComboBox, expandOption),
                 emptySpace,
@@ -194,6 +198,9 @@ class ConnectWebServiceDialog(wx.Dialog):
                 emptySpace,
                 (self.elementsLabel, noOptions),
                 (self.elementsTextCtrl, expandOption),
+                emptySpace,
+                (self.generatedLabel, noOptions),
+                (self.generatedTextCtrl, expandOption),
                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
@@ -213,6 +220,7 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def bindControls(self):
+        self.baseTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
         self.startTimePicker.Bind(wx.EVT_TEXT, self.onChange)
         self.endTimePicker.Bind(wx.EVT_TEXT, self.onChange)
         self.idComboBox.Bind(wx.EVT_CHOICE, self.onChange)
@@ -224,9 +232,13 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.endDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChange)
         self.endTimePicker.Bind(wx.EVT_TEXT, self.onChange)
         self.elementsTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
+        self.generatedTextCtrl.Bind(wx.EVT_TEXT, self.onOverride)
 
     def onChange(self, e):
         self.createUrl()
+
+    def onOverride(self, e):
+        self.url = self.generatedTextCtrl.GetValue()
 
     def createUrl(self):
         stday = self.startDatePicker.GetValue()
@@ -237,7 +249,7 @@ class ConnectWebServiceDialog(wx.Dialog):
             sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
         sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
         start = datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-        startstr = datetime.strftime(start, "%Y-%m-%dH%H:%M:%SZ")
+        startstr = datetime.strftime(start, "%Y-%m-%dT%H:%M:%SZ")
         enday = self.endDatePicker.GetValue()
         entime = str(self.endTimePicker.GetValue())
         if entime.endswith('AM') or entime.endswith('am'):
@@ -247,7 +259,7 @@ class ConnectWebServiceDialog(wx.Dialog):
             entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
         ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
         end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-        endstr = datetime.strftime(end, "%Y-%m-%dH%H:%M:%SZ")
+        endstr = datetime.strftime(end, "%Y-%m-%dT%H:%M:%SZ")
         obs_id = 'id=' + self.idComboBox.GetString(
                 self.idComboBox.GetSelection())
         start_time = '&starttime=' + startstr
@@ -258,12 +270,15 @@ class ConnectWebServiceDialog(wx.Dialog):
         data_type = '&type=' + self.typeComboBox.GetString(
                 self.typeComboBox.GetSelection())
         period = '&sampling_period=' + self.sampleTextCtrl.GetValue()
-        base = 'https://geomag.usgs.gov/ws/edge/?'
+        base = self.baseTextCtrl.GetValue()
         url = (base + obs_id + start_time + end_time + file_format +
               elements + data_type + period)
         self.url = url
-        self.starttime = start
-        self.endtime = end
+        self.starttime = startstr
+        self.endtime = endstr
+        self.sampling_period = self.sampleTextCtrl.GetValue()
+        self.elements = self.elementsTextCtrl.GetValue()
+        self.generatedTextCtrl.SetValue(self.url)
 
 
 class LoadDataDialog(wx.Dialog):

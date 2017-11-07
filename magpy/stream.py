@@ -10644,7 +10644,43 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
 
     return stream
 
-def saveflags(mylist=None,path=None, overwrite=False):
+def readusgsdata(path_or_url, starttime, endtime, elements, sampling_period):
+    start = datetime.strptime(starttime, "%Y-%m-%dT%H:%M:%SZ")
+    end = datetime.strptime(endtime, "%Y-%m-%dT%H:%M:%SZ")
+    if len(elements) > 1:
+        elements = len(elements.split(","))
+    else:
+        elements = 1
+    if int(sampling_period) == 60:
+        hourly = 60
+    else:
+        hourly = 3600
+    deltadays = 345600 / (24 * elements * hourly)
+    deltasecs = int(deltadays * 86400)
+    time = start + timedelta(seconds = deltasecs)
+    if end - start > timedelta(seconds = deltasecs):
+        parsed = path_or_url.split('&')
+        parsed = [el for el in parsed if not "endtime=" in el]
+        parsed.append('endtime=' + datetime.strftime(time,"%Y-%m-%dT%H:%M:%SZ"))
+        path_or_url = "&".join(parsed)
+    usgsstream = read(path_or_url)
+    while time < end:
+        starttime = time
+        time = time + timedelta(seconds=deltasecs)
+        if time > end:
+            endtime = end
+        else:
+            endtime = time
+        parsed = path_or_url.split('&')
+        parsed = [el for el in parsed if not "starttime=" in el and not "endtime=" in el]
+        parsed.append('starttime=' + datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ"))
+        parsed.append('endtime=' + datetime.strftime(endtime,"%Y-%m-%dT%H:%M:%SZ"))
+        path_or_url = "&".join(parsed)
+        tempstream = read(path_or_url)
+        usgsstream = joinStreams(usgsstream,tempstream)
+    return usgsstream
+
+def saveflags(mylist=None,path=None):
     """
     DEFINITION:
         Save list e.g. flaglist to file using pickle.

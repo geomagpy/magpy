@@ -152,7 +152,7 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['experimental'] = False
 
     if optionsdict.get('edgeid','') == '':
-        optionsdict['edgeid'] = ['BDT', 'BOU', 'TST', 'BRW', 'BRT', 'BSL',
+        optionsdict['edgeid'] = ['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL',
                             'CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA',
                             'HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS',
                             'BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA',
@@ -162,7 +162,7 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['edgetype'] = ['variation', 'adjusted', 'quasi-definitive',
                                 'definitive']
     if optionsdict.get('edgeformat','') == '':
-        optionsdict['edgeformat'] = ['iaga2002', 'json']
+        optionsdict['edgeformat'] = ['iaga2002']
     initpath = os.path.join(normalpath,'.magpyguiini')
 
     pwd = base64.b64encode(passwd)
@@ -2065,28 +2065,32 @@ Suite 330, Boston, MA  02111-1307  USA"""
             url = dlg.url
             start = dlg.starttime
             end = dlg.endtime
+            elements = dlg.elements
+            sampling_period = dlg.sampling_period
             if start < end:
                 self.changeStatusbar("Loading data ... be patient")
                 try:
-                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
-                    self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
-                    try:
+                    if "geomag.usgs.gov/ws/edge" in url:
+                        stream = readusgsdata(path_or_url = url, starttime=start,
+                                endtime=end, elements=elements,
+                                sampling_period=sampling_period)
+                    else:
                         stream = read(path_or_url=url)
-                        success = True
-                    except:
-                        success = False
+                    success = True
                 except:
                     success = False
-
                 if success:
                     self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
                     if self.InitialRead(stream):
                         self.OnInitialPlot(self.plotstream)
+                        self.menu_p.str_page.symbolRadioBox.Enable()
                     self.changeStatusbar("Ready")
                 else:
-                    dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                        "please check paramaters or your internet connection\n",
-                        "OpenWebService", wx.OK|wx.ICON_INFORMATION)
+                    dlg = wx.MessageDialog(self, "Could not access data!\n"
+                        "Please check the web service usage to ensure proper parameter use. "
+                        "Other possible issues may be due to internet connection"
+                        " or internal server errors.\n",
+                        "OpenWebServiceConnection", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
                     self.changeStatusbar("Loading from web service failed ... Ready")
                     dlg.Destroy()
