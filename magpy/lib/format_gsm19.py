@@ -313,7 +313,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
                     pass
             elif typus[0] == 'wg':
-                headers['col-var4'] = 'N satelites'
+                headers['col-var4'] = 'N satellites'
                 headers['col-var1'] = 'Latitude'
                 headers['col-var2'] = 'Longitude'
                 headers['col-var3'] = 'Elevation'
@@ -324,7 +324,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                     headers['col-z'] = 'f upper'
                     headers['unit-col-z'] = 'nT'
                 try:
-                    if elem[0] == '0': # No GPS data -> no altitude
+                    if elem[0] == '0' or len(elem) == 9: # No GPS data -> no elevation
                        hour = elem[6][:2]
                        minute = elem[6][2:4]
                        second = elem[6][4:]
@@ -377,7 +377,7 @@ def readGSM19(filename, headonly=False, **kwargs):
         headers['col-f'] = 'f'
         headers['unit-col-f'] = 'nT'
 
-    logging.info("Loaded GSM19 file of type %s, using creationdate of file (%s), %d values" % (typus[0],filename,len(stream)))
+    logging.info("Loaded GSM19 file of type %s, using creation date of file (%s), %d values" % (typus[0],filename,len(stream)))
     fh.close()
 
     array = [np.asarray(el) for el in array]
