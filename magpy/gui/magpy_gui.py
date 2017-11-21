@@ -5445,11 +5445,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.Destroy()
         dlg = LoadUSGSDialog(None, title='Get USGS data', stream=self.plotstream)
         if dlg.ShowModal() == wx.ID_OK:
-            di_db = dlg.urls
-            startvalue = dlg.startDatePicker.GetValue()
-            starttime = datetime.fromtimestamp(startvalue.GetTicks())
-            endvalue = dlg.endDatePicker.GetValue()
-            endtime = datetime.fromtimestamp(endvalue.GetTicks())
+            starttime = dlg.starttime
+            endtime = dlg.endtime
+            di_db = self.getUrls(starttime, endtime)
             if endtime >= starttime:
                 self.menu_p.rep_page.logMsg("- loaded DI data")
                 try:
@@ -5474,6 +5472,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             "LoadUSGSData", wx.OK|wx.ICON_INFORMATION)
                 dlg.ShowModal()
                 dlg.Destroy()
+
+    def getUrls(self, starttime, endtime):
+        urls = []
+        obsid = self.plotstream.header.get('StationID', '')
+        # Dates from pickers
+        base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
+        time = starttime
+        while time < endtime:
+            start = time.strftime('%Y-%m-%d')
+            time = time + timedelta(days=1)
+            end = time.strftime('%Y-%m-%d')
+            url = base + 'observatory=' + obsid + '&starttime=' + \
+                start + '&endtime=' + end + '&includemeasurements=true'
+            urls += [url]
+        return urls
 
     def onDefineVario(self,event):
         """
@@ -5572,9 +5585,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if usgsdata == True:
                 if not azimuth == '':
                     azimuth = float(azimuth)
-                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF, usgsdata=True)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF, datastream=self.plotstream)
                 else:
-                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF, usgsdata=True)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF, datastream=self.plotstream)
             else:
                 if not azimuth == '':
                     azimuth = float(azimuth)

@@ -2537,7 +2537,6 @@ class LoadUSGSDialog(wx.Dialog):
         self.createControls()
         self.doLayout()
         self.bindControls()
-        self.createUrls()
 
     # Widgets
     def createControls(self):
@@ -2558,6 +2557,8 @@ class LoadUSGSDialog(wx.Dialog):
         endtime = num2date(endtime)
         start = wx.DateTimeFromTimeT(time.mktime(starttime.timetuple()))
         end = wx.DateTimeFromTimeT(time.mktime(endtime.timetuple()))
+        self.starttime = starttime
+        self.endtime = endtime
         self.dateInfoText = wx.StaticText(self,-1,dateinfo,size=(500,65))
         self.startText = wx.StaticText(self,-1,"Start Date:",size=(500,15))
         self.startDatePicker = wx.DatePickerCtrl(self, dt=start,size=(500,25))
@@ -2619,7 +2620,10 @@ class LoadUSGSDialog(wx.Dialog):
         self.endDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChangeDate)
 
     def onChangeDate(self, e):
-        self.createUrls()
+        starttime = self.startDatePicker.GetValue()
+        self.starttime = datetime.fromtimestamp(starttime.GetTicks())
+        endtime = self.endDatePicker.GetValue()
+        self.endtime = datetime.fromtimestamp(endtime.GetTicks())
 
     def onExtend(self, e):
         startvalue = self.startDatePicker.GetValue()
@@ -2639,31 +2643,8 @@ class LoadUSGSDialog(wx.Dialog):
         end = wx.DateTimeFromTimeT(time.mktime(endtime.timetuple()))
         self.startDatePicker.SetValue(start)
         self.endDatePicker.SetValue(end)
-        self.createUrls()
-
-    def createUrls(self):
-        self.urls = []
-        obsid = self.stream.header.get('StationID', '')
-        extension = self.extensionComboBox.GetString(self.extensionComboBox.GetSelection())
-        dt = extension[0]
-        # Dates from pickers
-        startvalue = self.startDatePicker.GetValue()
-        startvalue = datetime.fromtimestamp(startvalue.GetTicks()).replace(tzinfo=None)
-        endvalue = self.endDatePicker.GetValue()
-        endvalue = datetime.fromtimestamp(endvalue.GetTicks()).replace(tzinfo=None)
-        starttime = startvalue
-        endtime = endvalue + timedelta(days=1)
-        base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
-        time = starttime
-        while time <= endtime:
-            start = time.strftime('%Y-%m-%d')
-            time = time + timedelta(days=1)
-            end = endtime + timedelta(days=5)
-            end = end.strftime('%Y-%m-%d')
-            url = base + 'observatory=' + obsid + '&starttime=' + \
-                start + '&endtime=' + end + '&includemeasurements=true'
-            self.urls += [url]
-
+        self.starttime = starttime
+        self.endtime = endtime
 
 class DefineVarioDialog(wx.Dialog):
     """
