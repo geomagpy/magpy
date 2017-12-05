@@ -1689,7 +1689,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if datastream:
         url = variodata
         if 'sampling_period' in url:
-            pos = url.find("starttime=")+10
+            pos = url.find("sampling_period=")+len("sampling_period=")
             epos = url.find('&',pos)
             if epos == -1:
                 epos = len(url)
