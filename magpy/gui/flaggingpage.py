@@ -48,40 +48,30 @@ class FlaggingPage(wx.Panel):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0,0), noOptions)
-
-        elemlist = [(self.flagOptionsLabel, noOptions),
-                 ((0,0), noOptions),
+        elemlist = [(self.flagOptionsLabel, dict()),
+                 ((0,0), dict()),
                  (self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.flagDropButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.flagMinButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.flagMaxButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.xCheckBox, noOptions),
-                 (self.yCheckBox, noOptions),
-                 (self.zCheckBox, noOptions),
-                 (self.fCheckBox, noOptions),
-                 (self.flagIDText, noOptions),
-                 (self.flagIDComboBox, expandOption),
+                 (self.xCheckBox, dict()),
+                 (self.yCheckBox, dict()),
+                 (self.zCheckBox, dict()),
+                 (self.fCheckBox, dict()),
+                 (self.flagIDText, dict()),
+                 (self.flagIDComboBox, dict(flag=wx.EXPAND)),
                  (self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)),]
-
         # A GridSizer will contain the other controls:
         cols = 2
         rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-
         # Add the controls to the sizers:
         for control, options in elemlist:
             gridSizer.Add(control, **options)
-
         for control, options in \
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:
             boxSizer.Add(control, **options)
-
         self.SetSizerAndFit(boxSizer)
