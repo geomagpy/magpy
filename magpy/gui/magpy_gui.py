@@ -2066,14 +2066,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
             start = dlg.starttime
             end = dlg.endtime
             elements = dlg.elements
-            sampling_period = dlg.sampling_period
+            samplingperiod = dlg.samplingperiod
             if start < end:
                 self.changeStatusbar("Loading data ... be patient")
                 try:
                     if "geomag.usgs.gov/ws/edge" in url:
                         stream = readusgsdata(path_or_url = url, starttime=start,
                                 endtime=end, elements=elements,
-                                sampling_period=sampling_period)
+                                sampling_period=samplingperiod)
                     else:
                         stream = read(path_or_url=url)
                     success = True
