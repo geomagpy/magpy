@@ -53,7 +53,7 @@ class OpenWebAddressDialog(wx.Dialog):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=6, cols=3, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -74,9 +74,6 @@ class OpenWebAddressDialog(wx.Dialog):
                   emptySpace,
                   emptySpace,
                  (self.dropFavsButton, dict(flag=wx.ALIGN_CENTER)),
-                 emptySpace,
-                 emptySpace,
-                 emptySpace,
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
@@ -132,15 +129,12 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.createUrl()
 
     def createControls(self):
-        example = "Example: https://geomag.usgs.gov/ws/edge/?id=BOU&starttime=" \
-                "2016-04-22H00:00:00Z&endtime=2016-04-30H23:59:00Z&sampling_period=60" \
-                "&type=variation&format=iaga2002"
         base = 'https://geomag.usgs.gov/ws/edge/?'
-        #self.exampleText = wx.StaticText(self, label=example,size=(500,60))
         self.baseLabel = wx.StaticText(self, label='Base URL:',size=(400,20))
         self.baseTextCtrl = wx.TextCtrl(self, value=base,size=(400,25))
         self.obsIDName = wx.TextCtrl(self, value="id=",size=(400,25))
-        self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,20))
+        self.obsIDLabel = wx.StaticText(self,
+                label="Observatory ID:", size=(400,20))
         self.idComboBox = wx.ComboBox(self, choices=self.ids,
             style=wx.CB_DROPDOWN,size=(400,25))
         self.formatName = wx.TextCtrl(self, value="format=",size=(400,25))
@@ -151,24 +145,43 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,20))
         self.typeComboBox = wx.ComboBox(self, choices=self.types,
             style=wx.CB_DROPDOWN, size=(400,25))
-        self.sampleName = wx.TextCtrl(self, value="sampling_period=",size=(400,25))
-        self.sampleLabel = wx.StaticText(self, label="Sampling Period (1, 6, or 3600)",size=(400,20))
-        self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,25))
-        self.startName = wx.TextCtrl(self, value="starttime=",size=(400,25))
-        self.startTimeLabel = wx.StaticText(self, label="Start Time: ",size=(400,20))
-        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(), size=(160,25))
-        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,25))
-        self.endName = wx.TextCtrl(self, value="endtime=",size=(400,25))
-        self.endTimeLabel = wx.StaticText(self, label="End Time: ",size=(400,20))
-        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(), size=(160,25))
-        self.endTimePicker = wx.TextCtrl(self, value='23:59:00',size=(160,25))
-        self.elementsName = wx.TextCtrl(self, value="elements=",size=(400,25))
-        self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
-        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,25))
-        self.generatedLabel = wx.StaticText(self, label="Generated URL:",size=(400,20))
-        self.generatedTextCtrl = wx.TextCtrl(self, value='',size=(400,25))
-        self.okButton = wx.Button(self, wx.ID_OK, label='OK',size=(400,25))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,25))
+        self.sampleName = wx.TextCtrl(self, value="sampling_period=",
+                size=(400,25))
+        self.sampleLabel = wx.StaticText(self,
+                label="Sampling Period (1, 6, or 3600):", size=(400,20))
+        self.sampleTextCtrl = wx.TextCtrl(self, value='60', size=(400,25))
+        self.startName = wx.TextCtrl(self, value="starttime=", size=(400,25))
+        self.startTimeLabel = wx.StaticText(self, label="Start Time: ",
+                size=(400,20))
+        self.startDatePicker = wx.DatePickerCtrl(self,
+                dt=wx.DateTime().Today(), size=(160,25))
+        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',
+                size=(160,25))
+        self.endName = wx.TextCtrl(self, value="endtime=", size=(400,25))
+        self.endTimeLabel = wx.StaticText(self, label="End Time: ",
+                size=(400,20))
+        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTime().Today(),
+                size=(160,25))
+        self.endTimePicker = wx.TextCtrl(self, value='23:59:00',
+                size=(160,25))
+        self.elementsName = wx.TextCtrl(self, value="elements=",
+                size=(400,25))
+        self.elementsLabel = wx.StaticText(self,
+                label="Comma separated list of requested elements: ",
+                size=(400,20))
+        self.elementsTextCtrl = wx.TextCtrl(self,
+                value='X,Y,Z,F',size=(400,25))
+        self.generatedLabel = wx.StaticText(self, label="Generated URL:",
+                size=(400,20))
+        self.generatedTextCtrl = wx.TextCtrl(self, value='', size=(400,25))
+        self.sampleLimitLabel = wx.StaticText(self,
+                label="Sample Limit (0 if no limit. 345600 for USGS default.): ",
+                size=(400,25))
+        self.sampleLimitTextCtrl = wx.TextCtrl(self,
+                value='345600',size=(400,25))
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK', size=(400,25))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',
+                size=(400,25))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -216,10 +229,10 @@ class ConnectWebServiceDialog(wx.Dialog):
                 emptySpace,
                 (self.elementsName, noOptions),
                 (self.elementsTextCtrl, expandOption),
+                (self.sampleLimitLabel, noOptions),
+                (self.sampleLimitTextCtrl, noOptions),
                 (self.generatedLabel, noOptions),
-                emptySpace,
                 (self.generatedTextCtrl, expandOption),
-                emptySpace,
                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
@@ -252,6 +265,7 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.idComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
         self.idComboBox.Bind(wx.EVT_TEXT, self.onChange)
         self.obsIDName.Bind(wx.EVT_TEXT, self.onChange)
+        self.sampleLimitTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
         self.sampleName.Bind(wx.EVT_TEXT, self.onChange)
         self.sampleTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
         self.startDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChange)
@@ -273,6 +287,7 @@ class ConnectWebServiceDialog(wx.Dialog):
                  fileformat + '&' + elements + '&' + datatype + '&' + period)
         self.url = url
         self.generatedTextCtrl.SetValue(self.url)
+        self.onSetSampleLimit()
 
     def getBaseUrl(self):
         baseurl = self.baseTextCtrl.GetValue()
@@ -305,6 +320,7 @@ class ConnectWebServiceDialog(wx.Dialog):
 
     def getEndTimeName(self):
         name = self.endName.GetValue()
+        self.endlabel = name
         return name
 
     def getFormat(self):
@@ -341,6 +357,7 @@ class ConnectWebServiceDialog(wx.Dialog):
 
     def getStartTimeName(self):
         name = self.startName.GetValue()
+        self.startlabel = name
         return name
 
     def parsePickerTime(self, date, time):
@@ -361,6 +378,14 @@ class ConnectWebServiceDialog(wx.Dialog):
 
     def onOverride(self, e):
         self.url = self.generatedTextCtrl.GetValue()
+
+    def onSetSampleLimit(self):
+        limit = self.sampleLimitTextCtrl.GetValue()
+        if limit == '0':
+            limit = None
+        else:
+            limit = int(limit)
+        self.samplelimit = limit
 
 
 class LoadDataDialog(wx.Dialog):

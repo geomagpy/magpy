@@ -2060,22 +2060,27 @@ Suite 330, Boston, MA  02111-1307  USA"""
         ids = self.options.get('edgeid',[])
         types = self.options.get('edgetype',[])
         formats = self.options.get('edgeformat',[])
-        dlg = ConnectWebServiceDialog(None, title='Create and Open URL for Geomag Web Service', ids=ids, types=types, formats=formats)
+        dlg = ConnectWebServiceDialog(None, title='Create and Open URL for a Web Service', ids=ids, types=types, formats=formats)
         if dlg.ShowModal() == wx.ID_OK:
-            url = dlg.url
-            start = dlg.starttime
-            end = dlg.endtime
             elements = dlg.elements
+            end = dlg.endtime
+            endlabel = dlg.endlabel
+            samplelimit = dlg.samplelimit
             samplingperiod = dlg.samplingperiod
+            start = dlg.starttime
+            startlabel = dlg.startlabel
+            url = dlg.url
             if start < end:
                 self.changeStatusbar("Loading data ... be patient")
                 try:
-                    if "geomag.usgs.gov/ws/edge" in url:
-                        stream = readusgsdata(path_or_url = url, starttime=start,
-                                endtime=end, elements=elements,
-                                sampling_period=samplingperiod)
+                    if samplelimit == None:
+                        stream = read(url)
                     else:
-                        stream = read(path_or_url=url)
+                        stream = readWebServiceData(path_or_url=url,
+                                startlabel=startlabel, starttime=start,
+                                endlabel=endlabel, endtime=end,
+                                elements=elements, sampling_period=samplingperiod,
+                                samplelimit=samplelimit)
                     success = True
                 except:
                     success = False
