@@ -4132,7 +4132,7 @@ CALLED BY:
     Variables:
         - keys:         (list) Provide a list of keys to be fitted (e.g. ['x','y','z'].
     Kwargs:
-        - fitfunc:      (str) Options: 'poly', 'harmonic', 'spline', default='spline'
+        - fitfunc:      (str) Options: 'poly', 'harmonic', 'least-squares', 'spline', 'none', default='spline'
         - timerange:    (timedelta object) Default = timedelta(hours=1)
         - fitdegree:    (float) Default=5
         - knotstep:     (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
@@ -4256,6 +4256,14 @@ CALLED BY:
                 f_fit = self.harmfit(nt, val, fitdegree)
                 # Don't use resampled list for harmonic time series
                 x = nt
+            elif len(val)>1 and fitfunc == 'linear least-squares':
+                logger.debug('Selected linear least-squares fit')
+                A = np.vstack([nt, np.ones(len(nt))]).T
+                m, c, = np.linalg.lstsq(A, val)[0]
+                f_fit = m * x + c
+            elif fitfunc == 'none':
+                logger.debug('Selected no fit')
+                return
             elif len(val)<=1:
                 logger.warning('Fit: No valid data for key {}'.format(key))
                 break

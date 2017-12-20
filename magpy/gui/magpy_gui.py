@@ -4012,7 +4012,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitdegree'] = str(degree)
             if len(self.plotstream.ndarray[0]) > 0:
                 func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots, starttime=starttime, endtime=endtime)
-                if isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
+                if fitfunc == 'none':
+                    self.plotopt['function'] = []
+                elif isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
                     self.plotopt['function'].append(func)
                 else:
                     self.plotopt['function'] = [func]

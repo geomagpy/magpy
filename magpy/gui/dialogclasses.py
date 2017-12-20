@@ -1995,7 +1995,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.stream = stream
         self.options = options
         self.fitfunc = self.options.get('fitfunction','spline')
-        self.funclist = ['spline','polynomial']
+        self.funclist = ['spline','polynomial', 'linear least-squares', 'none']
         self.fitknots = self.options.get('fitknotstep','0.3')
         self.fitdegree = self.options.get('fitdegree','5')
         self.mintime = num2date(stream.ndarray[0][0])
