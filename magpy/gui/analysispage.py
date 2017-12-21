@@ -69,8 +69,11 @@ class AnalysisPage(wx.Panel):
         self.calcfButton = wx.Button(self,-1,"Calculate F",size=(160,30))
 
         # 5 Line
-        self.powerButton = wx.Button(self,-1,"Power*",size=(160,30))
-        self.spectrumButton = wx.Button(self,-1,"Spectrum*",size=(160,30))
+        self.powerButton = wx.Button(self,-1,"Power",size=(160,30))
+        self.spectrumButton = wx.Button(self,-1,"Spectrum",size=(160,30))
+        self.statisticsLabel = wx.StaticText(self, label="Statistics:")
+        self.statisticsTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(250,150),
+                style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
 
         # 5 Line
         #self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
@@ -140,12 +143,65 @@ class AnalysisPage(wx.Panel):
                   emptySpace,
                  (self.powerButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.spectrumButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace]:
+                 emptySpace]:
             gridSizer.Add(control, **options)
 
         for control, options in \
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:
             boxSizer.Add(control, **options)
 
-        self.SetSizerAndFit(boxSizer)
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        mainSizer.Add(boxSizer, 0, 0, 0)
+
+        mainSizer.Add(self.statisticsLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+        mainSizer.Add(self.statisticsTextCtrl, 1, wx.SHAPED, 3)
+        self.SetSizerAndFit(mainSizer)
+
+    def getMin(self, keys, teststream):
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        mintext = '\n-------------------Minimum-------------------'
+        for idx,me in enumerate(mini):
+            line = '{} minima = {} at {}'.format(keys[idx],
+                    me[0], num2date(me[1]))
+            mintext = mintext + '\n' + line
+        return mintext
+
+    def getMax(self, keys, teststream):
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        maxtext = '\n-------------------Maximum-------------------'
+        for idx,me in enumerate(maxi):
+            line = '{} maxima = {} at {}'.format(keys[idx],
+                    me[0], num2date(me[1]))
+            maxtext = maxtext + '\n' + line
+        return maxtext
+
+    def getMean(self, keys, teststream):
+        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
+        meantext = '\n--------------------Mean--------------------'
+        for idx,me in enumerate(mean):
+            line = '{} mean = {} at {}'.format(keys[idx],
+                    me[0], me[1])
+            meantext = meantext + '\n' + line
+        return meantext
+
+    def getVariance(self, keys, teststream):
+        var = [teststream._get_variance(key) for key in keys]
+        vartext = '\n-------------------Variance------------------'
+        for idx,me in enumerate(var):
+            line = '{} variance = {}'.format(keys[idx], me)
+            vartext = vartext + '\n' + line
+        return vartext
+
+    def setStatistics(self, keys, stream, xlimits):
+        testarray = stream._select_timerange(starttime=xlimits[0],
+                endtime=xlimits[1])
+        teststream = DataStream([LineStruct()], stream, testarray)
+        t_limits = teststream._find_t_limits()
+        trange = 'Timerange: {} to {}'.format(t_limits[0],
+                t_limits[1])
+        mintext = self.getMin(keys, teststream)
+        maxtext = self.getMax(keys, teststream)
+        meantext = self.getMean(keys, teststream)
+        vartext = self.getVariance(keys, teststream)
+        stats = trange + mintext + maxtext + meantext + vartext
+        self.statisticsTextCtrl.SetValue(stats)

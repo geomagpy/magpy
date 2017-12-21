@@ -1728,7 +1728,6 @@ class MainFrame(wx.Frame):
             read stream, extract columns with values and display up to three of them by default
             executes guiPlot then
         """
-
         self.changeStatusbar("Plotting...")
 
         self.InitPlotParameter()
@@ -1760,6 +1759,10 @@ class MainFrame(wx.Frame):
                     checkbox.SetLabel(colname)
             else:
                 checkbox.SetValue(False)
+        for idx, ax in enumerate(self.plot_p.axlist):
+            ax.callbacks.connect('xlim_changed', self.updateStatistics)
+            ax.callbacks.connect('ylim_changed', self.updateStatistics)
+        self.updateStatistics()
         self.changeStatusbar("Ready")
 
 
@@ -1799,6 +1802,7 @@ class MainFrame(wx.Frame):
                     checkbox.SetLabel(colname)
             else:
                 checkbox.SetValue(False)
+        self.updateStatistics()
         self.changeStatusbar("Ready")
 
 
@@ -2532,6 +2536,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def changeStatusbar(self,msg):
         self.SetStatusText(msg)
+
+    def updateStatistics(self, event=None):
+        self.menu_p.ana_page.setStatistics(keys=self.shownkeylist,
+                stream=self.plotstream.copy(),
+                xlimits=self.plot_p.xlimits)
+
 
     def UpdateCursorStatus(self, event):
         """Motion event for displaying values under cursor."""
