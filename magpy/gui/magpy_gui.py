@@ -3998,6 +3998,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitfunction'] = fitfunc
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
+            elif fitfunc.startswith('linear'):
+                fitfunc = 'least-squares'
 
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (fitfunc, knots, degree))
             if not 0<float(knots)<1:
@@ -4360,6 +4362,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             fitfunc = self.options.get('fitfunction','spline')
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
+            elif fitfunc.startswith('linear'):
+                fitfunc = 'least-squares'
             baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))

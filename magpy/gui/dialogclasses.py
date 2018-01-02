@@ -2473,6 +2473,8 @@ class AnalysisBaselineDialog(wx.Dialog):
 
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
+            elif fitfunc.startswith('linear'):
+                fitfunc = 'least-squares'
             self.options['fitfunction'] = fitfunc
 
             #self.menu_p.rep_page.logMsg('Fitting base values with %s, %s, %s' % (fitfunc, knots, degree))
