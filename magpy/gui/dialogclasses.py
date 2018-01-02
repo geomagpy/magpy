@@ -2432,7 +2432,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.keylist = keylist
         self.idxlst = idxlst
         self.dictlst = dictlst
-        self.fitlist = ['time1','time2']
         self.absstreamlist = []
         for idx in idxlst:
             currentname = [el['filename'] for el in dictlst if str(el['streamidx']) == str(idx)][0]
@@ -2460,13 +2459,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.absstreamLabel = wx.StaticText(self, label="Select basevalue data:",size=(160,30))
         self.absstreamComboBox = wx.ComboBox(self, choices=self.absstreamlist,
             style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(160,-1))
-
-        #self.fitlistLabel = wx.StaticText(self, label="Adoption parameter:",size=(160,30))
-        # RadioButton with fitting list (eventually updated from DB)
-        #self.fitlistRadioBox = wx.RadioBox(self, label="Adoption parameter:",
-        #             choices=self.fitlist, majorDimension=len(fitlist), style=wx.RA_SPECIFY_COLS)
-
-
         self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(160,30))
         self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(300,90),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
@@ -2498,7 +2490,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         # Add the controls to the sizers:
         contlst=[(self.absstreamLabel, noOptions)]
         contlst.append((self.absstreamComboBox, expandOption))
-        #contlst.append((self.fitlistRadioBox, noOptions))
         contlst.append((self.parameterLabel, noOptions))
         contlst.append((self.parameterTextCtrl, expandOption))
         contlst.append((self.parameterButton, dict(flag=wx.ALIGN_CENTER)))
@@ -2523,6 +2514,11 @@ class AnalysisBaselineDialog(wx.Dialog):
     def OnParameter(self, e):
         # open fit dlg
         idx = int(self.absstreamComboBox.GetValue().split(':')[0])
+        streamidx = int(self.absstreamComboBox.GetValue().split(':')[0])
+        for idx in range(len(self.dictlst)):
+            if self.dictlst[idx]['streamidx'] == streamidx:
+                index = idx
+                break
 
         dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
         startdate=self.dictlst[idx].get('startdate')
