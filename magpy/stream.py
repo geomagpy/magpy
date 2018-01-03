@@ -10652,8 +10652,8 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
 
     return stream
 
-def readWebServiceData(path_or_url, startlabel, starttime, endlabel, endtime,
-        elements, sampling_period, samplelimit):
+def readWebServiceData(path_or_url, starttime, endtime, elements,
+        sampling_period, samplelimit):
     """Get timeseries data from a webservice.
         Can be used to circumvent sample limits for data requested from a
         web service.
@@ -10661,12 +10661,8 @@ def readWebServiceData(path_or_url, startlabel, starttime, endlabel, endtime,
         ----------
         parth_or_url: str
             url for the request.
-        startlabel: str
-            query key for the starttime.
         starttime : str
             time of first sample in timeseries.
-        endlabel: str
-            query key for the endtime.
         endtime : str
             time of last sample in timeseries.
         elements : array_like
@@ -10704,9 +10700,9 @@ def readWebServiceData(path_or_url, startlabel, starttime, endlabel, endtime,
         else:
             endtime = time
         parsed = path_or_url.split('&')
-        parsed = [el for el in parsed if not startlabel in el and not endlabel in el]
-        parsed.append(startlabel + datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ"))
-        parsed.append(endlabel + datetime.strftime(endtime,"%Y-%m-%dT%H:%M:%SZ"))
+        parsed = [el for el in parsed if not 'starttime=' in el and not 'endtime=' in el]
+        parsed.append('starttime=' + datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ"))
+        parsed.append('endtime=' + datetime.strftime(endtime,"%Y-%m-%dT%H:%M:%SZ"))
         path_or_url = "&".join(parsed)
         try:
             tempstream = read(path_or_url)
