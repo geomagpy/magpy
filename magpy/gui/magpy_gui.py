@@ -35,6 +35,7 @@ from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
 from magpy.collector import collectormethods as colsup
+from magpy.gui.statisticspage import StatisticsPanel
 import glob, os, pickle, base64
 import pylab
 import thread, time
@@ -849,8 +850,13 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         # The Splitted Window
         self.sp = wx.SplitterWindow(self, -1, style=wx.SP_3D|wx.SP_BORDER)
-        self.plot_p = PlotPanel(self.sp,-1)
-        self.menu_p = MenuPanel(self.sp,-1)
+        self.sp2 = wx.SplitterWindow(self.sp, -1, style=wx.SP_3D|wx.SP_BORDER)
+        self.plot_p = PlotPanel(self.sp2,-1)
+        self.menu_p = MenuPanel(self.sp2,-1)
+        self.sp2.SplitVertically(self.plot_p, self.menu_p, 800)
+        self.stats_p = StatisticsPanel(self.sp)
+        self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
+        self.sp.Unsplit(self.stats_p)
         pub.subscribe(self.changeStatusbar, 'changeStatusbar')
 
         # The Status Bar
@@ -1076,6 +1082,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onCalcfButton, self.menu_p.ana_page.calcfButton)
         self.Bind(wx.EVT_BUTTON, self.onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
+        self.Bind(wx.EVT_BUTTON, self.onStatsButton, self.menu_p.ana_page.statsButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -1110,8 +1117,6 @@ class MainFrame(wx.Frame):
         # --------------------------
         self.DeactivateAllControls()
 
-        self.sp.SplitVertically(self.plot_p,self.menu_p,800)
-
     def __set_properties(self):
         self.SetTitle("MagPy")
         self.SetSize((1200, 800))
@@ -1123,7 +1128,7 @@ class MainFrame(wx.Frame):
             self.StatusBar.SetStatusText(StatusBar_fields[i], i)
         self.menu_p.SetMinSize((400, 750))
         self.plot_p.SetMinSize((100, 100))
-
+        self.stats_p.SetMinSize((100, 100))
 
     def InitPlotParameter(self, keylist = None):
         # Kwargs for plotting
@@ -1282,6 +1287,7 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.calcfButton.Disable()        # if xyz available
         self.menu_p.ana_page.powerButton.Disable()         # always
         self.menu_p.ana_page.spectrumButton.Disable()      # always
+        self.menu_p.ana_page.statsButton.Disable()         # always
         #self.menu_p.ana_page.mergeButton.Disable()         # if len(self.streamlist) > 1
         #self.menu_p.ana_page.subtractButton.Disable()      # if len(self.streamlist) > 1
         #self.menu_p.ana_page.stackButton.Disable()         # if len(self.streamlist) > 1
@@ -1480,7 +1486,7 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.powerButton.Enable()         # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
-
+        self.menu_p.ana_page.statsButton.Enable()      # always
         # ----------------------------------------
         # absolutes page
         self.menu_p.abs_page.loadUSGSButton.Enable()      # always
@@ -1759,6 +1765,7 @@ class MainFrame(wx.Frame):
                     checkbox.SetLabel(colname)
             else:
                 checkbox.SetValue(False)
+        # Connect callback to the initial plot
         for idx, ax in enumerate(self.plot_p.axlist):
             ax.callbacks.connect('xlim_changed', self.updateStatistics)
             ax.callbacks.connect('ylim_changed', self.updateStatistics)
@@ -1802,6 +1809,10 @@ class MainFrame(wx.Frame):
                     checkbox.SetLabel(colname)
             else:
                 checkbox.SetValue(False)
+        # Connect callback to the new plot
+        for idx, ax in enumerate(self.plot_p.axlist):
+            ax.callbacks.connect('xlim_changed', self.updateStatistics)
+            ax.callbacks.connect('ylim_changed', self.updateStatistics)
         self.updateStatistics()
         self.changeStatusbar("Ready")
 
@@ -2538,9 +2549,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.SetStatusText(msg)
 
     def updateStatistics(self, event=None):
-        self.menu_p.ana_page.setStatistics(keys=self.shownkeylist,
-                stream=self.plotstream.copy(),
-                xlimits=self.plot_p.xlimits)
+        if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
+            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+                    stream=self.plotstream.copy(),
+                    xlimits=self.plot_p.xlimits)
 
 
     def UpdateCursorStatus(self, event):
@@ -4432,7 +4444,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
         import magpy.mpplot as mp
         mp.plotSpectrogram(self.plotstream, comp)
 
-
+    def onStatsButton(self, event):
+        status = self.menu_p.ana_page.statsButton.GetLabel()
+        if status == 'Show Statistics':
+            self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
+            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+                    stream=self.plotstream.copy(),
+                    xlimits=self.plot_p.xlimits)
+            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
+        if status == 'Hide Statistics':
+            self.sp.Unsplit(self.stats_p)
+            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
     # ------------------------------------------------------------------------------------------
     # ################
     # Stream page functions
