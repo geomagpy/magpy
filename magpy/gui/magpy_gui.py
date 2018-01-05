@@ -822,26 +822,30 @@ class MenuPanel(scrolled.ScrolledPanel):
     def __init__(self, *args, **kwds):
         scrolled.ScrolledPanel.__init__(self, *args, **kwds)
         # Create pages on MenuPanel
-        nb = wx.Notebook(self,-1)
-        self.str_page = StreamPage(nb)
-        self.flg_page = FlaggingPage(nb)
-        self.met_page = MetaPage(nb)
-        self.ana_page = AnalysisPage(nb)
-        self.abs_page = AbsolutePage(nb)
-        self.rep_page = ReportPage(nb)
-        self.com_page = MonitorPage(nb)
-        nb.AddPage(self.str_page, "Stream")
-        nb.AddPage(self.flg_page, "Flagging")
-        nb.AddPage(self.met_page, "Meta")
-        nb.AddPage(self.ana_page, "Analysis")
-        nb.AddPage(self.abs_page, "DI")
-        nb.AddPage(self.rep_page, "Report")
-        nb.AddPage(self.com_page, "Live")
+        self.nb = wx.Notebook(self,-1)
+        self.str_page = StreamPage(self.nb)
+        self.flg_page = FlaggingPage(self.nb)
+        self.met_page = MetaPage(self.nb)
+        self.ana_page = AnalysisPage(self.nb)
+        self.abs_page = AbsolutePage(self.nb)
+        self.rep_page = ReportPage(self.nb)
+        self.com_page = MonitorPage(self.nb)
+        self.stats_page = StatisticsPage(self.nb)
+        self.nb.AddPage(self.str_page, "Stream")
+        self.nb.AddPage(self.flg_page, "Flagging")
+        self.nb.AddPage(self.met_page, "Meta")
+        self.nb.AddPage(self.ana_page, "Analysis")
+        self.nb.AddPage(self.stats_page, "Statistics")
+        self.nb.AddPage(self.abs_page, "DI")
+        self.nb.AddPage(self.rep_page, "Report")
+        self.nb.AddPage(self.com_page, "Monitor")
 
         sizer = wx.BoxSizer()
-        sizer.Add(nb, 1, wx.EXPAND)
+        sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.SetupScrolling()
+        self.nb.RemovePage(4)
+        self.stats_page.Hide()
 
 
 class MainFrame(wx.Frame):
@@ -850,13 +854,9 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         # The Splitted Window
         self.sp = wx.SplitterWindow(self, -1, style=wx.SP_3D|wx.SP_BORDER)
-        self.sp2 = wx.SplitterWindow(self.sp, -1, style=wx.SP_3D|wx.SP_BORDER)
-        self.plot_p = PlotPanel(self.sp2,-1)
-        self.menu_p = MenuPanel(self.sp2,-1)
-        self.sp2.SplitVertically(self.plot_p, self.menu_p, 800)
-        self.stats_p = StatisticsPanel(self.sp)
-        self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
-        self.sp.Unsplit(self.stats_p)
+        self.plot_p = PlotPanel(self.sp,-1)
+        self.menu_p = MenuPanel(self.sp,-1)
+        self.sp.SplitVertically(self.plot_p, self.menu_p, 800)
         pub.subscribe(self.changeStatusbar, 'changeStatusbar')
 
         # The Status Bar
@@ -1128,7 +1128,6 @@ class MainFrame(wx.Frame):
             self.StatusBar.SetStatusText(StatusBar_fields[i], i)
         self.menu_p.SetMinSize((400, 750))
         self.plot_p.SetMinSize((100, 100))
-        self.stats_p.SetMinSize((100, 100))
 
     def InitPlotParameter(self, keylist = None):
         # Kwargs for plotting
@@ -2547,11 +2546,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.SetStatusText(msg)
 
     def updateStatistics(self, event=None):
+        """
+        DESCRIPTION
+             Updates and sets the statistics if the statistics page
+             is displayed
+        """
         if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
-            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
                     stream=self.plotstream.copy(),
                     xlimits=self.plot_p.xlimits)
-
 
     def UpdateCursorStatus(self, event):
         """Motion event for displaying values under cursor."""
@@ -4443,15 +4446,34 @@ Suite 330, Boston, MA  02111-1307  USA"""
         mp.plotSpectrogram(self.plotstream, comp)
 
     def onStatsButton(self, event):
+        """
+        DESCRIPTION
+             Creates/Destroys the statistics page int menu panel notebook
+             and sets the statistics
+        """
         status = self.menu_p.ana_page.statsButton.GetLabel()
         if status == 'Show Statistics':
-            self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
-            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+            # Remove last pages
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.abs_page.Hide()
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.rep_page.Hide()
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.com_page.Hide()
+            # Add new page next to the Analysis page
+            self.menu_p.nb.AddPage(self.menu_p.stats_page, "Statistics",
+                    True)
+            # Add back the last pages
+            self.menu_p.nb.AddPage(self.menu_p.abs_page, "DI")
+            self.menu_p.nb.AddPage(self.menu_p.rep_page, "Report")
+            self.menu_p.nb.AddPage(self.menu_p.com_page, "Monitor")
+            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
                     stream=self.plotstream.copy(),
                     xlimits=self.plot_p.xlimits)
             self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
         if status == 'Hide Statistics':
-            self.sp.Unsplit(self.stats_p)
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.stats_page.Hide()
             self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
     # ------------------------------------------------------------------------------------------
     # ################

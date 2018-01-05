@@ -4,24 +4,6 @@ import wx
 import wx.lib.scrolledpanel as scrolled
 
 
-class StatisticsPanel(scrolled.ScrolledPanel):
-    """
-    DESCRIPTION
-        Scrolled Panel that contains all methods for the lower statistics.
-        panel and its insets
-    """
-    def __init__(self, *args, **kwds):
-        scrolled.ScrolledPanel.__init__(self, *args, **kwds)
-        # Create pages on MenuPanel
-        nb = wx.Notebook(self,-1)
-        self.stats_page = StatisticsPage(nb)
-        nb.AddPage(self.stats_page, "Continuous Statistics")
-        sizer = wx.BoxSizer()
-        sizer.Add(nb, 1, wx.EXPAND)
-        self.SetSizer(sizer)
-        self.SetupScrolling()
-
-
 class StatisticsPage(wx.Panel):
     """
     DESCRIPTION
@@ -33,30 +15,45 @@ class StatisticsPage(wx.Panel):
         self.doLayout()
 
     def createControls(self):
-        self.statisticsLabel = wx.StaticText(self, label="Statistics:")
-        self.timeLabel = wx.StaticText(self, label="")
-        self.statisticsTextCtrl = wx.TextCtrl(self, wx.ID_ANY,
-                style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.valuesLabel = wx.StaticText(self,
-                label="Individual Values (For ten or less data points):")
-        self.valuesTextCtrl = wx.TextCtrl(self, wx.ID_ANY,
-                style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.timeLabel = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compLabel0 = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compLabel1 = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compLabel2 = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compLabel3 = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compLabel4 = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compLabel5 = wx.StaticText(self, -1, label="", size=(330,20))
+        self.compStats0 = wx.StaticText(self, -1, label="", size=(375,90))
+        self.compStats1 = wx.StaticText(self, -1, label="", size=(375,90))
+        self.compStats2 = wx.StaticText(self, -1, label="", size=(375,90))
+        self.compStats3 = wx.StaticText(self, -1, label="", size=(375,90))
+        self.compStats4 = wx.StaticText(self, -1, label="", size=(375,90))
+        self.compStats5 = wx.StaticText(self, -1, label="", size=(375,90))
+
 
     def doLayout(self):
-      mainSizer = wx.BoxSizer(wx.HORIZONTAL)
-      gridSizer = wx.FlexGridSizer(3, 2, 5,10)
-      gridSizer.AddMany([(self.timeLabel),
-            (0, 0),
-            (self.statisticsLabel),
-            (self.valuesLabel),
-            (self.statisticsTextCtrl, 1, wx.EXPAND),
-            (self.valuesTextCtrl, 1, wx.EXPAND)])
-      gridSizer.AddGrowableRow(2, 1)
-      gridSizer.AddGrowableCol(1, 1)
-      gridSizer.AddGrowableCol(0, 1)
-      mainSizer.Add(gridSizer, proportion = 2,
-            flag = wx.ALIGN_LEFT | wx.ALL |wx.EXPAND, border=5)
-      self.SetSizer(mainSizer)
+      boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+      elemlist = [(self.timeLabel, dict()),
+            (self.compLabel0, dict()),
+            (self.compStats0, dict()),
+            (self.compLabel1, dict()),
+            (self.compStats1, dict()),
+            (self.compLabel2, dict()),
+            (self.compStats2, dict()),
+            (self.compLabel3, dict()),
+            (self.compStats3, dict()),
+            (self.compLabel4, dict()),
+            (self.compStats4, dict()),
+            (self.compLabel5, dict()),
+            (self.compStats5, dict())]
+      cols = 1
+      rows = int(np.ceil(len(elemlist)/float(cols)))
+      gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=5, hgap=5)
+      for control, options in elemlist:
+          gridSizer.Add(control, **options)
+      for control, options in \
+              [(gridSizer, dict(border=5, flag=wx.ALL))]:
+          boxSizer.Add(control, **options)
+      self.SetSizerAndFit(boxSizer)
 
     def getDataPoints(self, keys, teststream):
         """
@@ -90,10 +87,10 @@ class StatisticsPage(wx.Panel):
         """
         try:
             mini = teststream._get_min(key,returntime=True)
-            minText = '       Minimum: {} at {}\n'.format(mini[0],
+            minText = '   Min : {} at {}\n'.format(mini[0],
                     num2date(mini[1]))
         except:
-            minText = '       Unable to calculate minimum.\n'
+            minText = '   Unable to calculate minimum.\n'
         return minText
 
     def getMax(self, key, teststream):
@@ -108,10 +105,10 @@ class StatisticsPage(wx.Panel):
         """
         try:
             maxi = teststream._get_max(key,returntime=True)
-            maxText = '       Maximum: {} at {}\n'.format(maxi[0],
+            maxText = '   Max : {} at {}\n'.format(maxi[0],
                     num2date(maxi[1]))
         except:
-            maxText = '       Unable to calculate maximum.\n'
+            maxText = '   Unable to calculate maximum.\n'
         return maxText
 
     def getMean(self, key, teststream):
@@ -127,14 +124,14 @@ class StatisticsPage(wx.Panel):
         try:
             mean = teststream.mean(key, meanfunction='mean',
                     std=True,percentage=10)
-            line = '       Mean: {}\n'.format(mean[0])
-            line += '       Standard Deviation: {}\n'.format(mean[1])
+            line = '   Mean : {}\n'.format(mean[0])
+            line += u'   \u03C3 : {0:.2f}\n'.format(mean[1])
             meanText = line
         except:
-            meanText = '       Unable to calculate mean.\n'
+            meanText = '   Unable to calculate mean.\n'
         return meanText
 
-    def getStatistics(self, keys, teststream):
+    def getStatistics(self, key, teststream):
         """
         DESCRIPTION:
             Function to format statistics.
@@ -144,16 +141,12 @@ class StatisticsPage(wx.Panel):
         RETURNS:
             A string displaying statistics of a time series
         """
-        statisticText = ''
-        for key in keys:
-            header = '|------------------------------{}'.format(key) + \
-                    '------------------------------|\n'
-            minText = self.getMin(key, teststream)
-            maxText = self.getMax(key, teststream)
-            meanText = self.getMean(key, teststream)
-            varText = self.getVariance(key, teststream)
-            statisticText += header + minText + maxText + meanText + \
-                    varText
+        minText = self.getMin(key, teststream)
+        maxText = self.getMax(key, teststream)
+        meanText = self.getMean(key, teststream)
+        varText = self.getVariance(key, teststream)
+        statisticText = minText + maxText + meanText + \
+                varText
         return statisticText
 
     def getVariance(self, key, teststream):
@@ -168,9 +161,9 @@ class StatisticsPage(wx.Panel):
         """
         try:
             var = teststream._get_variance(key)
-            varText = '       Variance: {}\n'.format(var)
+            varText = u'   \u03C3\u00B2 : {0:.2f}'.format(var)
         except:
-            varText = '       Unable to calculate variance.\n'
+            varText = '   Unable to calculate variance.'
         return varText
 
     def setStatistics(self, keys, stream, xlimits):
@@ -185,22 +178,26 @@ class StatisticsPage(wx.Panel):
         RETURNS:
             A string displaying the variance value of a time series
         """
+
+        titleFont = wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        for idx in range(6):
+            exec('self.compLabel'+str(idx)+'.SetLabel(" ")')
+            exec('self.compStats'+str(idx)+'.SetLabel(" ")')
+        self.timeLabel.SetFont(titleFont)
         try:
             testarray = stream._select_timerange(starttime=xlimits[0],
                     endtime=xlimits[1])
             teststream = DataStream([LineStruct()], stream, testarray)
             t_limits = teststream._find_t_limits()
-            trange = 'Timerange: {} to {}'.format(t_limits[0],
+            trange = '{} to {}\n'.format(t_limits[0],
                     t_limits[1])
             self.timeLabel.SetLabel(trange)
-            stats = self.getStatistics(keys, teststream)
-            self.statisticsTextCtrl.SetValue(stats)
-            if len(teststream.ndarray[KEYLIST.index('time')]) <= 10:
-                dataPoints = self.getDataPoints(keys, teststream)
-                self.valuesTextCtrl.SetValue(dataPoints)
-            else:
-                self.valuesTextCtrl.SetValue('Too many data points...')
+            for idx, key in enumerate(keys):
+                stats = self.getStatistics(key, teststream)
+                title = key.upper() + ' Component: '
+                exec('self.compLabel'+str(idx)+'.SetLabel(title)')
+                exec('self.compLabel'+str(idx)+'.SetFont(titleFont)')
+                exec('self.compStats'+str(idx)+'.SetLabel(stats)')
         except:
-            message = 'Cannot get statistics for time range.'
-            self.statisticsTextCtrl.SetValue(message)
-            self.valuesTextCtrl.SetValue(message)
+            message = 'No statistics for this time range.'
+            self.timeLabel.SetLabel(message)
