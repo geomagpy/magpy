@@ -4115,63 +4115,27 @@ Suite 330, Boston, MA  02111-1307  USA"""
         keys = self.shownkeylist
         if len(self.plotstream.ndarray[0]) == 0:
             self.plotstream = self.stream.copy()
-        #fitknots = str(0.5)
-        #fitdegree = str(4)
-        #fitfunc='spline'
         self.xlimits = self.plot_p.xlimits
-
-
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
+                options=self.options, stream = self.plotstream,
+                shownkeylist=self.shownkeylist, keylist=self.keylist)
         startdate=self.xlimits[0]
         enddate=self.xlimits[1]
-        starttime = num2date(startdate).strftime('%X')
-        endtime = num2date(enddate).strftime('%X')
-        dlg.startFitDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
-        dlg.endFitDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
-        dlg.startFitTimePicker.SetValue(starttime)
-        dlg.endFitTimePicker.SetValue(endtime)
+        dlg.setTimeRange(startdate, enddate)
         if dlg.ShowModal() == wx.ID_OK:
-            fitfunc = dlg.funcComboBox.GetValue()
-            knots = dlg.knotsTextCtrl.GetValue()
-            degree = dlg.degreeTextCtrl.GetValue()
-            # Getting time information
-            stday = dlg.startFitDatePicker.GetValue()
-            sttime = str(dlg.startFitTimePicker.GetValue())
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-            starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-            enday = dlg.endFitDatePicker.GetValue()
-            entime = str(dlg.endFitTimePicker.GetValue())
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-            endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-
-            self.options['fitfunction'] = fitfunc
-            if fitfunc.startswith('poly'):
-                fitfunc = 'poly'
-            elif fitfunc.startswith('linear'):
-                fitfunc = 'least-squares'
-
-            self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (fitfunc, knots, degree))
-            if not 0<float(knots)<1:
-                knots = 0.5
-            else:
-                knots = float(knots)
-            if not int(degree)>0:
-                degree = 1
-            else:
-                degree = int(degree)
-            self.options['fitknotstep'] = str(knots)
-            self.options['fitdegree'] = str(degree)
+            params = dlg.getFitParameters()
+            self.options['fitfunction'] = params['fitfuncname']
+            self.options['fitknotstep'] = str(params['knots'])
+            self.options['fitdegree'] = str(params['degree'])
+            self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
+                    params['fitfuncname'], params['knots'], params['degree']))
             if len(self.plotstream.ndarray[0]) > 0:
-                func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots, starttime=starttime, endtime=endtime)
-                if fitfunc == 'none':
+                func = self.plotstream.fit(keys=keys,
+                        fitfunc=params['fitfunc'],
+                        fitdegree=params['degree'], knotstep=params['knots'],
+                        starttime=params['starttime'],
+                        endtime=params['endtime'])
+                if params['fitfunc'] == 'none':
                     self.plotopt['function'] = []
                 elif isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
                     self.plotopt['function'].append(func)
@@ -4537,11 +4501,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             basedict = tmpbasedict[0]
             ## TODO extract all baseline parameters here
             fitfunc = self.options.get('fitfunction','spline')
+            """
             if fitfunc.startswith('poly'):
                 self.options['fitfunction'] = 'poly'
                 fitfunc = 'poly'
             elif fitfunc.startswith('linear'):
                 fitfunc = 'least-squares'
+            """
             baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
 
             #keys = self.shownkeylist

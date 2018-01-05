@@ -5,6 +5,7 @@ from magpy.absolutes import *
 from magpy.transfer import *
 from magpy.database import *
 
+
 import wx
 
 try:
@@ -2093,6 +2094,66 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+    def getFitParameters(self):
+        params = {}
+        params['starttime'], params['endtime'] = self.getTimeRange()
+        fitfunc = self.funcComboBox.GetValue()
+        knots = self.knotsTextCtrl.GetValue()
+        degree = self.degreeTextCtrl.GetValue()
+        params['fitfuncname'] = fitfunc
+        if fitfunc.startswith('poly'):
+            fitfunc = 'poly'
+        elif fitfunc.startswith('linear'):
+            fitfunc = 'least-squares'
+        params['fitfunc'] = fitfunc
+        if not 0<float(knots)<1:
+            knots = 0.5
+        else:
+            knots = float(knots)
+        params['knots'] = knots
+        if not int(degree)>0:
+            degree = 1
+        else:
+            degree = int(degree)
+        params['degree'] = degree
+        return params
+
+    def getTimeRange(self):
+        # Get start time
+        stday = self.startFitDatePicker.GetValue()
+        sttime = str(self.startFitTimePicker.GetValue())
+        if sttime.endswith('AM') or sttime.endswith('am'):
+            sttime = datetime.strftime(datetime.strptime(sttime,
+                    "%I:%M:%S %p"), "%H:%M:%S")
+        if sttime.endswith('pm') or sttime.endswith('PM'):
+            sttime = datetime.strftime(datetime.strptime(sttime,
+                    "%I:%M:%S %p"), "%H:%M:%S")
+        sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),
+                "%Y-%m-%d")
+        starttime = datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+        # Get end time
+        enday = self.endFitDatePicker.GetValue()
+        entime = str(self.endFitTimePicker.GetValue())
+        if entime.endswith('AM') or entime.endswith('am'):
+            entime = datetime.strftime(datetime.strptime(entime,
+                    "%I:%M:%S %p"), "%H:%M:%S")
+        if entime.endswith('pm') or entime.endswith('PM'):
+            entime = datetime.strftime(datetime.strptime(entime,
+                    "%I:%M:%S %p"), "%H:%M:%S")
+        ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()),
+                "%Y-%m-%d")
+        endtime = datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+        return starttime, endtime
+
+    def setTimeRange(self, startdate, enddate):
+        from magpy.gui.magpy_gui import pydate2wxdate
+        starttime = num2date(startdate).strftime('%X')
+        endtime = num2date(enddate).strftime('%X')
+        self.startFitDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
+        self.endFitDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
+        self.startFitTimePicker.SetValue(starttime)
+
+
 
 class AnalysisFilterDialog(wx.Dialog):
     """
@@ -2523,54 +2584,27 @@ class AnalysisBaselineDialog(wx.Dialog):
         dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
         startdate=self.dictlst[idx].get('startdate')
         enddate=self.dictlst[idx].get('enddate')
+        """
         starttime = num2date(startdate).strftime('%X')
         endtime = num2date(enddate).strftime('%X')
         dlg.startFitDatePicker.SetValue(self._pydate2wxdate(num2date(startdate)))
         dlg.endFitDatePicker.SetValue(self._pydate2wxdate(num2date(enddate)))
         dlg.startFitTimePicker.SetValue(starttime)
         dlg.endFitTimePicker.SetValue(endtime)
+        """
+
+        dlg.setTimeRange(startdate, enddate)
 
         if dlg.ShowModal() == wx.ID_OK:
-            fitfunc = dlg.funcComboBox.GetValue()
-            knots = dlg.knotsTextCtrl.GetValue()
-            degree = dlg.degreeTextCtrl.GetValue()
-            # Getting time information
-            stday = dlg.startFitDatePicker.GetValue()
-            sttime = str(dlg.startFitTimePicker.GetValue())
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-            starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-            enday = dlg.endFitDatePicker.GetValue()
-            entime = str(dlg.endFitTimePicker.GetValue())
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-            endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-
-            if fitfunc.startswith('poly'):
-                fitfunc = 'poly'
-            elif fitfunc.startswith('linear'):
-                fitfunc = 'least-squares'
-            self.options['fitfunction'] = fitfunc
-
-            #self.menu_p.rep_page.logMsg('Fitting base values with %s, %s, %s' % (fitfunc, knots, degree))
-            if not 0<float(knots)<1:
-                knots = 0.5
-            else:
-                knots = float(knots)
-            if not int(degree)>0:
-                degree = 1
-            else:
-                degree = int(degree)
-            self.options['fitknotstep'] = str(knots)
-            self.options['fitdegree'] = str(degree)
-
-            self.parameterstring = "Adopted Baseline 1: \nStarttime: {}, Function: {}, Knotstep: {}, Degree: {}, Endtime: {}\n".format(starttime,self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),endtime)
+            params = dlg.getFitParameters()
+            self.options['fitfunction'] = params['fitfunc']
+            self.options['fitknotstep'] = str(params['knots'])
+            self.options['fitdegree'] = str(params['degree'])
+            self.parameterstring = "Adopted Baseline 1: \nStarttime: {}, Function: {}, Knotstep: {}, Degree: {}, Endtime: {}\n".format(params['starttime'],
+                    self.options.get('fitfunction',''),
+                    self.options.get('fitknotstep',''),
+                    self.options.get('fitdegree',''),
+                    params['endtime'])
             self.parameterTextCtrl.SetValue(self.parameterstring)
         dlg.Destroy()
 
