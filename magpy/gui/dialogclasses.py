@@ -5299,15 +5299,21 @@ class SelectFromListDialog(wx.Dialog):
         self.selectlist = selectlist
         self.name = name
         self.createControls()
+        self.bindControls()
         self.doLayout()
+        self.setComponent(idx=0)
 
     # Widgets
     def createControls(self):
-        self.selectLabel = wx.StaticText(self, label="Choose {}:".format(self.name),size=(160,30))
+        self.selectLabel = wx.StaticText(self,
+                label="Choose {}:".format(self.name),size=(160,30))
         self.selectComboBox = wx.ComboBox(self, choices=self.selectlist,
-                       style=wx.CB_DROPDOWN, value=self.selectlist[0],size=(160,-1))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Select',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+                style=wx.CB_DROPDOWN, value=self.selectlist[0],
+                size=(160,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Select',
+                size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',
+                size=(160,30))
 
 
     def doLayout(self):
@@ -5339,6 +5345,30 @@ class SelectFromListDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.selectComboBox.Bind(wx.EVT_COMBOBOX, self.setComponent)
+        self.selectComboBox.Bind(wx.EVT_TEXT, self.setComponent)
+
+    def setComponent(self, event=None, idx=None):
+        """
+        DESCRIPTION
+            Method to set the component variable when the combo box selection
+            is changed or the method is called
+        """
+        if idx is not None:
+            self.component = self.selectlist[idx]
+        else:
+            idx = self.selectComboBox.GetSelection()
+            self.component = self.selectlist[idx]
+
+    def getComponent(self):
+        """
+        DESCRIPTION
+            Method to return the component variable
+        """
+        component = self.component
+        return component
 
 
 class MultiStreamDialog(wx.Dialog):

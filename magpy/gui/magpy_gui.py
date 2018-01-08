@@ -2218,6 +2218,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 msg.ShowModal()
                 self.changeStatusbar("Loading from directory failed ... Ready")
                 msg.Destroy()
+
+            self.changeStatusbar("Loading webservice data ... be patient")
+        dlg.Destroy()
+        """
+        <<<<<<< HEAD
             self.changeStatusbar("Loading webservice data ... be patient")
         dlg.Destroy()
 
@@ -2243,6 +2248,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = False
         except:
                 pass
+=======
+            dlg.Destroy()
+
+>>>>>>> 9791d0f... Make SelectFromListDialog close
+        """
 
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
@@ -4567,17 +4577,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
              Calculates Power spectrum of one component
         """
         self.changeStatusbar("Power spectrum ...")
-
-        # Open a dialog for paramater selction
-        dlg = SelectFromListDialog(None, title='Select sensor', selectlist=self.shownkeylist, name='Component')
-        if dlg.ShowModal() == wx.ID_OK:
-            comp = dlg.selectComboBox.GetValue()
-        else:
-            comp = self.compselect[0]
-
-        import magpy.mpplot as mp
-        mp.plotPS(self.plotstream, comp)
-
+        comp = self.getComponent()
+        if comp is not None:
+            mp.plotPS(self.plotstream, comp, gui=True)
 
     def onSpectrumButton(self, event):
         """
@@ -4585,16 +4587,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
              Calculates Power spectrum of one component
         """
         self.changeStatusbar("Spectral plot ...")
-
-        dlg = SelectFromListDialog(None, title='Select sensor', selectlist=self.shownkeylist, name='Component')
-        if dlg.ShowModal() == wx.ID_OK:
-            comp = dlg.selectComboBox.GetValue()
-        else:
-            comp = self.compselect[0]
-
-        # Open a dialog for paramater selction
-        import magpy.mpplot as mp
-        mp.plotSpectrogram(self.plotstream, comp)
+        comp = self.getComponent()
+        if comp is not None:
+            mp.plotSpectrogram(self.plotstream, comp, gui=True)
 
     def onStatsButton(self, event):
         """
@@ -4639,7 +4634,28 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.nb.RemovePage(4)
             self.menu_p.stats_page.Hide()
             self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+<<<<<<< HEAD
         """
+=======
+
+    def getComponent(self):
+        """
+        DESCRIPTION
+             Calls a dialog where the user can choose a component
+        """
+        dlg = SelectFromListDialog(None, title='Select sensor',
+                selectlist=self.shownkeylist, name='Component')
+        try:
+            if dlg.ShowModal() == wx.ID_OK:
+                comp = dlg.getComponent()
+                return comp
+            else:
+                return None
+        finally:
+            dlg.Destroy()
+
+
+>>>>>>> 9791d0f... Make SelectFromListDialog close
     # ------------------------------------------------------------------------------------------
     # ################
     # Stream page functions
