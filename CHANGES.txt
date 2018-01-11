@@ -12,7 +12,14 @@ v0.3.98 fixes:
     + database: dbdatainfo - int values treated as int now
     + database: dbdatainfo - improved new revision numbering
     + stream: logging - removed write permission failure when different users access they same log
+    + gui: hotkey for MagPy log changed to ctrl y
+    + stream: samplingrate is rounded to 2 digits
 
+v0.3.98 additions:
+    + added basic acquisition support for new MARTAS, in particular mqtt support
+
+v0.3.98 removals:
+    None
 
 -------------------------------------------------
 ####v<0.3.97>, <2017-09-15> -- On the way to beta.
