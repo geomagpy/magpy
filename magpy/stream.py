@@ -8326,7 +8326,7 @@ CALLED BY:
         the window parameter could be the window itself if an array instead of a string
         """
         # Defaults:
-        window_len = kwargs.get('window_len')
+        window_len = int(kwargs.get('window_len'))
         window = kwargs.get('window')
         if not window_len:
             window_len = 11
