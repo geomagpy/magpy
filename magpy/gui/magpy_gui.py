@@ -877,7 +877,7 @@ class MainFrame(wx.Frame):
             self.CheckDataMenu = wx.Menu()
             self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "Check &definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
             self.CheckDataMenu.AppendItem(self.CheckDefinitiveDataSelect)
-            self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagPy &log...\tCtrl+L", "Open log", wx.ITEM_NORMAL)
+            self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagP&y log...\tCtrl+Y", "Open log", wx.ITEM_NORMAL)
             self.CheckDataMenu.AppendItem(self.OpenLogFileSelect)
             self.MainMenu.Append(self.CheckDataMenu, "C&heck Data")
         # ## Options Menu

@@ -41,10 +41,28 @@ def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_log,
     """Basic setup function to create a standard logging config. Default output
     is to file in /tmp/dir."""
 
+
     logfile=os.path.join(logfilepath,'magpy.log')
-    logging.basicConfig(filename=logfile,
+    # Check file permission/existance
+    if not os.path.isfile(logfile):
+        pass
+    else:
+        if os.access(logfile, os.W_OK):
+            pass
+        else:
+            for count in range (1,100):
+                logfile=os.path.join(logfilepath,'magpy{:02}.log'.format(count))
+                value = os.access(logfile, os.W_OK)
+                if value or not os.path.isfile(logfile):
+                    count = 100
+                    break
+    try:
+        logging.basicConfig(filename=logfile,
                         filemode='w',
                         format=logformat,
+                        level=logging.INFO)
+    except:
+        logging.basicConfig(format=logformat,
                         level=logging.INFO)
     logger = logging.getLogger(name)
     # Define a Handler which writes "setLevel" messages or higher to the sys.stderr
@@ -10360,7 +10378,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         st = st.trim(endtime=endtime)
 
     ### Define some general header information TODO - This is done already in some format libs - clean up
-    st.header['DataSamplingRate'] = st.samplingrate()
+    st.header['DataSamplingRate'] = float("{0:.2f}".format(st.samplingrate()))
 
     return st
 

@@ -11,6 +11,7 @@ v0.3.98 fixes:
     + database: writeDB - numerical times problem solved
     + database: dbdatainfo - int values treated as int now
     + database: dbdatainfo - improved new revision numbering
+    + stream: logging - removed write permission failure when different users access they same log
 
 
 -------------------------------------------------
