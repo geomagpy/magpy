@@ -99,8 +99,8 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                     'CHAR(20)','CHAR(50)','DECIMAL(20,9)',
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(2)','DECIMAL(20,9)',
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(10)',
-                    'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(5)','CHAR(20)',
-                    'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(20)',
+                    'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(5)','TEXT',
+                    'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(50)',
                     'DECIMAL(20,9)','CHAR(10)','CHAR(50)','CHAR(20)',
                     'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
                     'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)',
@@ -119,7 +119,9 @@ SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','Sensor
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
                    'StationCity','StationPostalCode','StationCountry','StationWebInfo',
-                   'StationEmail','StationDescription','StationK9','StationMeans']
+                   'StationEmail','StationDescription','StationK9','StationMeans','StationLongitude', 
+                   'StationLatitude', 'StationLocationReference', 'StationElevation', 
+                   'StationElevationRef', 'StationType']
 
 FLAGSKEYLIST = ['FlagID','SensorID','FlagBeginTime','FlagEndTime','FlagComponents','FlagNum','FlagReason','ModificationDate']
 

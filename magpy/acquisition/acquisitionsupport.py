@@ -40,7 +40,7 @@ def connect(parameter):
     return ser
 
 
-def lineread(ser,eol=None):
+def lineread(ser,eol=None,timelimit=30):
     """
     DESCRIPTION:
        Does the same as readline(), but does not require a standard 
@@ -58,11 +58,14 @@ def lineread(ser,eol=None):
     else:
         eollist = [eol]
 
+    timeout = time.time()+timelimit
     ser_str = ''
     while True:
         char = ser.read()
         #if char == '\x00':
         if char in eollist:
+            break
+        if time.time() > timeout:
             break
         ser_str += char
     return ser_str
@@ -85,15 +88,15 @@ def hexify_command(command,eol):
 
     return command_hex
 
-
+"""
 def send_command(ser,command,eol):
     command_hex = hexify_command(command,eol)
     ser.write(command_hex)
     response = lineread(ser,eol)
     print('Response: ', response)
+"""
 
-
-def send_command(ser,command,eol=None,hexify=False,bits=0):
+def send_command(ser,command,eol=None,hexify=False,bits=0,report=True):
     """
     DESCRIPTION:
         General method to send commands to a e.g. serial port.
@@ -108,7 +111,8 @@ def send_command(ser,command,eol=None,hexify=False,bits=0):
         GSM90Sv7:       hexify=False, line=False, eol
         GSM90Fv7:       hexify=False, line=False, eol
     """
-    print('-- Sending command:  ', command)
+    if report:
+        print('-- Sending command:  ', command)
     if hexify:
         command = hexify_command(command,eol)
         ser.write(command)
@@ -121,7 +125,8 @@ def send_command(ser,command,eol=None,hexify=False,bits=0):
         response = lineread(ser,eol)
     else:
         response = ser.read(bits)
-    print('-- Response: ', response)
+    if report:
+        print('-- Response: ', response)
     return response
 
 
@@ -164,6 +169,31 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
         print("buffer {}: Error while saving file".format(sensorid))
 
 
+def dataToCSV(outputdir, sensorid, filedate, asciidata, header):
+    """
+    Writing buffer data to an ASCII file
+    """
+    # File Operations
+    try:
+        path = os.path.join(outputdir,sensorid)
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        savefile = os.path.join(path, sensorid+'_'+filedate+".asc")
+        asciilist = asciidata.split(';')
+        if not os.path.isfile(savefile):
+            with open(savefile, "wb") as csvfile:
+                writer = csv.writer(csvfile,delimiter=';')
+                writer.writerow(header)
+                writer.writerow(asciilist)
+        else:
+            with open(savefile, "a") as csvfile:
+                writer = csv.writer(csvfile,delimiter=';')
+                writer.writerow(asciilist)
+    except:
+        print("buffer {}: Error while saving file".format(sensorid))
+
+
 def AddSensor(path, dictionary, block=None):
     """
     DESCRIPTION:
@@ -174,8 +204,10 @@ def AddSensor(path, dictionary, block=None):
 
     owheadline = "# OW block (automatically determined)"
     arduinoheadline = "# Arduino block (automatically determined)"
+    mysqlheadline = "# SQL block (automatically determined)"
     owidentifier = '!'
     arduinoidentifier = '?'
+    mysqlidentifier = '$'
     delimiter = '\n'
 
     def makeline(dictionary,delimiter):
@@ -187,8 +219,8 @@ def AddSensor(path, dictionary, block=None):
     newline = makeline(dictionary,delimiter)
 
     # 1. if not block in ['OW','Arduino'] abort
-    if not block in ['OW','Arduino']:
-        print ("provided block needs to be 'OW' or 'Arduino'")
+    if not block in ['OW','ow','Ow','Arduino','arduino','ARDUINO','SQL','MySQL','mysql','MYSQL','sql']:
+        print ("provided block needs to be 'OW', 'Arduino' or 'SQL'")
         return False 
 
     # 2. check whether sensors.cfg existis
@@ -204,14 +236,6 @@ def AddSensor(path, dictionary, block=None):
         print ("no data found in sensors.cfg")
         return False
 
-    # 3. if block == OW
-    #    owheadline = "# OW block (automatically determined)"
-    #    locate owheadline - get position of last identifier 
-    #    else add owheadline at the end of the file
-    # 4. if block == Arduino
-    #    owheadline = "# OW block (automatically determined)"
-    #    locate owheadline - get position of last identifier 
-    #    else add owheadline at the end of the file
     if block in ['OW','ow','Ow']:
         num = [line for line in sensordata if line.startswith(owheadline)]
         identifier = owidentifier
@@ -220,12 +244,18 @@ def AddSensor(path, dictionary, block=None):
         num = [line for line in sensordata if line.startswith(arduinoheadline)]
         identifier = arduinoidentifier
         headline = arduinoheadline
+    elif block in ['SQL','MySQL','mysql','MYSQL','sql']:
+        num = [line for line in sensordata if line.startswith(mysqlheadline)]
+        identifier = mysqlidentifier
+        headline = mysqlheadline
 
-    # 5. Append/Insert line 
+    # 3. Append/Insert line 
     if len(num) > 0:
-            cnt = [idx for idx,line in enumerate(sensordata) if line.startswith(identifier)]
+            cnt = [idx for idx,line in enumerate(sensordata) if line.startswith(identifier) or  line.startswith('#'+identifier)]
             lastline = max(cnt)
-            sensordata.insert(lastline+1,identifier+newline)
+            if not (identifier+newline) in sensordata:
+                if not ('#'+identifier+newline) in sensordata:
+                    sensordata.insert(lastline+1,identifier+newline)
     else:
             sensordata.append(delimiter)
             sensordata.append(headline+delimiter)
@@ -293,6 +323,8 @@ def GetSensors(path, identifier=None, secondidentifier=None):
             elif item.startswith('!') and not identifier: 
                 continue
             elif item.startswith('?') and not identifier: 
+                continue
+            elif item.startswith('$') and not identifier: 
                 continue
             elif not identifier and len(item) > 8:
                 for idx,part in enumerate(parts):

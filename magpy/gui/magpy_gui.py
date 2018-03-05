@@ -849,7 +849,7 @@ class MainFrame(wx.Frame):
         self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBConnect)
         self.DatabaseMenu.AppendSeparator()
-        self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "&Initialize a new MySQL DB...\tCtrl+I", "Initialize Database", wx.ITEM_NORMAL)
+        self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "&Initialize a new MySQL DB...\tCtrl+Z", "Initialize Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.AppendItem(self.DBInit)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
@@ -2793,7 +2793,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     self.changeStatusbar("Step 2: Reading one second data - please be patient ... ")
                     secdata, fail = readSecData(secondpath,seconddata,rmonth,year)
                     if fail == 6:
-                        errormsg += "Step 2: Reading of one second data failed - check file format\n"
+                        errormsg += "Step 2: Reading of one second data failed - check file format and/or file name convention\n"
                         succlst[1] = 5
                     self.changeStatusbar("Step 2: Reading one second data ... Done ")
                     if secdata.length()[0] > 1:
