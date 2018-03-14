@@ -100,8 +100,8 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(2)','DECIMAL(20,9)',
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(10)',
                     'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(5)','TEXT',
-                    'DECIMAL(20,9)','DECIMAL(20,9)','CHAR(50)',
-                    'DECIMAL(20,9)','CHAR(10)','CHAR(50)','CHAR(20)',
+                    'TEXT','TEXT','CHAR(50)',
+                    'TEXT','CHAR(10)','CHAR(50)','CHAR(20)',
                     'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
                     'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)',
                     'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
@@ -3321,103 +3321,46 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
        mode: default inserts information if not existing
              use 'delete' to delete any existing input for the given sensorid
        sensorid: a string with the sensor id, if not provided within the list
-       modificationdate: a string with the flagging modificationdate, 
+       modificationdate: a datetime object with the flagging modificationdate, 
                          if not provided within the list
 
     APPLICATION:
-       flaglist2db(db, flaglist, sensorid='MySensor')
+       # 1. Upload all flaglist data and append to existing sensor info
+       >>> flaglist2db(db, flaglist)
+       # 2. Upload flaglist data for a specific sensor
+       >>> flaglist2db(db, flaglist, sensorid='MySensor')
+       # 3. Firstly delete all contents for existing sensors in flaglist (or the provided sensorid)
+       #    and then upload flaglist data
+       >>> flaglist2db(db, flaglist, mode='delete')# (, sensorid='MySensor')
+       # 4. Delete all data for a specific sensor
+       >>> flaglist2db(db, [], sensorid='MySensor', mode='delete')
+
+       >>> flaglist2db(db, [], mode='delete') is not supported - use TRUNCATE command in database
 
     """
-    if not sensorid:
-        sensorid = 'defaultsensor'
+    # Some defaults
     if not modificationdate:
-        modificationdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d %H:%M:%S.%f")
+        modificationdate = datetime.utcnow()
+    else:
+        try:
+            test = date2num(modificationdate)
+        except:
+            loggerdatabase.info("flaglist2db: Could not interprete modification data - use datetime object - aborting")
+            return 
 
     if not db:
-        print("No database connected - aborting")
-        return
-    cursor = db.cursor ()
-
-    # Check flaglist:
-    if not len(flaglist) > 0:
-        if mode == 'delete' and sensorid:
-            print("Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
-            cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
-            db.commit()
-            cursor.close ()
-            return
-        else:
-            print("No data found in flaglist - aborting")
-            return
-
-    lentype = len(flaglist[0])
-
-    if lentype <= 5:
-        listwithoutcomp = [[elem[0],elem[1],elem[3],elem[4]] for elem in flaglist]
-    else:
-        listwithoutcomp = [[elem[0],elem[1],elem[3],elem[4],elem[5],elem[6]] for elem in flaglist]
-        if sensorid == 'defaultsensor':
-            sensorid = listwithoutcomp[-1][4]
-    newlst = []
-    for elem in listwithoutcomp:
-        elem[0] = datetime.strftime(elem[0],"%Y-%m-%d %H:%M:%S.%f")
-        elem[1] = datetime.strftime(elem[1],"%Y-%m-%d %H:%M:%S.%f")
-        if elem not in newlst:
-            newlst.append(elem)
-
-    # Check whether an identical input already exists in the database
-    existinglst = db2flaglist(db,sensorid)
-
-    newflaglist = []
-    for flag in flaglist:
-        itexists = False
-        ti0 = datetime.strftime(flag[0],"%Y-%m-%d %H:%M:%S.%f")
-        ti1 = datetime.strftime(flag[1],"%Y-%m-%d %H:%M:%S.%f")
-        for exist in existinglst:
-            #print(ti0,exist[0],ti1,exist[1],flag[2],exist[2])
-            if lentype <= 5:
-                if ti1 == exist[0] and ti1 == exist[1] and flag[2] == exist[2]:
-                    itexists = True
-            else:
-                if ti0 == exist[0] and ti1 == exist[1] and flag[2] == exist[2] and flag[5] == exist[5]:
-                    itexists = True
-        if itexists:
-            pass
-        else:
-            newflaglist.append(flag)
-    flaglist = newflaglist
-
-    if len(flaglist) == 0:
+        loggerdatabase.info("flaglist2db: No database connected - aborting")
         return
 
-    for elem in newlst:
-        complst = []
-        for elem2 in flaglist:
-            comp = elem2[2]
-            if lentype <= 5:
-                el2 = [datetime.strftime(elem2[0],"%Y-%m-%d %H:%M:%S.%f"),datetime.strftime(elem2[1],"%Y-%m-%d %H:%M:%S.%f"),elem2[3],elem2[4]]
-            else:
-                el2 = [datetime.strftime(elem2[0],"%Y-%m-%d %H:%M:%S.%f"),datetime.strftime(elem2[1],"%Y-%m-%d %H:%M:%S.%f"),elem2[3],elem2[4],elem2[5],elem2[6]]
-            if el2 == elem:
-                complst.append(comp)
-        compstr = '_'.join(complst)
-        if lentype <= 5:
-            elem.extend([sensorid,modificationdate])
-        elem.append(compstr)
+    cursor = db.cursor()
 
-    # Flagging TABLE
-    # Create flagging table
-    if mode == 'delete':
-        if sensorid in ['all','All','ALL']:
-            print("Executing: TRUNCATE FLAGS")
-            cursor.execute("TRUNCATE FLAGS")
-        else:
-            print("Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
-            cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+    if len(flaglist) < 1 and not mode == 'delete':
+        loggerdatabase.info("flaglist2db: Nothing to do - aborting")
+        return
 
+    # 0. Check whether table exists
     flagstr = 'FlagID INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, SensorID CHAR(50), FlagBeginTime CHAR(50), FlagEndTime CHAR(50), FlagComponents CHAR(50), FlagNum INT, FlagReason TEXT, ModificationDate CHAR(50)'
-
-    # Check whether table exists
+    flaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate'
     flagids = dbselect(db, 'FlagID', 'FLAGS')
     if not len(flagids) > 0:
         createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
@@ -3427,43 +3370,114 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         flagids = [int(el) for el in flagids]
         flagid = max(flagids)
 
-    # add flagging data
-    #if lentype <= 4:
-    #    flaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagNum, FlagReason, FlagComponents'
-    flaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagNum, FlagReason, SensorID, ModificationDate, FlagComponents'
+    # 1. Scan provided flaglist and eventually extract data for selected sensorid 
+    lentype = len(flaglist[0])
+    if sensorid and not sensorid in ['all','All','ALL']:
+        if lentype <= 5:
+            flaglist = [[elem[0],elem[1],elem[2],elem[3],elem[4],sensorid,modificationdate] for elem in flaglist]
+        else:
+            flaglist = [elem for elem in flaglist if elem[5] == sensorid]
+    elif lentype <= 5:
+        loggerdatabase.info("flaglist2db: Please provide sensorid - aborting")
+        return
 
-    for elem in newlst:
+
+    # 2. Run the cleaning jobs if no flaglist contents are provided and delete is selected 
+    #    Abort if no flags are found
+    if not len(flaglist) > 0:
+        if mode == 'delete' and sensorid:
+            loggerdatabase.info("flaglist2db: Executing DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+            cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+            db.commit()
+            cursor.close ()
+            return
+        else:
+            loggerdatabase.info("flaglist2db: No data found in flaglist - aborting")
+            return
+
+    if mode == 'delete':
+        if not sensorid or sensorid in ['all','All','ALL']:
+            loggerdatabase.info("flaglist2db: Executing: TRUNCATE FLAGS")
+            cursor.execute("TRUNCATE FLAGS")
+        else:
+            loggerdatabase.info("flaglist2db: Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+            cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
+
+
+    # 4. Get unique lines (without components  
+    #         Creating unique newlst (without components !!) with mysql time stamps.
+    #         Flagdatabase will have a list of components for each timestep 
+    #         Variable newlst will contain all unique time steps with 
+    listwithoutcomp = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
+    uniquelistwithoutcomp, indicies  = np.unique(np.asarray(listwithoutcomp), return_index=True)
+    newlst = [elem.split('___') for elem in uniquelistwithoutcomp]
+    newlst= [[float(elem[0]),float(elem[1]),int(elem[2]),elem[3],elem[4],float(elem[5])] for elem in newlst]
+
+    # 5. Combine the components of otherwise unique lines
+    sensors = np.unique(np.asarray([row[4] for row in newlst]))
+    dbflaglist = []
+    for sensor in sensors:
+        newlstsens = [elem for elem in newlst if elem[4]==sensor]
+        newlstsensstr = ['___'.join([str(elem[0]),str(elem[1]),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5])]) for elem in newlstsens]
+        flaglstsens = [elem for elem in flaglist if elem[5]==sensor]
+        listwithcomp = [['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]), str(elem[2])] for elem in flaglstsens]
+        testlist = [elem[0] for elem in listwithcomp]
+
+        # get already existing data 
+        existinglst = db2flaglist(db,sensor)
+        existinglst = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in existinglst]
+        uniqueexisting = np.unique(np.asarray(existinglst))
+
+        for idx, elem in enumerate(newlstsensstr):
+            if not elem in uniqueexisting:
+                idxlst = [i for i, j in enumerate(testlist) if j == elem]
+                comps = [listwithcomp[el][1] for el in idxlst]
+                tcomps = [key for key in KEYLIST if key in comps]
+                el0 = datetime.strftime(num2date(newlstsens[idx][0]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                el1 = datetime.strftime(num2date(newlstsens[idx][1]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                el2 = '_'.join(tcomps)
+                el3 = newlstsens[idx][2]
+                el4 = newlstsens[idx][3]
+                el5 = newlstsens[idx][4]
+                # modification date is stored as datetime ??
+                el6 = datetime.strftime(num2date(newlstsens[idx][5]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                line = [el0,el1,el2,el3,el4,el5,el6]
+                dbflaglist.append(line)
+
+    if not len(dbflaglist) > 0:
+        loggerdatabase.info("flaglist2db: Nothing to do")
+        return
+
+    loggerdatabase.info("flaglist2db: Uploading {} new flags".format(len(dbflaglist)))
+
+    for elem in dbflaglist:
         flagid = flagid+1
         try:
-            elem[3] = unicode(elem[3],'utf-8')
-            elem[3] = elem[3].encode('ascii',errors='ignore')
+            elem[4] = unicode(elem[4],'utf-8')
+            elem[4] = elem[4].encode('ascii',errors='ignore')
         except:
             try:  # data is already unicode
-                elem[3] = elem[3].encode('ascii',errors='ignore')
+                elem[4] = elem[4].encode('ascii',errors='ignore')
             except:
-                print ('flag_stream id {}: non-ascii characters in comment. Replacing by unknown reason'.format(flagid))
-                elem[3] = 'Unknown reason'
+                loggerdatabase.info('flag_stream id {}: non-ascii characters in comment. Replacing by unknown reason'.format(flagid))
+                elem[4] = 'Unknown reason'
         ne = [str(flagid)]
         ne.extend(elem)
-        #try:
-        here = True
-        if here:
-            #print ("Checking:", ne)
+        if not (len(ne) == len(flaghead.split(','))):
+            loggerdatabase.info("flaglist2db: provided input does not fit to db structure")
+        else:
             elem = [str(el) for el in ne]
             flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
-            #print flagsql
             if mode == "replace":
                 try:
                     cursor.execute(flagsql.replace("INSERT","REPLACE"))
                 except:
-                    print("Write MySQL: Replace failed")
+                    loggerdatabase.info("flaglist2db: Write MySQL: Replace failed")
             else:
                 try:
                     cursor.execute(flagsql)
                 except:
-                    print("Record already existing: use mode 'replace' to override")
-        #except:
-        #    print (" Failed to INSERT {}".format(ne))
+                    loggerdatabase.info("flaglist2db: Record already existing: use mode 'replace' to override")
 
     db.commit()
     cursor.close ()
@@ -3474,9 +3488,8 @@ def db2flaglist(db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, 
     DEFINITION:
         Read flagging information for specified sensor from data base and return a flagging list
     PARAMETERS:
-        sensorid:	   (string) sensorid for flaglist, default is sensorid of self
-        removeduplicates:  (bool) if True, any duplicates with identical start and endtimes are removed
-                           -> considerably slower
+        sensorid:	   (string) provide the requested sensorid or 'all'
+        removeduplicates:  (bool) not supported any more - use flaglistclean before uploading
     RETURNS:
         flaglist:          flaglist contains start, end , key2flag, flagnumber, comment, sensorid,
                            ModificationDate
@@ -3488,7 +3501,7 @@ def db2flaglist(db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, 
     if not db:
         print("No database connected - aborting")
         return []
-    cursor = db.cursor ()
+    cursor = db.cursor()
 
     if sensorid in ['all','All','ALL']:
         searchsql = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS'
@@ -3517,41 +3530,31 @@ def db2flaglist(db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, 
     if key:
         addsql += ' AND FlagComponents LIKE "%{}%"'.format(key)
 
+
     sqlcommand = searchsql + addbeginsql + addendsql + addsql
     if sensorid in ['all','All','ALL']:
         sqlcommand = sqlcommand.replace('WHERE AND','WHERE')
+
     cursor.execute (sqlcommand)
     rows = cursor.fetchall()
 
     tmp = DataStream()
     res=[]
+    count = 0
     for line in rows:
         comps = line[2].split('_')
-        for elem in comps:
-            res.append([tmp._testtime(line[0]),tmp._testtime(line[1]),elem,int(line[3]),line[4],line[5],tmp._testtime(line[6])])
+        if len(comps) > 0:
+            for elem in comps:
+                if elem in KEYLIST:
+                    res.append([tmp._testtime(line[0]),tmp._testtime(line[1]),elem,int(line[3]),line[4],line[5],tmp._testtime(line[6])])
+        else:
+            count= count+1
 
+    db.commit()
     cursor.close ()
 
-    def flagclean(flaglist):
-            ## Cleanup flaglist -- remove all inputs with duplicate start and endtime 
-            ## (use only last input)
-            indicies = []
-            for line in flaglist:
-                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2]]
-                if len(inds) > 0:
-                    index = inds[-1]
-                    indicies.append(index)
-            uniqueidx = (list(set(indicies)))
-            uniqueidx.sort()
-            #print(uniqueidx)
-            flaglist = [elem for idx, elem in enumerate(flaglist) if idx in uniqueidx]
+    return res
 
-            return flaglist
-
-    if removeduplicates:
-        return flagclean(res)
-    else:
-        return res
 
 def string2dict(string):
     """

@@ -126,18 +126,24 @@ def isIYFV(filename):
 
     _YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
     """
+    # Search for identifier in the first three line
     try:
-        temp = open(filename, 'rt').readline()
+        fi = open(filename, 'rt')
     except:
         return False
-    try:
-        searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
-        for elem in searchstr:
-            if temp.find(elem) > 0:
-                logger.debug("isIYFV: Found IYFV data")
-                return True
-    except:
-        return False
+    for ln in range(0,2):
+        try:
+            temp = fi.readline()
+        except:
+            return False
+        try:
+            searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
+            for elem in searchstr:
+                if temp.find(elem) > 0:
+                    logger.debug("isIYFV: Found IYFV data")
+                    return True
+        except:
+            return False
     return False
 
 
@@ -2531,8 +2537,6 @@ def readIYFV(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
 
-    endtime = kwargs.get('endtime')
-
     getfile = True
 
     stream = DataStream()
@@ -2542,8 +2546,6 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     array = [[] for key in KEYLIST]
 
-    fh = open(filename, 'rt')
-    ok = True
     cnt = 0
     paracnt = 999998
     roworder=['d','i','h','x','y','z','f']
@@ -2554,22 +2556,46 @@ def readIYFV(filename, headonly=False, **kwargs):
                                 ## this is used by writeIYFV to add at the correct position
     newarray = []
 
-    if ok:
+    headfound = False
+    latitudefound = False
+
+    def dropnonascii(text):
+        return ''.join([i if ord(i) < 128 else ' ' for i in text])
+
+    code = 'rb'
+    #import sys
+    if sys.version_info >= (3, 0):
+        code = 'rt' 
+
+    with open(filename, code) as fh:  #
         for line in fh:
+            line = dropnonascii(line)
+            line = line.rstrip()
             cnt = cnt+1
+            #line = line.lstrip()  # delete leading spaces
             if line.isspace():
                 # blank line
                 pass
             elif line.find('ANNUAL') > 0 or line.find('annual') > 0:
+                headfound = True
                 pass
-            elif cnt == 3:
+            elif headfound and not latitudefound and cnt >= 3 and cnt < 6 and not line.find('COLATITUDE') > 0 and len(line) > 0:
                 # station info
                 block = line.split(',')
-                #print(block)
-                headers['StationName'] = block[0].strip()
-                headers['StationID'] = block[1].strip()
-                headers['StationCountry'] = block[2].strip()
-            elif line.find('COLATITUDE') > 0:
+                try:
+                    headers['StationName'] = block[0].strip()
+                except:
+                    pass
+                try:
+                    headers['StationID'] = block[1].strip()
+                except:
+                    pass
+                try:
+                    headers['StationCountry'] = block[2].strip()
+                except:
+                    pass
+            elif line.find('COLATITUDE') > 0 and not latitudefound:
+                latitudefound = True
                 loc = line.split()
                 headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
                 headers['DataAcquisitionLongitude'] = float(loc[3])
@@ -2613,6 +2639,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                         ele =  data[11]
                         headers['DataComponents'] = ele
                         # transfer
+                        #print ("Check", t, tsel)
                         if len(data) == 13:
                             note =  data[12]
                         if t == tsel:
@@ -2649,9 +2676,11 @@ def readIYFV(filename, headonly=False, **kwargs):
                             array[2].append(row[para.index('y')]-jumpy)
                             array[3].append(row[para.index('z')]-jumpz)
                             array[4].append(row[para.index('f')]-jumpf)
-
+                            #print ("here", array)
                             checklist = coordinatetransform(array[1][-1],array[2][-1],array[3][-1],'xyz')
+                            #print ("checks")
                             diffs = (np.array(row) - np.array(checklist))
+                            #print ("diffs")
                             for idx,el in enumerate(diffs):
                                 goodval = True
                                 if idx in [0,1]: ## Angular values
@@ -2670,8 +2699,9 @@ def readIYFV(filename, headonly=False, **kwargs):
                             jumpz = jumpz + row[para.index('z')]
                             jumpf = jumpf + row[para.index('f')]
                         tprev = tsel
-    fh.close()
-
+            else:
+                pass
+    #fh.close()
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))
 

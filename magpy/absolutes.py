@@ -1971,7 +1971,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 if valuetest:
                     stream = stream._insert_function_values(vafunc)
                 else:
-                    print ("Warning! Variation data missing at DI time range")
+                    print("Warning! Variation data missing at DI time range")
                 #stream = stream._insert_function_values(vafunc)
             if scalarfound:
                 # TODO Check offset values

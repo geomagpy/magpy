@@ -2,6 +2,27 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
 -------------------------------------------------
+####v<0.3.99>, <2018-03-07> -- On the way to beta.
+
+v0.3.99 general:
+
+v0.3.99 fixes:
+    + updated flaglist2db and db2flaglist methods - considerably faster now and more reliable
+    + CheckData in GUI: check for filename compliance, speed up read if not ok, relax checks with
+              numerical uncertainties, add optional flag for non-required information, 
+              updated all texts to comply with IM rules, 
+    + reading yearly mean format IYFV: less sensitive to slight variations in format
+
+
+v0.3.99 additions:
+    + added acquisition support for MARTAS, in particular mqtt support
+    + database: added Station coordinates
+    + database: DataAcquistionLat and Longs can be lists (useful for gradiometer etc)
+
+v0.3.99 removals:
+    None
+
+-------------------------------------------------
 ####v<0.3.98>, <2017-12-15> -- On the way to beta.
 
 v0.3.98 general:

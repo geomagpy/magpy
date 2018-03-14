@@ -2363,13 +2363,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if ll < pickY < ul:
                 possible_key += elem
                 possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
-        idy = (np.abs(possible_val - pickY)).argmin()
-        key = possible_key[idy]
-        val = possible_val[idy]
-        colname = self.plotstream.header.get('col-'+key, '')
-        if not colname == '':
-            key = colname
-        self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
+        try:
+            idy = (np.abs(possible_val - pickY)).argmin()
+            key = possible_key[idy]
+            val = possible_val[idy]
+            colname = self.plotstream.header.get('col-'+key, '')
+            if not colname == '':
+                key = colname
+            self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
+        except:
+            pass
 
     def OnCheckOpenLog(self, event):
         """
@@ -2487,6 +2490,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 except:
                     secdata = DataStream()
                     success = 6
+                if not secdata.length()[0] > 0:
+                    cdfname = '*.cdf'
+                    loadpath = os.path.join(secondpath,cdfname)
+                    # File name issue !!
+                    try:
+                        secdata = read(loadpath,debug=True, starttime=starttime, endtime=endtime)
+                        success = 3
+                    except:
+                        secdata = DataStream()
+                        success = 6
+
             elif seconddata == 'pycdf':
                 if dataid:
                     cdfname = dataid+'_vario_sec_'+str(year)+str(rmonth).zfill(2)+'.cdf'
@@ -2641,7 +2655,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 else:
                     blvdata = True
                 if not dkacnt == 1:
-                    reportmsg += "Step 1: No DKA data present (file is recommended but not obligatory)\n"
+                    reportmsg += "Step 1: No DKA data present (file is not obligatory, will be extracted from IAF)\n"
                     dkadata = False
                     #succlst[0] = 5   # File is not obligatory - no change to succlst
                 else:
@@ -2664,9 +2678,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 else:
                     readmedata = True
                 if not pngcnt == 1:
-                    warningmsg += "Step 1: (warning)  No PNG present\n"
+                    reportmsg += "Step 1: No PNG data present (file is not obligatory)\n"
                     pngdata = False
-                    succlst[0] = 3
+                    #succlst[0] = 3   # File is not obligatory - no change to succlst
                 else:
                     pngdata = True
                 if blvdata and dkadata and readmedata and yearmeandata and pngdata:
@@ -2795,6 +2809,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     if fail == 6:
                         errormsg += "Step 2: Reading of one second data failed - check file format and/or file name convention\n"
                         succlst[1] = 5
+                    elif fail == 3:
+                        errormsg += "Step 2: Reading of one second data - file names do not follow the ImagCDF convention\n"
+                        succlst[1] = 3
                     self.changeStatusbar("Step 2: Reading one second data ... Done ")
                     if secdata.length()[0] > 1:
                         reportmsg += "Step 2: +++ Second data readable - checked example for {}\n".format(month)
@@ -2992,9 +3009,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     faileddiff = False
                     try:
                         diff = subtractStreams(iafhour,minfiltdata)
+                        #print ("Here", KEYLIST.index('df'), iafhour.ndarray[KEYLIST.index('df')], minfiltdata.ndarray[KEYLIST.index('df')])
                         if not diff.length()[0] > 0:
                             diff = subtractStreams(iafhour,minfiltdata, keys=['x','y','z'])
-                            warningmsg +=  "Step 3: Could not get F/G differences between hourly data and filtered minute data. Please check data file whether hourly means are complete.\n"
+                            warningmsg +=  "Step 3: Could not get F/G differences between hourly data and the IAF minute data filtered to hourly means. Please check data file whether hourly means are complete.\n"
                             succlst[2] = 3
 
                         if not diff.length()[0] > 0:
@@ -3018,6 +3036,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                     warningmsg += 'Step 3: inconsistence at {} {}\n'.format(num2date(ts).replace(tzinfo=None),add)
                     except:
                         errormsg += "Step 3: Failed to obtain difference between hourly data and filtered minute data.\n"
+                        faileddiff = True
 
                     if not faileddiff:
                         if not incon:
@@ -3221,28 +3240,34 @@ Suite 330, Boston, MA  02111-1307  USA"""
                             diff = subtractStreams(highresfilt,mindata,keys=['x','y','z'])
 
                             incon = False
-                            if not diff.amplitude('x') < 0.11:
-                                warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in x/h component ({}) exceed numerical uncertainty\n".format(diff.amplitude('x'))
+                            if not diff.amplitude('x') < 0.2:
+                                warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in x/h component ({}) significantly exceed numerical uncertainty\n".format(diff.amplitude('x'))
                                 incon = True
-                            if not diff.amplitude('y') < 0.11:
-                                warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in y/d component ({}) exceed numerical uncertainty\n".format(diff.amplitude('y'))
+                            elif not diff.amplitude('x') < 0.11:
+                                reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in x/h component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('x'))
+                            if not diff.amplitude('y') < 0.2:
+                                warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in y/d component ({}) significantly  exceed numerical uncertainty\n".format(diff.amplitude('y'))
                                 incon = True
-                            if not diff.amplitude('z') < 0.11:
-                                warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in z component ({}) exceed numerical uncertainty\n".format(diff.amplitude('z'))
+                            elif not diff.amplitude('y') < 0.11:
+                                reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in y/d component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('y'))
+                            if not diff.amplitude('z') < 0.2:
+                                warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in z component ({}) significantly  exceed numerical uncertainty\n".format(diff.amplitude('z'))
                                 incon = True
+                            elif not diff.amplitude('z') < 0.11:
+                                reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in z component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('z'))
                             if len(diff._get_column(scal)) > 0:
                                 if not diff.amplitude(scal) < 0.30: ## uncertainty is larger because of df conversion (2 times rounding error)
-                                    warningmsg += "Step 4: !!! IAF/Filtered(Sec): maximum differences in f component ({}) exceed numerical uncertainty -- PLEASE NOTE: COBS standard procedure is to use mean F for minute and single best F for second\n".format(diff.amplitude('f'))
+                                    warningmsg += "Step 4: IAF versus filtered second data: maximum differences in f component ({}) exceed numerical uncertainty -- PLEASE NOTE: COBS standard procedure is to use mean F for minute and single best F for second\n".format(diff.amplitude('f'))
                                     try:
                                         ttf, ttstd = diff.mean('f',std=True)
-                                        warningmsg += "Step 4: !!! IAF/Filtered(Sec): mean f = {} +/- {}\n".format(ttf,ttstd)
+                                        warningmsg += "Step 4: !!! IAF versus filtered second data: mean f = {} +/- {}\n".format(ttf,ttstd)
                                         incon = True
                                     except:
                                         pass
                             if not incon:
                                 reportmsg += "Step 4: +++ IAF/Filtered(Sec): IAF data and filtered second data is consistent\n"
                             else:
-                                reportmsg += "Step 4: !!! IAF/Filtered(Sec): found inconsistencies\n"
+                                reportmsg += "Step 4: !!! IAF versus filtered second data: found inconsistencies. Eventually the one minute data record has been cleaned but not the second data set? \n"
                                 succlst[3] = 4
                                 if self.InitialRead(diff):
                                     self.OnInitialPlot(self.plotstream)
@@ -3395,9 +3420,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         if diffh < threshold and diffz < threshold:
                             repmsg += "Step 6: yearly means between {} and {} files are consistent\n".format(source1, source2)
                         else:
-                            repmsg += "Step 6: yearly means differ between {} and {} files. BLV: H={}nT,Z={}nT; IAF: H={}nT, Z={}nT \n".format(source1, source2, hmean1,zmean1,hmean2,zmean2)
-                            warnmsg += "Step 6: yearly means differ between {} and {} files\n".format(source1, source2)
+                            repmsg += "Step 6: yearly means differ between {} and {} files. {}: H={}nT,Z={}nT; {}: H={}nT, Z={}nT \n".format(source1, source2, source1, hmean1,zmean1, source2, hmean2,zmean2)
                             success = 5
+                            if source1 == 'yearmean':
+                                repmsg += "    ->   difference might be related to data jumps within the Yearmean file, which are considered when reading this file\n"
+                                success = 4
+                            warnmsg += "Step 6: yearly means differ between {} and {} files\n".format(source1, source2)
                     else:
                         repmsg += "Step 6: did not compare yearly means of {} and {} data - select step 3 and full to perform this check \n".format(source1, source2)
                     return repmsg, warnmsg, success
@@ -3438,20 +3466,25 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 yearmeanh = np.nan
                 yearmeanf = np.nan
                 if not yearmeanpath == '':
-                    yearmeandata = read(yearmeanpath)
-                    yearmeanx = yearmeandata.ndarray[1][-1]
-                    yearmeany = yearmeandata.ndarray[2][-1]
-                    yearmeanz = yearmeandata.ndarray[3][-1]
-                    yearmeanh = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany)
-                    yearmeanf = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany + yearmeanz*yearmeanz)
-                    # extract data for year
-                    rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,minhmean,minfmean,source1='yearmean',source2='iaf',threshold=0.5)
-                    reportmsg += rep
-                    warningmsg += warn
-                    rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,blvhmean,blvfmean,source1='yearmean',source2='blv',threshold=1.0)
-                    reportmsg += rep
-                    warningmsg += warn
-                    reportmsg += "Step 6: yearlmean.imo contains data from {} until {} \n".format(num2date(yearmeandata.ndarray[0][0]).year,num2date(yearmeandata.ndarray[0][-1]).year)
+                    yearmeandata = read(yearmeanpath, debug=True)
+                    if not yearmeandata.length()[0] > 0:
+                        warningmsg += "Step 6: !!! Could not read yearmean data. Please check manually!\n"
+                        reportmsg += "Step 6: !!! Could not read yearmean data. Please check manually!\n"
+                        succlst[5] = 4
+                    else:
+                        yearmeanx = yearmeandata.ndarray[1][-1]
+                        yearmeany = yearmeandata.ndarray[2][-1]
+                        yearmeanz = yearmeandata.ndarray[3][-1]
+                        yearmeanh = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany)
+                        yearmeanf = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany + yearmeanz*yearmeanz)
+                        # extract data for year
+                        rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,minhmean,minfmean,source1='yearmean',source2='iaf',threshold=0.5)
+                        reportmsg += rep
+                        warningmsg += warn
+                        rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,blvhmean,blvfmean,source1='yearmean',source2='blv',threshold=1.0)
+                        reportmsg += rep
+                        warningmsg += warn
+                        reportmsg += "Step 6: yearlmean.imo contains data from {} until {} \n".format(num2date(yearmeandata.ndarray[0][0]).year,num2date(yearmeandata.ndarray[0][-1]).year)
 
                 if not seconddata == 'None':
                     primeheader = secdata.header
@@ -3543,16 +3576,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 reportmsg += "#######################################\n"
                 reportmsg += "Step 7:\n"
                 reportmsg += "#######################################\n"
-                reportmsg += "Def.: K values and Kp\n\n"
+                reportmsg += "Def.: checking K values\n\n"
 
                 posk = KEYLIST.index('var1')
                 # compare content of dka and iaf
                 if dkadata:
-                    dkadata = read(dkapath)
-                    if dkadata.amplitude('var1') > 9:
-                        warningmsg += 'Step 7: k values in DKA file exceed 9 !!!\n'
-                        succlst[6] = 5
-
+                    dkadata = read(dkapath,debug=True)
+                    if not dkadata.length()[0] > 0:
+                        warningmsg += 'Step 7: Could not read provided dka file !!!\n'
+                    else:
+                        if dkadata.amplitude('var1') > 9:
+                            warningmsg += 'Step 7: k values in DKA file exceed 9 !!!\n'
+                            succlst[6] = 4
                 try:
                     iafk, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth,resolution='k')
                     if iafk.amplitude('var1') > 9:
@@ -3574,11 +3609,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                 warningmsg += 'Step 7: difference between k in IAF and DKA files at {}: IAF: {}, DKA: {}\n'.format(num2date(kdiffs.ndarray[0][idx]).replace(tzinfo=None), iafk.ndarray[posk][idx], dkadata.ndarray[posk][idx])
                                 succlst[6] = 4
                     else:
-                        warningmsg += 'Step 7: k value check could not be performed\n'
-                        succlst[6] = 3
+                        warningmsg += 'Step 7: (optional) k value check with DKA not performed.\n'
+                        succlst[6] = 2
                 else:
-                    warningmsg += 'Step 7: k value check could not be performed\n'
-                    succlst[6] = 3
+                    #warningmsg += 'Step 7: k value check not performed\n'
+                    succlst[6] = 2
 
                 if succlst[6] <= 2:
                     reportmsg += "Step 7: k values ... OK\n"

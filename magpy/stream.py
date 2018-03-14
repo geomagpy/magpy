@@ -4092,16 +4092,13 @@ CALLED BY:
             #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
             #print np.min(nt), np.max(nt), sp, len(self)
             # normalized sampling rate
-            #print sp
             sp = sp/(ev-sv) # should be the best?
-            #print sp
             #sp = (ev-sv)/len(val) # does not work
-            #print sp
             x = arange(np.min(nt),np.max(nt),sp)
             #print len(x)
             if len(val)>1 and fitfunc == 'spline':
                 try:
-                    logger.error('Interpolation: Testing knots (knotsteps = {}), (len(val) = {}'.format(knotstep, len(val)))
+                    #logger.error('Interpolation: Testing knots (knotsteps = {}), (len(val) = {}'.format(knotstep, len(val)))
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
                     if len(knots) > len(val):
                         knotstep = knotstep*4
@@ -4800,6 +4797,15 @@ CALLED BY:
             flaglist = db2flaglist(db,'all')
             flgalistwithoutduplicates = self.flaglistclean(flaglist)
         """
+        # first step - remove all duplicates
+        flaglistnum = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
+        flaglistnum = np.unique(np.asarray(flaglistnum))
+        flaglist = [elem.split('___') for elem in flaglistnum]
+        flaglist= [[num2date(float(elem[0])).replace(tzinfo=None),num2date(float(elem[1])).replace(tzinfo=None),elem[2],int(elem[3]),elem[4],elem[5],num2date(float(elem[6])).replace(tzinfo=None)] for elem in flaglist]
+
+        # second step - remove all inputs without components
+        flaglist = [elem for elem in flaglist if not elem[2] == '']
+
         ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
         ## (use only last input)
         indicies = []
@@ -12287,7 +12293,7 @@ def extractDateFromString(datestring):
                 numberstr = re.findall(r'\d+',testunder[i])[0]
             except:
                 numberstr = '0'
-            if len(numberstr) > 4:
+            if len(numberstr) > 4 and int(numberstr) > 100000: # There needs to be year and month
                 tmpdaystring = numberstr
             elif len(numberstr) == 4 and int(numberstr) > 1900: # use year at the end of string
                 tmpdaystring = numberstr
@@ -12564,8 +12570,8 @@ def convertGeoCoordinate(lon,lat,pro1,pro2):
     try:
         from pyproj import Proj, transform
         p1 = Proj(init=pro1)
-        x1 = lon
-        y1 = lat
+        x1 = float(lon)
+        y1 = float(lat)
         # projection 2: WGS 84
         p2 = Proj(init=pro2)
         # transform this point to projection 2 coordinates.
