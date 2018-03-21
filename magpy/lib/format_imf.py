@@ -219,6 +219,7 @@ def readIAF(filename, headonly=False, **kwargs):
     if endtime:
         end = stream._testtime(endtime)
 
+
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
 
@@ -277,6 +278,10 @@ def readIAF(filename, headonly=False, **kwargs):
                     headers['DataDigitalSampling'] = str(float(head[11])/1000.) + ' sec'
                     headers['DataSensorOrientation'] = head[12].lower()
                     headers['DataPublicationLevel'] = '4'
+                    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min 
+                    # and numerical publevel
+                    #  IAGA code 
+                    headers['SensorID'] = head[0].strip().upper()+'min_4_0001'
                     try:
                         pubdate = datetime.strptime(str(head[13]),"%y%m")
                     except:

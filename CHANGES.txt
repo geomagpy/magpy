@@ -5,6 +5,8 @@ Installation instructions can be found on the main download page.
 ####v<0.3.99>, <2018-03-07> -- On the way to beta.
 
 v0.3.99 general:
+    + removed capital letters from package title in pypi: GeomagPy -> geomagpy
+    + switched to readme.md for all package providers
 
 v0.3.99 fixes:
     + updated flaglist2db and db2flaglist methods - considerably faster now and more reliable
@@ -13,14 +15,15 @@ v0.3.99 fixes:
               updated all texts to comply with IM rules, 
     + reading yearly mean format IYFV: less sensitive to slight variations in format
 
-
 v0.3.99 additions:
-    + added acquisition support for MARTAS, in particular mqtt support
-    + database: added Station coordinates
+    + added full acquisition support for MARTAS, in particular mqtt support
+    + added mqtt broker support
+    + database: added Station coordinates and system with epsg code
     + database: DataAcquistionLat and Longs can be lists (useful for gradiometer etc)
+    + database: added column DataDeltaValuesApplied (0,1)
 
 v0.3.99 removals:
-    None
+    + cleaned up logs and removed unnecessary log info
 
 -------------------------------------------------
 ####v<0.3.98>, <2017-12-15> -- On the way to beta.

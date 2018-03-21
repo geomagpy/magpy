@@ -6731,7 +6731,7 @@ CALLED BY:
         stream = read(datapath)
         mean = stream.mean('f')
         median = stream.mean('f',meanfunction='median')
-        stddev = stream.mean('f',meanfunction='std')
+        stddev = stream.mean('f',std=True)
         """
         percentage = kwargs.get('percentage')
         meanfunction = kwargs.get('meanfunction')

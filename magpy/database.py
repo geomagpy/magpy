@@ -73,6 +73,7 @@ string2dict(string):
 #add: ('DataAbsInfo', 'DataBaseValues', 'DataFlagList', 'DataScales')
 ### DataScales=Text-> Dict; DataBaseValues=Text
 ###
+# DataDeltaValuesApplied - have the given delta values already been applied to the table: 0 - no , 1 - yes
  
 
 
@@ -88,7 +89,7 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
                    'DataElevation','DataElevationRef','DataFlagModification','DataAbsFunc',
                    'DataAbsDegree','DataAbsKnots','DataAbsMinTime','DataAbsMaxTime','DataAbsDate',
                    'DataRating','DataComments','DataSource','DataAbsFunctionObject',
-                   'DataDeltaValues', 'DataTerms', 'DataReferences',
+                   'DataDeltaValues', 'DataDeltaValuesApplied', 'DataTerms', 'DataReferences',
                    'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
                    'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta','DataAbsInfo','DataBaseValues','DataArchive']
 
@@ -103,9 +104,11 @@ DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30
                     'TEXT','TEXT','CHAR(50)',
                     'TEXT','CHAR(10)','CHAR(50)','CHAR(20)',
                     'INT','DECIMAL(20,9)','CHAR(50)','CHAR(50)','CHAR(50)',
-                    'CHAR(10)','TEXT','CHAR(100)','TEXT','CHAR(100)',
-                    'TEXT','TEXT','CHAR(50)','CHAR(50)','CHAR(50)','CHAR(100)',
-                    'CHAR(50)','TEXT','TEXT','TEXT','TEXT','TEXT','CHAR(50)']
+                    'CHAR(10)','TEXT','CHAR(100)','TEXT',
+                    'TEXT','INT','TEXT','TEXT',
+                    'CHAR(50)','CHAR(50)','CHAR(50)',
+                    'CHAR(100)','CHAR(50)',
+                    'TEXT','TEXT','TEXT','TEXT','TEXT','CHAR(50)']
 
 
 SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','SensorGroup','SensorDataLogger',
@@ -1482,7 +1485,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
         if sm in ['OW','ow','Ow','RCS','rcs','Rcs'] or 'Status' in sensorid or 'status' in sensorid:
             # Avoid sampling rate criteria for data revision for rcs and one wire sensors, as well
             # as any sensorid containing Status information
-            print ("dbdatainfo: Skipping SamplingRate for data revision")
+            #print ("dbdatainfo: Skipping SamplingRate for data revision")
             SKIPKEYS.append('DataSamplingRate')
 
         for key in datakeydict:
@@ -1889,6 +1892,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         nosingleelem = True
         if len(col) > 0 and not False in checkEqual3(col):
             #print ("Found only identical values of {} in column {}".format(col[0],idx))
+            # TODO Unicode equal comparison in the following
             if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
                 array[idx] = np.asarray([])
                 nosingleelem = False

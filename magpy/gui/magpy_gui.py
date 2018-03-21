@@ -408,6 +408,12 @@ class PlotPanel(wx.Panel):
                 mqttimport = True
             except:
                 mqttimport = False
+                dlg = wx.MessageDialog(self, "Could not import required packages!\n"
+                        "Make sure that the python package paho-mqtt is installed\n",
+                        "MARTAS monitor failed", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                self.changeStatusbar("Using MQTT monitor failed ... Ready")
+                dlg.Destroy()
             if mqttimport:
                 client = mqtt.Client()
                 client.on_connect = colsup.on_connect
@@ -5162,8 +5168,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
             self.menu_p.abs_page.varioTextCtrl.SetValue(path)
-            self.options['divariopath'] = os.path.join(path,'*')
+            self.options['divariopath'] = path
         dialog.Destroy()
+        # Select an extension as well
 
     def onDefineScalar(self,event):
         """
@@ -5178,7 +5185,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
             self.menu_p.abs_page.scalarTextCtrl.SetValue(path)
-            self.options['discalarpath'] = os.path.join(path,'*')
+            self.options['discalarpath'] = path
         dialog.Destroy()
 
     def onDIAnalyze(self,event):
@@ -5187,7 +5194,19 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         # Get parameters from options
         divariopath = self.options.get('divariopath','')
+        vext = self.menu_p.abs_page.varioextTextCtrl.GetValue()
+        #if vext not in ['*.*','*.BIN','*.bin','*.sec','*.SEC','*.min','*.MIN','*.cdf','*.CDF']:
+        #    vext = '*'
+        divariopath = divariopath.replace('*','')
+        divariopath = os.path.join(divariopath,vext)
+            
         discalarpath = self.options.get('discalarpath','')
+        sext = self.menu_p.abs_page.scalarextTextCtrl.GetValue()
+        #if sext not in ['*.*','*.BIN','*.bin','*.sec','*.SEC','*.min','*.MIN','*.cdf','*.CDF']:
+        #    sext = '*'
+        discalarpath = discalarpath.replace('*','')
+        discalarpath = os.path.join(discalarpath,sext)
+
         stationid= self.options.get('stationid','')
         abstype= self.options.get('ditype','')
         azimuth= self.options.get('diazimuth','')
@@ -5227,12 +5246,30 @@ Suite 330, Boston, MA  02111-1307  USA"""
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
 
-            # TODO include deltaD, deltaI, beta into the absoluteAnalysisCall
             if not azimuth == '':
                 azimuth = float(azimuth)
                 absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
             else:
                 absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+
+            try:
+                if not divariopath == '' and not discalapath == '': 
+                    variid = absstream.header.get('SensorID').split('_')[1]
+                    scalid = absstream.header.get('SensorID').split('_')[2]
+                    msgtxt = ''
+                    if variid == 'None' or variid == 'Unkown':
+                        msgtxt = 'variometer'
+                        if scalid == 'None' or scalid == 'Unkown':
+                            msgtxt = 'variometer and scalar magnetometer'
+                    elif scalid == 'None' or scalid == 'Unkown':
+                        msgtxt = 'scalar magnetometer'
+                    if not msgtxt == '':
+                        fulltxt = "Could not identify {} data.\n Please check paths.".format(msgtxt)
+                        dlg = wx.MessageDialog(self, fulltxt, "Data paths", wx.OK|wx.ICON_INFORMATION)
+                        dlg.ShowModal()
+                        dlg.Destroy()
+            except:
+               pass
 
             sys.stdout=prev_redir
             # only if more than one point is selected
@@ -5576,6 +5613,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #print ("TEST", colsup.identifier)
 
         if mqttimport:
+            # TODO stationcode is currently hardcoded in collectorsupport - change that !!
             client = mqtt.Client()
             client.on_connect = colsup.on_connect
             client.on_message = colsup.on_message

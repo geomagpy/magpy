@@ -164,10 +164,10 @@ def readIAGA(filename, headonly=False, **kwargs):
                             stream.header['DataPublicationDate'] = val
                 else:
                     # optional comment part
-                    if key.find('# V-Instrument') > -1:
-                        if not val == '':
-                            stream.header['SensorID'] = val
-                    elif key.find('# PublicationDate') > -1:
+                    #if key.find('# V-Instrument') > -1:
+                    #    if not val == '':
+                    #        stream.header['SensorID'] = val
+                    if key.find('# PublicationDate') > -1:
                         if not val == '':
                             stream.header['DataPublicationDate'] = val
                     elif key.find('# K9-limit') > -1:
@@ -318,6 +318,17 @@ def readIAGA(filename, headonly=False, **kwargs):
                 #data.append(row)
 
     fh.close()
+
+    if stream.header.get('SensorID','') == '':
+        # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min 
+        # and numerical publevel
+        #  IAGA code
+        try:
+            tmp, fileext = os.path.splitext(filename)
+            stream.header['SensorID'] = stream.header.get('StationIAGAcode','').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
+        except:
+            pass
+
     if not comment == '':
         stream.header['DataComments'] = comment
     for idx, elem in enumerate(array):

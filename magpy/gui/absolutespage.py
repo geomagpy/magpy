@@ -28,6 +28,7 @@ class AbsolutePage(wx.Panel):
         self.dipathlist = []
         self.createControls()
         self.doLayout()
+        self.extension = '*'
 
     # Widgets
     def createControls(self):
@@ -38,9 +39,13 @@ class AbsolutePage(wx.Panel):
         self.defineVarioButton = wx.Button(self,-1,"Variometer path",size=(160,30))
         self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.varioextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
+        self.varioextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,40))
         self.defineScalarButton = wx.Button(self,-1,"Scalar path",size=(160,30))
         self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.scalarextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
+        self.scalarextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,40))
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
         self.logLabel = wx.StaticText(self, label="Logging:")
         self.advancedButton = wx.Button(self,-1,"Set parameter",size=(160,30))
@@ -84,8 +89,12 @@ class AbsolutePage(wx.Panel):
                  (self.diTextCtrl, expandOption),
                  (self.defineVarioButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.varioTextCtrl, expandOption),
+                 (self.varioextLabel, noOptions),
+                 (self.varioextTextCtrl, expandOption),
                  (self.defineScalarButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.scalarTextCtrl, expandOption),
+                 (self.scalarextLabel, noOptions),
+                 (self.scalarextTextCtrl, expandOption),
                   emptySpace,
                   emptySpace,
                  (self.diLabel, noOptions),

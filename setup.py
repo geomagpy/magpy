@@ -6,16 +6,16 @@ except ImportError:
 exec(open('magpy/version.py').read())
 
 setup(
-    name='GeomagPy',
+    name='geomagpy',
     version=__version__,
     author='R. Leonhardt, R. Bailey, M. Miklavec',
     author_email='roman.leonhardt@zamg.ac.at',
     packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui'],
     scripts=['magpy/gui/xmagpy','magpy/gui/xmagpyw'],
-    url='http://pypi.python.org/pypi/GeomagPy/',
+    url='http://pypi.python.org/pypi/geomagpy/',
     license='LICENSE.txt',
     description='Geomagnetic analysis tools.',
-    long_description=open('README.rst').read(),
+    long_description=open('README.md').read(),
     package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.bin','examples/*.txt']},
     install_requires=[
         "matplotlib >= 0.9.8",
