@@ -1524,6 +1524,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     skipvariodb = kwargs.get('skipvariodb')
     skipscalardb = kwargs.get('skipscalardb')
     magrotation = kwargs.get('magrotation') ### if true then compensation fields are applied
+    compensation = kwargs.get('compensation') ### if true then compensation fields are applied
     alpha = kwargs.get('alpha')
     offset = kwargs.get('offset')
     starttime = kwargs.get('starttime')
@@ -1704,7 +1705,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-            print("Length of Variodata:", variostr.length()[0])
+            print("Length of Variodata ({}): {}".format(variodata,variostr.length()[0]))
             if not variostr.header.get('SensorID') == '':
                  varioid = variostr.header.get('SensorID')
             if db and not skipvariodb:
@@ -1719,14 +1720,39 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
                 except:
                     print("Failed to obtain header information from data base")
+                """
+                try:
+                    # identifying compensation values and applying them
+                    deltas = variostr.header.get('DataDeltaValues','')
+                    deltasapplied = int(variostr.header.get('DataDeltaValuesApplied',0))
+
+                    if deltas == '' and not deltasapplied == 1:
+                       # Check data compensation values
+                       try:
+                           xcorr = float(variostr.header.get('DataCompensationX',''))
+                           ycorr = float(variostr.header.get('DataCompensationY',''))
+                           zcorr = float(variostr.header.get('DataCompensationZ',''))
+                           if not xcorr=='' and not ycorr=='' and not zcorr=='':
+                               deltas = 'x_{},y_{},z_{}'.format(-1*xcorr*1000.,-1*ycorr*1000.,-1*zcorr*1000.)
+                               variostr.header['DataDeltaValues'] = deltas
+                       except:
+                           pass
+                    else:
+                       print("Compensation: Delta values not empty or compensation already applied.")
+                except:
+                    print("Extracting compensation values failed")
+                """
                 try:
                     print("Applying delta values from db")
                     variostr = dbase.applyDeltas(db,variostr)
                 except:
                     print("Applying delta values failed")
-            if db and magrotation:
+            if db and (magrotation or compensation):
+                print("absoluteAnalysis: Applying compensation fields to variometer data ...")
+                deltasapplied = int(variostr.header.get('DataDeltaValuesApplied',0))
+
                 try:   # Compensation values are essential for correct rotation estimates
-                    if not offset:  # if offset is provided then it overrides DB contents
+                    if not offset and not deltasapplied == 1:  # if offset is provided then it overrides DB contents
                         print("Compensation values from db:")
                         offdict = {}
                         xcomp = variostr.header.get('DataCompensationX','0')
@@ -1738,10 +1764,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             offdict['y'] = -1*float(ycomp)*1000.
                         if not float(zcomp)==0.:
                             offdict['z'] = -1*float(zcomp)*1000.
-                        print (' -- applying compensation fields',offdict, len(offdict))
+                        print (' -- applying compensation fields: x={}, y={}, z={}'.format(xcomp,ycomp,zcomp))
                         variostr = variostr.offset(offdict)
                 except:
                     print("Applying compensation values failed")
+            if db and magrotation:
                 try:
                     print("Rotation parameters from db:")
                     if not alpha:
@@ -1823,26 +1850,27 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             fcol = KEYLIST.index('f')
             dfcol = KEYLIST.index('df')
             if not len(scalarstr.ndarray[fcol]) > 0 and not len(scalarstr.ndarray[dfcol]) > 0:
-                print ("absoluteAnalysis: No F data found")
+                print ("absoluteAnalysis: No F data found in file")
                 pass
             elif not len(scalarstr.ndarray[fcol]) > 0:
                 scalarstr = scalarstr.calc_f()
             else:
                 pass
-            print("Length of Scalardata:", scalarstr.length()[0])
+            print("Length of Scalardata {}: {}".format(scalardata,scalarstr.length()[0]))
+            print (scalarstr.header.get('SensorID') , scalarstr.header.get('DataID'))
             if db and not skipscalardb:
                 try:
-                    scflaglist = dbase.db2flaglist(db,scalarstr.header['SensorID'])
+                    scflaglist = dbase.db2flaglist(db,scalarstr.header.get('SensorID'))
                     scalarstr = scalarstr.flag(scflaglist)
                 except:
                     print("Failed to obtain flagging information from data base")
                 try:
                     print("Now getting header information")
-                    scalarstr.header = dbase.dbfields2dict(db,scalarstr.header['SensorID']+'_0001')
+                    scalarstr.header = dbase.dbfields2dict(db,scalarstr.header.get('SensorID')+'_0001')
                 except:
                     print("Failed to obtain header information from data base")
                 try:
-                    print("Applying delta values from database", scalarstr.header['SensorID'])
+                    print("Applying delta values from database for {}".format(scalarstr.header.get('SensorID')))
                     scalarstr = dbase.applyDeltas(db,scalarstr)
                     if not deltaF == 0:
                         print (" ------------  IMPORTANT ----------------")

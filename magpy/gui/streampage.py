@@ -69,6 +69,7 @@ class StreamPage(wx.Panel):
         self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
         self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
+        self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(160,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Select components",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
@@ -143,7 +144,7 @@ class StreamPage(wx.Panel):
                  'self.FlagIDComboBox, expandOption',
                  'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
+                 'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions']
 
 

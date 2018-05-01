@@ -1094,6 +1094,8 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.UnitText = wx.StaticText(self,label="seconds")
         self.ThresholdTextCtrl = wx.TextCtrl(self, value=self.threshold)
         self.TimerangeTextCtrl = wx.TextCtrl(self, value=self.timerange)
+        self.MarkAllCheckBox = wx.CheckBox(self, label="Mark outliers in",size=(160,30))
+        self.MarkText = wx.StaticText(self,label="all components")
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
@@ -1117,7 +1119,10 @@ class StreamFlagOutlierDialog(wx.Dialog):
         contlst.append((self.TimerangeTextCtrl, expandOption))
         contlst.append((self.UnitText, noOptions))
         contlst.append(emptySpace)
+        contlst.append((self.MarkAllCheckBox, noOptions))
         contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.MarkText, noOptions))
         contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
@@ -2256,6 +2261,154 @@ class AnalysisBaselineDialog(wx.Dialog):
             self.parameterstring = "Adopted Baseline 1: \nStarttime: {}, Function: {}, Knotstep: {}, Degree: {}, Endtime: {}\n".format(starttime,self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),endtime)
             self.parameterTextCtrl.SetValue(self.parameterstring)
         dlg.Destroy()
+
+class AnalysisFlagsDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+    def __init__(self, parent, title, stats, flaglist, stream):
+        super(AnalysisFlagsDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.stats = stats
+        self.fllist = flaglist
+        self.plotstream = stream
+        self.newfllist = []
+        self.mod = False
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.statsLabel = wx.StaticText(self,label="Flagging statistics")
+        self.statsTextCtrl = wx.TextCtrl(self,value=self.stats,size=(400,300),style=wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
+        self.modifyButton = wx.Button(self, label='Modify Flags')
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        contlst.append((self.statsLabel, noOptions))
+        contlst.append((self.statsTextCtrl, expandOption))
+        contlst.append((self.modifyButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.modifyButton.Bind(wx.EVT_BUTTON, self.OnModify)
+
+    def OnModify(self, e):
+        # open modification dlg
+        dlg = AnalysisFlagmodDialog(None, title='Analysis: Modify flags')
+        if dlg.ShowModal() == wx.ID_OK:
+            select = dlg.selectComboBox.GetValue()
+            parameter = dlg.parameterComboBox.GetValue()
+            value = dlg.valueTextCtrl.GetValue()
+            newvalue = dlg.newvalueTextCtrl.GetValue()
+            self.newfllist = self.plotstream.flaglistmod(mode=select, flaglist=self.fllist, parameter=parameter, value=value, newvalue=newvalue) #, starttime=None, endtime=None)
+            self.stats = self.plotstream.flagliststats(self.newfllist,intensive=True, output='string')
+            self.mod = True
+            self.statsTextCtrl.SetValue(self.stats)
+        dlg.Destroy()
+
+class AnalysisFlagmodDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+    def __init__(self, parent, title):
+        super(AnalysisFlagmodDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.select = ['select','replace','delete']
+        self.parameter = ['key', 'sensorid', 'flagnumber', 'comment']
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.selectLabel = wx.StaticText(self,label="modification type")
+        self.parameterLabel = wx.StaticText(self,label="flag parameter")
+        self.valueLabel = wx.StaticText(self,label="value")
+        self.newvalueLabel = wx.StaticText(self,label="new value")
+        self.starttimeLabel = wx.StaticText(self,label="start time")
+        self.endtimeLabel = wx.StaticText(self,label="end time")
+        self.selectComboBox = wx.ComboBox(self, choices=self.select,
+                 style=wx.CB_DROPDOWN, value=self.select[0],size=(160,-1))
+        self.parameterComboBox = wx.ComboBox(self, choices=self.parameter,
+                 style=wx.CB_DROPDOWN, value=self.parameter[0],size=(160,-1))
+        self.valueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
+        self.newvalueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
+        self.starttimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
+        self.endtimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        contlst.append((self.selectLabel, noOptions))
+        contlst.append((self.parameterLabel, noOptions))
+        contlst.append((self.valueLabel, noOptions))
+        contlst.append((self.newvalueLabel, noOptions))
+        contlst.append((self.starttimeLabel, noOptions))
+        contlst.append((self.endtimeLabel, noOptions))
+        contlst.append((self.selectComboBox, noOptions))
+        contlst.append((self.parameterComboBox, noOptions))
+        contlst.append((self.valueTextCtrl, expandOption))
+        contlst.append((self.newvalueTextCtrl, expandOption))
+        contlst.append((self.starttimeTextCtrl, expandOption))
+        contlst.append((self.endtimeTextCtrl, expandOption))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 6
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
 
 # ###################################################
 #    DI page

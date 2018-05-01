@@ -55,6 +55,7 @@ class AnalysisPage(wx.Panel):
         self.meanButton = wx.Button(self,-1,"Mean",size=(160,30))
         self.maxButton = wx.Button(self,-1,"Maxima",size=(160,30))
         self.minButton = wx.Button(self,-1,"Minima",size=(160,30))
+        self.flagmodButton = wx.Button(self,-1,"Flags",size=(160,30))
 
         # 3 Line
         self.offsetButton = wx.Button(self,-1,"Offsets",size=(160,30))
@@ -65,10 +66,11 @@ class AnalysisPage(wx.Panel):
         self.activityButton = wx.Button(self,-1,"Activity",size=(160,30))
         self.deltafButton = wx.Button(self,-1,"Delta F",size=(160,30))
         self.baselineButton = wx.Button(self,-1,"Baseline",size=(160,30))
+        self.calcfButton = wx.Button(self,-1,"Calculate F",size=(160,30))
 
         # 5 Line
-        self.powerButton = wx.Button(self,-1,"Power",size=(160,30))
-        self.spectrumButton = wx.Button(self,-1,"Spectrum",size=(160,30))
+        self.powerButton = wx.Button(self,-1,"Power*",size=(160,30))
+        self.spectrumButton = wx.Button(self,-1,"Spectrum*",size=(160,30))
 
         # 5 Line
         #self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
@@ -121,7 +123,7 @@ class AnalysisPage(wx.Panel):
                  (self.maxButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.minButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.meanButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+                 (self.flagmodButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.head3Label, noOptions),
                   emptySpace,
                  (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
@@ -133,11 +135,13 @@ class AnalysisPage(wx.Panel):
                  (self.deltafButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.baselineButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+                 (self.calcfButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.head5Label, noOptions),
                   emptySpace,
                  (self.powerButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.spectrumButton, dict(flag=wx.ALIGN_CENTER))]:
+                 (self.spectrumButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
+                  emptySpace]:
             gridSizer.Add(control, **options)
 
         for control, options in \

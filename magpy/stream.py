@@ -231,19 +231,21 @@ try:
         nasacdfdir = findpath('libcdf.dll','C:\CDF_Distribution') ## new path since nasaCDF3.6
         if not nasacdfdir:
             nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
-        #print nasacdfdir
-        #os.putenv("CDF_LIB", nasacdfdir)
-        os.environ["CDF_LIB"] =str(nasacdfdir)
-        logger.info("Using CDF lib in %s" % nasacdfdir)
-        try:
-            import spacepy.pycdf as cdf
-            logger.info("... success")
-        except KeyError as e:
-            # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
-            badimports.append(e)
-        except:
-            logger.info("... Could not import spacepy")
-            pass
+        if nasacdfdir:
+            os.environ["CDF_LIB"] =str(nasacdfdir)
+            logger.info("Using CDF lib in %s" % nasacdfdir)
+            try:
+                import spacepy.pycdf as cdf
+                logger.info("... success")
+            except KeyError as e:
+                # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
+                badimports.append(e)
+            except:
+                logger.info("... Could not import spacepy")
+                pass
+        else:
+            # create exception and try linux
+            x=1/0
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
         logger.info("using CDF lib in /usr/local/cdf")
@@ -744,6 +746,7 @@ CALLED BY:
         #for key in KEYLIST:
         #    setattr(self,key,np.asarray([]))
         #self.header = {'Test':'Well, it works'}
+        self.progress = 0
 
     # ------------------------------------------------------------------------
     # A. Standard functions and overrides for list like objects
@@ -942,15 +945,18 @@ CALLED BY:
         """
         DEFINITION:
             Find a line within the container which contains the selected time step
+            or the first line following this timestep (since 0.3.99 using mode 'argmax')
         VARIABLES:
             startidx    (int) index to start search with (speeding up)
             endidx      (int) index to end search with (speeding up)
+            mode        (string) define search mode (fastest would be 'argmax')
 
         RETURNS:
             The index position of the line and the line itself
         """
         startidx = kwargs.get('startidx')
         endidx = kwargs.get('endidx')
+        mode = kwargs.get('mode')
 
         #try:
         #    from bisect import bisect
@@ -968,9 +974,16 @@ CALLED BY:
             else:
                 ticol = self.ndarray[0]
             try:
+                if mode =='argmax':
+                    ## much faster since 0.3.99 (used in flag_stream)
+                    indexes = [np.argmax(ticol>=st)]
+                else:
+                    ## the following method is used until 0.3.98
+                    indexes = [i for i,x in enumerate(ticol) if x == st]    ### FASTER
+                # Other methods
+                # #############
                 #indexes = [i for i,x in enumerate(ticol) if np.allclose(x,st,rtol=1e-14,atol=1e-17)]  # if the two time equal within about 0.7 milliseconds
                 #indexes = [bisect(ticol, st)]   ## SELECTS ONLY INDEX WHERE VALUE SHOULD BE inserted
-                indexes = [i for i,x in enumerate(ticol) if x == st]    ### FASTER
                 #indexes = [ticol.index(st)]
                 #print("findtime", indexes)
                 if not len(indexes) == 0:
@@ -1381,7 +1394,15 @@ CALLED BY:
         ind = KEYLIST.index(key)
 
         if len(self.ndarray[0]) > 0:
-            self.ndarray[ind] = np.asarray([])
+
+            try:
+                self.ndarray[ind] = np.asarray([])
+            except:
+                # Some array don't allow that, shape error e.g. PYSTRING -> then use this
+                array = [np.asarray(el) if idx is not ind else np.asarray([]) for idx,el in enumerate(self.ndarray)]
+                self.ndarray = np.asarray(array)
+
+
             colkey = "col-%s" % key
             colunitkey = "unit-col-%s" % key
             try:
@@ -2894,6 +2915,63 @@ CALLED BY:
         return self
 
 
+    def compensation(self, **kwargs):
+        """
+        DEFINITION:
+            Method for magnetic variometer data:
+            Applies eventually present compensation field values in the header
+            to the vector x,y,z.
+            Compensation fields are provided in mirco Tesla (according to LEMI data).
+            Please note that any additional provided "DataDeltaValues" are also applied
+            by default (to avoid use option skipdelta=True). 
+            Calculation:
+            
+            This method uses header information data.header[''].
+            After successfull application data.header['DeltaValuesApplied']
+            is set to 1.
+
+        PARAMETERS:
+         Kwargs:
+            - skipdelta   (bool)  if True then DataDeltaValues are ignored
+        RETURNS:
+            - DataStream with compensation values appliesd to xyz values
+            - original dataStream if no compensation values are found
+
+        EXAMPLES:
+            >>> compstream = stream.compensation()
+        """
+
+        skipdelta = kwargs.get('skipdelta')
+
+        if not self.length()[0] > 0:
+            return self
+ 
+        stream = self.copy()
+        logger.info("compensation: applying compensation field values to variometer data ...")
+        deltas = stream.header.get('DataDeltaValues','')
+        if not skipdelta and not deltas=='':
+            logger.info("compensation: applying delta values from header['DataDeltaValues'] first")
+            stream = stream.offset(deltas)
+            stream.header['DataDeltaValuesApplied'] = 1
+
+        offdict = {}
+        xcomp = stream.header.get('DataCompensationX','0')
+        ycomp = stream.header.get('DataCompensationY','0')
+        zcomp = stream.header.get('DataCompensationZ','0')
+        if not float(xcomp)==0.:
+            offdict['x'] = -1*float(xcomp)*1000.
+        if not float(ycomp)==0.:
+            offdict['y'] = -1*float(ycomp)*1000.
+        if not float(zcomp)==0.:
+            offdict['z'] = -1*float(zcomp)*1000.
+        logger.info(' -- applying compensation fields: x={}, y={}, z={}'.format(xcomp,ycomp,zcomp))
+        if len(offdict) > 0:
+            stream = stream.offset(offdict)
+            stream.header['DataDeltaValuesApplied'] = 1
+
+        return stream
+
+
     def dailymeans(self, keys=['x','y','z','f'], offset = 0.5, **kwargs):
         """
     DEFINITION:
@@ -2968,16 +3046,16 @@ CALLED BY:
             #for idx,pos in enumerate(poslst):
                 array[idx+1].append(np.mean(sel[pos],percentage=percentage))
                 """
-                data.header['col-'+KEYLIST[idx+1]] = self.header.get('col-'+KEYLIST[pos])
-                data.header['unit-col-'+KEYLIST[idx+1]] = self.header.get('unit-col-'+KEYLIST[pos])
+                data.header['col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('col-'+KEYLIST[pos]))
+                data.header['unit-col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[pos]))
                 diff = pos-idx
             for idx,dpos in enumerate(deltaposlst):
                 #if len(sttmp.ndarray[idx]) > 0:
                 me,std = sttmp.mean(KEYLIST[idx+diff],percentage=percentage, std=True)
                 array[dpos].append(std)
                 #array[dpos].append(np.std(sel[idx+diff]))
-                data.header['col-'+KEYLIST[dpos]] = 'sigma '+self.header.get('col-'+KEYLIST[idx+diff])
-                data.header['unit-col-'+KEYLIST[dpos]] = self.header.get('unit-col-'+KEYLIST[idx+diff])
+                data.header['col-'+KEYLIST[dpos]] = 'sigma {}'.format(self.header.get('col-'+KEYLIST[idx+diff]))
+                data.header['unit-col-'+KEYLIST[dpos]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[idx+diff]))
         data.header['DataFormat'] = 'MagPyDailyMean'
 
         array = [np.asarray(el) for el in array]
@@ -4457,11 +4535,14 @@ CALLED BY:
         - keys:         	(list) List of keys to evaluate. Default = all numerical
         - threshold:   		(float) Determines threshold for outliers.
                         	1.5 = standard
-                        	5 = keeps storm onsets in
-                        	4 = Default as comprimise.
-        - timerange:    	(timedelta Object) Time range. Default = timedelta(hours=1)
+                        	5 = weak condition, keeps storm onsets in (default)
+                        	4 = a useful comprimise to be used in automatic analysis.
+        - timerange:    	(timedelta Object) Time range. Default = samlingrate(sec)*600
         - stdout:        	prints removed values to stdout
         - returnflaglist	(bool) if True, a flaglist is returned instead of stream
+        - markall       	(bool) default is False. If True, all components (provided keys)
+                                 are flagged even if outlier is only detected in one. Useful for
+                                 vectorial data 
     RETURNS:
         - stream:       (DataStream Object) Stream with flagged data.
 
@@ -4471,6 +4552,7 @@ CALLED BY:
 
     APPLICATION:
         """
+
         # Defaults:
         timerange = kwargs.get('timerange')
         threshold = kwargs.get('threshold')
@@ -4501,11 +4583,11 @@ CALLED BY:
         # other (vector): pos 2
 
         if not len(self.ndarray[0]) > 0:
-            logger.info('flag_outlier: No ndarray - starting remove_outlier.')
+            logger.info('flag_outlier: No ndarray - starting old remove_outlier method.')
             self = self.remove_outlier(keys=keys,threshold=threshold,timerange=timerange,stdout=stdout,markall=markall)
             return self
 
-        logger.info('flag_outlier: Starting outlier removal.')
+        logger.info('flag_outlier: Starting outlier identification...')
 
         flagidx = KEYLIST.index('flag')
         commentidx = KEYLIST.index('comment')
@@ -4526,7 +4608,9 @@ CALLED BY:
             if not len(self.ndarray[flagpos]) > 0:
                 print("Flag_outlier: No data for key %s - skipping" % key)
                 break
-            #print key, flagpos
+
+            print ("-------------------------")
+            print ("Dealing with key:", key)
 
             st = 0
             et = len(self.ndarray[0])
@@ -4670,6 +4754,7 @@ CALLED BY:
         >>> flaglist = db.db2flaglist(db,sensorid_data)
         >>> data = data.flag(flaglist)
         """
+        self.progress = 0
 
         # get time range of stream:
         st,et = self._find_t_limits()
@@ -4677,7 +4762,7 @@ CALLED BY:
         et = date2num(et)
 
         lenfl = len(flaglist)
-        print ("Flag: Found flaglist of length {}".format(lenfl))
+        logger.info("Flag: Found flaglist of length {}".format(lenfl))
         flaglist = [line for line in flaglist if date2num(self._testtime(line[1])) >= st]
         flaglist = [line for line in flaglist if date2num(self._testtime(line[0])) <= et]
         # Sort flaglist accoring to startdate (used to speed up flagging procedure)
@@ -4706,17 +4791,15 @@ CALLED BY:
             flaglist = flagclean(flaglist)
 
         lenfl = len(flaglist)
-        print ("Flag: Relevant flags: {}".format(lenfl))
+        logger.info("Flag: Relevant flags: {}".format(lenfl))
 
         ## Determinig sampling rate for nearby flagging
         sr = self.samplingrate()
-        #print("###############################################")
-        #print("2",flaglist)
-        #x=1/0
+
         if lenfl > 0:
-            #print "flag: going through flaglist", st,et
             for i in range(lenfl):
-                if removeduplicates or debug:
+                self.progress = (float(i)/float(lenfl)*100.)
+                if removeduplicates or debug or lenfl > 100:
                     if i == int(lenfl/5.):
                         print("Flag: 20 percent done")
                     if i == int(lenfl/5.*2.):
@@ -4740,7 +4823,7 @@ CALLED BY:
 
         return self
 
-    def flagliststats(self,flaglist, intensive=False):
+    def flagliststats(self,flaglist, intensive=False, output='stdout'):
         """
         DESCRIPTION:
             Provides some information on flag statistics
@@ -4751,13 +4834,13 @@ CALLED BY:
             self.flagliststats(flaglist)
         """
         amountlist = []
-        print ('##########################################')
-        print ('           Flaglist statistics            ')
-        print ('##########################################')
-        print ('')
-        print ('A) Total contents: {}'.format(len(flaglist)))
-        print ('')
-        print ('B) Content for each ID:')
+        outputt = '##########################################\n'
+        outputt += '           Flaglist statistics            \n'
+        outputt += '##########################################\n'
+        outputt += '\n'
+        outputt += 'A) Total contents: {}\n'.format(len(flaglist))
+        outputt += '\n'
+        outputt += 'B) Content for each ID:\n'
         #print (flaglist[0], len(flaglist[0]))
         if len(flaglist[0]) > 6:
             ids = [el[5] for el in flaglist]
@@ -4776,15 +4859,17 @@ CALLED BY:
                     num = len([el for el in flagli if reason == el[4]])
                     intensiveinfo.append([reason,num])
                 intensiveinfo = sorted(intensiveinfo,key=lambda x: x[1])
-                intensiveinfo = ["{} : {}".format(e[0],e[1]) for e in intensiveinfo]
+                intensiveinfo = ["{} : {}\n".format(e[0],e[1]) for e in intensiveinfo]
                 amountlist[-1].append(intensiveinfo)
         amountlist = sorted(amountlist,key=lambda x: x[1])
         for el in amountlist:
-            print ("Dataset: {} \t Amount: {}".format(el[0],el[1]))
+            outputt += "Dataset: {} \t Amount: {}\n".format(el[0],el[1])
             if intensive:
                 for ele in el[2]:
-                    print ("   {}".format(ele))
-
+                    outputt += "   {}".format(ele)
+        if output=='stdout':
+            print (outputt)
+        return outputt
 
     def flaglistclean(self,flaglist):
         """
@@ -4794,8 +4879,9 @@ CALLED BY:
         PARAMETER:
             flaglist   (list) flaglist to be investigated
         APPLICTAION:
+            stream = DataStream()
             flaglist = db2flaglist(db,'all')
-            flgalistwithoutduplicates = self.flaglistclean(flaglist)
+            flaglistwithoutduplicates = stream.flaglistclean(flaglist)
         """
         # first step - remove all duplicates
         flaglistnum = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
@@ -4916,8 +5002,8 @@ CALLED BY:
     def flaglistmod(self, mode='select', flaglist=[], parameter='key', value=None, newvalue=None, starttime=None, endtime=None):
         """
         DEFINITION:
-            Extract/Replace/Delete information in flaglist
-            , keys, flagnumber, comment, startdate, enddate=None
+            Select/Replace/Delete information in flaglist
+            parameters are key, flagnumber, comment, startdate, enddate=None
             mode delete: if only starttime and endtime are provided then all data inbetween is removed,
                          if parameter and value are provided this data is removed, eventuall
                          only between start and endtime
@@ -4932,6 +5018,8 @@ CALLED BY:
             num = 3
         elif parameter == 'comment':
             num = 4
+        elif parameter == 'sensorid':
+            num = 5
 
         if mode in ['select','replace'] or (mode=='delete' and value):
             if starttime:
@@ -4981,6 +5069,11 @@ CALLED BY:
         """
         DEFINITION:
             Add a specific input to a flaglist
+            Flaglist elements look like
+            [st,et,key,flagnumber,comment,sensorid,now]
+
+        APPLICATION:
+            newflaglist = stream.flaglistadd(oldflaglist,sensorid, keys, flagnumber, comment, startdate, enddate)
         """
         # convert start and end to correct format
         st = self._testtime(startdate)
@@ -5025,10 +5118,10 @@ CALLED BY:
     APPLICATION:
         """
 
-        sr = samplingrate
+        # TODO:
+        # make flag_stream to accept keylists -> much faser for multiple column data
 
-        #t1 = datetime.utcnow()
-        #print("starting flag_stream method at",t1)
+        sr = samplingrate
 
         if not key in KEYLIST:
             logger.error("flag_stream: %s is not a valid key." % key)
@@ -5093,23 +5186,14 @@ CALLED BY:
                 return start,end
 
         pos = FLAGKEYLIST.index(key)
-        #poslst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
-        #pos = poslst[0]
-
-        #t1 = datetime.utcnow()
-        #print("Defined start and enddate",t1)
 
         if debug:
             print("Flag",startdate, enddate)
-            # check for startdate in stream
 
         start = date2num(startdate)
         end = date2num(enddate)
         mint = np.min(self.ndarray[0])
         maxt = np.max(self.ndarray[0])
-
-        #t1 = datetime.utcnow()
-        #print("Preparations for find neasrest done",t1)
 
         if start < mint and end < mint:
             st = 0
@@ -5118,8 +5202,6 @@ CALLED BY:
             st = 0
             ed = 0
         else:
-            if debug:
-                print ("Using Findtime... slow")
             ### Modified to use nearest value to be flagged if flagtimes
             ### overlap with streams timerange
             ### find_nearest is probably very slowly...
@@ -5127,7 +5209,8 @@ CALLED BY:
             # Get start and end indicies:
             if debug:
                 ti1 = datetime.utcnow()
-            st, ls = self.findtime(startdate)
+            st, ls = self.findtime(startdate,mode='argmax')
+            # st is the starttime, ls ?   -- modification allow to provide key list!!
             if debug:
                 ti2 = datetime.utcnow()
                 print ("Findtime duration", ti2-ti1)
@@ -5147,7 +5230,7 @@ CALLED BY:
             sti = st-2
             if sti < 0:
                 sti = 0
-            ed, le = self.findtime(enddate,startidx=sti)
+            ed, le = self.findtime(enddate,startidx=sti,mode='argmax')
             if ed == 0:
                 #print("Flag_stream: slowly end",ed)
                 if not sr == 0:
@@ -5158,10 +5241,10 @@ CALLED BY:
                 ed = ed-1
             # Create a defaultflag
             defaultflag = ['-' for el in FLAGKEYLIST]
-            #print("flagging", st, ed)
-
-        #t2 = datetime.utcnow()
-        #print("Identified indicies in ",t2-t1)
+            if debug:
+                ti3 = datetime.utcnow()
+                print ("Full Findtime duration", ti3-ti1)
+                print("flagging", st, ed)
 
         if ndtype:
             array = [[] for el in KEYLIST]
@@ -5170,21 +5253,18 @@ CALLED BY:
             # Check whether flag and comment are exisiting - if not create empty
             if not len(self.ndarray[flagind]) > 0:
                 array[flagind] = [''] * len(self.ndarray[0])
-                #array[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
-                #self.ndarray[flagind] = [''] * len(self.ndarray[0])
-                #self.ndarray[flagind] = np.asarray(self.ndarray[flagind]).astype(object)
             else:
                 array[flagind] = list(self.ndarray[flagind])
             if not len(self.ndarray[commentind]) > 0:
                 array[commentind] = [''] * len(self.ndarray[0])
-                #self.ndarray[commentind] = [''] * len(self.ndarray[0])
-                #self.ndarray[commentind] = np.asarray(self.ndarray[commentind]).astype(object)
             else:
                 array[commentind] = list(self.ndarray[commentind])
             # Now either modify existing or add new flag
+
             if st==0 and ed==0:
                 pass
             else:
+                t3a = datetime.utcnow()
                 for i in range(st,ed+1):
                     #if self.ndarray[flagind][i] == '' or self.ndarray[flagind][i] == '-':
                     if array[flagind][i] == '' or array[flagind][i] == '-':
@@ -5195,16 +5275,18 @@ CALLED BY:
                     if len(flagls) < pos:
                         flagls.extend(['-' for j in range(pos+1-flagls)])
                     flagls[pos] = str(flag)
-                    #print("flag", ''.join(flagls), comment)
-                    #self.ndarray[flagind][i] = ''.join(flagls)
                     array[flagind][i] = ''.join(flagls)
-                    #self.ndarray[commentind][i] = comment
                     array[commentind][i] = comment
-                #print (self.ndarray[flagind][i], array[flagind][i])
-            self.ndarray[flagind] = np.asarray(array[flagind]).astype(object)
-            self.ndarray[commentind] = np.asarray(array[commentind]).astype(object)
-            #self.ndarray[flagind] = np.asarray(self.ndarray[flagind])
-            #self.ndarray[commentind] = np.asarray(self.ndarray[commentind])
+
+            self.ndarray[flagind] = np.array(array[flagind], dtype=np.object)
+            self.ndarray[commentind] = np.array(array[commentind], dtype=np.object)
+
+            # up to 0.3.98 the following code was used (~10 times slower)
+            # further significant speed up requires some structural changes: 
+            #   1. use keylist here
+            #self.ndarray[flagind] = np.asarray(array[flagind]).astype(object)
+            #self.ndarray[commentind] = np.asarray(array[commentind]).astype(object)
+
         else:
             for elem in self:
                 if elem.time >= start and elem.time <= end:
@@ -5214,7 +5296,8 @@ CALLED BY:
                     fllist[pos] = str(flag)
                     elem.flag=''.join(fllist)
                     elem.comment = comment
-        if flag == 1 or flag == 3:
+        
+        if flag == 1 or flag == 3 and debug:
             if enddate:
                 #print ("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
                 try:
@@ -5226,11 +5309,6 @@ CALLED BY:
                     logger.info("flag_stream: Flagged data at %s -> (%s)" % (startdate.isoformat().encode('ascii','ignore'),comment.encode('ascii','ignore')))
                 except:
                     pass
-
-        #print self.ndarray[flagind][np.where(self.ndarray[flagind] != '')]
-        #print self.ndarray[flagind]
-        #t1 = datetime.utcnow()
-        #print("Finished flag",t1)
 
         return self
 
@@ -7695,11 +7773,22 @@ CALLED BY:
         #liste = [elem for elem in self if not elem.flag[pos] in flaglist]
 
         if ndtype:
-            # Drop contents of flag and comment column
-            array[flagind] = np.asarray([])
-            array[commind] = np.asarray([])
+            #-> Necessary to consider shape (e.g.BLV data)
+            newar = [np.asarray([]) for el in KEYLIST]
+            for idx,el in enumerate(array):
+                if idx == flagind:
+                    pass 
+                elif idx == commind:
+                    pass
+                else:
+                    newar[idx] = array[idx]
 
-        return DataStream(liste, self.header,array)
+            # Drop contents of flag and comment column -> didn't work for BLV data because of shape
+            # changed for 0.3.99
+            #array[flagind] = np.asarray([])
+            #array[commind] = np.asarray([])
+
+        return DataStream(liste, self.header,np.asarray(newar))
 
 
 
@@ -7917,7 +8006,7 @@ CALLED BY:
         - stream:       (DataStream object) Stream containing resampled data.
 
     EXAMPLE:
-        >>> resampled_stream = pos_data.resample(['f'],1)
+        >>> resampled_stream = pos_data.resample(['f'],period=1)
 
     APPLICATION:
         """
@@ -10200,6 +10289,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         - endtime:      (str/datetime object) Description.
         - starttime:    (str/datetime object) Description.
 
+    Format specific kwargs:
+        IAF:
+            - resolution: (str) can be either 'day','hour','minute'(default) or 'k'
+
     RETURNS:
         - stream:       (DataStream object) Stream containing data in file
                         under path_or_url.
@@ -10468,6 +10561,8 @@ def saveflags(mylist=None,path=None, overwrite=False):
         existflag = loadflags(path)
         existflag.extend(mylist)
         mylist = existflag
+    if not os.path.exists(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path))
     try:
         # TODO: check whether package is already loaded
         from pickle import dump

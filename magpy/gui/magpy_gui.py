@@ -802,6 +802,7 @@ class MainFrame(wx.Frame):
         self.keylist = []
         self.flaglist = []
         self.compselect = 'None'
+        self.databaseconnected = False  # Bool for testing whether database has been connected
 
         self.options = {}
         self.dipathlist = 'None'
@@ -960,6 +961,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.str_page.flagDropButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.str_page.flagMinButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.str_page.flagMaxButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagClearButton, self.menu_p.str_page.flagClearButton)
 
         #        Meta Page
         # --------------------------
@@ -987,12 +989,14 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onMeanButton, self.menu_p.ana_page.meanButton)
         self.Bind(wx.EVT_BUTTON, self.onMaxButton, self.menu_p.ana_page.maxButton)
         self.Bind(wx.EVT_BUTTON, self.onMinButton, self.menu_p.ana_page.minButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.ana_page.flagmodButton)
         self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
         self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
         self.Bind(wx.EVT_BUTTON, self.onSmoothButton, self.menu_p.ana_page.smoothButton)
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.onDeltafButton, self.menu_p.ana_page.deltafButton)
+        self.Bind(wx.EVT_BUTTON, self.onCalcfButton, self.menu_p.ana_page.calcfButton)
         self.Bind(wx.EVT_BUTTON, self.onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
         #        DI Page
@@ -1139,6 +1143,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagLoadButton.Disable()      # always
         self.menu_p.str_page.flagMinButton.Disable()       # always
         self.menu_p.str_page.flagMaxButton.Disable()       # always
+        self.menu_p.str_page.flagClearButton.Disable()     # always
         self.menu_p.str_page.xCheckBox.Disable()           # always
         self.menu_p.str_page.yCheckBox.Disable()           # always
         self.menu_p.str_page.zCheckBox.Disable()           # always
@@ -1186,12 +1191,14 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.meanButton.Disable()          # always
         self.menu_p.ana_page.maxButton.Disable()           # always
         self.menu_p.ana_page.minButton.Disable()           # always
+        self.menu_p.ana_page.flagmodButton.Disable()       # always
         self.menu_p.ana_page.offsetButton.Disable()        # always
         self.menu_p.ana_page.filterButton.Disable()        # always
         self.menu_p.ana_page.smoothButton.Disable()        # always
         self.menu_p.ana_page.activityButton.Disable()      # if xyz, hdz magnetic data
         self.menu_p.ana_page.baselineButton.Disable()      # if absstream in streamlist
         self.menu_p.ana_page.deltafButton.Disable()        # if xyzf available
+        self.menu_p.ana_page.calcfButton.Disable()        # if xyz available
         self.menu_p.ana_page.powerButton.Disable()         # always
         self.menu_p.ana_page.spectrumButton.Disable()      # always
         #self.menu_p.ana_page.mergeButton.Disable()         # if len(self.streamlist) > 1
@@ -1366,6 +1373,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.flagLoadButton.Enable()      # always
         self.menu_p.str_page.flagMinButton.Enable()       # always
         self.menu_p.str_page.flagMaxButton.Enable()       # always
+        self.menu_p.str_page.flagClearButton.Enable()       # always
         self.menu_p.str_page.FlagIDComboBox.Enable()      # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
         self.menu_p.met_page.MetaDataButton.Enable()      # always
@@ -1379,6 +1387,7 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.meanButton.Enable()          # always
         self.menu_p.ana_page.maxButton.Enable()           # always
         self.menu_p.ana_page.minButton.Enable()           # always
+        self.menu_p.ana_page.flagmodButton.Enable()       # always
         self.menu_p.ana_page.offsetButton.Enable()        # always
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
@@ -1426,6 +1435,7 @@ class MainFrame(wx.Frame):
         if 'x' in keys and 'y' in keys and 'z' in keys:
             self.menu_p.ana_page.rotationButton.Enable()      # activate if vector appears to be present
             self.menu_p.ana_page.activityButton.Enable()      # activate if vector appears to be present
+            self.menu_p.ana_page.calcfButton.Enable()    # activate if vector present
             if 'f' in keys and not 'df' in keys:
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
             if not formattype == 'MagPyDI':
@@ -1940,6 +1950,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # b) disable pathTextCtrl (DB: dbname)
         # c) Open dialog which lets the user select list and time window
         # d) update stream menu
+
+        # Check whether DB still available
+        self.checkDB('minimal')
+
         getdata = False
         stream = DataStream()
         if self.db:
@@ -2119,6 +2133,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.DBOpen.Enable(True)
             self.menu_p.rep_page.logMsg('- MySQL Database {} on {} connected.'.format(dbname,host))
             self.changeStatusbar("Database %s successfully connected" % (dbname))
+            # Set variable to True
+            self.databaseconnected = True
             # enable MARCOS button
             self.menu_p.com_page.getMARCOSButton.Enable()
         else:
@@ -2810,10 +2826,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 if not seconddata == 'None':
                     reportmsg += "\nStep 2:  Secondary data:\n"
                     reportmsg += "-----------------------\n"
-                    self.changeStatusbar("Step 2: Reading one second data - please be patient ... ")
+                    self.changeStatusbar("Step 2: Reading one second data ({})- please be patient ... this may need a few minutes".format(seconddata))
                     secdata, fail = readSecData(secondpath,seconddata,rmonth,year)
                     if fail == 6:
-                        errormsg += "Step 2: Reading of one second data failed - check file format and/or file name convention\n"
+                        errormsg += "Step 2: Reading of one second data failed - check file format and/or file name convention and/or dates\n"
                         succlst[1] = 5
                     elif fail == 3:
                         errormsg += "Step 2: Reading of one second data - file names do not follow the ImagCDF convention\n"
@@ -3084,7 +3100,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         incon = False
                         for col in ['x','y','z']:
                             if not ddiff.amplitude(col) < 1.0:
-                                print ("Hello", col, ddiff.amplitude(col))
+                                #print ("Hello", col, ddiff.amplitude(col))
                                 warningmsg += "Step 3: found differences between expected daily means and filtered minute data for component {}\n".format(col)
                                 incon = True
 
@@ -3652,6 +3668,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
     # pages: stream (plot, coordinate), analysis (smooth, filter, fit, baseline etc),
     #          specials(spectrum, power), absolutes (), report (log), monitor (access web socket)
 
+    def checkDB(self, level='minimal'):
+        if self.databaseconnected:
+            try:
+                dbinfo(self.db,destination='stdout',level='minimal')#,level='full') # use level ='minimal'
+            except:
+                logger.info("Database not connected any more -- reconnecting")
+                self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
+
 
 
     # ------------------------------------------------------------------------------------------
@@ -3812,6 +3836,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Method for offset correction
         """
+        # Check whether DB still available
+        self.checkDB('minimal')
+
         self.changeStatusbar("Adding offsets ...")
         keys = self.shownkeylist
         offsetdict = {}
@@ -3825,6 +3852,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         # get existing deltas from database
         deltas = self.plotstream.header.get('DataDeltaValues','')
+
+        if deltas == '':
+            # Check data compensation values
+            try:
+                xcorr = float(self.plotstream.header.get('DataCompensationX',''))
+                ycorr = float(self.plotstream.header.get('DataCompensationY',''))
+                zcorr = float(self.plotstream.header.get('DataCompensationZ',''))
+                if not xcorr=='' and not ycorr=='' and not zcorr=='':
+                    deltas = 'x_{},y_{},z_{}'.format(-1*xcorr*1000.,-1*ycorr*1000.,-1*zcorr*1000.)
+            except:
+                pass
+        #print ("Delta", deltas)
 
         dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=self.xlimits, deltas=deltas)
         if dlg.ShowModal() == wx.ID_OK:
@@ -3853,6 +3892,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 et= datetime.strptime(str(ed)+'_'+edtime, "%Y-%m-%d_%H:%M:%S")
                 self.plotstream = self.plotstream.offset(offsetdict, starttime=st, endtime=et)
 
+            self.plotstream.header['DataDeltaValuesApplied'] = 1
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
@@ -4013,6 +4053,48 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.Destroy()
         self.changeStatusbar("Ready")
 
+
+    def onFlagmodButton(self, event):
+        """
+        DESCRIPTION
+             Calculates means values for all keys of shownkeylist
+        """
+        self.changeStatusbar("Flaglist contents ...")
+        keys = self.shownkeylist
+
+        if not self.flaglist or not len(self.flaglist) > 0:
+            self.changeStatusbar("no flags available ... Ready")
+            return
+
+        stats = self.plotstream.flagliststats(self.flaglist, intensive=True, output='string')
+
+        self.menu_p.rep_page.logMsg(stats)
+        """
+        for idx,me in enumerate(mean):
+            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
+            self.menu_p.rep_page.logMsg(meanline)
+            trange = trange + '\n' + meanline
+        """
+        # open message dialog
+        dlg = AnalysisFlagsDialog(None, title='Analysis: Flags', stats=stats, flaglist=self.flaglist, stream=self.plotstream)
+        if dlg.ShowModal() == wx.ID_OK:
+            if dlg.mod:
+                self.changeStatusbar("Applying new flags ...")
+                self.menu_p.rep_page.logMsg('Flags have been modified: ')
+                self.flaglist = dlg.newfllist
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+                self.plotstream = self.plotstream.flag(self.flaglist)
+                self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(self.flaglist)))
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)        
+            else:
+                pass
+            pass
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+
     def onSmoothButton(self, event):
         """
         DESCRIPTION
@@ -4113,6 +4195,23 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
+
+    def onCalcfButton(self, event):
+        """
+        DESCRIPTION
+             Calculates delta F values
+        """
+        self.changeStatusbar("Calculating F from components ...")
+
+        self.plotstream = self.plotstream.calc_f()
+        self.streamlist[self.currentstreamindex].calc_f()
+        #print (self.plotstream._get_key_headers())
+        if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
+            self.shownkeylist.append('f')
+        self.menu_p.rep_page.logMsg('- determined f from x,y,z')
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
 
     def onPowerButton(self, event):
         """
@@ -4299,6 +4398,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             open dialog to select shown keys (check boxes)
         """
+
+        self.changeStatusbar("Selecting keys ...")
 
         if len(self.plotstream.ndarray[0]) == 0:
             self.plotstream = self.stream.copy()
@@ -4586,6 +4687,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if sensid == '' and not dataid == '':
             sensid = dataid[:-5]
 
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
         self.xlimits = self.plot_p.xlimits
         self.ylimits = self.plot_p.ylimits
         selplt = self.plot_p.selplt
@@ -4661,6 +4770,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.OnPlot(self.plotstream,self.shownkeylist)
         """
 
+    def onFlagClearButton(self, event):
+        """
+        DESCRIPTION
+            Clear current flaglist
+        """
+        self.changeStatusbar("Deleting flaglist ...")
+        self.flaglist = []
+        self.plotstream = self.plotstream._drop_column('flag')
+        self.plotstream = self.plotstream._drop_column('comment')
+        self.ActivateControls(self.plotstream)
+        self.plotopt['annotate'] = False
+        self.menu_p.str_page.annotateCheckBox.SetValue(False)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
 
     def onFlagOutlierButton(self, event):
         """
@@ -4672,30 +4796,42 @@ Suite 330, Boston, MA  02111-1307  USA"""
         keys = self.shownkeylist
         timerange = float(sr)*600.
         threshold=5.0
+        markall = False
+
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
 
         # Open Dialog and return the parameters threshold, keys, timerange
         dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange)
         if dlg.ShowModal() == wx.ID_OK:
             threshold = dlg.ThresholdTextCtrl.GetValue()
             timerange = dlg.TimerangeTextCtrl.GetValue()
-        try:
-            threshold = float(threshold)
-            timerange = float(timerange)
-            timerange = timedelta(seconds=timerange)
-            flaglist = self.plotstream.flag_outlier(stdout=True,returnflaglist=True, keys=keys,threshold=threshold,timerange=timerange)#,markall=markall)
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag_outlier(stdout=True, keys=keys,threshold=threshold,timerange=timerange)
-            self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(flaglist)))
-        except:
-            print("flag outliers failed: check parameter")
-            self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
+            markall = dlg.MarkAllCheckBox.GetValue()
+            try:
+                threshold = float(threshold)
+                timerange = float(timerange)
+                timerange = timedelta(seconds=timerange)
+                flaglist = self.plotstream.flag_outlier(stdout=True,returnflaglist=True, keys=keys,threshold=threshold,timerange=timerange,markall=markall)
+                self.flaglist.extend(flaglist)
+                #self.plotstream = self.plotstream.flag_outlier(stdout=True, keys=keys,threshold=threshold,timerange=timerange)
+                self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(flaglist)))
+                if markall:
+                    self.menu_p.rep_page.logMsg('- flagged outliers: used option markall')
+            except:
+                print("flag outliers failed: check parameter")
+                self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
 
-        self.ActivateControls(self.plotstream)
-        #self.annotate = True
-        self.plotopt['annotate'] = True
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
 
-        self.menu_p.str_page.annotateCheckBox.SetValue(True)
-        self.OnPlot(self.plotstream,self.shownkeylist)
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
 
@@ -4709,6 +4845,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dataid = self.plotstream.header.get('DataID','')
         if sensid == '' and not dataid == '':
             sensid = dataid[:-5]
+
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
 
         self.xlimits = self.plot_p.xlimits
 
@@ -4807,6 +4951,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             Opens a dialog which allows to load flags either from a DB or from file
         """
+        # Check whether DB still available
+        self.checkDB('minimal')
+
         sensorid = self.plotstream.header.get('SensorID','')
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
@@ -4836,6 +4983,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             Opens a dialog which allows to save flags either to DB or to file
         """
+        # Check whether DB still available
+        self.checkDB('minimal')
+
         currentlen = len(self.flaglist)
 
         #print ("FlagSave", self.flaglist)
@@ -4887,6 +5037,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             Flags minimum value in zoomed region
         """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
         keys = self.shownkeylist
         teststream = self.plotstream.copy()
         # limits
@@ -4924,6 +5082,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             Flags maximum value in zoomed region
         """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
         keys = self.shownkeylist
         teststream = self.plotstream.copy()
         # limits
@@ -4969,6 +5135,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             get Meta data for the current sensorid from database
         """
+        # Test whether DB is still connected
+        self.checkDB('minimal')
+
         # open dialog with all header info
         dataid = self.plotstream.header.get('DataID','')
         if dataid == '':
@@ -4988,6 +5157,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
             write meta data to the database
         """
+        # Check whether DB still available
+        self.checkDB('minimal')
+
         # open dialog with all header info
         dataid = self.plotstream.header.get('DataID','')
         if dataid == '':
@@ -5076,6 +5248,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         plotstreamlist = []
         plotkeylist = []
+        self.changeStatusbar("Selecting streams ...")
+
         dlg = MultiStreamDialog(None, title='Select stream(s):',streamlist=self.streamlist, idx=self.currentstreamindex, streamkeylist=self.streamkeylist)
         if dlg.ShowModal() == wx.ID_OK:
             namelst = dlg.namelst
@@ -5517,6 +5691,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onConnectMARCOSButton(self, event):
         # active if database is connected
         # open dlg
+
+        # Check whether DB still available
+        self.checkDB('minimal')
+
         self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
         output = dbselect(self.db,'DataID,DataMinTime,DataMaxTime','DATAINFO')
         datainfoidlist = [elem[0] for elem in output]

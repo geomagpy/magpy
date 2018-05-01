@@ -1297,8 +1297,12 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if not longi=='' or lati=='':
         if proj == '':
             patt = mycdf.attrs
-            patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
-            patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
+            try:
+                patt.new('Latitude',float(lati),type=cdf.const.CDF_DOUBLE)
+                patt.new('Longitude',float(longi),type=cdf.const.CDF_DOUBLE)
+            except:
+                patt.new('Latitude',lati,type=cdf.const.CDF_DOUBLE)
+                patt.new('Longitude',longi,type=cdf.const.CDF_DOUBLE)
             #mycdf.attrs['Latitude'] = lati
             #mycdf.attrs['Longitude'] = longi
         else:
@@ -2541,6 +2545,7 @@ def readIYFV(filename, headonly=False, **kwargs):
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    debug = kwargs.get('debug')
 
     getfile = True
 
@@ -2577,6 +2582,7 @@ def readIYFV(filename, headonly=False, **kwargs):
             line = dropnonascii(line)
             line = line.rstrip()
             cnt = cnt+1
+            #print ("Line", line)
             #line = line.lstrip()  # delete leading spaces
             if line.isspace():
                 # blank line
@@ -2624,11 +2630,21 @@ def readIYFV(filename, headonly=False, **kwargs):
                 if not headonly:
                     # get data
                     data = line.split()
-                    test = True
-                    if test:
+                    getdata = True
+                    if line.find('J') > 0:
+                        line = line.replace('     0.0','  0  0.0')
+                        data = line.split()
+                        num = data.index('J')
+                        if len(data) >= 12 and num == 10:
+                            getdata = True
+                        else:
+                            logger.warning("readIYFV: could not interprete jump line")
+                            getdata = False
+                    if not len(data) >= 12:
+                        getdata = False
+                        logger.warning("readIYFV: apparent inconsistency in file format - {}".format(len(data)))
+                    if getdata:
                         #try:
-                        if not len(data) >= 12:
-                            logger.warning("readIYFV: inconsistency of file format - ", len(data))
                         ye = data[0].split('.')
                         dat = ye[0]+'-06-01'
                         row = []

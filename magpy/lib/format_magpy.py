@@ -310,7 +310,6 @@ def readPYSTR(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    #print("lib format-magpy", [len(el) for el in array])
     return DataStream([LineStruct()], headers, np.asarray(array))
 
 

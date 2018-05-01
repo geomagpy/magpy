@@ -78,7 +78,7 @@ string2dict(string):
 
 
 DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits','DataFormat',
-                   'DataMinTime','DataMaxTime',
+                   'DataMinTime','DataMaxTime','DataTimezone',
                    'DataSamplingFilter','DataDigitalSampling','DataComponents','DataSamplingRate',
                    'DataType',
                    'DataDeltaReferencePier','DataDeltaReferenceEpoch','DataScaleX',
@@ -94,7 +94,7 @@ DATAINFOKEYLIST = ['DataID','SensorID','StationID','ColumnContents','ColumnUnits
                    'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc','DataRotationAlpha','DataRotationBeta','DataAbsInfo','DataBaseValues','DataArchive']
 
 DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
-                    'CHAR(50)','CHAR(50)',
+                    'CHAR(50)','CHAR(50)','CHAR(100)',
                     'CHAR(100)','CHAR(100)','CHAR(10)','CHAR(100)',
                     'CHAR(100)',
                     'CHAR(20)','CHAR(50)','DECIMAL(20,9)',
@@ -186,6 +186,7 @@ STATION:
         StationMeans: Contains a list with mean values e.g. Year:2015,H:20800nT,Z:43000nT
 DATAINFO:
         DataID:
+        DataTimezone:  contains timezone info (e.g. UTC) if empty, UTC is assumed
 
 FLAGS: (used to store flagging information)
 
@@ -237,6 +238,35 @@ dbgetfloat
 #  Part 3: Main methods for mysql database communication --
 #      dbalter, dbsensorinfo, dbdatainfo, dbdict2fields, dbfields2dict and
 # ----------------------------------------------------------------------------
+def dbinfo(db,destination='log',level='full'):
+    """
+    DEFINITION:
+        Provide version info of database and write to log
+    PARAMETERS:
+        - db:           (mysql database) defined by mysql.connect().
+        - destination:  (string) either "log"(default) or "stdout"  
+        - level:        (string) "full"(default) -> show size as well, else skip size  
+    """
+
+    size = 'not determined'
+    versionsql = "SELECT VERSION()"
+    namesql = "SELECT DATABASE()"
+    cursor = db.cursor()
+    cursor.execute(versionsql)
+    version = cursor.fetchone()[0]
+    cursor.execute(namesql)
+    databasename = cursor.fetchone()[0]
+    if level == 'full':
+        sizesql = 'SELECT sum(round(((data_length + index_length) / 1024 / 1024 / 1024), 2)) as "Size in GB" FROM information_schema.TABLES WHERE table_schema="{}"'.format(databasename)
+        cursor.execute(sizesql)
+        size = cursor.fetchone()[0]
+    if destination == 'log':
+        loggerdatabase.info("connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename,version,size))
+    else:
+        print ("connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename,version,size))
+    db.commit()
+    cursor.close()
+
 
 def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'):
     """
@@ -1794,6 +1824,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         print ("writeDB is used for ndarray type - use stream2DB for LineStruct")
         return
 
+    roundtime = False # if true then 10 mu sec rounding is used
     # ----------------------------------------------
     #   Identify tablename
     # ----------------------------------------------
@@ -1876,11 +1907,12 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         return lst[1:] == lst[:-1]
 
     def trim_time(t):
-        # Rounding time to milliseconds
+        # Rounding time to 10 microseconds
+        # Not essential for 0.3.99 in combination with MQTT Martas
         s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
         tail = s[-7:]
-        f = round(float(tail), 3)
-        temp = "%.3f000" % f
+        f = round(float(tail), 5)
+        temp = "%.5f0" % f
         if f == 1.0:
             t = t+timedelta(seconds=1)
             s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
@@ -1905,7 +1937,8 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                     tcol = np.asarray([tstr._testtime(elem) for elem in col])
                 except:
                     tcol = np.asarray([])
-            tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
+            if roundtime:
+                tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
             array[idx]=np.asarray(tcol)
         elif len(col) > 0 and nosingleelem: # and KEYLIST[idx] in NUMKEYLIST:
             array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
@@ -2611,7 +2644,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
         data stream
 
     EXAMPLE:
-        >>> db2stream(db,None,None,None,'DIDD_3121331_0002_0001')
+        >>> readDB(db,'DIDD_3121331_0002_0001')
 
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
@@ -2626,13 +2659,13 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
     stream = DataStream()
 
     if not db:
-        loggerdatabase.error("DB2stream: No database connected - aborting")
+        loggerdatabase.error("readDB: No database connected - aborting")
         return stream
 
     cursor = db.cursor ()
 
     if not table:
-        loggerdatabase.error("DB2stream: Aborting ... either sensorid or table must be specified")
+        loggerdatabase.error("readDB: Aborting ... either sensorid or table must be specified")
         return
     if starttime:
         #starttime = stream._testtime(begin)
@@ -3322,8 +3355,9 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
                 [[starttime, endtime, singlecomp, flagNum, flagReason, (SensorID, ModificationDate)],...]
 
     Optional:
-       mode: default inserts information if not existing
-             use 'delete' to delete any existing input for the given sensorid
+       mode: 'replace': default - replaces information 
+             'insert' : adds if not existing
+             'delete' : use 'delete' to delete any existing input for the given sensorid
        sensorid: a string with the sensor id, if not provided within the list
        modificationdate: a datetime object with the flagging modificationdate, 
                          if not provided within the list
@@ -3356,11 +3390,16 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         loggerdatabase.info("flaglist2db: No database connected - aborting")
         return
 
+    if not mode:
+        mode = 'replace'
+
     cursor = db.cursor()
 
     if len(flaglist) < 1 and not mode == 'delete':
         loggerdatabase.info("flaglist2db: Nothing to do - aborting")
         return
+
+    loggerdatabase.info("flaglist2db: Running flaglist2db ...")
 
     # 0. Check whether table exists
     flagstr = 'FlagID INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, SensorID CHAR(50), FlagBeginTime CHAR(50), FlagEndTime CHAR(50), FlagComponents CHAR(50), FlagNum INT, FlagReason TEXT, ModificationDate CHAR(50)'
@@ -3385,7 +3424,6 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         loggerdatabase.info("flaglist2db: Please provide sensorid - aborting")
         return
 
-
     # 2. Run the cleaning jobs if no flaglist contents are provided and delete is selected 
     #    Abort if no flags are found
     if not len(flaglist) > 0:
@@ -3407,44 +3445,51 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
             loggerdatabase.info("flaglist2db: Executing: DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
             cursor.execute("DELETE FROM FLAGS WHERE SensorID LIKE '{}'".format(sensorid))
 
-
     # 4. Get unique lines (without components  
     #         Creating unique newlst (without components !!) with mysql time stamps.
     #         Flagdatabase will have a list of components for each timestep 
     #         Variable newlst will contain all unique time steps with 
+    # Creating newlist with original timestamp without components
+    flaglistwithoutcomp = [[elem[0],elem[1],elem[3],elem[4],elem[5],elem[6]] for elem in flaglist]
+    # Creating newlist with original timestamp  as string for unique identification
     listwithoutcomp = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
-    uniquelistwithoutcomp, indicies  = np.unique(np.asarray(listwithoutcomp), return_index=True)
-    newlst = [elem.split('___') for elem in uniquelistwithoutcomp]
-    newlst= [[float(elem[0]),float(elem[1]),int(elem[2]),elem[3],elem[4],float(elem[5])] for elem in newlst]
+    uniquelistwithoutcomp, indices  = np.unique(np.asarray(listwithoutcomp), return_index=True)
+    newlst = [flaglistwithoutcomp[i] for i in indices]
 
     # 5. Combine the components of otherwise unique lines
     sensors = np.unique(np.asarray([row[4] for row in newlst]))
+
     dbflaglist = []
     for sensor in sensors:
         newlstsens = [elem for elem in newlst if elem[4]==sensor]
-        newlstsensstr = ['___'.join([str(elem[0]),str(elem[1]),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5])]) for elem in newlstsens]
+        newlstsensstr = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(date2num(elem[5]))]) for elem in newlstsens]
         flaglstsens = [elem for elem in flaglist if elem[5]==sensor]
         listwithcomp = [['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]), str(elem[2])] for elem in flaglstsens]
         testlist = [elem[0] for elem in listwithcomp]
 
-        # get already existing data 
-        existinglst = db2flaglist(db,sensor)
-        existinglst = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in existinglst]
-        uniqueexisting = np.unique(np.asarray(existinglst))
+        # get already existing data
+         
+        #existinglst = db2flaglist(db,sensor)
+        #existinglst = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in existinglst]
+        #uniqueexisting = np.unique(np.asarray(existinglst))
+        uniqueexisting=[]
 
-        for idx, elem in enumerate(newlstsensstr):
+        for idx, ele in enumerate(newlstsens):
+            elem = newlstsensstr[idx]
             if not elem in uniqueexisting:
                 idxlst = [i for i, j in enumerate(testlist) if j == elem]
                 comps = [listwithcomp[el][1] for el in idxlst]
                 tcomps = [key for key in KEYLIST if key in comps]
-                el0 = datetime.strftime(num2date(newlstsens[idx][0]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
-                el1 = datetime.strftime(num2date(newlstsens[idx][1]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                #el0 = datetime.strftime(num2date(newlstsens[idx][0]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                #el1 = datetime.strftime(num2date(newlstsens[idx][1]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                el0 = ele[0]
+                el1 = ele[1]
                 el2 = '_'.join(tcomps)
-                el3 = newlstsens[idx][2]
-                el4 = newlstsens[idx][3]
-                el5 = newlstsens[idx][4]
+                el3 = ele[2]
+                el4 = ele[3]
+                el5 = ele[4]
                 # modification date is stored as datetime ??
-                el6 = datetime.strftime(num2date(newlstsens[idx][5]).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                el6 = ele[5]
                 line = [el0,el1,el2,el3,el4,el5,el6]
                 dbflaglist.append(line)
 
@@ -3473,8 +3518,12 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
             elem = [str(el) for el in ne]
             flagsql = "INSERT INTO FLAGS(%s) VALUES (%s)" % (flaghead, '"'+'", "'.join(elem)+'"')
             if mode == "replace":
+                # DELETE existing input first (according to time range and sensor)
+                whereclause = "FlagBeginTime='{}' AND FlagEndTime='{}' AND SensorID='{}'".format(elem[1],elem[2],elem[6])
+                delsql = "DELETE FROM FLAGS WHERE {}".format(whereclause)
                 try:
-                    cursor.execute(flagsql.replace("INSERT","REPLACE"))
+                    cursor.execute(delsql)
+                    cursor.execute(flagsql)
                 except:
                     loggerdatabase.info("flaglist2db: Write MySQL: Replace failed")
             else:
