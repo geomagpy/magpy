@@ -76,7 +76,7 @@ class AbsolutePage(wx.Panel):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=10, cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=12, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)

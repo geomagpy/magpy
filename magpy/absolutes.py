@@ -1776,10 +1776,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         rotdict = dbase.string2dict(rotstring)
                         #print ("Dealing with year", date.year)
                         valalpha = rotdict.get(str(date.year),'')
-                        #print (valalpha)
                         if valalpha == '':
+                            print (" -- no alpha value found for year {}".format(date.year))
                             maxkey = max(int(k) for k, v in rotdict.iteritems())
-                            valalpha = rotdict[str(maxkey)]
+                            valalpha = rotdict.get(str(maxkey),0)
+                            print (" -- using alpha for year {}".format(str(maxkey)))
                         valalpha = float(valalpha)
                         if not float(valalpha)==0.:
                             print(" -- rotating with alpha: {a} degree (year {b})".format(a=valalpha,b=date.year))

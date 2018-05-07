@@ -2,7 +2,7 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
 -------------------------------------------------
-####v<0.3.99>, <2018-04-27> -- On the way to beta.
+####v<0.3.99>, <2018-05-08> -- On the way to beta.
 
 v0.3.99 general:
     + removed capital letters from package title in pypi: GeomagPy -> geomagpy
@@ -21,8 +21,11 @@ v0.3.99 fixes:
     + remove_flagged: shape issue solved
     + flags: saving flags to database create correct timesteps, 'replace' set to default
     + cdfpath returns NONE: illegal operation -> solved 
+    + corrected invalid GridSizeres in panels
 
 v0.3.99 additions:
+    + added mpconvert application to easily convert between different formats
+                 - check: mpconvert -h  for options
     + added full acquisition support for MARTAS, in particular mqtt support
     + added mqtt broker support
     + database: added Station coordinates and system with epsg code
@@ -39,6 +42,7 @@ v0.3.99 additions:
     + saveflags: creates directory if not yet existing
     + added compensation method for applying fluxgates compensation fields when available in the header
     + added Clear Flags button to remove all flags
+    + updated monitor panel: full mqtt support to view broker data (e.g. MARTAS) plus authentication
 
 v0.3.99 removals:
     + cleaned up logs and removed unnecessary log info

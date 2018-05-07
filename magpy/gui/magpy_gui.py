@@ -142,6 +142,10 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['fitdegree'] = '5'
     if optionsdict.get('fitknotstep','') == '':
         optionsdict['fitknotstep'] = '0.3'
+    if optionsdict.get('martasscantime','') == '':
+        optionsdict['martasscantime'] = '20'
+    if optionsdict.get('experimental','') == '':
+        optionsdict['experimental'] = False
 
     initpath = os.path.join(normalpath,'.magpyguiini')
 
@@ -392,6 +396,10 @@ class PlotPanel(wx.Panel):
         martasaddress = self.datavars[9]  # coverage
         martasport = self.datavars[10]
         martasdelay = self.datavars[11]
+        martasuser = self.datavars[13]
+        martaspasswd = self.datavars[14]
+        martasstationid = self.datavars[15]
+        qos = self.datavars[16]
 
         # convert unitlist to [[],[]]
         plist = parameter.split(',')
@@ -416,12 +424,17 @@ class PlotPanel(wx.Panel):
                 dlg.Destroy()
             if mqttimport:
                 client = mqtt.Client()
+
+                if not martasuser in ['',None,'None','-']: 
+                    #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
+                    client.username_pw_set(martasuser, password=martaspasswd)
+
                 client.on_connect = colsup.on_connect
                 client.on_message = colsup.on_message
 
-                print (martasaddress)
-                #client.connect("192.168.178.84", 1883, 60)
                 client.connect(martasaddress, int(martasport), int(martasdelay))
+
+                client.subscribe("{}/#".format(martasstationid), qos)
 
                 self.figure.clear()
 
@@ -523,6 +536,14 @@ class PlotPanel(wx.Panel):
         coverage = self.datavars[6]  # coverage
         updatetime = self.datavars[7]
         db = self.datavars[8]
+        martasaddress = self.datavars[9]
+        martasport = self.datavars[10]
+        martasdelay = self.datavars[11]
+        martasprotocol = self.datavars[12]
+        martasuser = self.datavars[13]
+        martaspasswd = self.datavars[14]
+        martasstationid = self.datavars[15]
+        qos = self.datavars[16]
 
         # convert parameter list to a dbselect sql format
         parameterstring = 'time,'+parameter
@@ -542,7 +563,10 @@ class PlotPanel(wx.Panel):
                 self.axes = self.figure.add_subplot(subind)
                 self.axes.grid(True)
                 rd = array[i]
+                #try:
                 l, = self.axes.plot_date(dt,rd,'b-')
+                #except:
+                #    array = [[] for el in KEYLIST]
                 #l, = a.plot_date(dt,td,'g-')
                 plt.xlabel("Time")
                 plt.ylabel(r'{} [{}]'.format(unitlist[idx-1][0],unitlist[idx-1][1]))
@@ -578,7 +602,7 @@ class PlotPanel(wx.Panel):
 
         # Repack variables that need to be persistent between
         # executions of this method
-        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
+        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol, 13: martasuser, 14: martaspasswd, 15: martasstationid, 16: qos}
 
 
     def guiPlot(self,streams,keys,plotopt={},**kwargs):
@@ -1391,8 +1415,9 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.offsetButton.Enable()        # always
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
-        self.menu_p.ana_page.powerButton.Enable()         # always
-        self.menu_p.ana_page.spectrumButton.Enable()      # always
+        if self.options.get('experimental'):
+            self.menu_p.ana_page.powerButton.Enable()         # if experimental
+            self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
         # Selective fields
         # ----------------------------------------
@@ -1535,6 +1560,16 @@ class MainFrame(wx.Frame):
         self.plotopt['symbollist'] =  ['-'] * len(keylist)
         self.plotopt['colorlist']=self.colorlist[:len(keylist)]
         self.plotopt['plottitle'] = stream.header.get('StationID')
+
+        try:
+            tmin,tmax = stream._find_t_limits()
+            diff = (tmax.date()-tmin.date()).days
+            if diff < 5 and not diff == 0:
+                self.plotopt['plottitle'] = "{}: {} to {}".format(stream.header.get('StationID'),tmin.date(),tmax.date())
+            elif diff == 0:
+                self.plotopt['plottitle'] = "{}: {}".format(stream.header.get('StationID'),tmin.date())
+        except:
+            pass
 
         self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
         self.menu_p.str_page.dailyMeansButton.Disable()
@@ -2282,6 +2317,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitfunction']=dlg.fitfunctionComboBox.GetValue()
             self.options['fitknotstep']=dlg.fitknotstepTextCtrl.GetValue()
             self.options['fitdegree']=dlg.fitdegreeTextCtrl.GetValue()
+            # experimental methods
+            self.options['experimental']=dlg.experimentalCheckBox.GetValue()
+            # mqtt communication
+            self.options['martasscantime']=dlg.martasscantimeTextCtrl.GetValue()
             saveini(self.options)
 
             inipara, check = loadini()
@@ -4057,7 +4096,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onFlagmodButton(self, event):
         """
         DESCRIPTION
-             Calculates means values for all keys of shownkeylist
+             Shows Flagilist statistics and allows to change flag contents
         """
         self.changeStatusbar("Flaglist contents ...")
         keys = self.shownkeylist
@@ -5062,7 +5101,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if flagid is 0:
             comment = ''
         for idx,me in enumerate(mini):
-            if keys[idx] is not 'df':
+            if not keys[idx] == 'df':
                 checkbox = getattr(self.menu_p.str_page, keys[idx] + 'CheckBox')
                 if checkbox.IsChecked():
                     starttime = num2date(me[1] - xtol)
@@ -5107,7 +5146,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if flagid is 0:
             comment = ''
         for idx,me in enumerate(maxi):
-            if keys[idx] is not 'df':
+            if not keys[idx] == 'df':
                 checkbox = getattr(self.menu_p.str_page, keys[idx] + 'CheckBox')
                 if checkbox.IsChecked():
                     starttime = num2date(me[1] - xtol)
@@ -5793,20 +5832,30 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if mqttimport:
             # TODO stationcode is currently hardcoded in collectorsupport - change that !!
             client = mqtt.Client()
+
+            if not martasuser in ['',None,'None','-']: 
+                #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
+                client.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
+
             client.on_connect = colsup.on_connect
             client.on_message = colsup.on_message
 
-            print (martasaddress)
+            #print (martasaddress)
             #client.connect("192.168.178.84", 1883, 60)
             client.connect(martasaddress, int(martasport), int(martasdelay))
+            qos = 0
+            client.subscribe("{}/#".format(martasstationid), qos)
 
-            self.changeStatusbar("Scanning for MQTT broadcasts ... approx 20 sec")
-
-            
+            self.changeStatusbar("Scanning for MQTT broadcasts ... approx 20 sec")            
 
             loopcnt = 0
             success = True
-            maxloop = 200
+            try:
+                maxloop = int(self.options.get('martasscantime'))*10
+                print ("Got data from init - remove this message ater 0.3.99", maxloop)
+            except:
+                print ("Could not get scantime from options - using approx 20 seconds")
+                maxloop = 200
             self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
             while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
                 loopcnt += 1
@@ -5817,7 +5866,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     break
             self.progress.Destroy()
 
-            if success:
+            #print ("here", colsup.identifier)
+
+            if success and len(colsup.identifier) > 0:
                 self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
                 self.menu_p.com_page.startMonitorButton.Enable()
                 self.menu_p.com_page.getMARTASButton.Disable()
@@ -5856,7 +5907,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 limit = period/sr
                 datainfoid = sensorid+'_0001'
 
-                self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol}
+                self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol, 13: martasuser, 14: martaspasswd, 15: martasstationid, 16: qos}
                 self.monitorSource='MARTAS'
             else:
                 self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
@@ -5918,6 +5969,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.com_page.logMsg(' > Read cycle stopped')
         self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.monitorSource))
         self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
+        # delete old array
+        self.plot_p.array = [[] for el in KEYLIST]
+        self.stream.header['StationID'] = self.plot_p.datavars[15]
         self.plotstream = self.stream.copy()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.plotstream)

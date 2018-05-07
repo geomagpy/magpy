@@ -559,6 +559,7 @@ class OptionsInitDialog(wx.Dialog):
         self.dboptLabel = wx.StaticText(self, label="Database:",size=(160,30))
         self.basicLabel = wx.StaticText(self, label="Basics:",size=(160,30))
         self.calcLabel = wx.StaticText(self, label="Calculation:",size=(160,30))
+        self.otherLabel = wx.StaticText(self, label="Other:",size=(160,30))
         self.hostLabel = wx.StaticText(self, label="Host",size=(160,30))
         self.hostTextCtrl = wx.TextCtrl(self,value=self.options.get('host','localhost'),size=(160,30))
         self.userLabel = wx.StaticText(self, label="User",size=(160,30))
@@ -572,6 +573,11 @@ class OptionsInitDialog(wx.Dialog):
 
         self.stationidLabel = wx.StaticText(self, label="Station ID",size=(160,30))
         self.stationidTextCtrl = wx.TextCtrl(self, value=self.options.get('stationid','WIC'),size=(160,30))
+
+        self.experimentalLabel = wx.StaticText(self, label="Experimental methods",size=(160,30))
+        self.experimentalCheckBox = wx.CheckBox(self, label="Activate", size=(160,30))
+        self.martasscantimeLabel = wx.StaticText(self, label="Scanning MARTAS [sec]",size=(160,30))
+        self.martasscantimeTextCtrl = wx.TextCtrl(self, value=self.options.get('martasscantime','20'),size=(160,30))
 
         self.fitfunctionLabel = wx.StaticText(self, label="Fit function",size=(160,30))
         self.fitfunctionComboBox = wx.ComboBox(self, choices=self.funclist,
@@ -589,11 +595,13 @@ class OptionsInitDialog(wx.Dialog):
 
         #self.bookmarksComboBox.Disable()
 
+        self.experimentalCheckBox.SetValue(self.options.get('experimental',False))
         f = self.dboptLabel.GetFont()
         newf = wx.Font(14, wx.DECORATIVE, wx.ITALIC, wx.BOLD)
         self.dboptLabel.SetFont(newf)
         self.basicLabel.SetFont(newf)
         self.calcLabel.SetFont(newf)
+        self.otherLabel.SetFont(newf)
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -641,6 +649,18 @@ class OptionsInitDialog(wx.Dialog):
                  (self.fitfunctionComboBox, noOptions),
                  (self.fitknotstepTextCtrl, expandOption),
                  (self.fitdegreeTextCtrl, expandOption),
+                 (self.otherLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.martasscantimeLabel, noOptions),
+                 (self.experimentalLabel, noOptions),
+                  emptySpace,
+                  emptySpace,
+                 (self.martasscantimeTextCtrl, noOptions),
+                 (self.experimentalCheckBox, noOptions),
+                  emptySpace,
+                  emptySpace,
                  (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
@@ -2118,7 +2138,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.keylist = keylist
         self.idxlst = idxlst
         self.dictlst = dictlst
-        #self.fitlist = ['time1','time2']
+        self.fitlist = ['time1','time2']
         self.absstreamlist = []
         for idx in idxlst:
             currentname = [el['filename'] for el in dictlst if str(el['streamidx']) == str(idx)][0]
@@ -2184,7 +2204,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         # Add the controls to the sizers:
         contlst=[(self.absstreamLabel, noOptions)]
         contlst.append((self.absstreamComboBox, expandOption))
-        contlst.append((self.fitlistRadioBox, noOptions))
+        #contlst.append((self.fitlistRadioBox, noOptions))
         contlst.append((self.parameterLabel, noOptions))
         contlst.append((self.parameterTextCtrl, expandOption))
         contlst.append((self.parameterButton, dict(flag=wx.ALIGN_CENTER)))
@@ -4584,7 +4604,7 @@ class CheckOpenLogDialog(wx.Dialog):
         self.reportTextCtrl = wx.TextCtrl(self, value=self.report ,size=(600,300), style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Close',size=(160,30))
 
-        self.reportTextCtrl.Disable()
+        #self.reportTextCtrl.Disable()
 
 
     def doLayout(self):
@@ -4640,9 +4660,10 @@ class SelectMARTASDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.options = options
         self.protocol = 'mqtt'
+        self.qos = ['0','1','2']
         self.stationid = 'WIC'               # should be extracted from options
-        self.user = 'cobs'               # should be extracted from options
-        self.protocollist = ['wamp','mqtt']
+        self.user = 'cobs'                   # should be extracted from options
+        self.protocollist = ['mqtt','wamp*']
         self.portlist = ['8080','1883']
         self.selector = 1                    # list number of protocol
         self.favoritemartas = ['192.168.0.14','192.168.178.84']
@@ -4652,6 +4673,9 @@ class SelectMARTASDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
+        self.qosLabel = wx.StaticText(self, label="Quality of service:",size=(160,30))
+        self.qosComboBox = wx.ComboBox(self, choices=self.qos,
+                       style=wx.CB_DROPDOWN, value=self.qos[0],size=(160,-1))
         self.protocolRadioBox = wx.RadioBox(self, label="Communication protocol:",  choices=self.protocollist,
                        majorDimension=2, style=wx.RA_SPECIFY_COLS ) #,size=(160,-1))
         self.addressLabel = wx.StaticText(self, label="Select MARTAS:",size=(160,30))
@@ -4695,6 +4719,8 @@ class SelectMARTASDialog(wx.Dialog):
                  (self.portTextCtrl, expandOption),
                  (self.stationidLabel, noOptions),
                  (self.stationidTextCtrl, expandOption),
+                 (self.qosLabel, noOptions),
+                 (self.qosComboBox, expandOption),
                  (self.userLabel, noOptions),
                  (self.userTextCtrl, expandOption),
                  (self.pwdLabel, noOptions),

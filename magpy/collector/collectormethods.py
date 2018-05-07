@@ -69,8 +69,8 @@ def analyse_meta(header,sensorid):
     lengthcode = struct.calcsize(packstr)
     si = h_elem[2]
     if not si == sensorid:
-        print ("Different sensorids in publish address and header - please check - aborting")
-        sys.exit()
+        print ("Different sensorids in publish address and header - please check - !!!!!")
+        print ("Header: {}, Used SensorID: {}".format(si,sensorid))
     keylist = h_elem[3].strip('[').strip(']').split(',')
     elemlist = h_elem[4].strip('[').strip(']').split(',')
     unitlist = h_elem[5].strip('[').strip(']').split(',')
@@ -106,14 +106,28 @@ def interprete_data(payload, ident, stream, sensorid):
     return np.asarray([np.asarray(elem) for elem in array])
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code " + str(rc))
+    #print("Connected with result code " + str(rc))
+    #print("Setting QOS (Quality of Service): {}".format(qos))
+    if str(rc) == '0':
+        print ("Connection successful - continue")
+    elif str(rc) == '5':
+        print ("Broker eventually requires authentication - use options -u and -P")
     # important obtain subscription from some config file or provide it directly (e.g. collector -a localhost -p 1883 -t mqtt -s wic)
-    client.subscribe("wic/#")
+    #substring = stationid+'/#'
+    #client.subscribe(substring,qos=qos)
+
+
+    # important obtain subscription from some config file or provide it directly (e.g. collector -a localhost -p 1883 -t mqtt -s wic)
+    #client.subscribe("wic/#")
+
+
 
 def on_message(client, userdata, msg):
-    sensorid = msg.topic.strip('wic').replace('/','').strip('meta').strip('data')
+    #print ("Topic", msg.topic.split('/'))
+    sensorid = msg.topic.split('/')[1].strip('meta').strip('data')
     #print ("Receiving message for", sensorid)
     # define a new data stream for each non-existing sensor
+    #print (msg.payload)
 
     metacheck = identifier.get(sensorid+':packingcode','')
     #print ("Too be done: separate sensors ... and Data stream for each sensor")
@@ -125,21 +139,7 @@ def on_message(client, userdata, msg):
         if not metacheck == '':
             stream.ndarray = interprete_data(msg.payload, identifier, stream, sensorid)
             streamdict[sensorid] = stream.ndarray  # to store data from different sensors
-            post1 = KEYLIST.index('t1')
-            posvar1 = KEYLIST.index('var1')
-            #print(" - Meta info existing:", sensorid, num2date(stream.ndarray[0][0]),stream.ndarray[post1],stream.ndarray[posvar1])
-            # create a magpy ndarray from payload (with lenght 1 if only one line is send)
-            #coverage = 3
-            #array = [ar[-coverage:] if len(ar) > coverage else ar for ar in array ]
-            #print (array)
-            # append data to a buffer array
-            # ######################################
-            # if writemode == 'file':
-            #      if len(array) == solllength:
-            #          write()
-            # elif writemode == 'db':
-            #      ...
-            # elif writemoded == 'array':
-            #      add to global array 
+            #post1 = KEYLIST.index('t1')
+            #posvar1 = KEYLIST.index('var1')
         else:
             print(msg.topic + " " + str(msg.payload))

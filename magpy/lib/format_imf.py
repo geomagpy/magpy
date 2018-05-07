@@ -503,9 +503,12 @@ def writeIAF(datastream, filename, **kwargs):
 
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
-        if not len(dayar[0]) == 1440:
-            logger.info("format_IMF: found {} datapoints (expected are 1440) - assuming last value(s) to represent next month".format(len(dayar[0])))
+        if len(dayar[0]) > 1440:
+            logger.info("writeIAF: found {} datapoints (expected are 1440) - assuming last value(s) to represent next month".format(len(dayar[0])))
             dayar = np.asarray([elem[:1440] for elem in dayar])
+        elif len(dayar[0]) < 1440:
+            logger.info("writeIAF: found {} datapoints (expected are 1440) - check gaps".format(len(dayar[0])))
+            print ("writeIAF:  Use get_gap function to identify and mark gaps in the timeseries")
         # get all indices
         #minutest = DataStream([LineStruct],datastream.header,dayar)
         #temp = minutest.copy() ### Necessary so that dayar is not modified by the filtering process
@@ -627,7 +630,10 @@ def writeIAF(datastream, filename, **kwargs):
         xvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[1]])
         xvals = np.asarray(xvals*10).astype(int)
         head.extend(xvals)
-        #print ("0a:", len(head))
+        if not len(xvals) == 1440:
+            logger.error("writeIAF: Found inconsistency in minute data set")
+            logger.error("writeIAF: for {}".format(datetime.strftime(num2date(dayar[0][0]),'%Y%j')))
+            logger.error("writeIAF: expected 1440 records, found {} records".format(len(xvals)))
         packcode += '1440l' # fh.read(64)
         yvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[2]])
         yvals = np.asarray(yvals*10).astype(int)
@@ -636,7 +642,6 @@ def writeIAF(datastream, filename, **kwargs):
         zvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[3]])
         zvals = np.asarray(zvals*10).astype(int)
         head.extend(zvals)
-        #print ("0c:", len(head))
         packcode += '1440l' # fh.read(64)
         if df:
             #print ([elem for elem in dayar[dfpos]])
@@ -653,6 +658,9 @@ def writeIAF(datastream, filename, **kwargs):
         xhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[1]])
         xhou = np.asarray(xhou*10).astype(int)
         head.extend(xhou)
+        if not len(xhou) == 24:
+            logger.error("writeIAF: Found inconsistency in hourly data set: expected 24, found {} records".format(len(xhou)))
+            logger.error("writeIAF: Error in day {}".format(datetime.strftime(num2date(dayar[0][0]),'%Y%j')))
         packcode += '24l'
         yhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[2]])
         yhou = np.asarray(yhou*10).astype(int)
@@ -705,7 +713,7 @@ def writeIAF(datastream, filename, **kwargs):
             dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
             kdat = dayk[KEYLIST.index('var1')]
             kdat = [el*10. if not np.isnan(el) else 999 for el in kdat]
-            #print("kvals", len(kdat), t0+i,t0+i+1,kdat,dayk[0])
+            #print("kvals", len(kdat), t0+i,t0+i+1,kdat,dayk[0],dayk[-1])
             packcode += '8l'
             if not len(kdat) == 8:
                 ks = [999]*8
@@ -729,7 +737,7 @@ def writeIAF(datastream, filename, **kwargs):
         reserved = [0,0,0,0]
         head.extend(reserved)
 
-        #print(len(ks))
+        #print("HERE", len(ks), len(head), head[-18:])
         #print [num2date(elem) for elem in temp.ndarray[0]]
         line = struct.pack(packcode,*head)
         output = output + line

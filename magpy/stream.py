@@ -5044,14 +5044,19 @@ CALLED BY:
             if num>0 and value:
                 if num == 4:
                     flaglist = [elem for elem in flaglist if elem[num].find(value) > 0]
+                elif num == 3:
+                    flaglist = [elem for elem in flaglist if elem[num] == int(value)]
                 else:
                     flaglist = [elem for elem in flaglist if elem[num] == value]
         elif mode == 'replace':
             if num>0 and value:
                 for idx, elem in enumerate(flaglist):
                     if num == 4:
-                        if elem[num].find(value) > 0:
+                        if elem[num].find(value) >= 0:
                             flaglist[idx][num] = newvalue
+                    elif num == 3:
+                        if elem[num] == int(value):
+                            flaglist[idx][num] = int(newvalue)
                     else:
                         if elem[num] == value:
                             flaglist[idx][num] = newvalue
@@ -5059,6 +5064,8 @@ CALLED BY:
             if num>0 and value:
                 if num == 4:
                     flaglist = [elem for elem in flaglist if elem[num].find(value) < 0]
+                elif num == 3:
+                    flaglist = [elem for elem in flaglist if not elem[num] == int(value)]
                 else:
                     flaglist = [elem for elem in flaglist if not elem[num] == value]
 
@@ -7782,6 +7789,8 @@ CALLED BY:
                     pass
                 else:
                     newar[idx] = array[idx]
+        else:
+            newar = list(self.ndarray)
 
             # Drop contents of flag and comment column -> didn't work for BLV data because of shape
             # changed for 0.3.99
@@ -9560,7 +9569,6 @@ CALLED BY:
                 if ndtype:
                     lst = []
                     ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
-                    #print "Trying to write ndarrays", ndarray
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                     ndarray = np.asarray([])
