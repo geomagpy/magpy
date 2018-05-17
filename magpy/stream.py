@@ -731,6 +731,7 @@ CALLED BY:
                 'typ',          # Type of data (str='xyzf')
                 'sectime'       # Secondary time variable (date2num)
                 ]
+    NUMKEYLIST = KEYLIST[1:16]
 
     def __init__(self, container=None, header={},ndarray=None):
         if container is None:
@@ -848,7 +849,10 @@ CALLED BY:
 
     def __getitem__(self, var):
         try:
-            return self.ndarray[self.KEYLIST.index(var)]
+            if var in NUMKEYLIST:
+                return self.ndarray[self.KEYLIST.index(var)].astype(np.float64)
+            else:
+                return self.ndarray[self.KEYLIST.index(var)]
         except:
             return self.container.__getitem__(var)
 
@@ -1241,8 +1245,8 @@ CALLED BY:
 
     def _get_column(self, key):
         """
-        returns an numpy array of selected columns from Stream
-        example:
+        Returns a numpy array of selected column from Stream
+        Example:
         columnx = datastream._get_column('x')
         """
 
@@ -1255,7 +1259,10 @@ CALLED BY:
         ind = KEYLIST.index(key)
 
         if len(self.ndarray[0]) > 0:
-            col = self.ndarray[ind]
+            try:
+                col = self[key]
+            except:
+                col = self.ndarray[ind]
             return col
 
         # Check for initialization value
@@ -6101,6 +6108,32 @@ CALLED BY:
         func = [functionkeylist, sv, ev]
 
         return func
+    
+    
+    def interpolate_nans(self, keys):
+        """"
+    DEFINITION: 
+        Provides a simple linear nan interpolator that returns the interpolated
+        data in the stream. Uses method that is already present elsewhere, e.g.
+        in filter, for easy and quick access.
+    
+    PARAMETERS:
+        - keys:         List of keys to interpolate.
+        
+    RETURNS:
+        - stream:       Original stream with nans replaced by linear interpolation.
+        """
+    
+        for key in keys:
+            if key not in NUMKEYLIST:
+                logger.error("interpolate_nans: {} is an invalid key! Cannot interpolate.".format(key))
+            y = self._get_column(key)
+            nans, x = nan_helper(y)
+            y[nans] = np.interp(x(nans), x(~nans), y[~nans])
+            self._put_column(y, key)
+            logger.info("interpolate_nans: Replaced nans in {} with linearly interpolated values.".format(key))
+        return self
+    
 
     def k_extend(self, **kwargs):
         """

@@ -1643,38 +1643,27 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
 
 def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
-             window=mlab.window_hanning, noverlap=900,
-             cmap=cm.Accent, cbar=False, xextent=None, pad_to=None, sides='default',
-             scale_by_freq=None, minfreq = None, maxfreq = None, plottitle=False, **kwargs):
+             window=mlab.window_hanning, noverlap=900, cmap=plt.get_cmap('plasma'), 
+             cbar=False, xextent=None, pad_to=None, sides='default', scale_by_freq=None, 
+             minfreq=None, maxfreq=None, plottitle=False, returnfig=False, **kwargs):
     """
     DEFINITION:
         Creates a spectrogram plot of selected keys.
         Parameter description at function obspyspectrogram
+        Uses samp_rate_multiplicator (=24*3600): Changes the 
+        frequency relative to one day sampling rate given as days ->
+        multiplied by x to create Hz,
 
     PARAMETERS:
     Variables:
         - stream:       (DataStream object) Stream to analyse
         - keys:         (list) Keys to analyse
     Kwargs:
-        - per_lap:      (?) ?
-        - wlen:         (?) ?
-        - log:          (bool) ?
-        - outfile:      (str) Filename to save plot to
-        - fmt:          (str) Format of outfile, e.g. 'png'
-        - axes:         (?) ?
-        - dbscale:      (?) ?
-        - mult:         (?) ?
-        - cmap:         (cm.) Colormap object
         - cbar:         (bool) Plot colorbar alongside spectrogram
-        - zorder:       (?) ?
-        - plottitle:    (?) ?
-        - samp_rate_multiplicator:
-                        (float=24*3600) Change the frequency relative to one day
-                        sampling rate given as days -> multiplied by x to create Hz,
-                        Default 24, which means 1/3600 Hz
-        - show:         (?) ?
-        - sphinx:       (?) ?
-
+        - returnfig:    (bool) If True, fig object is returned when calling
+                        func. Default is False
+        --> All other variables are put through to the magpySpecgram
+            function and are the same as those used there.
     RETURNS:
         - plot:         (matplotlib plot) A plot of the spectrogram.
 
@@ -1723,31 +1712,13 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         if cbar:
             fig = plt.gcf()
             axes = fig.axes
-            fig.colorbar(im, ax=np.ravel(axes).tolist())
-
-        plt.show()
-
-    """
-    if axes:
-        return ax
-
-    if not sphinx:
-        # ignoring all NumPy warnings during plot
-        temp = np.geterr()
-        np.seterr(all='ignore')
-        plt.draw()
-        np.seterr(**temp)
-
-    if outfile:
-        if fmt:
-            fig.savefig(outfile, format=fmt)
+            cbar = fig.colorbar(im, ax=np.ravel(axes).tolist())
+            cbar.set_label("dB")
+        
+        if not returnfig:
+            plt.show()
         else:
-            fig.savefig(outfile)
-    elif show:
-        plt.show()
-    else:
-        return fig
-    """
+            return fig
 
 
 def magpySpecgram(x, NFFT=256, Fs=2, Fc=0, detrend=mlab.detrend_none,
