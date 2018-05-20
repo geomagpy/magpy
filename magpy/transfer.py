@@ -86,7 +86,6 @@ def ftpdatatransfer (**kwargs):
     APPLICATION:
         >>>
     """
-    plog = PyMagLog()
     localfile = kwargs.get('localfile')
     localpath = kwargs.get('localpath')
     ftppath = kwargs.get('ftppath')
@@ -156,7 +155,6 @@ def ftpdatatransfer (**kwargs):
 # Transfer missing files
 # ####################
 def _missingvals(myproxy, port, login, passwd, logfile):
-    plog = PyMagLog()
     dat=_checklogfile(logfile)
     nr_lines=len(dat)
     for i in range(nr_lines):

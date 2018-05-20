@@ -2275,7 +2275,7 @@ def writeBLV(datastream, filename, **kwargs):
         logger.info("writeBLV: found deltaF values, but using provided deltaF {} for adopted scalar baseline ".format(deltaF))
 
     fbasefunc = False
-    if keys == ['dx','dy','dz','df'] and not datastream._is_number(deltaF):
+    if keys == ['dx','dy','dz','df'] and not datastream._is_number(deltaF) and not deltaF == None:
         #print ("writeBLV: found string in deltaF")
         if deltaF in ['mean','MEAN','Mean']:
             logger.info("writeBLV: MEAN deltaF: {}".format(datastream.mean('df',percentage=1)))
@@ -2318,7 +2318,7 @@ def writeBLV(datastream, filename, **kwargs):
         # check whether timerange is fitting
         if (parameter[0] >= t1 and parameter[0] <= t2) or (parameter[1] >= t1 and parameter[1] <= t2) or (parameter[0] < t1 and parameter[1] > t2):
             keys = parameter[6]
-            #print ("writeBLV: Using line", parameter)
+            print ("writeBLV: Using line", parameter, backupabsstream.length())
             basefunctionlist.append(dummystream.baseline(backupabsstream,startabs=parameter[0],endabs=parameter[1],keys=parameter[6], fitfunc=parameter[3],fitdegree=parameter[4],knotstep=parameter[5],extradays=parameter[2]))
 
     #print ("writeBLV: Extracted parameter", basefunctionlist)

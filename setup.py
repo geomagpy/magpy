@@ -11,7 +11,7 @@ setup(
     author='R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec',
     author_email='roman.leonhardt@zamg.ac.at',
     packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui'],
-    scripts=['magpy/gui/xmagpy','magpy/gui/xmagpyw','magpy/scripts/mpconvert'],
+    scripts=['magpy/gui/xmagpy','magpy/gui/xmagpyw','magpy/scripts/mpconvert','magpy/scripts/addcred'],
     url='http://pypi.python.org/pypi/geomagpy/',
     license='LICENSE.txt',
     description='Geomagnetic analysis tools.',

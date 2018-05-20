@@ -605,6 +605,7 @@ class DataStream(object):
     - stream.spectrogram() -- Creates a spectrogram plot of selected keys
     - stream.stream2flaglist() -- make flaglist out of stream
     - stream.trim() -- returns stream within new time frame
+    - stream.use_sectime() -- Swap between primary and secondary time (if sectime is available)
     - stream.variometercorrection() -- Obtain average DI values at certain timestep(s)
     - stream.write() -- Writing Stream to a file
 
@@ -1782,6 +1783,8 @@ CALLED BY:
         """
         Test whether s is a number
         """
+        if s in ['',None]:
+            return False
         try:
             float(s)
             return True
@@ -2356,7 +2359,8 @@ CALLED BY:
             func = bas.fit(keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
         except:
             print ("Baseline: Error when determining fit - Enough data point to satisfy fit complexity?")
-            raise
+            logger.error("Baseline: Error when determining fit - Not enough data point to satisfy fit complexity? N = {}".format(bas.length()))
+            return None
 
         #if len(keys) == 3:
         #    ix = KEYLIST.index(keys[0])
@@ -3703,6 +3707,8 @@ CALLED BY:
             indar = np.argsort(array[0])
             array = [el[indar].astype(object) if len(el)>0 else np.asarray([]) for el in array]
         else:
+            if self.length()[0] < 2:
+                return self
             firstelem = self[0]
             lastelem = self[-1]
             # Find the last element with baseline values
@@ -5407,6 +5413,8 @@ CALLED BY:
         testx = []
 
         for function in funct:
+            if not function:
+                return self
             # Changed that - 49 sec before, no less then 2 secs
             if not len(self.ndarray[0]) > 0:
                 print("func2stream: requires ndarray - trying old LineStruct functions")
@@ -8430,7 +8438,7 @@ CALLED BY:
         the window parameter could be the window itself if an array instead of a string
         """
         # Defaults:
-        window_len = int(kwargs.get('window_len'))
+        window_len = kwargs.get('window_len')
         window = kwargs.get('window')
         if not window_len:
             window_len = 11
@@ -8438,6 +8446,8 @@ CALLED BY:
             window='hanning'
         if not keys:
             keys=self._get_key_headers(numerical=True)
+
+        window_len = int(window_len)
 
         ndtype = False
         if len(self.ndarray[0])>0:
@@ -8987,6 +8997,30 @@ CALLED BY:
             return DataStream(self.container,self.header,newarray)
         else:
             return DataStream(self.container,self.header,self.ndarray)
+
+
+    def use_sectime(self, swap=False):
+        """
+        DEFINITION:
+            Drop primary time stamp and replace by secondary time stamp if available.
+            If swap is True, then primary time stamp is moved to secondary column (and
+            not dropped).
+        """
+        if not 'sectime' in self._get_key_headers():
+            logger.warning("use_sectime: did not find secondary time column in the streams keylist - returning unmodified timeseries")
+            return self
+
+        # Non destructive
+        stream = self.copy()
+        pos = KEYLIST.index('sectime')
+        tcol = stream.ndarray[0]
+        stream = stream._move_column('sectime','time')
+        if swap:
+            stream = stream._put_column(tcol,'sectime')
+        else:
+            stream = stream._drop_column('sectime')
+
+        return stream
 
 
     def variometercorrection(self, variopath, thedate, **kwargs):

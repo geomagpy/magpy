@@ -4663,7 +4663,10 @@ class SelectMARTASDialog(wx.Dialog):
         self.qos = ['0','1','2']
         self.stationid = 'WIC'               # should be extracted from options
         self.user = 'cobs'                   # should be extracted from options
-        self.protocollist = ['mqtt','wamp*']
+        if options.get('experimental'):
+            self.protocollist = ['mqtt','wamp*']
+        else:
+            self.protocollist = ['mqtt']
         self.portlist = ['8080','1883']
         self.selector = 1                    # list number of protocol
         self.favoritemartas = ['192.168.0.14','192.168.178.84']

@@ -732,7 +732,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     logbaddata = False
 
     if getfile:
-        logger.info("readPYBIN: %s Format: PYCDF" % filename)
+        logger.info("readPYBIN: %s Format: PYBIN" % filename)
 
         fh = open(filename, 'rb')
         #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
@@ -800,14 +800,16 @@ def readPYBIN(filename, headonly=False, **kwargs):
             return stream
 
         logger.debug('readPYBIN: checking code')
+        if debug:
+            print ("readPYBIN: checking code: {}".format(len(h_elem)))
 
         packstr = '<'+h_elem[-2]+'B'
-        packstr = packstr.encode('ascii','ignore')
+        #packstr = packstr.encode('ascii','ignore')
         lengthcode = struct.calcsize(packstr)
         lengthgiven = int(h_elem[-1])+1
         length = lengthgiven
         if not lengthcode == lengthgiven:
-            logger.debug("readPYBIN: Check your packing code!")
+            logger.warning("readPYBIN: Giving bit length of packing code ({}) and actual length ({}) differ - Check your packing code!".format(lengthcode,length))
             if lengthcode < lengthgiven:
                 missings = lengthgiven-lengthcode
                 for i in range(missings):
@@ -816,7 +818,11 @@ def readPYBIN(filename, headonly=False, **kwargs):
             else:
                 length = lengthcode
 
+        packstr = packstr.encode('ascii','ignore')
+
         logger.debug('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
+        if debug:
+            print ('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
 
         #fh = open(filename, 'rb')
         line = fh.read(length)
