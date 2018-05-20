@@ -43,6 +43,7 @@ v0.3.99 additions:
     + added compensation method for applying fluxgates compensation fields when available in the header
     + added Clear Flags button to remove all flags
     + updated monitor panel: full mqtt support to view broker data (e.g. MARTAS) plus authentication
+    + modified spectral plot options and its default colorscale
 
 v0.3.99 removals:
     + cleaned up logs and removed unnecessary log info

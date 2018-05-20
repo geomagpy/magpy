@@ -103,6 +103,12 @@ symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-']
 gridcolor = '#316931'
 labelcolor = '0.2'
 
+try:
+    defaultcolormap=plt.get_cmap('plasma')
+except:
+    defaultcolormap=cm.Accent
+
+
 def ploteasy(stream):
     '''
     DEFINITION:
@@ -1643,7 +1649,7 @@ def plotSatMag(mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous',
 
 
 def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
-             window=mlab.window_hanning, noverlap=900, cmap=plt.get_cmap('plasma'), 
+             window=mlab.window_hanning, noverlap=900, cmap=defaultcolormap, 
              cbar=False, xextent=None, pad_to=None, sides='default', scale_by_freq=None, 
              minfreq=None, maxfreq=None, plottitle=False, returnfig=False, **kwargs):
     """
