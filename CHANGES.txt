@@ -9,6 +9,8 @@ v0.3.99 general:
     + switched to readme.md for all package providers
     + increased time step accuracy in database acquisition methods max 1 microsecond
       (requires MARTAS-mqtt) (previously 1 millisec)
+    + moved flagging methods to a separate panel -> improves accessablility for small screens/MacOS
+    + improved extend method - speeding up
 
 v0.3.99 fixes:
     + updated flaglist2db and db2flaglist methods - considerably faster now and more reliable
@@ -24,7 +26,11 @@ v0.3.99 fixes:
     + corrected invalid GridSizeres in panels
 
 v0.3.99 additions:
-    + added mpconvert application to easily convert between different formats
+    + added script: mptest -> test method to check magpy compatibility
+                 - check: mptest -h  for options
+    + added script: addcred -> password method fro MARTAS/MARCOS
+                 - check: addcred -h  for options
+    + added script: mpconvert -> application to easily convert between different formats
                  - check: mpconvert -h  for options
     + added full acquisition support for MARTAS, in particular mqtt support
     + added mqtt broker support

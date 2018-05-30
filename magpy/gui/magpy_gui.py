@@ -25,6 +25,7 @@ from magpy.transfer import *
 from magpy.database import *
 from magpy.version import __version__
 from magpy.gui.streampage import *
+from magpy.gui.flagpage import *
 from magpy.gui.metapage import *
 from magpy.gui.dialogclasses import *
 from magpy.gui.absolutespage import *
@@ -227,7 +228,7 @@ class PlotPanel(wx.Panel):
                 self.update(self.array)
             else:
                 self.update_mqtt(arg1,self.array)
-            print ("Running ...")
+            print ("Running ... {}".format(datetime.utcnow()))
             stop_event.wait(self.datavars[7])
         ###
         # Eventually stop client
@@ -268,6 +269,11 @@ class PlotPanel(wx.Panel):
                 array[idx] = list(newelem)
 
         coverage = int(self.datavars[6])
+        try:
+           tmp = DataStream([],{},np.asarray(array)).samplingrate()
+           coverage = int(coverage/tmp)
+        except:
+           pass
 
         array = [ar[-coverage:] if len(ar) > coverage else ar for ar in array ]
 
@@ -294,6 +300,8 @@ class PlotPanel(wx.Panel):
         #print ("Parameter", self.datavars[1])
         #print ("Units", self.datavars[5])
 
+        coverage = int(self.datavars[6])
+
         pos = KEYLIST.index('t1')
         posvar1 = KEYLIST.index('var1')
         #OK = True
@@ -308,9 +316,21 @@ class PlotPanel(wx.Panel):
             else:
                 for idx,el in enumerate(li):
                         self.array[idx].extend(el)
-            self.array = [el[-int(self.datavars[6]):] for el in self.array]
+
+            try:
+                tmp = DataStream([],{},np.asarray(self.array)).samplingrate()
+                coverage = int(coverage/tmp)
+            except:
+                pass
+            self.array = [el[-coverage:] for el in self.array]
+
 
         if len(self.array[0]) > 2:
+            ind = np.argsort(np.asarray(self.array)[0])
+            for idx,line in enumerate(self.array):
+                if len(line) == len(ind):
+                    self.array[idx] = list(np.asarray(line)[ind])
+            #self.array = np.asarray(self.array)[:,np.argsort(np.asarray(self.array)[0])]
             array = self.array
             self.monitorPlot(array)
 
@@ -431,8 +451,15 @@ class PlotPanel(wx.Panel):
 
                 client.on_connect = colsup.on_connect
                 client.on_message = colsup.on_message
-
-                client.connect(martasaddress, int(martasport), int(martasdelay))
+                try: 
+                    client.connect(martasaddress, int(martasport), int(martasdelay))
+                except:
+                    dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
+                            "Check your internet connection or credentials\n",
+                            "Connection failed", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                    return
 
                 client.subscribe("{}/#".format(martasstationid), qos)
 
@@ -780,17 +807,19 @@ class MenuPanel(wx.Panel):
         # Create pages on MenuPanel
         nb = wx.Notebook(self,-1)
         self.str_page = StreamPage(nb)
+        self.fla_page = FlagPage(nb)
         self.met_page = MetaPage(nb)
         self.ana_page = AnalysisPage(nb)
         self.abs_page = AbsolutePage(nb)
         self.rep_page = ReportPage(nb)
         self.com_page = MonitorPage(nb)
         nb.AddPage(self.str_page, "Stream")
+        nb.AddPage(self.fla_page, "Flags")
         nb.AddPage(self.met_page, "Meta")
         nb.AddPage(self.ana_page, "Analysis")
         nb.AddPage(self.abs_page, "DI")
         nb.AddPage(self.rep_page, "Report")
-        nb.AddPage(self.com_page, "Monitor")
+        nb.AddPage(self.com_page, "Live")
 
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
@@ -977,15 +1006,17 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.str_page.applyBCButton)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
-        self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.str_page.flagOutlierButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagSelectionButton, self.menu_p.str_page.flagSelectionButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.str_page.flagRangeButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.str_page.flagLoadButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.str_page.flagSaveButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.str_page.flagDropButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.str_page.flagMinButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.str_page.flagMaxButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagClearButton, self.menu_p.str_page.flagClearButton)
+        #        Flags Page
+        # --------------------------
+        self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagSelectionButton, self.menu_p.fla_page.flagSelectionButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.fla_page.flagRangeButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.fla_page.flagDropButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.fla_page.flagMinButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
+        self.Bind(wx.EVT_BUTTON, self.onFlagClearButton, self.menu_p.fla_page.flagClearButton)
 
         #        Meta Page
         # --------------------------
@@ -1161,20 +1192,20 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.selectKeysButton.Disable()    # always
         self.menu_p.str_page.extractValuesButton.Disable() # always
         self.menu_p.str_page.changePlotButton.Disable()    # always
-        self.menu_p.str_page.flagOutlierButton.Disable()   # always
-        self.menu_p.str_page.flagSelectionButton.Disable() # always
-        self.menu_p.str_page.flagRangeButton.Disable()     # always
-        self.menu_p.str_page.flagLoadButton.Disable()      # always
-        self.menu_p.str_page.flagMinButton.Disable()       # always
-        self.menu_p.str_page.flagMaxButton.Disable()       # always
-        self.menu_p.str_page.flagClearButton.Disable()     # always
-        self.menu_p.str_page.xCheckBox.Disable()           # always
-        self.menu_p.str_page.yCheckBox.Disable()           # always
-        self.menu_p.str_page.zCheckBox.Disable()           # always
-        self.menu_p.str_page.fCheckBox.Disable()           # always
-        self.menu_p.str_page.FlagIDComboBox.Disable()      # always
-        self.menu_p.str_page.flagDropButton.Disable()      # activated if annotation are present
-        self.menu_p.str_page.flagSaveButton.Disable()      # activated if annotation are present
+        self.menu_p.fla_page.flagOutlierButton.Disable()   # always
+        self.menu_p.fla_page.flagSelectionButton.Disable() # always
+        self.menu_p.fla_page.flagRangeButton.Disable()     # always
+        self.menu_p.fla_page.flagLoadButton.Disable()      # always
+        self.menu_p.fla_page.flagMinButton.Disable()       # always
+        self.menu_p.fla_page.flagMaxButton.Disable()       # always
+        self.menu_p.fla_page.flagClearButton.Disable()     # always
+        self.menu_p.fla_page.xCheckBox.Disable()           # always
+        self.menu_p.fla_page.yCheckBox.Disable()           # always
+        self.menu_p.fla_page.zCheckBox.Disable()           # always
+        self.menu_p.fla_page.fCheckBox.Disable()           # always
+        self.menu_p.fla_page.FlagIDComboBox.Disable()      # always
+        self.menu_p.fla_page.flagDropButton.Disable()      # activated if annotation are present
+        self.menu_p.fla_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
         self.menu_p.str_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
         self.menu_p.str_page.annotateCheckBox.Disable()    # activated if annotation are present
@@ -1391,14 +1422,14 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.selectKeysButton.Enable()    # always
         self.menu_p.str_page.extractValuesButton.Enable() # always
         self.menu_p.str_page.changePlotButton.Enable()    # always
-        self.menu_p.str_page.flagOutlierButton.Enable()   # always
-        self.menu_p.str_page.flagSelectionButton.Enable() # always
-        self.menu_p.str_page.flagRangeButton.Enable()     # always
-        self.menu_p.str_page.flagLoadButton.Enable()      # always
-        self.menu_p.str_page.flagMinButton.Enable()       # always
-        self.menu_p.str_page.flagMaxButton.Enable()       # always
-        self.menu_p.str_page.flagClearButton.Enable()       # always
-        self.menu_p.str_page.FlagIDComboBox.Enable()      # always
+        self.menu_p.fla_page.flagOutlierButton.Enable()   # always
+        self.menu_p.fla_page.flagSelectionButton.Enable() # always
+        self.menu_p.fla_page.flagRangeButton.Enable()     # always
+        self.menu_p.fla_page.flagLoadButton.Enable()      # always
+        self.menu_p.fla_page.flagMinButton.Enable()       # always
+        self.menu_p.fla_page.flagMaxButton.Enable()       # always
+        self.menu_p.fla_page.flagClearButton.Enable()       # always
+        self.menu_p.fla_page.FlagIDComboBox.Enable()      # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
         self.menu_p.met_page.MetaDataButton.Enable()      # always
         self.menu_p.met_page.MetaSensorButton.Enable()    # always
@@ -1435,8 +1466,8 @@ class MainFrame(wx.Frame):
                 self.compselect = 'xyz'
 
         if len(commcol) > 0:
-            self.menu_p.str_page.flagDropButton.Enable()     # activated if annotation are present
-            self.menu_p.str_page.flagSaveButton.Enable()      # activated if annotation are present
+            self.menu_p.fla_page.flagDropButton.Enable()     # activated if annotation are present
+            self.menu_p.fla_page.flagSaveButton.Enable()      # activated if annotation are present
             self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
             if self.menu_p.str_page.annotateCheckBox.GetValue():
                 self.menu_p.str_page.annotateCheckBox.SetValue(True)
@@ -1686,7 +1717,7 @@ class MainFrame(wx.Frame):
         self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
         boxes = ['x','y','z','f']
         for box in boxes:
-            checkbox = getattr(self.menu_p.str_page, box + 'CheckBox')
+            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
             if box in self.shownkeylist:
                 checkbox.Enable()
                 colname = self.plotstream.header.get('col-'+box, '')
@@ -1725,7 +1756,7 @@ class MainFrame(wx.Frame):
             self.ExportData.Enable(True)
         boxes = ['x','y','z','f']
         for box in boxes:
-            checkbox = getattr(self.menu_p.str_page, box + 'CheckBox')
+            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
             if box in self.shownkeylist:
                 checkbox.Enable()
                 colname = self.plotstream.header.get('col-'+box, '')
@@ -5096,13 +5127,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         mini = [teststream._get_min(key,returntime=True) for key in keys]
         flaglist = []
         comment = 'Flagged minimum'
-        flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
         if flagid is 0:
             comment = ''
         for idx,me in enumerate(mini):
             if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.str_page, keys[idx] + 'CheckBox')
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
                 if checkbox.IsChecked():
                     starttime = num2date(me[1] - xtol)
                     endtime = num2date(me[1] + xtol)
@@ -5141,13 +5172,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         maxi = [teststream._get_max(key,returntime=True) for key in keys]
         flaglist = []
         comment = 'Flagged maximum'
-        flagid = self.menu_p.str_page.FlagIDComboBox.GetValue()
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
         if flagid is 0:
             comment = ''
         for idx,me in enumerate(maxi):
             if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.str_page, keys[idx] + 'CheckBox')
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
                 if checkbox.IsChecked():
                     starttime = num2date(me[1] - xtol)
                     endtime = num2date(me[1] + xtol)
@@ -5842,11 +5873,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
             #print (martasaddress)
             #client.connect("192.168.178.84", 1883, 60)
-            client.connect(martasaddress, int(martasport), int(martasdelay))
+            try:
+                client.connect(martasaddress, int(martasport), int(martasdelay))
+            except:
+                dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
+                        "Check your internet connection or credentials\n",
+                        "Connection failed", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+                return
             qos = 0
             client.subscribe("{}/#".format(martasstationid), qos)
-
-            self.changeStatusbar("Scanning for MQTT broadcasts ... approx 20 sec")            
 
             loopcnt = 0
             success = True
@@ -5856,6 +5893,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             except:
                 print ("Could not get scantime from options - using approx 20 seconds")
                 maxloop = 200
+            self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))            
+
             self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
             while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
                 loopcnt += 1
@@ -5892,6 +5931,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     sensorid = dlg.selectComboBox.GetValue()
                 else:
                     sensorid = sensorlist[0]
+                dlg.Destroy()
 
                 self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
 
@@ -5961,6 +6001,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if isinstance(array[0][-1], datetime):
                 array[0] = date2num(array[0])
         stream = DataStream([LineStruct()],header,array)
+        stream = stream.sorting()
         return stream
 
     def onStopMonitorButton(self, event):

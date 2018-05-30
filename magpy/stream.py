@@ -875,10 +875,33 @@ CALLED BY:
         self.header = header
         # Some initial check if any data set except timecolumn is contained
         datalength = len(ndarray)
+
+        #t1 = datetime.utcnow()
         try:
-            test = [[elem for elem in col if not np.isnan(elem)] for col in ndarray]
+            test = []
+            #ch1 = '-'.encode('utf-8') # not working with py3
+            #ch2 = ''.encode('utf-8')
+            for col in ndarray:
+                col = np.array(list(col))
+                #print (np.array(list(col)).dtype)
+                if col.dtype in ['float64','float32','int32']:
+                    try:
+                        x = np.asarray(col)[~np.isnan(col)]
+                    except: # fallback 1 -> should not needed any more
+                        #print ("Fallback1")
+                        x = np.asarray([elem for elem in col if not np.isnan(elem)]) 
+                else:
+                    y = np.asarray(col)[col!='-']
+                    x = np.asarray(y)[y!='']
+                test.append(x)
+            test = np.asarray(test)
         except:
+            # print ("Fallback -- pretty slowly")
+            #print ("Fallback2")
             test = [[elem for elem in col if not elem in ['','-']] for col in ndarray]
+        #t2 = datetime.utcnow()
+        #print (t2-t1)
+
         emptycnt = [len(el) for el in test if len(el) > 0]
 
         if self.ndarray.size == 0:

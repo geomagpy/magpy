@@ -322,13 +322,14 @@ def readLNM(filename, headonly=False, **kwargs):
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    debug = kwargs.get('debug')
     getfile = True
 
     array = [[] for key in KEYLIST]
     stream = DataStream([],{},np.asarray(array))
 
-
-    print("Found LNM file")
+    if debug:
+        print("Found LNM file")
     synopdict = {"-1":"Sensorfehler",
                  "41":"Leichter bis maessiger Niederschlag (nicht identifiziert, unbekannt)",
                  "42":"Starker Niederschlag (nicht identifiziert, unbekannt)",
@@ -454,10 +455,17 @@ def readLNM(filename, headonly=False, **kwargs):
     headers['SensorDescription'] = 'Thies Laser Niederschlags Monitor: Percipitation analysis'
     headers['SensorName'] = 'LNM'
     headers['SensorGroup'] = 'environment'
+    headers['SensorRevision'] = '0001'
     headers['SensorType'] = 'meteorology'
     headers['SensorKeys'] = 'x,y,z,f,t1,t2,var1,var2,var3,var4,var5,dx,dy,dz,df,str1,str2'
     headers['SensorElements'] = 'rainfall,visibility,reflectivity,P_tot,T,T_el,I_tot,I_fluid,I_solid,d(hail),qualtiy,P_slow,P_fast,P_small,SYNOP-4680-code,SYNOP-4680-description'
 
+    try:
+        headers['SensorID'] = "{}_{}_{} ".format(headers.get('SensorName'),headers.get('SensorSerialNum'),headers.get('SensorRevision'))
+    except:
+        pass
+
+    headers['DataFormat'] = 'Theiss-LaserNiederschlagsMonitor'
 
     return DataStream([LineStruct()], headers, np.asarray(array))
 

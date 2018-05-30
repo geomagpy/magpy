@@ -397,6 +397,7 @@ def readIAF(filename, headonly=False, **kwargs):
     stream = DataStream([LineStruct()], headers, ndarray)
     #if 'df' in keystr:
     #    stream = stream.f_from_df()
+    stream.header['DataFormat'] = 'IAF'
 
     return stream
 
@@ -962,6 +963,16 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         flagruletype = str(cdfdat.attrs['FlagRulesetType'])
     if 'FlagRulesetVersion' in attrslist:
         flagruleversion = str(cdfdat.attrs['FlagRulesetVersion'])
+
+    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec 
+    # and numerical publevel
+    #  IAGA code
+    if headers.get('SensorID','') == '':
+        try:
+            #TODO determine resolution
+            headers['SensorID'] = "{}_{}_{}".format(headers.get('StationIAGAcode','xxx').upper()+'sec',headers.get('DataPublicationLevel','0'),'0001')
+        except:
+            pass
 
 
     #  #################################
@@ -1623,6 +1634,10 @@ def readIMF(filename, headonly=False, **kwargs):
                 headers['DataSensorAzimuth'] = float(block[8])/10/60
                 headers['DataSamplingRate'] = '60 sec'
                 headers['DataType'] = block[5]
+                try:
+                    headers['SensorID'] = "{}{}_{}_{}".format(block[0].upper(),'min','4','0001')
+                except:
+                    pass
                 datehh = block[1] + '_' + block[3]
                 #print float(block[7][:4])/10, float(block[7][4:])/10, float(block[8])/10/60
                 minute = 0
@@ -2607,6 +2622,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                     pass
                 try:
                     headers['StationID'] = block[1].strip()
+                    headers['StationIAGAcode'] = block[1].strip()
                 except:
                     pass
                 try:
@@ -2736,6 +2752,9 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     if not ele.lower().startswith('xyz'):
         stream = stream._convertstream('xyz2'+ele.lower()[:3])
+
+    stream.header['DataFormat'] = 'IYFV'
+    stream.header['SensorID'] = "{}_{}".format(headers.get('StationID','xxx').upper(),'IYFV')
 
     return stream
 

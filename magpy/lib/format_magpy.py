@@ -200,10 +200,6 @@ def readPYASCII(filename, headonly=False, **kwargs):
                 pass
     qFile.close()
 
-    #print np.asarray(array[0])
-    #print np.asarray(array[1])
-    #print np.asarray(array[2])
-    #print headers
     # Clean up the file contents
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
@@ -217,6 +213,10 @@ def readPYASCII(filename, headonly=False, **kwargs):
             array[idx] = np.asarray(array[idx])
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
+
+    headers['DataFormat'] = 'MagPy-ASCII-v1.0'
+    if headers.get('SensorID','') == '':
+        headers['SensorID'] = 'unkown'
 
     return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
@@ -716,7 +716,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         headskip = True
 
     if debug:
-        print ("PYBIN: reading data")
+        print ("PYBIN: reading data here")
 
     theday = extractDateFromString(filename)
     try:
@@ -733,6 +733,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
     if getfile:
         logger.info("readPYBIN: %s Format: PYBIN" % filename)
+        if debug:
+            print ("readPYBIN: {} Format: PYBIN".format(filename))
 
         fh = open(filename, 'rb')
         #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
@@ -745,8 +747,12 @@ def readPYBIN(filename, headonly=False, **kwargs):
         header = header.replace('deg C','deg')
         h_elem = header.strip().split()
         logger.debug("PYBIN: Header {}".format(header))
+        if debug:
+            print ("PYBIN: Header {}".format(header))
 
         logger.debug('readPYBIN- debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
+        if debug:
+            print ('readPYBIN: debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
 
         if not h_elem[1] == 'MagPyBin':
             logger.error('readPYBIN: No MagPyBin format - aborting')
@@ -755,7 +761,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         #Test whether element 3,4,5 (and 6) are lists of equal length
         if len(h_elem) == 8:
-            #print "Very old import format"
+            stream.header['DataFormat'] = 'MagPy-BIN-v1.0'
             nospecial = True
             try:
                 if not keylist:
@@ -771,7 +777,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
                 return stream
         elif len(h_elem) == 9:
-            #print "The current format"
+            stream.header['DataFormat'] = 'MagPy-BIN-v1.1'
             nospecial = True
             try:
                 keylist = h_elem[3].strip('[').strip(']').split(',')
@@ -787,6 +793,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
                 return stream
         elif len(h_elem) == 10:
+            stream.header['DataFormat'] = 'MagPy-BIN-v1.S'
             logger.info("readPYBIN: Special format detected. May not be able to read file.")
             nospecial = False
             if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
@@ -797,6 +804,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 nospecial = True
         else:
             logger.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
+            if debug:
+                print ('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
             return stream
 
         logger.debug('readPYBIN: checking code')
@@ -850,6 +859,8 @@ def readPYBIN(filename, headonly=False, **kwargs):
                     data= struct.unpack(packstr, line)
                 except:
                     logger.error("readPYBIN: struct error {} {}".format(filename, len(line)))
+                    if debug:
+                        print ("readPYBIN: struct error {} {}".format(filename, len(line)))
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:

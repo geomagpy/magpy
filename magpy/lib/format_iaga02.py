@@ -319,15 +319,14 @@ def readIAGA(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    if stream.header.get('SensorID','') == '':
-        # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min 
-        # and numerical publevel
-        #  IAGA code
-        try:
-            tmp, fileext = os.path.splitext(filename)
-            stream.header['SensorID'] = stream.header.get('StationIAGAcode','').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
-        except:
-            pass
+    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min 
+    # and numerical publevel
+    #  IAGA code
+    try:
+        tmp, fileext = os.path.splitext(filename)
+        stream.header['SensorID'] = stream.header.get('StationIAGAcode','').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
+    except:
+        pass
 
     if not comment == '':
         stream.header['DataComments'] = comment
