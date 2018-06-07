@@ -1038,10 +1038,12 @@ def writePYCDF(datastream, filename, **kwargs):
     #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
     #    head.append(title)
 
-    #print datastream.ndarray, len(datastream.ndarray[0])
-    #print "WriteFormat length 0", len(datastream.ndarray[0])
-    # Test for file content
-    #if not len(datastream) > 0 and not len(datastream.ndarray)
+    if pyvers and pyvers == 2:
+                ch1 = '-'.encode('utf-8') # not working with py3
+                ch2 = ''.encode('utf-8')
+    else:
+                ch1 = '-'
+                ch2 = ''
 
     if not len(datastream.ndarray[0]) > 0 and not len(datastream) > 0:
         return False
@@ -1176,7 +1178,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = np.asarray(col) # to get string conversion
             else:
                 #print(col, key)
-                col = np.asarray([np.nan if el in [None,'-'] else el for el in col])
+                col = np.asarray([np.nan if el in [None,ch1] else el for el in col])
                 #col = np.asarray([float(nan) if el is None else el for el in col])
                 col = col.astype(float)
             mycdf[key] = col

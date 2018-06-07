@@ -135,8 +135,10 @@ try:
         import _thread
     try:                # python2
         from StringIO import StringIO
+        pyvers = 2
     except ImportError: # python 3
         from io import StringIO
+        pyvers = 3
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)
@@ -877,28 +879,36 @@ CALLED BY:
         datalength = len(ndarray)
 
         #t1 = datetime.utcnow()
+        if pyvers and pyvers == 2:
+                ch1 = '-'.encode('utf-8') # not working with py3
+                ch2 = ''.encode('utf-8')
+        else:
+                ch1 = '-'
+                ch2 = ''
+
         try:
             test = []
-            #ch1 = '-'.encode('utf-8') # not working with py3
-            #ch2 = ''.encode('utf-8')
+
             for col in ndarray:
                 col = np.array(list(col))
                 #print (np.array(list(col)).dtype)
-                if col.dtype in ['float64','float32','int32']:
+                if col.dtype in ['float64','float32','int32','int64']:
                     try:
                         x = np.asarray(col)[~np.isnan(col)]
                     except: # fallback 1 -> should not needed any more
                         #print ("Fallback1")
                         x = np.asarray([elem for elem in col if not np.isnan(elem)]) 
                 else:
-                    y = np.asarray(col)[col!='-']
-                    x = np.asarray(y)[y!='']
+                    #y = np.asarray(col)[col!='-']
+                    #x = np.asarray(y)[y!='']
+                    y = np.asarray(col)[col!=ch1]
+                    x = np.asarray(y)[y!=ch2]
                 test.append(x)
             test = np.asarray(test)
         except:
             # print ("Fallback -- pretty slowly")
             #print ("Fallback2")
-            test = [[elem for elem in col if not elem in ['','-']] for col in ndarray]
+            test = [[elem for elem in col if not elem in [ch1,ch2]] for col in ndarray]
         #t2 = datetime.utcnow()
         #print (t2-t1)
 

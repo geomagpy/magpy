@@ -11,6 +11,7 @@ v0.3.99 general:
       (requires MARTAS-mqtt) (previously 1 millisec)
     + moved flagging methods to a separate panel -> improves accessablility for small screens/MacOS
     + improved extend method - speeding up
+    + added information dialogs to GUI
 
 v0.3.99 fixes:
     + updated flaglist2db and db2flaglist methods - considerably faster now and more reliable
@@ -24,6 +25,7 @@ v0.3.99 fixes:
     + flags: saving flags to database create correct timesteps, 'replace' set to default
     + cdfpath returns NONE: illegal operation -> solved 
     + corrected invalid GridSizeres in panels
+    + corrected unicode issues
 
 v0.3.99 additions:
     + added script: mptest -> test method to check magpy compatibility

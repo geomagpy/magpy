@@ -216,6 +216,7 @@ def on_connect(client, userdata, flags, rc):
     #print("Setting QOS (Quality of Service): {}".format(qos))
     if str(rc) == '0':
         print ("Connection successful - continue")
+        client.connected_flag = True
     elif str(rc) == '5':
         print ("Broker eventually requires authentication - use options -u and -P")
     # important obtain subscription from some config file or provide it directly (e.g. collector -a localhost -p 1883 -t mqtt -s wic)
@@ -223,6 +224,7 @@ def on_connect(client, userdata, flags, rc):
     #client.subscribe(substring,qos=qos)
 
 
+"""
 def on_message(client, userdata, msg):
     #print ("Topic", msg.topic.split('/'))
     sensorid = msg.topic.split('/')[1].strip('meta').strip('data')
@@ -244,9 +246,15 @@ def on_message(client, userdata, msg):
             #posvar1 = KEYLIST.index('var1')
         else:
             print(msg.topic + " " + str(msg.payload))
-
+"""
 
 def on_message(client, userdata, msg):
+
+    #print("message received " ,str(msg.payload.decode("utf-8")))
+    #print("message topic=",msg.topic)
+    #print("message qos=",msg.qos)
+    #print("message retain flag=",msg.retain)
+
     arrayinterpreted = False
     sensorid = msg.topic.split('/')[1].strip('meta').strip('data').strip('dict')
     #sensorid = msg.topic.strip(stationid).replace('/','').strip('meta').strip('data').strip('dict')
@@ -282,3 +290,4 @@ def on_message(client, userdata, msg):
         else:
             print(msg.topic + " " + str(msg.payload))
 
+    #print ("on_message finished")

@@ -33,6 +33,7 @@ from magpy.gui.reportpage import *
 from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
+from magpy.collector import collectormethods as colsup
 import glob, os, pickle, base64
 import pylab
 import thread, time
@@ -145,6 +146,8 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['fitknotstep'] = '0.3'
     if optionsdict.get('martasscantime','') == '':
         optionsdict['martasscantime'] = '20'
+    if optionsdict.get('favoritemartas','') == '':
+        optionsdict['favoritemartas'] = ['www.example.com','192.168.178.42']
     if optionsdict.get('experimental','') == '':
         optionsdict['experimental'] = False
 
@@ -291,15 +294,11 @@ class PlotPanel(wx.Panel):
         DESCRIPTION
             Update array with new data and plot it.
         """
-        from magpy.collector import collectormethods as colsup
+        #from magpy.collector import collectormethods as colsup
 
         sumtime = 0
-        #        while sumtime<self.datavars[7] and (not self.t1_stop.is_set()):
-        #step = 0.1
-        #print ("Updating", self.datavars[0][:-5], self.datavars[7], self.datavars[2])
-        #print ("Parameter", self.datavars[1])
-        #print ("Units", self.datavars[5])
 
+        #print (self.datavars[0][:-5])
         coverage = int(self.datavars[6])
 
         pos = KEYLIST.index('t1')
@@ -307,23 +306,26 @@ class PlotPanel(wx.Panel):
         #OK = True
         #if OK:
         while sumtime<self.datavars[2]:
-            client.loop(1)
+            client.loop(.1)
+            # TODO add reconnection handler here in case that client goes away
+            # print (client.connected_flag) -- connected_flag remains True -> can set it to False if no Payload is received ....
+            #if not client.connected_flag:
+            #    reconnect
             sumtime = sumtime+1
             li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
-
             if len(self.array[0]) > 0 and li[0][0] == self.array[0][-1]:
                 pass
             else:
-                for idx,el in enumerate(li):
+                if not li == None:
+                    for idx,el in enumerate(li):
                         self.array[idx].extend(el)
 
             try:
                 tmp = DataStream([],{},np.asarray(self.array)).samplingrate()
-                coverage = int(coverage/tmp)
+                coverage = int(int(self.datavars[6])/tmp)
             except:
                 pass
             self.array = [el[-coverage:] for el in self.array]
-
 
         if len(self.array[0]) > 2:
             ind = np.argsort(np.asarray(self.array)[0])
@@ -443,6 +445,7 @@ class PlotPanel(wx.Panel):
                 self.changeStatusbar("Using MQTT monitor failed ... Ready")
                 dlg.Destroy()
             if mqttimport:
+                mqtt.Client.connected_flag=False
                 client = mqtt.Client()
 
                 if not martasuser in ['',None,'None','-']: 
@@ -1450,6 +1453,7 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.powerButton.Enable()         # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
+
         # Selective fields
         # ----------------------------------------
         #print ("COMPONENTS", comps)
@@ -1890,6 +1894,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             #self.changeStatusbar("Loading data ...")
         dialog.Destroy()
 
+
         if success:
             stream = self.openStream(path=self.dirname,mintime=old, maxtime=new, extension='*')
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.dirname,len(stream.ndarray[0])))
@@ -1915,7 +1920,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if dlg.ShowModal() == wx.ID_OK:
             self.changeStatusbar("Loading data ...")
             pathlist = dlg.GetPaths()
-            try:
+        dlg.Destroy()
+
+        loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+        try:
                 for path in pathlist:
                     elem = os.path.split(path)
                     self.dirname = elem[0]
@@ -1931,9 +1939,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
                 self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
                 success = True
-            except:
+        except:
                 sucess = False
-        dlg.Destroy()
+        loadDlg.Destroy()
 
         # plot data
         if success:
@@ -1954,14 +1962,18 @@ Suite 330, Boston, MA  02111-1307  USA"""
         success = False
         bookmarks = self.options.get('bookmarks',[])
         if bookmarks == []:
-            bookmarks = ['http://www.intermagnet.org/test/ws/?id=BOU','ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+            bookmarks = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab','http://www.intermagnet.org/test/ws/?id=BOU']
 
         dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
         if dlg.ShowModal() == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
             self.changeStatusbar("Loading data ... be patient")
-            try:
+            self.options['bookmarks'] = dlg.favorites
+        dlg.Destroy()
+
+        try:
                 if not url.endswith('/'):
+                    loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                     try:
@@ -1969,6 +1981,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = True
                     except:
                         success = False
+                    loadDlg.Destroy()
                 else:
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
@@ -1978,16 +1991,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = True
                     except:
                         success = False
-            except:
+        except:
                 pass
-        dlg.Destroy()
 
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
             if self.InitialRead(stream):
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
-            self.options['bookmarks'] = dlg.favorites
+            #self.options['bookmarks'] = dlg.favorites
             #print ("Here", dlg.favorites)
             #if not bookmarks == dlg.favorites:
             #print ("Favorites have changed ...  can be saved in init")
@@ -1996,7 +2008,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.initParameter(inipara)
             self.changeStatusbar("Ready")
         else:
-            self.options['bookmarks'] = dlg.favorites
+            #self.options['bookmarks'] = dlg.favorites
             #print ("Here", dlg.favorites)
             #if not bookmarks == dlg.favorites:
             #print ("Favorites have changed ...  can be saved in init")
@@ -2059,7 +2071,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if getdata:
             path = [self.db,datainfoid]
             stream = self.openStream(path=path,mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
-
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(path[1],len(stream.ndarray[0])))
             if self.InitialRead(stream):
                 #self.ActivateControls(self.plotstream)
@@ -2896,8 +2907,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 if not seconddata == 'None':
                     reportmsg += "\nStep 2:  Secondary data:\n"
                     reportmsg += "-----------------------\n"
+                    proDlg = WaitDialog(None, "Processing...", "Checking file structure of one second data.\nPlease wait....")
                     self.changeStatusbar("Step 2: Reading one second data ({})- please be patient ... this may need a few minutes".format(seconddata))
                     secdata, fail = readSecData(secondpath,seconddata,rmonth,year)
+                    proDlg.Destroy()
                     if fail == 6:
                         errormsg += "Step 2: Reading of one second data failed - check file format and/or file name convention and/or dates\n"
                         succlst[1] = 5
@@ -3223,6 +3236,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 if seconddata == 'None':
                     reportmsg += "Step 4: No second data available - continue with step 5\n"
                 else:
+                    proDlg = WaitDialog(None, "Processing...", "Checking consistency of one second data.\nPlease wait ... might need a while")
+
                     self.changeStatusbar("Step 4: Checking one second data consistency (internally and with primary data) ")
                     # message box - Continuing with step 4 - consistency of one second data with IAF
 
@@ -3364,6 +3379,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                                 if self.InitialRead(diff):
                                     self.OnInitialPlot(self.plotstream)
 
+                    proDlg.Destroy()
 
                 if succlst[3] <= 2:
                     reportmsg += "\n----> Step 4: successfully passed\n"
@@ -4442,6 +4458,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
             end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
 
+            dlg.Destroy()
+
+            loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+
             if isinstance(path, basestring):
                 if not path=='':
                     self.menu_p.str_page.fileTextCtrl.SetValue(ext)
@@ -4458,7 +4478,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 except:
                     print ("Reading failed")
 
+            loadDlg.Destroy()            
             return stream
+
         else:
             return DataStream()
 
@@ -5826,24 +5848,37 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onConnectMARTASButton(self, event):
 
         success = False
+        oldopt = self.options.get('favoritemartas',[])
         dlg = SelectMARTASDialog(None, title='Select MARTAS',options=self.options)
         if dlg.ShowModal() == wx.ID_OK:
-            martasaddress1 = dlg.addressComboBox.GetValue()
-            martasaddress = dlg.newTextCtrl.GetValue()
-            if martasaddress == '':
-                martasaddress = martasaddress1
+            martasaddress = dlg.addressComboBox.GetValue()
             martasport = dlg.portTextCtrl.GetValue()
             #martasdelay = dlg.delayTextCtrl.GetValue()
             martasstationid = dlg.stationidTextCtrl.GetValue()
             martasuser = dlg.userTextCtrl.GetValue()
             martaspasswd = dlg.pwdTextCtrl.GetValue()
+            self.options['favoritemartas'] = dlg.favoritemartas
             martasdelay = 60
             martasprotocol = 'mqtt' # dlg.pwdTextCtrl.GetValue()
             success = True
+            #if not oldopt == self.options['favoritemartas']:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            dlg.Destroy()
         else:
+            self.options['favoritemartas'] = dlg.favoritemartas
+            if not oldopt == self.options['favoritemartas']:
+                saveini(self.options)
+                inipara, check = loadini()
+                self.initParameter(inipara)
             dlg.Destroy()
             return
 
+        #if not oldopt == self.options['favoritemartas']:
+        #    saveini(self.options)
+        #    inipara, check = loadini()
+        #    self.initParameter(inipara)
         self.menu_p.rep_page.logMsg('- Selected MARTAS maschine ({},{}) for monitoring ...'.format(martasaddress,martasprotocol))
 
         pad = 5
@@ -5858,6 +5893,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
             mqttimport = True
         except:
             mqttimport = False
+            dlg = wx.MessageDialog(self, "Could not import required packages!\n"
+                        "Make sure that the python package paho-mqtt is installed\n",
+                        "MARTAS monitor failed", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Using MQTT monitor failed ... Ready")
+            dlg.Destroy()
         #print ("TEST", colsup.identifier)
 
         if mqttimport:
@@ -5894,16 +5935,26 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 print ("Could not get scantime from options - using approx 20 seconds")
                 maxloop = 200
             self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))            
-
-            self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
-            while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
-                loopcnt += 1
-                client.loop(.1) #blocks for 100ms
-                self.progress.Update(loopcnt)
-                if loopcnt > 600:
-                    success = False
-                    break
-            self.progress.Destroy()
+            try:
+                self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
+                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
+                    loopcnt += 1
+                    client.loop(.1) #blocks for 100ms
+                    self.progress.Update(loopcnt)
+                    if loopcnt > 600:
+                        success = False
+                        break
+                self.progress.Destroy()
+            except:  # test fallback for MacOS
+                proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
+                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
+                    loopcnt += 1
+                    client.loop(.1) #blocks for 100ms
+                    self.progress.Update(loopcnt)
+                    if loopcnt > 600:
+                        success = False
+                        break
+                proDlg.Destroy()
 
             #print ("here", colsup.identifier)
 
@@ -5930,7 +5981,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 if dlg.ShowModal() == wx.ID_OK:
                     sensorid = dlg.selectComboBox.GetValue()
                 else:
+                    self.menu_p.com_page.getMARTASButton.Enable()
+                    self.ActivateControls(self.plotstream)
                     sensorid = sensorlist[0]
+                    
                 dlg.Destroy()
 
                 self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
@@ -5960,7 +6014,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.menu_p.com_page.getMARCOSButton.Disable()
         #self.menu_p.com_page.getMQTTButton.Disable()
         self.menu_p.com_page.stopMonitorButton.Enable()
-        self.menu_p.com_page.saveMonitorButton.Enable()
+        if self.options.get('experimental'):
+            self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
 
         # start monitoring parameters
         period = float(self.menu_p.com_page.frequSlider.GetValue())
@@ -6007,6 +6062,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
     def onStopMonitorButton(self, event):
         dataid = self.plot_p.datavars[0]
         self.plot_p.t1_stop.set()
+        #self.plot_p.client.loop_stop()
         self.menu_p.com_page.logMsg(' > Read cycle stopped')
         self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.monitorSource))
         self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)

@@ -52,9 +52,9 @@ class MonitorPage(wx.Panel):
         self.startMonitorButton = wx.Button(self,-1,"Start Monitor", size=(160,30))  # if started then everything else will be disabled ..... except save monitor
         self.stopMonitorButton = wx.Button(self,-1,"Stop Monitor", size=(160,30))
 
-        self.saveMonitorButton = wx.Button(self,-1,"Log data", size=(160,30))  # produces a bin file
+        self.saveMonitorButton = wx.Button(self,-1,"Log data*", size=(160,30))  # produces a bin file
         #self.startMonitorButton.Disable()
-        #self.stopMonitorButton.Disable()
+        self.saveMonitorButton.Disable()
         # Connection Log
         # 
         self.connectionLogLabel = wx.StaticText(self, label="Connection Log:")

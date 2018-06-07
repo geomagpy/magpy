@@ -18,6 +18,7 @@ from io import open
 
 from magpy.stream import *
 
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -127,8 +128,12 @@ def isIYFV(filename):
     _YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
     """
     # Search for identifier in the first three line
+    code = 'rb'
+    if sys.version_info >= (3, 0):
+        code = 'rt' 
+
     try:
-        fi = open(filename, 'rt')
+        fi = open(filename, code)
     except:
         return False
     for ln in range(0,2):
@@ -2751,6 +2756,8 @@ def readIYFV(filename, headonly=False, **kwargs):
     stream = DataStream([LineStruct()], headers, np.asarray(array))
 
     if not ele.lower().startswith('xyz'):
+        if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
+            ele.lower()[:3] = 'hdz'
         stream = stream._convertstream('xyz2'+ele.lower()[:3])
 
     stream.header['DataFormat'] = 'IYFV'

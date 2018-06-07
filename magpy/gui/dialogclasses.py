@@ -4669,7 +4669,9 @@ class SelectMARTASDialog(wx.Dialog):
             self.protocollist = ['mqtt']
         self.portlist = ['8080','1883']
         self.selector = 1                    # list number of protocol
-        self.favoritemartas = ['192.168.0.14','192.168.178.84']
+        self.favoritemartas = self.options.get('favoritemartas')
+        if not self.favoritemartas or not len(self.favoritemartas) > 0:
+            self.favoritemartas = ['www.example.com','192.168.178.42']
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -4680,12 +4682,11 @@ class SelectMARTASDialog(wx.Dialog):
         self.qosComboBox = wx.ComboBox(self, choices=self.qos,
                        style=wx.CB_DROPDOWN, value=self.qos[0],size=(160,-1))
         self.protocolRadioBox = wx.RadioBox(self, label="Communication protocol:",  choices=self.protocollist,
-                       majorDimension=2, style=wx.RA_SPECIFY_COLS ) #,size=(160,-1))
+                       majorDimension=2, style=wx.RA_SPECIFY_COLS ,size=(160,-1))
         self.addressLabel = wx.StaticText(self, label="Select MARTAS:",size=(160,30))
         self.addressComboBox = wx.ComboBox(self, choices=self.favoritemartas,
                        style=wx.CB_DROPDOWN, value=self.favoritemartas[1],size=(160,-1))
-        self.newLabel = wx.StaticText(self, label="Input new MARTAS IP:",size=(160,30))
-        self.newTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.dropButton = wx.Button(self, label='Remove from favorites',size=(160,30))
         self.newButton = wx.Button(self, label='Add to favorites',size=(160,30))
         self.portLabel = wx.StaticText(self, label="Communication port:",size=(160,30))
         self.portTextCtrl = wx.TextCtrl(self, value=self.portlist[self.selector],size=(160,30))
@@ -4712,9 +4713,7 @@ class SelectMARTASDialog(wx.Dialog):
 
         contlist = [(self.addressLabel, noOptions),
                  (self.addressComboBox, expandOption),
-                 (self.newLabel, noOptions),
-                 (self.newTextCtrl, expandOption),
-                  emptySpace,
+                 (self.dropButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.newButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                  (self.protocolRadioBox, noOptions),
@@ -4750,11 +4749,24 @@ class SelectMARTASDialog(wx.Dialog):
 
     def bindControls(self):
         self.newButton.Bind(wx.EVT_BUTTON, self.OnNew)
+        self.dropButton.Bind(wx.EVT_BUTTON, self.OnRemove)
         self.Bind(wx.EVT_RADIOBOX, self.OnProtocol, self.protocolRadioBox)
 
 
     def OnNew(self, e):
-        self.Close(True)
+        # get current value in dropdown and append it to 
+        newval = self.addressComboBox.GetValue()
+        if not newval in self.favoritemartas:
+            self.favoritemartas.append(newval)
+
+    def OnRemove(self, e):
+        # get current value in dropdown and append it to 
+        #self.favoritemartas = self.options.get('favoritemartas')
+        dropval = self.addressComboBox.GetValue()
+        if dropval in self.favoritemartas:
+            self.favoritemartas = [elem for elem in self.favoritemartas if not elem == dropval]
+        #print (dropval, self.favoritemartas)
+        #self.Close(True)
 
     def OnProtocol(self, e):
         self.protocol = self.protocolRadioBox.GetStringSelection()
@@ -5245,3 +5257,40 @@ class MultiStreamDialog(wx.Dialog):
                             "Subtract error", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
+
+
+class WaitDialog(wx.Dialog):
+    """ 
+    A popup dialog for to inform users
+    that work is in progress 
+    """
+
+    def __init__(self, parent, title, msg):
+        # Create a dialog
+        wx.Dialog.__init__(self, parent, -1, title, size=(350, 150),
+style=wx.CAPTION | wx.STAY_ON_TOP)
+        # Add sizers
+        box = wx.BoxSizer(wx.VERTICAL)
+        box2 = wx.BoxSizer(wx.HORIZONTAL)
+        # Add an Info graphic
+        bitmap = wx.EmptyBitmap(32, 32)
+        bitmap = wx.ArtProvider_GetBitmap(wx.ART_INFORMATION,
+wx.ART_MESSAGE_BOX, (32, 32))
+        graphic = wx.StaticBitmap(self, -1, bitmap)
+        box2.Add(graphic, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 10)
+        # Add the message
+        message = wx.StaticText(self, -1, msg)
+        box2.Add(message, 0, wx.EXPAND | wx.ALIGN_CENTER |
+wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
+        box.Add(box2, 0, wx.EXPAND)
+        # Handle layout
+        self.SetAutoLayout(True)
+        self.SetSizer(box)
+        self.Fit()
+        self.Layout()
+        self.CentreOnScreen()
+        # Display the Dialog
+        self.Show()
+        # Make sure the screen gets fully drawn before continuing.
+        wx.Yield()
+
