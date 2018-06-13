@@ -2,9 +2,9 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
 -------------------------------------------------
-####v<0.3.99>, <2018-05-08> -- On the way to beta.
+####v<0.4.00>, <2018-06-13> -- 
 
-v0.3.99 general:
+v0.4.00 general:
     + removed capital letters from package title in pypi: GeomagPy -> geomagpy
     + switched to readme.md for all package providers
     + increased time step accuracy in database acquisition methods max 1 microsecond
@@ -13,7 +13,7 @@ v0.3.99 general:
     + improved extend method - speeding up
     + added information dialogs to GUI
 
-v0.3.99 fixes:
+v0.4.00 fixes:
     + updated flaglist2db and db2flaglist methods - considerably faster now and more reliable
     + CheckData in GUI: check for filename compliance, speed up read if not ok, relax checks with
               numerical uncertainties, add optional flag for non-required information, 
@@ -27,7 +27,7 @@ v0.3.99 fixes:
     + corrected invalid GridSizeres in panels
     + corrected unicode issues
 
-v0.3.99 additions:
+v0.4.00 additions:
     + added script: mptest -> test method to check magpy compatibility
                  - check: mptest -h  for options
     + added script: addcred -> password method fro MARTAS/MARCOS
@@ -52,8 +52,9 @@ v0.3.99 additions:
     + added Clear Flags button to remove all flags
     + updated monitor panel: full mqtt support to view broker data (e.g. MARTAS) plus authentication
     + modified spectral plot options and its default colorscale
+    + moved most runtime information to debug 
 
-v0.3.99 removals:
+v0.4.00 removals:
     + cleaned up logs and removed unnecessary log info
 
 -------------------------------------------------

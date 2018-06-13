@@ -11603,6 +11603,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     keys = kwargs.get('keys')
     newway = kwargs.get('newway')
     getmeans = kwargs.get('getmeans')
+    debug = kwargs.get('debug')
 
     if not keys:
         keys = stream_a._get_key_headers(numerical=True)
@@ -11770,10 +11771,11 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                                 array[ind] = np.delete(np.asarray(elem), nanind)
                     array = np.asarray(array)
             else:
-                print("Did not find identical timesteps - linearily interpolating stream b")
-                print("- please note... this needs considerably longer")
-                print("- put in the larger (higher resolution) stream as stream_a")
-                print("- otherwise you might wait endless")
+                if debug:
+                    print("Did not find identical timesteps - linearily interpolating stream b")
+                    print("- please note... this needs considerably longer")
+                    print("- put in the larger (higher resolution) stream as stream_a")
+                    print("- otherwise you might wait endless")
                 # interpolate b
                 function = sb.interpol(keys)
                 #print function, len(function), keys, sa.ndarray, sb.ndarray
