@@ -1745,23 +1745,6 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         else:
             plt.show()
 
-    """
-    if axes:
-        return ax
-
-    if not sphinx:
-        # ignoring all NumPy warnings during plot
-        temp = np.geterr()
-        np.seterr(all='ignore')
-        plt.draw()
-        np.seterr(**temp)
-
-    if outfile:
-        if fmt:
-            fig.savefig(outfile, format=fmt)
-        else:
-            return fig
-
 
 def magpySpecgram(x, NFFT=256, Fs=2, Fc=0, detrend=mlab.detrend_none,
              window=mlab.window_hanning, noverlap=128,

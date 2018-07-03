@@ -42,7 +42,7 @@ class FlaggingPage(wx.Panel):
         self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,25))
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,25))
         self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,25))
-
+        self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -63,7 +63,8 @@ class FlaggingPage(wx.Panel):
                  (self.flagIDText, dict()),
                  (self.flagIDComboBox, dict(flag=wx.EXPAND)),
                  (self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)),]
+                 (self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.flagClearButton, dict(flag=wx.ALIGN_CENTER)),]
         # A GridSizer will contain the other controls:
         cols = 2
         rows = int(np.ceil(len(elemlist)/float(cols)))

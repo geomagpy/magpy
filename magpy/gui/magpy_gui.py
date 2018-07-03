@@ -35,7 +35,7 @@ from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
 from magpy.collector import collectormethods as colsup
-from magpy.gui.statisticspage import StatisticsPanel
+from magpy.gui.statisticspage import StatisticsPage
 import glob, os, pickle, base64
 import pylab
 import thread, time
