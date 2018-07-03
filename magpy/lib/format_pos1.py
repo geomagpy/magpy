@@ -46,6 +46,32 @@ def isPOS1TXT(filename):
     loggerlib.info("format_pos1: Found POS-1 Text file %s" % filename)
     return True
 
+
+def isPOSPMB(filename):
+    """
+    Checks whether a file is binary POS-1 file format.
+    Header:
+    # MagPyBin %s %s %s %s %s %s %d" % ('POS1', '[f,df,var1,sectime]', '[f,df,var1,GPStime]', '[nT,nT,none,none]', '[1000,1000,1,1]
+    """
+    try:
+        temp = open(filename, 'rt').readline()
+    except:
+        return False
+    try:
+        el = temp.split()
+        if not len(el) == 5:
+            return False
+    except:
+        return False
+    try:
+        date = datetime.strptime(el[3],"%m.%d.%y")
+    except:
+        return False
+
+    loggerlib.info("format_pos1: Found POS-1 pmb file {}".format(filename))
+    return True
+
+
 def readPOS1(filename, headonly=False, **kwargs):
     # Reading POS-1 Binary format data.
 
@@ -113,7 +139,6 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     getfile = True
 
-    fh = open(filename, 'rb')
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
@@ -135,8 +160,9 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
         loggerlib.warning("readPOS1TXT: Could not identify date in %s. Reading all ..." % daystring)
         getfile = True
 
-    if getfile:
+    fh = open(filename, 'rb')
 
+    if getfile:
         line = fh.readline()
         loggerlib.info('readPOS1TXT: Reading %s' % (filename))
 
@@ -158,3 +184,49 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
 
 
     return DataStream(stream, headers)
+
+def readPOSPMB(filename, headonly=False, **kwargs):
+    # Reading POS-1 Binary format data.
+
+    timestamp = os.path.getmtime(filename)
+    creationdate = datetime.fromtimestamp(timestamp)
+    daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
+    YeT = daytmp[:2]
+    ctime = creationdate
+
+    fh = open(filename, 'rt')
+    # read file and split text into channels
+    stream = DataStream()
+    # Check whether header information is already present
+    headers = {}
+    array = [[] for key in KEYLIST]
+
+    data = []
+    key = None
+    logging.info(' Read: %s Format: POS pmb' % (filename))
+
+    for line in fh:
+        if line.isspace():
+            # blank line
+            pass
+        else:
+            data = line.split()
+            #'48607466', '00011', '80', '06.28.18', '15:05:27,00'
+            time = data[4].split(',')[0].split('.')[0]
+            date = data[3]+'T'+time
+            numtime = date2num(datetime.strptime(date,"%m.%d.%yT%H:%M:%S"))
+            if numtime > 0:
+                array[0].append(numtime)
+                array[4].append(float(data[0])/1000.)
+
+    if len(array[0]) > 0:
+        headers['col-f'] = 'f'
+        headers['unit-col-f'] = 'nT'
+
+    logging.info("Loaded POS pmb file")
+    fh.close()
+
+    headers['DataFormat'] = 'PMB'
+    array = [np.asarray(el) for el in array]
+
+    return DataStream([LineStruct()], headers, np.asarray(array))

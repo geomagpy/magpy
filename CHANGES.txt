@@ -2,6 +2,23 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
 -------------------------------------------------
+####v<0.4.01>, <2018-07-01> -- 
+
+v0.4.01 general:
+    + added suggestion from IAGA workshop
+
+v0.4.01 fixes:
+    + IAF export and read updated - more stable when f ot k missing
+    + IYFV import - corrected error when importing hdz,dhz data types 
+
+v0.4.01 additions:
+    + added filter option to script mpconvert:
+         allows to directly convert IMAGCDF second to IAF/IAGA2002 minute
+    + added QSpin library
+    + adding improved POS1 library - now supporting pmb format
+
+
+-------------------------------------------------
 ####v<0.4.00>, <2018-06-13> -- 
 
 v0.4.00 general:

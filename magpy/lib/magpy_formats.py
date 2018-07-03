@@ -53,6 +53,7 @@ from magpy.lib.format_didd import *
 from magpy.lib.format_gdas import *
 from magpy.lib.format_lemi import *
 from magpy.lib.format_pos1 import *
+from magpy.lib.format_qspin import *
 #from magpy.lib.format_env05 import *
 from magpy.lib.format_cr800 import *
 from magpy.lib.format_iono import *
@@ -186,6 +187,9 @@ def isFormat(filename, format_type):
     elif (format_type == "POS1TXT"): # Text POS1 data (0.2 Hz)
         if (isPOS1TXT(filename)):
             return True
+    elif (format_type == "PMB"): # POS PMB data
+        if (isPOSPMB(filename)):
+            return True
     elif (format_type == "IAF"): # Intermagnet Archive Format
         if (isIAF(filename)):
             return True
@@ -242,6 +246,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "USBLOG"): # Data from the USB temperature logger
         if (isUSBLOG(filename)):
+            return True
+    elif (format_type == "QSPIN"): # Data from the USB temperature logger
+        if (isQSPIN(filename)):
             return True
     elif (format_type in ["PYNC", "AUTODIF", "SERMUL", "SERSIN", "LATEX"]): # Not yet supported
         return False
@@ -306,6 +313,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPOS1(filename, headonly, **kwargs)
     elif (format_type == "POS1TXT"):
         return readPOS1TXT(filename, headonly, **kwargs)
+    elif (format_type == "PMB"):
+        return readPOSPMB(filename, headonly, **kwargs)
+    elif (format_type == "QSPIN"):
+        return readQSPIN(filename, headonly, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return readAUTODIF_FREAD(filename, headonly, **kwargs)
     #elif (format_type == "ENV05"):

@@ -399,6 +399,8 @@ PYMAG_SUPPORTED_FORMATS = {
                 'PYASCII':['rw', 'MagPy basic ASCII'],
                 'POS1TXT':['r', 'POS-1 text format output data'],
                 'POS1':['r', 'POS-1 binary output at WIC'],
+                'PMB':['r', 'POS pmb file'],
+                'QSPIN':['r', 'QSPIN ascii output'],
                 #'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
                 #'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
                 #'BDV1':['r', 'Budkov GDAS data variant'],
@@ -453,6 +455,8 @@ PYMAG_SUPPORTED_FORMATS = {
                 'PYASCII',      # MagPy basic ASCII
                 'POS1TXT',      # POS-1 text format output data
                 'POS1',         # POS-1 binary output at WIC
+                'PMB',          # POS pmb output
+                'QSPIN',        # QSpin output
                 'PYNC',         # MagPy NetCDF variant (too be developed)
                 'DTU1',         # ASCII Data from the DTU's FGE systems
                 'SFDMI',        # ?
@@ -3016,7 +3020,7 @@ CALLED BY:
         return stream
 
 
-    def dailymeans(self, keys=['x','y','z','f'], offset = 0.5, **kwargs):
+    def dailymeans(self, keys=['x','y','z','f'], offset = 0.5, keepposition=False, **kwargs):
         """
     DEFINITION:
         Calculates daily means of xyz components and their standard deviations. By default
@@ -3083,7 +3087,10 @@ CALLED BY:
             array[0].append(day+offset)
             for idx, pos in enumerate(poslst):
                 #if len(sttmp.ndarray[idx+1]) > 0:
-                array[idx+1].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
+                if not keepposition:
+                    array[idx+1].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
+                else:
+                    array[pos].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
                 #print ("Check", KEYLIST[pos], idx+1, len(sttmp._get_column(KEYLIST[pos])),sttmp._get_column(KEYLIST[pos]),sttmp.mean(KEYLIST[pos],percentage=percentage))
                 """
             #array[0].append(day+0.5)
@@ -3093,7 +3100,8 @@ CALLED BY:
                 data.header['col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('col-'+KEYLIST[pos]))
                 data.header['unit-col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[pos]))
                 diff = pos-idx
-            for idx,dpos in enumerate(deltaposlst):
+            if not keepposition:
+              for idx,dpos in enumerate(deltaposlst):
                 #if len(sttmp.ndarray[idx]) > 0:
                 me,std = sttmp.mean(KEYLIST[idx+diff],percentage=percentage, std=True)
                 array[dpos].append(std)
@@ -5987,7 +5995,20 @@ CALLED BY:
         # Use simple rounds if sr > 60 secs
         # Check accuracy for sr < 10 secs (three digits:
         #       if abs(sr-round(sr,0)) * 1000 e.g. (1.002 -> 2, 0.998 -> 2)
-        if sr < 59:
+        if sr < 0.05:
+            for i in range(0,5):
+                multi = 10**i
+                srfloor = np.floor(sr*multi)
+                if srfloor >= 1:
+                    # found multiplicator
+                    # now determine significance taking into account three more digits
+                    digs = np.floor(np.abs(sr*multi-srfloor)*1000)
+                    if digs<5: # round to zero
+                        val = np.round(srfloor/multi,1)
+                    else:
+                        val = np.round(sr,5)
+                    break
+        elif sr < 59:
             for i in range(0,3):
                 multi = 10**i
                 srfloor = np.floor(sr*multi)
@@ -9652,7 +9673,6 @@ CALLED BY:
             lasttime = num2date(self[-1].time).replace(tzinfo=None)
 
         t2 = datetime.utcnow()
-        #print "write - initial selection:", t2-t1
 
         # divide stream in parts according to coverage and save them
         newst = DataStream()

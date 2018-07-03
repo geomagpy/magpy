@@ -136,6 +136,7 @@ def isIYFV(filename):
         fi = open(filename, code)
     except:
         return False
+
     for ln in range(0,2):
         try:
             temp = fi.readline()
@@ -228,7 +229,6 @@ def readIAF(filename, headonly=False, **kwargs):
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
 
-    #print ("READING IAF")
     fh = open(filename, 'rb')
     while True:
         #try:
@@ -265,15 +265,16 @@ def readIAF(filename, headonly=False, **kwargs):
                         else:
                             headers['col-'+str(c)] = c
                             headers['unit-col-'+str(c)] = 'nT'
-                    keystr = ','.join([str(c) for c in head[5].lower()])
-                    if len(keystr) < 6:
+                    keystr = ','.join([str(c) for c in head[5].lower()]).replace(' ','')
+                    keystr = keystr.strip()
+                    if len(keystr) < 6 and not keystr.endswith('f'):
                         keystr = keystr + ',f'
-                    #print ("Test", keystr)
+                    elif len(keystr) < 7 and keystr.endswith(','):
+                        keystr = keystr + 'f'
                     keystr = keystr.replace('s','f')
                     keystr = keystr.replace('d','y')
                     keystr = keystr.replace('g','df')
                     keystr = keystr.replace('h','x')
-                    #print ("Test", keystr)
                     headers['StationInstitution'] = head[6]
                     headers['DataConversion'] = head[7]
                     headers['DataQuality'] = head[8]
@@ -283,7 +284,7 @@ def readIAF(filename, headonly=False, **kwargs):
                     headers['DataDigitalSampling'] = str(float(head[11])/1000.) + ' sec'
                     headers['DataSensorOrientation'] = head[12].lower()
                     headers['DataPublicationLevel'] = '4'
-                    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min 
+                    # New in 0.3.99 - provide a SensorID consisting of IAGA code, min 
                     # and numerical publevel
                     #  IAGA code 
                     headers['SensorID'] = head[0].strip().upper()+'min_4_0001'
@@ -338,9 +339,7 @@ def readIAF(filename, headonly=False, **kwargs):
     y[y > 88880] = float(nan)
     z = np.asarray(z)/10.
     z[z > 88880] = float(nan)
-    #print ("readIAF", np.asarray(f))
     f = np.asarray(f)/10.
-    #print ("readIAF", np.asarray(f))
     f[f > 88880] = float(nan)
     with np.errstate(invalid='ignore'):
         f[f < -44440] = float(nan)
@@ -506,6 +505,7 @@ def writeIAF(datastream, filename, **kwargs):
     tmpstream = datastream.copy()
     hourvals = tmpstream.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat',missingdata='mean')
     hourvals = hourvals.get_gaps()
+    printhead = True
 
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
@@ -532,12 +532,11 @@ def writeIAF(datastream, filename, **kwargs):
                     if value == '':
                         misslist.append(elem)
                 elif elem == 'StartDate':
-                    
                     value = int(datetime.strftime(num2date(dayar[0][0]),'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
                         print("Latitude and Longitude need to be provided in degrees")
-                        x=1/0
+                        return False
                     value = int(np.round((90-float(datastream.header.get('DataAcquisitionLatitude',0)))*1000))
                     if value == 0:
                         misslist.append(elem)
@@ -570,11 +569,14 @@ def writeIAF(datastream, filename, **kwargs):
                     value = int(np.round(float(datastream.header.get('StationK9',0))))
                     if value == 0:
                         misslist.append(elem)
+                        # TODO replace by correct K9LL using Audes formula
+                        value = 500
                 elif elem == 'DataDigitalSampling':
                     try:
                         value = int(datastream.header.get('DataDigitalSampling',0)*1000)
                         if value == 0:
                             misslist.append(elem)
+                            value = 999
                     except:
                         value = datastream.header.get('DataDigitalSampling','')
                         #print ("writeIAF: ", value)
@@ -599,24 +601,17 @@ def writeIAF(datastream, filename, **kwargs):
                     value = 0
                 else:
                     value = datastream.header.get(elem,'')
-                if len(misslist) == 0:
-                    if not datastream._is_number(value):
-                        if len(value) < 4:
-                            value = value.ljust(4)
-                        elif len(value) > 4:
-                            value = value[:4]
-                    head.append(value)
-                    reqinfotmp = [el for el in reqinfotmp if not el==elem]
-                else:
-                    print("Check header: below mentioned content appears to be missing in header")
-                    print("  --  critical information missing in data header  --")
-                    print("  ---------------------------------------------------")
-                    print(" Please provide: {} ".format(misslist))
-                    print(" e.g. data.header['StationK9'] = 750")
-                    return False
+                
+                if not datastream._is_number(value):
+                    if len(value) < 4:
+                        value = value.ljust(4)
+                    elif len(value) > 4:
+                        value = value[:4]
+                head.append(value)
+                reqinfotmp = [el for el in reqinfotmp if not el==elem]
             except:
                 print("Check header content: could not interprete header information")
-                print("  --  critical information missing in data header: {}  --".format(misslist))
+                print("  --  critical information error in data header: {}  --".format(elem))
                 print("  ---------------------------------------------------")
                 print(" Please provide: StationIAGAcode, DataAcquisitionLatitude, ")
                 print(" DataAcquisitionLongitude, DataElevation, DataConversion, ")
@@ -624,6 +619,29 @@ def writeIAF(datastream, filename, **kwargs):
                 print(" StationK9, DataDigitalSampling, DataSensorOrientation")
                 print(" e.g. data.header['StationK9'] = 750")
                 return False
+
+        """
+            if len(misslist) == 0:
+                    if not datastream._is_number(value):
+                        if len(value) < 4:
+                            value = value.ljust(4)
+                        elif len(value) > 4:
+                            value = value[:4]
+                    head.append(value)
+                    reqinfotmp = [el for el in reqinfotmp if not el==elem]
+            else:
+                    print("Check header: below mentioned content appears to be missing in header")
+                    print("  --  critical information missing in data header  --")
+                    print("  ---------------------------------------------------")
+                    print(" Please provide: {} ".format(misslist))
+                    print(" e.g. data.header['StationK9'] = 750")
+                    return False
+        """
+        if len(misslist) > 0 and printhead:
+            print ("The following meta information is missing. Please provide!")
+            for he in misslist:
+                print (he)
+            printhead = False
 
         # Constructing header Info
         packcode = '<4s4l4s4sl4s4sll4s4sll' # fh.read(64)
@@ -2575,6 +2593,9 @@ def readIYFV(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     debug = kwargs.get('debug')
 
+    if debug:
+        print ("readIYVF: Reading data")
+
     getfile = True
 
     stream = DataStream()
@@ -2604,6 +2625,9 @@ def readIYFV(filename, headonly=False, **kwargs):
     #import sys
     if sys.version_info >= (3, 0):
         code = 'rt' 
+
+    if debug:
+        print ("readIYVF: Reading data ...")
 
     with open(filename, code) as fh:  #
         for line in fh:
@@ -2646,6 +2670,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                 #    headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
                 #    headers['DataAcquisitionLongitude'] = float(loc[3])
                 #    headers['DataElevation'] = float(loc[3])
+
             elif line.find(' YEAR ') > 0:
                 paracnt = cnt
                 para = line.split()
@@ -2657,6 +2682,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                 units = tmp
             elif line.startswith(' 1') or line.startswith(' 2'): # Upcoming year 3k problem ;)
                 if not headonly:
+                    #if debug:
                     # get data
                     data = line.split()
                     getdata = True
@@ -2751,13 +2777,17 @@ def readIYFV(filename, headonly=False, **kwargs):
                         tprev = tsel
             else:
                 pass
+
+    if debug:
+        print ("readIYVF: Got data ...")
+
     #fh.close()
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))
 
     if not ele.lower().startswith('xyz'):
         if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
-            ele.lower()[:3] = 'hdz'
+            ele = 'hdz'
         stream = stream._convertstream('xyz2'+ele.lower()[:3])
 
     stream.header['DataFormat'] = 'IYFV'
