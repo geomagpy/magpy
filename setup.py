@@ -21,6 +21,7 @@ setup(
         "matplotlib >= 0.9.8",
         "numpy >= 1.5.0",
         "scipy >= 0.8.6",
+        "paho-mqtt >= 1.2.0",
         #"MySQL-python >= 1.2.3",
         #"pexpect >= 3.1",
     ],

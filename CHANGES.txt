@@ -2,6 +2,26 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
 -------------------------------------------------
+####v<0.4.3>, <2018-07-27> -- 
+
+v0.4.3 additions:
+    + added help on scripts to manual (section 3)
+    + added instructions for second to minute conversion to "mpconvert"
+
+v0.4.3 fixes:
+    + fixed blocking overwrite dialog in DI input sheet for Windows and MacOS
+
+
+-------------------------------------------------
+####v<0.4.02>, <2018-07-03> -- 
+
+v0.4.02 additions:
+    + "mpconvert" conversion enabled for windows  
+
+v0.4.02 fixes:
+    + added paho-mqtt requirement to setup
+
+-------------------------------------------------
 ####v<0.4.01>, <2018-07-01> -- 
 
 v0.4.01 general:

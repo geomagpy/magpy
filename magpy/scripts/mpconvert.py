@@ -6,11 +6,6 @@ Simple method to convert data files in different formats
 from __future__ import print_function
 from __future__ import unicode_literals
 
-local = True
-if local:
-    import sys
-    sys.path.insert(1,'/home/leon/Software/magpy-git/')
-
 from magpy.stream import read, PYMAG_SUPPORTED_FORMATS
 import sys, getopt, os
 
@@ -78,6 +73,8 @@ def main(argv):
             print ('Convert IAGA seconds to IMAGCDF and include obligatory meta information:')
             print ('  mpconvert.py -r "/iagaseconds/wic201701*" -f IMAGCDF -c month -w "/tmp"')
             print ('               -m "DataStandardLevel:Full,IAGACode:WIC,DataReferences:myref"')
+            print ('Convert IMAGCDF seconds to IAF minute (using IAGA/IM filtering procedures):')
+            print ('  mpconvert.py -r "/imagcdf/wic_201701*" -f IAF -i -w "/tmp"')
             print ('')
             print ('!!!!  please note: !!!!')
             print ('!!!! using wildcards in filenames (asterix) requires quotes !!!!')

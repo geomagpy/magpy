@@ -2679,9 +2679,12 @@ class DISaveDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
-        self.yesButton = wx.Button(self, wx.ID_OK, label="Overwrite",size=(160,30))
-        self.noButton = wx.Button(self, wx.ID_OK,label="Cancel",size=(160,30))
-        self.alternativeButton = wx.Button(self, wx.ID_OK,label="Write as alternative",size=(160,30))
+        #self.yesButton = wx.Button(self, wx.ID_OK, label="Overwrite",size=(160,30))
+        #self.noButton = wx.Button(self, wx.ID_OK,label="Cancel",size=(160,30))
+        #self.alternativeButton = wx.Button(self, wx.ID_OK,label="Write as alternative",size=(160,30))
+        self.yesButton = wx.Button(self, wx.ID_YES, label="Overwrite",size=(160,30))
+        self.noButton = wx.Button(self, wx.ID_NO,label="Cancel",size=(160,30))
+        self.alternativeButton = wx.Button(self, wx.ID_YES,label="Write as alternative",size=(160,30))
         self.sourceLabel = wx.StaticText(self, label="A file with similar name is already existing. You can:")
 
     def doLayout(self):
@@ -3294,7 +3297,7 @@ class InputSheetDialog(wx.Dialog):
                     dlg = wx.MessageDialog(self, "Data set {} successfully written.\n".format(filename),
                                     "File written", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
-                    #dlg.Destroy()
+            dialog.Destroy()
 
     def OnClose(self, event):
         closedlg = wx.MessageDialog(self, "Unsaved data will be lost\n"
@@ -4071,7 +4074,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             ffield = []
             self.CodeTextCtrl.SetValue(iagacode)
             for line in datalist:
-                print ("Here", line)
+                #print ("Here", line)
                 numelements = len(line.split())
                 if line.isspace():
                     # blank line

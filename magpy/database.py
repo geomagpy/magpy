@@ -1930,7 +1930,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 nosingleelem = False
         if key.endswith('time') and len(col) > 0 and nosingleelem:
             try:
-                tcol = np.asarray([num2date(elem) for elem in col.astype(float)])
+                tcol = np.asarray([num2date(elem.replace(tzinfo=None)) for elem in col.astype(float)])
             except:
                 try:
                     tstr = DataStream()

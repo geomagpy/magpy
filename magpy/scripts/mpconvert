@@ -6,7 +6,6 @@ Simple method to convert data files in different formats
 from __future__ import print_function
 from __future__ import unicode_literals
 
-
 from magpy.stream import read, PYMAG_SUPPORTED_FORMATS
 import sys, getopt, os
 
@@ -18,10 +17,11 @@ def main(argv):
     format_type = ''
     coverage= None
     metainfo= None
+    filt = False
     try:
-        opts, args = getopt.getopt(argv,"hr:w:s:e:f:m:c:",["read=","write=","sdate=","edate=","format=","metainfo=","coverage="])
+        opts, args = getopt.getopt(argv,"hr:w:s:e:f:m:c:i",["read=","write=","sdate=","edate=","format=","metainfo=","coverage=","filter="])
     except getopt.GetoptError:
-        print ('convert.py -r <path2read> -w <path2write> -s <startdate> -e <enddate> -f <outputformat>  -m <metainfo> -c <coverage>')
+        print ('convert.py -r <path2read> -w <path2write> -s <startdate> -e <enddate> -f <outputformat>  -m <metainfo> -c <coverage> -i <filter>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
@@ -59,6 +59,7 @@ def main(argv):
             print ('   			 -- LATEX: LateX data')
             print ('-m:			additional meta information:')
             print ('			a string like "DataStandardLevel:Partial,StationIAGACode:WIC"')
+            print ('-i:			filter data using IAGA defaults to the next period e.g. sec->min')
             print ('')
             print ('Examples:')
             print ('------------')
@@ -72,6 +73,8 @@ def main(argv):
             print ('Convert IAGA seconds to IMAGCDF and include obligatory meta information:')
             print ('  mpconvert.py -r "/iagaseconds/wic201701*" -f IMAGCDF -c month -w "/tmp"')
             print ('               -m "DataStandardLevel:Full,IAGACode:WIC,DataReferences:myref"')
+            print ('Convert IMAGCDF seconds to IAF minute (using IAGA/IM filtering procedures):')
+            print ('  mpconvert.py -r "/imagcdf/wic_201701*" -f IAF -i -w "/tmp"')
             print ('')
             print ('!!!!  please note: !!!!')
             print ('!!!! using wildcards in filenames (asterix) requires quotes !!!!')
@@ -91,6 +94,8 @@ def main(argv):
             metainfo = arg
         elif opt in ("-c", "--coverage"):
             coverage = arg
+        elif opt in ("-i", "--filter"):
+            filt = True
 
     if not inputpath:
         print ("mpconvert.py: no input data specified - aborting")
@@ -160,6 +165,10 @@ def main(argv):
         print ("mpconvert.py: Error: No readable data found")
     print ("mpconvert.py: Found {} timesteps ...".format(data.length()[0]))
 
+    if filt:
+        print ("mpconvert.py: Filtering data ...")
+        data = data.filter()
+
     if metainfo:
         print ("mpconvert.py: Adding/Replacing provided meta information")
         metalist = metainfo.split(',')
@@ -172,6 +181,8 @@ def main(argv):
                 data.header[key] = value
 
     print ("mpconvert.py: Writing data to {} now...".format(outputpath))
+    if not data.length()[0] > 0:
+        print ("             -> failed! no data found.")
     # Check whether wpath is really a path
     data.write(outputpath,format_type=format_type, coverage=coverage)
     print ("conversion finished!")

@@ -56,7 +56,11 @@ import numpy as np
 
 ## Import MQTT
 ## -----------------------------------------------------------
-import paho.mqtt.client as mqtt
+try:
+    import paho.mqtt.client as mqtt
+except:
+    print ('Importing mqtt client package failed.')
+    print ('Install paho-mqtt to use this functionality.')
 
 global identifier
 identifier = {}

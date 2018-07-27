@@ -179,7 +179,16 @@ Tested on XP, Win7, Win10
 
 written by R. Leonhardt, R. Bailey (April 2017)
 
-### 2.1 Getting started
+MagPy's functionality can be accessed basically in three different ways:
+    1) Directly import and use the magpy package into a python environment
+    2) Run the graphical user interface xmagpy (xmagpyw for Mac)
+    3) Use predefined applications "Scripts"
+
+The following section will primarily deal with way 1. 
+For 2 - xmagpy - we refer to the video tutorials whcih can be found here:
+Section 3 contains examples for predefined applications/scripts 
+
+### 2.1 Getting started with the python package
 
 Start python. Import all stream methods and classes using:
 
@@ -1011,7 +1020,66 @@ The `addflags` option denotes that flagging information will be added to the Ima
         new = read('/tmp/cnb_20120802_000000_PT1S_1.cdf')
         mp.plot(new,['f'],annotate=True)
 
-### 2.17 List of all MagPy methods
+
+## 3. Predefined scripts
+
+MagPy comes with a steadily increasing number of applications for various purposes. These applications can be run from some command prompt and allow to simplify/automize some commonly used applications of MagPy. All applications have the same syntax, consisting of the name of application and options. The option -h is available for all applications and provides an overview about purpose and options of the application:
+
+        $> application -h
+
+
+### 3.1 Running applications in Linux/MacOs
+
+On Linux Systems all applications are added the bin directory and can be run directly from any command interface/terminal after installation of MagPy:
+
+        $> application -h
+
+### 3.2 Running applications in Windows
+
+After installing MagPy/GeomagPy on Windows, three executables are found in the MagPy program folder. For running applications you have to start the MagPy "command prompt". In this terminal you will have to go to the Scripts directory:
+
+        .../> cd Scripts
+
+And here you now can run the application of your choice using the python environment:
+
+        .../Scripts>python application -h
+
+
+### 3.3 Applications
+
+The available applications are briefly intruduced in the following. Please refer to "application -h" for all available options for each application.
+
+#### 3.3.1 mpconvert
+
+mpconvert converts bewteen data formats based on MagPy.
+Typical applications are the conversion of binary data formats
+to readable ASCII data sets or the conversion.
+
+Typical applications include
+
+a) Convert IAGA seconds to IMAGCDF and include obligatory meta information:
+
+        mpconvert -r "/iagaseconds/wic201701*" -f IMAGCDF -c month -w "/tmp"
+                     -m "DataStandardLevel:Full,IAGACode:WIC,DataReferences:myref"
+
+b) Convert IMAGCDF seconds to IAF minute (using IAGA/IM filtering procedures):
+
+        mpconvert -r "/imagcdf/wic_201701_000000_PT1S_4.cdf" -f IAF -i -w "/tmp"
+
+
+mpconvert -r "/srv/products/data/magnetism/definitive/wic2017/ImagCDF/wic_201708_000000_PT1S_4.cdf" -f IAF -i -w "/tmp"
+
+#### 3.3.2 addcred
+
+Used to store encrypted credential information for automatic data transfer. So that sensitive information has not to be written in plain text in scripts or cron jobs.
+
+
+a) Add information for ftp data transfer. This information is encrypted and can be accessed by referring to the shortcut "zamg".
+ 
+        addcred -t transfer -c zamg -u max -p geheim 
+                  -a "ftp://ftp.remote.ac.at" -l 21
+
+## 4. List of all MagPy methods
 
 Please use the help method (section 2.3) for descriptions and return values.
 
