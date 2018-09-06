@@ -69,6 +69,7 @@ def isLEMIBIN1(filename):
         data= struct.unpack('<4cb6B11Bcbbhhhb', temp)
     except:
         return False
+
     try:
         if not data[0].decode('ascii') == 'L':
             return False
@@ -102,6 +103,7 @@ def isLEMIBIN(filename):
     except:
         return False
 
+    print ("Reading a Lemi Binary format")
     #loggerlib.info("format_lemi: Found Lemi 10Hz binary file %s." % filename)
     return True
 
@@ -272,6 +274,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         packcode = '<4cb6B8hb30f3BcB6hL'
         linelength = 169
         stime = True
+        if debug:
+            print ("SensorID", sensorid)
     else:
         # old format
         data = struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
@@ -334,7 +338,6 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         timediff = []
 
         line = fh.read(linelength)
-        #print (line, len(line))
 
         while len(line) > 0:
             try:

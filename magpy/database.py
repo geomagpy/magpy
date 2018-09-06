@@ -1908,6 +1908,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
 
     def trim_time(t):
         # Rounding time to 10 microseconds
+        print ("Entered round time method")
         # Not essential for 0.3.99 in combination with MQTT Martas
         s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
         tail = s[-7:]
@@ -1919,6 +1920,10 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         return "%s%s" % (s[:-7], temp[1:])
 
     array = [[] for key in KEYLIST]
+    if datastream.samplingrate() < 0.9:
+        timeformat='%Y-%m-%d %H:%M:%S.%f'
+    else:
+        timeformat='%Y-%m-%d %H:%M:%S'
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
         nosingleelem = True
@@ -1930,11 +1935,11 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                 nosingleelem = False
         if key.endswith('time') and len(col) > 0 and nosingleelem:
             try:
-                tcol = np.asarray([num2date(elem.replace(tzinfo=None)) for elem in col.astype(float)])
+                tcol = np.asarray([num2date(elem.replace(tzinfo=None)).strftime(timeformat) for elem in col.astype(float)])
             except:
                 try:
                     tstr = DataStream()
-                    tcol = np.asarray([tstr._testtime(elem) for elem in col])
+                    tcol = np.asarray([tstr._testtime(elem).strftime(timeformat) for elem in col])
                 except:
                     tcol = np.asarray([])
             if roundtime:
@@ -2029,7 +2034,6 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     #print insertmanysql
     if mode == 'replace':
         insertmanysql = insertmanysql.replace("INSERT","REPLACE")
-    #print (values)
     cursor.executemany(insertmanysql,values)
 
     # ----------------------------------------------

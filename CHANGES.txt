@@ -2,6 +2,13 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 
 -------------------------------------------------
+####v<0.4.4>, <2018-08-10> -- 
+
+v0.4.3 fixes:
+    + fixed rounding of microseconds in writeDB
+
+
+-------------------------------------------------
 ####v<0.4.3>, <2018-07-27> -- 
 
 v0.4.3 additions:

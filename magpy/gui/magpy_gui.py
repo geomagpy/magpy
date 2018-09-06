@@ -2198,7 +2198,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
             pass
         # check whether host can be pinged (faster)
-        response = os.system("ping -c 1 -w2 {} > /dev/null 2>&1".format(host))
+        if PLATFORM.startswith('linux'):
+            response = os.system("ping -c 1 -w2 {} > /dev/null 2>&1".format(host))
+        else:
+            response = 0
+
         if response == 0:
             try:
                 self.db = mysql.connect (host=host,user=user,passwd=passwd,db=dbname)
