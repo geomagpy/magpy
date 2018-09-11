@@ -35,6 +35,7 @@ DEPENDENCIES:
                 .format_imf
                 .format_rcs
                 .format_json
+                .format_pha
 
 CALLED BY:
         magpy.stream.read()
@@ -76,6 +77,7 @@ from magpy.lib.format_dtu import *
 from magpy.lib.format_gfz import *
 from magpy.lib.format_neic import *
 from magpy.lib.format_rcs import *
+from magpy.lib.format_pha import *
 
 from magpy.lib.format_imf import *
 try:
@@ -244,6 +246,9 @@ def isFormat(filename, format_type):
     elif (format_type == "NEIC"): # NEIC USGS data
         if (isNEIC(filename)):
             return True
+    elif (format_type == "PHA"): # Potentially Hazardous Objects (This research has made use of data and/or services provided by the International Astronomical Union's Minor Planet Center.)
+        if (isPHA(filename)):
+            return True
     elif (format_type == "USBLOG"): # Data from the USB temperature logger
         if (isUSBLOG(filename)):
             return True
@@ -360,6 +365,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readNETCDF(filename, headonly, **kwargs)
     elif (format_type == "NEIC"):
         return readNEIC(filename, headonly, **kwargs)
+    elif (format_type == "PHA"):
+        return readPHA(filename, headonly, **kwargs)
     else:
         logger.info("No valid format found ({}). Returning empty stream.".format(format_type))
         return DataStream(empty,empty.header)

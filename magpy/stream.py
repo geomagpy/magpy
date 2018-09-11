@@ -406,6 +406,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 #'BDV1':['r', 'Budkov GDAS data variant'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
+                'PHA':['r', 'Potentially Hazardous Asteroids (PHAs) from the International Astronomical Unions Minor Planet Center, (json, incomplete)'],
                 'NETCDF':['r', 'NetCDF4 format, NOAA DSCOVR satellite data archive format'],
                 'LATEX':['w','LateX data'],
                 'CS':['r','Cesium G823'],
