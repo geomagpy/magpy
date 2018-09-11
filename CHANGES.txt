@@ -4,8 +4,9 @@ Installation instructions can be found on the main download page.
 -------------------------------------------------
 ####v<0.4.4>, <2018-08-10> -- 
 
-v0.4.3 fixes:
+v0.4.4 fixes:
     + fixed rounding of microseconds in writeDB
+    + fixed database selection in GUI in windows
 
 
 -------------------------------------------------
