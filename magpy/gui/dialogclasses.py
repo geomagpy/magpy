@@ -5178,7 +5178,7 @@ class MultiStreamDialog(wx.Dialog):
                 mergestreamlist.append(elem)
                 mergekeylist.append(self.streamkeylist[idx])
         if len(mergestreamlist) == 2:
-            print (mergestreamlist[0].length(),mergestreamlist[1].length())
+            #print (mergestreamlist[0].length(),mergestreamlist[1].length())
             self.result = mergeStreams(mergestreamlist[0],mergestreamlist[1])
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
@@ -5250,6 +5250,7 @@ class MultiStreamDialog(wx.Dialog):
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:
+            print ("Combine streams:", substreamlist[0].length()[0],substreamlist[1].length()[0])
             self.result = joinStreams(substreamlist[0],substreamlist[1])
             self.resultkeys = self.result._get_key_headers()
             self.modify = True

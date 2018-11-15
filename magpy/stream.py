@@ -10775,6 +10775,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
 
     # Get indicies of timesteps of stream_b of which identical times are existing in stream_a-> delelte those lines
     # --------------------------------------
+    # IMPORTANT: If two streams with different keys should be combined then "merge" is the method of choice
     indofb = np.nonzero(np.in1d(sb.ndarray[0], sa.ndarray[0]))[0]
     for idx,elem in enumerate(sb.ndarray):
         if len(sb.ndarray[idx]) > 0:
