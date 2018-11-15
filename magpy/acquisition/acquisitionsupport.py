@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import serial
 import binascii
+import csv
 import sys, getopt
 import time
 import os
@@ -129,6 +130,8 @@ def send_command(ser,command,eol=None,hexify=False,bits=0,report=True):
         print('-- Response: ', response)
     return response
 
+def datetime2array(t):
+    return [t.year,t.month,t.day,t.hour,t.minute,t.second,t.microsecond]
 
 def timeToArray(timestring):
     # Converts time string of format 2013-12-12T23:12:23.122324

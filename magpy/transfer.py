@@ -108,9 +108,31 @@ def ftpdatatransfer (**kwargs):
         filestr = os.path.split(localfile)[1]
         filelocal = localfile
 
+    retrycount = 0
+    timeout = None
+    connectsuccess = False
+    debug = False
+    if debug:
+        print ("ftpdatatransfer: running ftp transfer")
+
     try:
         site = ftplib.FTP()
-        site.connect(myproxy, port)
+        while retrycount < 5:
+            try:
+                if debug:
+                    print ("Trying: {}, {}".format(retrycount, timeout))
+                site.connect(myproxy, port,timeout)
+                retrycount = 10
+                connectsuccess = True
+            except:
+                timeout = 10
+                retrycount += 1
+
+        if not connectsuccess:
+            loggertransfer.error(' -- connection failed 5 times - aborting')
+            raise
+        if debug:
+            print ("ftpdatatransfer: connection establish -- continue")
         site.set_debuglevel(1)
         msg = site.login(login,passwd)
         site.cwd(ftppath)

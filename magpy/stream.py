@@ -1194,7 +1194,10 @@ CALLED BY:
         """
         Sorting data according to time (maybe generalize that to some key)
         """
-        liste = sorted(self.container, key=lambda tmp: tmp.time)
+        try: # old LineStruct part
+            liste = sorted(self.container, key=lambda tmp: tmp.time)
+        except:
+            pass
 
         if len(self.ndarray[0]) > 0:
             self.ndarray, keylst = self.dropempty()

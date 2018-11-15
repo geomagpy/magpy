@@ -2768,7 +2768,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                 if not False in checkEqual3(col):
                     print ("readDB: Found identical values only:{}".format(key))
                     #try:
-                    if str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find('0000000000000000') or str(col[0]).find('xyz'):
+                    if len(col)<1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find('0000000000000000') or str(col[0]).find('xyz'):
                         ls[index] = np.asarray([])
                     else:
                         ls[index] = col[:1]
