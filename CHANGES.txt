@@ -1,11 +1,12 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<0.4.5>, <2018-12-24> --
+####v<0.4.5>, <2018-11-15> --
 
 v0.4.5 fixes:
     + readDB - fixed possible error with None in timecolumns
     + added improved MARTAS methods to acquisition support
+    + updated some transfer methods mainly used by MARTAS
 
 -------------------------------------------------
 ####v<0.4.4>, <2018-08-10> -- 
