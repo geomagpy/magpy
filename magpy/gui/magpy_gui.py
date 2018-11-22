@@ -844,7 +844,7 @@ class MainFrame(wx.Frame):
         # Update Status Bar with plot values
         self.plot_p.canvas.mpl_connect('motion_notify_event', self.UpdateCursorStatus)
         # Allow flagging with double click
-        self.plot_p.canvas.mpl_connect('button_press_event', self.OnFlagClick)
+        #self.plot_p.canvas.mpl_connect('button_press_event', self.OnFlagClick)
 
         self.streamlist = []
         self.headerlist = []
@@ -4750,7 +4750,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 time = self.plotstream.ndarray[KEYLIST.index('time')][idx]
                 starttime = num2date(time - xtol)
                 endtime = num2date(time + xtol)
+                print ("Double click disabled because of freezing")
+                """
+                print ("Opening Dialog")
                 dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+                print ("Waiting for OK ...")
                 if dlg.ShowModal() == wx.ID_OK:
                     keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
                     keys2flag = keys2flag.split(',')
@@ -4770,6 +4774,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     self.menu_p.str_page.annotateCheckBox.SetValue(True)
                     self.OnPlot(self.plotstream,self.shownkeylist)
                 self.changeStatusbar("Ready")
+                """
 
     def onFlagSelectionButton(self,event):
         """
