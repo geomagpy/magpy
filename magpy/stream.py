@@ -154,9 +154,12 @@ except:
 # ----------
 try:
     import matplotlib
+    gui_env = ['TKAgg','GTKAgg','Qt4Agg','WXAgg','Agg']
+
     try:
         if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
             logger.info("No terminal connected - assuming cron job and using Agg for matplotlib")
+            gui_env = ['Agg','TKAgg','GTKAgg','Qt4Agg','WXAgg']
             matplotlib.use('Agg') # For using cron
     except:
         logger.warning("Problems with identfying cron job - windows system?")
@@ -174,11 +177,17 @@ try:
         version = version.strip("rc")
         MATPLOTLIB_VERSION = version
     logger.info("Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION))
-    try:
-        import matplotlib.pyplot as plt
-    except: ## Workaround for anaconda PYQT4 patch error
-        matplotlib.use('qt5agg')
-        import matplotlib.pyplot as plt
+
+    for gui in gui_env:
+        try:
+            logger.info("Testing backend {}".format(gui))
+            matplotlib.use(gui,warn=False, force=True)
+            from matplotlib import pyplot as plt
+            break
+        except:
+            continue
+    logger.info("Using backend: {}".format(matplotlib.get_backend()))
+
     from matplotlib.colors import Normalize
     from matplotlib.widgets import RectangleSelector, RadioButtons
     #from matplotlib.colorbar import ColorbarBase
