@@ -2009,7 +2009,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                     addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
                     cursor.execute(addsql)
                 else:
-                    print ("writeDB: unknown MySQL error when checking for existing tables: %s" %e)
+                    print ("writeDB: unknown MySQL error when checking for existing tables! SQL: {}, error: {}".format(sql,emsg))
             except:
                 print ("writeDB: unknown error when checking for existing tables")
 
