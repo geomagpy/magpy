@@ -5041,7 +5041,7 @@ CALLED BY:
                     for pos in poslst:
                         resultarray.append(self.ndarray[pos])
                     resultarray = np.transpose(np.asarray(resultarray))
-                    commentarray = [' : '.join(str(lst)) for lst in resultarray]
+                    commentarray = [''.join(str(lst)) for lst in resultarray]
             except:
                 #comment remains unchanged
                 pass
@@ -6003,6 +6003,8 @@ CALLED BY:
 
         sr = self.get_sampling_period()*24*3600
         unit = ' sec'
+
+        val = sr
 
         # Create a suitable rounding function:
         # Use simple rounds if sr > 60 secs
@@ -11037,24 +11039,31 @@ def mergeStreams(stream_a, stream_b, **kwargs):
             print ("Merge: Starttime of stream_b too large")
             for indx,key in enumerate(KEYLIST):
                 if key == 'time':
-                   sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
+                   ### Changes from 2019-01-15: modified axis - originally working fine, however except for saggitarius
+                   #sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
+                   sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0])
                 elif key == 'sectime' or key in NUMKEYLIST:
                     if not len(sb.ndarray[indx]) == 0:
-                        sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
+                        #sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
+                        sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx])
                 else:
                     if not len(sb.ndarray[indx]) == 0:
-                        sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx],1)
+                        #sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx],1)
+                        sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx])
         if not bet > aet-timedelta(minutes=uncert*24*60):
             print ("Merge: Endtime of stream_b too small") ### Move that to merge??
             for indx,key in enumerate(KEYLIST):
                 if key == 'time':
-                   sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
+                   #sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
+                   sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]))
                 elif key == 'sectime' or key in NUMKEYLIST:
                     if not len(sb.ndarray[indx]) == 0:
-                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
+                        #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]))
                 else:
                     if not len(sb.ndarray[indx]) == 0:
-                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']),1)
+                        #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']),1)
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']))
         #st,et = sb._find_t_limits()
         #print ("Merge", st, et, sb.length())
         sb = sb.get_gaps()

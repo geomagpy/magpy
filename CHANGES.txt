@@ -6,6 +6,9 @@ Installation instructions can be found on the main download page.
 v0.4.6 fixes:
     + writeDB - microsecond resolution in timecolumns
 
+v0.4.6 additions:
+    + updated import library for ionometer
+
 
 -------------------------------------------------
 ####v<0.4.5>, <2018-11-15> --
