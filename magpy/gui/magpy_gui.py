@@ -257,7 +257,10 @@ class PlotPanel(wx.Panel):
         parameterstring = 'time,'+self.datavars[1]
         # li should contain a data source of a certain length (can be filled by any reading process)
         li = sorted(dbselect(db, parameterstring, self.datavars[0], expert='ORDER BY time DESC LIMIT {}'.format(int(self.datavars[2]))))
-        tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S.%f") for elem in li]
+        try:
+            tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S.%f") for elem in li]
+        except:
+            tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S") for elem in li]
         self.array[0].extend(tmpdt)
         for idx,para in enumerate(parameterstring.split(',')):
             if not para.endswith('time'):
@@ -384,7 +387,10 @@ class PlotPanel(wx.Panel):
             for i,elem in enumerate(valkeys):
                 idx = KEYLIST.index(elem)
                 if elem == 'time':
-                    self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
+                    try:
+                        self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
+                    except:
+                        self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S") for el in li]
                 else:
                     self.array[idx] = [float(el[i]) for el in li]
 
