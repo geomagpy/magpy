@@ -1772,6 +1772,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 try:
                     print("Rotation parameters from db:")
                     if not alpha:
+                        print ("Alpha")
                         rotstring = variostr.header.get('DataRotationAlpha','')
                         rotdict = dbase.string2dict(rotstring)
                         #print ("Dealing with year", date.year)
@@ -1788,6 +1789,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     else:
                         print ("-- alpha provided manually")
                     if not beta:
+                        print ("Beta")
                         rotstring = variostr.header.get('DataRotationBeta','')
                         rotdict = dbase.string2dict(rotstring)
                         valbeta = rotdict.get(str(date.year),'')

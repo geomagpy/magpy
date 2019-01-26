@@ -5012,6 +5012,7 @@ class SelectFromListDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
 
+#class MultiStreamDialog(scrolledpanel.ScrolledPanel):
 class MultiStreamDialog(wx.Dialog):
     """
     DESCRIPTION:
@@ -5036,6 +5037,25 @@ class MultiStreamDialog(wx.Dialog):
      If merge is used a new stream is generated and all other methods are available again.)
     """
 
+    #def __init__(self, parent, title, streamlist, idx, streamkeylist):
+    #    scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
+    #    self.modify = False
+    #    self.result = DataStream()
+    #    self.resultkeys = []
+    #    self.streamlist = streamlist
+    #    self.namelst = []
+    #    self.streamkeylist = streamkeylist
+    #    self.activeidx = idx
+
+    #    self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+    #    #self.createWidgets()
+    #    self.createControls()
+    #    self.doLayout()
+    #    self.SetSizer(self.mainSizer)
+    #    self.mainSizer.Fit(self)
+    #    self.SetupScrolling()
+    #    self.bindControls()
+
     def __init__(self, parent, title, streamlist, idx, streamkeylist):
         super(MultiStreamDialog, self).__init__(parent=parent,
             title=title, size=(400, 700))
@@ -5046,6 +5066,7 @@ class MultiStreamDialog(wx.Dialog):
         self.namelst = []
         self.streamkeylist = streamkeylist
         self.activeidx = idx
+
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -5080,6 +5101,8 @@ class MultiStreamDialog(wx.Dialog):
         self.CombineButton = wx.Button(self,-1,"Combine",size=(160,30))
         self.AverageStackButton = wx.Button(self,-1,"Average",size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+        #self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
 
 
     def doLayout(self):
@@ -5125,6 +5148,7 @@ class MultiStreamDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
+        #self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
 
     def bindControls(self):
         from functools import partial

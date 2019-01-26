@@ -5,8 +5,12 @@ Installation instructions can be found on the main download page.
 
 v0.4.6 fixes:
     + writeDB - microsecond resolution in timecolumns
+    + GUI - polynomial fit now working in GUI
+    + writeDB method will now work even for very large datasets
+    + GUI: freezing error when double clicking solved 
 
 v0.4.6 additions:
+    + added method 'cut' to extract lines from a stream from the beginning or end 
     + updated import library for ionometer
 
 

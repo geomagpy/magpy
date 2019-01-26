@@ -4256,7 +4256,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             ## TODO extract all baseline parameters here
             fitfunc = self.options.get('fitfunction','spline')
             if fitfunc.startswith('poly'):
+                self.options['fitfunction'] = 'poly'
                 fitfunc = 'poly'
+
             baselinefunc = self.plotstream.baseline(absstream,fitfunc=self.options.get('fitfunction','spline'), knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))

@@ -547,6 +547,7 @@ class DataStream(object):
     - stream.baseline(self, absolutestream, **kwargs):
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.calc_f(self, **kwargs):
+    - stream.cut(self,length,kind=0,order=0):
     - stream.dailymeans(self):
     - stream.date_offset(self, offset):
     - stream.delta_f(self, **kwargs):
@@ -3030,6 +3031,49 @@ CALLED BY:
             stream = stream.offset(offdict)
             stream.header['DataDeltaValuesApplied'] = 1
 
+        return stream
+
+
+    def cut(self,length,kind=0,order=0):
+        """
+        DEFINITION:
+            cut returns the selected amount of lines from datastreams
+        PARAMETER:
+            stream    :    datastream
+            length    :    provide the amount of lines to be returned (default: percent of stream length)
+            kind      :    define the kind of length parameter  
+                           = 0 (default): length is given in percent
+                           = 1: length is given in number of lines
+            order     :    define from which side   
+                           = 0 (default): the last amount of lines are returned
+                           = 1: lines are counted from the beginning 
+        VERSION:
+            added in MagPy 0.4.6
+        APPLICATION:
+            # length of stream: 86400
+            cutstream = stream.cut(stream,50) 
+            # length of cutstream: 43200
+        """
+        stream = self.copy()
+        if length <= 0:
+            print ("get_last: length needs to be > 0")
+            return stream
+        if kind == 0:
+            if length > 100:
+                length = 100
+            amount = int(stream.length()[0]*length/100.)
+        else:
+            if length > stream.length()[0]:
+                return stream
+            else:
+                amount = length
+        for idx,el in enumerate(stream.ndarray):
+            if len(el) >= amount:
+                if order == 0:
+                    nel = el[-amount:]
+                else:
+                    nel = el[:amount]
+                stream.ndarray[idx] = nel
         return stream
 
 

@@ -2029,6 +2029,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,', '.join(dataheads))
         cursor.execute(createdatatablesql)
 
+
     # ----------------------------------------------
     #   upload data
     # ----------------------------------------------
@@ -2036,7 +2037,21 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     #print insertmanysql
     if mode == 'replace':
         insertmanysql = insertmanysql.replace("INSERT","REPLACE")
-    cursor.executemany(insertmanysql,values)
+
+    #t1 = datetime.utcnow()
+
+    ## Alternative upload for very large lists (from 0.4.6 on) 
+    START_INDEX = 0
+    LIST_LENGTH=1000
+    while values[START_INDEX:START_INDEX+LIST_LENGTH]:
+        cursor.executemany(insertmanysql,values[START_INDEX:START_INDEX+LIST_LENGTH])
+        START_INDEX += LIST_LENGTH
+
+    ## Previous way - direct upload (up to 0.4.5)
+    #cursor.executemany(insertmanysql,values)
+
+    #t2 = datetime.utcnow()
+    #print (t2-t1)
 
     # ----------------------------------------------
     #   update DATAINFO - move to a separate method
@@ -3216,6 +3231,7 @@ def applyDeltas(db, stream):
             #logger.info("applyDeltas: {}, {}, {}".format(delts, starttime, endtime))
             for key in deltdict:
                 if not key in ['st','et']:
+                    logger.info("applyDeltas: key={}, value={}".format(key,deltadict(key)))
                     if key == 'time':
                         stream = calloffset(stream,'time',deltdict[key],starttime,endtime)
                     elif key in NUMKEYLIST:
