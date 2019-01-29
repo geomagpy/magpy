@@ -417,7 +417,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         else:
                             ind = KEYLIST.index('sectime')
                         try:
-                            array[ind] = np.asarray(date2num(cdf_file[key][...]))
+                            try:
+                                array[ind] = np.asarray(date2num(cdf_file[key][...]))
+                            except:
+                                array[ind] = np.asarray(np.asarray([cdf.lib.tt2000_to_datetime(el) for el in cdfdat[key][...]]))
                         except:
                             array[ind] = np.asarray([])
                             pass ### catches exceptions if sectime is nan
@@ -908,6 +911,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         array = np.asarray([np.asarray(el).astype(object) for el in array])
         stream.ndarray = array
+
         if len(stream.ndarray[0]) > 0:
             logger.debug("readPYBIN: Imported bin as ndarray")
             stream.container = [LineStruct()]
@@ -1033,10 +1037,6 @@ def writePYCDF(datastream, filename, **kwargs):
                default is 5
 
     """
-    # check for nan and - columns
-    #for key in KEYLIST:
-    #    title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit col-'+key,'') + ']'
-    #    head.append(title)
 
     if pyvers and pyvers == 2:
                 ch1 = '-'.encode('utf-8') # not working with py3
@@ -1051,6 +1051,8 @@ def writePYCDF(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     skipcompression = kwargs.get('skipcompression')
     compression = kwargs.get('compression')
+
+    cdf.lib.set_backward(False) ## necessary for time_tt2000 support
 
     if os.path.isfile(filename+'.cdf'):
         if mode == 'skip': # skip existing inputs
@@ -1153,25 +1155,25 @@ def writePYCDF(datastream, filename, **kwargs):
         if not False in checkEqual3(col) and len(col) > 0:
             logger.warning("writePYCDF: Found identical values only for key: %s" % key)
             col = col[:1]
-            #if not col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
-            #- better not!!! 2015-10-14 --- if two files are loaded, one with flags, one without, then column lengths will not fit
-            #    col = col[:1]
-            #else:
-            #    col = np.asarray([])
 
         if key.find('time') >= 0:
             if key == 'time':
                 key = 'Epoch'
-                #col = col.astype
-                mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
-                #print "Last time saved", col[-1]
+                try:
+                    mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
+                    mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)]))
+                except:
+                    mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)])
             elif key == 'sectime':
                 try: #col = np.asarray([np.nan if el is '-' else el for el in col])
-                    mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(float)])
+                    try:
+                        mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
+                        mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)]))
+                    except:
+                        mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)])
                 except:
                     pass
         elif len(col) > 0:
-            #print "writing", np.asarray(col)
             if not key in NUMKEYLIST:
                 col = list(col)
                 col = ['' if el is None else el for el in col]
@@ -1204,9 +1206,6 @@ def writePYCDF(datastream, filename, **kwargs):
         except:
             logger.warning("writePYCDF: : compression of CDF failed - Trying to store uncompressed data")
             logger.warning("writePYCDF: please use option skipcompression=True if unreadable")
-            #logger.info("writePYCDF: : CDF: {}".format(mycdf))
-            #logger.info("writePYCDF: attrs: {}".format(mycdf.attrs))
-            #pass
 
     mycdf.close()
     return True

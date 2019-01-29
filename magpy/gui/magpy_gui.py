@@ -5361,12 +5361,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         dlg = MultiStreamDialog(None, title='Select stream(s):',streamlist=self.streamlist, idx=self.currentstreamindex, streamkeylist=self.streamkeylist)
         if dlg.ShowModal() == wx.ID_OK:
-            namelst = dlg.namelst
+            namelst = dlg.panel.namelst
             for idx, elem in enumerate(self.streamlist):
-                val = eval('dlg.'+namelst[idx]+'CheckBox.GetValue()')
+                val = eval('dlg.panel.'+namelst[idx]+'CheckBox.GetValue()')
                 if val:
                     plotstreamlist.append(elem)
-                    plotkeylist.append(dlg.streamkeylist[idx])
+                    plotkeylist.append(dlg.panel.streamkeylist[idx])
                     activeidx = idx
             if len(plotstreamlist) > 1:
                 #  deactivate all Meta; Analysis methods
@@ -5381,10 +5381,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)
         else:
-            mod = dlg.modify
+            mod = dlg.panel.modify
             if mod == True:
-                self.streamlist.append(dlg.result)
-                self.streamkeylist.append(dlg.resultkeys)
+                self.streamlist.append(dlg.panel.result)
+                self.streamkeylist.append(dlg.panel.resultkeys)
                 self.currentstreamindex = len(self.streamlist)-1
                 self.plotstream = self.streamlist[-1]
                 self.headerlist.append(self.plotstream.header)

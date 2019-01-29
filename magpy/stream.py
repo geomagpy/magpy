@@ -3051,7 +3051,7 @@ CALLED BY:
             added in MagPy 0.4.6
         APPLICATION:
             # length of stream: 86400
-            cutstream = stream.cut(stream,50) 
+            cutstream = stream.cut(50) 
             # length of cutstream: 43200
         """
         stream = self.copy()
@@ -7040,7 +7040,7 @@ CALLED BY:
             v = v.astype(float)
             n_split = len(v)/float(window_len)
             if not n_split == int(n_split):
-                el = int(n_split)*window_len
+                el = int(int(n_split)*window_len)
                 v_rest = v[el:]
                 v = v[:el]
             spli = np.split(v,int(len(v)/window_len))
@@ -8425,7 +8425,7 @@ CALLED BY:
                 self.ndarray[ind2] = self.ndarray[ind1].astype(float)*np.cos(rb)*np.sin(ra)+self.ndarray[ind2].astype(float)*np.cos(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.sin(ra)
                 self.ndarray[ind3] = -self.ndarray[ind1].astype(float)*np.sin(rb)+self.ndarray[ind3].astype(float)*np.cos(rb)
 
-
+        """
         for elem in self:
             ra = np.pi*alpha/(180.*ang_fac)
             rb = np.pi*beta/(180.*ang_fac)
@@ -8440,7 +8440,7 @@ CALLED BY:
             elem.x = xs
             elem.y = ys
             elem.z = zs
-
+        """
         logger.info('rotation: Finished reorientation.')
 
         return self

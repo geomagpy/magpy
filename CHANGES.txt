@@ -3,15 +3,21 @@ Installation instructions can be found on the main download page.
 -------------------------------------------------
 ####v<0.4.6>, <2018-xx-xx> --
 
+v0.4.6 general:
+    + PYCDF format - changed time format from EPOCH to TT2000
+
 v0.4.6 fixes:
-    + writeDB - microsecond resolution in timecolumns
+    + writeDB - resolution in timecolumns changeable by roundtime variable
     + GUI - polynomial fit now working in GUI
-    + writeDB method will now work even for very large datasets
+    + writeDB: method will now work even for very large datasets
     + GUI: freezing error when double clicking solved 
+    + writeDB: treatment of columns with only nan values has been corrected
 
 v0.4.6 additions:
     + added method 'cut' to extract lines from a stream from the beginning or end 
     + updated import library for ionometer
+    + GUI: added better names + dates to Streamlist operations 
+    + GUI: streamlist is now scrollable
 
 
 -------------------------------------------------

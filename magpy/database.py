@@ -1769,7 +1769,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     return datainfoid
 
-def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, debug=False, **kwargs):
+def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, roundtime=0,debug=False, **kwargs):
 
     """
     DEFINITION:
@@ -1789,6 +1789,13 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
                                  SENSORS and STATIONS remain unchanged, DATAINFO data
                                  is updated if existing
          - StationID:   (string) provide the StationID
+         - roundtime:   (int)    round timesteps - default is 0, 
+                                 can be 0, 10 (round to 10microsec),
+                                 100 (round to 100microsec),1000 (round to 1millisec)
+                                 Rounding is can be necessary as MagPy uses date2num and num2date methods:
+                                 Accuracy of this methods is between 1 micro and 1 milli sec, sometimes an
+                                 error of a few microseconds is obtained
+
     REQUIRES:
         dbdatainfo
 
@@ -1824,7 +1831,9 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         print ("writeDB is used for ndarray type - use stream2DB for LineStruct")
         return
 
-    roundtime = False # if true then 10 mu sec rounding is used
+    if not roundtime in [False,None,0,10,100,1000]:
+        roundtime = False
+
     # ----------------------------------------------
     #   Identify tablename
     # ----------------------------------------------
@@ -1906,17 +1915,33 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 
-    def trim_time(t):
-        # Rounding time to 10 microseconds
-        print ("Entered round time method")
+    def trim_time(s,roundtime):
+        # Rounding time to 100 microseconds
+        #print ("Entered round time method")
         # Not essential for 0.3.99 in combination with MQTT Martas
-        s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
-        tail = s[-7:]
-        f = round(float(tail), 5)
-        temp = "%.5f0" % f
+        # It is essential: -> example
+        # Data is send out by mqtt with 432000 microseconds and is added to database with 432004 ms
+        # Data is written to bin file with 43200 microseconds and read as ?
+        # Input is date like '%Y-%m-%d %H:%M:%S.%f'
+        if not roundtime:
+            return s
+        elif roundtime == 10:
+            tail = s[-7:]
+            f = round(float(tail), 5)
+            temp = "%.5f0" % f
+        elif roundtime == 100:
+            tail = s[-7:]
+            f = round(float(tail), 4)
+            temp = "%.4f00" % f
+        elif roundtime == 1000:
+            tail = s[-7:]
+            f = round(float(tail), 3)
+            temp = "%.3f000" % f
         if f == 1.0:
+            t = datetime.strptime(s,'%Y-%m-%d %H:%M:%S.%f')
             t = t+timedelta(seconds=1)
             s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
+            return s
         return "%s%s" % (s[:-7], temp[1:])
 
     array = [[] for key in KEYLIST]
@@ -1929,23 +1954,31 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     for idx,col in enumerate(datastream.ndarray):
         key = KEYLIST[idx]
         nosingleelem = True
-        if len(col) > 0 and not False in checkEqual3(col):
-            #print ("Found only identical values of {} in column {}".format(col[0],idx))
-            # TODO Unicode equal comparison in the following
-            if col[0] in ['nan', float('nan'),NaN,'-',None,'']: #remove place holders
-                array[idx] = np.asarray([])
-                nosingleelem = False
+        if len(col) > 0:
+            nantest = False
+            if key in NUMKEYLIST:
+                col = col.astype(np.float64)
+                # First test for nans, as this is not easily possible in arrays because nan != nan
+                if np.isnan(np.array(col)).all():
+                    # checking whether only nans are present
+                    array[idx] = np.asarray([])
+                    nosingleelem = False
+                    nantest = True
+            if not False in checkEqual3(col) and not nantest:
+                # checking for identical elements
+                # TODO Unicode equal comparison in the following - see whether error still present after Jan2019
+                if col[0] in ['nan', '-',None,'']: #remove place holders
+                    array[idx] = np.asarray([])
+                    nosingleelem = False
         if key.endswith('time') and len(col) > 0 and nosingleelem:
             try:
-                tcol = np.asarray([num2date(elem.replace(tzinfo=None)).strftime(timeformat) for elem in col.astype(float)])
+                tcol = np.asarray([trim_time(datetime.strftime(num2date(elem).replace(tzinfo=None),timeformat),roundtime) for elem in col.astype(float)])
             except:
                 try:
                     tstr = DataStream()
-                    tcol = np.asarray([tstr._testtime(elem).strftime(timeformat) for elem in col])
+                    tcol = np.asarray([trim_time(tstr._testtime(elem).strftime(timeformat),roundtime) for elem in col])
                 except:
                     tcol = np.asarray([])
-            if roundtime:
-                tcol = [trim_time(elem.replace(tzinfo=None)) for elem in tcol]
             array[idx]=np.asarray(tcol)
         elif len(col) > 0 and nosingleelem: # and KEYLIST[idx] in NUMKEYLIST:
             array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
@@ -1957,6 +1990,9 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
         #    valid_chars='-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
         #    el[i] = ''.join([e for e in list(el[i]) if e in list(valid_chars)])
         #    array[idx] = datastream.ndarray[idx].astype(object)
+
+    #print ("Here", tcol[1])
+
     keys = np.asarray([KEYLIST[idx] for idx,elem in enumerate(array) if len(elem)>0])
     array = np.asarray([elem for elem in array if len(elem)>0], dtype=object)
     dollarstring = ['%s' for elem in keys]

@@ -5012,8 +5012,28 @@ class SelectFromListDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
 
-#class MultiStreamDialog(scrolledpanel.ScrolledPanel):
 class MultiStreamDialog(wx.Dialog):
+    def __init__(self, parent, title, streamlist, idx, streamkeylist):
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        super(MultiStreamDialog, self).__init__(parent=parent,
+            title=title, style=style) #, size=(400, 700))
+        #self.modify = False
+        #self.result = DataStream()
+        #self.resultkeys = []
+        #self.streamlist = streamlist
+        #self.namelst = []
+        #self.streamkeylist = streamkeylist
+        #self.activeidx = idx
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        # Add MultilistPanel
+        self.panel = MultiStreamPanel(self, title, streamlist, idx, streamkeylist)
+        self.panel.SetInitialSize((850, 400))
+        self.mainSizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 10)
+        self.SetSizerAndFit(self.mainSizer)
+
+
+class MultiStreamPanel(scrolledpanel.ScrolledPanel):
     """
     DESCRIPTION:
     Subclass for Multiple stream selections
@@ -5037,28 +5057,10 @@ class MultiStreamDialog(wx.Dialog):
      If merge is used a new stream is generated and all other methods are available again.)
     """
 
-    #def __init__(self, parent, title, streamlist, idx, streamkeylist):
-    #    scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
-    #    self.modify = False
-    #    self.result = DataStream()
-    #    self.resultkeys = []
-    #    self.streamlist = streamlist
-    #    self.namelst = []
-    #    self.streamkeylist = streamkeylist
-    #    self.activeidx = idx
-
-    #    self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-    #    #self.createWidgets()
-    #    self.createControls()
-    #    self.doLayout()
-    #    self.SetSizer(self.mainSizer)
-    #    self.mainSizer.Fit(self)
-    #    self.SetupScrolling()
-    #    self.bindControls()
-
     def __init__(self, parent, title, streamlist, idx, streamkeylist):
-        super(MultiStreamDialog, self).__init__(parent=parent,
-            title=title, size=(400, 700))
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
+        self.parent = parent
+        self.title = title
         self.modify = False
         self.result = DataStream()
         self.resultkeys = []
@@ -5067,12 +5069,16 @@ class MultiStreamDialog(wx.Dialog):
         self.streamkeylist = streamkeylist
         self.activeidx = idx
 
-        self.createControls()
-        self.doLayout()
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.createWidgets()  ## adding controls to mainsizer
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+        self.SetupScrolling()
         self.bindControls()
 
+
     # Widgets
-    def createControls(self):
+    def createWidgets(self):
         self.head1Label = wx.StaticText(self, label="Available datastreams:")
         self.head2Label = wx.StaticText(self, label="Applications:")
         # 1. Section
@@ -5080,9 +5086,12 @@ class MultiStreamDialog(wx.Dialog):
         for idx, elem in enumerate(self.streamlist):
             #print ("Multi - check this if DI analysis has been conducted before",idx, elem.length())
             name = elem.header.get('DataID','stream'+str(idx))
-            #if not len(self.keylist[idx]) > 0:
-            #    keys = elem._get_key_headers()
-            #self.keylst.append(keys)
+            if name == 'stream{}'.format(idx):
+                name = elem.header.get('SensorID','stream'+str(idx))
+            try:
+                name = "{}_{}".format(name,datetime.strftime(elem.start(),"%Y%m%d"))
+            except:
+                pass
             keys = self.streamkeylist[idx]
             oldname = name
             if name in tmpnamelst:
@@ -5101,14 +5110,6 @@ class MultiStreamDialog(wx.Dialog):
         self.CombineButton = wx.Button(self,-1,"Combine",size=(160,30))
         self.AverageStackButton = wx.Button(self,-1,"Average",size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
-
-        #self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
-
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -5135,6 +5136,7 @@ class MultiStreamDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
+        #self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
         # A GridSizer will contain the other controls:
         cols = 2
         rows = int(np.ceil(len(contlst)/float(cols)))
@@ -5143,12 +5145,8 @@ class MultiStreamDialog(wx.Dialog):
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
+        self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
 
-        self.SetSizerAndFit(boxSizer)
-        #self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
 
     def bindControls(self):
         from functools import partial
@@ -5161,10 +5159,8 @@ class MultiStreamDialog(wx.Dialog):
             exec('self.'+name+'KeyButton.Bind(wx.EVT_BUTTON, partial( self.OnGetKeys, name = idx ) )')
 
     def OnGetKeys(self, e, name):
-        print ("Stream", name)
         shkeylst = self.streamkeylist[name]
         keylst = self.streamlist[name]._get_key_headers()
-        print ("Stream", shkeylst)
         namelist = []
         for key in shkeylst:
             colname = self.streamlist[name].header.get('col-'+key, '')
@@ -5180,7 +5176,7 @@ class MultiStreamDialog(wx.Dialog):
             for elem in keylst:
                 boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
                 if boolval:
-                   shownkeylist.append(elem)
+                    shownkeylist.append(elem)
             if len(shownkeylist) == 0:
                 shownkeylist = self.streamkeylist[name]
             else:
@@ -5218,6 +5214,10 @@ class MultiStreamDialog(wx.Dialog):
             dlg.ShowModal()
             dlg.Destroy()
 
+        self.Close(True)
+        self.parent.Destroy()
+
+
         #self.changeStatusbar("Ready")
 
 
@@ -5245,6 +5245,9 @@ class MultiStreamDialog(wx.Dialog):
             dlg.ShowModal()
             dlg.Destroy()
 
+        self.Close(True)
+        self.parent.Destroy()
+
 
     def OnStackButton(self, event):
         """
@@ -5261,6 +5264,9 @@ class MultiStreamDialog(wx.Dialog):
         self.result = stackStreams(substreamlist,get='mean',uncert='True')
         self.resultkeys = self.result._get_key_headers()
         self.modify = True
+
+        self.Close(True)
+        self.parent.Destroy()
 
     def OnCombineButton(self, event):
         """
@@ -5286,6 +5292,9 @@ class MultiStreamDialog(wx.Dialog):
                             "Subtract error", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
+
+        self.Close(True)
+        self.parent.Destroy()
 
 
 class WaitDialog(wx.Dialog):
