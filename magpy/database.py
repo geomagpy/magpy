@@ -2699,6 +2699,9 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
                                      lowest revision is selected
         - sql:              (string) provide any additional search criteria
                                   example: sql = "x>20000 AND str1='P'"
+        - starttime:        (string/datetime)
+        - endtime:          (string/datetime)
+
     Kwargs:
 
     RETURNS:
