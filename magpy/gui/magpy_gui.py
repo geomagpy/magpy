@@ -1938,6 +1938,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     tmp = read(path)
                     self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
                     stream.extend(tmp.container,tmp.header,tmp.ndarray)
+                stream=stream.sorting()
                 #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
                 #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
                 self.filename = ' ,'.join(filelist)
@@ -4941,6 +4942,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
             self.menu_p.str_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
+
         self.changeStatusbar("Ready")
 
 

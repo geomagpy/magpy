@@ -348,11 +348,15 @@ def dbgetlines(db, tablename, lines):
     try:
         cursor.execute(headsql)
     except mysql.IntegrityError as message:
-        return message
+        print ('dbgetlines: {}'.format(message))
+        return stream
     except mysql.Error as message:
-        return message
+        print ('dbgetlines: {}'.format(message))
+        return stream
     except:
-        return 'dbgetlines: unkown error'
+        print ('dbgetlines: unkown error')
+        return stream
+
     head = cursor.fetchall()
     keys = list(np.transpose(np.asarray(head))[0])
 
@@ -360,10 +364,10 @@ def dbgetlines(db, tablename, lines):
     try:
         cursor.execute(getsql)
     except mysql.IntegrityError as message:
-        print(message)
+        print ('dbgetlines: {}'.format(message))
         return stream
     except mysql.Error as message:
-        print(message)
+        print ('dbgetlines: {}'.format(message))
         return stream
     except:
         print('dbgetlines: unkown error')

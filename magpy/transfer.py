@@ -199,6 +199,8 @@ if ssh:
             - src:        (string) e.g. /path/to/local/file or user@remotehost:/path/to/remote/file
             - dest:       (string) e.g. /path/to/local/file or user@remotehost:/path/to/remote/file
             - passwd:     (string) users password
+        Kwargs:
+            - timeout:    (int)  define timeout - default is 30 
 
         REQUIRES:
             Requires package pexpect

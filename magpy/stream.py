@@ -1070,8 +1070,11 @@ CALLED BY:
             t_start = num2date(np.min(self.ndarray[0].astype(float))).replace(tzinfo=None)
             t_end = num2date(np.max(self.ndarray[0].astype(float))).replace(tzinfo=None)
         else:
-            t_start = num2date(self[0].time).replace(tzinfo=None)
-            t_end = num2date(self[-1].time).replace(tzinfo=None)
+            try: # old type
+                t_start = num2date(self[0].time).replace(tzinfo=None)
+                t_end = num2date(self[-1].time).replace(tzinfo=None)
+            except: # empty
+                t_start,t_end = None,None
 
         return t_start, t_end
 
@@ -4825,21 +4828,34 @@ CALLED BY:
 
         ## METHOD WHICH SORTS/COMBINES THE FLAGLIST
         #print("flag_outlier",flaglist)
+        # Combine subsequent time steps with identical flags to one flag range
         newlist = []
         srday = sr/(3600.*24.)
-        for line in flaglist:
-            ft = line[0]
-            if flagtimeprev == 0:
-                startflagtime = ft
-            if (ft-flagtimeprev)-0.01*srday > srday and not flagtimeprev == 0:
-                newlist.append([num2date(startflagtime).replace(tzinfo=None),num2date(flagtimeprev).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
-                startflagtime = ft
-            flagtimeprev = ft
-        if len(flaglist) > 0:
-            finalfl = [num2date(flaglist[-1][0]).replace(tzinfo=None),num2date(flaglist[-1][1]).replace(tzinfo=None),flaglist[-1][2],flaglist[-1][3],flaglist[-1][4],sensorid,cdate]
-            newlist.append(finalfl)
 
-        #print("flag_outlier",newlist)
+        # requires a sorted list
+        if len(flaglist)>0:
+            flaglist = sorted(flaglist, key=lambda x: x[0])
+            # Startvalue of endtime is firsttime
+            etprev = flaglist[0][1]
+            prevline = flaglist[0]
+            for line in flaglist:
+                st = line[0]
+                et = line[1]
+                diff1 = (et-etprev)       # end time diff between current flag and last flag
+                diff2 = (st-etprev)       # diff between current start and last end
+                srunc = srday+0.01*srday  # sampling rate with uncertainty
+                if diff1 < srunc or diff2 < srunc:
+                    # subsequent time step found -> changing et in line
+                    prevline[1] = et
+                else:
+                    newlist.append([num2date(prevline[0]).replace(tzinfo=None),num2date(prevline[1]).replace(tzinfo=None),prevline[2],prevline[3],prevline[4],sensorid,cdate])
+                    prevline = line
+                etprev = et
+            #save current content of prevline with new et
+            newlist.append([num2date(prevline[0]).replace(tzinfo=None),num2date(prevline[1]).replace(tzinfo=None),prevline[2],prevline[3],prevline[4],sensorid,cdate])
+        else:
+            newlist = []
+  
         if returnflaglist:
             return newlist
 
@@ -9062,11 +9078,14 @@ CALLED BY:
             if newarray[0].size > 0:   # time column present
                 idx = (np.abs(newarray[0].astype(float)-date2num(starttime))).argmin()
                 # Trim should start at point >= starttime, so check:
+                print ("minimmu diff at ", idx)
                 if newarray[0][idx] < date2num(starttime):
                     idx += 1
+                print ("minimmu diff at ", idx)
                 for i in range(len(newarray)):
-                    if len(newarray[i]) > idx:
+                    if len(newarray[i]) >= idx:
                         newarray[i] =  newarray[i][idx:]
+
         if endtime:
             endtime = self._testtime(endtime)
             if newarray[0].size > 0:   # time column present
@@ -10738,7 +10757,7 @@ def saveflags(mylist=None,path=None, overwrite=False):
         >>> saveflags(flaglist,'/my/path/myfile.pkl')
 
     """
-    print("Saving flaglist")
+    print("Saving flaglist ...")
     if not mylist:
         print("error 1")
         return False
@@ -10750,14 +10769,39 @@ def saveflags(mylist=None,path=None, overwrite=False):
         mylist = existflag
     if not os.path.exists(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
-    try:
-        # TODO: check whether package is already loaded
-        from pickle import dump
-        dump(mylist,open(path,'wb'))
-        print("saveflags: list saved to {}".format(path))
-        return True
-    except:
-        return False
+    if path.endswith('.json'):
+        print(" -- using json format ")
+        try:
+            import json
+            def dateconv(d):
+                # Converter to serialize datetime objects in json
+                if isinstance(d,datetime):
+                    return d.__str__()
+            # Convert mylist to a dictionary
+            mydic = {}
+            # get a list of unique sensorid
+            sid = [elem[5] for elem in mylist]
+            sid = list(set(sid))
+            for s in sid:
+                slist = [elem[0:5]+elem[6:] for elem in mylist if elem[5] == s]
+                mydic[s] = slist
+                ## Dictionary looks like {SensorID:[[t1,t2,xxx,xxx,],[x...]]}
+            with open(path,'w',encoding='utf-8') as file:
+                file.write(unicode(json.dumps(mydic,default=dateconv)))
+            print("saveflags: list saved to a json file: {}".format(path))
+            return True
+        except:
+            return False
+    else:
+        print(" -- using pickle")
+        try:
+            # TODO: check whether package is already loaded
+            from pickle import dump
+            dump(mylist,open(path,'wb'))
+            print("saveflags: list saved to {}".format(path))
+            return True
+        except:
+            return False
 
 def loadflags(path=None,sensorid=None,begin=None, end=None):
     """
@@ -10775,21 +10819,64 @@ def loadflags(path=None,sensorid=None,begin=None, end=None):
     """
     if not path:
         return []
-    try:
-        from pickle import load as pklload
-        mylist = pklload(open(path,"rb"))
-        print("loadflags: list {a} successfully loaded, found {b} inputs".format(a=path,b=len(mylist)))
-        if sensorid:
-            print(" - extracting data for sensor {}".format(sensorid))
-            mylist = [el for el in mylist if el[5] == sensorid]
-            if begin:
-                mylist = [el for el in mylist if el[1] > begin]
-            if end:
-                mylist = [el for el in mylist if el[0] < end]
-            #print(" -> remaining flags: {b}".format(b=len(mylist)))
-        return mylist
-    except:
-        return []
+    if path.endswith('.json'):
+        try:
+            import json
+            print ("Reading a json style flaglist...")
+            def dateparser(dct):
+                # Convert dates in dictionary to datetime objects
+                for (key,value) in dct.items():
+                    for i,line in enumerate(value):
+                        for j,elem in enumerate(line):
+                            if str(elem).count('-') + str(elem).count(':') == 4:
+                                try:
+                                    try:
+                                        value[i][j] = datetime.strptime(elem,"%Y-%m-%d %H:%M:%S.%f")
+                                    except:
+                                        value[i][j] = datetime.strptime(elem,"%Y-%m-%d %H:%M:%S")
+                                except:
+                                    pass
+                    dct[key] = value
+                return dct
+
+            if os.path.isfile(path):
+                with open(path,'r') as file:
+                    mydic = json.load(file,object_hook=dateparser)
+                if sensorid:
+                    mylist = mydic.get(sensorid,'')
+                    do = [el.insert(5,sensorid) for el in mylist]
+                else:
+                    mylist = []
+                    for s in mydic:
+                        ml = mydic[s]
+                        do = [el.insert(5,s) for el in ml]
+                        mylist.extend(mydic[s])
+                if begin:
+                    mylist = [el for el in mylist if el[1] > begin]
+                if end:
+                    mylist = [el for el in mylist if el[0] < end]
+                return mylist
+            else:
+                print ("Flagfile not yet existing ...")
+                return []
+        except:
+            return []
+    else:
+        try:
+            from pickle import load as pklload
+            mylist = pklload(open(path,"rb"))
+            print("loadflags: list {a} successfully loaded, found {b} inputs".format(a=path,b=len(mylist)))
+            if sensorid:
+                print(" - extracting data for sensor {}".format(sensorid))
+                mylist = [el for el in mylist if el[5] == sensorid]
+                if begin:
+                    mylist = [el for el in mylist if el[1] > begin]
+                if end:
+                    mylist = [el for el in mylist if el[0] < end]
+                #print(" -> remaining flags: {b}".format(b=len(mylist)))
+            return mylist
+        except:
+            return []
 
 
 

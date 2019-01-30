@@ -286,7 +286,10 @@ class ExportDataDialog(wx.Dialog):
         #print ("Calling GetFilename: if file is MagPyDI - eventually open a message box to define year", filenamebegins, filenameends, coverage, dateformat)
         format_type, self.filenamebegins, self.filenameends, self.coverage, self.dateformat = stream._write_format(format_type, filenamebegins, filenameends, coverage, dateformat , blvyear)
         #print ("obtained:", self.filenamebegins, self.filenameends, self.coverage, self.dateformat)
-        datelook = datetime.strftime(stream._find_t_limits()[0],self.dateformat)
+        if coverage == 'all':
+            datelook = ''
+        else:
+            datelook = datetime.strftime(stream._find_t_limits()[0],self.dateformat)
         if format_type.endswith('PYCDF'):
             self.filenameends = '.cdf'
         filename = self.filenamebegins+datelook+self.filenameends
@@ -1492,7 +1495,7 @@ class StreamLoadFlagDialog(wx.Dialog):
 
     def OnLoadFile(self, e):
         openFileDialog = wx.FileDialog(self, "Open", "", "",
-                                       "Flaglist (*.pkl)|*.pkl",
+                                       "pickle flaglist (*.pkl)|*.pkl|json flaglist (*.json)|*.json",
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
         flagname = openFileDialog.GetPath()
@@ -1575,7 +1578,7 @@ class StreamSaveFlagDialog(wx.Dialog):
 
     def OnSaveFile(self, e):
         saveFileDialog = wx.FileDialog(self, "Save As", "", "",
-                                       "Flaglist (*.pkl)|*.pkl",
+                                       "pickle flaglist (*.pkl)|*.pkl|json flaglist (*.json)|*.json",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
         flagname = saveFileDialog.GetPath()

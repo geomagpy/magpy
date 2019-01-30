@@ -12,6 +12,11 @@ v0.4.6 fixes:
     + writeDB: method will now work even for very large datasets
     + GUI: freezing error when double clicking solved 
     + writeDB: treatment of columns with only nan values has been corrected
+    + GUI: when opening multiple data set: sorting by time column
+    + FlagOutlier: combination of susequent time steps corrected
+                   previously some flags were lost
+    + database: understandable error messages
+    + trim: corrections if stream outside the timerange
 
 v0.4.6 additions:
     + added method 'cut' to extract lines from a stream from the beginning or end 

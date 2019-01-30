@@ -410,7 +410,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
             if key.find('time')>=0 or key == 'Epoch':
                 #ti = cdf_file[key][...]
                 #row = LineStruct()
-                if str(cdfformat) == 'MagPyCDF':
+                if str(cdfformat).startswith('MagPyCDF'):
                     if not oldtype:
                         if not key == 'sectime':
                             ind = KEYLIST.index('time')
@@ -1115,7 +1115,7 @@ def writePYCDF(datastream, filename, **kwargs):
                     pfunc = pickle.dumps(headdict[key])
                     mycdf.attrs[key] = pfunc
 
-    mycdf.attrs['DataFormat'] = 'MagPyCDF'
+    mycdf.attrs['DataFormat'] = 'MagPyCDF1.1'
 
     #print ("Check", mycdf.attrs)
     #def checkEqualIvo(lst):
