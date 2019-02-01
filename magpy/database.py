@@ -1971,7 +1971,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             if not False in checkEqual3(col) and not nantest:
                 # checking for identical elements
                 # TODO Unicode equal comparison in the following - see whether error still present after Jan2019
-                if col[0] in ['nan', '-',None,'']: #remove place holders
+                if not col[0] or col[0] in ['nan', '-','']: #remove place holders
                     array[idx] = np.asarray([])
                     nosingleelem = False
         if key.endswith('time') and len(col) > 0 and nosingleelem:

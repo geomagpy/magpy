@@ -9078,10 +9078,8 @@ CALLED BY:
             if newarray[0].size > 0:   # time column present
                 idx = (np.abs(newarray[0].astype(float)-date2num(starttime))).argmin()
                 # Trim should start at point >= starttime, so check:
-                print ("minimmu diff at ", idx)
                 if newarray[0][idx] < date2num(starttime):
                     idx += 1
-                print ("minimmu diff at ", idx)
                 for i in range(len(newarray)):
                     if len(newarray[i]) >= idx:
                         newarray[i] =  newarray[i][idx:]

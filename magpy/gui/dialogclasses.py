@@ -5088,9 +5088,9 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         tmpnamelst = []
         for idx, elem in enumerate(self.streamlist):
             #print ("Multi - check this if DI analysis has been conducted before",idx, elem.length())
-            name = elem.header.get('DataID','stream'+str(idx))
+            name = elem.header.get('DataID','stream'+str(idx)).strip()
             if name == 'stream{}'.format(idx):
-                name = elem.header.get('SensorID','stream'+str(idx))
+                name = elem.header.get('SensorID','stream'+str(idx)).strip()
             try:
                 name = "{}_{}".format(name,datetime.strftime(elem.start(),"%Y%m%d"))
             except:

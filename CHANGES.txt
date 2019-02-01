@@ -13,10 +13,11 @@ v0.4.6 fixes:
     + GUI: freezing error when double clicking solved 
     + writeDB: treatment of columns with only nan values has been corrected
     + GUI: when opening multiple data set: sorting by time column
-    + FlagOutlier: combination of susequent time steps corrected
-                   previously some flags were lost
+    + FlagOutlier: combination of susequent time steps corrected -
+                   previously some flags were lost when saving and reloading
     + database: understandable error messages
     + trim: corrections if stream outside the timerange
+    + python3 import of IYFV files now possible
 
 v0.4.6 additions:
     + added method 'cut' to extract lines from a stream from the beginning or end 

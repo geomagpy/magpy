@@ -43,7 +43,7 @@ class MartasInfo():
         uid = pw.pw_uid
         os.setuid(uid)
 
-        print "setuid successful to", uid
+        print ("setuid successful to", uid)
 
         try:
             scptransfer(scpuser+'@'+source,dest,scppasswd)
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     #                 do necessary changes above
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    print dbhost, dbuser, dbpasswd, dbname, scpuser
+    print (dbhost, dbuser, dbpasswd, dbname, scpuser)
 
     logfile = os.path.join(homedir,'MARCOS','Logs','marcos.log')
     log.startLogging(open(logfile,'a'))
@@ -121,25 +121,25 @@ if __name__ == '__main__':
         db = mysql.connect (host=dbhost,user=dbuser,passwd=dbpasswd,db=dbname)
         dbcredlst = [dbhost,dbuser,dbpasswd,dbname]
     except:
-        print "Create a credential file first or provide login info for database directly"
+        print ("Create a credential file first or provide login info for database directly")
         raise
     cursor = db.cursor ()
     cursor.execute ("SELECT VERSION()")
     row = cursor.fetchone ()
-    print "MySQL server version:", row[0]
+    print ("MySQL server version:", row[0])
     cursor.close ()
     db.close ()
 
     # ----------------------------------------------------------
     # 3. connect to client and get sensor list as well as owlist
     # ----------------------------------------------------------
-    print "Locating MARCOS directory ..."
+    print ("Locating MARCOS directory ...")
     destpath = [path for path, dirs, files in os.walk("/home") if path.endswith('MARCOS')][0]
     sensfile = os.path.join(martaspath,'sensors.txt')
     owfile = os.path.join(martaspath,'owlist.csv')
     destsensfile = os.path.join(destpath,'MartasSensors',clientname+'_sensors.txt') 
     destowfile = os.path.join(destpath,'MartasSensors',clientname+'_owlist.csv')
-    print "Getting sensor information from ", clientname
+    print ("Getting sensor information from ", clientname)
 
     ## to be activated if multiprocessing and pexpect are working again
     #MI=MartasInfo()
@@ -161,13 +161,13 @@ if __name__ == '__main__':
         print scpuser+'@'+clientip+':'+sensfile
         scptransfer(scpuser+'@'+clientip+':'+sensfile,destsensfile,scppasswd)
     except:
-        print "Could not connect to/get sensor info of client %s - aborting" % clientname
+        print ("Could not connect to/get sensor info of client %s - aborting" % clientname)
         sys.exit()
-    print "Searching for onewire data from ", clientname
+    print ("Searching for onewire data from ", clientname)
     try:
         scptransfer(scpuser+'@'+clientip+':'+owfile,destowfile,scppasswd)
     except:
-        print "No one wire info available on client %s - proceeding" % clientname
+        print ("No one wire info available on client %s - proceeding" % clientname)
         pass
 
     s,o = [],[]
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         reader = csv.reader(f)
         s = []
         for line in reader:
-            print line
+            print (line)
             if len(line) < 2:
                 try:
                     s.append(line[0].split())
@@ -184,12 +184,12 @@ if __name__ == '__main__':
                     pass
             else:
                 s.append(line)
-    print s
+    print (s)
     if os.path.exists(destowfile):
         with open(destowfile,'rb') as f:
             reader = csv.reader(f)
             o = [line for line in reader]
-        print o
+        print (o)
 
     factory = WampClientFactory("ws://"+clientip+":9100", debugWamp = False)
     cl.sendparameter(clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst)

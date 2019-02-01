@@ -128,18 +128,25 @@ def isIYFV(filename):
     _YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
     """
     # Search for identifier in the first three line
-    code = 'rb'
     if sys.version_info >= (3, 0):
         code = 'rt' 
-
-    try:
-        fi = open(filename, code)
-    except:
-        return False
+        try:
+            fi = open(filename, code, errors='replace')
+        except:
+            return False
+    else:
+        code = 'rb'
+        try:
+            fi = open(filename, code)
+        except:
+            return False
 
     for ln in range(0,2):
         try:
             temp = fi.readline()
+        except UnicodeDecodeError as e:
+            print ("Found an unicode error whene reading:",e)
+            return False
         except:
             return False
         try:
@@ -2621,16 +2628,18 @@ def readIYFV(filename, headonly=False, **kwargs):
     def dropnonascii(text):
         return ''.join([i if ord(i) < 128 else ' ' for i in text])
 
-    code = 'rb'
-    #import sys
-    if sys.version_info >= (3, 0):
-        code = 'rt' 
-
     if debug:
         print ("readIYVF: Reading data ...")
 
-    with open(filename, code) as fh:  #
-        for line in fh:
+
+    if sys.version_info >= (3, 0):
+        code = 'rt' 
+        fh = open(filename, code, errors='ignore')  # python3
+    else:
+        code = 'rb'
+        fh = open(filename, code)  #
+    
+    for line in fh:
             line = dropnonascii(line)
             line = line.rstrip()
             cnt = cnt+1
@@ -2777,6 +2786,8 @@ def readIYFV(filename, headonly=False, **kwargs):
                         tprev = tsel
             else:
                 pass
+
+    fh.close()
 
     if debug:
         print ("readIYVF: Got data ...")

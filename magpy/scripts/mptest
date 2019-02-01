@@ -145,6 +145,10 @@ def main(argv):
     failedload = []
     failedwrite = []
 
+    print ("\n----------------------------------")
+    print ("--------  Testing MagPy ----------")
+    print ("--------  Version: {} ---------".format(magpyversion))
+
     if path == '' and source == '':
         print ('Specify a path and/or single data source:')
         print ('-- check mptest.py -h for more options and requirements')
