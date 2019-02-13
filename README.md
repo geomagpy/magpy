@@ -24,7 +24,7 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
 #### 1.1.1 Install NASA [CDF] support
   - enables CDF support for formats like ImagCDF
   - package details and files at http://cdf.gsfc.nasa.gov/
-  - download and install a recent version of CDF e.g. cdf36_2_1-setup-32.exe
+  - download and install a recent version of CDF e.g. cdf36_4-setup-32.exe
   - Note: please use 32 bit installer.
 
 #### 1.1.2 Install MagPy for Windows
@@ -33,10 +33,17 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
   - all required packages are included in the installer
 
 #### 1.1.3 Post-installation information
-  - MagPy should have a sub-folder in the Start menu. Here you will find two items:
+  - MagPy should have a sub-folder in the Start menu. Here you will find three items:
 
-        * python -> opens a python shell ready for MagPy
-        * xmagpy -> opens the MagPy graphical user interface
+        * command -> opens a DOS shell within the Python environment e.g. for updates 
+        * python  -> opens a python shell ready for MagPy
+        * xmagpy  -> opens the MagPy graphical user interface
+
+#### 1.1.4 Update an existing MagPy installation on Windows
+  - right-click on subfolder "command" in the start menu
+  - select "run as administrator"
+  - issue the following command "pip install geomagpy"
+    (you can also specify the version e.g. pip install geomagpy==0.x.x)
 
 
 ### 1.2 Linux/MacOs installation - Anaconda
@@ -137,7 +144,7 @@ B) Get CDF and Omni database support:
 
     a) CDF (NASA): http://cdf.gsfc.nasa.gov/html/sw_and_docs.html (tested with 3.6.1.0, please check validity of commands below to make command for any future versions)
 
-        tar -zxvf cdf36_1-dist-all.tar.gz
+        tar -zxvf cdf36_4-dist-all.tar.gz
         cd cdf36*
         make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
         sudo make INSTALLDIR=/usr/local/cdf install
@@ -150,9 +157,9 @@ C) Install MagPy
 
     a) Using pip
 
-        sudo pip install GeomagPy
+        sudo pip install geomagpy
           * specific version:
-        sudo pip install GeomagPy==v0.3.9
+        sudo pip install geomagpy==0.4.6
 
     b) Using github (latest development versions)
 
