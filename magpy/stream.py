@@ -260,6 +260,14 @@ try:
     except:
         os.putenv("CDF_LIB", "/usr/local/cdf/lib")
         logger.info("using CDF lib in /usr/local/cdf")
+        ### If files (with tt_2000) have been generated with an outdated leapsecondtable
+        ### an exception will occur - to prevent that:
+        ### 1. make sure to use a actual leapsecond table - update cdf regularly
+        ### 2. temporarly set cdf_validate environment variable to no
+        # This is how option 2 is included TODO -- add this to initialization options
+        # as an update of cdf is the way to go and not just deactivating the error message
+        os.putenv("CDF_VALIDATE", "no")
+        logger.info("deactivating cdf validation")
         try:
             import spacepy.pycdf as cdf
             logger.info("... success")
