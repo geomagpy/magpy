@@ -49,14 +49,22 @@ import base64
 import pickle
 import os
 from os.path import expanduser
+import platform
+
+pyversion = platform.python_version()
+
 
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
         pickle.dump(obj,f,pickle.HIGHEST_PROTOCOL)
 
 def loadobj(filename):
-    with open(filename, 'r') as f:
-        return pickle.load(f) # encoding='latin1' if python3 to read python2 cred
+    if pyversion.startswith('2'):
+        with open(filename, 'r') as f:
+            return pickle.load(f) # encoding='latin1' if python3 to read python2 cred
+    else:
+        with open(filename, 'rb') as f:
+            return pickle.load(f,encoding='latin1')
 
 def getuser():
     sysuser = os.getenv("USER")
