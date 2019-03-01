@@ -56,7 +56,7 @@ def saveobj(obj, filename):
 
 def loadobj(filename):
     with open(filename, 'r') as f:
-        return pickle.load(f)
+        return pickle.load(f) # encoding='latin1' if python3 to read python2 cred
 
 def getuser():
     sysuser = os.getenv("USER")

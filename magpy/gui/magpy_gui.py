@@ -1229,20 +1229,20 @@ class MainFrame(wx.Frame):
         self.menu_p.met_page.MetaDataButton.Disable()      # remain disabled
         self.menu_p.met_page.MetaSensorButton.Disable()    # remain disabled
         self.menu_p.met_page.MetaStationButton.Disable()   # remain disabled
-        if PLATFORM.startswith('linux'):
-            self.menu_p.met_page.stationTextCtrl.Disable()     # remain disabled
-            self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
-            self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
+        #if PLATFORM.startswith('linux'):
+        #    self.menu_p.met_page.stationTextCtrl.Disable()     # remain disabled
+        #    self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
+        #    self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
         # DI
         self.menu_p.abs_page.AnalyzeButton.Disable()       # activate if DI data is present i.e. diTextCtrl contains data
         self.menu_p.abs_page.loadDIButton.Enable()         # remain enabled
         self.menu_p.abs_page.defineVarioButton.Enable()    # remain enabled
         self.menu_p.abs_page.defineScalarButton.Enable()   # remain enabled
-        if PLATFORM.startswith('linux'):
-            self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled -- WINDOWS Prob - scrolling will not work
-            self.menu_p.abs_page.scalarTextCtrl.Disable()      # remain disabled
-            self.menu_p.abs_page.varioTextCtrl.Disable()       # remain disabled
-            self.menu_p.abs_page.diTextCtrl.Disable()          # remain disabled
+        #if PLATFORM.startswith('linux'):
+        #    self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled -- WINDOWS Prob - scrolling will not work
+        #    self.menu_p.abs_page.scalarTextCtrl.Disable()      # remain disabled
+        #    self.menu_p.abs_page.varioTextCtrl.Disable()       # remain disabled
+        #    self.menu_p.abs_page.diTextCtrl.Disable()          # remain disabled
         self.menu_p.abs_page.ClearLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.SaveLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
@@ -1270,12 +1270,12 @@ class MainFrame(wx.Frame):
         #self.menu_p.ana_page.stackButton.Disable()         # if len(self.streamlist) > 1
 
         # Report
-        if PLATFORM.startswith('linux'):
-            self.menu_p.rep_page.logger.Disable()              # remain disabled
+        #if PLATFORM.startswith('linux'):
+        #    self.menu_p.rep_page.logger.Disable()              # remain disabled
 
         # Monitor
-        if PLATFORM.startswith('linux'):
-            self.menu_p.com_page.connectionLogTextCtrl.Disable()  # remain disabled
+        #if PLATFORM.startswith('linux'):
+        #    self.menu_p.com_page.connectionLogTextCtrl.Disable()  # remain disabled
         self.menu_p.com_page.startMonitorButton.Disable()  # always
         self.menu_p.com_page.stopMonitorButton.Disable()   # always
         self.menu_p.com_page.saveMonitorButton.Disable()   # always

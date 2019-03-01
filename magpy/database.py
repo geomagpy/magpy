@@ -3205,7 +3205,7 @@ def db2diline(db,**kwargs):
 
     return resultlist
 
-def applyDeltas(db, stream):
+def applyDeltas(db, stream, debug=False):
     """
     DESCRIPTION:
        Extract content of DataDeltaDictionary and apply the corrections to stream.
@@ -3260,6 +3260,8 @@ def applyDeltas(db, stream):
     logger.info("applyDeltas: Running delta app")
     try:
         for delt in deltalines:
+            if debug:
+                print ("applyDeltas: delt {}".format(delt))
             deltdict = {}
             starttime = ''
             endtime = ''
@@ -3271,16 +3273,21 @@ def applyDeltas(db, stream):
                 starttime = deltdict.get('st','')
             if not deltdict.get('et','') == '':
                 endtime = deltdict.get('et','')
-            #logger.info("applyDeltas: {}, {}, {}".format(delts, starttime, endtime))
+            #logger.info()
+            if debug:
+                print ("applyDeltas: {}, {}, {}".format(delts, starttime, endtime))
             for key in deltdict:
                 if not key in ['st','et']:
-                    logger.info("applyDeltas: key={}, value={}".format(key,deltadict(key)))
+                    logger.info("applyDeltas: key={}, value={}".format(key,deltdict[key]))
                     if key == 'time':
                         stream = calloffset(stream,'time',deltdict[key],starttime,endtime)
                     elif key in NUMKEYLIST:
                         stream = calloffset(stream,key,float(deltdict[key]),starttime,endtime)
         stream.header['DataDeltaValues'] = ''
     except:
+        logger.info("applyDeltas: Running delta app")
+        if debug:
+            print ("applyDeltas: failed")
         pass
 
     return stream

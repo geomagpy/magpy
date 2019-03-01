@@ -1,7 +1,18 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<0.4.6>, <2018-xx-xx> --
+####v<0.4.7>, <2018-xx-xx> --
+
+v0.4.7 general:
+
+v0.4.7 fixes:
+    + database: error in applyDeltas method corrected
+
+v0.4.7 additions:
+
+
+
+####v<0.4.6>, <2018-02-01> --
 
 v0.4.6 general:
     + PYCDF format - changed time format from EPOCH to TT2000
