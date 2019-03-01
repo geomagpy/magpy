@@ -2056,7 +2056,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 dlg.ShowModal()
                 dlg.Destroy()
                 return
-            dlg = DatabaseContentDialog(None, title='MySQL Database: Get content',datalst=datainfoidlist)
+            dlg = DatabaseContentDialog(None, title='MySQL Database: Get content',datalst=sort(datainfoidlist))
             if dlg.ShowModal() == wx.ID_OK:
                 datainfoid = dlg.dataComboBox.GetValue()
                 stream = DataStream()
