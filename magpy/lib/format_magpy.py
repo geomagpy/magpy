@@ -1117,7 +1117,6 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mycdf.attrs['DataFormat'] = 'MagPyCDF1.1'
 
-    #print ("Check", mycdf.attrs)
     #def checkEqualIvo(lst):
     #    # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
     #    return not lst or lst.count(lst[0]) == len(lst)
@@ -1131,8 +1130,6 @@ def writePYCDF(datastream, filename, **kwargs):
     except:
         pass
 
-    #print "fmagpy", datastream.ndarray
-    #print "writing keys", keylst
     #print("WriteFormat length 1", datastream.ndarray, datastream.length())
     for key in keylst:
         if ndtype:
@@ -1196,6 +1193,8 @@ def writePYCDF(datastream, filename, **kwargs):
                         mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
                     except:
                         pass
+
+    #print ("Got here", mycdf)
 
     if compression == 0: ## temporary solution until all refs to skipcomression are eliminated
         skipcompression = True

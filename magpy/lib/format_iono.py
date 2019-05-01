@@ -48,6 +48,7 @@ def readIONO(filename, headonly, **kwargs):
     fileformat = 'ftpexp' # 'fileexp'
     headers['SensorName'] = 'IM806'
     headers['SensorSerialNum'] = '12IM0183'
+    lensum, lencnt = 0,0
     for line in csvReader:
         elem = line[0].split(';')
         try:
@@ -79,10 +80,18 @@ def readIONO(filename, headonly, **kwargs):
                         array[ind].append(float(el))
             elif fileformat == 'ftpexp' and not headonly:
                 array[0].append(date2num(datetime.strptime(elem[0]+'T'+elem[1],'%d.%m.%YT%H:%M:%S')))
+                # Typical problem of last line -> missing elements -> pad with nan values
+                lensum += len(elem)
+                lencnt += 1
+                avlen = int(np.round(lensum/lencnt))
+                if not len(elem) == avlen:
+                    elem = (elem + ['nan'] * avlen)[:avlen]
                 for idx,el in enumerate(elem):
                     if idx > 1:
                         ind = idx-1
-                        if ind > 7:
+                        if el.strip() in [u'nan','']:
+                            array[ind].append(np.nan)
+                        elif ind > 7:
                             array[ind].append(float(el)/10.)
                         else:
                             array[ind].append(float(el))

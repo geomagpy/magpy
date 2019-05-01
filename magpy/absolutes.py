@@ -1547,6 +1547,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     expD = kwargs.get('expD')
     meantime = kwargs.get('meantime')
     movetoarchive = kwargs.get('movetoarchive')
+    debug = kwargs.get('debug')
 
     if not outputformat:
         outputformat='idf'
@@ -1617,7 +1618,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if readfile:
         # Get list of files
         if isinstance(absdata, basestring):
-            #print "Found string"
+            #print ("Found string")
             #filelist.append(absdata)
             if "://" in absdata:
                 print("Found URL code - requires name of data set with date")
@@ -1637,7 +1638,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         filelist.append(os.path.join(absdata,file))
         else:
             try:
-                #print "Found List"
+                #print ("Found List")
                 listlen = len(absdata)
                 for elem in absdata:
                     if "://" in absdata:
@@ -1654,8 +1655,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         for elem in filelist:
             head, tail = os.path.split(elem)
             try:
-                date = dparser.parse(tail,fuzzy=True)
-                datelist.append(datetime.strftime(date,"%Y-%m-%d"))
+                if elem.endswith('.json'):
+                    data = readJSONABS(elem)
+                    for dat in data:
+                        stream = dat.getAbsDIStruct()
+                        datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
+                else:
+                    date = dparser.parse(tail,fuzzy=True)
+                    datelist.append(datetime.strftime(date,"%Y-%m-%d"))
             except:
                 try:
                     date = dparser.parse(tail[:19],fuzzy=True)
@@ -1665,6 +1672,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     failinglist.append(elem)
 
         datelist = list(set(datelist))
+        #print (datelist)
+        #sys.exit()
 
 
     datetimelist = [datetime.strptime(elem,'%Y-%m-%d') for elem in datelist]
@@ -1774,7 +1783,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     if not alpha:
                         print ("Alpha")
                         rotstring = variostr.header.get('DataRotationAlpha','')
-                        rotdict = dbase.string2dict(rotstring)
+                        rotdict = dbase.string2dict(rotstring,typ='oldlist')
                         #print ("Dealing with year", date.year)
                         valalpha = rotdict.get(str(date.year),'')
                         if valalpha == '':
@@ -1791,7 +1800,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     if not beta:
                         print ("Beta")
                         rotstring = variostr.header.get('DataRotationBeta','')
-                        rotdict = dbase.string2dict(rotstring)
+                        rotdict = dbase.string2dict(rotstring,typ='oldlist')
                         valbeta = rotdict.get(str(date.year),'')
                         if valbeta == '':
                             maxkey = max(int(k) for k, v in rotdict.iteritems())
@@ -1976,6 +1985,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             except:
                 print("absoluteAnalysis: Problems when reading from database")
 
+
         for absst in abslist:
             print("-----------------")
             print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
@@ -1990,6 +2000,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 stream = absst.getAbsDIStruct()
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
+            streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
+            if streamtime == datetime.strftime(date,"%Y-%m-%d"):
+                print ("Times are fitting")
+            else:
+                continue
     
             if stream[0].person == 'AutoDIF' and not usestep:
                 usestep = 2
@@ -2016,17 +2031,27 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 if not deltaD and db:
                     try:
                         val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
-                        deltainputs = val.split(',')
-                        lastval = deltainputs[-1] 
-                        deltaD = float(lastval.split('_')[2])
+                        try:
+                            dic = string2dict(val,typ='dictionary')
+                            res = dicgetlast(dic,pier='A2',element='deltaD,deltaI,deltaF')
+                            deltaD = float(res.get('deltaD','0.00001'))
+                        except:
+                            deltainputs = val.split(',')
+                            lastval = deltainputs[-1] 
+                            deltaD = float(lastval.split('_')[2])
                     except:
                         deltaD = 0.0
                 if not deltaI and db:
                     try:
                         val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
-                        deltainputs = val.split(',')
-                        lastval = deltainputs[-1]
-                        deltaI = float(lastval.split('_')[3])
+                        try:
+                            dic = string2dict(val,typ='dictionary')
+                            res = dicgetlast(dic,pier='A2',element='deltaD,deltaI,deltaF')
+                            deltaI = float(res.get('deltaI','0.00001'))
+                        except:
+                            deltainputs = val.split(',')
+                            lastval = deltainputs[-1]
+                            deltaI = float(lastval.split('_')[3])
                     except:
                         deltaI = 0.0
                 #print("here", deltaD, deltaI, scalevalue)

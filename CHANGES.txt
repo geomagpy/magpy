@@ -4,9 +4,11 @@ Installation instructions can be found on the main download page.
 ####v<0.4.7>, <2018-xx-xx> --
 
 v0.4.7 general:
+    + reading all generations of cdf
 
 v0.4.7 fixes:
     + database: error in applyDeltas method corrected
+    + flagging_outlier: 'markall' option is now working correctly
 
 v0.4.7 additions:
 

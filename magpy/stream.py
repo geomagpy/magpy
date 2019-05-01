@@ -4061,7 +4061,8 @@ CALLED BY:
             print("Length time column:", len(t))
 
         for key in keys:
-            #print "Start filtering for", key
+            if debugmode:
+                print ("Start filtering for", key)
             if not key in KEYLIST:
                 logger.error("Column key %s not valid." % key)
             keyindex = KEYLIST.index(key)
@@ -4091,6 +4092,7 @@ CALLED BY:
 
             # Make sure that we are dealing with numbers
             v = np.array(list(map(float, v)))
+
             if v.ndim != 1:
                 logger.error("Filter: Only accepts 1 dimensional arrays.")
             if window_len<3:
@@ -4136,11 +4138,6 @@ CALLED BY:
                     self.ndarray[keyindex] = res
                 else:
                     self._put_column(res,key)
-
-        #print "End length:", self.length()
-        #print self.ndarray
-        #shortdata = self._select_timerange(starttime="2015-01-01 01:00:00",endtime="2015-01-01 02:00:00")
-        #print ("data after filter", shortdata, len(shortdata[0]))
 
         if resample:
             if debugmode:
@@ -4295,7 +4292,6 @@ CALLED BY:
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
             x = arange(np.min(nt),np.max(nt),sp)
-            #print len(x)
             if len(val)>1 and fitfunc == 'spline':
                 try:
                     #logger.error('Interpolation: Testing knots (knotsteps = {}), (len(val) = {}'.format(knotstep, len(val)))
@@ -4793,7 +4789,6 @@ CALLED BY:
                                             if not newflagls[p] > 1:
                                                 newflagls[p] = '1'
                                     newflag = ''.join(newflagls)
-                                    #print(newflag)
                                 else:
                                     x=1/0 # Force except
                             except:
@@ -4816,7 +4811,15 @@ CALLED BY:
                             logger.info(infoline)
                             #[starttime,endtime,key,flagid,flagcomment]
                             flagtime = self.ndarray[0][elem]
-                            flaglist.append([flagtime,flagtime,key,1,commline])
+
+                            if markall:
+                                # if not flagtime and key and commline in flaglist
+                                for fkey in keys:
+                                    ls = [flagtime,flagtime,fkey,1,commline]
+                                    if not ls in flaglist:
+                                        flaglist.append(ls)
+                            else:
+                                flaglist.append([flagtime,flagtime,key,1,commline])
                             if stdout:
                                 print(infoline)
                         else:
@@ -4840,13 +4843,29 @@ CALLED BY:
         newlist = []
         srday = sr/(3600.*24.)
 
+        # Keep it simple - no cleaning here - just produce new format
+        if len(flaglist)>0:
+            #flaglist = sorted(flaglist, key=lambda x: x[0])
+            for line in flaglist: 
+                newlist.append([num2date(line[0]).replace(tzinfo=None),num2date(line[1]).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
+        else:
+            newlist = []
+
+        #newlist = self.flaglistclean(newlist)
+
+        """
         # requires a sorted list
         if len(flaglist)>0:
-            flaglist = sorted(flaglist, key=lambda x: x[0])
+          # Different keys are not regarded for here (until 0.4.6)
+          # 1. Extract all flag for individual keys first
+          for key in keys:
+            templist = [l for l in flaglist if l[2] == key]
+            fllist = sorted(templist, key=lambda x: x[0])
+            #flaglist = sorted(flaglist, key=lambda x: x[0])
             # Startvalue of endtime is firsttime
-            etprev = flaglist[0][1]
-            prevline = flaglist[0]
-            for line in flaglist:
+            etprev = fllist[0][1]
+            prevline = fllist[0]
+            for line in fllist:
                 st = line[0]
                 et = line[1]
                 diff1 = (et-etprev)       # end time diff between current flag and last flag
@@ -4863,7 +4882,8 @@ CALLED BY:
             newlist.append([num2date(prevline[0]).replace(tzinfo=None),num2date(prevline[1]).replace(tzinfo=None),prevline[2],prevline[3],prevline[4],sensorid,cdate])
         else:
             newlist = []
-  
+        """
+
         if returnflaglist:
             return newlist
 
@@ -5018,11 +5038,11 @@ CALLED BY:
             flaglist = db2flaglist(db,'all')
             flaglistwithoutduplicates = stream.flaglistclean(flaglist)
         """
+
         # first step - remove all duplicates
-        flaglistnum = ['___'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
-        flaglistnum = np.unique(np.asarray(flaglistnum))
-        flaglist = [elem.split('___') for elem in flaglistnum]
-        flaglist= [[num2date(float(elem[0])).replace(tzinfo=None),num2date(float(elem[1])).replace(tzinfo=None),elem[2],int(elem[3]),elem[4],elem[5],num2date(float(elem[6])).replace(tzinfo=None)] for elem in flaglist]
+        testflaglist = ['____'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
+        uniques,indi = np.unique(testflaglist,return_index=True)
+        flaglist = [flaglist[idx] for idx in indi]
 
         # second step - remove all inputs without components
         flaglist = [elem for elem in flaglist if not elem[2] == '']
@@ -5030,7 +5050,7 @@ CALLED BY:
         ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
         ## (use only last input)
         indicies = []
-        for line in flaglist:
+        for ti, line in enumerate(flaglist):
             if len(line) > 5:
                 inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2] and elem[5] == line[5]]
             else:
@@ -5042,11 +5062,11 @@ CALLED BY:
             else:
                 index = inds[-1]
                 indicies.append(index)
+
         uniqueidx = (list(set(indicies)))
         print ("flaglistclean: found {} unique inputs".format(len(uniqueidx)))
         uniqueidx.sort()
-        #print(uniqueidx)
-        flaglist = [elem for idx, elem in enumerate(flaglist) if idx in uniqueidx]
+        flaglist = [flaglist[idx] for idx in uniqueidx]
 
         return flaglist
 
@@ -5974,6 +5994,7 @@ CALLED BY:
                     meanx = np.mean(xl)+xcompensation
                 meany = np.mean(yl)
                 # get rotation angle so that meany == 0
+                print ("Rotation",meanx, meany)
                 #zeroy = meanx*np.sin(ra)+meany*np.cos(ra)
                 #-meany/meanx = np.tan(ra)
                 rotangle = np.arctan2(-meany,meanx) * (180.) / np.pi
@@ -8175,11 +8196,16 @@ CALLED BY:
             return DataStream(newst, self.header, self.ndarray)
 
 
-    def resample(self, keys, **kwargs):
+    def resample(self, keys, debugmode=False,**kwargs):
         """
     DEFINITION:
         Uses Numpy interpolate.interp1d to resample stream to requested period.
 
+        Two methods:
+           fast: is only valid if time stamps at which resampling is conducted are part of the 
+                 original time series. e.g. org = second (58,59,0,1,2) resampled at 0
+           slow: general method if time stamps for resampling are not contained (e.g. 58.23, 59.24, 0.23,...) 
+                 resampled at 0
     PARAMETERS:
     Variables:
         - keys:         (list) keys to be resampled.
@@ -8237,10 +8263,12 @@ CALLED BY:
                 sampling_period = si.seconds
 
                 if period <= sampling_period:
-                    logger.warning("resample: Resampling period must be larger than original sampling period.")
+                    logger.warning("resample: Resampling period must be larger or equal than original sampling period.")
                     return self
 
-                #print "Trying fast algorythm"
+                if debugmode:
+                    print ("Trying fast algorythm")
+                    print ("Projected period and Sampling period:", period, sampling_period)
                 if not line == [] or ndtype: # or (ndtype and not line == []):
                     xx = int(np.round(period/sampling_period))
                     if ndtype:
@@ -8248,7 +8276,8 @@ CALLED BY:
                         newstream.header = self.header
                         lst = []
                         for ind,elem in enumerate(self.ndarray):
-                            #print "Now here", elem
+                            if debugmode:
+                                print ("dealing with column", ind, elem)
                             if len(elem) > 0:
                                 lst.append(np.asarray(elem[startperiod::xx]))
                             else:
@@ -8269,7 +8298,8 @@ CALLED BY:
         # This is done if timesteps are not at period intervals
         # -----------------------------------------------------
 
-        #print ("RESAMPLE Here 3")
+        if debugmode:
+            print ("General -slow- resampling")
         # Create a list containing time steps
         #t_max = num2date(self._get_max('time'))
         t_list = []
@@ -8285,11 +8315,14 @@ CALLED BY:
         multiplicator = float(self.length()[0])/float(len(t_list))
         logger.info("resample a: {},{},{}".format(float(self.length()[0]), float(len(t_list)),startperiod))
 
+        #print ("Times:", self.ndarray[0][0],self.ndarray[0][-1],t_list[0],t_list[-1]) 
         stwithnan = self.copy()
-        #logger.info("stwithnan: {}".format(stwithnan.ndarray))
 
+        # What is this good for (leon 17.04.2019)???
         tmp = self.trim(starttime=736011.58337400458,endtime=736011.59721099539)
         logger.info("resample test: {}".format(tmp.ndarray))
+
+        #tcol = stwithnan.ndarray[0]
 
         res_stream = DataStream()
         res_stream.header = self.header
@@ -8304,12 +8337,14 @@ CALLED BY:
                 res_stream.add(row)
 
         for key in keys:
-            #print "Resampling:", key
+            if debugmode:
+                print ("Resampling:", key)
             if key not in KEYLIST[1:16]:
                 logger.warning("resample: Key %s not supported!" % key)
 
             index = KEYLIST.index(key)
             try:
+                #print (len(self._get_column(key)), multiplicator)
                 int_data = self.interpol([key],kind='linear')#'cubic')
                 int_func = int_data[0]['f'+key]
                 int_min = int_data[1]
@@ -8317,8 +8352,12 @@ CALLED BY:
 
                 key_list = []
                 for ind, item in enumerate(t_list):
+                    # normalized time range between 0 and 1
                     functime = (item - int_min)/(int_max - int_min)
-                    #orgval = eval('self[int(ind*multiplicator)].'+key)
+                    # check whether original value is np.nan (as interpol method does not account for that)
+                    # exact but slowly: idx = np.abs(tcol-item).argmin()
+                    #                   orgval = stwithnan.ndarray[index][idx]
+                    # reduce the index range as below
                     if ndtype:
                         if int(ind*multiplicator) <= len(self.ndarray[index]):
                             #orgval = self.ndarray[index][int(ind*multiplicator)]
@@ -8344,6 +8383,8 @@ CALLED BY:
                                 orgval = stwithnan.ndarray[index][stv+idx] # + offset
                                 #if item > 736011.58337400458 and item < 736011.59721099539:
                                 #   print ("Found", item, stv+idx, idx, orgval)
+                                #if np.isnan(orgval):
+                                #    print (stv+idx, stv, etv)
                         else:
                             print("Check Resampling method")
                             orgval = 1.0
@@ -8355,9 +8396,7 @@ CALLED BY:
                     if functime > 1.0:
                         functime = 1.0
                     if not isnan(orgval):
-                        #print "no nan"
                         tempval = int_func(functime)
-                    #print tempval, orgval
                     key_list.append(float(tempval))
 
                 if ndtype:
@@ -10817,6 +10856,8 @@ def loadflags(path=None,sensorid=None,begin=None, end=None):
     PARAMETERS:
     Variables:
         - path:  (str) Path to data files in form:
+        - begin: (datetime)
+        - end:   (datetime)
 
     RETURNS:
         - list (e.g. flaglist)

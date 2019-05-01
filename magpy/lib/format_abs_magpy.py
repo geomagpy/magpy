@@ -683,14 +683,15 @@ def readJSONABS(filename, headonly=False, **kwargs):
     flist = []
     fcorr = 0.0
 
-
     ## cycling though data set, metadata is not yet considered
     ## #######################################################
     for idx, elem in enumerate(dataset):
-            #print ("New element: {} : {}".format(idx, elem))
-            if idx==0:
+        #print ("New element: {} : {}".format(idx, elem))
+        if elem=='data':
+            print ("Found {} datasets".format(len(dataset[elem])))
+            for datadict in dataset[elem]:
                 #print (dataset[elem][0])
-                datadict = dataset[elem][0]
+                #datadict = dataset[elem][0]
                 for el in datadict:
                     if not el == 'readings':
                         # get readings only after all other infos have been initialized

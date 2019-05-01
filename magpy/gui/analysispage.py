@@ -61,6 +61,7 @@ class AnalysisPage(wx.Panel):
         self.offsetButton = wx.Button(self,-1,"Offsets",size=(160,30))
         self.filterButton = wx.Button(self,-1,"Filter",size=(160,30))
         self.smoothButton = wx.Button(self,-1,"Smooth",size=(160,30))
+        self.resampleButton = wx.Button(self,-1,"Resample",size=(160,30))
 
         # 4 Line
         self.activityButton = wx.Button(self,-1,"Activity",size=(160,30))
@@ -129,7 +130,7 @@ class AnalysisPage(wx.Panel):
                  (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.smoothButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.offsetButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
+                 (self.resampleButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.head4Label, noOptions),
                   emptySpace,
                  (self.deltafButton, dict(flag=wx.ALIGN_CENTER)),

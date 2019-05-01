@@ -1057,6 +1057,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
         self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
         self.Bind(wx.EVT_BUTTON, self.onSmoothButton, self.menu_p.ana_page.smoothButton)
+        self.Bind(wx.EVT_BUTTON, self.onResampleButton, self.menu_p.ana_page.resampleButton)
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.onDeltafButton, self.menu_p.ana_page.deltafButton)
@@ -1257,6 +1258,7 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.minButton.Disable()           # always
         self.menu_p.ana_page.flagmodButton.Disable()       # always
         self.menu_p.ana_page.offsetButton.Disable()        # always
+        self.menu_p.ana_page.resampleButton.Disable()        # always
         self.menu_p.ana_page.filterButton.Disable()        # always
         self.menu_p.ana_page.smoothButton.Disable()        # always
         self.menu_p.ana_page.activityButton.Disable()      # if xyz, hdz magnetic data
@@ -1453,6 +1455,7 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.minButton.Enable()           # always
         self.menu_p.ana_page.flagmodButton.Enable()       # always
         self.menu_p.ana_page.offsetButton.Enable()        # always
+        self.menu_p.ana_page.resampleButton.Enable()        # always
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
         if self.options.get('experimental'):
@@ -3990,6 +3993,26 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plotstream = self.plotstream.offset(offsetdict, starttime=st, endtime=et)
 
             self.plotstream.header['DataDeltaValuesApplied'] = 1
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+
+    def onResampleButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Resampling ...")
+        keys = self.shownkeylist
+        sr = self.plotstream.samplingrate()
+
+        dlg = AnalysisResampleDialog(None, title='Analysis: resampling parameters', keylst=keys, period=sr)
+        if dlg.ShowModal() == wx.ID_OK:
+            newperiod = dlg.periodTextCtrl.GetValue()
+            self.plotstream = self.plotstream.resample(keys, period=float(newperiod))
+            self.menu_p.rep_page.logMsg('- resampled stream at period {} second'.format(newperiod))
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
