@@ -2435,6 +2435,9 @@ def writeBLV(datastream, filename, **kwargs):
                     z = 99999.00
                 if np.isnan(df) or ftype.startswith('Fext'):
                     df = 99999.00
+                elif deltaF and dummystream._is_number(deltaF):
+                    # TODO check the sign
+                    df = df + deltaF
                 line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
                 myFile.writelines( line ) #.encode('utf-8') )
     else:
@@ -2462,6 +2465,8 @@ def writeBLV(datastream, filename, **kwargs):
                 z = elem.z
             if np.isnan(elem.df):
                 f = 99999.00
+            elif deltaF and dummystream._is_number(deltaF):
+                f = elem.df + deltaF
             else:
                 f = elem.df
             line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,f)

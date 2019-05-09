@@ -167,6 +167,19 @@ def readGSM19(filename, headonly=False, **kwargs):
     115019.0  48487.17 99
     115020.0  48487.44 99
 
+    v7.0:
+    /Gem Systems GSM-19GWV 7122568 v7.0 15 III 2018 M ewv10fl.v7vbs                      
+    /ID 1 file 01survey.b   05 IX 18
+    /datum  48500.00
+    / 047.9278532   015.8618024 
+    /UTC+01
+    /33T
+    /no AC filter
+    /12.3V
+    /tune initialize Y auto-tune Y 048.6uT
+    /time nT sq 
+
+
     WG looks like:
     /Gem Systems GSM-19GWV 7122568 v7.0 4 V 2011 M ewv10fl.v7vbs
     /ID 1 file 24survey.wg  02VIII12
@@ -213,6 +226,7 @@ def readGSM19(filename, headonly=False, **kwargs):
     data = []
     key = None
     logging.info(' Read: %s Format: GSM19' % (filename))
+    toffset = 0
 
     for line in fh:
         if line.isspace():
@@ -220,6 +234,7 @@ def readGSM19(filename, headonly=False, **kwargs):
             pass
         elif line.startswith('Gem Systems GSM-19') or line.startswith('/Gem Systems GSM-19'):
             head = line.split()
+            headers['SensorID'] = "{}_{}_0001".format(head[2],head[3])
             headers['SensorName'] = 'GSM19'
             headers['SensorDataLogger'] =  head[2]+head[4]
             headers['SensorDataLoggerSerNum'] =  head[3]
@@ -242,7 +257,6 @@ def readGSM19(filename, headonly=False, **kwargs):
             # data header
             pass
         elif line.startswith('ID') or line.startswith('/ID'):
-            print(line)
             tester = line.split('.')
             typus = tester[1].split()
             #logging.debug(' Read: %s Format: GSM19' % (filename))
@@ -267,11 +281,23 @@ def readGSM19(filename, headonly=False, **kwargs):
                 da = typus[1]
                 mo = roman_to_int(typus[2])
                 day = str(YeT)+str(typus[3])+'-'+str(mo)+'-'+str(da)
-            # data header
-            pass
         elif line.startswith('datum'):
             # data header
             pass
+        elif line.startswith('/ '):
+            try:
+                vals = line.replace('/ ','').split()
+                headers['DataAcquisitionLatitude'] =  float(vals[0].strip())
+                headers['DataAcquisitionLongitude'] =  float(vals[1].strip())
+                headers['DataLocationReference'] =  'WGS84, EPSG: 4326'
+            except:
+                pass
+        elif line.startswith('/UTC'):
+            try:
+                vals = line.split('C')
+                toffset = float(vals[1])
+            except:
+                pass
         elif line.find('sensor distance') > 0:
             diststr = line.split()[0]
             dist = int(diststr.strip('/'))/100
@@ -281,21 +307,22 @@ def readGSM19(filename, headonly=False, **kwargs):
             continue
         else:
             elem = line.split()
-            if len(elem) == 3 and typus[0]=='b': # a Baseline file
+            if typus[0]=='b': # a Baseline file
                 try:
-                    hour = elem[0][:2]
-                    minute = elem[0][2:4]
-                    second = elem[0][4:6]
-                    #second = elem[0][4:] # TODO
-                    # add day
-                    #strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f") # TODO
-                    strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
-                    array[0].append(date2num(strtime))
-                    array[indf].append(float(elem[1]))
-                    array[indvar5].append(float(elem[2]))
+                    if len(elem) == 3:
+                        hour = elem[0][:2]
+                        minute = elem[0][2:4]
+                        #second = elem[0][4:6]
+                        second = elem[0][4:]
+                        strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute),"%Y-%m-%dT%H:%M") + timedelta(seconds=float(second))
+                        if not toffset == 0:
+                            strtime = strtime - timedelta(hours=toffset)
+                        #strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
+                        array[0].append(date2num(strtime))
+                        array[indf].append(float(elem[1]))
+                        array[indvar5].append(float(elem[2]))
                 except:
                     logging.warning("Error in input data: %s - skipping bad value" % filename)
-                    pass
             elif typus[0] == 'g':
                 try:
                     hour = elem[6][:2]
@@ -332,7 +359,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                        try:
                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
                        except:
-                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
+                           strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
                        valf = float(elem[2])
                        valdf = float(elem[3])
                        if dist:
@@ -352,7 +379,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                        try:
                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
                        except:
-                            strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
+                           strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
                        valf = float(elem[3])
                        valdf = float(elem[4])
                        if dist:
