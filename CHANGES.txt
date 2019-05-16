@@ -1,16 +1,22 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<0.4.7>, <2018-xx-xx> --
+####v<0.4.7>, <2018-05-16> --
 
 v0.4.7 general:
-    + reading all generations of cdf
+    + version 0.4.7 was used to obtain and test the validity of one second and mintute data
+      of the Conrad Observatory 2018. All below mentioned bug fixes and additions were 
+      considered for this purpose.
 
 v0.4.7 fixes:
-    + database: error in applyDeltas method corrected
-    + flagging_outlier: 'markall' option is now working correctly
+    + reading all generations of NASA CDF with correct interpretetion of archived Epoch variable
+      and leap seconds tables
+    + database: error in applyDeltas method corrected (used for offset determination, delta F, 
+      compensation fields)
+    + database: sorting of input data corrected
+    + flagging outlier: 'markall' option is now working correctly
+    + format lib: improved GSM19 support - base nmeasurements
 
-v0.4.7 additions:
 
 
 

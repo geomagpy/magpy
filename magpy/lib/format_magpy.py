@@ -420,7 +420,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             try:
                                 array[ind] = np.asarray(date2num(cdf_file[key][...]))
                             except:
-                                array[ind] = np.asarray(np.asarray([cdf.lib.tt2000_to_datetime(el) for el in cdfdat[key][...]]))
+                                array[ind] = np.asarray(np.asarray([cdf.lib.tt2000_to_datetime(el) for el in cdf_file[key][...]]))
                         except:
                             array[ind] = np.asarray([])
                             pass ### catches exceptions if sectime is nan
