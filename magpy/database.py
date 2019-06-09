@@ -2792,7 +2792,7 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
         #print getdatasql
         cursor.execute(getdatasql)
         rows = list(cursor.fetchall())
-        print ("readDB: Read rows: {}".format(len(rows)))
+        #print ("readDB: Read rows: {}".format(len(rows)))
         ls = []
         for i in range(len(KEYLIST)):
             ls.append([])

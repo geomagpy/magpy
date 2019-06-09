@@ -1217,6 +1217,7 @@ def writePYASCII(datastream, filename, **kwargs):
 
     mode = kwargs.get('mode')
     logger.info("writePYASCII: Writing file to %s" % filename)
+    returnstring = False
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
@@ -1244,6 +1245,15 @@ def writePYASCII(datastream, filename, **kwargs):
                 myFile = open(filename, 'w', newline='')
             else:
                 myFile = open(filename, 'wb')
+    elif filename.find('StringIO') > -1 and not os.path.isfile(filename):
+        if sys.version_info >= (3,0,0):
+            import io
+            myFile = io.StringIO()
+            returnstring = True
+        else:
+            import StringIO
+            myFile = StringIO.StringIO()
+            returnstring = True
     else:
         if sys.version_info >= (3,0,0):
             myFile = open(filename, 'w', newline='')
@@ -1299,5 +1309,9 @@ def writePYASCII(datastream, filename, **kwargs):
                 else:
                     row.append(eval('elem.'+key))
             wtr.writerow( row )
+
+    if returnstring:
+        return myFile
+
     myFile.close()
     return True

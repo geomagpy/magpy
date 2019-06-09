@@ -379,7 +379,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
     """
     directory = os.path.dirname(filename)
     if not os.path.exists(directory):
-        os.makedirs(os.path.normpath(directory))
+        if not filename.startswith('StringIO'):
+            os.makedirs(os.path.normpath(directory))
     if (format_type == "IAGA"):
         return writeIAGA(datastream, filename, **kwargs)
     elif (format_type == "WDC"):

@@ -5994,7 +5994,7 @@ CALLED BY:
                     meanx = np.mean(xl)+xcompensation
                 meany = np.mean(yl)
                 # get rotation angle so that meany == 0
-                print ("Rotation",meanx, meany)
+                #print ("Rotation",meanx, meany)
                 #zeroy = meanx*np.sin(ra)+meany*np.cos(ra)
                 #-meany/meanx = np.tan(ra)
                 rotangle = np.arctan2(-meany,meanx) * (180.) / np.pi
@@ -9523,7 +9523,8 @@ CALLED BY:
             coverage = 'year'
         if format_type == 'IAGA':
             dateformat = '%Y%m%d'
-            coverage = 'day'
+            if not coverage == 'all':
+                coverage = 'day'
             head = self.header
             if not filenamebegins:
                 code = head.get('StationIAGAcode','')
@@ -9710,6 +9711,8 @@ CALLED BY:
 
     EXAMPLE:
         >>> stream.write('/home/user/data',
+                        format_type='IAGA')
+        >>> stringio = stream.write('StringIO',
                         format_type='IAGA')
 
     APPLICATION:
@@ -10598,6 +10601,18 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         # extract extension if any
         logger.info("read: Found URL to read at %s" % path_or_url)
         content = urlopen(path_or_url).read()
+        if content.find('<pre>') > 0:
+            """
+                check whether content is coming with some html tags
+            """
+            def get_between(s,first,last):
+                start = s.index(first) + len(first)
+                end = s.index(last, start )
+                return s[start:end]
+            content_t = get_between(content, '<pre>', '</pre>')
+            cleanr = re.compile('<.*?>')
+            content = re.sub(cleanr, '', content_t)
+
         if debugmode:
             print(urlopen(path_or_url).info())
         if path_or_url[-1] == '/':

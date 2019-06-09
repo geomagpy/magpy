@@ -50,9 +50,10 @@ import pickle
 import os
 from os.path import expanduser
 import platform
+import sys
 
 pyversion = platform.python_version()
-
+PY3 = sys.version_info[0] >= 3
 
 def saveobj(obj, filename):
     with open(filename, 'wb') as f:
@@ -90,6 +91,18 @@ def getuser():
     #else:
     #    sysuser = os.getenv("LOGNAME").replace("LOGNAME=", "")
     #    pass
+
+def base64ify(bytes_or_str):
+    # from ajdavis
+    if PY3 and isinstance(bytes_or_str, str):
+        input_bytes = bytes_or_str.encode('utf-8')
+    else:
+        input_bytes = bytes_or_str
+    output_bytes = base64.urlsafe_b64encode(input_bytes)
+    if PY3:
+        return output_bytes.decode('ascii')
+    else:
+        return output_bytes
 
 
 def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remotedir=None,port=None,host=None):
@@ -145,19 +158,22 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
         if not host:
             print('Credentials: host missing')
             return
-        pwd = base64.b64encode(passwd)
+        #pwd = base64.b64encode(passwd)
+        pwd = base64ify(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'db':db, 'host':host}
     if typus == 'mail':
         if not smtp:
             print('Credentials: smtp adress missing')
             return
-        pwd = base64.b64encode(passwd)
+        #pwd = base64.b64encode(passwd)
+        pwd = base64ify(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'smtp':smtp}
     if typus == 'transfer':
         if not address:
             print('Credentials: address missing')
             return
-        pwd = base64.b64encode(passwd)
+        #pwd = base64.b64encode(passwd)
+        pwd = base64ify(passwd)
         dictionary = {'user': user, 'passwd': pwd, 'address':address, 'port':port }
 
     dictslist.append([name,dictionary])
@@ -168,7 +184,7 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
     print("Credentials: Now containing entries for", entries)
 
 
-def lc(dictionary,value,path=None):
+def lc(dictionary,value,path=None,debug=False):
     """
     Load credentials
     """
@@ -180,7 +196,8 @@ def lc(dictionary,value,path=None):
         credentials = os.path.join(home,'.magpycred')
     else:
         credentials = path
-    print("Accessing credential file:", credentials)
+    if debug:
+        print("Accessing credential file:", credentials)
 
     try:
         dictslist = loadobj(credentials)
@@ -191,7 +208,12 @@ def lc(dictionary,value,path=None):
     for d in dictslist:
         if d[0] == dictionary:
             if 'passwd' in value:
-                return base64.b64decode(d[1][value])
+                data = base64.b64decode(d[1][value])
+                try:  # Python2/3 compatibility
+                    data = data.decode()
+                except AttributeError:
+                    pass
+                return data
             return d[1][value]
 
     print("Credentials: value/dict not found")

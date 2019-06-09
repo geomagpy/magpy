@@ -3117,4 +3117,65 @@ def readDKA(filename, headonly=False, **kwargs):
 
 
 def writeDKA(datastream, filename, **kwargs):
-    pass
+    if os.path.isfile(filename):
+        if mode == 'append':
+            with open(filename, "a") as myfile:
+                myfile.write(output)
+        else: # overwrite mode
+            os.remove(filename)
+            myfile = open(filename, "wb")
+    elif filename.find('StringIO') > -1 and not os.path.exists(filename):
+        if sys.version_info >= (3,0,0):
+            import io
+            myFile = io.StringIO()
+            returnstring = True
+        else:
+            import StringIO
+            myFile = StringIO.StringIO()
+            returnstring = True
+    else:
+        myfile = open(filename, "wb")
+
+    # extract k string from datastream
+    # check kvals
+    kstr = ''
+
+    if len(kstr) > 0:
+        station=datastream.header['StationIAGAcode']
+        k9=datastream.header['StationK9']
+        lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
+        lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
+        year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
+        ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
+        kfile = os.path.join(path[0],station.upper()+year+'K.DKA')
+        logger.info("Writing k summary file: {}".format(kfile))
+        head = []
+        if not os.path.isfile(kfile):
+            head.append("{0:^66}".format(station.upper()))
+            head2 = '                  Geographical latitude: {:>10.3f} N'.format(lat)
+            head3 = '                  Geographical longitude:{:>10.3f} E'.format(lon)
+            head4 = '            K-index values for {0}     (K9-limit = {1:>4} nT)'.format(ye, k9)
+            head5 = '  DA-MON-YR  DAY #    1    2    3    4      5    6    7    8       SK'
+            emptyline = ''
+            head.append("{0:<50}".format(head2))
+            head.append("{0:<50}".format(head3))
+            head.append("{0:<50}".format(emptyline))
+            head.append("{0:<50}".format(head4))
+            head.append("{0:<50}".format(emptyline))
+            head.append("{0:<50}".format(head5))
+            head.append("{0:<50}".format(emptyline))
+            with open(kfile, "wb") as myfile:
+                for elem in head:
+                    myfile.write(elem+'\r\n')
+                #print elem
+        # write data
+        with open(kfile, "a") as myfile:
+            for elem in kstr:
+                myfile.write(elem+'\r\n')
+                #print elem
+
+        if returnstring:
+            return myFile
+        myFile.close()
+
+        return True

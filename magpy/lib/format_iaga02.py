@@ -369,9 +369,14 @@ def writeIAGA(datastream, filename, **kwargs):
             #os.remove(filename)  ?? necessary ??
             myFile= OpenFile(filename)
     elif filename.find('StringIO') > -1 and not os.path.exists(filename):
-        import StringIO
-        myFile = StringIO.StringIO()
-        returnstring = True
+        if sys.version_info >= (3,0,0):
+            import io
+            myFile = io.StringIO()
+            returnstring = True
+        else:
+            import StringIO
+            myFile = StringIO.StringIO()
+            returnstring = True
     else:
         myFile= OpenFile(filename)
 
@@ -570,6 +575,7 @@ def writeIAGA(datastream, filename, **kwargs):
             ndtype = True
 
         fulllength = datastream.length()[0]
+
         # Possible types: DHIF, DHZF, XYZF, or DHIG, DHZG, XYZG
         #datacomp = 'EHZ'
         #datacomp = 'DHZ'

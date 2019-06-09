@@ -158,6 +158,7 @@ the tutorials.
      - run python shell (not conda) 
      - in python shell
 
+
             >>> %matplotlib inline
             >>> from magpy.stream import read
             >>> ...
