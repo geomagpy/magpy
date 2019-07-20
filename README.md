@@ -12,51 +12,95 @@ Typical usage for reading and visualising data looks like this:
     
         from magpy.stream import read
         import magpy.mpplot as mp
-        stream = read(path_or_url='filename')
+        stream = read('filename_or_url')
         mp.plot(stream)
 
 Below you will find a quick guide to usage of the MagPy package. The quickest approach can be accomplished when skipping everything except the tutorials. 
 
 ## 1. INSTALLATION
 
-### 1.1 Windows installation - WinPython Package
 
-#### 1.1.1 Install NASA [CDF] support
+### 1.1 Linux installation (Ubuntu,Debian)
+
+#### 1.1.1 Complete Install
+
+Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages)
+
+        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
+        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
+        $ sudo apt-get install python-twisted  
+        $ sudo pip install ffnet
+        $ sudo pip install pymysql
+        $ sudo pip install pyproj==1.9.5
+        $ sudo pip install pyserial
+        $ sudo pip install service_identity
+        $ sudo pip install ownet
+        $ sudo pip install spacepy
+        $ sudo pip install paho-mqtt   #*
+        $ sudo pip install geomagpy    #*
+
+The first line and the two #* packages are required, all other packages are optional. For CDF features and Site coordinate transformation with EPSG codes please install the following packages as well  
+
+
+    a) CDF (NASA): http://cdf.gsfc.nasa.gov/html/sw_and_docs.html (tested with 3.7.0, please check validity of commands below to make command for any future versions)
+
+        $ tar -zxvf cdf37_0-dist-all.tar.gz
+        $ cd cdf37...
+        $ make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
+        $ sudo make INSTALLDIR=/usr/local/cdf install
+
+    b) Proj4:
+ 
+        $ sudo apt-get install libproj-dev proj-data proj-bin
+
+
+#### 1.1.2 Updates
+
+If MagPy is already installed and you want to upgrade to the most recent version:
+
+        $ sudo pip install geomagpy==0.4.8  #*
+
+*replace with the most recent available version
+
+
+### 1.2 Windows installation - WinPython Package
+
+#### 1.2.1 Install NASA [CDF] support
   - enables CDF support for formats like ImagCDF
   - package details and files at http://cdf.gsfc.nasa.gov/
-  - download and install a recent version of CDF e.g. cdf36_4-setup-32.exe
+  - download and install a recent version of CDF e.g. cdf37_0-setup-32.exe
   - Note: please use 32 bit installer.
 
-#### 1.1.2 Install MagPy for Windows
+#### 1.2.2 Install MagPy for Windows
   - find the MagPy Windows installer here (under Downloads): http://www.conrad-observatory.at
   - download and execute magpy-0.x.x.exe
   - all required packages are included in the installer
 
-#### 1.1.3 Post-installation information
+#### 1.2.3 Post-installation information
   - MagPy should have a sub-folder in the Start menu. Here you will find three items:
 
         * command -> opens a DOS shell within the Python environment e.g. for updates 
         * python  -> opens a python shell ready for MagPy
         * xmagpy  -> opens the MagPy graphical user interface
 
-#### 1.1.4 Update an existing MagPy installation on Windows
+#### 1.2.4 Update an existing MagPy installation on Windows
   - right-click on subfolder "command" in the start menu
   - select "run as administrator"
   - issue the following command "pip install geomagpy"
     (you can also specify the version e.g. pip install geomagpy==0.x.x)
 
 
-### 1.2 Linux/MacOs installation - Anaconda
+### 1.3 MacOs/Linux installation - based on Anaconda
 
-#### 1.2.1 Install [Anaconda] on your operating system
+#### 1.3.1 Install [Anaconda] on your operating system
   - download files from https://www.continuum.io/Downloads (tested with Anaconda2 for Python 2.7)
   - see https://docs.continuum.io/anaconda/install for more details
 
-#### 1.2.2 Install NASA CDF support
+#### 1.3.2 Install NASA CDF support
   - http://cdf.gsfc.nasa.gov/
   - download and install the latest cdf version for your operating system
 
-#### 1.2.3 Install MagPy and SpacePy (required for CDF support)
+#### 1.3.3 Install MagPy and SpacePy (required for CDF support)
   - open a Terminal
   - ... known issues: eventually change to the anaconda2/bin directory before running python (if not set as default)
   - ...               check by starting python in the terminal
@@ -67,7 +111,7 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
   - run './pip install geomagpy'
   - ... known issues: e.g. Linux: MySQL-python problem -> install libmysqlclient-dev on linux (e.g. debian/ubuntu: sudo apt-get install libmysqlclient-dev)
 
-#### 1.2.4 Post-installation information
+#### 1.3.4 Post-installation information
   - please note that anaconda provides a full python environment with many packages not used by MagPy 
   - for a "slim" installation follow the "from scratch" instructions below (for experienced users)
   - for upgrades: run './pip install geomagpy version==new-version'. Installation provides both shell based magpy and the graphical user interface xmagpy 
@@ -80,16 +124,7 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
   - adding a shortcut for xmagpy: coming soon
 
 
-
-### 1.3 MacOs installation - MacPorts
-
-#### 1.3.1 Install [MacPorts]
-
-#### 1.3.2 coming soon
-
-
-
-### 1.4 Platform independent installations - Docker
+### 1.4 Platform independent container - Docker
 
 #### 1.4.1 Install [Docker] (toolbox) on your operating system
      - https://docs.docker.com/engine/installation/
@@ -124,61 +159,18 @@ Recommended:
   - Python packages:
     * NasaCDF
     * SpacePy
-    * pexpect (for SSH support)
+    * wxpython 3.x (or older)
 
   - Other useful Software:
+    * pexpect (for SSH support)
     * MySQL (database features)
     * NetCDF4 (support is currently in preparation)
     * Webserver (e.g. Apache2, PHP)
-
-#### 1.5.1 Linux
-
-A) Get python packages and other extensions (for other distros than debian/ubuntu install similar packages):
-
-        sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb libmysqlclient-dev
-        sudo pip install ffnet
-        sudo pip install pexpect
-        sudo pip install pyproj
-
-B) Get CDF and Omni database support:
-
-    a) CDF (NASA): http://cdf.gsfc.nasa.gov/html/sw_and_docs.html (tested with 3.6.1.0, please check validity of commands below to make command for any future versions)
-
-        tar -zxvf cdf36_4-dist-all.tar.gz
-        cd cdf36*
-        make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
-        sudo make INSTALLDIR=/usr/local/cdf install
-
-    b) SpacePy (Los Alamos): https://sourceforge.net/projects/spacepy/files/spacepy/ (tested with 0.1.6)
-
-        sudo pip install spacepy
-
-C) Install MagPy
-
-    a) Using pip
-
-        sudo pip install geomagpy
-          * specific version:
-        sudo pip install geomagpy==0.4.6
-
-    b) Using github (latest development versions)
 
         git clone git://github.com/GeomagPy/MagPy.git
         cd MagPy*
         sudo python setup.py install
 
-
-#### 1.5.2 Windows
-
-Tested on XP, Win7, Win10
-  a) Get a current version of Python(x,y) and install it
-   optionally select packages ffnet and netcdf during install - for cdf support
-  b) Download nasaCDF packages and install (see links above)
-  c) get python-spacepy package
-  d) download and unpack GeomagPy-x.x.x.tar.gz
-  e) open a command window
-  f) go to the unpacked directory e.g. cd c:\user\Downloads\GeomagPy\
-  g) execute "setup.py install"
 
 
 

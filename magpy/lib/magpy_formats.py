@@ -20,6 +20,7 @@ DEPENDENCIES:
                 .format_pos1
                 #.format_env05
                 .format_cr800
+                .format_covjson
                 .format_iono
                 .format_iaga02
                 .format_wdc
@@ -66,6 +67,7 @@ from magpy.lib.format_magpy import *
 from magpy.lib.format_noaa import *
 from magpy.lib.format_nc import isNETCDF, readNETCDF
 from magpy.lib.format_latex import *
+from magpy.lib.format_covjson import *
 from magpy.lib.format_json import *
 
 # IMPORT OBSERVATORY/GROUP SPECIFIC FORMATS:
@@ -75,6 +77,7 @@ from magpy.lib.format_sfs import *
 from magpy.lib.format_bdv import *
 from magpy.lib.format_dtu import *
 from magpy.lib.format_gfz import *
+from magpy.lib.format_gfztmp import *
 from magpy.lib.format_neic import *
 from magpy.lib.format_rcs import *
 from magpy.lib.format_pha import *
@@ -134,6 +137,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "PYBIN"):
         if (isPYBIN(filename)):
+            return True
+    elif (format_type == "COVJSON"):
+        if (isCOVJSON(filename)):
             return True
     elif (format_type == "JSON"):
         if (isJSON(filename)):
@@ -255,6 +261,9 @@ def isFormat(filename, format_type):
     elif (format_type == "QSPIN"): # Data from the USB temperature logger
         if (isQSPIN(filename)):
             return True
+    elif (format_type == "GFZTMP"): # Data from the USB temperature logger
+        if (isGFZTMP(filename)):
+            return True
     elif (format_type in ["PYNC", "AUTODIF", "SERMUL", "SERSIN", "LATEX"]): # Not yet supported
         return False
     elif (format_type == "UNKOWN"): # Unkown
@@ -324,6 +333,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readQSPIN(filename, headonly, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return readAUTODIF_FREAD(filename, headonly, **kwargs)
+    elif (format_type == "COVJSON"):
+        return readCOVJSON(filename, headonly, **kwargs)
     #elif (format_type == "ENV05"):
     #    return readENV05(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
@@ -359,6 +370,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readBDV1(filename, headonly, **kwargs)
     elif (format_type == "GFZKP"):
         return readGFZKP(filename, headonly, **kwargs)
+    elif (format_type == "GFZTMP"):
+        return readGFZTMP(filename, headonly, **kwargs)
     elif (format_type == "NOAAACE"):
         return readNOAAACE(filename, headonly, **kwargs)
     elif (format_type == "NETCDF"):
@@ -405,6 +418,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writePYASCII(datastream, filename, **kwargs)
     elif (format_type == "PYCDF"):
         return writePYCDF(datastream, filename, **kwargs)
+    elif (format_type == "COVJSON"):
+        return writeCOVJSON(datastream, filename, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return writeAUTODIF_FREAD(datastream, filename, **kwargs)
     elif (format_type == "CR800"):

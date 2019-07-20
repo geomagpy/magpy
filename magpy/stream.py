@@ -385,6 +385,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'DKA':['rw', 'K value format Intermagnet'],
                 'DIDD':['rw','Output format from MinGeo DIDD'],
                 'GSM19':['r', 'Output format from GSM19 magnetometer'],
+                'COVJSON':['rw', 'Coverage JSON'],
                 'JSON':['rw', 'JavaScript Object Notation'],
                 'LEMIHF':['r', 'LEMI text format data'],
                 'LEMIBIN':['r','Current LEMI binary data format'],
@@ -421,6 +422,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 #'PYNC':['r', 'MagPy NetCDF variant (too be developed)'],
                 #'DTU1':['r', 'ASCII Data from the DTUs FGE systems'],
                 #'BDV1':['r', 'Budkov GDAS data variant'],
+                'GFZTMP':['r', 'GeoForschungsZentrum ascii format'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
                 'PHA':['r', 'Potentially Hazardous Asteroids (PHAs) from the International Astronomical Unions Minor Planet Center, (json, incomplete)'],
@@ -5790,6 +5792,83 @@ CALLED BY:
         return st
 
 
+    def GetKeyName(self,key):
+        """
+        DESCRIPTION
+           get the content name of a specific key
+           will scan header information until successful: 
+           (1) col-"key" names 
+           (2) ColumnContent header info 
+           (3) SensorElements header info 
+           if no Name for the key is found, then the key itself is returned
+        APPLICATION:
+           element = datastream.GetKeyName('var1')
+        """
+        if not key in KEYLIST:
+            print ("key not in KEYLIST - aborting")
+            return ''
+        element = ''
+        # One
+        try:
+            element = self.header.get("col-{}".format(key))
+            if not element == '':
+                return element
+        except:
+            pass
+
+        # Two
+        try:
+            element = self.header.get('ColumnContents','').split(',')[KEYLIST.index(key)]
+            if not element == '':
+                return element
+        except:
+            pass
+
+        # Three
+        try:
+            idx = self.header.get('SensorKeys','').split(',').index(key)
+            element = self.header.get('SensorElements','').split(',')[idx]
+            if not element == '':
+                return element
+        except:
+            pass
+
+        return key
+
+    def GetKeyUnit(self,key):
+        """
+        DESCRIPTION
+           get the content name of a specific key
+           will scan header information until successful: 
+           (1) unit-col-"key" names 
+           (2) ColumnUnit header info 
+           if no unit for the key is found, then an empty string is returned
+        APPLICATION:
+           unit = datastream.GetKeyUnit('var1')
+        """
+        if not key in KEYLIST:
+            print ("key not in KEYLIST - aborting")
+            return ''
+        unit = ''
+        # One
+        try:
+            unit = self.header.get("unit-col-{}".format(key))
+            if not unit == '':
+                return unit
+        except:
+            pass
+
+        # Two
+        try:
+            unit = self.header.get('ColumnUnits','').split(',')[KEYLIST.index(key)]
+            if not unit == '':
+                return unit
+        except:
+            pass
+
+        return unit
+
+
     def get_gaps(self, **kwargs):
         """
     DEFINITION:
@@ -9748,6 +9827,7 @@ CALLED BY:
         skipcompression = kwargs.get('skipcompression')
         debug = kwargs.get('debug')
         addflags = kwargs.get('addflags')
+        headonly = kwargs.get('headonly')
 
         success = True
 
@@ -9909,7 +9989,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         logger.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags)
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -9923,7 +10003,7 @@ CALLED BY:
             filename = filename.replace('\x00','')
             if debug:
                 print ("Writing file:", filename)
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly)
 
         return success
 
@@ -10598,9 +10678,12 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         """
     elif "://" in path_or_url:
         # some URL
+        print ("HERE")
         # extract extension if any
-        logger.info("read: Found URL to read at %s" % path_or_url)
+        logger.info("read: Found URL to read at {}".format(path_or_url))
+        print ("HERE", path_or_url)
         content = urlopen(path_or_url).read()
+        print ("Cont", content)
         if content.find('<pre>') > 0:
             """
                 check whether content is coming with some html tags
@@ -12814,7 +12897,8 @@ def testTimeString(time):
                    "%Y-%m-%dT%H:%M:%S",
                    "%Y-%m-%d %H:%M:%S.%f",
                    "%Y-%m-%dT%H:%M:%S.%f",
-                   "%Y-%m-%d %H:%M:%S"
+                   "%Y-%m-%d %H:%M:%S",
+                   "%Y-%m-%dT%H:%M:%SZ"
                    ]
 
     if isinstance(time, float) or isinstance(time, int):
@@ -12822,6 +12906,13 @@ def testTimeString(time):
             timeobj = num2date(time).replace(tzinfo=None)
         except:
             raise TypeError
+    elif isinstance(time, basestring): # test for str only in Python 3 should be basestring for 2.x
+        for i, tf in enumerate(timeformats):
+            try:
+                timeobj = datetime.strptime(time,tf)
+                break
+            except:
+                pass
     elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
         for i, tf in enumerate(timeformats):
             try:

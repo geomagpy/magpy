@@ -21,6 +21,12 @@ def isJSON(filename):
         j = json.load(jsonfile)
     except:
         return False
+    try:
+        if j.get("domain").get("type") == 'Domain':
+            # Found Coverage json - use separate filter
+            return False
+    except:
+        pass
     return True
 
 
