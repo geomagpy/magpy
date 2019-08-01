@@ -52,7 +52,7 @@ def isGFZTMP(filename):
     except:
         return False
 
-    print('Found GFZ TMP format')
+    #print('Found GFZ TMP format')
     return True
 
 
