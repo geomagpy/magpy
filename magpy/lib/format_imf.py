@@ -2607,7 +2607,7 @@ def readIYFV(filename, headonly=False, **kwargs):
     debug = kwargs.get('debug')
 
     if debug:
-        print ("readIYVF: Reading data")
+        print ("readIYVF: Reading yearmean file {}".format(filename))
 
     getfile = True
 
@@ -2635,7 +2635,7 @@ def readIYFV(filename, headonly=False, **kwargs):
         return ''.join([i if ord(i) < 128 else ' ' for i in text])
 
     if debug:
-        print ("readIYVF: Reading data ...")
+        print ("readIYVF: Reading data (only lines with {}) ...".format(tsel))
 
 
     if sys.version_info >= (3, 0):
@@ -2644,10 +2644,17 @@ def readIYFV(filename, headonly=False, **kwargs):
     else:
         code = 'rb'
         fh = open(filename, code)  #
+
+    if debug:
+        print ("readIYVF: sysinfo = {}".format(sys.version_info))
     
     for line in fh:
             line = dropnonascii(line)
             line = line.rstrip()
+            try:
+                tyear = int(line[:5])
+            except:
+                tyear = 99999
             cnt = cnt+1
             #print ("Line", line)
             #line = line.lstrip()  # delete leading spaces
@@ -2695,13 +2702,13 @@ def readIYFV(filename, headonly=False, **kwargs):
                 tmp = ['deg','deg']
                 tmp.extend(units[4:10])
                 units = tmp
-            elif line.startswith(' 1') or line.startswith(' 2'): # Upcoming year 3k problem ;)
+            elif tyear < 3000: # Upcoming year 3k problem ;)
                 if not headonly:
                     #if debug:
                     # get data
                     data = line.split()
                     getdata = True
-                    if line.find('J') > 0:
+                    if line.find('J') > 0: # JUMP
                         line = line.replace('     0.0','  0  0.0')
                         data = line.split()
                         num = data.index('J')
@@ -2802,7 +2809,7 @@ def readIYFV(filename, headonly=False, **kwargs):
     array = [np.asarray(ar) for ar in array]
     stream = DataStream([LineStruct()], headers, np.asarray(array))
 
-    if not ele.lower().startswith('xyz'):
+    if not ele.lower().startswith('xyz') and ele.lower()[:3] in ['xyz','hdz','dhz','hez','idf']:
         if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
             ele = 'hdz'
         stream = stream._convertstream('xyz2'+ele.lower()[:3])
