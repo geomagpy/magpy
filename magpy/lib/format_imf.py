@@ -58,7 +58,7 @@ def isIMAGCDF(filename):
             return False
     except:
         return False
-    
+
     logger.debug("isIMAGCDF: Found INTERMAGNET CDF data")
     return True
 
@@ -916,10 +916,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     debug = kwargs.get('debug')
 
-    if debug:
-        logger.info("readIMAGCDF: FOUND IMAGCDF file")
-
     cdfdat = cdf.CDF(filename)
+
+    if debug:
+        logger.info("readIMAGCDF: FOUND IMAGCDF file created with version {}".format(cdfdat.version()))
+
     if debug:
         for line in cdfdat:
             logger.info("{}".format(line))

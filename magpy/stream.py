@@ -267,7 +267,7 @@ try:
         # This is how option 2 is included TODO -- add this to initialization options
         # as an update of cdf is the way to go and not just deactivating the error message
         os.putenv("CDF_VALIDATE", "no")
-        logger.info("deactivating cdf validation")
+        logger.info("... deactivating cdf validation")
         try:
             import spacepy.pycdf as cdf
             logger.info("... success")
