@@ -2703,6 +2703,7 @@ def readIYFV(filename, headonly=False, **kwargs):
                 tmp.extend(units[4:10])
                 units = tmp
             elif tyear < 3000: # Upcoming year 3k problem ;)
+              try:
                 if not headonly:
                     #if debug:
                     # get data
@@ -2797,6 +2798,8 @@ def readIYFV(filename, headonly=False, **kwargs):
                             jumpz = jumpz + row[para.index('z')]
                             jumpf = jumpf + row[para.index('f')]
                         tprev = tsel
+              except:
+                pass
             else:
                 pass
 
