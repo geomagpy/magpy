@@ -4001,6 +4001,9 @@ CALLED BY:
             logger.debug("smooth: You entered non-existing filter type -  %s  - " % filter_type)
             return self
 
+        logger.info("filter: Filtering with {} window".format(filter_type))
+
+
         #print self.length()[0]
         if not self.length()[0] > 1:
             logger.error("Filter: stream needs to contain data - returning.")
@@ -13077,6 +13080,8 @@ def LeapTime(t):
     converts strings to datetime, considering leap seconds
     """ 
     nofrag, frag = t.split('.')
+    if len(frag) < 6:  # IAGA string has only millisecond resolution:
+        frag = frag.ljust(6, '0')
     nofrag_dt = time.strptime(nofrag, "%Y-%m-%dT%H:%M:%S")
     ts = datetime.fromtimestamp(time.mktime(nofrag_dt))
     dt = ts.replace(microsecond=int(frag))
