@@ -18,6 +18,22 @@ from wx.lib.pubsub import pub
 from wx.lib.dialogs import ScrolledMessageDialog
 import wx.lib.scrolledpanel as scrolled
 
+try:
+    # wx 2.x, 3.x
+    from wx import ST_SIZEGRIP as wxSTB_SIZEGRIP
+    from wx import AboutDialogInfo as wxAboutDialogInfo
+    from wx import AboutBox as wxAboutBox
+    from wx import MULTIPLE as wxMULTIPLE
+    print ("WX Version 3.x")
+except:
+    # wx 4.x
+    from wx import STB_SIZEGRIP as wxSTB_SIZEGRIP
+    from wx.adv import AboutDialogInfo as wxAboutDialogInfo
+    from wx.adv import AboutBox as wxAboutBox
+    from wx import FD_MULTIPLE as wxMULTIPLE
+    print ("WX Version 4.x")
+
+
 from magpy.stream import read
 import magpy.mpplot as mp
 #import magpy.absolutes import as di
@@ -37,7 +53,7 @@ from magpy.gui.monitorpage import *
 from magpy.collector import collectormethods as colsup
 import glob, os, pickle, base64
 import pylab
-import thread, time
+import time #,thread
 import threading
 
 import wx.py
@@ -849,7 +865,7 @@ class MainFrame(wx.Frame):
         pub.subscribe(self.changeStatusbar, 'changeStatusbar')
 
         # The Status Bar
-        self.StatusBar = self.CreateStatusBar(2, wx.ST_SIZEGRIP)
+        self.StatusBar = self.CreateStatusBar(2, wxSTB_SIZEGRIP)
         # Update Status Bar with plot values
         self.plot_p.canvas.mpl_connect('motion_notify_event', self.UpdateCursorStatus)
         # Allow flagging with double click
@@ -1835,7 +1851,7 @@ if not, write to the Free Software Foundation, Inc., 59 Temple Place,
 Suite 330, Boston, MA  02111-1307  USA"""
 
 
-        info = wx.AboutDialogInfo()
+        info = wxAboutDialogInfo()
 
         try:
             script_dir = os.path.dirname(__file__)
@@ -1857,7 +1873,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         info.AddArtist('Leonhardt')
         info.AddTranslator('Bailey')
 
-        wx.AboutBox(info)
+        wxAboutBox(info)
 
     def OnHelpWriteFormats(self, event):
 
@@ -1928,7 +1944,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         success = False
         stream.header = {}
         filelist = []
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.changeStatusbar("Loading data ...")
             pathlist = dlg.GetPaths()

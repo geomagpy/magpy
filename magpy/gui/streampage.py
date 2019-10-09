@@ -7,6 +7,15 @@ from magpy.database import *
 
 import wx
 
+try:
+    # wx 2.x, 3.x
+    from wx import DatePickerCtrl as wxDatePickerCtrl
+    from wx import DP_DEFAULT as wxDP_DEFAULT
+except:
+    # wx 4.x
+    from wx.adv import DatePickerCtrl as wxDatePickerCtrl
+    from wx.adv import DP_DEFAULT as wxDP_DEFAULT
+
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
@@ -39,11 +48,11 @@ class StreamPage(wx.Panel):
         self.fileLabel = wx.StaticText(self, label="File/Table:")
         self.fileTextCtrl = wx.TextCtrl(self, value="*")
         self.startdateLabel = wx.StaticText(self, label="Start date:")
-        self.startDatePicker = wx.DatePickerCtrl(self, style=wx.DP_DEFAULT)
+        self.startDatePicker = wxDatePickerCtrl(self, style=wxDP_DEFAULT)
         # the following line produces error in my win xp installation
         self.startTimePicker = wx.TextCtrl(self, value="00:00:00")
         self.enddateLabel = wx.StaticText(self, label="End date:")
-        self.endDatePicker = wx.DatePickerCtrl(self, style=wx.DP_DEFAULT)
+        self.endDatePicker = wxDatePickerCtrl(self, style=wxDP_DEFAULT)
         self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
         self.trimStreamButton = wx.Button(self,-1,"Trim timerange",size=(160,30))
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")

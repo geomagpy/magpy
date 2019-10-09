@@ -6,6 +6,16 @@ from magpy.transfer import *
 from magpy.database import *
 
 import wx
+try:
+    # wx 2.x, 3.x
+    #from wx import ArtProvider_GetBitmap as wxArtProviderGetBitmap
+    print ("WX Version 3.x")
+except:
+    # wx 4.x
+    #import wx.ArtProvider 
+    #import wx.ArtProvider.GetBitmap as wxArtProviderGetBitmap
+    print ("WX Version 4.x")
+
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
@@ -5371,7 +5381,11 @@ style=wx.CAPTION | wx.STAY_ON_TOP)
         box2 = wx.BoxSizer(wx.HORIZONTAL)
         # Add an Info graphic
         bitmap = wx.EmptyBitmap(32, 32)
-        bitmap = wx.ArtProvider_GetBitmap(wx.ART_INFORMATION,
+        try:
+            bitmap = wx.ArtProvider_GetBitmap(wx.ART_INFORMATION,
+wx.ART_MESSAGE_BOX, (32, 32))
+        except:
+            bitmap = wx.ArtProvider.GetBitmap(wx.ART_INFORMATION,
 wx.ART_MESSAGE_BOX, (32, 32))
         graphic = wx.StaticBitmap(self, -1, bitmap)
         box2.Add(graphic, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 10)
