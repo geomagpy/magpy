@@ -6,15 +6,15 @@ from magpy.transfer import *
 from magpy.database import *
 
 import wx
+
 try:
     # wx 2.x, 3.x
-    #from wx import ArtProvider_GetBitmap as wxArtProviderGetBitmap
-    print ("WX Version 3.x")
+    from wx import DatePickerCtrl as wxDatePickerCtrl
+    from wx import DP_DEFAULT as wxDP_DEFAULT
 except:
     # wx 4.x
-    #import wx.ArtProvider 
-    #import wx.ArtProvider.GetBitmap as wxArtProviderGetBitmap
-    print ("WX Version 4.x")
+    from wx.adv import DatePickerCtrl as wxDatePickerCtrl
+    from wx.adv import DP_DEFAULT as wxDP_DEFAULT
 
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -140,11 +140,11 @@ class LoadDataDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         self.startdateLabel = wx.StaticText(self, label="Start date:")
-        self.startDatePicker = wx.DatePickerCtrl(self, dt=self.mintime)
+        self.startDatePicker = wxDatePickerCtrl(self, dt=self.mintime)
         # the following line produces error in my win xp installation
         self.startTimePicker = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         self.enddateLabel = wx.StaticText(self, label="End date:")
-        self.endDatePicker = wx.DatePickerCtrl(self, dt=self.maxtime)
+        self.endDatePicker = wxDatePickerCtrl(self, dt=self.maxtime)
         self.endTimePicker = wx.TextCtrl(self, value="00:00:00",size=(160,30))
         if self.extension == 'MySQL Database':
             self.extLabel = wx.StaticText(self, label="DB:")
@@ -1218,9 +1218,9 @@ class StreamFlagRangeDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.shownkeys[self.shownkeys.index(self.selectedkey)],size=(160,-1))
         self.UpperTimeText = wx.StaticText(self,label="Flag data before:")
         self.LowerTimeText = wx.StaticText(self,label="Flag data after:")
-        self.startFlagDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
+        self.startFlagDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
         self.startFlagTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
-        self.endFlagDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
+        self.endFlagDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
         self.endFlagTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
         self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
         self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
@@ -1818,9 +1818,9 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.UpperTimeText = wx.StaticText(self,label="Fit data before:")
         self.LowerTimeText = wx.StaticText(self,label="Fit data after:")
-        self.startFitDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
+        self.startFitDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
         self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
-        self.endFitDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
+        self.endFitDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
         self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
@@ -2008,10 +2008,10 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.timeshiftTextCtrl = wx.TextCtrl(self, value=self.val.get('time','0'),size=(160,30))
 
         self.StartDateLabel = wx.StaticText(self, label="Starting:",size=(160,30))
-        self.StartDatePicker = wx.DatePickerCtrl(self, dt=self.start,size=(160,30))
+        self.StartDatePicker = wxDatePickerCtrl(self, dt=self.start,size=(160,30))
         self.StartTimeTextCtrl = wx.TextCtrl(self, value=self.starttime,size=(160,30))
         self.EndDateLabel = wx.StaticText(self, label="Ending:",size=(160,30))
-        self.EndDatePicker = wx.DatePickerCtrl(self, dt=self.end,size=(160,30))
+        self.EndDatePicker = wxDatePickerCtrl(self, dt=self.end,size=(160,30))
         self.EndTimeTextCtrl = wx.TextCtrl(self, value=self.endtime,size=(160,30))
 
         for elem in self.keylst:
@@ -3409,7 +3409,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         # - Header
         self.HeadLabel = wx.StaticText(self, label="Meta data:",size=(160,30))
         self.DateLabel = wx.StaticText(self, label="Date:",size=(160,30))
-        self.DatePicker = wx.DatePickerCtrl(self, dt=self.cdate,size=(160,30))
+        self.DatePicker = wxDatePickerCtrl(self, dt=self.cdate,size=(160,30))
         self.ObserverLabel = wx.StaticText(self, label="Observer:",size=(160,30))
         self.ObserverTextCtrl = wx.TextCtrl(self, value="Max",size=(160,30))
         self.CodeLabel = wx.StaticText(self, label="IAGA code:",size=(160,30))
@@ -4153,7 +4153,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                     line = line.strip('\n')
                     headline = line.split(':')
                     #self.CodeTextCtrl.SetValue()
-                    #self.DatePicker = wx.DatePickerCtrl(self, dt=self.cdate,size=(160,30))
+                    #self.DatePicker = wxDatePickerCtrl(self, dt=self.cdate,size=(160,30))
 
                     if headline[0] == ('# Abs-Observer'):
                         self.ObserverTextCtrl.SetValue(headline[1].strip())

@@ -88,6 +88,13 @@ try:
 except:
     logging.warning("magpy-formats: Format package autodif-F not available")
 
+try:
+    ## Overriding the format_imf ImagCDF methods in case of cdflib available
+    from magpy.lib.format_imagcdf import *
+except:
+    logging.warning("magpy-formats: imagcdf package based on cdflib not available")
+
+
 IAFMETA = {'StationInstitution':'word', 'StationName':'word', 'StationIAGAcode':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataFormat':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataSamplingFilter':'word', 'Data Type':'word', 'DataPublicationLevel':'word', 'DataConversion':'word', 'StationK9':'word', 'DataQuality':'word', 'SensorType':'word', 'StationStreet':'word', 'StationCity':'word', 'StationPostalCode':'word', 'StationCountry':'word', 'StationWebInfo':'word', 'StationEmail':'word'}
 
 IAFBINMETA = {'StationInstitution':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataConversion':'word', 'StationK9':'word', 'DataQuality':'word', 'SensorType':'word', 'StationID':'word'}

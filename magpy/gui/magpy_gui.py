@@ -2234,11 +2234,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         if response == 0:
             try:
-                self.db = mysql.connect (host=host,user=user,passwd=passwd,db=dbname)
+                self.db = mysql.connect(host=host,user=user,passwd=passwd,db=dbname)
             except:
                 self.db = False
         else:
             self.db = False
+        
         if self.db:
             self.DBOpen.Enable(True)
             self.menu_p.rep_page.logMsg('- MySQL Database {} on {} connected.'.format(dbname,host))
@@ -5339,10 +5340,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if len(self.plotstream.ndarray[0]) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='DATAINFO')
             if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
                 for key in DATAINFOKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not value == dlg.header.get(key,''):
-                        self.plotstream.header[key] = value
+                    if not d['value'] == dlg.header.get(key,''):
+                        self.plotstream.header[key] = d['value']
                 self.ActivateControls(self.plotstream)
         else:
             self.menu_p.rep_page.logMsg("Meta information: No data available")
@@ -5359,10 +5361,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if len(self.plotstream.ndarray[0]) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='SENSORS')
             if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
                 for key in SENSORSKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not value == dlg.header.get(key,''):
-                        self.plotstream.header[key] = value
+                    if not d['value'] == dlg.header.get(key,''):
+                        self.plotstream.header[key] = d['value']
                 self.ActivateControls(self.plotstream)
 
         else:
@@ -5380,10 +5383,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if len(self.plotstream.ndarray[0]) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='STATIONS')
             if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
                 for key in STATIONSKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not value == dlg.header.get(key,''):
-                        self.plotstream.header[key] = value
+                    if not d['value'] == dlg.header.get(key,''):
+                        self.plotstream.header[key] = d['value']
                 self.ActivateControls(self.plotstream)
         else:
             self.menu_p.rep_page.logMsg("Meta information: No data available")

@@ -1854,7 +1854,7 @@ CALLED BY:
         """
         Test whether s is a number
         """
-        if s in ['',None]:
+        if str(s) in ['','None',None]:
             return False
         try:
             float(s)
@@ -10681,12 +10681,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         """
     elif "://" in path_or_url:
         # some URL
-        print ("HERE")
         # extract extension if any
         logger.info("read: Found URL to read at {}".format(path_or_url))
-        print ("HERE", path_or_url)
         content = urlopen(path_or_url).read()
-        print ("Cont", content)
+        content = content.decode('utf-8')
         if content.find('<pre>') > 0:
             """
                 check whether content is coming with some html tags
@@ -10699,6 +10697,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             cleanr = re.compile('<.*?>')
             content = re.sub(cleanr, '', content_t)
 
+        print ("HERE", path_or_url)
         if debugmode:
             print(urlopen(path_or_url).info())
         if path_or_url[-1] == '/':
@@ -10735,8 +10734,8 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             #date = re.findall(r'\d+',os.path.basename(path_or_url).partition('.')[0])[0]
             date = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
             fname = date+suffix
-            fname = fname.strip('?').strip(':')   ## Necessary for windows
-            fh = NamedTemporaryFile(suffix=fname,delete=False)
+            fname = fname.replace('?','').replace(':','')   ## Necessary for windows
+            fh = NamedTemporaryFile(suffix=fname,delete=False,mode='w+')
             fh.write(content)
             fh.close()
             st = _read(fh.name, dataformat, headonly, **kwargs)
