@@ -5276,6 +5276,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             #self.streamkeylist.append(self.result._get_key_headers())
             #
             self.Close(True)
+            self.parent.Close(True)
         else:
             dlg = wx.MessageDialog(self, "Merge requires two records\n"
                             " - not less, not more\n",
@@ -5283,8 +5284,8 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             dlg.ShowModal()
             dlg.Destroy()
 
-        self.Close(True)
-        self.parent.Destroy()
+            self.Close(True)
+        #self.parent.Destroy()  # Old Version ... only working on linux and windows, not macos
 
 
         #self.changeStatusbar("Ready")
@@ -5307,6 +5308,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             self.Close(True)
+            self.parent.Close(True)
         else:
             dlg = wx.MessageDialog(self, "Subtract requires two records\n"
                             " - not less, not more\n",
@@ -5314,8 +5316,8 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             dlg.ShowModal()
             dlg.Destroy()
 
-        self.Close(True)
-        self.parent.Destroy()
+            self.Close(True)
+        #self.parent.Destroy()
 
 
     def OnStackButton(self, event):
@@ -5335,7 +5337,8 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         self.modify = True
 
         self.Close(True)
-        self.parent.Destroy()
+        self.parent.Close(True)
+        #self.parent.Destroy()
 
     def OnCombineButton(self, event):
         """
@@ -5355,6 +5358,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             self.Close(True)
+            self.parent.Close(True)
         else:
             dlg = wx.MessageDialog(self, "Subtract requires two records\n"
                             " - not less, not more\n",
@@ -5362,8 +5366,8 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             dlg.ShowModal()
             dlg.Destroy()
 
-        self.Close(True)
-        self.parent.Destroy()
+            self.Close(True)
+        #self.parent.Destroy()
 
 
 class WaitDialog(wx.Dialog):

@@ -92,6 +92,8 @@ class StreamPage(wx.Panel):
         self.compRadioBox.Disable()
         self.symbolRadioBox.Disable()
 
+        #self.dailyMeansButton.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.NORMAL))
+
 
     def doLayout(self):
         # Prepare some reusable arguments for calling sizer.Add():

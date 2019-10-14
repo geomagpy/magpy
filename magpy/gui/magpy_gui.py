@@ -7,14 +7,18 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-try: # Necessary for wx2.8.11.0
-    from wx.lib.pubsub import setupkwargs
-    # later versions: wxPython-phoenix
-    # sudo pip3 install -U --pre -f http://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix
-    # does not work so far! leon 2016-06-24
+try:
+    from pypubsub import setupkwargs
 except:
-    pass
-from wx.lib.pubsub import pub
+    try: # Necessary for wx2.8.11.0
+        from wx.lib.pubsub import setupkwargs
+    except:
+        pass
+try:
+    from pypubsub import pub
+except:
+    from wx.lib.pubsub import pub
+
 from wx.lib.dialogs import ScrolledMessageDialog
 import wx.lib.scrolledpanel as scrolled
 
@@ -52,6 +56,7 @@ from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
 from magpy.collector import collectormethods as colsup
 import glob, os, pickle, base64
+import platform # for system check to import WXAgg on Mac
 import pylab
 import time #,thread
 import threading
@@ -170,6 +175,10 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
 
     initpath = os.path.join(normalpath,'.magpyguiini')
 
+    try:
+        passwd = passwd.encode()
+    except:
+        pass
     pwd = base64.b64encode(passwd)
     optionsdict['passwd'] = pwd
 
@@ -219,6 +228,9 @@ class PlotPanel(scrolled.ScrolledPanel):
     """
     def __init__(self, *args, **kwds):
         scrolled.ScrolledPanel.__init__(self, *args, **kwds)
+        # switch to WXAgg (required for MacOS)
+        if platform.system() == "Darwin":
+            matplotlib.use('WXAgg')
         self.figure = plt.figure()
         self.plt = plt
         scsetmp = ScreenSelections()
