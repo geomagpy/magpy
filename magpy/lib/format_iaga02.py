@@ -324,7 +324,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     #  IAGA code
     try:
         tmp, fileext = os.path.splitext(filename)
-        stream.header['SensorID'] = stream.header.get('StationIAGAcode','').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
+        stream.header['SensorID'] = stream.header.get('StationIAGAcode','NoCode').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
     except:
         pass
 

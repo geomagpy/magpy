@@ -269,6 +269,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     if temp[:60].decode('ascii').startswith("LemiBin"):
         # current format
         sensorid = temp[:60].split()[1]
+        sensorid = sensorid.decode('ascii')
         dataheader = True
         lemiformat = "current"
         packcode = '<4cb6B8hb30f3BcB6hL'

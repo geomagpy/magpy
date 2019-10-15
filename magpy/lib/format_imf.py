@@ -1195,6 +1195,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     else:
         mycdf = cdf.CDF(filename, '')
 
+    logger.debug("writeIMAGCDF: Saving to {}".format(filename))
+    #print ("Saving to {}".format(filename))
+
     keylst = datastream._get_key_headers()
     tmpkeylst = ['time']
     tmpkeylst.extend(keylst)
@@ -1547,6 +1550,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             except:
                                 pass
             success = True
+            success = filename    # new from 0.4.8 onwards
 
     if len(flaglist) > 0 and addflags == True:
         flagstart = 'FlagBeginTimes'
