@@ -1032,8 +1032,12 @@ class StreamSelectKeysDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
-        contlst = [eval('(self.'+elem+'CheckBox, expandOption)') for elem in self.keylst]
+        # Add the controls to the sizers:   ### list comprehension with eval not working in py3
+        def applyBox(self,key,expandOption):
+            return eval('(self.{}CheckBox, expandOption)'.format(key))
+        contlst = []
+        for elem in self.keylst:
+            contlst.append(applyBox(self,elem,expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         # A GridSizer will contain the other controls:
@@ -1083,7 +1087,13 @@ class StreamPlotOptionsDialog(wx.Dialog):
         emptySpace = ((0, 0), noOptions)
 
         # Add the controls to the sizers:
-        contlst = [[eval('(self.'+elem+'Text, noOptions)'),eval('(self.'+elem+'TextCtrl, expandOption)')] for elem in self.optdict]
+        def applyBox(self,key,noOptions, expandOption):
+            return [eval('(self.{}Text, noOptions)'.format(key)),eval('(self.{}TextCtrl, expandOption)'.format(key))]
+        contlst = []
+        for elem in self.optdict:
+            contlst.append(applyBox(self,elem,noOptions,expandOption))
+
+        #contlst = [[eval('(self.'+elem+'Text, noOptions)'),eval('(self.'+elem+'TextCtrl, expandOption)')] for elem in self.optdict]
         contlst = [y for x in contlst for y in x]
 
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
