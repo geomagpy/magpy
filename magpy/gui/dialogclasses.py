@@ -11,10 +11,12 @@ try:
     # wx 2.x, 3.x
     from wx import DatePickerCtrl as wxDatePickerCtrl
     from wx import DP_DEFAULT as wxDP_DEFAULT
+    from wx import MULTIPLE as wxMULTIPLE
 except:
     # wx 4.x
     from wx.adv import DatePickerCtrl as wxDatePickerCtrl
     from wx.adv import DP_DEFAULT as wxDP_DEFAULT
+    from wx import FD_MULTIPLE as wxMULTIPLE
 
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -2584,7 +2586,7 @@ class LoadDIDialog(wx.Dialog):
     def OnLoadDIFiles(self,e):
         self.difiledirname = ''
         stream = DataStream()
-        dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wx.MULTIPLE)
+        dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
@@ -2593,7 +2595,7 @@ class LoadDIDialog(wx.Dialog):
     def OnLoadDIDB(self,e):
         #self.dirname = ''
         stream = DataStream()
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
@@ -2602,7 +2604,7 @@ class LoadDIDialog(wx.Dialog):
     def OnLoadDIRemote(self,e):
         self.dirname = ''
         stream = DataStream()
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wx.MULTIPLE)
+        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
@@ -3347,7 +3349,12 @@ class InputSheetDialog(wx.Dialog):
 
         # Write Block
         if saving:
-            opstring = [unicode(el+'\n', "utf-8") for el in opstring]
+            try:
+                # python2 - will fail in py3
+                opstring = [unicode(el+'\n', "utf-8") for el in opstring]
+            except:
+                # python3
+                opstring = ["{}\n".format(el) for el in opstring]
             didirname = os.path.expanduser("~")
             dialog = wx.DirDialog(None, "Choose directory to write data:",didirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
             if dialog.ShowModal() == wx.ID_OK:

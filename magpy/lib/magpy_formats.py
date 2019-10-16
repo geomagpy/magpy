@@ -90,8 +90,8 @@ except:
 
 try:
     ## Overriding the format_imf ImagCDF methods in case of cdflib available
-    print ("Overriding nasacdf with cdflib")
     from magpy.lib.format_imagcdf import *
+    print ("Overriding nasacdf with cdflib")
 except:
     logging.warning("magpy-formats: imagcdf package based on cdflib not available")
 

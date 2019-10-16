@@ -295,7 +295,11 @@ class PlotPanel(scrolled.ScrolledPanel):
         for idx,para in enumerate(parameterstring.split(',')):
             if not para.endswith('time'):
                 i = KEYLIST.index(para)
-                self.array[i].extend([float(elem[idx]) for elem in li])
+                try:
+                    self.array[i].extend([float(elem[idx]) for elem in li])
+                except:
+                    # None, NAN or string
+                    pass
 
         duplicateindicies = list_duplicates(self.array[0])
         array = [[] for key in KEYLIST]
@@ -313,6 +317,7 @@ class PlotPanel(scrolled.ScrolledPanel):
 
         array = [ar[-coverage:] if len(ar) > coverage else ar for ar in array ]
 
+        print ("CHECK:", self.datavars)
         self.monitorPlot(array)
 
         #if Log2File:
@@ -331,25 +336,44 @@ class PlotPanel(scrolled.ScrolledPanel):
 
         sumtime = 0
 
+        debug = False ## PLEASE NOTE Oct 2019: MARTAS is receiving data only at the defined interval, not inbetween 
+
         #print (self.datavars[0][:-5])
         coverage = int(self.datavars[6])
 
         pos = KEYLIST.index('t1')
         posvar1 = KEYLIST.index('var1')
+        if debug:
+            print ("updating ...")
+            print ("data:", self.datavars)
         #OK = True
         #if OK:
         while sumtime<self.datavars[2]:
-            client.loop(.1)
+            #client.loop(.1)
             # TODO add reconnection handler here in case that client goes away
             # print (client.connected_flag) -- connected_flag remains True -> can set it to False if no Payload is received ....
             #if not client.connected_flag:
             #    reconnect
             sumtime = sumtime+1
             li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
+            if debug:
+                print (li)
+                print (self.datavars[0][:-5])
+            tester = True
+            try:
+                if li == None:
+                    tester = False
+            except:
+                try:
+                    if li.all() == None:
+                        tester = False
+                except:
+                    pass
+
             if len(self.array[0]) > 0 and li[0][0] == self.array[0][-1]:
                 pass
             else:
-                if not li == None:
+                if tester:
                     for idx,el in enumerate(li):
                         self.array[idx].extend(el)
 
@@ -400,6 +424,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         coverage = self.datavars[6]  # coverage
         updatetime = self.datavars[7]
         db = self.datavars[8]
+        stationid = self.datavars.get(15)
 
         # convert parameter list to a dbselect sql format
         parameterstring = 'time,'+parameter
@@ -422,9 +447,13 @@ class PlotPanel(scrolled.ScrolledPanel):
                     except:
                         self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S") for el in li]
                 else:
-                    self.array[idx] = [float(el[i]) for el in li]
+                    try:
+                        self.array[idx] = [float(el[i]) for el in li]
+                    except:
+                        # non valid inputs or no numbers
+                        pass
 
-        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db}
+        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db, 15: stationid}
 
         self.figure.clear()
         t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
@@ -506,6 +535,7 @@ class PlotPanel(scrolled.ScrolledPanel):
 
                 t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
                 t1.start()
+                client.loop_start()
                 # Display the plot
                 self.canvas.draw()
 
@@ -602,14 +632,14 @@ class PlotPanel(scrolled.ScrolledPanel):
         coverage = self.datavars[6]  # coverage
         updatetime = self.datavars[7]
         db = self.datavars[8]
-        martasaddress = self.datavars[9]
-        martasport = self.datavars[10]
-        martasdelay = self.datavars[11]
-        martasprotocol = self.datavars[12]
-        martasuser = self.datavars[13]
-        martaspasswd = self.datavars[14]
-        martasstationid = self.datavars[15]
-        qos = self.datavars[16]
+        martasaddress = self.datavars.get(9)
+        martasport = self.datavars.get(10)
+        martasdelay = self.datavars.get(11)
+        martasprotocol = self.datavars.get(12)
+        martasuser = self.datavars.get(13)
+        martaspasswd = self.datavars.get(14)
+        martasstationid = self.datavars.get(15)
+        qos = self.datavars.get(16)
 
         # convert parameter list to a dbselect sql format
         parameterstring = 'time,'+parameter
@@ -622,10 +652,10 @@ class PlotPanel(scrolled.ScrolledPanel):
         dt = array[0]
         self.figure.suptitle("Live Data of %s - %s" % (dataid, currentdate))
         for idx,para in enumerate(parameterstring.split(',')):
-            if not para.endswith('time'):
-                i = KEYLIST.index(para)
+            i = KEYLIST.index(para)
+            if not para.endswith('time') and len(array[i]) > 0:
+                #print (para, len(array[i]))
                 subind = int("{}1{}".format(len(parameterstring.split(','))-1,idx))
-                #print subind
                 self.axes = self.figure.add_subplot(subind)
                 self.axes.grid(True)
                 rd = array[i]
@@ -5882,9 +5912,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # Check whether DB still available
         self.checkDB('minimal')
 
+        def dataAvailabilityCheck(db, datainfoidlist):
+            existinglist = []
+            if not len(datainfoidlist) > 0:
+                return datainfoidlist
+            for dataid in datainfoidlist:
+                ar = dbselect(db, 'time', dataid, expert="ORDER BY time DESC LIMIT 10")
+                if len(ar) > 0:
+                    existinglist.append(dataid)
+            return existinglist
+
+
         self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
         output = dbselect(self.db,'DataID,DataMinTime,DataMaxTime','DATAINFO')
         datainfoidlist = [elem[0] for elem in output]
+        datainfoidlist = dataAvailabilityCheck(self.db, datainfoidlist)
+
         if len(datainfoidlist) < 1:
             dlg = wx.MessageDialog(self, "No data tables available!\n"
                             "please check your database\n",
@@ -5897,12 +5940,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg = AGetMARCOSDialog(None, title='Select table',datalst=datainfoidlist)
         if dlg.ShowModal() == wx.ID_OK:
             datainfoid = dlg.dataComboBox.GetValue()
-            vals = dbselect(self.db, 'SensorID,DataSamplingRate,ColumnContents,ColumnUnits','DATAINFO', 'DataID = "'+datainfoid+'"')
+            vals = dbselect(self.db, 'SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
             vals = vals[0]
             sensid= vals[0]
             sr= float(vals[1].strip('sec'))
             keys= vals[2].split(',')
             units= vals[3].split(',')
+            stationid= vals[4]
         else:
             dlg.Destroy()
             return
@@ -5923,7 +5967,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
         parameter = ','.join([KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and KEYLIST[idx+1] in NUMKEYLIST])
 
-        self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db}
+        self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 15: stationid}
         self.monitorSource='MARCOS'
 
         success = True
@@ -5997,7 +6041,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #print ("TEST", colsup.identifier)
 
         if mqttimport:
-            # TODO stationcode is currently hardcoded in collectorsupport - change that !!
             client = mqtt.Client()
 
             if not martasuser in ['',None,'None','-']: 
@@ -6025,7 +6068,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             success = True
             try:
                 maxloop = int(self.options.get('martasscantime'))*10
-                print ("Got data from init - remove this message ater 0.3.99", maxloop)
+                #print ("Got data from init - remove this message ater 0.3.99", maxloop)
             except:
                 print ("Could not get scantime from options - using approx 20 seconds")
                 maxloop = 200
@@ -6067,7 +6110,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
                 sensorlist = []
                 for key in colsup.identifier:
-                    print ("key", key)
+                    #print ("key", key)
                     sensorid = key.split(':')[0]
                     if not sensorid in sensorlist:
                         sensorlist.append(sensorid)
@@ -6163,7 +6206,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
         # delete old array
         self.plot_p.array = [[] for el in KEYLIST]
-        self.stream.header['StationID'] = self.plot_p.datavars[15]
+        self.stream.header['StationID'] = self.plot_p.datavars.get(15)
+        self.stream.header['SensorID'] = self.plot_p.datavars.get(0)[:-5]
+        self.stream.header['DataID'] = self.plot_p.datavars.get(0)
         self.plotstream = self.stream.copy()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.plotstream)

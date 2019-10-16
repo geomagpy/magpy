@@ -106,7 +106,6 @@ def analyse_meta(header,sensorid, debug=False):
     source:mqtt:
     Interprete header information
     """
-    header = header.decode('utf-8')
     
     # some cleaning actions for false header inputs
     header = header.replace(', ',',')
@@ -116,7 +115,7 @@ def analyse_meta(header,sensorid, debug=False):
         packstr = '<'+h_elem[-2]+'B'
     else:
         packstr = h_elem[-2]
-    packstr = packstr.encode('ascii','ignore')
+    #packstr = packstr.encode('ascii','ignore')
     lengthcode = struct.calcsize(packstr)
     si = h_elem[2]
     if not si == sensorid and debug:
@@ -228,36 +227,13 @@ def on_connect(client, userdata, flags, rc):
     #client.subscribe(substring,qos=qos)
 
 
-"""
-def on_message(client, userdata, msg):
-    #print ("Topic", msg.topic.split('/'))
-    sensorid = msg.topic.split('/')[1].strip('meta').strip('data')
-    #print ("Receiving message for", sensorid)
-    # define a new data stream for each non-existing sensor
-    #print (msg.payload)
-
-    metacheck = identifier.get(sensorid+':packingcode','')
-    #print ("Too be done: separate sensors ... and Data stream for each sensor")
-
-    if msg.topic.endswith('meta') and metacheck == '':
-        #print ("Found header:", str(msg.payload))
-        analyse_meta(str(msg.payload),sensorid)
-    elif msg.topic.endswith('data'):
-        if not metacheck == '':
-            stream.ndarray = interprete_data(msg.payload, identifier, stream, sensorid)
-            streamdict[sensorid] = stream.ndarray  # to store data from different sensors
-            #post1 = KEYLIST.index('t1')
-            #posvar1 = KEYLIST.index('var1')
-        else:
-            print(msg.topic + " " + str(msg.payload))
-"""
 
 def on_message(client, userdata, msg):
 
-    #print("message received " ,str(msg.payload.decode("utf-8")))
     #print("message topic=",msg.topic)
     #print("message qos=",msg.qos)
     #print("message retain flag=",msg.retain)
+    payload = msg.payload.decode('ascii')
 
     arrayinterpreted = False
     sensorid = msg.topic.split('/')[1].strip('meta').strip('data').strip('dict')
@@ -266,17 +242,17 @@ def on_message(client, userdata, msg):
     metacheck = identifier.get(sensorid+':packingcode','')
 
     if msg.topic.endswith('meta') and metacheck == '':
-        analyse_meta(str(msg.payload),sensorid)
+        analyse_meta(payload,sensorid)
         if not sensorid in headdict:
-            headdict[sensorid] = msg.payload
+            headdict[sensorid] = payload
             # create stream.header dictionary and it here
-            headstream[sensorid] = create_head_dict(str(msg.payload),sensorid)
+            headstream[sensorid] = create_head_dict(msg.payload,sensorid)
             #if debug:
             #    log.msg("New headdict: {}".format(headdict))
     elif msg.topic.endswith('dict') and sensorid in headdict:
         #log.msg("Found Dictionary:{}".format(str(msg.payload)))
         head_dict = headstream[sensorid]
-        for elem in str(msg.payload).split(','):
+        for elem in payload.split(','):
             keyvaluespair = elem.split(':')
             try:
                 if not keyvaluespair[1] in ['-','-\n','-\r\n']:
@@ -287,11 +263,11 @@ def on_message(client, userdata, msg):
         #    log.msg("Dictionary now looks like {}".format(headstream[sensorid]))
     elif msg.topic.endswith('data'):
         if not metacheck == '':
-            stream.ndarray = interprete_data(msg.payload, identifier, stream, sensorid)
+            stream.ndarray = interprete_data(payload, identifier, stream, sensorid)
             streamdict[sensorid] = stream.ndarray  # to store data from different sensors
             #post1 = KEYLIST.index('t1')
             #posvar1 = KEYLIST.index('var1')
         else:
-            print(msg.topic + " " + str(msg.payload))
+            print(msg.topic + " " + payload)
 
     #print ("on_message finished")
