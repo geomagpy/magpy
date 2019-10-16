@@ -966,12 +966,12 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.DIMenu, "D&I")
         # ## Stream Operations
         self.StreamOperationsMenu = wx.Menu()
-        self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Add current &working state to Streamlist...\tCtrl+W", "Add Stream", wx.ITEM_NORMAL)
+        self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Add current &working state to memory...\tCtrl+W", "Add Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.AppendItem(self.StreamAddListSelect)
         self.StreamOperationsMenu.AppendSeparator()
-        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Select active Strea&m...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
+        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Access memory/&multiple data set operations...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.AppendItem(self.StreamListSelect)
-        self.MainMenu.Append(self.StreamOperationsMenu, "StreamO&perations")
+        self.MainMenu.Append(self.StreamOperationsMenu, "Memory/DataO&perations")
         # ## Data Checker
         if datacheck:
             self.CheckDataMenu = wx.Menu()
@@ -979,7 +979,7 @@ class MainFrame(wx.Frame):
             self.CheckDataMenu.AppendItem(self.CheckDefinitiveDataSelect)
             self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagP&y log...\tCtrl+Y", "Open log", wx.ITEM_NORMAL)
             self.CheckDataMenu.AppendItem(self.OpenLogFileSelect)
-            self.MainMenu.Append(self.CheckDataMenu, "C&heck Data")
+            self.MainMenu.Append(self.CheckDataMenu, "E&xtra")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic initialisation parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
@@ -1464,6 +1464,10 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.selectKeysButton.Enable()    # always
         self.menu_p.str_page.extractValuesButton.Enable() # always
         self.menu_p.str_page.changePlotButton.Enable()    # always
+        self.menu_p.str_page.confinexCheckBox.Enable()    # always
+
+        # ----------------------------------------
+        # flag page
         self.menu_p.fla_page.flagOutlierButton.Enable()   # always
         self.menu_p.fla_page.flagSelectionButton.Enable() # always
         self.menu_p.fla_page.flagRangeButton.Enable()     # always
@@ -1472,7 +1476,9 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.flagMaxButton.Enable()       # always
         self.menu_p.fla_page.flagClearButton.Enable()       # always
         self.menu_p.fla_page.FlagIDComboBox.Enable()      # always
-        self.menu_p.str_page.confinexCheckBox.Enable()    # always
+
+        # ----------------------------------------
+        # meta page
         self.menu_p.met_page.MetaDataButton.Enable()      # always
         self.menu_p.met_page.MetaSensorButton.Enable()    # always
         self.menu_p.met_page.MetaStationButton.Enable()   # always
@@ -2073,6 +2079,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
         # Check whether DB still available
         self.checkDB('minimal')
 
+        def dataAvailabilityCheck(db, datainfoidlist):
+            existinglist = []
+            if not len(datainfoidlist) > 0:
+                return datainfoidlist
+            for dataid in datainfoidlist:
+                ar = dbselect(db, 'time', dataid, expert="ORDER BY time DESC LIMIT 10")
+                if len(ar) > 0:
+                    existinglist.append(dataid)
+            return existinglist
+
         getdata = False
         stream = DataStream()
         if self.db:
@@ -2083,6 +2099,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             output = cursor.fetchall()
             #print ("Test", output)
             datainfoidlist = [elem[0] for elem in output]
+            # Verify datainfoidlist
+            datainfoidlist = dataAvailabilityCheck(self.db, datainfoidlist)
             if len(datainfoidlist) < 1:
                 dlg = wx.MessageDialog(self, "No data tables available!\n"
                             "please check your database\n",

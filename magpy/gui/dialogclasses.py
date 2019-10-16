@@ -1515,7 +1515,7 @@ class StreamLoadFlagDialog(wx.Dialog):
 
     def OnLoadFile(self, e):
         openFileDialog = wx.FileDialog(self, "Open", "", "",
-                                       "pickle flaglist (*.pkl)|*.pkl|json flaglist (*.json)|*.json",
+                                       "json flaglist (*.json)|*.json|pickle flaglist (*.pkl)|*.pkl|all files (*.*)|*.*",
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
         flagname = openFileDialog.GetPath()
@@ -1601,12 +1601,17 @@ class StreamSaveFlagDialog(wx.Dialog):
 
     def OnSaveFile(self, e):
         saveFileDialog = wx.FileDialog(self, "Save As", "", "",
-                                       "pickle flaglist (*.pkl)|*.pkl|json flaglist (*.json)|*.json",
+                                       "json flaglist (*.json)|*.json|pickle flaglist (*.pkl)|*.pkl",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
+        extensions = ['.json','.pkl']
+        extind = saveFileDialog.GetFilterIndex()
+
         flagname = saveFileDialog.GetPath()
+        if not flagname.endswith(extensions[extind]):
+            flagname = flagname+extensions[extind]
+        
         saveFileDialog.Destroy()
-        print (flagname)
         saveflags(self.flaglist,flagname)
         self.Close(True)
 
