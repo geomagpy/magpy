@@ -89,11 +89,15 @@ except:
     logging.warning("magpy-formats: Format package autodif-F not available")
 
 try:
-    ## Overriding the format_imf ImagCDF methods in case of cdflib available
+    ## Overriding:
+    ##  -> format_imf ImagCDF method in case of cdflib available
+    ##  -> format_magpy PYCDF method in case of cdflib available
     from magpy.lib.format_imagcdf import *
-    print ("Overriding nasacdf with cdflib")
+    from magpy.lib.format_magpycdf import *
+    from magpy.lib.format_acecdf import *
+    # please note: magpycdf and acecdf replace the earlier combined method in magpy
 except:
-    logging.warning("magpy-formats: imagcdf package based on cdflib not available")
+    logging.warning("magpy-formats: cdflib not available")
 
 
 IAFMETA = {'StationInstitution':'word', 'StationName':'word', 'StationIAGAcode':'word', 'DataAcquisitionLatitude':'word', 'DataAcquisitionLongitude':'word', 'DataElevation':'word', 'DataFormat':'word', 'DataComponents':'word', 'DataSensorOrientation':'word', 'DataDigitalSampling':'word', 'DataSamplingFilter':'word', 'Data Type':'word', 'DataPublicationLevel':'word', 'DataConversion':'word', 'StationK9':'word', 'DataQuality':'word', 'SensorType':'word', 'StationStreet':'word', 'StationCity':'word', 'StationPostalCode':'word', 'StationCountry':'word', 'StationWebInfo':'word', 'StationEmail':'word'}
@@ -133,6 +137,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "DTU1"): # ASCII Data from the DTU's FGE systems
         if (isDTU1(filename)):
+            return True
+    elif (format_type == "ACECDF"):
+        if (isACECDF(filename)):
             return True
     elif (format_type == "PYSTR"):
         if (isPYSTR(filename)):
@@ -301,6 +308,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readDKA(filename, headonly, **kwargs)
     elif (format_type == "DIDD"):
         return readDIDD(filename, headonly, **kwargs)
+    elif (format_type == "ACECDF"): # cdf ACE
+        return readACECDF(filename, headonly, **kwargs)
     elif (format_type == "GDASA1"):
         return readGDASA1(filename, headonly, **kwargs)
     elif (format_type == "GDASB1"):

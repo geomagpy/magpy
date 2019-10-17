@@ -70,37 +70,6 @@ headdict = {} # store headerlines for file
 headstream = {}
 
 
-"""
-def analyse_meta(header,sensorid):
-    #
-    #Interprete header information
-    #
-    header = header.decode('utf-8')
-    
-    # some cleaning actions for false header inputs
-    header = header.replace(', ',',')
-    header = header.replace('deg C','deg')
-    h_elem = header.strip().split()
-    packstr = '<'+h_elem[-2]+'B'
-    packstr = packstr.encode('ascii','ignore')
-    lengthcode = struct.calcsize(packstr)
-    si = h_elem[2]
-    if not si == sensorid:
-        print ("Different sensorids in publish address and header - please check - !!!!!")
-        print ("Header: {}, Used SensorID: {}".format(si,sensorid))
-    keylist = h_elem[3].strip('[').strip(']').split(',')
-    elemlist = h_elem[4].strip('[').strip(']').split(',')
-    unitlist = h_elem[5].strip('[').strip(']').split(',')
-    multilist = list(map(float,h_elem[6].strip('[').strip(']').split(',')))
-    print ("Packing code", packstr)
-    print ("keylist", keylist)
-    identifier[sensorid+':packingcode'] = packstr
-    identifier[sensorid+':keylist'] = keylist
-    identifier[sensorid+':elemlist'] = elemlist
-    identifier[sensorid+':unitlist'] = unitlist
-    identifier[sensorid+':multilist'] = multilist
-"""
-
 def analyse_meta(header,sensorid, debug=False):
     """
     source:mqtt:
@@ -247,10 +216,7 @@ def on_message(client, userdata, msg):
             headdict[sensorid] = payload
             # create stream.header dictionary and it here
             headstream[sensorid] = create_head_dict(msg.payload,sensorid)
-            #if debug:
-            #    log.msg("New headdict: {}".format(headdict))
     elif msg.topic.endswith('dict') and sensorid in headdict:
-        #log.msg("Found Dictionary:{}".format(str(msg.payload)))
         head_dict = headstream[sensorid]
         for elem in payload.split(','):
             keyvaluespair = elem.split(':')
@@ -259,14 +225,10 @@ def on_message(client, userdata, msg):
                     head_dict[keyvaluespair[0]] = keyvaluespair[1].strip()
             except:
                 pass
-        #if debug:
-        #    log.msg("Dictionary now looks like {}".format(headstream[sensorid]))
     elif msg.topic.endswith('data'):
         if not metacheck == '':
             stream.ndarray = interprete_data(payload, identifier, stream, sensorid)
             streamdict[sensorid] = stream.ndarray  # to store data from different sensors
-            #post1 = KEYLIST.index('t1')
-            #posvar1 = KEYLIST.index('var1')
         else:
             print(msg.topic + " " + payload)
 

@@ -2,7 +2,7 @@
 MagPy
 Intermagnet ImagCDF input filter
 (based on cdflib)
-Written by Roman Leonhardt December 2019
+Written by Roman Leonhardt October 2019
 - contains test, read and write functions for
         ImagCDF
 - supports python >= 3.5
@@ -608,7 +608,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
             mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
 
-    success = True
     success = filename
 
     if len(flaglist) > 0 and addflags == True:

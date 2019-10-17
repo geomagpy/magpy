@@ -1023,7 +1023,7 @@ def writePYSTR(datastream, filename, **kwargs):
                     row.append(eval('elem.'+key))
             wtr.writerow( row )
     myFile.close()
-    return True
+    return filename
 
 
 def writePYCDF(datastream, filename, **kwargs):
@@ -1207,7 +1207,7 @@ def writePYCDF(datastream, filename, **kwargs):
             logger.warning("writePYCDF: please use option skipcompression=True if unreadable")
 
     mycdf.close()
-    return True
+    return filename+'.cdf'
 
 
 def writePYASCII(datastream, filename, **kwargs):
@@ -1314,4 +1314,4 @@ def writePYASCII(datastream, filename, **kwargs):
         return myFile
 
     myFile.close()
-    return True
+    return filename
