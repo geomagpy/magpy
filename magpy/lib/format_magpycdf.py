@@ -83,7 +83,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
     logbaddata = False
 
     #if debug:
-    print ("Step1", theday, getfile)
+    #print ("Step1", theday, getfile)
 
     # Get format type:
     # Juergens DTU type is using different date format (MATLAB specific)
@@ -161,15 +161,21 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 else:
                     array[ind] = np.asarray(col)
                     addhead = True
+                #print (cdfdat.varattsget(key))
                 if addhead:
-                    vname = cdfdat.varattsget(key).get('name')
-                    vunit = cdfdat.varattsget(key).get('unit')
+                    vname = cdfdat.varattsget(key).get('name','')
+                    if not vname:
+                        vname = cdfdat.varattsget(key).get('FIELDNAM','')
+                    vunit = cdfdat.varattsget(key).get('units','')
+                    if not vunit:
+                        vunit = cdfdat.varattsget(key).get('UNITS','')
                     stream.header['col-'+key.lower()] = vname
                     stream.header['unit-col-'+key.lower()] = vunit
 
         cdfdat.close()
         del cdfdat
 
+    #print (stream.header)
     return DataStream([LineStruct()], stream.header,np.asarray(array))
 
 
@@ -340,9 +346,11 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = col.astype(float)
             cdfdata = col
 
-            if not key in ['comment','time','sectime']:
-                var_attrs['name'] = headdict.get('col-'+key,'')
-                var_attrs['unit'] = headdict.get('unit-col-'+key,'')
+            var_attrs['name'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.1
+            var_attrs['units'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style
+            var_attrs['FIELDNAM'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.2
+            var_attrs['UNITS'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style ## Version 1.2
+            var_attrs['LABLAXIS'] = headdict.get('col-'+key,'') ## Version 1.2
 
         if len(cdfdata) > 0:
             var_spec['Variable'] = cdfkey
