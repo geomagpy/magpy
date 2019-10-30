@@ -160,12 +160,12 @@ def plot_new(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow
         plot(stream,variables=variables,specialdict=specialdict,errorbars=errorbars,padding=padding,
                         noshow=noshow,annotate=annotate,stormphases=stormphases,colorlist=colorlist,
                         symbollist=symbollist,t_stormphases=t_stormphases,includeid=includeid,
-                        function=function,plottype=plottype,resolution=resolution, **kwargs)
+                        function=function,plottype=plottype,flagontop=flagontop,resolution=resolution, **kwargs)
 
 
 def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False,
         annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-        t_stormphases=None,includeid=False,function=None,plottype='discontinuous',resolution=None,
+        t_stormphases=None,includeid=False,flagontop=False,function=None,plottype='discontinuous',resolution=None,
         **kwargs):
     '''
     DEFINITION:
@@ -284,7 +284,7 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
         padding = padding
 
     plotStreams([stream], [ variables ], specialdict=[specialdict],noshow=noshow,
-        errorbars=errorbars,padding=padding,annotate=annotate,stormphases=stormphases,
+        errorbars=errorbars,padding=padding,annotate=annotate,flagontop=flagontop,stormphases=stormphases,
         colorlist=colorlist,symbollist=symbollist,t_stormphases=t_stormphases,
         includeid=includeid,function=function,plottype=plottype,resolution=resolution,**kwargs)
 
@@ -292,7 +292,7 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
 def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
         t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-        noshow=False,labels=False,resolution=None,**kwargs):
+        noshow=False,labels=False,flagontop=False,resolution=None,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -343,6 +343,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         - includeid:    (bool) If True, sensor IDs will be extracted from header data and
                         plotted alongside corresponding data. Default=False
         - labelcolor:   (color='0.2') Colour of labels.
+        - flagontop:    (True/False) define whether flags are shown above or below data.
         - opacity:      (0.0 to 1.0) Opacity applied to fills and bars.
         - legendposition: (str) Position of legend (when var labels is used), e.g. 'upper left'
         - noshow:       (bool) If True, figure object will be returned. Default=False
@@ -629,6 +630,9 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     data_dict['flags'] = flags
             else:
                 data_dict['annotate'] = False
+
+            data_dict['flagontop'] = flagontop
+
 
             #print "plotStreams2", data_dict['flags']
 
@@ -2100,6 +2104,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         'flags' : flags         (np.ndarray) Flags to add into subplot.
                                 Note: must be 2-dimensional, flags & comments.
         'function': fn          (function object) Plot a function within the subplot.
+        'flagontop': True/False  (bool) define whether flags are on top or not.
         } ,
 
       { 'key' : ...                             } ... ]
@@ -2123,6 +2128,7 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
     #fig = plt.figure()
     plt_fmt = ScalarFormatter(useOffset=False)
     n_subplots = len(data)
+    zorder = 2
 
     for i in range(n_subplots):
 
@@ -2147,6 +2153,12 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
         color = data[i]['color']
         symbol = data[i]['symbol']
         datalabel = data[i]['datalabel']
+
+        if 'flagontop' in data[i]:
+            if data[i]['flagontop'] == True:
+                zorder = 10
+            else:
+                zorder = 2
 
         # CREATE SUBPLOT OBJECT & ADD TITLE:
         logger.info("Adding subplot for key %s..." % data[i]['ylabel'])
@@ -2269,27 +2281,27 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                 linecrit = 2000
                 if len(a_t) > 0:
                     if len(a_t) > linecrit:
-                        ax.plot(a_t,a_y,'.',c='r', zorder=2) ## Use lines if a lot of data is marked
+                        ax.plot(a_t,a_y,'.',c='r', zorder=zorder) ## Use lines if a lot of data is marked
                     else:
-                        ax.scatter(a_t,a_y,c='r')
+                        ax.scatter(a_t,a_y,c='r', zorder=zorder)
                 if len(b_t) > 0:
                     if len(b_t) > linecrit:
-                        ax.plot(b_t,b_y,'.',c='orange', zorder=2)
+                        ax.plot(b_t,b_y,'.',c='orange', zorder=zorder)
                     else:
-                        ax.scatter(b_t,b_y,c='orange')
+                        ax.scatter(b_t,b_y,c='orange', zorder=zorder)
                 if len(c_t) > 0:
                     # TODO Here we have a masked nan warning - too be solved
                     #print np.asarray(c_t)
                     #print np.asarray(c_y)
                     if len(c_t) > linecrit:
-                        ax.plot(c_t,c_y,'.',c='g')
+                        ax.plot(c_t,c_y,'.',c='g', zorder=zorder)
                     else:
-                        ax.scatter(c_t,c_y,c='g')
+                        ax.scatter(c_t,c_y,c='g', zorder=zorder)
                 if len(d_t) > 0:
                     if len(d_t) > linecrit:
-                        ax.plot(d_t,d_y,'.',c='b')
+                        ax.plot(d_t,d_y,'.',c='b', zorder=zorder)
                     else:
-                        ax.scatter(d_t,d_y,c='b')
+                        ax.scatter(d_t,d_y,c='b', zorder=zorder)
 
         # PLOT A GIVEN FUNCTION:
         if 'function' in data[i]:

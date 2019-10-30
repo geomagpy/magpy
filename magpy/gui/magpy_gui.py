@@ -1221,6 +1221,7 @@ class MainFrame(wx.Frame):
                         'plottype':'discontinuous',
                         'symbollist': [],
                         't_stormphases':{},
+                        'flagontop':True,
                         'opacity':1.0,
                         'function':None}
 
