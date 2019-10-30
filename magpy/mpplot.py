@@ -633,7 +633,6 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 
             data_dict['flagontop'] = flagontop
 
-
             #print "plotStreams2", data_dict['flags']
 
             # Get an existing function object from header:

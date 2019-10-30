@@ -123,6 +123,125 @@ class OpenWebAddressDialog(wx.Dialog):
         for elem in self.favorites:
             self.getFavsComboBox.Append(elem)
 
+class ConnectWebServiceDialog(wx.Dialog):
+    """
+    Helper method to connect to edge
+    Select shown keys
+    """
+    def __init__(self, parent, title, services, default):
+        super(ConnectWebServiceDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.services = services
+        self.default = default
+        self.servicelist = [el for el in services]
+        self.selectedservice = default
+
+        self.ids = services.get(default).get('ids')        
+        self.types = services.get(default).get('type')        
+        self.formats = services.get(default).get('format')        
+        self.createControls()
+        self.doLayout()
+        self.serviceComboBox.Bind(wx.EVT_COMBOBOX, self.update)
+
+    def createControls(self):
+        #self.urlLabel = wx.StaticText(self, label="Insert address (e.g.'https://geomag.usgs.gov/ws/edge/?id=BOU')",size=(500,30))
+        #self.urlTextCtrl = wx.TextCtrl(self, value=self.url,size=(500,30))
+        self.serviceLabel = wx.StaticText(self, label="Webservice source:",size=(400,20))
+        self.serviceComboBox = wx.ComboBox(self, choices=self.servicelist,
+            style=wx.CB_DROPDOWN, value=self.selectedservice,size=(400,-1))
+        self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,20))
+        self.idComboBox = wx.ComboBox(self, choices=self.ids,
+            style=wx.CB_DROPDOWN, value=self.ids[0],size=(400,-1))
+        self.formatLabel = wx.StaticText(self, label="Format: ",size=(400,20))
+        self.formatComboBox = wx.ComboBox(self, choices=self.formats,
+            style=wx.CB_DROPDOWN, value=self.formats[0],size=(400,-1))
+        self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,20))
+        self.typeComboBox = wx.ComboBox(self, choices=self.types,
+            style=wx.CB_DROPDOWN, value=self.types[0],size=(400,-1))
+        self.sampleLabel = wx.StaticText(self, label="Sampling Period (1, 60, or 3600)",size=(400,20))
+        self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,30))
+        self.startTimeLabel = wx.StaticText(self, label="Start Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
+        #self.startTimeTextCtrl = wx.TextCtrl(self, value='2017-01-01T00:00:00Z',size=(400,30))
+        self.startDatePicker = wxDatePickerCtrl(self,size=(160,30))
+        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,30))
+        self.endTimeLabel = wx.StaticText(self, label="End Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
+        #self.endTimeTextCtrl = wx.TextCtrl(self, value='2017-02-01T00:00:00Z',size=(400,30))
+        self.endDatePicker = wxDatePickerCtrl(self,size=(160,30))
+        self.endTimePicker = wx.TextCtrl(self, value='23:59:59',size=(160,30))
+        self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
+        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        elemlist = [(self.serviceLabel, noOptions),
+                 emptySpace,
+                 (self.serviceComboBox, expandOption),
+                 emptySpace,
+                 (self.obsIDLabel, noOptions),
+                 (self.formatLabel, noOptions),
+                 (self.idComboBox, expandOption),
+                 (self.formatComboBox, expandOption),
+                 (self.typeLabel, noOptions),
+                 (self.sampleLabel, noOptions),
+                 (self.typeComboBox, expandOption),
+                 (self.sampleTextCtrl, expandOption),
+                 (self.startTimeLabel, noOptions),
+                 emptySpace,
+                 (self.startDatePicker, expandOption),
+                 (self.startTimePicker, expandOption),
+                 (self.endTimeLabel, noOptions),
+                 emptySpace,
+                 (self.endDatePicker, expandOption),
+                 (self.endTimePicker, expandOption),
+                 (self.elementsLabel, noOptions),
+                 emptySpace,
+                 (self.elementsTextCtrl, expandOption),
+                 emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=5, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def update(self, event):
+        selectn = self.serviceComboBox.GetStringSelection()
+        self.selectedservice = selectn
+        self.ids = self.services.get(selectn).get('ids')        
+        self.types = self.services.get(selectn).get('type')        
+        self.formats = self.services.get(selectn).get('format')        
+        self.idComboBox.Clear()
+        self.idComboBox.AppendItems(self.ids) 
+        self.idComboBox.SetValue(self.ids[0])
+        self.typeComboBox.Clear()
+        self.typeComboBox.AppendItems(self.types) 
+        self.typeComboBox.SetValue(self.types[0])
+        self.formatComboBox.Clear()
+        self.formatComboBox.AppendItems(self.formats) 
+        self.formatComboBox.SetValue(self.formats[0])
+        
 
 class LoadDataDialog(wx.Dialog):
     """

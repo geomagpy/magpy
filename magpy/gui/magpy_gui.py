@@ -151,6 +151,11 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['didbadd'] = 'False'
     if optionsdict.get('bookmarks','') == '':
         optionsdict['bookmarks'] = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
+    if optionsdict.get('defaultservice','') == '':
+        optionsdict['defaultservice'] = 'conrad'
+    if optionsdict.get('webservices','') == '':
+        optionsdict['webservices'] = {'usgs':{'address':'https://geomag.usgs.gov/ws/edge/','format':['iaga2002', 'json'],'ids':['BDT', 'BOU', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':['X,Y,Z,F'],'type':['variation', 'adjusted', 'quasi-definitive','definitive'],'group':[]}, 
+                                      'conrad': {'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':[],'type':['adjusted'],'group':['magnetism','meteo']}}
     if optionsdict.get('scalevalue','') == '':
         optionsdict['scalevalue'] = 'True'
     if optionsdict.get('double','') == '':
@@ -961,13 +966,18 @@ class MainFrame(wx.Frame):
         self.FileMenu.AppendItem(self.FileOpen)
         self.DirOpen = wx.MenuItem(self.FileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DirOpen)
-        self.WebOpen = wx.MenuItem(self.FileMenu, 103, "Open &URL...\tCtrl+U", "Get data from the internet", wx.ITEM_NORMAL)
+        self.FileMenu.AppendSeparator()
+        self.WebServiceOpen = wx.MenuItem(self.FileMenu, 103, "Open &WebService...\tCtrl+W", "Get webservice data", wx.ITEM_NORMAL)
+        self.FileMenu.AppendItem(self.WebServiceOpen)
+        self.FileMenu.AppendSeparator()
+        self.WebOpen = wx.MenuItem(self.FileMenu, 104, "Open general &URL...\tCtrl+U", "Get data from the internet", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.WebOpen)
-        self.DBOpen = wx.MenuItem(self.FileMenu, 104, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
+        self.FileMenu.AppendSeparator()
+        self.DBOpen = wx.MenuItem(self.FileMenu, 105, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.DBOpen)
         self.DBOpen.Enable(False)
         self.FileMenu.AppendSeparator()
-        self.ExportData = wx.MenuItem(self.FileMenu, 105, "&Export data...\tCtrl+E", "Export data to a file", wx.ITEM_NORMAL)
+        self.ExportData = wx.MenuItem(self.FileMenu, 106, "&Export data...\tCtrl+E", "Export data to a file", wx.ITEM_NORMAL)
         self.FileMenu.AppendItem(self.ExportData)
         self.ExportData.Enable(False)
         self.FileMenu.AppendSeparator()
@@ -1039,6 +1049,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnOpenDir, self.DirOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenFile, self.FileOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenURL, self.WebOpen)
+        self.Bind(wx.EVT_MENU, self.OnOpenWebService, self.WebServiceOpen)
         self.Bind(wx.EVT_MENU, self.OnOpenDB, self.DBOpen)
         self.Bind(wx.EVT_MENU, self.OnExportData, self.ExportData)
         self.Bind(wx.EVT_MENU, self.OnFileQuit, self.FileQuitItem)
@@ -2100,6 +2111,117 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.changeStatusbar("Loading url failed ... Ready")
             dlg.Destroy()
 
+    def OnOpenWebService(self, event):
+        stream = DataStream()
+        success = False
+        url = ''
+        services = self.options.get('webservices',{})
+        default = self.options.get('defaultservice','conrad')
+        #print (services, self.options)
+        if services == {}:
+                print ("OPEN a dialog which informs you on the non-existance of services")
+                msg = wx.MessageDialog(self, "No Webservices found!\n"
+                    "No webservices defined so far.\n",
+                    "OpenWebService", wx.OK|wx.ICON_INFORMATION)
+                msg.ShowModal()
+                self.changeStatusbar("Connecting to webservice failed ... Ready")
+                msg.Destroy()
+                return
+
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default)
+        if dlg.ShowModal() == wx.ID_OK:
+            # Create URL from inputs
+
+
+            stday = dlg.startDatePicker.GetValue()
+            sttime = str(dlg.startTimePicker.GetValue())
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+            start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+            enday = dlg.endDatePicker.GetValue()
+            entime = str(dlg.endTimePicker.GetValue())
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+            end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+            if start < end:
+                service = dlg.serviceComboBox.GetValue()
+                obs_id = 'id=' + dlg.idComboBox.GetValue()
+                start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
+                end_time = '&endtime=' + ed + 'T' + entime + 'Z'
+                if service == 'conrad':
+                    file_format = '&of=' + dlg.formatComboBox.GetValue()
+                else:
+                    file_format = '&format=' + dlg.formatComboBox.GetValue()
+                elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
+                data_type = '&type=' + dlg.typeComboBox.GetValue()
+                period = '&sampling_period=' + dlg.sampleTextCtrl.GetValue()
+                base = services.get(dlg.serviceComboBox.GetValue()).get('address')
+                url = (base + '?' + obs_id + start_time + end_time + file_format +
+                      elements + data_type + period)
+                #print ("Constructed url:", url)
+                #url = (base + '?' + obs_id)
+                self.options['defaultservice'] = service
+            else:
+                msg = wx.MessageDialog(self, "Invalid time range!\n"
+                    "The end time occurs before the start time.\n",
+                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
+                msg.ShowModal()
+                self.changeStatusbar("Loading from directory failed ... Ready")
+                msg.Destroy()
+
+            self.changeStatusbar("Loading webservice data ... be patient")
+        dlg.Destroy()
+
+        #print ("Constructed url:", url)
+
+        try:
+                if not url.endswith('/'):
+                    loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
+                    try:
+                        stream = read(path_or_url=url)
+                        success = True
+                    except:
+                        success = False
+                    loadDlg.Destroy()
+                else:
+                    self.menu_p.str_page.pathTextCtrl.SetValue(url)
+                    mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
+                    maxtime = pydate2wxdate(datetime(2233,3,22))  # Kirk
+                    try:
+                        stream = self.openStream(path=url, mintime=mintime, maxtime=maxtime, extension='*')
+                        success = True
+                    except:
+                        success = False
+        except:
+                pass
+
+        if success:
+            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
+            if self.InitialRead(stream):
+                self.OnInitialPlot(self.plotstream)
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            self.changeStatusbar("Ready")
+        else:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            dlg = wx.MessageDialog(self, "Could not access URL!\n"
+                "please check address or your internet connection\n",
+                "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Loading url failed ... Ready")
+            dlg.Destroy()
 
     def OnOpenDB(self, event):
         # a) get all DATAINFO IDs and store them in a list
