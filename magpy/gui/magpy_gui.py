@@ -4894,6 +4894,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             Flag all data within the zoomed region
         """
 
+        debug = False
         flaglist = []
         sensid = self.plotstream.header.get('SensorID','')
         dataid = self.plotstream.header.get('DataID','')
@@ -4934,15 +4935,20 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 starttime =num2date(min(self.xlimits))
                 endtime = num2date(max(self.xlimits))
 
-                print ("FlagID:", flagid)
+                if debug:
+                    print ("GUI FlagID:", flagid, starttime, endtime)
                 flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
                 self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
+                if debug:
+                    print ("GUI Flaglist", flaglist)
 
         if len(flaglist) > 0:
             #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
             #print ("TEst", flaglist)
             self.flaglist.extend(flaglist)
             self.plotstream = self.plotstream.flag(flaglist)
+
+            #print ("GUI Flaglist", flaglist)
 
             self.ActivateControls(self.plotstream)
             #self.annotate = True

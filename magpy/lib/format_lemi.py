@@ -252,6 +252,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     timeshift = kwargs.get('timeshift')
     gpstime = kwargs.get('gpstime')
+    sectime = kwargs.get('sectime')
 
     #print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)"
     timediff = []
@@ -359,7 +360,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             # get GPSstate
             gpsstate = data[53]
 
-            if gpsstate == 'A':
+            #if gpsstate == 'A':
+            #if not sectime:
+            if not gpsstate == 'P' or not sectime:    # Verify these condiditions - particulary when comparing bufferfile and mqtt transmission
                 time = datetime(2000+h2d(data[5]),h2d(data[6]),h2d(data[7]),h2d(data[8]),h2d(data[9]),h2d(data[10]))  # Lemi GPS time
                 sectime = datetime(2000+data[55],data[56],data[57],data[58],data[59],data[60],data[61])+timedelta(microseconds=timeshift*1000.)                 # PC time
                 timediff.append((date2num(time)-date2num(sectime))*24.*3600.) # in seconds
@@ -410,6 +413,9 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     if gpstime and len(timediff) > 0:
         loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): %f sec +- %f" % (np.mean(timediff), np.std(timediff)))
         print("Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff))
+
+    if sectime:
+        print("Using NTP time as primary timestamp")
 
     for idx,ar in enumerate(array):
         if len(ar) > 0:

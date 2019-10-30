@@ -4523,6 +4523,7 @@ CALLED BY:
         flagnum = kwargs.get('flagnum')
         keystoflag = kwargs.get('keystoflag')
 
+        numuncert = 0.0000000001 # numerical uncertainty on different machines when using date2num()
 
         sensorid = self.header.get('SensorID')
         moddate = datetime.utcnow()
@@ -4559,7 +4560,7 @@ CALLED BY:
         if not above and not below:
             # return flags for all data in trimmed stream
             for elem in keystoflag:
-                flagline = [num2date(trimmedstream.ndarray[0][0]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][-1]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                flagline = [num2date(trimmedstream.ndarray[0][0]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][-1]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                 flaglist.append(flagline)
             return flaglist
 
@@ -4586,7 +4587,9 @@ CALLED BY:
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    # numerical uncertainty is subtracted from both time steps, as the flagging procedure (findtime) links
+                    # flags to the exact time stamp or, if not found, due to numerical diffs, to the next timestamp
+                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
         elif above:
             # TODO create True/False list and then follow the bin detector example
@@ -4611,7 +4614,7 @@ CALLED BY:
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
         elif below:
             # TODO create True/False the other way round
@@ -4636,7 +4639,7 @@ CALLED BY:
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(trimmedstream.ndarray[0][start]).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
                     flaglist.append(flagline)
 
         return flaglist
@@ -4687,6 +4690,8 @@ CALLED BY:
         sr = self.samplingrate()
         flagtimeprev = 0
         startflagtime = 0
+
+        numuncert = 0.0000000001 # numerical uncertainty on different machines when using date2num()
 
         if not timerange:
             sr = self.samplingrate()
@@ -4852,7 +4857,7 @@ CALLED BY:
         if len(flaglist)>0:
             #flaglist = sorted(flaglist, key=lambda x: x[0])
             for line in flaglist: 
-                newlist.append([num2date(line[0]).replace(tzinfo=None),num2date(line[1]).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
+                newlist.append([num2date(line[0]-numuncert).replace(tzinfo=None),num2date(line[1]-numuncert).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
         else:
             newlist = []
 
@@ -5355,7 +5360,7 @@ CALLED BY:
         pos = FLAGKEYLIST.index(key)
 
         if debug:
-            print("Flag",startdate, enddate)
+            print("flag_stream: Flag",startdate, enddate)
 
         start = date2num(startdate)
         end = date2num(enddate)
@@ -5380,7 +5385,7 @@ CALLED BY:
             # st is the starttime, ls ?   -- modification allow to provide key list!!
             if debug:
                 ti2 = datetime.utcnow()
-                print ("Findtime duration", ti2-ti1)
+                print ("flag_stream: findtime duration", ti2-ti1)
 
             #if debug:
             #    ti1 = datetime.utcnow()
@@ -5397,7 +5402,9 @@ CALLED BY:
             sti = st-2
             if sti < 0:
                 sti = 0
+
             ed, le = self.findtime(enddate,startidx=sti,mode='argmax')
+
             if ed == 0:
                 #print("Flag_stream: slowly end",ed)
                 if not sr == 0:

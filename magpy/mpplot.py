@@ -2269,12 +2269,12 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
                 linecrit = 2000
                 if len(a_t) > 0:
                     if len(a_t) > linecrit:
-                        ax.plot(a_t,a_y,'.',c='r') ## Use lines if a lot of data is marked
+                        ax.plot(a_t,a_y,'.',c='r', zorder=2) ## Use lines if a lot of data is marked
                     else:
                         ax.scatter(a_t,a_y,c='r')
                 if len(b_t) > 0:
                     if len(b_t) > linecrit:
-                        ax.plot(b_t,b_y,'.',c='orange')
+                        ax.plot(b_t,b_y,'.',c='orange', zorder=2)
                     else:
                         ax.scatter(b_t,b_y,c='orange')
                 if len(c_t) > 0:
