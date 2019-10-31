@@ -25,6 +25,7 @@ Installation instructions can be found on the main download page.
     + new cdf input and output libraries based on cdflib
     + coverage json support 
     + scroll bars in GUI panels
+    + general webservice support (currently for usgs and zamg)
 
 
 

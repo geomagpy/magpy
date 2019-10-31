@@ -133,45 +133,95 @@ class ConnectWebServiceDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.services = services
         self.default = default
+        defaultgroup = 'magnetism'
         self.servicelist = [el for el in services]
         self.selectedservice = default
+        self.selectedgroup = defaultgroup
+        self.grouplist = [el for el in self.services.get(self.selectedservice)]
+        #self.layoutlist = []
 
-        self.ids = services.get(default).get('ids')        
-        self.types = services.get(default).get('type')        
-        self.formats = services.get(default).get('format')        
+        self.ids = services.get(default).get(defaultgroup).get('ids')        
+        self.types = services.get(default).get(defaultgroup).get('type')        
+        self.formats = services.get(default).get(defaultgroup).get('format')        
+        self.sampling = services.get(default).get(defaultgroup).get('sampling')        
+        self.elements = services.get(default).get(defaultgroup).get('elements')        
+
         self.createControls()
+        #self.createUrl()
+        
         self.doLayout()
-        self.serviceComboBox.Bind(wx.EVT_COMBOBOX, self.update)
+        self.bindControls()
+
+        #self.serviceComboBox.Bind(wx.EVT_COMBOBOX, self.update)
 
     def createControls(self):
-        #self.urlLabel = wx.StaticText(self, label="Insert address (e.g.'https://geomag.usgs.gov/ws/edge/?id=BOU')",size=(500,30))
-        #self.urlTextCtrl = wx.TextCtrl(self, value=self.url,size=(500,30))
-        self.serviceLabel = wx.StaticText(self, label="Webservice source:",size=(400,20))
+        self.serviceLabel = wx.StaticText(self, label="Webservice source:",size=(400,25))
         self.serviceComboBox = wx.ComboBox(self, choices=self.servicelist,
             style=wx.CB_DROPDOWN, value=self.selectedservice,size=(400,-1))
-        self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,20))
+        self.groupLabel = wx.StaticText(self, label="Source:",size=(400,25))
+        self.groupComboBox = wx.ComboBox(self, choices=self.grouplist,
+            style=wx.CB_DROPDOWN, value=self.selectedgroup,size=(400,-1))
+        self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,25))
+        #self.obsIDName = wx.TextCtrl(self, value="id=",size=(400,25))
         self.idComboBox = wx.ComboBox(self, choices=self.ids,
             style=wx.CB_DROPDOWN, value=self.ids[0],size=(400,-1))
-        self.formatLabel = wx.StaticText(self, label="Format: ",size=(400,20))
+        #if self.selectedservice == 'conrad':
+        #    self.formatName = wx.TextCtrl(self, value="of=",size=(400,25))
+        #else:
+        #    self.formatName = wx.TextCtrl(self, value="format=",size=(400,25))
+        self.formatLabel = wx.StaticText(self, label="Format: ",size=(400,25))
         self.formatComboBox = wx.ComboBox(self, choices=self.formats,
             style=wx.CB_DROPDOWN, value=self.formats[0],size=(400,-1))
-        self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,20))
+        #self.typeName = wx.TextCtrl(self, value="type=",size=(400,25))
+        self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,25))
         self.typeComboBox = wx.ComboBox(self, choices=self.types,
             style=wx.CB_DROPDOWN, value=self.types[0],size=(400,-1))
-        self.sampleLabel = wx.StaticText(self, label="Sampling Period (1, 60, or 3600)",size=(400,20))
-        self.sampleTextCtrl = wx.TextCtrl(self, value='60',size=(400,30))
-        self.startTimeLabel = wx.StaticText(self, label="Start Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
-        #self.startTimeTextCtrl = wx.TextCtrl(self, value='2017-01-01T00:00:00Z',size=(400,30))
-        self.startDatePicker = wxDatePickerCtrl(self,size=(160,30))
-        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,30))
-        self.endTimeLabel = wx.StaticText(self, label="End Time (Format = YYYY-MM-DDTHH:MM:SSZ): ",size=(400,20))
-        #self.endTimeTextCtrl = wx.TextCtrl(self, value='2017-02-01T00:00:00Z',size=(400,30))
-        self.endDatePicker = wxDatePickerCtrl(self,size=(160,30))
-        self.endTimePicker = wx.TextCtrl(self, value='23:59:59',size=(160,30))
-        self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,20))
-        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,30))
+        #self.sampleName = wx.TextCtrl(self, value="sampling_period=",size=(400,25))
+        self.sampleLabel = wx.StaticText(self, label="Sampling Period (seconds):",size=(400,25))
+        self.sampleComboBox = wx.ComboBox(self, choices=self.sampling,
+            style=wx.CB_DROPDOWN, value=self.sampling[0],size=(400,-1))
+        #self.startName = wx.TextCtrl(self, value="starttime=",size=(400,25))
+        self.startTimeLabel = wx.StaticText(self, label="Start Time: ",size=(400,25))
+        self.startDatePicker = wxDatePickerCtrl(self,dt=wx.DateTime().Today(),size=(160,25))
+        self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,25))
+        #self.endName = wx.TextCtrl(self, value="endtime=",size=(400,25))
+        self.endTimeLabel = wx.StaticText(self, label="End Time: ",size=(400,25))
+        self.endDatePicker = wxDatePickerCtrl(self,dt=wx.DateTime().Today(), size=(160,25))
+        self.endTimePicker = wx.TextCtrl(self, value='23:59:59',size=(160,25))
+        #self.elementsName = wx.TextCtrl(self, value="elements=",size=(400,25))
+        self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,25))
+        self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,25))
+        #self.generatedLabel = wx.StaticText(self, label="Generated URL:",size=(400,25))
+        #self.generatedTextCtrl = wx.StaticText(self, value="",size=(400,25))
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,25))
+
+
+    def bindControls(self):
+        self.serviceComboBox.Bind(wx.EVT_TEXT, self.updateService)
+        self.groupComboBox.Bind(wx.EVT_TEXT, self.updateGroup)
+        """
+        #self.baseTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
+        self.elementsTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
+        self.elementsName.Bind(wx.EVT_TEXT, self.onChange)
+        #self.endDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChange)
+        self.endName.Bind(wx.EVT_TEXT, self.onChange)
+        self.endTimePicker.Bind(wx.EVT_TEXT, self.onChange)
+        self.formatComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
+        self.formatComboBox.Bind(wx.EVT_TEXT, self.onChange)
+        self.formatName.Bind(wx.EVT_TEXT, self.onChange)
+        #self.generatedTextCtrl.Bind(wx.EVT_TEXT, self.onOverride)
+        self.idComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
+        self.idComboBox.Bind(wx.EVT_TEXT, self.onChange)
+        self.obsIDName.Bind(wx.EVT_TEXT, self.onChange)
+        self.sampleName.Bind(wx.EVT_TEXT, self.onChange)
+        self.sampleTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
+        #self.startDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChange)
+        self.startName.Bind(wx.EVT_TEXT, self.onChange)
+        self.startTimePicker.Bind(wx.EVT_TEXT, self.onChange)
+        self.typeComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
+        self.typeComboBox.Bind(wx.EVT_TEXT, self.onChange)
+        """
 
 
     def doLayout(self):
@@ -185,9 +235,9 @@ class ConnectWebServiceDialog(wx.Dialog):
         emptySpace = ((0, 0), noOptions)
 
         elemlist = [(self.serviceLabel, noOptions),
-                 emptySpace,
+                 (self.groupLabel, dict()),
                  (self.serviceComboBox, expandOption),
-                 emptySpace,
+                 (self.groupComboBox, dict(flag=wx.EXPAND)),
                  (self.obsIDLabel, noOptions),
                  (self.formatLabel, noOptions),
                  (self.idComboBox, expandOption),
@@ -195,7 +245,11 @@ class ConnectWebServiceDialog(wx.Dialog):
                  (self.typeLabel, noOptions),
                  (self.sampleLabel, noOptions),
                  (self.typeComboBox, expandOption),
-                 (self.sampleTextCtrl, expandOption),
+                 (self.sampleComboBox, expandOption),
+                 (self.elementsLabel, noOptions),
+                 emptySpace,
+                 (self.elementsTextCtrl, expandOption),
+                 emptySpace,
                  (self.startTimeLabel, noOptions),
                  emptySpace,
                  (self.startDatePicker, expandOption),
@@ -204,12 +258,9 @@ class ConnectWebServiceDialog(wx.Dialog):
                  emptySpace,
                  (self.endDatePicker, expandOption),
                  (self.endTimePicker, expandOption),
-                 (self.elementsLabel, noOptions),
-                 emptySpace,
-                 (self.elementsTextCtrl, expandOption),
-                 emptySpace,
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
 
         # A GridSizer will contain the other controls:
         cols = 2
@@ -226,12 +277,38 @@ class ConnectWebServiceDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-    def update(self, event):
+
+    def createUrl(self):
+        # Not used any more - have chosen alternative to provide appropriate dictionary in init
+        # Known webservices can be added to initial dictionary
+        # Experimental or test sites can be opened by the "general url" method
+        pass
+
+    def getService(self):
         selectn = self.serviceComboBox.GetStringSelection()
-        self.selectedservice = selectn
-        self.ids = self.services.get(selectn).get('ids')        
-        self.types = self.services.get(selectn).get('type')        
-        self.formats = self.services.get(selectn).get('format')        
+        if selectn:
+            self.selectedservice = selectn
+        self.grouplist = [el for el in self.services.get(self.selectedservice)]
+
+        self.groupComboBox.Clear()
+        self.groupComboBox.AppendItems(self.grouplist) 
+        if not self.selectedgroup in self.grouplist:
+            self.selectedgroup = self.grouplist[0]
+        self.groupComboBox.SetValue(self.selectedgroup)
+
+
+    def getGroup(self):
+        selectg = self.groupComboBox.GetStringSelection()
+        if selectg:
+            self.selectedgroup = selectg
+        parameter = self.services.get(self.selectedservice).get(self.selectedgroup)
+
+        self.ids = parameter.get('ids')
+        self.types = parameter.get('type')
+        self.formats = parameter.get('format')
+        self.sampling = parameter.get('sampling')
+        self.elements = parameter.get('elements')
+
         self.idComboBox.Clear()
         self.idComboBox.AppendItems(self.ids) 
         self.idComboBox.SetValue(self.ids[0])
@@ -241,7 +318,18 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.formatComboBox.Clear()
         self.formatComboBox.AppendItems(self.formats) 
         self.formatComboBox.SetValue(self.formats[0])
-        
+        self.sampleComboBox.Clear()
+        self.sampleComboBox.AppendItems(self.sampling) 
+        self.sampleComboBox.SetValue(self.sampling[0])
+        self.elementsTextCtrl.Clear()
+        self.elementsTextCtrl.SetValue(self.elements)
+
+    def updateService(self, event):
+        self.getService()
+        self.getGroup()
+
+    def updateGroup(self, event):
+        self.getGroup()
 
 class LoadDataDialog(wx.Dialog):
     """

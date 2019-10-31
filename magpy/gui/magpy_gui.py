@@ -154,8 +154,9 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('defaultservice','') == '':
         optionsdict['defaultservice'] = 'conrad'
     if optionsdict.get('webservices','') == '':
-        optionsdict['webservices'] = {'usgs':{'address':'https://geomag.usgs.gov/ws/edge/','format':['iaga2002', 'json'],'ids':['BDT', 'BOU', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':['X,Y,Z,F'],'type':['variation', 'adjusted', 'quasi-definitive','definitive'],'group':[]}, 
-                                      'conrad': {'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':[],'type':['adjusted'],'group':['magnetism','meteo']}}
+        optionsdict['webservices'] = { 'usgs':{'magnetism':{'address':'https://geomag.usgs.gov/ws/edge/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['1','60','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']}}, 
+                                      'conrad': {'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']}} }
+
     if optionsdict.get('scalevalue','') == '':
         optionsdict['scalevalue'] = 'True'
     if optionsdict.get('double','') == '':
@@ -2131,8 +2132,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default)
         if dlg.ShowModal() == wx.ID_OK:
             # Create URL from inputs
-
-
             stday = dlg.startDatePicker.GetValue()
             sttime = str(dlg.startTimePicker.GetValue())
             if sttime.endswith('AM') or sttime.endswith('am'):
@@ -2152,6 +2151,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
             if start < end:
                 service = dlg.serviceComboBox.GetValue()
+                group = dlg.groupComboBox.GetValue()
                 obs_id = 'id=' + dlg.idComboBox.GetValue()
                 start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
                 end_time = '&endtime=' + ed + 'T' + entime + 'Z'
@@ -2161,25 +2161,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     file_format = '&format=' + dlg.formatComboBox.GetValue()
                 elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
                 data_type = '&type=' + dlg.typeComboBox.GetValue()
-                period = '&sampling_period=' + dlg.sampleTextCtrl.GetValue()
-                base = services.get(dlg.serviceComboBox.GetValue()).get('address')
+                period = '&sampling_period=' + dlg.sampleComboBox.GetValue()
+                base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
                 url = (base + '?' + obs_id + start_time + end_time + file_format +
                       elements + data_type + period)
                 #print ("Constructed url:", url)
-                #url = (base + '?' + obs_id)
                 self.options['defaultservice'] = service
             else:
                 msg = wx.MessageDialog(self, "Invalid time range!\n"
                     "The end time occurs before the start time.\n",
-                    "ConnectEdge", wx.OK|wx.ICON_INFORMATION)
+                    "Connect Webservice", wx.OK|wx.ICON_INFORMATION)
                 msg.ShowModal()
                 self.changeStatusbar("Loading from directory failed ... Ready")
                 msg.Destroy()
-
             self.changeStatusbar("Loading webservice data ... be patient")
         dlg.Destroy()
-
-        #print ("Constructed url:", url)
 
         try:
                 if not url.endswith('/'):
