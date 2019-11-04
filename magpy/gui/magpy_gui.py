@@ -4634,9 +4634,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.nb.RemovePage(4)
             self.menu_p.stats_page.Hide()
             self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
-<<<<<<< HEAD
         """
-=======
 
     def getComponent(self):
         """
@@ -4655,7 +4653,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.Destroy()
 
 
->>>>>>> 9791d0f... Make SelectFromListDialog close
     # ------------------------------------------------------------------------------------------
     # ################
     # Stream page functions

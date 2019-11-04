@@ -1748,7 +1748,7 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         else:
             plt.show()
 
-    """
+    #"""
     if axes:
         return ax
 
@@ -1764,7 +1764,7 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
             fig.savefig(outfile, format=fmt)
         else:
             return fig
-
+    #"""
 
 def magpySpecgram(x, NFFT=256, Fs=2, Fc=0, detrend=mlab.detrend_none,
              window=mlab.window_hanning, noverlap=128,
