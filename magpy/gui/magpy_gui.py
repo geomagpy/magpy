@@ -2219,13 +2219,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.changeStatusbar("Loading from directory failed ... Ready")
                 msg.Destroy()
 
-            self.changeStatusbar("Loading webservice data ... be patient")
-        dlg.Destroy()
-        """
-        <<<<<<< HEAD
-            self.changeStatusbar("Loading webservice data ... be patient")
-        dlg.Destroy()
 
+            self.changeStatusbar("Loading webservice data ... be patient")
+        dlg.Destroy()
         try:
                 if not url.endswith('/'):
                     loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
@@ -2248,11 +2244,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = False
         except:
                 pass
-=======
-            dlg.Destroy()
-
->>>>>>> 9791d0f... Make SelectFromListDialog close
-        """
 
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
@@ -2719,9 +2710,14 @@ Suite 330, Boston, MA  02111-1307  USA"""
              is displayed
         """
         if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
+            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+                    stream=self.plotstream.copy(),
+                    xlimits=self.plot_p.xlimits)
+            """
             self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
                     stream=self.plotstream.copy(),
                     xlimits=self.plot_p.xlimits)
+            """
 
     def UpdateCursorStatus(self, event):
         """Motion event for displaying values under cursor."""
