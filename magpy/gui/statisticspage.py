@@ -204,3 +204,4 @@ class StatisticsPage(wx.Panel):
             message = 'Cannot get statistics for time range.'
             self.statisticsTextCtrl.SetValue(message)
             self.valuesTextCtrl.SetValue(message)
+

@@ -896,11 +896,32 @@ class MenuPanel(scrolled.ScrolledPanel):
         nb.AddPage(self.abs_page, "DI")
         nb.AddPage(self.rep_page, "Report")
         nb.AddPage(self.com_page, "Live")
+        """
+        self.nb = wx.Notebook(self,-1)
+        self.str_page = StreamPage(self.nb)
+        self.fla_page = FlagPage(self.nb)
+        self.met_page = MetaPage(self.nb)
+        self.ana_page = AnalysisPage(self.nb)
+        self.abs_page = AbsolutePage(self.nb)
+        self.rep_page = ReportPage(self.nb)
+        self.com_page = MonitorPage(self.nb)
+        self.stats_page = StatisticsPa(self.nb)
+        self.nb.AddPage(self.str_page, "Stream")
+        self.nb.AddPage(self.fla_page, "Flagging")
+        self.nb.AddPage(self.met_page, "Meta")
+        self.nb.AddPage(self.ana_page, "Analysis")
+        self.nb.AddPage(self.stats_page, "Statistics")
+        self.nb.AddPage(self.abs_page, "DI")
+        self.nb.AddPage(self.rep_page, "Report")
+        self.nb.AddPage(self.com_page, "Monitor")
+        """
 
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.SetupScrolling()
+        #self.nb.RemovePage(4)
+        #self.stats_page.Hide()
 
 
 class MainFrame(wx.Frame):
@@ -916,6 +937,10 @@ class MainFrame(wx.Frame):
         self.stats_p = StatisticsPanel(self.sp)
         self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
         self.sp.Unsplit(self.stats_p)
+ 
+        #self.plot_p = PlotPanel(self.sp,-1)
+        #self.menu_p = MenuPanel(self.sp,-1)
+        #self.sp.SplitVertically(self.plot_p, self.menu_p, 800)
         pub.subscribe(self.changeStatusbar, 'changeStatusbar')
 
         # The Status Bar
@@ -2678,11 +2703,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.SetStatusText(msg)
 
     def updateStatistics(self, event=None):
+        """
+        DESCRIPTION
+             Updates and sets the statistics if the statistics page
+             is displayed
+        """
         if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
-            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
                     stream=self.plotstream.copy(),
                     xlimits=self.plot_p.xlimits)
-
 
     def UpdateCursorStatus(self, event):
         """Motion event for displaying values under cursor."""
@@ -4126,6 +4155,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitfunction'] = fitfunc
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
+            elif fitfunc.startswith('linear'):
+                fitfunc = 'least-squares'
 
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (fitfunc, knots, degree))
             if not 0<float(knots)<1:
@@ -4140,7 +4171,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['fitdegree'] = str(degree)
             if len(self.plotstream.ndarray[0]) > 0:
                 func = self.plotstream.fit(keys=keys,fitfunc=fitfunc,fitdegree=degree,knotstep=knots, starttime=starttime, endtime=endtime)
-                if isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
+                if fitfunc == 'none':
+                    self.plotopt['function'] = []
+                elif isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
                     self.plotopt['function'].append(func)
                 else:
                     self.plotopt['function'] = [func]
@@ -4507,8 +4540,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if fitfunc.startswith('poly'):
                 self.options['fitfunction'] = 'poly'
                 fitfunc = 'poly'
+            elif fitfunc.startswith('linear'):
+                fitfunc = 'least-squares'
+            baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
 
-            baselinefunc = self.plotstream.baseline(absstream,fitfunc=self.options.get('fitfunction','spline'), knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
             # add new stream, with baselinecorr
@@ -4596,6 +4631,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         mp.plotSpectrogram(self.plotstream, comp)
 
     def onStatsButton(self, event):
+        """
+        DESCRIPTION
+             Creates/Destroys the statistics element below main window
+             and sets the statistics
+        """
+
         status = self.menu_p.ana_page.statsButton.GetLabel()
         if status == 'Show Statistics':
             self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
@@ -4606,6 +4647,33 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if status == 'Hide Statistics':
             self.sp.Unsplit(self.stats_p)
             self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+
+        """
+        status = self.menu_p.ana_page.statsButton.GetLabel()
+        if status == 'Show Statistics':
+            # Remove last pages
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.abs_page.Hide()
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.rep_page.Hide()
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.com_page.Hide()
+            # Add new page next to the Analysis page
+            self.menu_p.nb.AddPage(self.menu_p.stats_page, "Statistics",
+                    True)
+            # Add back the last pages
+            self.menu_p.nb.AddPage(self.menu_p.abs_page, "DI")
+            self.menu_p.nb.AddPage(self.menu_p.rep_page, "Report")
+            self.menu_p.nb.AddPage(self.menu_p.com_page, "Monitor")
+            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
+                    stream=self.plotstream.copy(),
+                    xlimits=self.plot_p.xlimits)
+            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
+        if status == 'Hide Statistics':
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.stats_page.Hide()
+            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+        """
     # ------------------------------------------------------------------------------------------
     # ################
     # Stream page functions

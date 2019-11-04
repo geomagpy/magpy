@@ -2022,7 +2022,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.stream = stream
         self.options = options
         self.fitfunc = self.options.get('fitfunction','spline')
-        self.funclist = ['spline','polynomial']
+        self.funclist = ['spline','polynomial', 'linear least-squares', 'none']
         self.fitknots = self.options.get('fitknotstep','0.3')
         self.fitdegree = self.options.get('fitdegree','5')
         self.mintime = num2date(stream.ndarray[0][0])
@@ -2554,6 +2554,8 @@ class AnalysisBaselineDialog(wx.Dialog):
 
             if fitfunc.startswith('poly'):
                 fitfunc = 'poly'
+            elif fitfunc.startswith('linear'):
+                fitfunc = 'least-squares'
             self.options['fitfunction'] = fitfunc
 
             #self.menu_p.rep_page.logMsg('Fitting base values with %s, %s, %s' % (fitfunc, knots, degree))

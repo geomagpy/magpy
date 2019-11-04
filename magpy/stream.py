@@ -4210,7 +4210,7 @@ CALLED BY:
     Variables:
         - keys:         (list) Provide a list of keys to be fitted (e.g. ['x','y','z'].
     Kwargs:
-        - fitfunc:      (str) Options: 'poly', 'harmonic', 'spline', default='spline'
+        - fitfunc:      (str) Options: 'poly', 'harmonic', 'least-squares', 'spline', 'none', default='spline'
         - timerange:    (timedelta object) Default = timedelta(hours=1)
         - fitdegree:    (float) Default=5
         - knotstep:     (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
@@ -4305,7 +4305,11 @@ CALLED BY:
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
             x = arange(np.min(nt),np.max(nt),sp)
-            if len(val)>1 and fitfunc == 'spline':
+            #print len(x)
+            if len(val)<=1:
+                logger.warning('Fit: No valid data for key {}'.format(key))
+                break
+            elif fitfunc == 'spline':
                 try:
                     #logger.error('Interpolation: Testing knots (knotsteps = {}), (len(val) = {}'.format(knotstep, len(val)))
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
@@ -4324,19 +4328,23 @@ CALLED BY:
                 #print "X", x, np.min(nt),np.max(nt),sp
                 #print "TI", ti
                 f_fit = interpolate.splev(x,ti)
-            elif len(val)>1 and fitfunc == 'poly':
+            elif fitfunc == 'poly':
                 logger.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
                 ti = polyfit(nt, val, fitdegree)
                 f_fit = polyval(ti,x)
-            elif len(val)>1 and fitfunc == 'harmonic':
+            elif fitfunc == 'harmonic':
                 logger.debug('Selected harmonic fit - using inverse fourier transform')
                 f_fit = self.harmfit(nt, val, fitdegree)
                 # Don't use resampled list for harmonic time series
                 x = nt
-            elif len(val)<=1:
-                logger.warning('Fit: No valid data for key {}'.format(key))
-                break
-                #return
+            elif fitfunc == 'least-squares':
+                logger.debug('Selected linear least-squares fit')
+                A = np.vstack([nt, np.ones(len(nt))]).T
+                m, c, = np.linalg.lstsq(A, val)[0]
+                f_fit = m * x + c
+            elif fitfunc == 'none':
+                logger.debug('Selected no fit')
+                return
             else:
                 logger.warning('Fit: function not valid')
                 return
