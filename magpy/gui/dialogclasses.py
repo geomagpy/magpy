@@ -2494,6 +2494,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.idxlst = idxlst
         self.dictlst = dictlst
         self.absstreamlist = []
+
         for idx in idxlst:
             currentname = [el['filename'] for el in dictlst if str(el['streamidx']) == str(idx)][0]
             line = str(idx)+': '+currentname

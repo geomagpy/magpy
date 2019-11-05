@@ -1492,7 +1492,13 @@ class MainFrame(wx.Frame):
         if formattype == 'MagPyDI':
             filename = self.menu_p.str_page.fileTextCtrl.GetValue()
             basedict = {'startdate':mintime,'enddate':maxtime, 'filename':filename, 'streamidx':len(self.streamlist)-1}
-            self.baselinedictlst.append(basedict)
+            # Check if such an input is already existing... if not append to baselinelst
+            basedictexisting = False
+            for tempdict in self.baselinedictlst:
+                if basedict.get('startdate') == tempdict.get('startdate') and basedict.get('enddate') == tempdict.get('enddate') and basedict.get('filename') == tempdict.get('filename'):
+                    basedictexisting = True
+            if not basedictexisting:
+                self.baselinedictlst.append(basedict)
 
         def checkbaseline(baselinedictlst, sensorid, mintime, maxtime):
             """
@@ -4508,14 +4514,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
             basedict = tmpbasedict[0]
             ## TODO extract all baseline parameters here
             fitfunc = self.options.get('fitfunction','spline')
-            """
+
             if fitfunc.startswith('poly'):
                 self.options['fitfunction'] = 'poly'
                 fitfunc = 'poly'
             elif fitfunc.startswith('linear'):
                 fitfunc = 'least-squares'
-            """
-            print ("TEST", fitfunc, self.options.get('fitknotstep'), self.options.get('fitdegree'), absstream.length()[0])
 
             baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
 
