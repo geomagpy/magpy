@@ -210,6 +210,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                     stream.header["col-f"] = 'F'
                 else:
                     stream.header["col-f"] = 'F'
+                #print ("VAR", varstr)
                 if varstr in ['dhzf','dhzg']:
                     #stream.header["col-x"] = 'H'
                     #stream.header["col-y"] = 'D'
@@ -217,9 +218,10 @@ def readIAGA(filename, headonly=False, **kwargs):
                     stream.header["unit-col-y"] = 'deg'
                     stream.header['DataComponents'] = 'HDZF'
                 elif varstr in ['ehzf','ehzg']:
-                    #stream.header["col-x"] = 'H'
-                    #stream.header["col-y"] = 'E'
-                    #stream.header["col-z"] = 'Z'
+                    # consider the different order in the file
+                    stream.header["col-x"] = 'H'
+                    stream.header["col-y"] = 'E'
+                    stream.header["col-z"] = 'Z'
                     stream.header['DataComponents'] = 'HEZF'
                 elif varstr in ['dhif','dhig']:
                     stream.header["col-x"] = 'I'
