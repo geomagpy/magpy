@@ -2398,11 +2398,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         print ("Writing PYCDF data")  # add function here
                         addflags = False
                         # Test whether flags are present at all
-                        dlg = wx.MessageDialog(self, 'Compress? (selecting "NO" improves compatibility between different operating systems', 'Compression', wx.YES_NO | wx.ICON_QUESTION)
+                        cdlg = wx.MessageDialog(self, 'Compress? (selecting "NO" improves compatibility between different operating systems', 'Compression', wx.YES_NO | wx.ICON_QUESTION)
                         compression = 0
-                        if dlg.ShowModal() == wx.ID_YES:
+                        if cdlg.ShowModal() == wx.ID_YES:
                             compression = 5
-                        dlg.Destroy()
+                        cdlg.Destroy()
                         self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
@@ -2416,10 +2416,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         print ("Writing IMAGCDF data")  # add function here
                         addflags = False
                         # Test whether flags are present at all
-                        dlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-                        if dlg.ShowModal() == wx.ID_YES:
+                        fdlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+                        if fdlg.ShowModal() == wx.ID_YES:
                             addflags = True
-                        dlg.Destroy()
+                        fdlg.Destroy()
                         self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
@@ -2444,6 +2444,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()
+
 
     def _db_connect(self, host, user, passwd, dbname):
         try:

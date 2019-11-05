@@ -1598,7 +1598,7 @@ class StreamFlagSelectionDialog(wx.Dialog):
         self.comment = ''
         self.createControls()
         self.doLayout()
-        print ("Dialog open", shownkeylist, keylist)
+        #print ("Dialog open", shownkeylist, keylist)
 
     # Widgets
     def createControls(self):
