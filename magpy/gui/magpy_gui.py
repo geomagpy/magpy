@@ -4547,7 +4547,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.changeStatusbar("Delta F ...")
 
         self.plotstream = self.plotstream.delta_f()
-        self.streamlist[self.currentstreamindex].delta_f()
+        #self.streamlist[self.currentstreamindex].delta_f()
         #print (self.plotstream._get_key_headers())
         if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
             self.shownkeylist.append('df')
@@ -4579,11 +4579,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if cont:
             self.changeStatusbar("Calculating F from components ...")
 
-            self.plotstream = self.plotstream.calc_f()
-            self.streamlist[self.currentstreamindex].calc_f()
+            self.plotstream = self.plotstream.calc_f(skipdelta=True)
+            #self.streamlist[self.currentstreamindex].calc_f()
             #print (self.plotstream._get_key_headers())
             if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
                 self.shownkeylist.append('f')
+            if 'df' in self.plotstream._get_key_headers():
+                self.plotstream = self.plotstream.delta_f()
             self.menu_p.rep_page.logMsg('- determined f from x,y,z')
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
