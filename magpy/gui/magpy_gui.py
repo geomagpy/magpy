@@ -4515,7 +4515,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif fitfunc.startswith('linear'):
                 fitfunc = 'least-squares'
             """
-            print ("TEST", fitfunc, self.options.get('fitknotstep'), self.options.get('fitdegree'), absstream.length([0]))
+            print ("TEST", fitfunc, self.options.get('fitknotstep'), self.options.get('fitdegree'), absstream.length()[0])
 
             baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
 

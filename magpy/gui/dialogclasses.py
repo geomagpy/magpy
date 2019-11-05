@@ -5542,9 +5542,9 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             else:
                 self.streamkeylist[name] = shownkeylist
 
-        # update
-        buttonname = self.namelst[name]
-        exec('self.'+str(buttonname)+'KeyButton.SetLabel("Keys: '+",".join(shownkeylist)+'")')
+            # update
+            buttonname = self.namelst[name]
+            exec('self.'+str(buttonname)+'KeyButton.SetLabel("Keys: '+",".join(shownkeylist)+'")')
 
     def OnMergeButton(self, event):
         """
