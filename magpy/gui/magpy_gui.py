@@ -4562,16 +4562,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
         DESCRIPTION
              Calculates delta F values
         """
-        self.changeStatusbar("Calculating F from components ...")
 
-        self.plotstream = self.plotstream.calc_f()
-        self.streamlist[self.currentstreamindex].calc_f()
-        #print (self.plotstream._get_key_headers())
-        if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
-            self.shownkeylist.append('f')
-        self.menu_p.rep_page.logMsg('- determined f from x,y,z')
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
+        cont = True
+        if 'f' in self.plotstream._get_key_headers():
+            existdlg = wx.MessageDialog(self, "F data already existing\n"
+                        "Replace with vector sum?\n".format(time),
+                        "F data existing", wx.YES_NO|wx.ICON_INFORMATION)
+            if existdlg.ShowModal() == wx.ID_YES:
+                existdlg.Destroy()
+                #self.Close(True)
+            else:
+                existdlg.Destroy()
+                #self.Close(True)
+                cont = False
+
+        if cont:
+            self.changeStatusbar("Calculating F from components ...")
+
+            self.plotstream = self.plotstream.calc_f()
+            self.streamlist[self.currentstreamindex].calc_f()
+            #print (self.plotstream._get_key_headers())
+            if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
+                self.shownkeylist.append('f')
+            self.menu_p.rep_page.logMsg('- determined f from x,y,z')
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
     def onPowerButton(self, event):
@@ -4947,16 +4962,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.DeactivateAllControls()
             self.changeStatusbar("No data available")
             return False
-        print ("Restoring (works only for latest stream):", self.currentstreamindex)
+        #print ("Restoring (works only for latest stream):", self.currentstreamindex, len(self.streamlist), self.stream.length()[0], self.streamlist[self.currentstreamindex].length()[0])
         #print ("Header", self.headerlist)
-        #self.plotstream = self.streamlist[self.currentstreamindex].copy()
-        self.plotstream = self.stream.copy()
+        self.plotstream = self.streamlist[self.currentstreamindex].copy()
+        #self.plotstream = self.stream.copy()
         self.plotstream.header = self.headerlist[self.currentstreamindex]
 
         self.menu_p.rep_page.logMsg('Original data restored...')
         #self.InitPlotParameter()
         #self.ActivateControls(self.stream)
-        self.OnInitialPlot(self.stream, restore=True)
+        self.OnInitialPlot(self.plotstream, restore=True)
 
     def onDailyMeansButton(self,event):
         """
