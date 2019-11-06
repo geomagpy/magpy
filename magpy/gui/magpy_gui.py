@@ -1624,7 +1624,8 @@ class MainFrame(wx.Frame):
 
         if 'x' in keys and 'y' in keys and 'z' in keys:
             self.menu_p.ana_page.rotationButton.Enable()      # activate if vector appears to be present
-            self.menu_p.ana_page.activityButton.Enable()      # activate if vector appears to be present
+            if (maxtime - mintime > 1.1) and sr < 61:  # test if enough time is covered and sampling rate is appropriate
+                self.menu_p.ana_page.activityButton.Enable()      # activate if vector appears to be present
             self.menu_p.ana_page.calcfButton.Enable()    # activate if vector present
             if 'f' in keys and not 'df' in keys:
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
@@ -4732,20 +4733,38 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         stday = self.menu_p.str_page.startDatePicker.GetValue()
         sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
-        if sttime.endswith('AM') or sttime.endswith('am'):
-            sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-        if sttime.endswith('pm') or sttime.endswith('PM'):
-            sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-        sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+        try:
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered startdate is not valid.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+
         start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = str(self.menu_p.str_page.endTimePicker.GetValue())
-        if entime.endswith('AM') or entime.endswith('am'):
-            entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-        if entime.endswith('pm') or entime.endswith('PM'):
-            #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
-            entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-        ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+        try:
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered enddate is not valid.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+
         end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
         #print ("Range", start, end)
 
