@@ -7,6 +7,7 @@ Uses mainly two classes
 - AbsStruct (contains a single measurement, is extended by variation and scalar data, used for calculation)
 Calculation returns a data stream with absolute and baseline values for any selected variometer
 
+TEST REPORT in GERMAN/ENGLISH MIX:
 Systematische Tests:
 1.  (11/2013, OK) Laden von Raw-Datem
 2.  Laden von alten Raw-Daten
@@ -313,16 +314,18 @@ class AbsoluteData(object):
         """
         DEFINITION:
             check whether variometer/scalar data is available for each time step
-            of DI data (within 2* samplingrate diff 
+            of DI data (within 2* samplingrate diff)
         """
         # 1. Drop all data without value
         samprate = datastream.samplingrate()
         for key in keys:
             datastream = datastream._drop_nans(key)
         if not datastream.length()[0] > 1:
-            return False        
+            return False
+
         # 2. Get time column
         timea = np.asarray(datastream._get_column('time'))
+
         # 3. Get time column of DI data
         timeb = np.asarray([el.time for el in self])
         # 4. search
@@ -792,7 +795,7 @@ class AbsoluteData(object):
         #     1. check Absolute file - no delta F -> use delta F from abs file
         #     2. check Scalar path
         #     3. check provided annual means
-        #     4. TODO basevalue is calculated at time t0 
+        #     4. TODO basevalue is calculated at time t0
         #        -> According to Juerges excel sheet only D is determined at t0
         #        -> I and F are averages within time range of DI meas
         # ###################################
@@ -1008,7 +1011,7 @@ class AbsoluteData(object):
         EZI3 = EZI3/2.
 
         i1list = [np.abs(elem) for elem in i1list]
-          
+
         #print "Collimation", S0I1, S0I2, S0I3, EZI1, EZI2, EZI3
         # Variometer correction to start time is missing for f value and inc ???
         inc = np.mean(i1list)*180.0/np.pi + deltaI
@@ -1204,7 +1207,7 @@ class AbsoluteData(object):
             - scalevalue:       (list of floats) scalevalues for each component (e.g. default = [1,1,1])
             - debugmode:        (bool) activate additional debug output -- !!!!!!! removed and replaced by loggin !!!!!
             - printresults      (bool) - if True print results to screen
-            - meantime          (bool) if true, values are recalculated to nearest 
+            - meantime          (bool) if true, values are recalculated to nearest
                                        horizontal measurement to average time
 
         USED BY:
@@ -1622,6 +1625,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #filelist.append(absdata)
             if "://" in absdata:
                 print("Found URL code - requires name of data set with date")
+                if "observation.json" in absdata:
+                    dataformat = 'JSONABS'
                 filelist.append(absdata)
                 movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
             elif os.path.isfile(absdata):
@@ -1641,7 +1646,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 #print ("Found List")
                 listlen = len(absdata)
                 for elem in absdata:
-                    if "://" in absdata:
+                    if "://" in elem:
+                        if "observation.json" in elem:
+                            dataformat = 'JSONABS'
                         print("Found URL code - requires name of data set with date")
                         filelist.append(elem)
                         movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
@@ -1672,9 +1679,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     failinglist.append(elem)
 
         datelist = list(set(datelist))
-        #print (datelist)
-        #sys.exit()
-
 
     datetimelist = [datetime.strptime(elem,'%Y-%m-%d') for elem in datelist]
 
@@ -1813,7 +1817,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         print ("-- beta provided manually")
                 except:
                     print("Applying rotation parameters failed")
-              
+
             try:
                 variostr = variostr.remove_flagged()
                 print("Flagged records of variodata have been removed")
@@ -1829,12 +1833,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 valalpha = 0.0
             else:
                 valalpha = float(alpha)
-                print ("Rotating vector with manually provided alpha", valalpha) 
+                print ("Rotating vector with manually provided alpha", valalpha)
             if not beta:
                 valbeta = 0.0
             else:
                 valbeta = float(beta)
-                print ("Rotating vector with manually provided beta", valbeta) 
+                print ("Rotating vector with manually provided beta", valbeta)
             variostr =variostr.rotation(alpha=valalpha, beta=valbeta)
             #alpha = None
             #beta = None
@@ -2037,7 +2041,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             deltaD = float(res.get('deltaD','0.00001'))
                         except:
                             deltainputs = val.split(',')
-                            lastval = deltainputs[-1] 
+                            lastval = deltainputs[-1]
                             deltaD = float(lastval.split('_')[2])
                     except:
                         deltaD = 0.0
@@ -2070,7 +2074,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     elif not alpha == None:
                         alphavaluetobeadded = alpha
                     if not result.str4 == '':
-                        result.str4 = result.str4 + ","    
+                        result.str4 = result.str4 + ","
                     result.str4 += "alpha_" + str(alphavaluetobeadded)
                 #print("absolutes", result.str4, valbeta, beta)
                 if valbeta != 0 or beta:
@@ -2081,7 +2085,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     elif not beta == 0:
                         betavaluetobeadded = beta
                     if not result.str4 == '':
-                        result.str4 = result.str4 + ","    
+                        result.str4 = result.str4 + ","
                     result.str4 += "beta_" + str(betavaluetobeadded)
                 #print("absolutes", result.str4)
             except:
@@ -2157,6 +2161,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     #print "outfile"
     #print resultstream.ndarray
+    if varioid == scalarid:
+        # TODO Check this line
+        stationid = varioid
 
     # 3.1 Header information
     # --------------------
@@ -2169,7 +2176,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['unit-col-x'] = 'deg'
     resultstream.header['col-y'] = 'd'
     resultstream.header['unit-col-y'] = 'deg'
-    resultstream.header['col-z'] = 'f'
+    resultstream.header['col-z'] = 'f'  # F into column-z to allow coordinate conversions (e.g. idf2xyz)
     resultstream.header['unit-col-z'] = 'nT'
     resultstream.header['col-f'] = 'f'
     resultstream.header['unit-col-f'] = 'nT'

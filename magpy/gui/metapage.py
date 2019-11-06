@@ -109,5 +109,6 @@ class MetaPage(wx.Panel):
         mainSizer.Add(self.sensorTextCtrl, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.MetaStationButton, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.stationTextCtrl, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+        mainSizer.AddSpacer(60)
         self.SetSizerAndFit(mainSizer)
 

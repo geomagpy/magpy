@@ -119,6 +119,7 @@ class AbsolutePage(wx.Panel):
         self.centred_text = wx.StaticText(self, label="DI Analysis Log:")
         mainSizer.Add(self.centred_text, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.dilogTextCtrl, 0, wx.ALIGN_LEFT | wx.ALL, 3)
+        #mainSizer.AddSpacer(60)
 
         self.SetSizerAndFit(mainSizer)
 

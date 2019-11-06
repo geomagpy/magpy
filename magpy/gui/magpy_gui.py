@@ -1462,6 +1462,7 @@ class MainFrame(wx.Frame):
         # Essential header info
         comps = stream.header.get('DataComponents','')[:3]
         sensorid = stream.header.get('SensorID','')
+        stationid = stream.header.get('StationID','')
         dataid = self.plotstream.header.get('DataID','')
         formattype = self.plotstream.header.get('DataFormat','')
         absinfo = self.plotstream.header.get('DataAbsInfo',None)
@@ -1500,7 +1501,7 @@ class MainFrame(wx.Frame):
             if not basedictexisting:
                 self.baselinedictlst.append(basedict)
 
-        def checkbaseline(baselinedictlst, sensorid, mintime, maxtime):
+        def checkbaseline(baselinedictlst, sensorid, mintime, maxtime, stationid=None):
             """
               DESCRIPTION:
                 check whether valid baseline info is existing
@@ -1631,7 +1632,7 @@ class MainFrame(wx.Frame):
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
             if not formattype == 'MagPyDI':
                 #print ("Checking baseline info")
-                self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime)
+                self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime, stationid)
                 if len(self.baselineidxlst) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
 
@@ -2746,13 +2747,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             time = datetime.strftime(num2date(time),"%Y-%m-%d %H:%M:%S %Z")
         except:
             time = num2date(time)
-        for elem in self.shownkeylist:
-            ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
-            ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
-            if ll < pickY < ul:
-                possible_key += elem
-                possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
         try:
+            for elem in self.shownkeylist:
+                ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
+                ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
+                if ll < pickY < ul:
+                    possible_key += elem
+                    possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
             idy = (np.abs(possible_val - pickY)).argmin()
             key = possible_key[idy]
             val = possible_val[idy]
@@ -2761,7 +2762,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 key = colname
             self.changeStatusbar("time: " + str(time) + "  |  " + key + " data value: " + str(val))
         except:
-            pass
+            self.changeStatusbar("time: " + str(time) + "  |  ? data value: ?")
 
     def OnCheckOpenLog(self, event):
         """
@@ -5935,6 +5936,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
                 #self.plotoptlist.append(self.plotopt)
+                if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
+                    self.menu_p.abs_page.ClearLogButton.Enable()
+                    self.menu_p.abs_page.SaveLogButton.Enable()
             else:
                 if absstream:
                     self.ActivateControls(self.plotstream)

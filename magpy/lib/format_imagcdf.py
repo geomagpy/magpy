@@ -464,7 +464,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
             if not 'df' in keylst:
-                 print ("writeIMAGCDF: Found F column") # check whether F or S
+                 #print ("writeIMAGCDF: Found F column") # check whether F or S
                  comps = datastream.header.get('DataComponents')
                  if not comps.endswith('S'):
                      print ("writeIMAGCDF: given components are {}. Checking F column...".format(datastream.header.get('DataComponents')))
