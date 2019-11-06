@@ -13,11 +13,13 @@ try:
     from wx import DatePickerCtrl as wxDatePickerCtrl
     from wx import DP_DEFAULT as wxDP_DEFAULT
     from wx import MULTIPLE as wxMULTIPLE
+    from wx import EmptyBitmap as wxBitmap
 except:
     # wx 4.x
     from wx.adv import DatePickerCtrl as wxDatePickerCtrl
     from wx.adv import DP_DEFAULT as wxDP_DEFAULT
     from wx import FD_MULTIPLE as wxMULTIPLE
+    from wx import Bitmap as wxBitmap
 
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -437,17 +439,18 @@ class ExportDataDialog(wx.Dialog):
     def createControls(self):
         # single anaylsis
         # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        self.selectDirButton = wx.Button(self, label='Change Directory', size=(160,30))
+        self.selectDirButton = wx.Button(self, label='Change directory', size=(190,30))
         self.selectedTextCtrl = wx.TextCtrl(self, value=self.path, size=(300,30))
         self.formatLabel = wx.StaticText(self, label="as ...")
         self.formatComboBox = wx.ComboBox(self, choices=self.WriteFormats,
-            style=wx.CB_DROPDOWN, value=self.WriteFormats[self.default],size=(160,-1))
+            style=wx.CB_DROPDOWN, value=self.WriteFormats[self.default],size=(190,-1))
         self.selectLabel = wx.StaticText(self, label="Export data to ...")
         self.nameLabel = wx.StaticText(self, label="File name(s) looks like ...")
+        self.modifyLabel = wx.StaticText(self, label="Change name/coverage/...")
         self.filenameTextCtrl = wx.TextCtrl(self, value=self.filename, size=(300,30))
-        self.modifyButton = wx.Button(self, label='Modify name(s)', size=(160,30))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Write', size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
+        self.modifyButton = wx.Button(self, label='Export options', size=(190,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Write', size=(190,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(190,30))
 
         self.filenameTextCtrl.Disable()
         self.selectedTextCtrl.Disable()
@@ -470,7 +473,7 @@ class ExportDataDialog(wx.Dialog):
                  (self.formatLabel, noOptions),
                  (self.formatComboBox, expandOption),
                  (self.nameLabel, noOptions),
-                  emptySpace,
+                 (self.modifyLabel, noOptions),
                  (self.filenameTextCtrl, expandOption),
                  (self.modifyButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.okButton, dict(flag=wx.ALIGN_CENTER)),
@@ -5676,7 +5679,7 @@ style=wx.CAPTION | wx.STAY_ON_TOP)
         box = wx.BoxSizer(wx.VERTICAL)
         box2 = wx.BoxSizer(wx.HORIZONTAL)
         # Add an Info graphic
-        bitmap = wx.EmptyBitmap(32, 32)
+        bitmap = wxBitmap(32, 32)
         try:
             bitmap = wx.ArtProvider_GetBitmap(wx.ART_INFORMATION,
 wx.ART_MESSAGE_BOX, (32, 32))

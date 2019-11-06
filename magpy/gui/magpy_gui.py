@@ -2385,6 +2385,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 export = True
 
             if export == True:
+                if filenamebegins == '':
+                     filenamebegins='youforgottodefineafilename'
+
                 try:
                     if fileformat == 'BLV':
                         print ("Writing BLV data")  # add function here
@@ -2423,10 +2426,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         print ("Writing IMAGCDF data")  # add function here
                         addflags = False
                         # Test whether flags are present at all
-                        fdlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-                        if fdlg.ShowModal() == wx.ID_YES:
-                            addflags = True
-                        fdlg.Destroy()
+                        if self.flaglist and len(self.flaglist) > 0:
+                            fdlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+                            if fdlg.ShowModal() == wx.ID_YES:
+                                addflags = True
+                            fdlg.Destroy()
                         self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
