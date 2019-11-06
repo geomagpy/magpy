@@ -338,7 +338,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         elif key.startswith('col-') or key.startswith('unit-'):
             pass
         else:
-            globalAttrs[key.replace('Data','',1)] = { 0 : headers.get(key) }
+            globalAttrs[key.replace('Data','',1)] = { 0 : str(headers.get(key)) }
+
 
     ## 1. Fixed Part -- current version is 1.2
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
@@ -406,6 +407,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         except:
             print ("writeIMAGCDF: Asigning StandardName Failed")
 
+
     proj = headers.get('DataLocationReference','')
     longi = headers.get('DataAcquisitionLongitude','')
     lati = headers.get('DataAcquisitionLatitude','')
@@ -436,6 +438,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     if not 'StationIagaCode' in headers and 'StationID' in headers:
         globalAttrs['IagaCode'] = { 0 : headers.get('StationID','')}
+
 
     mycdf.write_globalattrs(globalAttrs)    
 

@@ -287,7 +287,7 @@ def writePYCDF(datastream, filename, **kwargs):
             if not key.find('col-') >= 0:
                 #print (key, headdict[key])
                 if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
-                    globalAttrs[key] = { 0 : headdict[key] }
+                    globalAttrs[key] = { 0 : str(headdict[key]) }
                 else:
                     logger.info("writePYCDF: Found Object in header - pickle and dump ")
                     pfunc = pickle.dumps(headdict[key])
