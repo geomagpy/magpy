@@ -2122,8 +2122,8 @@ def dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
     getminmaxtimesql = "Select MIN(time),MAX(time) FROM " + tablename
     cursor.execute(getminmaxtimesql)
     rows = cursor.fetchall()
-    #print (rows)
-    loggerdatabase.info("stream2DB: Table now covering a time range from " + str(rows[0][0]) + " to " + str(rows[0][1]))
+    # Eventually switch to debug level
+    #loggerdatabase.info("stream2DB: Table {} now covering a time range from {} to {}".format(tablename,str(rows[0][0]),str(rows[0][1])))
     # removed columncontents and units from update
     updatedatainfotimesql = 'UPDATE DATAINFO SET DataMinTime = "' + rows[0][0] + '", DataMaxTime = "' + rows[0][1] +'", ColumnContents = "' + colstr +'", ColumnUnits = "' + unitstr +'" WHERE DataID = "'+ tablename + '"'
     #print updatedatainfotimesql
