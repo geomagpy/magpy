@@ -5781,7 +5781,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         if os.path.isfile(dipathlist):
             dipathlist = os.path.split(dipathlist)[0]
 
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist)
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist, db=self.db)
+        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
         dlg.ShowModal()
         if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
             self.menu_p.rep_page.logMsg("- loaded DI data")

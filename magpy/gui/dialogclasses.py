@@ -2771,22 +2771,31 @@ class LoadDIDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, dirname):
+    def __init__(self, parent, title, dirname, db):
         super(LoadDIDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.pathlist = []
         self.dirname = dirname
+        self.db = db
+        self.sources = ['general','conrad','usgs']
+        self.mainsource = self.sources[0]
         self.createControls()
         self.doLayout()
         self.bindControls()
 
     # Widgets
     def createControls(self):
-        self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(160,30))
-        self.loadDBButton = wx.Button(self,-1,"Use DB Table",size=(160,30))
-        self.loadRemoteButton = wx.Button(self,-1,"Get from Remote",size=(160,30))
+        self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(210,30))
+        self.loadDBButton = wx.Button(self,-1,"Select Database",size=(210,30))
+        self.loadRemoteButton = wx.Button(self,-1,"Select Webservice/Remote",size=(210,30))
+        self.remoteComboBox = wx.ComboBox(self, choices=self.sources,
+                 style=wx.CB_DROPDOWN, value=self.mainsource,size=(160,-1))
+        self.fileTextCtrl = wx.TextCtrl(self,value="",size=(160,-1)) # manual, autodif -> if autudif request azimuth
+        self.databaseTextCtrl = wx.TextCtrl(self,value="",size=(160,-1)) # currently conected to
+
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
-        self.loadDBButton.Disable()
+        if not self.db:
+            self.loadDBButton.Disable()
         self.loadRemoteButton.Disable()
 
     def doLayout(self):
@@ -2802,13 +2811,18 @@ class LoadDIDialog(wx.Dialog):
         # Add the controls to the sizers:
         contlst=[]
         contlst.append((self.loadFileButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.fileTextCtrl, expandOption))
         contlst.append((self.loadDBButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.databaseTextCtrl, expandOption))
         contlst.append((self.loadRemoteButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.remoteComboBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
         # A GridSizer will contain the other controls:
-        cols = 1
+        cols = 2
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
@@ -2836,12 +2850,75 @@ class LoadDIDialog(wx.Dialog):
         self.Close(True)
 
     def OnLoadDIDB(self,e):
-        #self.dirname = ''
-        stream = DataStream()
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
+        # 1. check whether data is accessible
+        if not self.db:
+            dlg = wx.MessageDialog(self, "Could not access database!\n"
+                        "please check your connection\n",
+                        "Get DI data from database", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.Close(True)
+            return
+        # 2. Identify all tables with DIDATA_xxx
+        if self.db:
+            cursor = self.db.cursor()
+            sql = "SHOW TABLES LIKE 'DIDATA\_%'"
+            cursor.execute(sql)
+            tablelist = cursor.fetchall()
+            ditables = [el[0] for el in tablelist]
+            #print ("Test", ditables)
+            if len(ditables) < 1:
+                dlg = wx.MessageDialog(self, "No DI tables available!\n"
+                            "please check your database\n",
+                            "Get DI data from database", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+                self.Close(True)
+                return
+        # 3. check contents of DIDATA_Obscode 
+        if self.db:
+            cursor = self.db.cursor()
+            # cycle through all tables
+            didatadict = {}
+            for table in ditables:
+                dicont = {}
+                try:
+                    stationid = table.split('_')[1]
+                except:
+                    stationid = 'None'
+                sql = "SELECT DIID, Pier, Observer, StartTime FROM {}".format(table)
+                cursor.execute(sql)
+                output = cursor.fetchall()
+                piers = list(set([el[1] for el in output]))
+                observers = list(set([el[2] for el in output]))
+                output = [[el[0],el[1],el[2],datetime.strptime(el[3],"%Y-%m-%d %H:%M:%S")] for el in output]
+                #
+                # get unique list of piers and observers
+                #   
+                dicont['piers'] = piers
+                dicont['observers'] = observers
+                dicont['data'] = output
+                didatadict[stationid] = dicont
+                #print ("Test", piers)
+                #print ("Test", observers)
+
+
+        #4. if didatadict existing
+        # open a new selection window with station id, pier and observer combos
+        # update start and endtime plus aoumt of available data upon selection
+
+        # option 1: create temporary files from each selected DIID and return a pointer to this temporary filelist
+        # option 2: obtain diline structure directly
+
+        dlg = DIConnectDatabaseDialog(None, title='Obtaining DI data from database', db=self.db, didict=didatadict, options={})
         if dlg.ShowModal() == wx.ID_OK:
-            self.pathlist = dlg.GetPaths()
+            # Create URL from inputs
+            stday = dlg.startDatePicker.GetValue()
+            # Obtain DiLineSruct of all selected DI ata
+            #absolutes = db2diline(db,starttime="2013-01-01",sql="Pier='A2' AND Observer=''")
+
         dlg.Destroy()
+
         self.Close(True)
 
     def OnLoadDIRemote(self,e):
@@ -2852,6 +2929,206 @@ class LoadDIDialog(wx.Dialog):
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
         self.Close(True)
+
+
+class DIConnectDatabaseDialog(wx.Dialog):
+    """
+    Helper method to connect to edge
+    Select shown keys
+    """
+    def __init__(self, parent, title, db, didict, options):
+        super(DIConnectDatabaseDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.db = db
+        self.didict = didict
+        self.opt = options # get default pier etc from this list
+        self.stations = [el for el in didict]
+        defaultstation = 'WIC'
+        if defaultstation in self.stations:
+            self.defaultstation = defaultstation
+        else:
+            self.defaultstation = self.stations[0]
+        defaultpier = 'A2'
+        self.stationdict = self.getStationData(didict.get(self.defaultstation), pier=defaultpier)
+        self.createControls()        
+        self.doLayout()
+        self.bindControls()
+
+    def createControls(self):
+        self.stationsLabel = wx.StaticText(self, label="Available stations:",size=(400,25))
+        self.stationsComboBox = wx.ComboBox(self, choices=self.stations,
+            style=wx.CB_DROPDOWN, value=self.defaultstation,size=(400,-1))
+        self.piersLabel = wx.StaticText(self, label="Piers:",size=(400,25))
+        self.piersComboBox = wx.ComboBox(self, choices=self.stationdict.get('piers'),
+            style=wx.CB_DROPDOWN, value=self.stationdict.get('selectedpier'),size=(400,-1))
+        self.observersLabel = wx.StaticText(self, label="Observers:",size=(400,25))
+        self.observersComboBox = wx.ComboBox(self, choices=self.stationdict.get('observers'),
+            style=wx.CB_DROPDOWN, value=self.stationdict.get('selectedobserver'),size=(400,-1))
+
+        self.amountLabel = wx.StaticText(self, label="Selected DI datasets:",size=(400,25))
+        self.amountTextCtrl = wx.TextCtrl(self,value=self.stationdict.get('amount'),size=(160,-1))
+
+        self.startTimeLabel = wx.StaticText(self, label="Start Time: ",size=(400,25))
+        self.startDatePicker = wxDatePickerCtrl(self,dt=self.stationdict.get('mindate'),size=(160,25)) #wx.DateTime().Today()
+        self.startTimePicker = wx.TextCtrl(self, value=self.stationdict.get('mintime'),size=(160,25))
+
+        self.endTimeLabel = wx.StaticText(self, label="End Time: ",size=(400,25))
+        self.endDatePicker = wxDatePickerCtrl(self,dt=self.stationdict.get('maxdate'), size=(160,25))
+        self.endTimePicker = wx.TextCtrl(self, value=self.stationdict.get('maxtime'),size=(160,25))
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Continue',size=(160,25))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,25))
+
+
+    def bindControls(self):
+        self.stationsComboBox.Bind(wx.EVT_TEXT, self.update)
+        self.piersComboBox.Bind(wx.EVT_TEXT, self.update)
+        self.observersComboBox.Bind(wx.EVT_TEXT, self.update)
+        self.startDatePicker.Bind(wx.EVT_TEXT, self.update)
+        self.endDatePicker.Bind(wx.EVT_TEXT, self.update)
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        elemlist = [(self.stationsLabel, noOptions),
+                 (self.stationsComboBox, expandOption),
+                 (self.piersLabel, dict()),
+                 (self.piersComboBox, dict(flag=wx.EXPAND)),
+                 (self.observersLabel, noOptions),
+                 (self.observersComboBox, expandOption),
+                 (self.amountLabel, noOptions),
+                 (self.amountTextCtrl, expandOption),
+                 (self.startTimeLabel, noOptions),
+                 emptySpace,
+                 (self.startDatePicker, expandOption),
+                 (self.startTimePicker, expandOption),
+                 (self.endTimeLabel, noOptions),
+                 emptySpace,
+                 (self.endDatePicker, expandOption),
+                 (self.endTimePicker, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=5, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def pydate2wxdate(self,date):
+        assert isinstance(date, (datetime, date))
+        tt = date.timetuple()
+        dmy = (tt[2], tt[1]-1, tt[0])
+        return wx.DateTimeFromDMY(*dmy)
+ 
+    def wxdate2pydate(self,date):
+        assert isinstance(date, wx.DateTime)
+        if date.IsValid():
+             ymd = map(int, date.FormatISODate().split('-'))
+             return datetime.date(*ymd)
+        else:
+             return None
+
+    def getLimits(self, data):
+        timecol = [el[3] for el in data]
+        mindatetime = min(timecol)
+        maxdatetime = max(timecol)
+        mintime = datetime.strftime(mindatetime,"%H:%M:%S")
+        mindate = self.pydate2wxdate(mindatetime)
+        maxtime = datetime.strftime(maxdatetime,"%H:%M:%S")
+        maxdate = self.pydate2wxdate(maxdatetime)
+        return mintime, maxtime, mindate, maxdate
+
+
+    def getStationData(self, content, pier=None, observer=None, mindatetime=None, maxdatetime=None):
+        # returns a stationdict with data, mintime, maxtime, amount
+        stationdict = {}
+        data = content.get('data')
+        orgdata = data
+        stationdict['piers'] = content.get('piers')
+        observerlist = ['all']
+        observerlist.extend(content.get('observers'))
+        stationdict['observers'] = observerlist
+        stationdict['amount'] = str(len(content.get('data')))
+        stationdict['selectedobserver'] = 'all'
+
+        if pier:
+             if pier in stationdict['piers']:
+                 stationdict['selectedpier'] = pier
+             else:
+                 stationdict['selectedpier'] = stationdict.get('piers')[0]
+             data = [el for el in data if el[1] == stationdict.get('selectedpier')]
+             stationdict['observers'] = list(set([el[2] for el in data]))
+        else:
+             stationdict['selectedpier'] = stationdict['piers'][0]
+        if observer and not observer == 'all':
+             if observer in stationdict['observers']:
+                 stationdict['selectedobserver'] = observer
+                 data = [el for el in data if el[2] == stationdict.get('selectedobserver')]
+                 stationdict['piers'] = list(set([el[1] for el in orgdata if el[2] == observer]))
+        else:
+             stationdict['selectedobserver'] = 'all'
+        if mindatetime:
+             data = [el for el in data if el[3] >= mindatetime]
+        if maxdatetime:
+             data = [el for el in data if el[3] <= maxdatetime]
+
+        stationdict['id'] = [el[0] for el in data]
+        stationdict['amount'] = str(len(data))
+        stationdict['mintime'], stationdict['maxtime'], stationdict['mindate'], stationdict['maxdate'] = self.getLimits(data)
+        return stationdict
+
+    def dt(self, wxval,wxstr):
+        tl = wxstr.split(':')
+        if wxval and len(tl) == 3:
+            return datetime(wxval.GetYear(), wxval.GetMonth()+1, wxval.GetDay(), int(tl[0]), int(tl[1]), int(tl[2]))
+        elif wxval:
+            return datetime(wxval.GetYear(), wxval.GetMonth()+1, wxval.GetDay())
+        else:
+            return None
+
+    def update(self, event):
+        station = self.stationsComboBox.GetValue()
+        if not station:
+            station = self.defaultstation
+        pier = self.piersComboBox.GetValue()
+        obs = self.observersComboBox.GetValue()
+        content = self.didict.get(station)
+        midate = self.dt(self.startDatePicker.GetValue(),self.startTimePicker.GetValue())
+        madate = self.dt(self.endDatePicker.GetValue(),self.endTimePicker.GetValue())
+
+        self.stationdict = self.getStationData(content, pier=pier, observer=obs, mindatetime=midate, maxdatetime=madate)
+
+        self.amountTextCtrl.Clear()
+        self.amountTextCtrl.SetValue(self.stationdict.get('amount'))
+        self.endTimePicker.Clear()
+        self.endTimePicker.SetValue(self.stationdict.get('maxtime'))
+        self.endDatePicker.SetValue(self.stationdict.get('maxdate'))
+        self.startTimePicker.Clear()
+        self.startTimePicker.SetValue(self.stationdict.get('mintime'))
+        self.startDatePicker.SetValue(self.stationdict.get('mindate'))
+        self.piersComboBox.Clear()
+        self.piersComboBox.AppendItems(self.stationdict.get('piers')) 
+        self.observersComboBox.Clear()
+        self.observersComboBox.AppendItems(self.stationdict.get('observers')) 
 
 
 class DefineVarioDialog(wx.Dialog):
