@@ -6522,6 +6522,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
 
     def onStartMonitorButton(self, event):
         self.DeactivateAllControls()
+        self.MainMenu.EnableTop(0, False)
+        self.MainMenu.EnableTop(1, False)
+        self.MainMenu.EnableTop(2, False)
+        self.MainMenu.EnableTop(3, False)
+        self.MainMenu.EnableTop(4, False)
+        self.MainMenu.EnableTop(5, False)
         self.menu_p.com_page.getMARTASButton.Disable()
         self.menu_p.com_page.getMARCOSButton.Disable()
         #self.menu_p.com_page.getMQTTButton.Disable()
@@ -6596,6 +6602,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
         self.shownkeylist = self.UpdatePlotCharacteristics(self.plotstream)
         self.plotoptlist.append(self.plotopt)
         self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.MainMenu.EnableTop(0, True)
+        self.MainMenu.EnableTop(1, True)
+        self.MainMenu.EnableTop(2, True)
+        self.MainMenu.EnableTop(3, True)
+        self.MainMenu.EnableTop(4, True)
+        self.MainMenu.EnableTop(5, True)
 
         self.menu_p.com_page.getMARTASButton.Enable()
         self.menu_p.com_page.getMARCOSButton.Enable()
