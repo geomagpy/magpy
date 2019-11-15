@@ -79,8 +79,8 @@ def readIAGA(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
 
-    # Check whether header infromation is already present
-    headers = {}
+    # Check whether header information is already present
+    stream.header = {}
     data = []
     key = None
 

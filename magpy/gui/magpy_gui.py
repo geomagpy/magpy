@@ -1720,8 +1720,10 @@ class MainFrame(wx.Frame):
 
         self.plotstream = self.stream.copy()
         currentstreamindex = len(self.streamlist)
-        self.streamlist.append(self.stream)
-        self.headerlist.append(self.stream.header)
+        #self.streamlist.append(self.stream)
+        self.streamlist.append(stream)
+        #self.headerlist.append(self.stream.header)
+        self.headerlist.append(stream.header)
         self.currentstreamindex = currentstreamindex
         # Moved the following to InitialPlot
         #self.streamkeylist.append(self.stream._get_key_headers())
