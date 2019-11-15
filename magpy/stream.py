@@ -2430,6 +2430,8 @@ CALLED BY:
             bas = bas.extrapolate(basestarttime,baseendtime)
 
         #keys = ['dx','dy','dz']
+
+        print ("BASELINE-FIT", keys,fitfunc,fitdegree,knotstep, bas.length()[0], num2date(bas.ndarray[0][0]), num2date(bas.ndarray[0][-1]))
         try:
             logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
             #print ("Baseline", bas.length(), keys)

@@ -3194,13 +3194,20 @@ def db2diline(db,**kwargs):
         distruct.t = di[10]
         distruct.scaleflux =  di[11]
         distruct.scaleangle =  di[12]
-        distruct.azimuth =  di[13]
+        try:
+            distruct.azimuth =  float(di[13])
+        except:
+            distruct.azimuth =  di[13]
         distruct.person =  di[14]
         distruct.pier =  di[15]
         distruct.di_inst =  di[16]
         distruct.f_inst =  di[17]
         distruct.fluxgatesensor =  di[18]
-        distruct.inputdate =  stream._testtime(di[19])
+        try:
+            distruct.inputdate =  stream._testtime(di[19])
+        except:
+            # no input data for AUTODIF
+            distruct.inputdate =  num2date(np.nanmean(distruct.time)).replace(tzinfo=None)
         resultlist.append(distruct)
 
     return resultlist

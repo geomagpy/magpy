@@ -1415,6 +1415,27 @@ class MainFrame(wx.Frame):
         keys = stream._get_key_headers()
         keystr = ','.join(keys)
 
+
+        def compare_dicts(d1, d2, ignore_keys):
+            """
+            # https://stackoverflow.com/questions/10480806/compare-dictionaries-ignoring-specific-keys
+            used for checking existance of baseline parameters
+            """
+            if {k: v for k,v in d1.items() if k not in ignore_keys} == {k: v for k,v in d2.items() if k not in ignore_keys}:
+                return True
+            else:
+                return False
+            """
+            ignored = set(ignore_keys)
+            for k1, v1 in d1.iteritems():
+                if k1 not in ignored and (k1 not in d2 or d2[k1] != v1):
+                    return False
+            for k2, v2 in d2.iteritems():
+                if k2 not in ignored and k2 not in d1:
+                    return False
+            return True
+            """
+
         if len(self.shownkeylist) == 0:   ## Initiaize self.shownkeylist if not yet done
             keylist = [elem for elem in keys if elem in NUMKEYLIST]
             self.shownkeylist = keylist[:9]
@@ -1465,6 +1486,12 @@ class MainFrame(wx.Frame):
         stationid = stream.header.get('StationID','')
         dataid = self.plotstream.header.get('DataID','')
         formattype = self.plotstream.header.get('DataFormat','')
+        ### Formattype is not ideal for discriminating MagPyDI data contents as they can also be in CDF format
+        ### Therefore use DataType in future: beginning with 11/2019
+        contenttype = self.plotstream.header.get('DataType','')  # e.g. MagPyDI1.0
+
+        print ("Activating stream again: formattype={}".format(formattype))
+
         absinfo = self.plotstream.header.get('DataAbsInfo',None)
         metadatatext = ''
         metasensortext = ''
@@ -1490,16 +1517,36 @@ class MainFrame(wx.Frame):
                  metastationtext += "{}: \t{}\n".format(key.replace('Station',''),stream.header.get(key,'')) #key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
 
         # Append baselineinfo to baselinedictlist
-        if formattype == 'MagPyDI':
-            filename = self.menu_p.str_page.fileTextCtrl.GetValue()
-            basedict = {'startdate':mintime,'enddate':maxtime, 'filename':filename, 'streamidx':len(self.streamlist)-1}
+        if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
+            print ("HERE ---- MagPyDI")
+            #filename = self.menu_p.str_page.fileTextCtrl.GetValue()   # don't use filename as this is not changing when selecting earlier data
+            if not sensorid and not dataid:
+                basename = self.menu_p.str_page.fileTextCtrl.GetValue() #"{}_{}_{}".format(sensorid,int(mintime),int(maxtime))
+            elif dataid:
+                basename = dataid
+            else:
+                basename = sensorid
+            # Obtain the correct stream idx function
+            print (self.currentstreamindex)
+
+            #streamidx = len(self.streamlist)-1
+            streamidx = self.currentstreamindex
+
+            basedict = {'startdate':num2date(mintime).replace(tzinfo=None),'enddate':num2date(maxtime).replace(tzinfo=None), 'filename':basename, 'streamidx': streamidx, 'function': self.options.get('fitfunction'), 'knotstep': self.options.get('fitknotstep'), 'degree': self.options.get('fitdegree')} #, 'function': self.options.get('fitfunction')}
+            print (basedict)
+
             # Check if such an input is already existing... if not append to baselinelst
             basedictexisting = False
+            print ("BEFORE", len(self.baselinedictlst))
             for tempdict in self.baselinedictlst:
-                if basedict.get('startdate') == tempdict.get('startdate') and basedict.get('enddate') == tempdict.get('enddate') and basedict.get('filename') == tempdict.get('filename'):
+                print (tempdict.get('filename'), tempdict, basedict)
+                if compare_dicts(basedict, tempdict, ['streamidx']):
                     basedictexisting = True
             if not basedictexisting:
                 self.baselinedictlst.append(basedict)
+                print ("Extending baseline data sets")
+                # If I am extending the baseline data set, then first of all, this stream needs also be added to the 
+            print ("After", len(self.baselinedictlst))
 
         def checkbaseline(baselinedictlst, sensorid, mintime, maxtime, stationid=None):
             """
@@ -4149,6 +4196,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
                     params['fitfuncname'], params['knots'], params['degree']))
             if len(self.plotstream.ndarray[0]) > 0:
+                #print ("BASELINE-FIT in FITFUNC", keys,params['fitfunc'],params['degree'],params['knots'], self.plotstream.length()[0], num2date(self.plotstream.ndarray[0][0]), num2date(self.plotstream.ndarray[0][-1]))
+
                 func = self.plotstream.fit(keys=keys,
                         fitfunc=params['fitfunc'],
                         fitdegree=params['degree'], knotstep=params['knots'],
@@ -4502,24 +4551,36 @@ Suite 330, Boston, MA  02111-1307  USA"""
              Calculates baseline correction
         """
         self.changeStatusbar("Baseline adoption ...")
+        if self.plotstream.header.get('DataAbsInfo'):
+            #print ("Baseline has been calculated already - existing adopted baseline will be replaced")
+            existdlg = wx.MessageDialog(self, "Baseline date already connected to timeseries\n"
+                        "Append new data (YES) or replace (No)\n".format(time),
+                        "Baseline data existing", wx.YES_NO|wx.ICON_INFORMATION)
+            if existdlg.ShowModal() == wx.ID_NO:
+                self.plotstream.header['DataAbsInfo'] = ''
+                self.plotstream.header['DataBaseValues'] = None
+            existdlg.Destroy()
+
         dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
         # open dlg which allows to choose baseline data stream, function and parameters
         # Drop down for baseline data stream (idx: filename)
         # Text window describing baseline parameter
         # button to modify baseline parameter
         #print ("BASELINEDICT CoNTENTS:", self.baselinedictlst,self.baselineidxlst)
-
         if dlg.ShowModal() == wx.ID_OK:
             # return active stream idx ()
             #print ("Here", dlg.absstreamComboBox.GetStringSelection())
             #print ("Here2", dlg.absstreamComboBox.GetValue())
-            idx = int(dlg.absstreamComboBox.GetValue().split(':')[0])
             self.options = dlg.options
-            absstream = self.streamlist[idx]
-            tmpbasedict = [el for el in self.baselinedictlst if el['streamidx']==idx]
-            basedict = tmpbasedict[0]
-            ## TODO extract all baseline parameters here
-            fitfunc = self.options.get('fitfunction','spline')
+            starttime = dlg.starttime
+            endtime = dlg.endtime
+            basedict = dlg.selecteddict # tmpbasedict[0]
+            #idx = basedict.get('streamidx') #int(dlg.absstreamComboBox.GetValue().split(':')[0])
+            absstream = self.streamlist[int(basedict.get('streamidx'))]
+            fitfunc = basedict.get('function','spline')
+            knotstep = basedict.get('knotstep',0.3)
+            degree = basedict.get('degree',5)
+            #fitfunc = self.options.get('fitfunction','spline')
 
             if fitfunc.startswith('poly'):
                 self.options['fitfunction'] = 'poly'
@@ -4527,7 +4588,15 @@ Suite 330, Boston, MA  02111-1307  USA"""
             elif fitfunc.startswith('linear'):
                 fitfunc = 'least-squares'
 
-            baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
+            # Obtain the dates from the dialog
+            if not dlg.starttime:
+                starttime, endtime = absstream._find_t_limits()
+                #print ("TIMES", starttime, endtime)
+
+            #print ("CHECK BAS DATES", num2date(absstream.ndarray[0][0]),num2date(absstream.ndarray[0][-1]))
+            #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
+            print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
+            baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)
 
             #keys = self.shownkeylist
             self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
@@ -4538,7 +4607,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
-            
+
+            print ("SET", self.plotstream.header.get('DataAbsInfo'))
+
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
             self.changeStatusbar("BC function available - Ready")
@@ -5027,6 +5098,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         Apply baselinecorrection
         """
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
         self.plotstream = self.plotstream.bc()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.plotstream)
@@ -5655,8 +5727,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 d = locals()
                 for key in DATAINFOKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        self.plotstream.header[key] = d['value']
+                    try:
+                        if not d['value'] == dlg.header.get(key,''):
+                            self.plotstream.header[key] = d['value']
+                    except:
+                        # might fail for arrays
+                        pass
                 self.ActivateControls(self.plotstream)
         else:
             self.menu_p.rep_page.logMsg("Meta information: No data available")
@@ -5776,6 +5852,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         if isinstance(self.dipathlist, str):
             dipathlist = self.dipathlist
+        elif isinstance(self.dipathlist, dict):
+            dipathlist = "DB"
         else:
             dipathlist = self.dipathlist[0]
         if os.path.isfile(dipathlist):
@@ -5786,13 +5864,17 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg.ShowModal()
         if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
             self.menu_p.rep_page.logMsg("- loaded DI data")
-            self.menu_p.abs_page.diTextCtrl.SetValue(','.join(dlg.pathlist))
             self.dipathlist = dlg.pathlist
-            if os.path.isfile(dlg.pathlist[0]):
-                dlgpath = os.path.split(dlg.pathlist[0])[0]
-            else:
-                dlgpath = dlg.pathlist[0]
-            self.options['dipathlist'] = [dlgpath]
+            if isinstance(self.dipathlist,list):
+                self.menu_p.abs_page.diTextCtrl.SetValue(','.join(self.dipathlist))
+                if os.path.isfile(dlg.pathlist[0]):
+                    dlgpath = os.path.split(dlg.pathlist[0])[0]
+                else:
+                    dlgpath = dlg.pathlist[0]
+                self.options['dipathlist'] = [dlgpath]
+            elif isinstance(self.dipathlist,dict):
+                info = "{}: from {}, {} dataset(s)".format(self.dipathlist.get('station'),self.dipathlist.get('source'),len(self.dipathlist.get('absdata')))
+                self.menu_p.abs_page.diTextCtrl.SetValue(info)
             self.menu_p.abs_page.AnalyzeButton.Enable()
         dlg.Destroy()
 
@@ -5883,18 +5965,52 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
             deltaI = 0.0
 
+        #def azimuthcheck(absdata, azimuth):
+        #    """
+        #    DESCRIPTION:
+        #        Test function to check whether an azimuth is provided and
+        #        whether the stored azimuth is different from the manually given
+        #        (in case valid values are found in both) 
+        #    !! Only works if absdatastruct has been directly provided
+        #    """
+        #    newaz = 0.0
+        #    az1 = absdata.azimuth
+        #    az2 = azimuth
+        #    # Open dialog
+        #    return newaz
+
         if len(self.dipathlist) > 0:
-            self.changeStatusbar("Processing DI data ... please be patient")
-            #absstream = absoluteAnalysis(self.dipathlist,self.divariopath,self.discalarpath, expD=self.diexpD,expI=self.diexpI,diid=self.diid,stationid=self.stationid,abstype=self.ditype, azimuth=self.diazimuth,pier=self.dipier,alpha=self.dialpha,deltaF=self.dideltaF, dbadd=self.didbadd)
+            # Identify source -> Future version: use absolutClass which contains raw data
+            #                    and necessary variation,scalar data
             prev_redir = sys.stdout
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
 
-            if not azimuth == '':
-                azimuth = float(azimuth)
-                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+            if isinstance(self.dipathlist,dict):
+                self.changeStatusbar("Processing DI data ... please be patient")
+                stationid = self.dipathlist.get('station')
+                starttime = self.dipathlist.get('mindatetime')
+                endtime = self.dipathlist.get('maxdatetime')
+                pier = self.dipathlist.get('selectedpier')
+                abstable = "DIDATA_{}".format(stationid.upper())
+                absdata = self.dipathlist.get('absdata')
+                ## TODO add an azimuth check here
+                #azimuth = [el.azimuth for el in absdata]
+                #print (azimuth)
+                # Please NOte: observer selection does not yet work #  db=self.db
+                absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,absstruct=True)
+
+            elif isinstance(self.dipathlist,list):
+                self.changeStatusbar("Processing DI data from file(s) ... please be patient")
+
+                if not azimuth == '':
+                    azimuth = float(azimuth)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+                else:
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
             else:
-                absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
+                print ("Could not identify absolute data")
+                absstream = DataStream()
 
             try:
                 if not divariopath == '' and not discalapath == '': 

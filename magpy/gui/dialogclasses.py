@@ -2496,14 +2496,40 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.keylist = keylist
         self.idxlst = idxlst
         self.dictlst = dictlst
+        self.activedict = self.dictlst[-1]
+        self.starttime = None
+        self.endtime = None
         self.absstreamlist = []
 
+        print ("GOTIDXLIST", idxlst)
+        for idx, ele in enumerate(dictlst):
+            #st = num2date(ele.get('startdate')).replace(tzinfo=None)
+            #et = num2date(ele.get('enddate')).replace(tzinfo=None)
+            st = ele.get('startdate')
+            et = ele.get('enddate')
+            line = "{}: {}_{}_{}".format(str(idx),ele.get('filename'),datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d")) 
+            self.absstreamlist.append(line)
+            self.starttime = st  # as the last one is selected by default
+            self.endtime = et 
+
+        """
         for idx in idxlst:
-            currentname = [el['filename'] for el in dictlst if str(el['streamidx']) == str(idx)][0]
-            line = str(idx)+': '+currentname
+            currentname = [(el['filename'],el) for el in dictlst if str(el['streamidx']) == str(idx)][0]
+            st = num2date(currentname[1].get('startdate')).replace(tzinfo=None)
+            et = num2date(currentname[1].get('enddate')).replace(tzinfo=None)
+            #datetime.strftime(st,"%Y%m%d)
+            line = "{}: {}_{}_{}".format(str(idx),currentname[0],datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d")) 
             if not line in self.absstreamlist:
                 self.absstreamlist.append(line)
-        self.parameterstring = "Function: {}\nKnotstep: {}\nDegree: {}\n".format(self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''))
+                # get start and end date from last dict input
+                self.starttime = st 
+                self.endtime = et 
+        print ("DICTLIST", dictlst)
+        """
+
+        self.selecteddict = dictlst[-1]
+
+        self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndttime: {}\n".format(self.starttime, self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),self.endtime)
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -2517,30 +2543,26 @@ class AnalysisBaselineDialog(wx.Dialog):
         assert isinstance(date, (datetime, datetime.date))
         tt = date.timetuple()
         dmy = (tt[2], tt[1]-1, tt[0])
-        return wx.DateTimeFromDMY(*dmy)
+        try:
+            return wx.DateTime.FromDMY(*dmy)
+        except:
+            return wx.DateTimeFromDMY(*dmy)
 
     # Widgets
     def createControls(self):
-        self.absstreamLabel = wx.StaticText(self, label="Select basevalue data:",size=(160,30))
+        self.absstreamLabel = wx.StaticText(self, label="Select basevalue data:",size=(190,30))
         self.absstreamComboBox = wx.ComboBox(self, choices=self.absstreamlist,
-            style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(160,-1))
-        self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(160,30))
-        self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(300,90),
+            style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(190,-1))
+        self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(190,30))
+        self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(300,120),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.parameterButton = wx.Button(self, label='Change fit ...',size=(160,30))
+        self.parameterButton = wx.Button(self, label='Change fit ...',size=(190,30))
 
-        self.okButton = wx.Button(self, wx.ID_OK, label='Adopt baseline',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Adopt baseline',size=(190,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(190,30))
 
         if PLATFORM.startswith('linux'):
             self.parameterTextCtrl.Disable()
-        #self.funcLabel = wx.StaticText(self, label="Fit function:")
-        #self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
-        #    style=wx.CB_DROPDOWN, value=self.fitfunc)
-        #self.knotsLabel = wx.StaticText(self, label="Knots [e.g. 0.5  (0..1)] (spline only):")
-        #self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots)
-        #self.degreeLabel = wx.StaticText(self, label="Degree [e.g. 1, 2, 345, etc.] (polynomial only):")
-        #self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree)
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2575,15 +2597,16 @@ class AnalysisBaselineDialog(wx.Dialog):
 
     def bindControls(self):
         self.parameterButton.Bind(wx.EVT_BUTTON, self.OnParameter)
+        self.absstreamComboBox.Bind(wx.EVT_TEXT, self.OnUpdate)
 
     def OnParameter(self, e):
         # open fit dlg
         idx = int(self.absstreamComboBox.GetValue().split(':')[0])
-        streamidx = int(self.absstreamComboBox.GetValue().split(':')[0])
-        for idx in range(len(self.dictlst)):
-            if self.dictlst[idx]['streamidx'] == streamidx:
-                index = idx
-                break
+        #streamidx = int(self.absstreamComboBox.GetValue().split(':')[0])
+        #for idx in range(len(self.dictlst)):
+        #    if self.dictlst[idx]['streamidx'] == streamidx:
+        #        index = idx
+        #        break
 
         dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
         startdate=self.dictlst[idx].get('startdate')
@@ -2597,20 +2620,50 @@ class AnalysisBaselineDialog(wx.Dialog):
         dlg.endFitTimePicker.SetValue(endtime)
         """
 
-        dlg.setTimeRange(startdate, enddate)
+        dlg.setTimeRange(date2num(startdate), date2num(enddate))
 
         if dlg.ShowModal() == wx.ID_OK:
             params = dlg.getFitParameters()
             self.options['fitfunction'] = params['fitfunc']
             self.options['fitknotstep'] = str(params['knots'])
             self.options['fitdegree'] = str(params['degree'])
-            self.parameterstring = "Adopted Baseline 1: \nStarttime: {}, Function: {}, Knotstep: {}, Degree: {}, Endtime: {}\n".format(params['starttime'],
+            self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndtime: {}\n".format(params['starttime'],
                     self.options.get('fitfunction',''),
                     self.options.get('fitknotstep',''),
                     self.options.get('fitdegree',''),
                     params['endtime'])
             self.parameterTextCtrl.SetValue(self.parameterstring)
+            self.starttime = params['starttime']
+            self.endtime = params['endtime']
+            self.selecteddict['function'] = params['fitfunc']
+            self.selecteddict['knotstep'] = str(params['knots'])
+            self.selecteddict['degree'] = str(params['degree'])
         dlg.Destroy()
+
+    def OnUpdate(self, e):
+        # open fit dlg
+        idx = int(self.absstreamComboBox.GetValue().split(':')[0])
+        #streamidx = int(self.absstreamComboBox.GetValue().split(':')[0])
+        self.selecteddict = self.dictlst[idx]
+        print (idx, self.selecteddict)
+        #for idx in range(len(self.dictlst)):
+        #    if self.dictlst[idx]['streamidx'] == streamidx:
+        #        index = idx
+        #        break
+        self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndtime: {}\n".format(self.selecteddict.get('startdate'),
+                    self.selecteddict.get('function',''),
+                    self.selecteddict.get('knotstep',''),
+                    self.selecteddict.get('degree',''),
+                    self.selecteddict.get('enddate'))
+        print (self.parameterstring)
+        self.starttime=self.dictlst[idx].get('startdate')
+        self.endtime=self.dictlst[idx].get('enddate')
+        ## also add funtional parameters to the dictionary
+        self.parameterTextCtrl.Clear()
+        self.parameterTextCtrl.SetValue(self.parameterstring)
+
+
+
 
 class AnalysisFlagsDialog(wx.Dialog):
     """
@@ -2777,6 +2830,7 @@ class LoadDIDialog(wx.Dialog):
         self.pathlist = []
         self.dirname = dirname
         self.db = db
+        self.absolutes = []
         self.sources = ['general','conrad','usgs']
         self.mainsource = self.sources[0]
         self.createControls()
@@ -2840,12 +2894,84 @@ class LoadDIDialog(wx.Dialog):
         self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDIDB)
         self.loadRemoteButton.Bind(wx.EVT_BUTTON, self.OnLoadDIRemote)
 
+    def LoadFiles(self, pathlist, stationid=None, azimuth=None, pier=None, source='file'):
+        """
+        DESCRIPTION
+            internal method to load all files from a list
+            and create a absdata list
+        """
+        didict = {}
+        abslist = []
+        datelist, pierlist = [], []
+        for elem in pathlist:
+            if elem.endswith('.json'):
+                absst = readJSONABS(elem)
+                #print ("Json", absst)
+            else:
+                # get pier from filename
+                tmpname = os.path.split(elem)[1].split('.')[0].split('_')
+                try:
+                    pier = tmpname[-2]
+                except:
+                    #pier = self.options.get('pier')
+                    pass
+                try:
+                    stationid = tmpname[-1]
+                except:
+                    #stationid = self.options.get('stationid')
+                    pass
+
+                absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
+                #print ("File", absst)
+
+            try: 
+                if not len(absst) > 1: # Manual
+                    stream = absst[0].getAbsDIStruct()
+                    abslist.append(absst)
+                    datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
+                    pierlist.append(absst[0].pier)
+                else: # AutoDIF
+                    for a in absst:
+                        stream = a.getAbsDIStruct()
+                        abslist.append(a)
+                        datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
+                        pierlist.append(a.pier)
+                #print "absoluteAnalysis: Successful analyse of %s" % elem
+                #successlist.append(elem)
+            except:
+                print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
+                #failinglist.append(elem)
+                # TODO Drop that line from filelist
+
+        pierlist = list(set(pierlist))
+        if len(pierlist) > 1:
+            print ("Multiple piers selected")
+            # TODO do something here 
+
+        didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
+        didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
+        didict['selectedpier'] = pierlist[0]
+        didict['source'] = source
+        didict['absdata'] = abslist
+
+        # stationid needs to be defined !!!!
+        if not stationid:
+            stationid = 'WIC'
+        didict['station'] =  stationid
+
+        return didict
+
+
     def OnLoadDIFiles(self,e):
         self.difiledirname = ''
         stream = DataStream()
         dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
-            self.pathlist = dlg.GetPaths()
+            #self.pathlist = dlg.GetPaths()
+            #self.LoadFiles(self.pathlist)
+            # Need stationid, pier and azimuth!!
+            self.pathlist = self.LoadFiles(dlg.GetPaths())
+
         dlg.Destroy()
         self.Close(True)
 
@@ -2899,8 +3025,6 @@ class LoadDIDialog(wx.Dialog):
                 dicont['observers'] = observers
                 dicont['data'] = output
                 didatadict[stationid] = dicont
-                #print ("Test", piers)
-                #print ("Test", observers)
 
 
         #4. if didatadict existing
@@ -2909,16 +3033,32 @@ class LoadDIDialog(wx.Dialog):
 
         # option 1: create temporary files from each selected DIID and return a pointer to this temporary filelist
         # option 2: obtain diline structure directly
+        # option 3: obtain link to DB and provide that to absoluteAnalysis
 
         dlg = DIConnectDatabaseDialog(None, title='Obtaining DI data from database', db=self.db, didict=didatadict, options={})
         if dlg.ShowModal() == wx.ID_OK:
-            # Create URL from inputs
-            stday = dlg.startDatePicker.GetValue()
+            # Obtain selection dictionary
+            #stday = dlg.startDatePicker.GetValue()
+
+            content = dlg.stationdict
+            midate = dlg.dt(content.get('mindate'),content.get('mintime'))
+            madate = dlg.dt(content.get('maxdate'),content.get('maxtime'))
             # Obtain DiLineSruct of all selected DI ata
-            #absolutes = db2diline(db,starttime="2013-01-01",sql="Pier='A2' AND Observer=''")
+            sql = 'Pier="{}"'.format(content.get('selectedpier'))
+            if not content.get('selectedobserver') == 'all':
+                sql += ' AND Observer="{}"'.format(content.get('selectedpier'))
+
+            content['mindatetime'] = midate
+            content['maxdatetime'] = madate
+            content['source'] = 'db'
+            self.absolutes = db2diline(self.db,starttime=midate,endtime=madate,sql=sql)
+            content['absdata'] = self.absolutes
+            self.pathlist = content
+            #print (sql)
+            self.absolutes = db2diline(self.db,starttime=midate,endtime=madate,sql=sql)
+            # write to tmp or provide DIDATA_ and parameter to absanalysis
 
         dlg.Destroy()
-
         self.Close(True)
 
     def OnLoadDIRemote(self,e):
@@ -2949,8 +3089,8 @@ class DIConnectDatabaseDialog(wx.Dialog):
         else:
             self.defaultstation = self.stations[0]
         defaultpier = 'A2'
-        self.stationdict = self.getStationData(didict.get(self.defaultstation), pier=defaultpier)
-        self.createControls()        
+        self.stationdict = self.getStationData(didict.get(self.defaultstation), pier=defaultpier, station= self.defaultstation)
+        self.createControls()
         self.doLayout()
         self.bindControls()
 
@@ -3058,7 +3198,7 @@ class DIConnectDatabaseDialog(wx.Dialog):
         return mintime, maxtime, mindate, maxdate
 
 
-    def getStationData(self, content, pier=None, observer=None, mindatetime=None, maxdatetime=None):
+    def getStationData(self, content, pier=None, observer=None, mindatetime=None, maxdatetime=None, station=None):
         # returns a stationdict with data, mintime, maxtime, amount
         stationdict = {}
         data = content.get('data')
@@ -3069,6 +3209,7 @@ class DIConnectDatabaseDialog(wx.Dialog):
         stationdict['observers'] = observerlist
         stationdict['amount'] = str(len(content.get('data')))
         stationdict['selectedobserver'] = 'all'
+        stationdict['station'] = station
 
         if pier:
              if pier in stationdict['piers']:
@@ -3091,9 +3232,15 @@ class DIConnectDatabaseDialog(wx.Dialog):
         if maxdatetime:
              data = [el for el in data if el[3] <= maxdatetime]
 
-        stationdict['id'] = [el[0] for el in data]
         stationdict['amount'] = str(len(data))
-        stationdict['mintime'], stationdict['maxtime'], stationdict['mindate'], stationdict['maxdate'] = self.getLimits(data)
+        if len(data) > 0:
+            stationdict['id'] = [el[0] for el in data]
+            stationdict['mintime'], stationdict['maxtime'], stationdict['mindate'], stationdict['maxdate'] = self.getLimits(data)
+        else:
+            stationdict['mintime'] = self.startTimePicker.GetValue()
+            stationdict['mindate'] = self.startDatePicker.GetValue()
+            stationdict['maxtime'] = self.endTimePicker.GetValue()
+            stationdict['maxdate'] = self.endDatePicker.GetValue()
         return stationdict
 
     def dt(self, wxval,wxstr):
@@ -3115,7 +3262,7 @@ class DIConnectDatabaseDialog(wx.Dialog):
         midate = self.dt(self.startDatePicker.GetValue(),self.startTimePicker.GetValue())
         madate = self.dt(self.endDatePicker.GetValue(),self.endTimePicker.GetValue())
 
-        self.stationdict = self.getStationData(content, pier=pier, observer=obs, mindatetime=midate, maxdatetime=madate)
+        self.stationdict = self.getStationData(content, pier=pier, observer=obs, mindatetime=midate, maxdatetime=madate, station=station)
 
         self.amountTextCtrl.Clear()
         self.amountTextCtrl.SetValue(self.stationdict.get('amount'))

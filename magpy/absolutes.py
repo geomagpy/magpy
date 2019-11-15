@@ -1306,9 +1306,12 @@ class AbsoluteData(object):
         for key in FLAGKEYLIST:
              if not 'time' in key:
                  testval = eval('outline.'+key)
-                 #print testval
-                 if testval > 10000000:
-                     exec('outline.'+key+' = 999999.99')
+                 try:
+                     testval = float(testval)
+                     if testval > 10000000:
+                         exec('outline.'+key+' = 999999.99')
+                 except:
+                     pass
 
         #test whether outline is a linestruct object - if not use an empty object
         try:
@@ -1550,6 +1553,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     expD = kwargs.get('expD')
     meantime = kwargs.get('meantime')
     movetoarchive = kwargs.get('movetoarchive')
+    absstruct = kwargs.get('absstruct')
     debug = kwargs.get('debug')
 
     if not outputformat:
@@ -1587,7 +1591,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     filelist, datelist = [],[]
     failinglist = []
     successlist = []
-    if db:
+    if db and not absstruct:
         #print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
         try:
             import magpy.database as dbase
@@ -1617,6 +1621,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         except:
             print("absoluteAnalysis:  getting DI data from files")
             pass
+
+    if absstruct:
+        """
+        assume that the provided absdata is already a diline structure
+        """
+        print ("Absolut data directly provided")
+        datelist = sort(list(set([datetime.strftime(num2date(np.nanmean(el.time)).replace(tzinfo=None),"%Y-%m-%d") for el in absdata])))
+        readfile = False
+
 
     if readfile:
         # Get list of files
@@ -1680,13 +1693,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
         datelist = list(set(datelist))
 
+
     datetimelist = [datetime.strptime(elem,'%Y-%m-%d') for elem in datelist]
 
     empty = DataStream()
     if starttime:
-        datetimelist = [elem for elem in datetimelist if elem >= empty._testtime(starttime)]
+        datetimelist = [elem for elem in datetimelist if elem.date() >= empty._testtime(starttime).date()]
     if endtime:
-        datetimelist = [elem for elem in datetimelist if elem <= empty._testtime(endtime)]
+        datetimelist = [elem for elem in datetimelist if elem.date() <= empty._testtime(endtime).date()]
 
     if not len(datetimelist) > 0:
         print("absoluteAnalysis: No matching dates found - aborting")
@@ -1972,6 +1986,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         failinglist.append(elem)
                         # TODO Drop that line from filelist
                         pass
+        elif absstruct:
+            abslist = [el for el in absdata if num2date(np.nanmean(el.time)).replace(tzinfo=None).date() == date.date()]
         else:
             #get list from database
             startd = datetime.strftime(date,"%Y-%m-%d")
@@ -2002,11 +2018,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     pier = filepier
             except:
                 stream = absst.getAbsDIStruct()
+
+            #print ("HERE", stream[0].expectedmire)
+
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
             streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
             if streamtime == datetime.strftime(date,"%Y-%m-%d"):
-                print ("Times are fitting")
+                if debug:
+                    print ("Times are fitting")
             else:
                 continue
     
@@ -2059,7 +2079,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     except:
                         deltaI = 0.0
                 #print("here", deltaD, deltaI, scalevalue)
-                #print ("Running calc", usestep, annualmeans, deltaD, deltaI)
+
+                #print ("Running calc", usestep, annualmeans, deltaD, deltaI,meantime,scalevalue)
+
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue)
                 print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
                 print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))

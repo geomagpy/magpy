@@ -61,7 +61,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
     oldtype = kwargs.get('oldtype')
     getfile = True
 
-    print ("Reading")
+    print ("Reading PYCDF with CDFLIB")
     # Check whether header information is already present
     headskip = False
     if stream.header == None:
