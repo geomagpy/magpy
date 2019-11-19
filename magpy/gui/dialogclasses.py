@@ -418,6 +418,17 @@ class ExportDataDialog(wx.Dialog):
         super(ExportDataDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.WriteFormats = [ key for key in PYMAG_SUPPORTED_FORMATS if 'w' in PYMAG_SUPPORTED_FORMATS[key][0]]
+
+        #print ("STREAM content:", stream.header.get('DataType'))
+        #print ("Too be used to limit selection possible formats")
+        EXPERIMENTALFORMATS = ['LATEX']
+        #if self.options.get('experimental'):
+        self.WriteFormats = [el for el in self.WriteFormats if not el in EXPERIMENTALFORMATS]
+
+        BLVFORMATS = ['BLV','PYCDF','PYSTR']
+        if stream.header.get('DataType','').startswith('MagPyDI') or stream.header.get('DataFormat','') == 'MagPyDI':
+            self.WriteFormats = [el for el in self.WriteFormats if el in BLVFORMATS]
+
         if not defaultformat or not defaultformat in self.WriteFormats:
             defaultformat = 'PYCDF'
         self.default = self.WriteFormats.index(defaultformat)
@@ -507,8 +518,9 @@ class ExportDataDialog(wx.Dialog):
             Helper method to determine filename from selections
         """
         #print ("Calling GetFilename: if file is MagPyDI - eventually open a message box to define year", filenamebegins, filenameends, coverage, dateformat)
-        format_type, self.filenamebegins, self.filenameends, self.coverage, self.dateformat = stream._write_format(format_type, filenamebegins, filenameends, coverage, dateformat , blvyear)
+        format_type, self.filenamebegins, self.filenameends, coverage, self.dateformat = stream._write_format(format_type, filenamebegins, filenameends, coverage, dateformat , blvyear)
         #print ("obtained:", self.filenamebegins, self.filenameends, self.coverage, self.dateformat)
+        self.coverage = coverage
         if coverage == 'all':
             datelook = ''
         else:
@@ -2283,7 +2295,10 @@ class AnalysisOffsetDialog(wx.Dialog):
         assert isinstance(date, (datetime, datetime.date))
         tt = date.timetuple()
         dmy = (tt[2], tt[1]-1, tt[0])
-        return wx.DateTimeFromDMY(*dmy)
+        try:
+            return wx.DateTime.FromDMY(*dmy)
+        except:
+            return wx.DateTimeFromDMY(*dmy)
 
     # Widgets
     def createControls(self):
@@ -2501,10 +2516,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.endtime = None
         self.absstreamlist = []
 
-        print ("GOTIDXLIST", idxlst)
         for idx, ele in enumerate(dictlst):
-            #st = num2date(ele.get('startdate')).replace(tzinfo=None)
-            #et = num2date(ele.get('enddate')).replace(tzinfo=None)
             st = ele.get('startdate')
             et = ele.get('enddate')
             line = "{}: {}_{}_{}".format(str(idx),ele.get('filename'),datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d")) 
@@ -2512,31 +2524,12 @@ class AnalysisBaselineDialog(wx.Dialog):
             self.starttime = st  # as the last one is selected by default
             self.endtime = et 
 
-        """
-        for idx in idxlst:
-            currentname = [(el['filename'],el) for el in dictlst if str(el['streamidx']) == str(idx)][0]
-            st = num2date(currentname[1].get('startdate')).replace(tzinfo=None)
-            et = num2date(currentname[1].get('enddate')).replace(tzinfo=None)
-            #datetime.strftime(st,"%Y%m%d)
-            line = "{}: {}_{}_{}".format(str(idx),currentname[0],datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d")) 
-            if not line in self.absstreamlist:
-                self.absstreamlist.append(line)
-                # get start and end date from last dict input
-                self.starttime = st 
-                self.endtime = et 
-        print ("DICTLIST", dictlst)
-        """
-
         self.selecteddict = dictlst[-1]
 
         self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndttime: {}\n".format(self.starttime, self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),self.endtime)
         self.createControls()
         self.doLayout()
         self.bindControls()
-
-        #self.funclist = ['spline','polynomial']
-        #self.fitknots = fitknots
-        #self.fitdegree = fitdegree
 
 
     def _pydate2wxdate(self,date):
@@ -2602,11 +2595,6 @@ class AnalysisBaselineDialog(wx.Dialog):
     def OnParameter(self, e):
         # open fit dlg
         idx = int(self.absstreamComboBox.GetValue().split(':')[0])
-        #streamidx = int(self.absstreamComboBox.GetValue().split(':')[0])
-        #for idx in range(len(self.dictlst)):
-        #    if self.dictlst[idx]['streamidx'] == streamidx:
-        #        index = idx
-        #        break
 
         dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
         startdate=self.dictlst[idx].get('startdate')
@@ -2643,19 +2631,12 @@ class AnalysisBaselineDialog(wx.Dialog):
     def OnUpdate(self, e):
         # open fit dlg
         idx = int(self.absstreamComboBox.GetValue().split(':')[0])
-        #streamidx = int(self.absstreamComboBox.GetValue().split(':')[0])
         self.selecteddict = self.dictlst[idx]
-        print (idx, self.selecteddict)
-        #for idx in range(len(self.dictlst)):
-        #    if self.dictlst[idx]['streamidx'] == streamidx:
-        #        index = idx
-        #        break
         self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndtime: {}\n".format(self.selecteddict.get('startdate'),
                     self.selecteddict.get('function',''),
                     self.selecteddict.get('knotstep',''),
                     self.selecteddict.get('degree',''),
                     self.selecteddict.get('enddate'))
-        print (self.parameterstring)
         self.starttime=self.dictlst[idx].get('startdate')
         self.endtime=self.dictlst[idx].get('enddate')
         ## also add funtional parameters to the dictionary
@@ -2817,6 +2798,60 @@ class AnalysisFlagmodDialog(wx.Dialog):
 #    DI page
 # ###################################################
 
+class SetStationIDDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog fto define an eventually missing stationid
+    USED BY:
+        Stream Method: LoadDIDialog()
+    """
+    def __init__(self, parent, title, stationid):
+        super(SetStationIDDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.stationid=stationid
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.StationText = wx.StaticText(self,label="StationID",size=(160,-1))
+        self.StationTextCtrl = wx.TextCtrl(self, value=self.stationid,size=(160,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.StationText, noOptions))
+        contlst.append((self.StationTextCtrl, expandOption))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
 
 class LoadDIDialog(wx.Dialog):
     """
@@ -2956,7 +2991,13 @@ class LoadDIDialog(wx.Dialog):
 
         # stationid needs to be defined !!!!
         if not stationid:
-            stationid = 'WIC'
+            # Open a dialog to set the stationid
+            stationid = 'NONE'
+            dlg = SetStationIDDialog(None, title='Define a StationID (e.g. IAGA code)', stationid=stationid)
+            if dlg.ShowModal() == wx.ID_OK:
+                stationid = dlg.StationTextCtrl.GetValue()
+            dlg.Destroy()
+
         didict['station'] =  stationid
 
         return didict
@@ -3177,7 +3218,10 @@ class DIConnectDatabaseDialog(wx.Dialog):
         assert isinstance(date, (datetime, date))
         tt = date.timetuple()
         dmy = (tt[2], tt[1]-1, tt[0])
-        return wx.DateTimeFromDMY(*dmy)
+        try:
+            return wx.DateTime.FromDMY(*dmy)
+        except:
+            return wx.DateTimeFromDMY(*dmy)
  
     def wxdate2pydate(self,date):
         assert isinstance(date, wx.DateTime)

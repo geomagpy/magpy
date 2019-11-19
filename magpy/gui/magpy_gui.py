@@ -78,7 +78,10 @@ def pydate2wxdate(datum):
      tt = datum.timetuple()
      dmy = (tt[2], tt[1]-1, tt[0])
      #print (tt, dmy)
-     return wx.DateTimeFromDMY(*dmy)
+     try:
+         return wx.DateTime.FromDMY(*dmy)
+     except:
+         return wx.DateTimeFromDMY(*dmy)
 
 def wxdate2pydate(date):
      assert isinstance(date, wx.DateTime)
@@ -1489,9 +1492,11 @@ class MainFrame(wx.Frame):
         ### Formattype is not ideal for discriminating MagPyDI data contents as they can also be in CDF format
         ### Therefore use DataType in future: beginning with 11/2019
         contenttype = self.plotstream.header.get('DataType','')  # e.g. MagPyDI1.0
+        if contenttype == '' and formattype == 'MagPyDI':
+            contenttype = 'MagPyDI1.0'
+            self.plotstream.header['DataType'] = contenttype
 
-        print ("Activating stream again: formattype={}".format(formattype))
-
+        #print ("Activating stream again: formattype={}".format(formattype))
         absinfo = self.plotstream.header.get('DataAbsInfo',None)
         metadatatext = ''
         metasensortext = ''
@@ -1521,32 +1526,25 @@ class MainFrame(wx.Frame):
             print ("HERE ---- MagPyDI")
             #filename = self.menu_p.str_page.fileTextCtrl.GetValue()   # don't use filename as this is not changing when selecting earlier data
             if not sensorid and not dataid:
-                basename = self.menu_p.str_page.fileTextCtrl.GetValue() #"{}_{}_{}".format(sensorid,int(mintime),int(maxtime))
+                basename = self.menu_p.str_page.fileTextCtrl.GetValue()
             elif dataid:
                 basename = dataid
             else:
                 basename = sensorid
             # Obtain the correct stream idx function
-            print (self.currentstreamindex)
-
-            #streamidx = len(self.streamlist)-1
             streamidx = self.currentstreamindex
 
-            basedict = {'startdate':num2date(mintime).replace(tzinfo=None),'enddate':num2date(maxtime).replace(tzinfo=None), 'filename':basename, 'streamidx': streamidx, 'function': self.options.get('fitfunction'), 'knotstep': self.options.get('fitknotstep'), 'degree': self.options.get('fitdegree')} #, 'function': self.options.get('fitfunction')}
-            print (basedict)
+            basedict = {'startdate':num2date(mintime).replace(tzinfo=None),'enddate':num2date(maxtime).replace(tzinfo=None), 'filename':basename, 'streamidx': streamidx, 'function': self.options.get('fitfunction'), 'knotstep': self.options.get('fitknotstep'), 'degree': self.options.get('fitdegree')}
+            #print (basedict)
 
             # Check if such an input is already existing... if not append to baselinelst
             basedictexisting = False
-            print ("BEFORE", len(self.baselinedictlst))
             for tempdict in self.baselinedictlst:
-                print (tempdict.get('filename'), tempdict, basedict)
                 if compare_dicts(basedict, tempdict, ['streamidx']):
                     basedictexisting = True
             if not basedictexisting:
                 self.baselinedictlst.append(basedict)
-                print ("Extending baseline data sets")
-                # If I am extending the baseline data set, then first of all, this stream needs also be added to the 
-            print ("After", len(self.baselinedictlst))
+                #print ("Extending baseline data sets")
 
         def checkbaseline(baselinedictlst, sensorid, mintime, maxtime, stationid=None):
             """
@@ -1568,12 +1566,6 @@ class MainFrame(wx.Frame):
                 # -- extrapolation needs to be tested
                 #if mintime <= startdate <= maxtime or mintime <= enddate <= maxtime or (startdate <= mintime and enddate >= maxtime):
                 baselineidxlst.append(basedict['streamidx'])
-                """
-                if sensorid in basedict['filename']:
-                    #print ("found filename")
-                    if mintime <= startdate <= maxtime or mintime <= enddate <= maxtime or (startdate <= mintime and enddate >= maxtime):
-                        baselineidxlst.append(basedict['streamidx'])
-                """
             return baselineidxlst
 
         # Activate "always" fields
@@ -1654,10 +1646,10 @@ class MainFrame(wx.Frame):
             if self.menu_p.str_page.annotateCheckBox.GetValue():
                 self.menu_p.str_page.annotateCheckBox.SetValue(True)
                 self.plotopt['annotate'] = True                   # activate annotation
-        if formattype == 'MagPyDI':
+        if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
-        if deltas and not formattype == 'MagPyDI' and not sensorid.startswith('GP20S3'):
+        if deltas and not formattype == 'MagPyDI' and not sensorid.startswith('GP20S3') and not contenttype.startswith('MagPyDI'):
             self.menu_p.str_page.errorBarsCheckBox.Enable()   # activated if delta columns are present and not DI file
         if not absinfo == None:
             self.menu_p.str_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
@@ -1677,7 +1669,7 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.calcfButton.Enable()    # activate if vector present
             if 'f' in keys and not 'df' in keys:
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
-            if not formattype == 'MagPyDI':
+            if not formattype == 'MagPyDI' and not contenttype.startswith('MagPyDI'):
                 #print ("Checking baseline info")
                 self.baselineidxlst = checkbaseline(self.baselinedictlst, sensorid, mintime, maxtime, stationid)
                 if len(self.baselineidxlst) > 0:
@@ -1797,7 +1789,7 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.symbolRadioBox.Disable()
 
         # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
-        if stream.header.get('DataFormat') == 'MagPyDI':
+        if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
             self.menu_p.str_page.symbolRadioBox.Enable()
             self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
             self.shownkeylist = keylist
@@ -2438,6 +2430,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 if filenamebegins == '':
                      filenamebegins='youforgottodefineafilename'
 
+                if self.plotstream.header.get('DataFormat') == 'MagPyDI':
+                    divers = '1.0'
+                    self.plotstream.header['DataType'] = "{}{}".format('MagPyDI',divers)
                 try:
                     if fileformat == 'BLV':
                         print ("Writing BLV data")  # add function here
@@ -5076,7 +5071,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         Restore originally loaded data
         """
-        if self.plotstream.header.get('DataFormat') == 'MagPyDI':
+        if self.plotstream.header.get('DataFormat') == 'MagPyDI' or self.plotstream.header.get('DataType','').startswith('MagPyDI'):
             keys=['dx','dy','dz']
         else:
             keys = False
@@ -5100,7 +5095,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         Apply baselinecorrection
         """
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
+        #print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
         self.plotstream = self.plotstream.bc()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.plotstream)
@@ -6049,7 +6044,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 self.plotstream = absstream
                 currentstreamindex = len(self.streamlist)
                 self.streamlist.append(self.stream)
-                self.streamkeylist.append(absstream._get_key_headers())
+                # self.streamkeylist.append(absstream._get_key_headers()) -> This is done in OnInitialPlot
                 self.headerlist.append(self.stream.header)
                 self.currentstreamindex = currentstreamindex
                 #self.ActivateControls(self.plotstream)

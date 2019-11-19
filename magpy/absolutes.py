@@ -2183,15 +2183,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     #print "outfile"
     #print resultstream.ndarray
-    if varioid == scalarid:
-        # TODO Check this line
+    if not stationid and varioid == scalarid:
         stationid = varioid
 
     # 3.1 Header information
     # --------------------
+    di_version = '1.0'
     resultstream.header['StationID'] = stationid
     resultstream.header['DataPier'] = pier
     resultstream.header['DataFormat'] = 'MagPyDI'
+    resultstream.header['DataType'] = "{}{}".format('MagPyDI',di_version)
     resultstream.header['DataComponents'] = 'IDFF'
     resultstream.header['col-time'] = 'Epoch'
     resultstream.header['col-x'] = 'i'

@@ -7084,7 +7084,7 @@ CALLED BY:
             ind = KEYLIST.index(key)
             col = self._get_column(key)
             if len(col) > 0:
-                if not False in checkEqual3(col) and col[0] == '-':
+                if not False in checkEqual3(col) and str(col[0]) == str('-'):
                     col = np.asarray([])
                 array[ind] = col
             else:

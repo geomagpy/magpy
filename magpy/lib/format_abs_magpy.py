@@ -688,7 +688,7 @@ def readJSONABS(filename, headonly=False, **kwargs):
     for idx, elem in enumerate(dataset):
         #print ("New element: {} : {}".format(idx, elem))
         if elem=='data':
-            print ("Found {} datasets".format(len(dataset[elem])))
+            #print ("Found {} datasets".format(len(dataset[elem])))
             for datadict in dataset[elem]:
                 #print (dataset[elem][0])
                 #datadict = dataset[elem][0]

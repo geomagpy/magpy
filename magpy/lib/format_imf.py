@@ -2419,6 +2419,9 @@ def writeBLV(datastream, filename, **kwargs):
     headerline = '%s %5.f %5.f %s %s\r\n' % (comps.upper(),meanh,meanf,idc,year)
     myFile.writelines( headerline ) #.decode('ascii').encode('utf-8') )
 
+    #print ("BLV export", datastream.length()[0])
+    #print ("BLV export", year, t2, t1)
+
     # 8. Basevalues
     if len(datastream.ndarray[0]) > 0:
         logger.debug("writeBLV: {}".format(datastream.ndarray[indFtype]))
@@ -2427,6 +2430,7 @@ def writeBLV(datastream, filename, **kwargs):
         for idx, elem in enumerate(datastream.ndarray[0]):
             if t2 >= elem >= t1:
                 day = datetime.strftime(num2date(elem),'%j')
+                print ("YES", day)
                 x = float(datastream.ndarray[indx][idx])
                 y = float(datastream.ndarray[indy][idx])*60.
                 z = float(datastream.ndarray[indz][idx])
