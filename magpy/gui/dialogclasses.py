@@ -428,6 +428,8 @@ class ExportDataDialog(wx.Dialog):
         BLVFORMATS = ['BLV','PYCDF','PYSTR']
         if stream.header.get('DataType','').startswith('MagPyDI') or stream.header.get('DataFormat','') == 'MagPyDI':
             self.WriteFormats = [el for el in self.WriteFormats if el in BLVFORMATS]
+        else:
+            self.WriteFormats = [el for el in self.WriteFormats if not el == 'BLV']
 
         if not defaultformat or not defaultformat in self.WriteFormats:
             defaultformat = 'PYCDF'

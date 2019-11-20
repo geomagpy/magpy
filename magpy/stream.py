@@ -2431,8 +2431,9 @@ CALLED BY:
 
         #keys = ['dx','dy','dz']
 
-        print ("BASELINE-FIT", keys,fitfunc,fitdegree,knotstep, bas.length()[0], num2date(bas.ndarray[0][0]), num2date(bas.ndarray[0][-1]))
         try:
+            print ("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
+            print (keys, fitfunc, fitdegree, knotstep)
             logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
             #print ("Baseline", bas.length(), keys)
             #for elem in bas.ndarray:
@@ -4261,33 +4262,35 @@ CALLED BY:
         if len(self.ndarray[0]) > 0:
             ndtype=True
 
-        tok = True
+        #tok = True
 
         fitstream = self.copy()
         if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing
             fitstream = fitstream.trim(starttime=starttime, endtime=endtime)
 
+        sv = 0
+        ev = 0
         for key in keys:
             tmpst = fitstream._drop_nans(key)
+            print ("Length", tmpst.length())
             if ndtype:
                 t = tmpst.ndarray[0]
             else:
                 t = tmpst._get_column('time')
             if len(t) < 1:
-                tok = False
-                break
+                #tok = False
+                print ("Column {} does not contain valid values".format(key))
+                continue
 
             nt,sv,ev = fitstream._normalize(t)
-
-            #newlist = []
-            #for kkk in nt:
-            #    if kkk not in newlist:
-            #        newlist.append(kkk)
-            #    else:
-            #        newlist.append(kkk+0.00001)
-            #nt = newlist
-            #nt = np.sort(np.asarray(nt))
-            #print "NT", nt
+            #nt,sv,ev = tmpst._normalize(t)
+            print (key, num2date(sv),num2date(ev))
+            """
+            if not sv == 0:
+                sv = svkey
+            if not ev == 0:
+                ev = evkey
+            """
             sp = fitstream.get_sampling_period()
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256
@@ -4353,10 +4356,10 @@ CALLED BY:
             exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
             exec('functionkeylist["f'+key+'"] = f'+key)
 
-        if tok:
-            func = [functionkeylist, sv, ev]
-        else:
-            func = [functionkeylist, 0, 0]
+        #if tok:
+        func = [functionkeylist, sv, ev]
+        #else:
+        #    func = [functionkeylist, 0, 0]
         return func
 
     def extractflags(self):
@@ -5592,6 +5595,7 @@ CALLED BY:
         testx = []
 
         for function in funct:
+            print ("Testing", function)
             if not function:
                 return self
             # Changed that - 49 sec before, no less then 2 secs
@@ -5612,24 +5616,22 @@ CALLED BY:
             #indx = KEYLIST.index('x')
             #arrayx = self.ndarray[indx].astype(float)
             functimearray = (self.ndarray[0].astype(float)-function[1])/(function[2]-function[1])
-            #print functimearray
-            validkey = False
             for key in KEYLIST:
+                validkey = False
                 ind = KEYLIST.index(key)
                 if key in keys: # new
+                    print ("DEALING: ", key)
                     keyind = keys.index(key)
                     if fkeys:
                         fkey = fkeys[keyind]
                     else:
                         fkey = key
                     ar = np.asarray(self.ndarray[ind]).astype(float)
-                    validkey = True
-                    #try:
-                    #    test = function[0]['f'+key](functimearray)
-                    #    validkey = True
-                    #except:
-                    #    validkey = False
-                    #    array[ind] = ar
+                    try:
+                        test = function[0]['f'+fkey](functimearray)
+                        validkey = True
+                    except:
+                        pass
                     if mode == 'add' and validkey:
                         print ("here", ar, function[0]['f'+fkey](functimearray))
                         array[ind] = ar + function[0]['f'+fkey](functimearray)
@@ -5672,13 +5674,12 @@ CALLED BY:
                         array[ind] = ar / function[0]['f'+fkey](functimearray)
                     elif mode == 'multiply' and validkey:
                         array[ind] = ar * function[0]['f'+fkey](functimearray)
-                    else:
+                    elif validkey:
                         print("func2stream: mode not recognized")
                 else: # new
                     if len(self.ndarray[ind]) > 0:
                         array[ind] = np.asarray(self.ndarray[ind]).astype(object)
 
-            #print ("Check", array[posstr])
             for idx, col in enumerate(array):
                 if len(totalarray[idx]) > 0 and not idx == 0:
                     totalcol = totalarray[idx]

@@ -1428,16 +1428,6 @@ class MainFrame(wx.Frame):
                 return True
             else:
                 return False
-            """
-            ignored = set(ignore_keys)
-            for k1, v1 in d1.iteritems():
-                if k1 not in ignored and (k1 not in d2 or d2[k1] != v1):
-                    return False
-            for k2, v2 in d2.iteritems():
-                if k2 not in ignored and k2 not in d1:
-                    return False
-            return True
-            """
 
         if len(self.shownkeylist) == 0:   ## Initiaize self.shownkeylist if not yet done
             keylist = [elem for elem in keys if elem in NUMKEYLIST]
@@ -1521,10 +1511,9 @@ class MainFrame(wx.Frame):
             if key.startswith('Station'):
                  metastationtext += "{}: \t{}\n".format(key.replace('Station',''),stream.header.get(key,'')) #key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
 
+
         # Append baselineinfo to baselinedictlist
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
-            print ("HERE ---- MagPyDI")
-            #filename = self.menu_p.str_page.fileTextCtrl.GetValue()   # don't use filename as this is not changing when selecting earlier data
             if not sensorid and not dataid:
                 basename = self.menu_p.str_page.fileTextCtrl.GetValue()
             elif dataid:
@@ -1796,6 +1785,8 @@ class MainFrame(wx.Frame):
             if len(stream.ndarray[KEYLIST.index('x')]) > 0:
                 keylist = ['x','y','z','dx','dy','dz']
                 self.plotopt['padding'] = [[0,0,0,5,0.05,5]]
+                #keylist = ['x','y','z','dx','dy','dz','df']
+                #self.plotopt['padding'] = [[0,0,0,5,0.05,5,1]]
             else:
                 keylist = ['dx','dy','dz']
                 self.plotopt['padding'] = [[5,0.05,5]]
@@ -1806,7 +1797,7 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.dailyMeansButton.Enable()
 
         # 4. If K values are shown: preselect bar chart
-        if stream.header.get('DataFormat') == 'MagPyK' or ('var1' in keylist and stream.header.get('col-var1','').startswith('K')):
+        if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in keylist and stream.header.get('col-var1','').startswith('K')):
             #print ("Found K values - apply self.plotopt")
             self.plotopt['specialdict']=[{'var1':[0,9]}]
             pos = keylist.index('var1')
@@ -1917,19 +1908,13 @@ class MainFrame(wx.Frame):
         #self.plotopt = {'bgcolor':'green'}
 
         self.changeStatusbar("Plotting...")
-        #print ("ConfineX:", confinex, symbollist)
-        """
-        self.plot_p.guiPlot([stream],[keylist],padding=padding,specialdict=specialdict,errorbars=errorbars,
-                            colorlist=colorlist,symbollist=symbollist,annotate=annotate,
-                            includeid=includeid, function=function,plottype=plottype,
-                            labels=labels,resolution=resolution,confinex=confinex,plotopt=plotopt)
-        """
-        #print ("Keys", keylist)
         if stream.length()[0] > 200000:
             self.plotopt['symbollist']= ['.'] * len(keylist)
-        # Update Delta F if plotted
-        if 'df' in keylist:
-            stream = stream.delta_f()
+
+        # Update Delta F if plotted  -- this should move to BC corr
+        # or any other method it is necessary
+        #if 'df' in keylist:
+        #    stream = stream.delta_f()
 
         self.plot_p.guiPlot([stream],[keylist],plotopt=self.plotopt)
         #self.plot_p.guiPlot(stream,keylist,**kwargs)
@@ -2435,18 +2420,24 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     self.plotstream.header['DataType'] = "{}{}".format('MagPyDI',divers)
                 try:
                     if fileformat == 'BLV':
-                        print ("Writing BLV data")  # add function here
-                        print ("Function", self.plotopt['function'])
+                        #print ("Writing BLV data")  # add function here
+                        #print ("Function", self.plotopt['function'])
                         year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
+                        print ("Replacing year with {}".format(year))
                         # use functionlist as kwarg in write method
+                        # Please note: Xmagpy will loose all non-numerical columns
+                        print ("Function", self.plotopt.get('function'))
+
                         self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
                                     dateformat=dateformat,
                                     mode=mode,
                                     year=year,
+                                    fitfunc = self.plotopt.get('function'),
                                     coverage=coverage,
                                     format_type=fileformat)
+                        ## add absinfo if a fit has been calculated
                         mode = 'replace'
                     elif fileformat == 'PYCDF':
                         # Open Yes/No message box and to select whether flags should be stored or not
@@ -4193,8 +4184,6 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
                     params['fitfuncname'], params['knots'], params['degree']))
             if len(self.plotstream.ndarray[0]) > 0:
-                #print ("BASELINE-FIT in FITFUNC", keys,params['fitfunc'],params['degree'],params['knots'], self.plotstream.length()[0], num2date(self.plotstream.ndarray[0][0]), num2date(self.plotstream.ndarray[0][-1]))
-
                 func = self.plotstream.fit(keys=keys,
                         fitfunc=params['fitfunc'],
                         fitdegree=params['degree'], knotstep=params['knots'],
@@ -5097,6 +5086,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         #print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
         self.plotstream = self.plotstream.bc()
+        # Eventually update delta F
+        if 'df' in self.plotstream._get_key_headers():
+            self.plotstream = self.plotstream.delta_f()
         currentstreamindex = len(self.streamlist)
         self.streamlist.append(self.plotstream)
         self.streamkeylist.append(self.shownkeylist)
