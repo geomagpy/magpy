@@ -4283,14 +4283,6 @@ CALLED BY:
                 continue
 
             nt,sv,ev = fitstream._normalize(t)
-            #nt,sv,ev = tmpst._normalize(t)
-            print (key, num2date(sv),num2date(ev))
-            """
-            if not sv == 0:
-                sv = svkey
-            if not ev == 0:
-                ev = evkey
-            """
             sp = fitstream.get_sampling_period()
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256

@@ -2081,6 +2081,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #self.dirname = ''
         stream = DataStream()
         success = False
+        message = "Yeah - working fine\n"
         stream.header = {}
         filelist = []
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
@@ -2109,7 +2110,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 success = True
         except:
                 sucess = False
+                message = "Could not identify file!\nplease check and/or try OpenDirectory\n"
         loadDlg.Destroy()
+
+        if len(stream.length()) < 2 and stream.length()[0] < 2:
+            message = "Obtained an empty file structure\nfile format supported?\n"
+            success = False
 
         # plot data
         if success:
@@ -2117,8 +2123,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 #self.ActivateControls(self.plotstream)
                 self.OnInitialPlot(self.plotstream)
         else:
-            dlg = wx.MessageDialog(self, "Could not identify file!\n"
-                "please check and/or try OpenDirectory\n",
+            dlg = wx.MessageDialog(self, message,
                 "OpenFile", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             self.changeStatusbar("Loading file failed ... Ready")
@@ -2162,6 +2167,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         except:
                 pass
 
+        if len(stream.length()) < 2 and stream.length()[0] < 2:
+            message = "No data found"
+            success = False
+
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
             if self.InitialRead(stream):
@@ -2194,6 +2203,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         stream = DataStream()
         success = False
         url = ''
+        message = "Awesome - its working"
         services = self.options.get('webservices',{})
         default = self.options.get('defaultservice','conrad')
         #print (services, self.options)
@@ -2266,6 +2276,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = True
                     except:
                         success = False
+                        message = "Could not access URL"
                     loadDlg.Destroy()
                 else:
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
@@ -2276,8 +2287,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                         success = True
                     except:
                         success = False
+                        message = "Could not access URL"
         except:
                 pass
+
+        if len(stream.length()) < 2 and stream.length()[0] < 2:
+            message = "No data found"
+            success = False
 
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
@@ -2288,11 +2304,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.initParameter(inipara)
             self.changeStatusbar("Ready")
         else:
+            line = "{}!\nplease check address or your internet connection\n".format(message)
             saveini(self.options)
             inipara, check = loadini()
             self.initParameter(inipara)
-            dlg = wx.MessageDialog(self, "Could not access URL!\n"
-                "please check address or your internet connection\n",
+            dlg = wx.MessageDialog(self, line,
                 "OpenWebAddress", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             self.changeStatusbar("Loading url failed ... Ready")
