@@ -2888,7 +2888,7 @@ class LoadDIDialog(wx.Dialog):
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         if not self.db:
             self.loadDBButton.Disable()
-        self.loadRemoteButton.Disable()
+        #self.loadRemoteButton.Disable()
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -3106,13 +3106,78 @@ class LoadDIDialog(wx.Dialog):
         self.Close(True)
 
     def OnLoadDIRemote(self,e):
-        self.dirname = ''
+
+        services = self.options.get('webservices',{})
+        default = self.options.get('defaultservice','conrad')
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default)
+        if dlg.ShowModal() == wx.ID_OK:
+            # Create URL from inputs
+            """
+            stday = dlg.startDatePicker.GetValue()
+            sttime = str(dlg.startTimePicker.GetValue())
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+            start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+            enday = dlg.endDatePicker.GetValue()
+            entime = str(dlg.endTimePicker.GetValue())
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+            end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+            if start < end:
+                service = dlg.serviceComboBox.GetValue()
+                group = dlg.groupComboBox.GetValue()
+                obs_id = 'id=' + dlg.idComboBox.GetValue()
+                start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
+                end_time = '&endtime=' + ed + 'T' + entime + 'Z'
+                if service == 'conrad':
+                    file_format = '&of=' + dlg.formatComboBox.GetValue()
+                else:
+                    file_format = '&format=' + dlg.formatComboBox.GetValue()
+                elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
+                data_type = '&type=' + dlg.typeComboBox.GetValue()
+                period = '&sampling_period=' + dlg.sampleComboBox.GetValue()
+                base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
+                url = (base + '?' + obs_id + start_time + end_time + file_format +
+                      elements + data_type + period)
+                #print ("Constructed url:", url)
+                self.options['defaultservice'] = service
+            else:
+                msg = wx.MessageDialog(self, "Invalid time range!\n"
+                    "The end time occurs before the start time.\n",
+                    "Connect Webservice", wx.OK|wx.ICON_INFORMATION)
+                msg.ShowModal()
+                self.changeStatusbar("Loading from directory failed ... Ready")
+                msg.Destroy()
+            """
+
+
+            self.changeStatusbar("Loading webservice data ... be patient")
+        dlg.Destroy()
+
+        """
         stream = DataStream()
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.pathlist = dlg.GetPaths()
         dlg.Destroy()
         self.Close(True)
+
+        base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
+        observatory = self.plotstream.header.get('StationID')
+        while time < endtime + timedelta(days = 7):
+            called_date = time.strftime('%Y-%m-%d')
+            time = time + timedelta(days=1)
+            url = base + 'observatory=' + observatory + '&starttime=' + \
+                    called_date + '&includemeasurements=true'
+            di_db += [url]
+        """
 
 
 class DIConnectDatabaseDialog(wx.Dialog):
