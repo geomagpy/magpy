@@ -5877,9 +5877,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 else:
                     dlgpath = dlg.pathlist[0]
                 self.options['dipathlist'] = [dlgpath]
+                self.menu_p.abs_page.diSourceLabel.SetLabel('Source: files')
             elif isinstance(self.dipathlist,dict):
-                info = "{}: from {}, {} dataset(s)".format(self.dipathlist.get('station'),self.dipathlist.get('source'),len(self.dipathlist.get('absdata')))
+                info = "{}: {} dataset(s)".format(self.dipathlist.get('station'),len(self.dipathlist.get('absdata')))
                 self.menu_p.abs_page.diTextCtrl.SetValue(info)
+                self.menu_p.abs_page.diSourceLabel.SetLabel("Source: {}".format(self.dipathlist.get('source')))
             self.menu_p.abs_page.AnalyzeButton.Enable()
         dlg.Destroy()
 
@@ -5892,12 +5894,31 @@ Suite 330, Boston, MA  02111-1307  USA"""
             pass
             # send a message box that this data will be erased
 
+        def getExtensionList(path):
+            import collections
+            # returns a sorted extension list for all file in the directory
+            # sorted by abunandce
+            ext = []
+            for f in os.listdir(path):
+                sp = f.split('.')
+                if len(sp) > 1:
+                    ext.append(sp[-1])
+            counter=collections.Counter(ext)
+            sortlist = counter.most_common()
+            sortlist.append(('*',1))
+            #print (["*.{}".format(el[0]) for el in sortlist])
+            return ["*.{}".format(el[0]) for el in sortlist]
+
         #self.variopath = ''
         divariopath = self.options.get('divariopath','')
         # Open a select path dlg as long as db and remote is not supported
         dialog = wx.DirDialog(None, "Choose a directory with variometer data:",divariopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
+            varioext = getExtensionList(path)
+            self.menu_p.abs_page.varioExtComboBox.Clear()
+            self.menu_p.abs_page.varioExtComboBox.Append(varioext)
+            self.menu_p.abs_page.varioExtComboBox.SetValue(varioext[0])
             self.menu_p.abs_page.varioTextCtrl.SetValue(path)
             self.options['divariopath'] = path
         dialog.Destroy()
@@ -5907,6 +5928,22 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         open dialog to load DI data
         """
+        def getExtensionList(path):
+            import collections
+            # returns a sorted extension list for all file in the directory
+            # sorted by abunandce
+            ext = []
+            for f in os.listdir(path):
+                sp = f.split('.')
+                if len(sp) > 1:
+                    ext.append(sp[-1])
+            counter=collections.Counter(ext)
+            sortlist = counter.most_common()
+            sortlist.append(('*',1))
+            #print (["*.{}".format(el[0]) for el in sortlist])
+            return ["*.{}".format(el[0]) for el in sortlist]
+
+
         if len(self.stream) > 0:
             pass
             # send a message box that this data will be erased
@@ -5915,7 +5952,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dialog = wx.DirDialog(None, "Choose a directory with scalar data:",discalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
+            scalarext = getExtensionList(path)
             self.menu_p.abs_page.scalarTextCtrl.SetValue(path)
+            self.menu_p.abs_page.scalarExtComboBox.Clear()
+            self.menu_p.abs_page.scalarExtComboBox.Append(scalarext)
+            self.menu_p.abs_page.scalarExtComboBox.SetValue(scalarext[0])
             self.options['discalarpath'] = path
         dialog.Destroy()
 
@@ -5925,16 +5966,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         # Get parameters from options
         divariopath = self.options.get('divariopath','')
-        vext = self.menu_p.abs_page.varioextTextCtrl.GetValue()
-        #if vext not in ['*.*','*.BIN','*.bin','*.sec','*.SEC','*.min','*.MIN','*.cdf','*.CDF']:
-        #    vext = '*'
+        vext = self.menu_p.abs_page.varioExtComboBox.GetValue()
         divariopath = divariopath.replace('*','')
         divariopath = os.path.join(divariopath,vext)
             
         discalarpath = self.options.get('discalarpath','')
-        sext = self.menu_p.abs_page.scalarextTextCtrl.GetValue()
-        #if sext not in ['*.*','*.BIN','*.bin','*.sec','*.SEC','*.min','*.MIN','*.cdf','*.CDF']:
-        #    sext = '*'
+        sext = self.menu_p.abs_page.scalarExtComboBox.GetValue()
         discalarpath = discalarpath.replace('*','')
         discalarpath = os.path.join(discalarpath,sext)
 

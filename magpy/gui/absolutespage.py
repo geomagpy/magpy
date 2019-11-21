@@ -26,26 +26,30 @@ class AbsolutePage(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.comp = ['xyz', 'hdz', 'idf']
         self.dipathlist = []
+        self.extension = '*'
+        self.varioext = ['*.*']
+        self.scalarext = ['*.*']
         self.createControls()
         self.doLayout()
-        self.extension = '*'
 
     # Widgets
     def createControls(self):
-        self.diLabel = wx.StaticText(self, label="DI files:")
-        self.loadDIButton = wx.Button(self,-1,"Load DI data",size=(160,30))
-        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+        self.sourceLabel = wx.StaticText(self, label="Data source:")
+        self.diLabel = wx.StaticText(self, label="Actions:")
+        self.loadDIButton = wx.Button(self,-1,"DI data",size=(160,30))
+        self.diSourceLabel = wx.StaticText(self, label="Source: None")
+        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.defineVarioButton = wx.Button(self,-1,"Variometer path",size=(160,30))
-        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+        self.defineVarioButton = wx.Button(self,-1,"Variometer",size=(160,30))
+        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.varioextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
-        self.varioextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,40))
-        self.defineScalarButton = wx.Button(self,-1,"Scalar path",size=(160,30))
-        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
+        #self.varioextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
+        #self.varioextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,30))
+        self.defineScalarButton = wx.Button(self,-1,"Scalar",size=(160,30))
+        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.scalarextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
-        self.scalarextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,40))
+        #self.scalarextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
+        #self.scalarextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,30))
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
         self.logLabel = wx.StaticText(self, label="Logging:")
         self.advancedButton = wx.Button(self,-1,"Set parameter",size=(160,30))
@@ -53,6 +57,10 @@ class AbsolutePage(wx.Panel):
         self.SaveLogButton = wx.Button(self,-1,"Save Log",size=(160,30))
         self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,300),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
+                 style=wx.CB_DROPDOWN, value=self.varioext[0],size=(160,-1))
+        self.scalarExtComboBox = wx.ComboBox(self, choices=self.scalarext,
+                 style=wx.CB_DROPDOWN, value=self.scalarext[0],size=(160,-1))
 
 
     def doLayout(self):
@@ -85,18 +93,20 @@ class AbsolutePage(wx.Panel):
 
         # Add the controls to the sizers:
         for control, options in \
-                [(self.loadDIButton, dict(flag=wx.ALIGN_CENTER)),
+                [(self.sourceLabel, noOptions),
+                  emptySpace,
+                 (self.loadDIButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.diSourceLabel, noOptions),
+                  emptySpace,
                  (self.diTextCtrl, expandOption),
                  (self.defineVarioButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.varioExtComboBox, expandOption),
+                  emptySpace,
                  (self.varioTextCtrl, expandOption),
-                 (self.varioextLabel, noOptions),
-                 (self.varioextTextCtrl, expandOption),
                  (self.defineScalarButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.scalarExtComboBox, expandOption),
+                  emptySpace,
                  (self.scalarTextCtrl, expandOption),
-                 (self.scalarextLabel, noOptions),
-                 (self.scalarextTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
                  (self.diLabel, noOptions),
                   emptySpace,
                  (self.AnalyzeButton, dict(flag=wx.ALIGN_CENTER)),

@@ -534,10 +534,11 @@ class ExportDataDialog(wx.Dialog):
 
 
     def OnSelectDirButton(self, event):
-        dialog = wx.DirDialog(None, "Choose a directory:",'/srv',style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        dialog = wx.DirDialog(None, "Choose a directory:",self.path,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             #self.ReactivateStreamPage()
-            self.selectedTextCtrl.SetValue(dialog.GetPath())
+            self.path = dialog.GetPath()
+            self.selectedTextCtrl.SetValue(self.path)            
         #self.menu_p.rep_page.logMsg('- Directory for file export defined')
         #dialog.Destroy()
 
