@@ -2862,15 +2862,18 @@ class LoadDIDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, dirname, db):
+    def __init__(self, parent, title, dirname, db, services, defaultservice):
         super(LoadDIDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.pathlist = []
         self.dirname = dirname
         self.db = db
         self.absolutes = []
-        self.sources = ['general','conrad','usgs']
-        self.mainsource = self.sources[0]
+        self.services = services
+        # TODO limit the list of serviceitems to webservices providing DI data
+        self.serviceitems = list(self.services.keys())
+        #print (self.services)
+        self.mainsource = defaultservice
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -2880,7 +2883,7 @@ class LoadDIDialog(wx.Dialog):
         self.loadFileButton = wx.Button(self,-1,"Select File(s)",size=(210,30))
         self.loadDBButton = wx.Button(self,-1,"Select Database",size=(210,30))
         self.loadRemoteButton = wx.Button(self,-1,"Select Webservice/Remote",size=(210,30))
-        self.remoteComboBox = wx.ComboBox(self, choices=self.sources,
+        self.remoteComboBox = wx.ComboBox(self, choices=self.serviceitems,
                  style=wx.CB_DROPDOWN, value=self.mainsource,size=(160,-1))
         self.fileTextCtrl = wx.TextCtrl(self,value="",size=(160,-1)) # manual, autodif -> if autudif request azimuth
         self.databaseTextCtrl = wx.TextCtrl(self,value="",size=(160,-1)) # currently conected to
@@ -3107,9 +3110,28 @@ class LoadDIDialog(wx.Dialog):
 
     def OnLoadDIRemote(self,e):
 
-        services = self.options.get('webservices',{})
-        default = self.options.get('defaultservice','conrad')
+        services = self.services
+        ### TODO Drop all unnecessary information from services
+
+        default = self.remoteComboBox.GetValue()
         dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default)
+        # Set the following parameters and disable the items
+        # Format = Json
+        dlg.formatComboBox.SetValue("json")
+        dlg.formatComboBox.Disable()
+        # Date Group = Basevalue Observation
+        dlg.groupComboBox.SetValue("Basevalue observation")
+        dlg.groupComboBox.Disable()
+        # Date Type = basevalues
+        dlg.typeComboBox.SetValue("basevalues")
+        dlg.typeComboBox.Disable()
+        # Sampling Rate = Empty
+        dlg.sampleComboBox.SetValue("")
+        dlg.sampleComboBox.Disable()
+        # Components = Empty
+        dlg.elementsTextCtrl.SetValue("")
+        dlg.elementsTextCtrl.Disable()
+
         if dlg.ShowModal() == wx.ID_OK:
             # Create URL from inputs
             """

@@ -998,81 +998,147 @@ class MainFrame(wx.Frame):
         # ## File Menu
         self.FileMenu = wx.Menu()
         self.FileOpen = wx.MenuItem(self.FileMenu, 101, "&Open File...\tCtrl+F", "Open file", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.FileOpen)
+        try:
+            self.FileMenu.Append(self.FileOpen)
+        except:
+            self.FileMenu.AppendItem(self.FileOpen)
         self.DirOpen = wx.MenuItem(self.FileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.DirOpen)
+        try:
+            self.FileMenu.Append(self.DirOpen)
+        except:
+            self.FileMenu.AppendItem(self.DirOpen)
         self.FileMenu.AppendSeparator()
         self.WebServiceOpen = wx.MenuItem(self.FileMenu, 103, "Open &WebService...\tCtrl+W", "Get webservice data", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.WebServiceOpen)
+        try:
+            self.FileMenu.Append(self.WebServiceOpen)
+        except:
+            self.FileMenu.AppendItem(self.WebServiceOpen)
         self.FileMenu.AppendSeparator()
         self.WebOpen = wx.MenuItem(self.FileMenu, 104, "Open general &URL...\tCtrl+U", "Get data from the internet", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.WebOpen)
+        try:
+            self.FileMenu.Append(self.WebOpen)
+        except:
+            self.FileMenu.AppendItem(self.WebOpen)
         self.FileMenu.AppendSeparator()
         self.DBOpen = wx.MenuItem(self.FileMenu, 105, "&Select DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.DBOpen)
+        try:
+            self.FileMenu.Append(self.DBOpen)
+        except:
+            self.FileMenu.AppendItem(self.DBOpen)
         self.DBOpen.Enable(False)
         self.FileMenu.AppendSeparator()
         self.ExportData = wx.MenuItem(self.FileMenu, 106, "&Export data...\tCtrl+E", "Export data to a file", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.ExportData)
+        try:
+            self.FileMenu.Append(self.ExportData)
+        except:
+            self.FileMenu.AppendItem(self.ExportData)
         self.ExportData.Enable(False)
         self.FileMenu.AppendSeparator()
         self.FileQuitItem = wx.MenuItem(self.FileMenu, wx.ID_EXIT, "&Quit\tCtrl+Q", "Quit the program", wx.ITEM_NORMAL)
-        self.FileMenu.AppendItem(self.FileQuitItem)
+        try:
+            self.FileMenu.Append(self.FileQuitItem)
+        except:
+            self.FileMenu.AppendItem(self.FileQuitItem)
         self.MainMenu.Append(self.FileMenu, "&File")
         # ## Database Menu
         self.DatabaseMenu = wx.Menu()
         self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
-        self.DatabaseMenu.AppendItem(self.DBConnect)
+        try:
+            self.DatabaseMenu.Append(self.DBConnect)
+        except:
+            self.DatabaseMenu.AppendItem(self.DBConnect)
         self.DatabaseMenu.AppendSeparator()
         self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "&Initialize a new MySQL DB...\tCtrl+Z", "Initialize Database", wx.ITEM_NORMAL)
-        self.DatabaseMenu.AppendItem(self.DBInit)
+        try:
+            self.DatabaseMenu.Append(self.DBInit)
+        except:
+            self.DatabaseMenu.AppendItem(self.DBInit)
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
         self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "&Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
-        self.DIMenu.AppendItem(self.DIPath2DI)
+        try:
+            self.DIMenu.Append(self.DIPath2DI)
+        except:
+            self.DIMenu.AppendItem(self.DIPath2DI)
         self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
-        self.DIMenu.AppendItem(self.DIPath2Vario)
+        try:
+            self.DIMenu.Append(self.DIPath2Vario)
+        except:
+            self.DIMenu.AppendItem(self.DIPath2Vario)
         self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scala&r data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
-        self.DIMenu.AppendItem(self.DIPath2Scalar)
+        try:
+            self.DIMenu.Append(self.DIPath2Scalar)
+        except:
+            self.DIMenu.AppendItem(self.DIPath2Scalar)
         self.DIMenu.AppendSeparator()
         self.DIInputSheet = wx.MenuItem(self.DIMenu, 504, "O&pen input sheet...\tCtrl+P", "Input sheet...", wx.ITEM_NORMAL)
-        self.DIMenu.AppendItem(self.DIInputSheet)
+        try:
+            self.DIMenu.Append(self.DIInputSheet)
+        except:
+            self.DIMenu.AppendItem(self.DIInputSheet)
         self.MainMenu.Append(self.DIMenu, "D&I")
         # ## Stream Operations
         self.StreamOperationsMenu = wx.Menu()
         self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Add current &working state to memory...\tCtrl+W", "Add Stream", wx.ITEM_NORMAL)
-        self.StreamOperationsMenu.AppendItem(self.StreamAddListSelect)
+        try:
+            self.StreamOperationsMenu.Append(self.StreamAddListSelect)
+        except:
+            self.StreamOperationsMenu.AppendItem(self.StreamAddListSelect)
         self.StreamOperationsMenu.AppendSeparator()
         self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Access memory/&multiple data set operations...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
-        self.StreamOperationsMenu.AppendItem(self.StreamListSelect)
+        try:
+            self.StreamOperationsMenu.Append(self.StreamListSelect)
+        except:
+            self.StreamOperationsMenu.AppendItem(self.StreamListSelect)
         self.MainMenu.Append(self.StreamOperationsMenu, "Memory/DataO&perations")
         # ## Data Checker
         if datacheck:
             self.CheckDataMenu = wx.Menu()
             self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "Check &definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
-            self.CheckDataMenu.AppendItem(self.CheckDefinitiveDataSelect)
+            try:
+                self.CheckDataMenu.Append(self.CheckDefinitiveDataSelect)
+            except:
+                self.CheckDataMenu.AppendItem(self.CheckDefinitiveDataSelect)
             self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagP&y log...\tCtrl+Y", "Open log", wx.ITEM_NORMAL)
-            self.CheckDataMenu.AppendItem(self.OpenLogFileSelect)
+            try:
+                self.CheckDataMenu.Append(self.OpenLogFileSelect)
+            except:
+                self.CheckDataMenu.AppendItem(self.OpenLogFileSelect)
             self.MainMenu.Append(self.CheckDataMenu, "E&xtra")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic initialisation parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
-        self.OptionsMenu.AppendItem(self.OptionsInitItem)
+        try:
+            self.OptionsMenu.Append(self.OptionsInitItem)
+        except:
+            self.OptionsMenu.AppendItem(self.OptionsInitItem)
         self.OptionsMenu.AppendSeparator()
         self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 402, "DI &initialisation parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
-        self.OptionsMenu.AppendItem(self.OptionsDIItem)
+        try:
+            self.OptionsMenu.Append(self.OptionsDIItem)
+        except:
+            self.OptionsMenu.AppendItem(self.OptionsDIItem)
         #self.OptionsMenu.AppendSeparator()
         #self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 403, "Observator&y specifications\tCtrl+Y", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
         #self.OptionsMenu.AppendItem(self.OptionsObsItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
         self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
-        self.HelpMenu.AppendItem(self.HelpAboutItem)
+        try:
+            self.HelpMenu.Append(self.HelpAboutItem)
+        except:
+            self.HelpMenu.AppendItem(self.HelpAboutItem)
         self.HelpReadFormatsItem = wx.MenuItem(self.HelpMenu, 302, "Read Formats...", "Supported data formats to read", wx.ITEM_NORMAL)
-        self.HelpMenu.AppendItem(self.HelpReadFormatsItem)
+        try:
+            self.HelpMenu.Append(self.HelpReadFormatsItem)
+        except:
+            self.HelpMenu.AppendItem(self.HelpReadFormatsItem)
         self.HelpWriteFormatsItem = wx.MenuItem(self.HelpMenu, 303, "Write Formats...", "Supported data formats to write", wx.ITEM_NORMAL)
-        self.HelpMenu.AppendItem(self.HelpWriteFormatsItem)
+        try:
+            self.HelpMenu.Append(self.HelpWriteFormatsItem)
+        except:
+            self.HelpMenu.AppendItem(self.HelpWriteFormatsItem)
         self.MainMenu.Append(self.HelpMenu, "&Help")
         self.SetMenuBar(self.MainMenu)
         # Menu Bar end
@@ -5863,8 +5929,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dipathlist = self.dipathlist[0]
         if os.path.isfile(dipathlist):
             dipathlist = os.path.split(dipathlist)[0]
+        services = self.options.get('webservices',{})
+        default = self.options.get('defaultservice','conrad')
 
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist, db=self.db)
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist, db=self.db, services=services, defaultservice=default)
         dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
         dlg.ShowModal()
         if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
