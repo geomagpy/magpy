@@ -2295,6 +2295,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 msg.Destroy()
                 return
 
+        def replaceCommands(dictionary, replacedict):
+            if replacedict and not replacedict == {}:
+                for el in replacedict:
+                    if not dictionary.get(el,'') == '':
+                        dictionary[el] = replacedict[el]
+            return dictionary
+
         dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default, validgroups=['magnetism','meteorology'])
         if dlg.ShowModal() == wx.ID_OK:
             # Create URL from inputs
@@ -2318,20 +2325,16 @@ Suite 330, Boston, MA  02111-1307  USA"""
             if start < end:
                 service = dlg.serviceComboBox.GetValue()
                 # get service depended commands dictionary
-                print ("Command replacements", dlg.serviceComboBox.GetValue()).get(commands))
-                #defaultcommands = replaceCommands()
-                print ("Check", defaultcommand.get('format'))
+                replacedict = services.get(dlg.serviceComboBox.GetValue()).get('commands',{})
+                defaultcommands = replaceCommands(defaultcommands, replacedict)
                 group = dlg.groupComboBox.GetValue()
-                obs_id = 'id={}'.format(dlg.idComboBox.GetValue())
-                start_time = '&starttime={}T{}Z'.format(sd,sttime)
-                end_time = '&endtime={}T{}Z'.format(ed,entime)
-                if service == 'conrad':
-                    file_format = '&of=' + dlg.formatComboBox.GetValue()
-                else:
-                    file_format = '&format={}'.format(dlg.formatComboBox.GetValue()
-                elements = '&elements={}'.format(dlg.elementsTextCtrl.GetValue())
-                data_type = '&type={}'.format(dlg.typeComboBox.GetValue())
-                period = '&sampling_period={}'.format(dlg.sampleComboBox.GetValue())
+                obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
+                start_time = '&{}={}T{}Z'.format(defaultcommands.get('starttime'), sd,sttime)
+                end_time = '&{}={}T{}Z'.format(defaultcommands.get('endtime'), ed,entime)
+                file_format = '&{}={}'.format(defaultcommands.get('format'), dlg.formatComboBox.GetValue())
+                elements = '&{}={}'.format(defaultcommands.get('elements'), dlg.elementsTextCtrl.GetValue())
+                data_type = '&{}={}'.format(defaultcommands.get('type'), dlg.typeComboBox.GetValue())
+                period = '&{}={}'.format(defaultcommands.get('sampling_period'), dlg.sampleComboBox.GetValue())
                 base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
                 url = (base + '?' + obs_id + start_time + end_time + file_format +
                       elements + data_type + period)
