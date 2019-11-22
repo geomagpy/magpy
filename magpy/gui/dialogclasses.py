@@ -131,23 +131,38 @@ class ConnectWebServiceDialog(wx.Dialog):
     Helper method to connect to edge
     Select shown keys
     """
-    def __init__(self, parent, title, services, default):
+    def __init__(self, parent, title, services, default, validgroups, defaultstarttime=None):
         super(ConnectWebServiceDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.services = services
         self.default = default
+        self.validgroups = validgroups
         defaultgroup = 'magnetism'
+        if not defaultstarttime:
+            defaultstarttime = wx.DateTime().Today()
+        self.defaultstartime = defaultstarttime
         self.servicelist = [el for el in services]
-        self.selectedservice = default
-        self.selectedgroup = defaultgroup
-        self.grouplist = [el for el in self.services.get(self.selectedservice)]
-        #self.layoutlist = []
+        if default in self.servicelist and len(self.servicelist) > 0:
+            self.selectedservice = default
+        elif len(self.servicelist) > 0:
+            self.selectedservice = self.servicelist[0]
+        else:
+            # Message window that no service has been found
+            # Aborting
+            print ("Abort")
 
-        self.ids = services.get(default).get(defaultgroup).get('ids')        
-        self.types = services.get(default).get(defaultgroup).get('type')        
-        self.formats = services.get(default).get(defaultgroup).get('format')        
-        self.sampling = services.get(default).get(defaultgroup).get('sampling')        
-        self.elements = services.get(default).get(defaultgroup).get('elements')        
+        self.grouplist = [el for el in self.services.get(self.selectedservice) if el in validgroups and not el == 'commands']
+
+        if defaultgroup in self.grouplist and len(self.grouplist) > 0:
+            self.selectedgroup = defaultgroup
+        elif len(self.grouplist) > 0:
+            self.selectedgroup = self.grouplist[0]
+
+        self.ids = services.get(self.selectedservice).get(self.selectedgroup).get('ids',[])
+        self.types = services.get(self.selectedservice).get(self.selectedgroup).get('type',[])
+        self.formats = services.get(self.selectedservice).get(self.selectedgroup).get('format')
+        self.sampling = services.get(self.selectedservice).get(self.selectedgroup).get('sampling',[])
+        self.elements = services.get(self.selectedservice).get(self.selectedgroup).get('elements','')
 
         self.createControls()
         #self.createUrl()
@@ -185,7 +200,7 @@ class ConnectWebServiceDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.sampling[0],size=(400,-1))
         #self.startName = wx.TextCtrl(self, value="starttime=",size=(400,25))
         self.startTimeLabel = wx.StaticText(self, label="Start Time: ",size=(400,25))
-        self.startDatePicker = wxDatePickerCtrl(self,dt=wx.DateTime().Today(),size=(160,25))
+        self.startDatePicker = wxDatePickerCtrl(self,dt=self.defaultstartime,size=(160,25))
         self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,25))
         #self.endName = wx.TextCtrl(self, value="endtime=",size=(400,25))
         self.endTimeLabel = wx.StaticText(self, label="End Time: ",size=(400,25))
@@ -291,7 +306,7 @@ class ConnectWebServiceDialog(wx.Dialog):
         selectn = self.serviceComboBox.GetStringSelection()
         if selectn:
             self.selectedservice = selectn
-        self.grouplist = [el for el in self.services.get(self.selectedservice)]
+        self.grouplist = [el for el in self.services.get(self.selectedservice) if el in self.validgroups]
 
         self.groupComboBox.Clear()
         self.groupComboBox.AppendItems(self.grouplist) 
@@ -2869,14 +2884,40 @@ class LoadDIDialog(wx.Dialog):
         self.dirname = dirname
         self.db = db
         self.absolutes = []
-        self.services = services
-        # TODO limit the list of serviceitems to webservices providing DI data
+        self.services =  self.getBasevalueService(services)
         self.serviceitems = list(self.services.keys())
-        #print (self.services)
-        self.mainsource = defaultservice
+        if not defaultservice in self.serviceitems:
+            self.mainsource = self.serviceitems[0]
+        else:
+            self.mainsource = defaultservice
         self.createControls()
         self.doLayout()
         self.bindControls()
+
+    def getBasevalueService(self,services):
+        """
+        DESCRIPTION
+          Obtain only services providing basevalues
+          Return a service dictionary and a service list for preselection in ComboBox 
+        """
+        basevaluedict = {}
+        for service in services:
+            #print (services[service])
+            cont = services[service]
+            for el in cont:
+                #print (service,el)
+                if el == 'basevalues':
+                    basecont = {}
+                    #print ("FOUND", service)
+                    #print (cont[el])
+                    if not cont[el].get('type'):
+                        cont[el]['type'] = ['basevalue']
+                    if not cont[el].get('sampling'):
+                        cont[el]['sampling'] = ['']
+                    cont[el]['elements'] = ''
+                    basecont[el] = cont[el]
+                    basevaluedict[service] = basecont
+        return basevaluedict
 
     # Widgets
     def createControls(self):
@@ -3109,32 +3150,22 @@ class LoadDIDialog(wx.Dialog):
         self.Close(True)
 
     def OnLoadDIRemote(self,e):
-
+        url = ''
+        stationid = 'None'
+        source = 'webservice'
+        abslist = []
+        datelist, pierlist = [], []
         services = self.services
-        ### TODO Drop all unnecessary information from services
-
         default = self.remoteComboBox.GetValue()
-        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default)
-        # Set the following parameters and disable the items
-        # Format = Json
-        dlg.formatComboBox.SetValue("json")
-        dlg.formatComboBox.Disable()
-        # Date Group = Basevalue Observation
-        dlg.groupComboBox.SetValue("Basevalue observation")
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default, validgroups=['basevalues'], defaultstarttime = wx.DateTime().Today()-wx.TimeSpan(24*14))
+        # Disable items
         dlg.groupComboBox.Disable()
-        # Date Type = basevalues
-        dlg.typeComboBox.SetValue("basevalues")
         dlg.typeComboBox.Disable()
-        # Sampling Rate = Empty
-        dlg.sampleComboBox.SetValue("")
         dlg.sampleComboBox.Disable()
-        # Components = Empty
-        dlg.elementsTextCtrl.SetValue("")
         dlg.elementsTextCtrl.Disable()
 
         if dlg.ShowModal() == wx.ID_OK:
             # Create URL from inputs
-            """
             stday = dlg.startDatePicker.GetValue()
             sttime = str(dlg.startTimePicker.GetValue())
             if sttime.endswith('AM') or sttime.endswith('am'):
@@ -3153,53 +3184,58 @@ class LoadDIDialog(wx.Dialog):
             ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
             end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
             if start < end:
-                service = dlg.serviceComboBox.GetValue()
-                group = dlg.groupComboBox.GetValue()
-                obs_id = 'id=' + dlg.idComboBox.GetValue()
+                stationid = dlg.idComboBox.GetValue()
+                # Should that be changed to "id" ?
+                obs_id = 'observatory=' + stationid
                 start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
                 end_time = '&endtime=' + ed + 'T' + entime + 'Z'
-                if service == 'conrad':
-                    file_format = '&of=' + dlg.formatComboBox.GetValue()
-                else:
-                    file_format = '&format=' + dlg.formatComboBox.GetValue()
-                elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
-                data_type = '&type=' + dlg.typeComboBox.GetValue()
-                period = '&sampling_period=' + dlg.sampleComboBox.GetValue()
-                base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
-                url = (base + '?' + obs_id + start_time + end_time + file_format +
-                      elements + data_type + period)
+                raw = '&includemeasurements=true'
+                base = services.get(dlg.serviceComboBox.GetValue()).get('basevalues').get('address')
+                url = (base + '?' + obs_id + start_time + end_time + raw)
                 #print ("Constructed url:", url)
-                self.options['defaultservice'] = service
             else:
                 msg = wx.MessageDialog(self, "Invalid time range!\n"
                     "The end time occurs before the start time.\n",
                     "Connect Webservice", wx.OK|wx.ICON_INFORMATION)
                 msg.ShowModal()
-                self.changeStatusbar("Loading from directory failed ... Ready")
                 msg.Destroy()
-            """
 
+        didict = {}
+        if not url == '':
+            # get data from url and read using readJSONABS
+            # eventually move that to readJSONABS
+            content = urlopen(url).read()
+            suffix = '.json'
+            date = os.path.basename(url).partition('.')[0] # append the full filename to the temporary file
+            fname = date+suffix
+            fname = fname.strip('?').strip(':')      ## Necessary for windows
+            fh = NamedTemporaryFile(suffix=fname,delete=False)
+            fh.write(content)
+            fh.close()
+            # create temporary file??
+            absst = readJSONABS(fh.name)
+            # JSONABS returns a DILIST
+            for a in absst:
+                stream = a.getAbsDIStruct()
+                abslist.append(a)
+                datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None), "%Y-%m-%d"))
+                pierlist.append(a.pier)
 
-            self.changeStatusbar("Loading webservice data ... be patient")
-        dlg.Destroy()
+            didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
+            didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
+            didict['selectedpier'] = pierlist[0]
+            didict['source'] = source
+            didict['absdata'] = abslist
+            didict['station'] =  stationid
 
-        """
-        stream = DataStream()
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.pathlist = dlg.GetPaths()
+            self.pathlist = didict
+
+        else:
+            # set some info parameters on DI panel
+            pass
+
         dlg.Destroy()
         self.Close(True)
-
-        base = 'https://geomag.usgs.gov/baselines/observation.json.php?'
-        observatory = self.plotstream.header.get('StationID')
-        while time < endtime + timedelta(days = 7):
-            called_date = time.strftime('%Y-%m-%d')
-            time = time + timedelta(days=1)
-            url = base + 'observatory=' + observatory + '&starttime=' + \
-                    called_date + '&includemeasurements=true'
-            di_db += [url]
-        """
 
 
 class DIConnectDatabaseDialog(wx.Dialog):

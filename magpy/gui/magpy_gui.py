@@ -158,9 +158,20 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('defaultservice','') == '':
         optionsdict['defaultservice'] = 'conrad'
     if optionsdict.get('webservices','') == '':
-        optionsdict['webservices'] = { 'usgs':{'magnetism':{'address':'https://geomag.usgs.gov/ws/edge/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['1','60','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']}}, 
-                                      'conrad': {'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']}} }
-
+        # default commands are:
+        # id, starttime, endtime, format, elements, type, sampling_period
+        # to change them, use commands dictionary below the webservice input: 
+        # e.g. {'conrad' :  { 'commands' : {'format':'of'}, 'magnetism' : {...} } }
+        #                                      |       |
+        #    defaultvalue  <--------------------       ----------> conrad specification
+        optionsdict['webservices'] = { 'usgs':{
+                         'magnetism':{'address':'https://geomag.usgs.gov/ws/edge/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['1','60','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']},
+                         'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
+                         'commands':{} }, 
+                                      'conrad': {
+                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
+                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']},
+                         'commands':{'format':'of'} } }
     if optionsdict.get('scalevalue','') == '':
         optionsdict['scalevalue'] = 'True'
     if optionsdict.get('double','') == '':
@@ -2283,7 +2294,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 msg.Destroy()
                 return
 
-        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default)
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default, validgroups=['magnetism','meteorology'])
         if dlg.ShowModal() == wx.ID_OK:
             # Create URL from inputs
             stday = dlg.startDatePicker.GetValue()
