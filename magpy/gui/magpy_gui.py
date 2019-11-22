@@ -2277,6 +2277,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             dlg.Destroy()
 
     def OnOpenWebService(self, event):
+        defaultcommands = {'id':'id', 'starttime':'starttime', 'endtime':'endtime', 'format':'format', 'elements':'elements', 'type':'type','sampling_period':'sampling_period'}
         stream = DataStream()
         success = False
         url = ''
@@ -2316,17 +2317,21 @@ Suite 330, Boston, MA  02111-1307  USA"""
             end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
             if start < end:
                 service = dlg.serviceComboBox.GetValue()
+                # get service depended commands dictionary
+                print ("Command replacements", dlg.serviceComboBox.GetValue()).get(commands))
+                #defaultcommands = replaceCommands()
+                print ("Check", defaultcommand.get('format'))
                 group = dlg.groupComboBox.GetValue()
-                obs_id = 'id=' + dlg.idComboBox.GetValue()
-                start_time = '&starttime=' + sd + 'T' + sttime + 'Z'
-                end_time = '&endtime=' + ed + 'T' + entime + 'Z'
+                obs_id = 'id={}'.format(dlg.idComboBox.GetValue())
+                start_time = '&starttime={}T{}Z'.format(sd,sttime)
+                end_time = '&endtime={}T{}Z'.format(ed,entime)
                 if service == 'conrad':
                     file_format = '&of=' + dlg.formatComboBox.GetValue()
                 else:
-                    file_format = '&format=' + dlg.formatComboBox.GetValue()
-                elements = '&elements=' + dlg.elementsTextCtrl.GetValue()
-                data_type = '&type=' + dlg.typeComboBox.GetValue()
-                period = '&sampling_period=' + dlg.sampleComboBox.GetValue()
+                    file_format = '&format={}'.format(dlg.formatComboBox.GetValue()
+                elements = '&elements={}'.format(dlg.elementsTextCtrl.GetValue())
+                data_type = '&type={}'.format(dlg.typeComboBox.GetValue())
+                period = '&sampling_period={}'.format(dlg.sampleComboBox.GetValue())
                 base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
                 url = (base + '?' + obs_id + start_time + end_time + file_format +
                       elements + data_type + period)
