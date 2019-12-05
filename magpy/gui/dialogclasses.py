@@ -2875,6 +2875,14 @@ class LoadDIDialog(wx.Dialog):
     """
     Dialog for Stream panel
     Select shown keys
+
+    Essetial parameters for DI analysis:
+    self.dipathlist                :  contains the obtained dictionary from the Load process with a diline structure
+    self.divariopath               :  the sourcepath 
+    self.discalarpath              :  the sourcepath
+    self.dirname                   :  initial path for vario, scalar and di data
+    self.options['didictionary']   :  basically all options and defauts for variometer and scalar
+    self.options['diparameter']    :  parameter for analysis
     """
 
     def __init__(self, parent, title, dirname, db, services, defaultservice):
@@ -3009,7 +3017,7 @@ class LoadDIDialog(wx.Dialog):
             try: 
                 if not len(absst) > 1: # Manual
                     stream = absst[0].getAbsDIStruct()
-                    abslist.append(absst)
+                    abslist.append(absst[0])
                     datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
                     pierlist.append(absst[0].pier)
                 else: # AutoDIF
@@ -3044,9 +3052,7 @@ class LoadDIDialog(wx.Dialog):
             if dlg.ShowModal() == wx.ID_OK:
                 stationid = dlg.StationTextCtrl.GetValue()
             dlg.Destroy()
-
         didict['station'] =  stationid
-
         return didict
 
 
@@ -3055,9 +3061,10 @@ class LoadDIDialog(wx.Dialog):
         stream = DataStream()
         dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wxMULTIPLE)
         if dlg.ShowModal() == wx.ID_OK:
-            #self.pathlist = dlg.GetPaths()
-            #self.LoadFiles(self.pathlist)
-            # Need stationid, pier and azimuth!!
+            try:
+                self.dirname = os.path.split(dlg.GetPaths()[0])[0]
+            except:
+                pass
             self.pathlist = self.LoadFiles(dlg.GetPaths())
 
         dlg.Destroy()
@@ -3237,6 +3244,371 @@ class LoadDIDialog(wx.Dialog):
         dlg.Destroy()
         self.Close(True)
 
+
+class LoadVarioScalarDialog(wx.Dialog):
+    """
+    Dialog for Absolute panel
+    Select data source for variometer and scalar data
+    """
+
+    def __init__(self, parent, title, vselection, sselection, defaultvariopath, defaultscalarpath, db, defaultvariotable, defaultscalartable, services, defaultservice):
+        super(LoadVarioScalarDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.vchoicesselection = [False,False,False]
+        self.vchoice = vselection
+        self.vchoicesselection[self.vchoice] = True
+        self.sourcechoices = ['file','DB','webservice']
+        self.schoicesselection = [False,False,False]
+        self.schoice = sselection
+        self.schoicesselection[self.schoice] = True
+        self.defaultvariopath = defaultvariopath.split('*.')[0]
+        self.defaultscalarpath = defaultscalarpath.split('*.')[0]
+        self.varioext = ['*.*']
+        self.scalarext = ['*.*']
+        self.db = db
+        if self.db:
+            self.variotables = self.checkDB(search='x,y,z')
+            self.scalartables = self.checkDB(search='f')
+            self.defaultvariotable = self.variotables[0]
+            self.defaultscalartable = self.scalartables[0]
+        else:
+            self.variotables = ['1','2']
+            self.scalartables = ['3','4']
+        self.defaultvariotable = defaultvariotable
+        self.defaultscalartable = defaultscalartable
+        self.services = services
+        self.serviceitems = list(self.services.keys())
+        if not defaultservice in self.serviceitems:
+            self.mainsource = self.serviceitems[0]
+        else:
+            self.mainsource = defaultservice
+        self.divariows = 'url'
+        self.discalarws = 'url'
+        self.variopath_short = self.getShort(self.defaultvariopath)
+        self.scalarpath_short = self.getShort(self.defaultscalarpath)
+
+        # the following variables contain the resulting source information for absoluteAnalysis
+        self.variosource = ''
+        self.scalarsource = ''
+
+
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    def getShort(self,path,slen=20):
+        """
+        Get short version of directory name
+        """
+        if not path:
+            path = ''
+        elif len(path) < slen:
+            return path
+        else:
+            return "...{}".format(path[-slen:])
+
+    def checkDB(self, search='f'):
+        cursor = self.db.cursor()
+        sql = "SELECT DataID, ColumnContents, ColumnUnits FROM DATAINFO"
+        cursor.execute(sql)
+        output = cursor.fetchall()
+        #print ("Test", output)
+        datainfoidlist = [elem[0] for elem in output if search in elem[1].lower() and 'nT' in  elem[2]]
+        return datainfoidlist
+
+    # Widgets
+    def createControls(self):
+        self.variosourceLabel = wx.StaticText(self, label="Variometer:",size=(160,30))
+        self.scalarsourceLabel = wx.StaticText(self, label="Scalar instr.:",size=(160,30))
+        self.scalarLabel = wx.StaticText(self, label="Source:",size=(120,30))
+
+        self.vsource1CheckBox = wx.CheckBox(self, label='files',size=(160,30))
+        self.vsource2CheckBox = wx.CheckBox(self, label='DB',size=(160,30))
+        self.vsource3CheckBox = wx.CheckBox(self, label='webservice',size=(160,30))
+
+        self.ssource1CheckBox = wx.CheckBox(self, label='files',size=(160,30))
+        self.ssource2CheckBox = wx.CheckBox(self, label='DB',size=(160,30))
+        self.ssource3CheckBox = wx.CheckBox(self, label='webservice',size=(160,30))
+
+        self.varioButton = wx.Button(self, -1, self.variopath_short,size=(210,30))
+        self.scalarButton = wx.Button(self, -1, self.scalarpath_short,size=(210,30))
+
+        self.varioDBComboBox = wx.ComboBox(self, choices=self.variotables,
+                 style=wx.CB_DROPDOWN, value=self.defaultvariotable,size=(210,-1))
+        self.scalarDBComboBox = wx.ComboBox(self, choices=self.scalartables,
+                 style=wx.CB_DROPDOWN, value=self.defaultscalartable,size=(210,-1))
+        self.varioWSButton = wx.Button(self, -1, self.mainsource ,size=(210,30))
+        self.scalarWSButton = wx.Button(self, -1, self.mainsource ,size=(210,30))
+
+        self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
+                 style=wx.CB_DROPDOWN, value=self.varioext[0],size=(80,-1))
+        self.scalarExtComboBox = wx.ComboBox(self, choices=self.scalarext,
+                 style=wx.CB_DROPDOWN, value=self.scalarext[0],size=(80,-1))
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Continue',size=(210,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(210,30))
+        if not self.db:
+            self.varioDBComboBox.Disable()
+            self.scalarDBComboBox.Disable()
+
+        self.vsource1CheckBox.SetValue(True)
+        self.vsource2CheckBox.SetValue(True)
+        self.vsource3CheckBox.SetValue(True)
+        self.ssource1CheckBox.SetValue(True)
+        self.ssource2CheckBox.SetValue(True)
+        self.ssource3CheckBox.SetValue(True)
+        self.EnDis(self.vchoice,self.schoice)
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        contlst=[]
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.scalarLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.variosourceLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.scalarsourceLabel, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.vsource1CheckBox, noOptions))
+        contlst.append((self.varioButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.varioExtComboBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.ssource1CheckBox, noOptions))
+        contlst.append((self.scalarButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.scalarExtComboBox, noOptions))
+        contlst.append((self.vsource2CheckBox, noOptions))
+        contlst.append((self.varioDBComboBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.ssource2CheckBox, noOptions))
+        contlst.append((self.scalarDBComboBox, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.vsource3CheckBox, noOptions))
+        contlst.append((self.varioWSButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.ssource3CheckBox, noOptions))
+        contlst.append((self.scalarWSButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+
+        # A GridSizer will contain the other controls:
+        cols = 7
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.vsource1CheckBox.Bind(wx.EVT_CHECKBOX, self.OnCb1)
+        self.vsource2CheckBox.Bind(wx.EVT_CHECKBOX, self.OnCb2)
+        self.vsource3CheckBox.Bind(wx.EVT_CHECKBOX, self.OnCb3)
+        self.ssource1CheckBox.Bind(wx.EVT_CHECKBOX, self.OnCbs1)
+        self.ssource2CheckBox.Bind(wx.EVT_CHECKBOX, self.OnCbs2)
+        self.ssource3CheckBox.Bind(wx.EVT_CHECKBOX, self.OnCbs3)
+        self.varioButton.Bind(wx.EVT_BUTTON, self.OnVario)
+        self.scalarButton.Bind(wx.EVT_BUTTON, self.OnScalar)
+        self.varioWSButton.Bind(wx.EVT_BUTTON, self.OnVarioWS)
+        self.scalarWSButton.Bind(wx.EVT_BUTTON, self.OnScalarWS)
+
+    def EnDis(self,vchoice,schoice):
+        self.varioButton.Disable()
+        self.scalarButton.Disable()
+        self.varioDBComboBox.Disable()
+        self.scalarDBComboBox.Disable()
+        self.varioWSButton.Disable()
+        self.scalarWSButton.Disable()
+        self.varioExtComboBox.Disable()
+        self.scalarExtComboBox.Disable()
+        if vchoice == 0:
+            self.vsource2CheckBox.SetValue(False)
+            self.vsource3CheckBox.SetValue(False)
+            self.varioButton.Enable()
+            self.varioExtComboBox.Enable()
+        if vchoice == 1:
+            self.vsource1CheckBox.SetValue(False)
+            self.vsource3CheckBox.SetValue(False)
+            if self.db:
+                self.varioDBComboBox.Enable()
+        if vchoice == 2:
+            self.vsource1CheckBox.SetValue(False)
+            self.vsource2CheckBox.SetValue(False)
+            self.varioWSButton.Enable()
+        if schoice == 0:
+            self.ssource2CheckBox.SetValue(False)
+            self.ssource3CheckBox.SetValue(False)
+            self.scalarButton.Enable()
+            self.scalarExtComboBox.Enable()
+        if schoice == 1:
+            self.ssource1CheckBox.SetValue(False)
+            self.ssource3CheckBox.SetValue(False)
+            if self.db:
+                self.scalarDBComboBox.Enable()
+        if schoice == 2:
+            self.ssource1CheckBox.SetValue(False)
+            self.ssource2CheckBox.SetValue(False)
+            self.scalarWSButton.Enable()
+
+
+    def OnCb1(self, evt):
+        self.vchoice = 0
+        self.EnDis(self.vchoice,self.schoice)
+        self.variosource = self.defaultvariopath
+        self.scalarsource = self.defaultscalarpath
+
+    def OnCb2(self, evt):
+        self.vchoice = 1
+        self.EnDis(self.vchoice,self.schoice)
+
+    def OnCb3(self, evt):
+        self.vchoice = 2
+        self.EnDis(self.vchoice,self.schoice)
+
+    def OnCbs1(self, evt):
+        self.schoice = 0
+        self.EnDis(self.vchoice,self.schoice)
+        self.variosource = self.defaultvariopath
+        self.scalarsource = self.defaultscalarpath
+
+    def OnCbs2(self, evt):
+        self.schoice = 1
+        self.EnDis(self.vchoice,self.schoice)
+
+    def OnCbs3(self, evt):
+        self.schoice = 2
+        self.EnDis(self.vchoice,self.schoice)
+
+    def getExtensionList(self,path):
+            import collections
+            # returns a sorted extension list for all file in the directory
+            # sorted by abunandce
+            ext = []
+            for f in os.listdir(path):
+                sp = f.split('.')
+                if len(sp) > 1:
+                    ext.append(sp[-1])
+            counter=collections.Counter(ext)
+            sortlist = counter.most_common()
+            sortlist.append(('*',1))
+            #print (["*.{}".format(el[0]) for el in sortlist])
+            return ["*.{}".format(el[0]) for el in sortlist]
+
+    def OnVario(self, event):
+        # Open a select path dlg as long as db and remote is not supported
+        dialog = wx.DirDialog(None, "Choose a directory with variometer data:",self.defaultvariopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPath()
+            varioext = self.getExtensionList(path)
+            self.varioExtComboBox.Clear()
+            try:
+                self.varioExtComboBox.Append(varioext)
+            except:
+                self.varioExtComboBox.AppendItems(varioext)
+            self.varioExtComboBox.SetValue(varioext[0])
+            label = self.getShort(path)
+            self.varioButton.SetLabel(label)
+            self.defaultvariopath = path
+        dialog.Destroy()
+
+    def OnScalar(self, event):
+        # Open a select path dlg as long as db and remote is not supported
+        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",self.defaultvariopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPath()
+            scalarext = self.getExtensionList(path)
+            self.scalarExtComboBox.Clear()
+            try:
+                self.scalarExtComboBox.Append(varioext)
+            except:
+                self.scalarExtComboBox.AppendItems(scalarext)
+            self.scalarExtComboBox.SetValue(scalarext[0])
+            label = self.getShort(path)
+            self.scalarButton.SetLabel(label)
+            self.defaultscalarpath = path
+        dialog.Destroy()
+
+    def replaceCommands(self, dictionary, replacedict):
+            if replacedict and not replacedict == {}:
+                for el in replacedict:
+                    if not dictionary.get(el,'') == '':
+                        dictionary[el] = replacedict[el]
+            return dictionary
+
+    def OnVarioWS(self, event):
+        defaultcommands = {'id':'id', 'starttime':'starttime', 'endtime':'endtime', 'format':'format', 'elements':'elements', 'type':'type','sampling_period':'sampling_period'}
+
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=self.services, default=self.mainsource, validgroups=['magnetism'])
+        if dlg.ShowModal() == wx.ID_OK:
+            # Create URL from inputs ignoring times
+            service = dlg.serviceComboBox.GetValue()
+            # get service depended commands dictionary
+            replacedict = self.services.get(dlg.serviceComboBox.GetValue()).get('commands',{})
+            defaultcommands = self.replaceCommands(defaultcommands, replacedict)
+            group = dlg.groupComboBox.GetValue()
+            obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
+            file_format = '&{}={}'.format(defaultcommands.get('format'), dlg.formatComboBox.GetValue())
+            elements = '&{}={}'.format(defaultcommands.get('elements'), dlg.elementsTextCtrl.GetValue())
+            data_type = '&{}={}'.format(defaultcommands.get('type'), dlg.typeComboBox.GetValue())
+            period = '&{}={}'.format(defaultcommands.get('sampling_period'), dlg.sampleComboBox.GetValue())
+            base = self.services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
+            url = (base + '?' + obs_id + file_format +
+                      elements + data_type + period)
+            self.divariows = url
+            self.varioWSButton.SetLabel(service)
+            self.mainsource = service
+
+    def OnScalarWS(self, event):
+        defaultcommands = {'id':'id', 'starttime':'starttime', 'endtime':'endtime', 'format':'format', 'elements':'elements', 'type':'type','sampling_period':'sampling_period'}
+
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=self.services, default=self.mainsource, validgroups=['magnetism'])
+        if dlg.ShowModal() == wx.ID_OK:
+            # Create URL from inputs ignoring times
+            service = dlg.serviceComboBox.GetValue()
+            # get service depended commands dictionary
+            replacedict = self.services.get(dlg.serviceComboBox.GetValue()).get('commands',{})
+            defaultcommands = self.replaceCommands(defaultcommands, replacedict)
+            group = dlg.groupComboBox.GetValue()
+            obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
+            file_format = '&{}={}'.format(defaultcommands.get('format'), dlg.formatComboBox.GetValue())
+            elements = '&{}={}'.format(defaultcommands.get('elements'), dlg.elementsTextCtrl.GetValue())
+            data_type = '&{}={}'.format(defaultcommands.get('type'), dlg.typeComboBox.GetValue())
+            period = '&{}={}'.format(defaultcommands.get('sampling_period'), dlg.sampleComboBox.GetValue())
+            base = self.services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
+            url = (base + '?' + obs_id + file_format +
+                      elements + data_type + period)
+            self.discalarws = url
+            self.scalarWSButton.SetLabel(service)
+            self.mainsource = service
 
 class DIConnectDatabaseDialog(wx.Dialog):
     """
@@ -3679,6 +4051,149 @@ class DISaveDialog(wx.Dialog):
     def OnAlternative(self, e):
         self.choice = 'alternative'
         self.Close(True)
+
+
+class ParameterDictDialog(wx.Dialog):
+    """
+    Dialog for general Parameter selection - based on a dictionary
+    """
+
+    def __init__(self, parent, title, dictionary):
+        super(ParameterDictDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.dict = dictionary
+        self.depth = len(list(self.iter_leafs(dictionary))[0][0])
+        self.elementlist = []
+        selected = []
+
+        self.lastlayer, self.layhead, selected = self.getHeadsAndLast(self.depth, self.dict)
+        self.createControls(selected)
+        self.doLayout()
+
+    def iter_leafs(self, d, keys=[]):
+        for key, val in d.items():
+            if isinstance(val, dict):
+                yield from self.iter_leafs(val, keys + [key])
+            else:
+                yield keys + [key], val
+
+    def getHeadsAndLast(self, depth, d, preselect = []):
+        print ("PreselectioN", preselect)
+        if self.depth > 1:
+            lay = []
+            last=d
+            selection = []
+            for i in range(depth-1):
+                lay.append([])
+                for el in last:
+                    lay[i].append(el)
+                if len(preselect) >= depth-1 and preselect[i] in lay[i]:
+                    selection.append(preselect[i])
+                else:
+                    selection.append(lay[i][0])
+                print ("CHOOSING", selection[-1])
+                last=last.get(selection[-1])
+            #print ("Layer list", lay, len(lay))
+            headlist = lay
+            return last, headlist, selection
+        else:
+            return d, [], []
+
+    # Widgets
+    def createControls(self, selected):
+        """
+        selected is a list of same length as self.layhead containing selected items
+        """
+        if len(self.layhead) > 0:
+            for idx,el in enumerate(self.layhead):
+                print (el)
+                self.elementlist.append(['Combo', wx.ComboBox(self, choices=el,
+                            style=wx.CB_DROPDOWN, value=selected[idx],size=(110,-1))])
+                print ("bind the combo boxes")
+                self.elementlist[-1][1].Bind(wx.EVT_COMBOBOX, self.OnUpdate)
+                self.elementlist.append(['Label', wx.StaticText(self, label='Hello',size=(210,30))])
+
+        lastlayer= self.lastlayer
+        for el in lastlayer:
+            print (el, lastlayer[el])
+            self.elementlist.append(['Label',wx.StaticText(self, label=el,size=(110,30))])
+            if not isinstance(lastlayer[el], bool):
+                self.elementlist.append(['Text', wx.TextCtrl(self,value="{}".format(lastlayer[el]),size=(210,30))])
+            else:
+                choices=['True','False']
+                self.elementlist.append(['Radio', wx.RadioBox(self,label="",choices=choices, majorDimension=2, style=wx.RA_SPECIFY_COLS,size=(210,50))])
+                if lastlayer[el]:
+                    self.elementlist[-1][1].SetSelection(0)
+                else:
+                    self.elementlist[-1][1].SetSelection(1)
+
+        self.elementlist.append(['Button', wx.Button(self, wx.ID_CANCEL, label='Cancel')])
+        self.elementlist.append(['Button', wx.Button(self, wx.ID_OK, label='OK')])
+
+    def destroyControls(self):
+        print ("Destroying")
+        #for el in self.elementlist:
+        #    el[1].Destroy()
+        print ("Done")
+        self.DestroyChildren()
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        self.boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        contlist = []
+        for el in self.elementlist:
+            if el[0] == 'Label':
+                opt = noOptions
+            elif el[0] == 'Text':
+                opt = expandOption
+            elif el[0] == 'Radio':
+                opt = noOptions
+            elif el[0] == 'Combo':
+                opt = noOptions
+            elif el[0] == 'Button':
+                opt = dict(flag=wx.ALIGN_CENTER)
+            contlist.append((el[1],opt))
+            #contlist.append(emptySpace)
+        #contlist.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        #contlist.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            self.boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(self.boxSizer)
+
+    def OnUpdate(self, event):
+        print ("YESS")
+        selected = [] 
+        for idx,el in enumerate(self.layhead):
+            pos = idx*2
+            selected.append(self.elementlist[pos][1].GetValue())
+
+        #self.destroyControls()
+
+        self.elementlist = []
+        self.lastlayer, self.layhead, selected = self.getHeadsAndLast(self.depth, self.dict, selected)
+        #self.createControls(selected)
+        #print (self.elementlist)
+        #self.doLayout()
 
 
 class DISetParameterDialog(wx.Dialog):

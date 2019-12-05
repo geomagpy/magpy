@@ -2780,7 +2780,6 @@ def readDB(db, table, starttime=None, endtime=None, sql=None):
         loggerdatabase.error("readDB: mysqlerror while getting table info: %s" % (e))
         return stream
 
-
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
 

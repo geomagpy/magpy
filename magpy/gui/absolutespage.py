@@ -40,16 +40,16 @@ class AbsolutePage(wx.Panel):
         self.diSourceLabel = wx.StaticText(self, label="Source: None")
         self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.defineVarioButton = wx.Button(self,-1,"Variometer",size=(160,30))
+        self.defineVarioScalarButton = wx.Button(self,-1,"Vario/Scalar",size=(160,30))
+        self.VarioSourceLabel = wx.StaticText(self, label="Vario: None")
+        self.ScalarSourceLabel = wx.StaticText(self, label="Scalar: None")
         self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        #self.varioextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
-        #self.varioextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,30))
-        self.defineScalarButton = wx.Button(self,-1,"Scalar",size=(160,30))
+        self.defineParameterButton = wx.Button(self,-1,"Analysis options",size=(160,30))
+        self.parameterTextCtrl = wx.TextCtrl(self, value="Default",size=(160,30),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        #self.scalarextLabel = wx.StaticText(self, label="ext: e.g. *, *.sec, *.cdf")
-        #self.scalarextTextCtrl = wx.TextCtrl(self, value="*.min",size=(160,30))
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
         self.logLabel = wx.StaticText(self, label="Logging:")
         self.advancedButton = wx.Button(self,-1,"Set parameter",size=(160,30))
@@ -57,10 +57,10 @@ class AbsolutePage(wx.Panel):
         self.SaveLogButton = wx.Button(self,-1,"Save Log",size=(160,30))
         self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,300),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
-                 style=wx.CB_DROPDOWN, value=self.varioext[0],size=(160,-1))
-        self.scalarExtComboBox = wx.ComboBox(self, choices=self.scalarext,
-                 style=wx.CB_DROPDOWN, value=self.scalarext[0],size=(160,-1))
+        #self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
+        #         style=wx.CB_DROPDOWN, value=self.varioext[0],size=(160,-1))
+        #self.scalarExtComboBox = wx.ComboBox(self, choices=self.scalarext,
+        #         style=wx.CB_DROPDOWN, value=self.scalarext[0],size=(160,-1))
 
 
     def doLayout(self):
@@ -84,7 +84,7 @@ class AbsolutePage(wx.Panel):
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=12, cols=2, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=13, cols=2, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -96,19 +96,21 @@ class AbsolutePage(wx.Panel):
                 [(self.sourceLabel, noOptions),
                   emptySpace,
                  (self.loadDIButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
                  (self.diSourceLabel, noOptions),
-                  emptySpace,
                  (self.diTextCtrl, expandOption),
-                 (self.defineVarioButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.varioExtComboBox, expandOption),
+                 (self.defineVarioScalarButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
+                 (self.VarioSourceLabel, noOptions),
                  (self.varioTextCtrl, expandOption),
-                 (self.defineScalarButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.scalarExtComboBox, expandOption),
-                  emptySpace,
+                 (self.ScalarSourceLabel, noOptions),
                  (self.scalarTextCtrl, expandOption),
+                  emptySpace,
+                  emptySpace,
                  (self.diLabel, noOptions),
                   emptySpace,
+                 (self.defineParameterButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.parameterTextCtrl, expandOption),
                  (self.AnalyzeButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.advancedButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,

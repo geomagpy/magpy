@@ -153,6 +153,36 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['diannualmean'] = ''
     if optionsdict.get('didbadd','') == '':
         optionsdict['didbadd'] = 'False'
+    if optionsdict.get('didictionary','') == '':
+        # source 0 = file, 1 = DB, 2 = webservice
+        optionsdict['didictionary'] = { 'divariopath': normalpath,
+                                        'discalarpath': normalpath,
+                                        'didatapath': normalpath,
+                                        'divariourl' : '',
+                                        'discalarurl' : '',
+                                        'divarioDBinst': '1',
+                                        'discalarDBinst': '4',
+                                        'divariosource': 0,
+                                        'discalarsource': 0
+                                      }
+    if optionsdict.get('diparameter','') == '':
+        # to be used for setting DI analysis parameter in future
+        optionsdict['diparameter'] = { 'diusedb' : False,
+                                       'diexpD' : 0.0,
+                                       'diexpI' : 0.0,
+                                       'stationid' : 'WIC',
+                                       'diid' : '',
+                                       'ditype' : 'manual',
+                                       'diazimuth' : '',
+                                       'dipier' : 'A2',
+                                       'dialpha' : 0.0,
+                                       'dibeta' : 0.0,
+                                       'dideltaF' : 0.0,
+                                       'dideltaD' : 0.0,
+                                       'dideltaI' : 0.0,
+                                       'diannualmean' : '',
+                                       'didbadd' : 'False'
+                                      }
     if optionsdict.get('bookmarks','') == '':
         optionsdict['bookmarks'] = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
     if optionsdict.get('defaultservice','') == '':
@@ -1072,16 +1102,16 @@ class MainFrame(wx.Frame):
             self.DIMenu.Append(self.DIPath2DI)
         except:
             self.DIMenu.AppendItem(self.DIPath2DI)
-        self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
-        try:
-            self.DIMenu.Append(self.DIPath2Vario)
-        except:
-            self.DIMenu.AppendItem(self.DIPath2Vario)
-        self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scala&r data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
-        try:
-            self.DIMenu.Append(self.DIPath2Scalar)
-        except:
-            self.DIMenu.AppendItem(self.DIPath2Scalar)
+        #self.DIPath2Vario = wx.MenuItem(self.DIMenu, 502, "Path to &variometer data...\tCtrl+A", "Variometer data...", wx.ITEM_NORMAL)
+        #try:
+        #    self.DIMenu.Append(self.DIPath2Vario)
+        #except:
+        #    self.DIMenu.AppendItem(self.DIPath2Vario)
+        #self.DIPath2Scalar = wx.MenuItem(self.DIMenu, 503, "Path to scala&r data...\tCtrl+R", "Scalar data...", wx.ITEM_NORMAL)
+        #try:
+        #    self.DIMenu.Append(self.DIPath2Scalar)
+        #except:
+        #    self.DIMenu.AppendItem(self.DIPath2Scalar)
         self.DIMenu.AppendSeparator()
         self.DIInputSheet = wx.MenuItem(self.DIMenu, 504, "O&pen input sheet...\tCtrl+P", "Input sheet...", wx.ITEM_NORMAL)
         try:
@@ -1170,8 +1200,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamListSelect)
         self.Bind(wx.EVT_MENU, self.OnStreamAdd, self.StreamAddListSelect)
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
-        self.Bind(wx.EVT_MENU, self.onDefineVario, self.DIPath2Vario)
-        self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
+        # Check that
+        #self.Bind(wx.EVT_MENU, self.onDefineVario, self.DIPath2Vario)
+        #self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
         self.Bind(wx.EVT_MENU, self.onInputSheet, self.DIInputSheet)
         self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsDI, self.OptionsDIItem)
@@ -1252,8 +1283,10 @@ class MainFrame(wx.Frame):
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
-        self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
-        self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
+        self.Bind(wx.EVT_BUTTON, self.onDefineVarioScalar, self.menu_p.abs_page.defineVarioScalarButton)
+        self.Bind(wx.EVT_BUTTON, self.onDIParameter, self.menu_p.abs_page.defineParameterButton)
+        #self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
+        #self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
         self.Bind(wx.EVT_BUTTON, self.onDISetParameter, self.menu_p.abs_page.advancedButton)
         self.Bind(wx.EVT_BUTTON, self.onSaveDIData, self.menu_p.abs_page.SaveLogButton)
@@ -1368,6 +1401,14 @@ class MainFrame(wx.Frame):
             To be used at start and when an empty stream is loaded
             Deactivates all control elements
         """
+        def display(value):
+            # Used for displaying content of database
+            if isinstance(value, list):
+                dis = str(value[-1])
+            else:
+                dis = str(value)
+            return dis
+
         # Menu
         self.ExportData.Enable(False)
 
@@ -1419,10 +1460,12 @@ class MainFrame(wx.Frame):
         #    self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
         #    self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
         # DI
-        self.menu_p.abs_page.AnalyzeButton.Disable()       # activate if DI data is present i.e. diTextCtrl contains data
+        if not self.dipathlist:
+            self.menu_p.abs_page.AnalyzeButton.Disable()       # activate if DI data is present i.e. diTextCtrl contains data
         self.menu_p.abs_page.loadDIButton.Enable()         # remain enabled
-        self.menu_p.abs_page.defineVarioButton.Enable()    # remain enabled
-        self.menu_p.abs_page.defineScalarButton.Enable()   # remain enabled
+        self.menu_p.abs_page.defineVarioScalarButton.Enable()    # remain enabled
+        #self.menu_p.abs_page.defineVarioButton.Enable()    # remain enabled
+        #self.menu_p.abs_page.defineScalarButton.Enable()   # remain enabled
         #if PLATFORM.startswith('linux'):
         #    self.menu_p.abs_page.dilogTextCtrl.Disable()       # remain disabled -- WINDOWS Prob - scrolling will not work
         #    self.menu_p.abs_page.scalarTextCtrl.Disable()      # remain disabled
@@ -1430,8 +1473,12 @@ class MainFrame(wx.Frame):
         #    self.menu_p.abs_page.diTextCtrl.Disable()          # remain disabled
         self.menu_p.abs_page.ClearLogButton.Disable()      # Activate if log contains text
         self.menu_p.abs_page.SaveLogButton.Disable()      # Activate if log contains text
-        self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
-        self.menu_p.abs_page.scalarTextCtrl.SetValue(self.options.get('discalarpath',''))
+
+        self.menu_p.abs_page.varioTextCtrl.SetValue(display(self.options.get('divariopath','')))
+        self.menu_p.abs_page.scalarTextCtrl.SetValue(display(self.options.get('discalarpath','')))
+        sourcelist = ['file','database','webservice']
+        self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[self.options.get('didictionary').get('divariosource')]))
+        self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[self.options.get('didictionary').get('discalarsource')]))
 
         # Analysis
         self.menu_p.ana_page.rotationButton.Disable()      # if xyz magnetic data
@@ -1495,6 +1542,16 @@ class MainFrame(wx.Frame):
         keys = stream._get_key_headers()
         keystr = ','.join(keys)
 
+
+        def display(value):
+            """
+            Used for displaying content of database
+            """
+            if isinstance(value, list):
+                dis = str(value[-1])
+            else:
+                dis = str(value)
+            return dis
 
         def compare_dicts(d1, d2, ignore_keys):
             """
@@ -1757,8 +1814,11 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.startTimePicker.SetValue(num2date(mintime).strftime('%X'))
         self.menu_p.str_page.endTimePicker.SetValue(num2date(maxtime).strftime('%X'))
 
-        self.menu_p.abs_page.varioTextCtrl.SetValue(self.options.get('divariopath',''))
-        self.menu_p.abs_page.scalarTextCtrl.SetValue(self.options.get('discalarpath',''))
+        self.menu_p.abs_page.varioTextCtrl.SetValue(display(self.options.get('divariopath','')))
+        self.menu_p.abs_page.scalarTextCtrl.SetValue(display(self.options.get('discalarpath','')))
+        sourcelist = ['file','database','webservice']
+        self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[self.options.get('didictionary').get('divariosource')]))
+        self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[self.options.get('didictionary').get('discalarsource')]))
 
     def InitialRead(self,stream):
         """
@@ -5940,18 +6000,23 @@ Suite 330, Boston, MA  02111-1307  USA"""
         """
         open dialog to load DI data
         """
+        """
         if isinstance(self.dipathlist, str):
             dipathlist = self.dipathlist
         elif isinstance(self.dipathlist, dict):
             dipathlist = "DB"
         else:
             dipathlist = self.dipathlist[0]
-        if os.path.isfile(dipathlist):
-            dipathlist = os.path.split(dipathlist)[0]
+        """
+        defaultpath = self.options.get('didictionary',{}).get('didatapath','')
+
+        if os.path.isfile(defaultpath):
+            defaultpath = os.path.split(defaultpath)[0]
+
         services = self.options.get('webservices',{})
         default = self.options.get('defaultservice','conrad')
 
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=dipathlist, db=self.db, services=services, defaultservice=default)
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=self.db, services=services, defaultservice=default)
         dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
         dlg.ShowModal()
         if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
@@ -5969,11 +6034,39 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 info = "{}: {} dataset(s)".format(self.dipathlist.get('station'),len(self.dipathlist.get('absdata')))
                 self.menu_p.abs_page.diTextCtrl.SetValue(info)
                 self.menu_p.abs_page.diSourceLabel.SetLabel("Source: {}".format(self.dipathlist.get('source')))
+            # Update di data path
+            didict = self.options.get('didictionary')
+            didict['didatapath'] = dlg.dirname
+            self.options['didictionary'] = didict
             self.menu_p.abs_page.AnalyzeButton.Enable()
         dlg.Destroy()
 
+        # Used for checking while switching to dictionary structure
+        #if isinstance(self.dipathlist,dict):
+        #    print ("onLoadDI: Obtained DI data in a dictionary")
+        #    print (self.dipathlist.get('absdata')[0])
 
-    def onDefineVario(self,event):
+
+    def onDIParameter(self,event):
+        """
+        open dialog to modify analysis parameters for DI
+        """
+        saveoptions = False
+        dipara = self.options.get('diparameter',{})
+        dipara = self.options.get('webservices',{})
+
+        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter", dictionary=dipara)
+        if dlg.ShowModal() == wx.ID_OK:
+            #self.options['diparameter'] = dlg.dict
+            pass
+
+        dlg.Destroy()
+        if saveoptions:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+
+    def onDefineVarioScalar(self,event):
         """
         open dialog to load DI data
         """
@@ -5981,87 +6074,81 @@ Suite 330, Boston, MA  02111-1307  USA"""
             pass
             # send a message box that this data will be erased
 
-        def getExtensionList(path):
-            import collections
-            # returns a sorted extension list for all file in the directory
-            # sorted by abunandce
-            ext = []
-            for f in os.listdir(path):
-                sp = f.split('.')
-                if len(sp) > 1:
-                    ext.append(sp[-1])
-            counter=collections.Counter(ext)
-            sortlist = counter.most_common()
-            sortlist.append(('*',1))
-            #print (["*.{}".format(el[0]) for el in sortlist])
-            return ["*.{}".format(el[0]) for el in sortlist]
+        def getPathFromDict(typ, dictionary):
+            filepath = dictionary.get('di{}path'.format(typ),'')
+            selection = dictionary.get('di{}source'.format(typ),0)
+            url = dictionary.get('di{}url'.format(typ),'')
+            dbtable = dictionary.get('di{}DBinst'.format(typ),'')
+            if selection == 0:
+                return filepath
+            elif selection == 1:
+                return [self.db, dbtable]
+            elif selection == 2:
+                return url
 
-        #self.variopath = ''
-        divariopath = self.options.get('divariopath','')
-        # Open a select path dlg as long as db and remote is not supported
-        dialog = wx.DirDialog(None, "Choose a directory with variometer data:",divariopath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        def display(value):
+            if isinstance(value, list):
+                display = str(value[-1])
+            else:
+                display = str(value)
+            return display
+
+        saveoptions = False
+        didict = self.options.get('didictionary',{})
+        discalarpath = didict.get('discalarpath','')
+        divariopath = didict.get('divariopath','')
+        discalarurl = didict.get('discalarurl','')
+        divariourl = didict.get('divariourl','')
+        vselection = didict.get('divariosource',0)
+        sselection = didict.get('discalarsource',0)
+        varioDB = didict.get('divarioDBinst','1')
+        scalarDB = didict.get('discalarDBinst','4')
+        sourcelist = ['file','database','webservice']
+
+        dialog = LoadVarioScalarDialog(None, title="Choose data source", vselection=vselection, sselection=sselection, defaultvariopath=divariopath, defaultscalarpath=discalarpath, db=self.db, defaultvariotable=varioDB, defaultscalartable=scalarDB, services=self.options.get('webservices',{}), defaultservice=self.options.get('defaultservice','conrad'))
         if dialog.ShowModal() == wx.ID_OK:
-            path = dialog.GetPath()
-            varioext = getExtensionList(path)
-            self.menu_p.abs_page.varioExtComboBox.Clear()
-            self.menu_p.abs_page.varioExtComboBox.Append(varioext)
-            self.menu_p.abs_page.varioExtComboBox.SetValue(varioext[0])
-            self.menu_p.abs_page.varioTextCtrl.SetValue(path)
-            self.options['divariopath'] = path
+            # get selected options:
+            didict['divariosource'] = dialog.vchoice
+            didict['discalarsource'] = dialog.schoice
+            varioext = dialog.varioExtComboBox.GetValue()
+            scalarext = dialog.scalarExtComboBox.GetValue()
+            didict['discalarpath'] = os.path.join(dialog.defaultscalarpath,scalarext)
+            didict['divariopath'] = os.path.join(dialog.defaultvariopath,varioext)
+            didict['divarioDBinst'] = dialog.varioDBComboBox.GetValue()
+            didict['discalarDBinst'] = dialog.scalarDBComboBox.GetValue()
+            didict['divariourl'] = dialog.divariows
+            didict['discalarurl'] = dialog.discalarws
+            #print (dialog.vchoice, dialog.defaultvariopath, varioext)
+            self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[dialog.vchoice]))
+            self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[dialog.schoice]))
+            res_divariopath = getPathFromDict("vario",didict)
+            res_discalarpath = getPathFromDict("scalar",didict)
+
+            self.menu_p.abs_page.varioTextCtrl.SetValue("{}".format(display(res_divariopath)))
+            self.menu_p.abs_page.scalarTextCtrl.SetValue("{}".format(display(res_discalarpath)))
+            self.options['didictionary'] = didict
+            self.options['divariopath'] = res_divariopath
+            self.options['discalarpath'] = res_discalarpath
+            saveoptions=True
+
         dialog.Destroy()
-        # Select an extension as well
 
-    def onDefineScalar(self,event):
-        """
-        open dialog to load DI data
-        """
-        def getExtensionList(path):
-            import collections
-            # returns a sorted extension list for all file in the directory
-            # sorted by abunandce
-            ext = []
-            for f in os.listdir(path):
-                sp = f.split('.')
-                if len(sp) > 1:
-                    ext.append(sp[-1])
-            counter=collections.Counter(ext)
-            sortlist = counter.most_common()
-            sortlist.append(('*',1))
-            #print (["*.{}".format(el[0]) for el in sortlist])
-            return ["*.{}".format(el[0]) for el in sortlist]
+        if saveoptions:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
 
 
-        if len(self.stream) > 0:
-            pass
-            # send a message box that this data will be erased
-        # Open a select path dlg as long as db and remote is not supported
-        discalarpath = self.options.get('discalarpath','')
-        dialog = wx.DirDialog(None, "Choose a directory with scalar data:",discalarpath,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-        if dialog.ShowModal() == wx.ID_OK:
-            path = dialog.GetPath()
-            scalarext = getExtensionList(path)
-            self.menu_p.abs_page.scalarTextCtrl.SetValue(path)
-            self.menu_p.abs_page.scalarExtComboBox.Clear()
-            self.menu_p.abs_page.scalarExtComboBox.Append(scalarext)
-            self.menu_p.abs_page.scalarExtComboBox.SetValue(scalarext[0])
-            self.options['discalarpath'] = path
-        dialog.Destroy()
 
     def onDIAnalyze(self,event):
         """
         open dialog to load DI data
         """
-        # Get parameters from options
-        divariopath = self.options.get('divariopath','')
-        vext = self.menu_p.abs_page.varioExtComboBox.GetValue()
-        divariopath = divariopath.replace('*','')
-        divariopath = os.path.join(divariopath,vext)
-            
-        discalarpath = self.options.get('discalarpath','')
-        sext = self.menu_p.abs_page.scalarExtComboBox.GetValue()
-        discalarpath = discalarpath.replace('*','')
-        discalarpath = os.path.join(discalarpath,sext)
 
+        divariopath = self.options.get('divariopath','')
+        discalarpath = self.options.get('discalarpath','')
+
+        # Get parameters from options
         stationid= self.options.get('stationid','')
         abstype= self.options.get('ditype','')
         azimuth= self.options.get('diazimuth','')
@@ -6114,6 +6201,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             prev_redir = sys.stdout
             redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
             sys.stdout=redir
+            absstream = DataStream()
 
             if isinstance(self.dipathlist,dict):
                 self.changeStatusbar("Processing DI data ... please be patient")
@@ -6172,8 +6260,8 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     else:
                         array[idx] = np.asarray(el)
                 absstream.ndarray = np.asarray(array)
-                self.stream = absstream
-                self.plotstream = absstream
+                self.stream = absstream.copy()
+                self.plotstream = absstream.copy()
                 currentstreamindex = len(self.streamlist)
                 self.streamlist.append(self.stream)
                 # self.streamkeylist.append(absstream._get_key_headers()) -> This is done in OnInitialPlot

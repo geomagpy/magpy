@@ -10715,7 +10715,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             cleanr = re.compile('<.*?>')
             content = re.sub(cleanr, '', content_t)
 
-        print ("HERE", path_or_url)
+        #print ("HERE", path_or_url)
         if debugmode:
             print(urlopen(path_or_url).info())
         if path_or_url[-1] == '/':

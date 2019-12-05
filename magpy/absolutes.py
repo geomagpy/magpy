@@ -1591,6 +1591,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     filelist, datelist = [],[]
     failinglist = []
     successlist = []
+    if db:
+        import magpy.database as dbase
+
     if db and not absstruct:
         #print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
         try:
@@ -1629,7 +1632,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print ("Absolut data directly provided")
         datelist = sort(list(set([datetime.strftime(num2date(np.nanmean(el.time)).replace(tzinfo=None),"%Y-%m-%d") for el in absdata])))
         readfile = False
-
 
     if readfile:
         # Get list of files
@@ -1706,6 +1708,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print("absoluteAnalysis: No matching dates found - aborting")
         return
 
+    def checkURL(url, starttime):
+        if "://" in url:
+            print (url)
+            ind = url.find('starttime')
+            if ind < 0: 
+                st = datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ")
+                et = datetime.strftime(starttime+timedelta(days=1),"%Y-%m-%dT%H:%M:%SZ")
+                url = "{}&starttime={}&endtime={}".format(url,st, et)
+        return url
 
         # Please Note for pier information always the existing pier in the file is used
 
@@ -1727,12 +1738,20 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         try:
             valalpha = ''
             valbeta = ''
-            variodbtest = variodata.split(',')
-            if len(variodbtest) > 1:
+            if not isinstance(variodata, list):
+                # Varioinformation from DB can be a comma separated string -> convert to list
+                # or directly be a list
+                variodbtest = variodata.split(',')
+            else:
+                variodbtest = variodata
+
+            if len(variodbtest) == 2:
+                import magpy.database as dbase
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
-                variostr = read(variodata,starttime=date,endtime=date+timedelta(days=1))
-            print("Length of Variodata ({}): {}".format(variodata,variostr.length()[0]))
+                variomod = checkURL(variodata, date)
+                variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
+            print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
             if not variostr.header.get('SensorID') == '':
                  varioid = variostr.header.get('SensorID')
             if db and not skipvariodb:
@@ -1869,11 +1888,19 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         #    deltaF = 0.0
         print("-----------------")
         try:
-            scalardbtest = scalardata.split(',')
-            if len(scalardbtest) > 1:
+            if not isinstance(scalardata, list):
+                # Scalar information from DB can be a comma separated string -> convert to list
+                # or directly be a list
+                scalardbtest = scalardata.split(',')
+            else:
+                scalardbtest = scalardata
+
+            if len(scalardbtest) == 2:
+                import magpy.database as dbase
                 scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
-                scalarstr = read(scalardata,starttime=date,endtime=date+timedelta(days=1))
+                scalarmod = checkURL(scalardata, date)
+                scalarstr = read(scalarmod,starttime=date,endtime=date+timedelta(days=1))
             if not scalarstr.header.get('SensorID') == '':
                  scalarid = scalarstr.header.get('SensorID')
             # Check for the presence of f or df
@@ -1886,7 +1913,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 scalarstr = scalarstr.calc_f()
             else:
                 pass
-            print("Length of Scalardata {}: {}".format(scalardata,scalarstr.length()[0]))
+            print("Length of Scalardata {}: {}".format(scalardbtest[-1],scalarstr.length()[0]))
             print (scalarstr.header.get('SensorID') , scalarstr.header.get('DataID'))
             if db and not skipscalardb:
                 try:
