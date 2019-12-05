@@ -4073,7 +4073,11 @@ class ParameterDictDialog(wx.Dialog):
     def iter_leafs(self, d, keys=[]):
         for key, val in d.items():
             if isinstance(val, dict):
-                yield from self.iter_leafs(val, keys + [key])
+                #try:
+                #     yield from self.iter_leafs(val, keys + [key])
+                #except:
+                for el in self.iter_leafs(val, keys + [key]):
+                    yield el
             else:
                 yield keys + [key], val
 
