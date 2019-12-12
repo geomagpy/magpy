@@ -6163,6 +6163,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             return display
 
         saveoptions = False
+        tmppathlist = self.dipathlist
         didict = self.options.get('didictionary',{})
         discalarpath = didict.get('discalarpath','')
         divariopath = didict.get('divariopath','')
@@ -6206,6 +6207,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             saveini(self.options)
             inipara, check = loadini()
             self.initParameter(inipara)
+            self.dipathlist = tmppathlist
 
 
 
