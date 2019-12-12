@@ -167,21 +167,32 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
                                       }
     if optionsdict.get('diparameter','') == '':
         # to be used for setting DI analysis parameter in future
-        optionsdict['diparameter'] = { 'diusedb' : False,
-                                       'diexpD' : 0.0,
-                                       'diexpI' : 0.0,
-                                       'stationid' : 'WIC',
-                                       'diid' : '',
-                                       'ditype' : 'manual',
-                                       'diazimuth' : '',
-                                       'dipier' : 'A2',
-                                       'dialpha' : 0.0,
-                                       'dibeta' : 0.0,
-                                       'dideltaF' : 0.0,
-                                       'dideltaD' : 0.0,
-                                       'dideltaI' : 0.0,
-                                       'diannualmean' : '',
-                                       'didbadd' : 'False'
+        optionsdict['diparameter'] = { 'WIC': { 'diusedb' : False,
+                                                'diexpD' : 0.0,
+                                                'diexpI' : 0.0,
+                                                'stationid' : 'WIC',
+                                                'diid' : '',
+                                                'diazimuth' : '',
+                                                'dipier' : 'A2',
+                                                'dialpha' : 0.0,
+                                                'dibeta' : 0.0,
+                                                'dideltaF' : 0.0,
+                                                'dideltaD' : 0.0,
+                                                'dideltaI' : 0.0,
+                                                'diannualmean' : ''},
+                                       'TST': { 'diusedb' : True,
+                                                'diexpD' : 0.0,
+                                                'diexpI' : 0.0,
+                                                'stationid' : 'TST',
+                                                'diid' : '',
+                                                'diazimuth' : '179.9',
+                                                'dipier' : 'A8',
+                                                'dialpha' : 0.0,
+                                                'dibeta' : 0.0,
+                                                'dideltaF' : 2.1,
+                                                'dideltaD' : 0.0,
+                                                'dideltaI' : 0.0,
+                                                'diannualmean' : ''}
                                       }
     if optionsdict.get('bookmarks','') == '':
         optionsdict['bookmarks'] = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
@@ -1288,7 +1299,7 @@ class MainFrame(wx.Frame):
         #self.Bind(wx.EVT_BUTTON, self.onDefineVario, self.menu_p.abs_page.defineVarioButton)
         #self.Bind(wx.EVT_BUTTON, self.onDefineScalar, self.menu_p.abs_page.defineScalarButton)
         self.Bind(wx.EVT_BUTTON, self.onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
-        self.Bind(wx.EVT_BUTTON, self.onDISetParameter, self.menu_p.abs_page.advancedButton)
+        #self.Bind(wx.EVT_BUTTON, self.onDISetParameter, self.menu_p.abs_page.advancedButton)
         self.Bind(wx.EVT_BUTTON, self.onSaveDIData, self.menu_p.abs_page.SaveLogButton)
         self.Bind(wx.EVT_BUTTON, self.onClearDIData, self.menu_p.abs_page.ClearLogButton)
         #        Report Page
@@ -2846,6 +2857,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         dlg = OptionsDIDialog(None, title='Options: DI Analysis parameters', options=self.options)
 
         if dlg.ShowModal() == wx.ID_OK:
+            """
             self.options['diexpD']=dlg.diexpDTextCtrl.GetValue()
             self.options['diexpI']=dlg.diexpITextCtrl.GetValue()
             self.options['dialpha']=dlg.dialphaTextCtrl.GetValue()
@@ -2862,13 +2874,13 @@ Suite 330, Boston, MA  02111-1307  USA"""
             self.options['dibeta']=dlg.dibetaTextCtrl.GetValue()
             self.options['dideltaD']=dlg.dideltaDTextCtrl.GetValue()
             self.options['dideltaI']=dlg.dideltaITextCtrl.GetValue()
-
             self.dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
             dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
             dipath = dipathlist[0]
             if os.path.isfile(dipath):
                 dipath = os.path.split(dipath)[0]
             self.options['dipathlist'] = [dipath]
+            """
             order=dlg.sheetorderTextCtrl.GetValue()
             double=dlg.sheetdoubleCheckBox.GetValue()
             scalevalue=dlg.sheetscaleCheckBox.GetValue()
@@ -6052,19 +6064,76 @@ Suite 330, Boston, MA  02111-1307  USA"""
         open dialog to modify analysis parameters for DI
         """
         saveoptions = False
+        ok = False
+        try:
+            stationid = self.dipathlist.get('station','')
+        except:
+            stationid = ''
         dipara = self.options.get('diparameter',{})
-        dipara = self.options.get('webservices',{})
+        #dipara = self.options.get('webservices',{})
+        tmppathlist = self.dipathlist
 
-        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter", dictionary=dipara)
+        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter", dictionary=dipara, preselect=[stationid])
         if dlg.ShowModal() == wx.ID_OK:
-            #self.options['diparameter'] = dlg.dict
-            pass
+            ok = True
+            valuedict = {}
+            for el in dlg.panel.elementlist:
+                if not el[1].GetName() == 'Label':
+                    try:
+                        val = el[1].GetValue()
+                        valuedict[el[1].GetName()] = val
+                    except:
+                        try:
+                            val = el[1].GetStringSelection()
+                            valuedict[el[1].GetName()] = val
+                            print ("Val:", el[1].GetName(), val)
+                        except:
+                            pass
 
         dlg.Destroy()
+
+        # Test if modified
+
+        if ok:
+            #print ("Station", valuedict.get('stationid'))
+            stationid = valuedict.get('stationid')
+            exvals = dipara.get(valuedict.get('stationid'),{})
+            if not exvals == {} and not (valuedict == exvals):
+                exstationid =  dipara.get(valuedict.get('stationid')).get('stationid','')
+                #print ("StationID existing")
+                # Update
+                dipara[stationid] = valuedict
+                self.options['diparameter'] = dipara
+                # Modify data permanently?
+                updatedlg = wx.MessageDialog(self, "Update input\n"
+                        "Remember new settings?\n".format(time),
+                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
+
+                if updatedlg.ShowModal() == wx.ID_YES:
+                    saveoptions = True
+                    updatedlg.Destroy()
+
+            elif not (valuedict == exvals):
+                #print ("StationID not yet existing")
+                # add new station information?
+                updatedlg = wx.MessageDialog(self, "New Station ID\n"
+                        "Add new parameters for StationID {} ?\n".format(stationid),
+                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
+
+                if updatedlg.ShowModal() == wx.ID_YES:
+                    saveoptions = True
+                    updatedlg.Destroy()
+                if saveoptions:
+                    dipara[stationid] = valuedict
+                    self.options['diparameter'] = dipara
+
+            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
+
         if saveoptions:
             saveini(self.options)
             inipara, check = loadini()
             self.initParameter(inipara)
+            self.dipathlist = tmppathlist
 
     def onDefineVarioScalar(self,event):
         """
@@ -6149,51 +6218,80 @@ Suite 330, Boston, MA  02111-1307  USA"""
         discalarpath = self.options.get('discalarpath','')
 
         # Get parameters from options
-        stationid= self.options.get('stationid','')
-        abstype= self.options.get('ditype','')
-        azimuth= self.options.get('diazimuth','')
-        try:
-            expD= float(self.options.get('diexpD','0.0'))
-        except:
-            expD = 0.0
-        try:
-            expI= float(self.options.get('diexpI','0.0'))
-        except:
-            expI = 0.0
-        try:
-            alpha= float(self.options.get('dialpha','0.0'))
-        except:
-            alpha = 0.0
-        try:
-            beta= float(self.options.get('dibeta','0.0'))
-        except:
-            beta = 0.0
-        try:
-            deltaF= float(self.options.get('dideltaF','0.0'))
-        except:
-            deltaF = 0.0
-        try:
-            deltaD= float(self.options.get('dideltaD','0.0'))
-        except:
-            deltaD = 0.0
-        try:
-            deltaI= float(self.options.get('dideltaI','0.0'))
-        except:
-            deltaI = 0.0
+        didict = self.options.get('didictionary')
+        dipara = self.options.get('diparameter')
 
-        #def azimuthcheck(absdata, azimuth):
-        #    """
-        #    DESCRIPTION:
-        #        Test function to check whether an azimuth is provided and
-        #        whether the stored azimuth is different from the manually given
-        #        (in case valid values are found in both) 
-        #    !! Only works if absdatastruct has been directly provided
-        #    """
-        #    newaz = 0.0
-        #    az1 = absdata.azimuth
-        #    az2 = azimuth
-        #    # Open dialog
-        #    return newaz
+        # Get didictionary variables directly obtained from file/DB/WS
+        #print (self.dipathlist)
+        f_azimuth = self.dipathlist.get('azimuth')
+        f_pier = self.dipathlist.get('selectedpier',None)
+        stationid= self.dipathlist.get('station','')
+
+        # Select appropriate diparameters for station from options
+        # if specified to use parameters
+        primaryparametersource = self.menu_p.abs_page.parameterRadioBox.GetStringSelection()
+
+        # Currently not all parameters are in use
+        # only expD, expI, alpha, beta and all delta values are considered
+        # (and azimuth)
+        # Please note: station and pier are always taken from the file (dipathlist dictionary)
+        expD=0.0
+        expI=0.0
+        alpha=0.0
+        beta=0.0
+        deltaF=0.0
+        deltaD=0.0
+        deltaI=0.0
+        abstype= 'manual'   # is tested in absoluteAnalysis and not necessary
+        azimuth = None
+
+        stationpara = dipara.get(stationid,{})
+        if primaryparametersource == 'options' and stationpara == {}:
+            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('file')
+
+        if primaryparametersource == 'options' and not (f_pier == stationpara.get('dipier') and not stationpara == {}):
+            print ("Careful: pier in options differs from pier in file -> using file")
+
+        for el in stationpara:
+            value = stationpara[el]
+            if DataStream()._is_number(value):
+                value = float(value)
+            elif value == 'False':
+                value = False
+            elif value == 'True':
+                value = True
+            elif value.startswith('['):
+                value = value.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
+                value = [float(el) for el in value]
+            elif value == '':
+                value = None
+
+            if primaryparametersource == 'options':
+                if not value == 0 or value == '':
+                    if el == 'diexpD':
+                        expD = value
+                    elif el == 'diexpI':
+                        expI = value
+                    elif el == 'dideltaD':
+                        deltaD = value
+                    elif el == 'dideltaI':
+                        deltaI = value
+                    elif el == 'dideltaF':
+                        deltaF = value
+                    elif el == 'dialpha':
+                        alpha = value
+                    elif el == 'dibeta':
+                        beta = value
+                    elif el == 'diid':
+                        diid = value
+                    elif el == 'diannualmean':
+                        annualmean = value
+                    elif el == 'diazimuth':
+                        azimuth = value
+                    elif el == 'diusedb':
+                        usedb = value
+            elif primaryparametersource == 'file':
+                pass
 
         if len(self.dipathlist) > 0:
             # Identify source -> Future version: use absolutClass which contains raw data
@@ -6204,6 +6302,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             absstream = DataStream()
 
             if isinstance(self.dipathlist,dict):
+                # Dictionary is the new default - all processes will return a dictionary
                 self.changeStatusbar("Processing DI data ... please be patient")
                 stationid = self.dipathlist.get('station')
                 starttime = self.dipathlist.get('mindatetime')
@@ -6211,16 +6310,34 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 pier = self.dipathlist.get('selectedpier')
                 abstable = "DIDATA_{}".format(stationid.upper())
                 absdata = self.dipathlist.get('absdata')
-                ## TODO add an azimuth check here
-                #azimuth = [el.azimuth for el in absdata]
-                #print (azimuth)
-                # Please NOte: observer selection does not yet work #  db=self.db
-                absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,absstruct=True)
+                f_azimuth = self.dipathlist.get('azimuth')
+                if azimuth:
+                    print ("Using aziumth from options menu: {}".format(azimuth))
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,absstruct=True)
+                    # abstream... aziumth =
+                elif not f_azimuth or np.isnan(f_azimuth) or f_azimuth == 'nan' or f_azimuth == None:
+                    print ("no aziumth so far - please define")
+                    # open dialog
+                    ok = False
+                    dlg = SetAzimuthDialog(None, title='Define azimuth', azimuth=0.0)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        print (dlg.AzimuthTextCtrl.GetValue())
+                        azimuth = float(dlg.AzimuthTextCtrl.GetValue())
+                        ok = True
+                        #except:
+                        #    pass
+                    dlg.Destroy()
+                    if ok:
+                        print ("Using given aziumth: {}".format(azimuth))
+                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,absstruct=True)
+                else:
+                    # Please NOte: observer selection does not yet work #  db=self.db
+                    print ("Using aziumth values from data sources")
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,absstruct=True)
 
             elif isinstance(self.dipathlist,list):
                 self.changeStatusbar("Processing DI data from file(s) ... please be patient")
-
-                if not azimuth == '':
+                if azimuth and not azimuth == '':
                     azimuth = float(azimuth)
                     absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF)
                 else:
@@ -6321,7 +6438,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             open dialog to input DI data
         """
 
-        if isinstance(self.dipathlist, str):
+        if isinstance(self.dipathlist, dict):
+            dipath = self.options.get('didictionary',{}).get('didatapath','')
+        elif isinstance(self.dipathlist, str):
             dipath = self.dipathlist
         else:
             dipath = self.dipathlist[0]

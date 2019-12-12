@@ -51,7 +51,7 @@ def isPYCDF(filename):
 
 def readPYCDF(filename, headonly=False, **kwargs):
     """
-    Reading CDF format data - DTU type.
+    Reading CDF format data.
     """
     stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
 
@@ -82,11 +82,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         getfile = True
     logbaddata = False
 
-    #if debug:
-    #print ("Step1", theday, getfile)
-
     # Get format type:
-    # Juergens DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
     if getfile:
         cdfdat = cdflib.CDF(filename)

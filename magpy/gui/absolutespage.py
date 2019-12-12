@@ -25,6 +25,7 @@ class AbsolutePage(wx.Panel):
     def __init__(self, *args, **kwds):
         wx.Panel.__init__(self, *args, **kwds)
         self.comp = ['xyz', 'hdz', 'idf']
+        self.choices = ['file','options']
         self.dipathlist = []
         self.extension = '*'
         self.varioext = ['*.*']
@@ -45,14 +46,15 @@ class AbsolutePage(wx.Panel):
         self.ScalarSourceLabel = wx.StaticText(self, label="Scalar: None")
         self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.defineParameterButton = wx.Button(self,-1,"Analysis options",size=(160,30))
-        self.parameterTextCtrl = wx.TextCtrl(self, value="Default",size=(160,30),
-                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.defineParameterButton = wx.Button(self,-1,"Analysis parameter",size=(160,30))
+        self.parameterRadioBox = wx.RadioBox(self,label="parameter source",choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS,size=(160,50))
+        #self.parameterTextCtrl = wx.TextCtrl(self, value="Default",size=(160,30),
+        #                  style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
         self.logLabel = wx.StaticText(self, label="Logging:")
-        self.advancedButton = wx.Button(self,-1,"Set parameter",size=(160,30))
+        #self.exportButton = wx.Button(self,-1,"Export...",size=(160,30))
         self.ClearLogButton = wx.Button(self,-1,"Clear Log",size=(160,30))
         self.SaveLogButton = wx.Button(self,-1,"Save Log",size=(160,30))
         self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,300),
@@ -110,9 +112,9 @@ class AbsolutePage(wx.Panel):
                  (self.diLabel, noOptions),
                   emptySpace,
                  (self.defineParameterButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.parameterTextCtrl, expandOption),
+                 (self.parameterRadioBox, expandOption),
                  (self.AnalyzeButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.advancedButton, dict(flag=wx.ALIGN_CENTER)),
+                  emptySpace,
                   emptySpace,
                   emptySpace,
                  (self.logLabel, noOptions),

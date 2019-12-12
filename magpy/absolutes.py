@@ -1726,6 +1726,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # analyze data for each day and append results to a resultstream
     # XXX possible issues: an absolute measurement which is performed in two day (e.g. across midnight)
     # TODO Add possibilty to get vario and scalar data from database
+
     resultstream = DataStream()
     for date in sorted(datetimelist):
         variofound = True
@@ -1752,6 +1753,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variomod = checkURL(variodata, date)
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
+
             if not variostr.header.get('SensorID') == '':
                  varioid = variostr.header.get('SensorID')
             if db and not skipvariodb:
@@ -1986,13 +1988,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             print ("Please provide pier name: pier='MyPier'")
                     if not deltaF:
                         deltaF = 0.0
-                    #if deltaF != 0 or alpha != 0 or beta != 0:
-                    #    print("Please note that any offsets defined in DataDeltaValues")
-                    #    print("of the database have been applied already.")
-                    #    print("Data from %s, pier %s: manually defined are deltaF=%.2f" % (stationid, pier, deltaF))
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
-                    #print ("LENGTH:",len(absst))
-                    #print ("ABSST:",absst)
 
                     try: 
                         if not len(absst) > 1: # Manual
@@ -2019,24 +2015,19 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             #get list from database
             startd = datetime.strftime(date,"%Y-%m-%d")
             endd = datetime.strftime(date+timedelta(days=1),"%Y-%m-%d")
-            #pier = 'D'
             if not stationid or stationid == '':
                 stationid = absdata.split('_')[1]
 
             sql = "Pier='%s'" % pier
-            #tablename = 'DIDATA_%s' % stationid
             tablename = absdata
-            #print sql, tablename, absdata
+
             try:
                 abslist = dbase.db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
             except:
                 print("absoluteAnalysis: Problems when reading from database")
 
-
         for absst in abslist:
             print("-----------------")
-            print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
-            #if readfile:
             try:
                 stream = absst[0].getAbsDIStruct()
                 filepier = absst[0].pier
@@ -2046,8 +2037,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             except:
                 stream = absst.getAbsDIStruct()
 
-            #print ("HERE", stream[0].expectedmire)
+            if stream[0].person == 'AutoDIF':
+                abstype = 'autodif'
 
+            if azimuth:
+                stream[0].expectedmire = azimuth
+
+            print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
             streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
@@ -2090,6 +2086,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             deltainputs = val.split(',')
                             lastval = deltainputs[-1]
                             deltaD = float(lastval.split('_')[2])
+                        print ("Obtained deltaD from database")
                     except:
                         deltaD = 0.0
                 if not deltaI and db:
@@ -2103,11 +2100,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             deltainputs = val.split(',')
                             lastval = deltainputs[-1]
                             deltaI = float(lastval.split('_')[3])
+                        print ("Obtained deltaI from database")
                     except:
                         deltaI = 0.0
-                #print("here", deltaD, deltaI, scalevalue)
 
-                #print ("Running calc", usestep, annualmeans, deltaD, deltaI,meantime,scalevalue)
+                #print ("Running calc:", usestep, annualmeans, deltaD, deltaI, meantime, scalevalue)
 
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue)
                 print("%s with delta F of %s nT" % (result.str4,str(deltaF)))

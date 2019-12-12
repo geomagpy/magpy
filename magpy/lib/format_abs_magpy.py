@@ -744,9 +744,10 @@ def readJSONABS(filename, headonly=False, **kwargs):
                         valdict = datadict[el]
                         #print ("Length",len(valdict))
                         for setcount, dataset in enumerate(valdict):
+                          try:
                             # for each set add a new di row structure to abslist
                             # ######################################################## 
-                            if not setcount==0:
+                            if dirow.pier and not setcount==0:
                                 abslist.append(dirow)
                             dirow = DILineStruct(24)
                             dirow.pier = pier
@@ -762,7 +763,6 @@ def readJSONABS(filename, headonly=False, **kwargs):
                                     if ds == 'measurements':
                                         measurements = dataset[ds]
                                         for meas in measurements:
-                                            #print ("Here", meas.get('type',''))
                                             typ = meas.get('type','')
                                             if typ in marksorting:
                                                 for idx,check in enumerate(measorder):
@@ -798,8 +798,12 @@ def readJSONABS(filename, headonly=False, **kwargs):
                                     dirow.ftime.append(fl[0])
                                     dirow.f.append(fl[1])
                                 flist = [] # cleanup
+                          except:
+                            print ("Could not read data. Inputdate: {}".format(dirow.inputdate))
+                            dirow = DILineStruct(24)
 
-    abslist.append(dirow)
+    if dirow.pier:
+        abslist.append(dirow)
 
     return abslist
 
