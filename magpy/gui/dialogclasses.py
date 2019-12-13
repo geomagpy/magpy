@@ -165,12 +165,9 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.elements = services.get(self.selectedservice).get(self.selectedgroup).get('elements','')
 
         self.createControls()
-        #self.createUrl()
         
         self.doLayout()
         self.bindControls()
-
-        #self.serviceComboBox.Bind(wx.EVT_COMBOBOX, self.update)
 
     def createControls(self):
         self.serviceLabel = wx.StaticText(self, label="Webservice source:",size=(400,25))
@@ -216,8 +213,8 @@ class ConnectWebServiceDialog(wx.Dialog):
 
 
     def bindControls(self):
-        self.serviceComboBox.Bind(wx.EVT_TEXT, self.updateService)
-        self.groupComboBox.Bind(wx.EVT_TEXT, self.updateGroup)
+        self.serviceComboBox.Bind(wx.EVT_COMBOBOX, self.updateService)
+        self.groupComboBox.Bind(wx.EVT_COMBOBOX, self.updateGroup)
         """
         #self.baseTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
         self.elementsTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
@@ -309,7 +306,7 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.grouplist = [el for el in self.services.get(self.selectedservice) if el in self.validgroups]
 
         self.groupComboBox.Clear()
-        self.groupComboBox.AppendItems(self.grouplist) 
+        self.groupComboBox.AppendItems(self.grouplist)
         if not self.selectedgroup in self.grouplist:
             self.selectedgroup = self.grouplist[0]
         self.groupComboBox.SetValue(self.selectedgroup)
@@ -1469,6 +1466,12 @@ class StreamFlagRangeDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
+        try:
+            stda = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
+            edda = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
+        except:
+            stda = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
+            edda = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
         # countvariables for specific header blocks
         self.TimeRangeText = wx.StaticText(self,label="Flag time range")
         self.ValueRangeText = wx.StaticText(self,label="Flag value range")
@@ -1481,9 +1484,9 @@ class StreamFlagRangeDialog(wx.Dialog):
             style=wx.CB_DROPDOWN, value=self.shownkeys[self.shownkeys.index(self.selectedkey)],size=(160,-1))
         self.UpperTimeText = wx.StaticText(self,label="Flag data before:")
         self.LowerTimeText = wx.StaticText(self,label="Flag data after:")
-        self.startFlagDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
+        self.startFlagDatePicker = wxDatePickerCtrl(self, dt=stda,size=(160,30))
         self.startFlagTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
-        self.endFlagDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
+        self.endFlagDatePicker = wxDatePickerCtrl(self, dt=edda,size=(160,30))
         self.endFlagTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
         self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
         self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
