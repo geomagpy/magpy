@@ -105,6 +105,76 @@ class DILineStruct(object):
     def __repr__(self):
         return repr((self.time, self.hc, self.vc, self.res, self.laser, self.opt, self.ftime, self.f, self.scaleflux, self.scaleangle, self.t, self.azimuth, self.pier, self.person, self.di_inst, self.f_inst, self.fluxgatesensor, self.inputdate))
 
+    def getDataList(self):
+        """
+        DEFINITION:
+            convert the DILineStruct to a Datalist used for displaying and saving
+
+        RESULT:
+            #['# MagPy Absolutes\n', '# Abs-Observer: Leichter\n', '# Abs-Theodolite: T10B_0619H154167_07-2011\n', '# Abs-TheoUnit: deg\n', '# Abs-FGSensor: MAG01H_SerialSensor_SerialElectronic_07-2011\n', '# Abs-AzimuthMark: 180.1044444\n', '# Abs-Pillar: A4\n', '# Abs-Scalar: /\n', '# Abs-Temperature: 6.7C\n', '# Abs-InputDate: 2016-01-26\n', 'Miren:\n', '0.099166666666667  0.098055555555556  180.09916666667  180.09916666667  0.098055555555556  0.096666666666667  180.09805555556  180.09805555556\n', 'Positions:\n', '2016-01-21_13:22:00  93.870555555556  90  1.1\n', '2016-01-21_13:22:30  93.870555555556  90  1.8\n', '2016-01-21_13:27:00  273.85666666667  90  0.1\n', '2016-01-21_13:27:30  273.85666666667  90  0.2\n', '2016-01-21_13:25:30  273.85666666667  270  0.3\n', '2016-01-21_13:26:00  273.85666666667  270  -0.6\n', '2016-01-21_13:24:00  93.845555555556  270  -0.2\n', '2016-01-21_13:24:30  93.845555555556  270  0.4\n', '2016-01-21_13:39:30  0  64.340555555556  -0.3\n', '2016-01-21_13:40:00  0  64.340555555556  0.1\n', '2016-01-21_13:38:00  0  244.34055555556  0\n', '2016-01-21_13:38:30  0  244.34055555556  -0.4\n', '2016-01-21_13:36:00  180  295.67055555556  1.1\n', '2016-01-21_13:36:30  180  295.67055555556  1.2\n', '2016-01-21_13:34:30  180  115.66916666667  0.3\n', '2016-01-21_13:35:00  180  115.66916666667  0.9\n', '2016-01-21_13:34:30  180  115.66916666667  0\n', 'PPM:\n', 'Result:\n']
+
+        EXAMPLE:
+            >>> abslinestruct.getAbsDIStruct()
+        """
+        try:
+            mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
+            if isnan(mu1):
+                mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
+        except:
+            mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
+        try:
+            md1 = self.hc[2]-((self.hc[2]-self.hc[3])/(self.laser[2]-self.laser[3]))*self.laser[2]
+            if isnan(md1):
+                md1 = self.hc[2] # in case of laser(vc0-vc1) = 0
+        except:
+            md1 = self.hc[2]
+        try:
+            mu2 = self.hc[12]-((self.hc[12]-self.hc[13])/(self.laser[12]-self.laser[13]))*self.laser[12]
+            if isnan(mu2):
+                mu2 = self.hc[12] # in case of laser(vc0-vc1) = 0
+        except:
+            mu2 = self.hc[12]
+        try:
+            md2 = self.hc[14]-((self.hc[14]-self.hc[15])/(self.laser[14]-self.laser[15]))*self.laser[14]
+            if isnan(md2):
+                md2 = self.hc[14] # in case of laser(vc0-vc1) = 0
+        except:
+            md2 = self.hc[14]
+
+        datalist = []
+        # Construct header
+        datalist.append('# MagPy Absolutes\n')
+        datalist.append('# Abs-Observer: {}\n'.format(self.person))
+        datalist.append('# Abs-Theodolite: {}\n'.format(self.di_inst))
+        datalist.append('# Abs-TheoUnit: deg\n')
+        datalist.append('# Abs-FGSensor: {}\n'.format(self.fluxgatesensor))
+        datalist.append('# Abs-AzimuthMark: {}\n'.format(self.azimuth))
+        datalist.append('# Abs-Pillar: {}\n'.format(self.pier))
+        datalist.append('# Abs-Scalar: {}\n'.format(self.f_inst))
+        datalist.append('# Abs-Temperature: {}C\n'.format(self.t))
+        datalist.append('# Abs-InputDate: {}\n'.format(datetime.strftime(self.inputdate,"%Y-%m-%d")))
+
+        datalist.append('Miren:\n')
+        datalist.append('{}  {}  {}  {}  {}  {}  {}  {}\n'.format(md1, md1, mu1, mu1, md2, md2, mu2, mu2))
+        datalist.append('Positions:\n')
+        absst = self.getAbsDIStruct()
+        for row in absst:
+            ok = True  # modify if f treatment is added
+            if ok:
+                tt = datetime.strftime(num2date(row.time), "%Y-%m-%d_%H:%M:%S")
+                datalist.append('{}  {}  {}  {}\n'.format(tt,row.hc,row.vc,row.res))
+        datalist.append('PPM:\n')
+        # TODO deal with samples with PPM data
+        #if len(self.ftime) > 0:
+        #    for i, elem in enumerate(self.ftime):
+        #        row = AbsoluteDIStruct()
+        #        row.time = self.ftime[i]
+        #        row.f = self.f[i]
+
+        datalist.append('Result:\n')
+
+        return datalist
+
 
     def getAbsDIStruct(self):
         """
@@ -1764,7 +1834,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 except:
                     print("Could not find flagging data in database")
                 try:
-                    print("Now getting header information")
+                    print("Obtaining variometers meta information from db")
                     variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
                 except:
                     print("Failed to obtain header information from data base")
@@ -1791,7 +1861,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     print("Extracting compensation values failed")
                 """
                 try:
-                    print("Applying delta values from db")
+                    print("Applying delta values from db ...")
                     variostr = dbase.applyDeltas(db,variostr)
                 except:
                     print("Applying delta values failed")
@@ -1818,9 +1888,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     print("Applying compensation values failed")
             if db and magrotation:
                 try:
-                    print("Rotation parameters from db:")
                     if not alpha:
-                        print ("Alpha")
+                        print("Taking rotation parameters from db... (alpha)")
                         rotstring = variostr.header.get('DataRotationAlpha','')
                         rotdict = dbase.string2dict(rotstring,typ='oldlist')
                         #print ("Dealing with year", date.year)
@@ -1835,9 +1904,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             print(" -- rotating with alpha: {a} degree (year {b})".format(a=valalpha,b=date.year))
                             variostr=variostr.rotation(alpha=float(valalpha))
                     else:
-                        print ("-- alpha provided manually")
+                        print ("Using manually provided rotation value")
+                        #variostr=variostr.rotation(alpha=alpha)
                     if not beta:
-                        print ("Beta")
+                        print("Taking rotation parameters from db... (beta)")
                         rotstring = variostr.header.get('DataRotationBeta','')
                         rotdict = dbase.string2dict(rotstring,typ='oldlist')
                         valbeta = rotdict.get(str(date.year),'')
@@ -1849,7 +1919,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                             print("-- rotating with beta: {a} degree (year {b})".format(a=valbeta,b=date.year))
                             variostr=variostr.rotation(beta=float(valbeta))
                     else:
-                        print ("-- beta provided manually")
+                        print ("Using manually provided rotation value")
+                        #variostr=variostr.rotation(alpha=alpha)
                 except:
                     print("Applying rotation parameters failed")
 

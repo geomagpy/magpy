@@ -168,30 +168,32 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('diparameter','') == '':
         # to be used for setting DI analysis parameter in future
         optionsdict['diparameter'] = { 'WIC': { 'diusedb' : False,
+                                                'stationid' : 'WIC',
+                                                'diazimuth' : '',
+                                                'divariocorr' : False,
                                                 'diexpD' : 0.0,
                                                 'diexpI' : 0.0,
-                                                'stationid' : 'WIC',
-                                                'diid' : '',
-                                                'diazimuth' : '',
-                                                'dipier' : 'A2',
                                                 'dialpha' : 0.0,
                                                 'dibeta' : 0.0,
                                                 'dideltaF' : 0.0,
                                                 'dideltaD' : 0.0,
                                                 'dideltaI' : 0.0,
+                                                'diid' : '',
+                                                'dipier' : 'A2',
                                                 'diannualmean' : ''},
                                        'TST': { 'diusedb' : True,
+                                                'stationid' : 'TST',
+                                                'diazimuth' : '179.9',
+                                                'divariocorr' : False,
                                                 'diexpD' : 0.0,
                                                 'diexpI' : 0.0,
-                                                'stationid' : 'TST',
-                                                'diid' : '',
-                                                'diazimuth' : '179.9',
-                                                'dipier' : 'A8',
                                                 'dialpha' : 0.0,
                                                 'dibeta' : 0.0,
                                                 'dideltaF' : 2.1,
                                                 'dideltaD' : 0.0,
                                                 'dideltaI' : 0.0,
+                                                'diid' : '',
+                                                'dipier' : 'A8',
                                                 'diannualmean' : ''}
                                       }
     if optionsdict.get('bookmarks','') == '':
@@ -6085,8 +6087,12 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     except:
                         try:
                             val = el[1].GetStringSelection()
+                            if val == 'False':
+                                val = False
+                            if val == 'True':
+                                val = True
                             valuedict[el[1].GetName()] = val
-                            print ("Val:", el[1].GetName(), val)
+                            #print ("Val:", el[1].GetName(), val)
                         except:
                             pass
 
@@ -6246,6 +6252,10 @@ Suite 330, Boston, MA  02111-1307  USA"""
         deltaI=0.0
         abstype= 'manual'   # is tested in absoluteAnalysis and not necessary
         azimuth = None
+        db = None
+        magrotation = None
+        usedb = False
+        annualmeans=None
 
         stationpara = dipara.get(stationid,{})
         if primaryparametersource == 'options' and stationpara == {}:
@@ -6287,21 +6297,33 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     elif el == 'diid':
                         diid = value
                     elif el == 'diannualmean':
-                        annualmean = value
+                        annualmeans = value
                     elif el == 'diazimuth':
                         azimuth = value
                     elif el == 'diusedb':
                         usedb = value
+                        if usedb and self.db:
+                            db = self.db
+                    elif el == 'divariocorr':
+                        magrotation = value
+                        # does only work with db? compensation data is path of the vario source 
             elif primaryparametersource == 'file':
                 pass
 
         if len(self.dipathlist) > 0:
             # Identify source -> Future version: use absolutClass which contains raw data
             #                    and necessary variation,scalar data
-            prev_redir = sys.stdout
-            redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
-            sys.stdout=redir
+            activatereport = True
+            if activatereport:
+                prev_redir = sys.stdout
+                redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
+                sys.stdout=redir
             absstream = DataStream()
+
+            if db:
+                print ("Database {} connected".format(self.options.get('dbname','')))
+            elif usedb and not db:
+                print ("No database connected")
 
             if isinstance(self.dipathlist,dict):
                 # Dictionary is the new default - all processes will return a dictionary
@@ -6315,7 +6337,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
                 f_azimuth = self.dipathlist.get('azimuth')
                 if azimuth:
                     print ("Using aziumth from options menu: {}".format(azimuth))
-                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,absstruct=True)
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,absstruct=True)
                     # abstream... aziumth =
                 elif not f_azimuth or np.isnan(f_azimuth) or f_azimuth == 'nan' or f_azimuth == None:
                     print ("no aziumth so far - please define")
@@ -6331,11 +6353,11 @@ Suite 330, Boston, MA  02111-1307  USA"""
                     dlg.Destroy()
                     if ok:
                         print ("Using given aziumth: {}".format(azimuth))
-                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,absstruct=True)
+                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,absstruct=True)
                 else:
                     # Please NOte: observer selection does not yet work #  db=self.db
                     print ("Using aziumth values from data sources")
-                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,absstruct=True)
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,absstruct=True)
 
             elif isinstance(self.dipathlist,list):
                 self.changeStatusbar("Processing DI data from file(s) ... please be patient")
@@ -6367,7 +6389,9 @@ Suite 330, Boston, MA  02111-1307  USA"""
             except:
                pass
 
-            sys.stdout=prev_redir
+            if activatereport:
+                sys.stdout=prev_redir
+
             # only if more than one point is selected
             self.changeStatusbar("Ready")
             if absstream and len(absstream.length()) > 1 and absstream.length()[0] > 0:
@@ -6457,7 +6481,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
         #self.dilayout = {'order':['MU','MD','WU','EU','WD','ED','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'False'}
         defaults = self.options
         cdate = pydate2wxdate(datetime.utcnow())
-        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db)
+        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db, dipathdict=self.dipathlist)
         if dlg.ShowModal() == wx.ID_OK:
             pass
         dlg.Destroy()

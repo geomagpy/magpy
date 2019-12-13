@@ -57,7 +57,7 @@ class AbsolutePage(wx.Panel):
         #self.exportButton = wx.Button(self,-1,"Export...",size=(160,30))
         self.ClearLogButton = wx.Button(self,-1,"Clear Log",size=(160,30))
         self.SaveLogButton = wx.Button(self,-1,"Save Log",size=(160,30))
-        self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,300),
+        self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,200),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         #self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
         #         style=wx.CB_DROPDOWN, value=self.varioext[0],size=(160,-1))

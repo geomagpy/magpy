@@ -4394,7 +4394,7 @@ class InputSheetDialog(wx.Dialog):
         InputDialog for DI data
     """
 
-    def __init__(self, parent, title, layout, path, defaults,cdate, db):
+    def __init__(self, parent, title, layout, path, defaults,cdate, db, dipathdict):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(InputSheetDialog, self).__init__(parent=parent,
             title=title, style=style) #size=(1000, 800),
@@ -4404,10 +4404,14 @@ class InputSheetDialog(wx.Dialog):
         self.defaults = defaults
         self.cdate = cdate
         self.units = ['degree','gon']
+        if isinstance(dipathdict, dict):
+            self.didict = dipathdict
+        else:
+            self.didict = {}
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
-        self.panel = SettingsPanel(self, cdate, path, defaults, layout, db)
+        self.panel = SettingsPanel(self, cdate, path, defaults, layout, db, self.didict)
         self.panel.SetInitialSize((850, 400))
         self.mainSizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 10)
         # Add Save/Cancel Buttons
@@ -4869,7 +4873,7 @@ class InputSheetDialog(wx.Dialog):
             self.Close(True)
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
-    def __init__(self, parent, cdate, path, defaults, layout, db):
+    def __init__(self, parent, cdate, path, defaults, layout, db, didict):
         scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
         #self.ShowFullScreen(True)
         self.cdate = cdate
@@ -4880,6 +4884,10 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.units = ['degree','gon']
         self.choices = ['decimal', 'dms']
         self.ressign = ['inline','opposite']
+        self.dichoices = []
+        self.didatalists = []
+        self.didict = didict
+        self.diline2datalist(didict)
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.createWidgets()
@@ -4892,6 +4900,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         """Create and layout the widgets in the panel"""
         # ##### Header Block (fix - 5 columns)
         # - Load line
+        self.memdataComboBox = wx.ComboBox(self, choices=self.dichoices,
+                     style=wx.CB_DROPDOWN,size=(160,-1))
         self.loadButton = wx.Button(self,-1,"Open DI data",size=(160,30))
         self.angleRadioBox = wx.RadioBox(self, label="Display angle as:",
                      choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS)
@@ -5046,6 +5056,11 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.SD1GCTextCtrl.Disable()
         self.SD2GCTextCtrl.Disable()
         self.SCGCTextCtrl.Disable()
+
+        if not len(self.dichoices) > 0:
+            self.memdataComboBox.Hide()
+        #else:
+        #    self.memdataComboBox.SetValue(self.dichoices[0]) 
 
         if not self.layout['double'] == 'False':
             #self.SD2TimeTextCtrl.Hide()
@@ -5405,6 +5420,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.Bind(wx.EVT_RADIOBOX, self.OnFlip, self.angleRadioBox)
         self.calcButton.Bind(wx.EVT_BUTTON, self.OnCalc)
         self.FLoadFromFileButton.Bind(wx.EVT_BUTTON, self.OnLoadF)
+        self.memdataComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateCombo)
 
     def OnLoadF(self, e):
         self.dirname = os.path.expanduser('~')
@@ -5593,48 +5609,9 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
         def _getDI():
             datalist = []
-            """
-            if self.db:
-                cursor = self.db.cursor()
-                sql = "SHOW TABLES LIKE 'DIDATA%'"
-                cursor.execute(sql)
-                output = cursor.fetchall()
-                tablelist = [elem[0] for elem in output]
-                if len(tablelist) < 1:
-                    dlg = wx.MessageDialog(self, "No DI data tables available!\n"
-                            "please check your database\n",
-                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    return
-                # 1 dlg, select table
-                if not len(tablelist) == 1:
-                    dlg = DITableDialog(None, title='Select DIDATA table', tablelist=tablelist)
-                    if dlg.ShowModal() == wx.ID_OK:
-                        table = dlg.tableRadioBox.GetStringSelection()
-                else:
-                    table = tablelist[0]
-
-                print table
-                # 2 dlg, select pier
-                sql = "SELECT StartTime, Pier FROM "+table
-                cursor.execute(sql)
-                output = cursor.fetchall()
-                resultlist = [elem[0] for elem in output]
-                # 3 dlg, select time
-                dlg = DISelectionDialog(None, title='Select DI-Dataset',resultlist=resultlist)
-                if dlg.ShowModal() == wx.ID_OK:
-                    # ComboBox with pier and times
-                    pier = dlg.pierComboBox.GetValue()
-                    time = dlg.timeComboBox.GetValue()
-                sql = "Select * FROM {} WHERE StartTime = '{}' and Pier = '{}'".format(table, time, pier)
-                cursor.execute(sql)
-                output = cursor.fetchall()
-                datalist = [elem[0] for elem in output]
-                print ("DATALIST", datalist)
-            """
             return datalist
 
-
+        """ Moved down
         def _datalist2wx(datalist,iagacode):
             # datalist looks like:
             # string list with lines:
@@ -5750,7 +5727,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             loadfile = True
         else:
             loadfile = True
-
+        """
         datalist = []
         self.dirname = os.path.expanduser('~')
         iagacode = 'undefined'
@@ -5769,8 +5746,147 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         if len(datalist) > 0:
             self.angleRadioBox.SetStringSelection("decimal")
             #print ("Datalist", datalist)
-            _datalist2wx(datalist, iagacode)
+            self.datalist2wx(datalist, iagacode)
+            #_datalist2wx(datalist, iagacode)
 
+
+    def datalist2wx(self,datalist,iagacode):
+            # datalist looks like:
+            # string list with lines:
+            #['# MagPy Absolutes\n', '# Abs-Observer: Leichter\n', '# Abs-Theodolite: T10B_0619H154167_07-2011\n', '# Abs-TheoUnit: deg\n', '# Abs-FGSensor: MAG01H_SerialSensor_SerialElectronic_07-2011\n', '# Abs-AzimuthMark: 180.1044444\n', '# Abs-Pillar: A4\n', '# Abs-Scalar: /\n', '# Abs-Temperature: 6.7C\n', '# Abs-InputDate: 2016-01-26\n', 'Miren:\n', '0.099166666666667  0.098055555555556  180.09916666667  180.09916666667  0.098055555555556  0.096666666666667  180.09805555556  180.09805555556\n', 'Positions:\n', '2016-01-21_13:22:00  93.870555555556  90  1.1\n', '2016-01-21_13:22:30  93.870555555556  90  1.8\n', '2016-01-21_13:27:00  273.85666666667  90  0.1\n', '2016-01-21_13:27:30  273.85666666667  90  0.2\n', '2016-01-21_13:25:30  273.85666666667  270  0.3\n', '2016-01-21_13:26:00  273.85666666667  270  -0.6\n', '2016-01-21_13:24:00  93.845555555556  270  -0.2\n', '2016-01-21_13:24:30  93.845555555556  270  0.4\n', '2016-01-21_13:39:30  0  64.340555555556  -0.3\n', '2016-01-21_13:40:00  0  64.340555555556  0.1\n', '2016-01-21_13:38:00  0  244.34055555556  0\n', '2016-01-21_13:38:30  0  244.34055555556  -0.4\n', '2016-01-21_13:36:00  180  295.67055555556  1.1\n', '2016-01-21_13:36:30  180  295.67055555556  1.2\n', '2016-01-21_13:34:30  180  115.66916666667  0.3\n', '2016-01-21_13:35:00  180  115.66916666667  0.9\n', '2016-01-21_13:34:30  180  115.66916666667  0\n', 'PPM:\n', 'Result:\n']
+
+            poscnt = 0
+            poslst = ['EU','EU','WU','WU','ED','ED','WD','WD','NU','NU','SD','SD','ND','ND','SU','SU']
+            posord = ['1','2','1','2','1','2','1','2','1','2','1','2','1','2','1','2']
+            ffield = []
+            self.CodeTextCtrl.SetValue(iagacode)
+            for line in datalist:
+                #print ("Here", line)
+                numelements = len(line.split())
+                if line.isspace():
+                    # blank line
+                    pass
+                elif line.startswith('#'):
+                    # header
+                    line = line.strip('\n')
+                    headline = line.split(':')
+                    #self.CodeTextCtrl.SetValue()
+                    #self.DatePicker = wxDatePickerCtrl(self, dt=self.cdate,size=(160,30))
+
+                    if headline[0] == ('# Abs-Observer'):
+                        self.ObserverTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Theodolite'):
+                        self.TheoTextCtrl.SetValue(headline[1].replace(', ','_').strip().replace(' ','_'))
+                    if headline[0] == ('# Abs-TheoUnit'):
+                        self.UnitComboBox.SetStringSelection(headline[1].strip().replace('deg','degree'))
+                    if headline[0] == ('# Abs-FGSensor'):
+                        self.FluxTextCtrl.SetValue(headline[1].strip().replace(' ','_'))
+                    if headline[0] == ('# Abs-AzimuthMark'):
+                        self.AzimuthTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Pillar'):
+                        self.PillarTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Scalar'):
+                        self.FInstTextCtrl.SetValue(headline[1].strip())
+                    if headline[0] == ('# Abs-Notes'):
+                        self.CommentTextCtrl.SetValue(headline[1].strip())
+                        #datalist.append(headline[1].strip())
+                    #if headline[0] == ('# Abs-DeltaF'):
+                    #    datalist.append(headline[1].strip())
+                    if headline[0] == ('# Abs-Temperature'):
+                        self.TempTextCtrl.SetValue(headline[1].strip().strip('C'))
+                elif numelements == 8:
+                    # Miren mesurements
+                    mirestr = line.split()
+                    self.AmireUp1TextCtrl.SetValue(mirestr[0])
+                    self.AmireUp2TextCtrl.SetValue(mirestr[1])
+                    self.AmireDown1TextCtrl.SetValue(mirestr[2])
+                    self.AmireDown2TextCtrl.SetValue(mirestr[3])
+                    self.BmireUp1TextCtrl.SetValue(mirestr[4])
+                    self.BmireUp2TextCtrl.SetValue(mirestr[5])
+                    self.BmireDown1TextCtrl.SetValue(mirestr[6])
+                    self.BmireDown2TextCtrl.SetValue(mirestr[7])
+                elif numelements == 4:
+                    # Position mesurements
+                    posstr = line.split()
+                    #print ("Cnt", poscnt, posstr)
+                    lineel = ['Time','GC','Angle','Residual']
+                    if poscnt == 16:
+                        na = 'SC'
+                    elif poscnt < 16:
+                        comp = poslst[poscnt]
+                        na = comp+posord[poscnt]
+                    if poscnt < 8:
+                        lineel = ['Time','Angle','GC','Residual']
+                    for idx,el in enumerate(posstr):
+                        col = lineel[idx]
+                        #print ("Here", el, col)
+                        if col == 'Time':
+                            try:
+                                mdate = datetime.strptime(el,"%Y-%m-%d_%H:%M:%S")
+                                el = datetime.strftime(mdate,"%H:%M:%S")
+                            except:
+                                el = '00:00:00'
+                        eval('self.'+na+col+'TextCtrl.SetValue(el)')
+                    poscnt = poscnt+1
+                elif numelements == 2:
+                    # Intensity mesurements
+                    fstr = line.split()
+                    try:
+                        el = datetime.strftime(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"),"%H:%M:%S")
+                    except:
+                        el = '00:00:00'
+                    try:
+                        f = fstr[1].replace(',','.')
+                    except:
+                        f = 0.0
+                    fline = ','.join([el,f])+'\n'
+                    ffield.append(fline)
+                else:
+                    #print line
+                    pass
+            try:
+                self.DatePicker.SetValue(wx.DateTime.FromTimeT(time.mktime(mdate.timetuple())))
+            except:
+                self.DatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mdate.timetuple())))
+
+            if len(ffield) > 0:
+                self.FValsTextCtrl.SetValue("".join(ffield))
+                self.FBaseTextCtrl.SetValue("0.0")
+            else:
+                self.FInstTextCtrl.SetValue("type_serial_version")
+                self.FValsTextCtrl.SetValue("time,value")
+                self.FBaseTextCtrl.SetValue("")
+
+
+    def diline2datalist(self, didict):
+        """
+        DESCRIPTION:
+           converts a diline structure into a datalist string used for displaying and saving
+           and a name list for the ComboBox selection
+        """
+        if didict == {}:
+            return
+        for struc in didict.get('absdata'):
+            datalist = struc.getDataList()
+            #try:
+            positionsindex = datalist.index('Positions:\n')
+            datadate = datalist[positionsindex+1].split()[0]
+            dataname = "{}_{}_{}".format(datadate.replace(':','-'), struc.pier, didict.get('station'))
+            self.dichoices.append(dataname)
+            self.didatalists.append(datalist)
+
+    def OnUpdateCombo(self, event):
+        # Get choice
+        idx = self.dichoices.index(self.memdataComboBox.GetValue())
+        # Get corresponding datalist
+        datalist = self.didatalists[idx]
+        # Get iagacode
+        iagacode = self.didict.get('station')
+        # Update Screen
+        if len(datalist) > 0:
+            self.angleRadioBox.SetStringSelection("decimal")
+            #print ("Datalist", datalist)
+            self.datalist2wx(datalist, iagacode)
 
 
 # ###################################################
