@@ -3590,11 +3590,11 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     for elem in dbflaglist:
         flagid = flagid+1
         try:
-            elem[4] = unicode(elem[4],'utf-8')
+            elem[4] = unicode(elem[4],errors='ignore')
             elem[4] = elem[4].encode('ascii',errors='ignore')
         except:
-            try:  # data is already unicode
-                elem[4] = elem[4].encode('ascii',errors='ignore')
+            try:  # Python3
+                elem[4] = str(elem[4])
             except:
                 loggerdatabase.info('flag_stream id {}: non-ascii characters in comment. Replacing by unknown reason'.format(flagid))
                 elem[4] = 'Unknown reason'

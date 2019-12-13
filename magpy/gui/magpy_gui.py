@@ -946,7 +946,7 @@ class MenuPanel(scrolled.ScrolledPanel):
         self.abs_page = AbsolutePage(nb)
         self.rep_page = ReportPage(nb)
         self.com_page = MonitorPage(nb)
-        nb.AddPage(self.str_page, "Stream")
+        nb.AddPage(self.str_page, "Data")
         nb.AddPage(self.fla_page, "Flags")
         nb.AddPage(self.met_page, "Meta")
         nb.AddPage(self.ana_page, "Analysis")
@@ -1473,7 +1473,7 @@ class MainFrame(wx.Frame):
         #    self.menu_p.met_page.sensorTextCtrl.Disable()      # remain disabled
         #    self.menu_p.met_page.dataTextCtrl.Disable()        # remain disabled
         # DI
-        if not self.dipathlist:
+        if not isinstance(self.dipathlist,dict):
             self.menu_p.abs_page.AnalyzeButton.Disable()       # activate if DI data is present i.e. diTextCtrl contains data
         self.menu_p.abs_page.loadDIButton.Enable()         # remain enabled
         self.menu_p.abs_page.defineVarioScalarButton.Enable()    # remain enabled
@@ -5665,7 +5665,7 @@ Suite 330, Boston, MA  02111-1307  USA"""
             flaglist = dlg.flaglist
             #print ("Loaded flags like", flaglist[0], self.flaglist[0])
             self.flaglist.extend(flaglist)
-            #print ("extended flaglist looking like", self.flaglist[0])
+            #print ("extended flaglist looking like", self.flaglist)
             self.changeStatusbar("Applying flags ... please be patient")
             self.plotstream = self.plotstream.flag(flaglist)
             self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))

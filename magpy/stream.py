@@ -4295,9 +4295,6 @@ CALLED BY:
                 val = tmpst._get_column(key)
 
             # interplolate NaN values
-            #nans, xxx= nan_helper(val)
-            #val[nans]= np.interp(xxx(nans), xxx(~nans), val[~nans])
-            #print np.min(nt), np.max(nt), sp, len(self)
             # normalized sampling rate
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
@@ -4658,7 +4655,7 @@ CALLED BY:
             for start,stop in idx:
                 stop = stop-1
                 for elem in keystoflag:
-                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
+                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),str(text),sensorid,moddate]
                     flaglist.append(flagline)
 
         return flaglist
@@ -4949,8 +4946,11 @@ CALLED BY:
         logger.info("Flag: Found flaglist of length {}".format(lenfl))
         flaglist = [line for line in flaglist if date2num(self._testtime(line[1])) >= st]
         flaglist = [line for line in flaglist if date2num(self._testtime(line[0])) <= et]
+
         # Sort flaglist accoring to startdate (used to speed up flagging procedure)
-        flaglist.sort()
+        # BETTER: Sort with input date - otherwise later data might not overwrite earlier...
+        flaglist = sorted(flaglist, key=lambda x: x[-1])
+        #flaglist.sort()
 
         ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
         ## (use only last input)
