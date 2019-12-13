@@ -39,18 +39,18 @@ class AbsolutePage(wx.Panel):
         self.diLabel = wx.StaticText(self, label="Actions:")
         self.loadDIButton = wx.Button(self,-1,"DI data",size=(160,30))
         self.diSourceLabel = wx.StaticText(self, label="Source: None")
-        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
+        self.diTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.defineVarioScalarButton = wx.Button(self,-1,"Vario/Scalar",size=(160,30))
         self.VarioSourceLabel = wx.StaticText(self, label="Vario: None")
         self.ScalarSourceLabel = wx.StaticText(self, label="Scalar: None")
-        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
+        self.varioTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.defineParameterButton = wx.Button(self,-1,"Analysis parameter",size=(160,30))
         self.parameterRadioBox = wx.RadioBox(self,label="parameter source",choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS,size=(160,50))
         #self.parameterTextCtrl = wx.TextCtrl(self, value="Default",size=(160,30),
         #                  style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,30),
+        self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
         self.logLabel = wx.StaticText(self, label="Logging:")

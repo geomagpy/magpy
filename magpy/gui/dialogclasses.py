@@ -3002,7 +3002,7 @@ class LoadDIDialog(wx.Dialog):
         self.loadRemoteButton = wx.Button(self,-1,"Select Webservice/Remote",size=(210,30))
         self.remoteComboBox = wx.ComboBox(self, choices=self.serviceitems,
                  style=wx.CB_DROPDOWN, value=self.mainsource,size=(160,-1))
-        self.fileTextCtrl = wx.TextCtrl(self,value="",size=(160,-1)) # manual, autodif -> if autudif request azimuth
+        self.fileTextCtrl = wx.TextCtrl(self,value=self.dirname,size=(160,-1)) # manual, autodif -> if autudif request azimuth
         self.databaseTextCtrl = wx.TextCtrl(self,value="",size=(160,-1)) # currently conected to
 
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
