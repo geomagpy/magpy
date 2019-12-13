@@ -2069,16 +2069,23 @@ class AnalysisFitDialog(wx.Dialog):
         self.stream = stream
         self.options = options
         self.fitfunc = self.options.get('fitfunction','spline')
-        self.funclist = ['spline','polynomial', 'linear least-squares', 'none']
+        self.funclist = ['spline','polynomial', 'linear least-squares', 'mean', 'none']
         self.fitknots = self.options.get('fitknotstep','0.3')
         self.fitdegree = self.options.get('fitdegree','5')
         self.mintime = num2date(stream.ndarray[0][0])
         self.maxtime = num2date(stream.ndarray[0][-1])
         self.createControls()
         self.doLayout()
+        self.modifyWindows(self.fitfunc)
 
     # Widgets
     def createControls(self):
+        try:
+            stfit = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
+            etfit = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
+        except:
+            stfit = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
+            etfit = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
         self.funcLabel = wx.StaticText(self, label="Fit function:",size=(160,30))
         self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
             style=wx.CB_DROPDOWN, value=self.fitfunc,size=(160,-1))
@@ -2089,13 +2096,16 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.UpperTimeText = wx.StaticText(self,label="Fit data before:")
         self.LowerTimeText = wx.StaticText(self,label="Fit data after:")
-        self.startFitDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple())),size=(160,30))
+        self.startFitDatePicker = wxDatePickerCtrl(self, dt=stfit,size=(160,30))
         self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
-        self.endFitDatePicker = wxDatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple())),size=(160,30))
+        self.endFitDatePicker = wxDatePickerCtrl(self, dt=etfit,size=(160,30))
         self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+        self.funcComboBox.Bind(wx.EVT_COMBOBOX, self.onUpdate)
+
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2199,7 +2209,26 @@ class AnalysisFitDialog(wx.Dialog):
         self.endFitDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
         self.startFitTimePicker.SetValue(starttime)
 
+    def modifyWindows(self, select):
+        if select == 'spline':
+            self.knotsTextCtrl.Enable()
+            self.degreeTextCtrl.Disable()
+        elif select == 'mean':
+            self.knotsTextCtrl.Disable()
+            self.degreeTextCtrl.Disable()
+        elif select.startswith('poly'):
+            self.knotsTextCtrl.Disable()
+            self.degreeTextCtrl.Enable()
+        elif select.startswith('linear'):
+            self.knotsTextCtrl.Disable()
+            self.degreeTextCtrl.Disable()
+        else:
+            self.knotsTextCtrl.Enable()
+            self.degreeTextCtrl.Enable()
 
+    def onUpdate(self, event):
+        select = self.funcComboBox.GetStringSelection()
+        self.modifyWindows(select)
 
 class AnalysisFilterDialog(wx.Dialog):
     """

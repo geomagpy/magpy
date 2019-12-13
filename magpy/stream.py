@@ -4272,7 +4272,7 @@ CALLED BY:
         ev = 0
         for key in keys:
             tmpst = fitstream._drop_nans(key)
-            print ("Length", tmpst.length())
+            #print ("Length", tmpst.length())
             if ndtype:
                 t = tmpst.ndarray[0]
             else:
@@ -4328,6 +4328,12 @@ CALLED BY:
             elif fitfunc == 'poly':
                 logger.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
                 ti = polyfit(nt, val, fitdegree)
+                f_fit = polyval(ti,x)
+            elif fitfunc == 'mean':
+                logger.debug('Selected mean fit - amount of data: {}, time steps: {}'.format(len(nt), len(val)))
+                meanvalue = np.nanmean(val)
+                meanval = np.asarray([meanvalue for el in val])
+                ti = polyfit(nt, meanval, 1)
                 f_fit = polyval(ti,x)
             elif fitfunc == 'harmonic':
                 logger.debug('Selected harmonic fit - using inverse fourier transform')
