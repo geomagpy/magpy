@@ -159,18 +159,16 @@ class DILineStruct(object):
         datalist.append('Positions:\n')
         absst = self.getAbsDIStruct()
         for row in absst:
-            ok = True  # modify if f treatment is added
-            if ok:
+            # modify if f treatment is added
+            if not np.isnan(row.hc):
                 tt = datetime.strftime(num2date(row.time), "%Y-%m-%d_%H:%M:%S")
                 datalist.append('{}  {}  {}  {}\n'.format(tt,row.hc,row.vc,row.res))
         datalist.append('PPM:\n')
-        # TODO deal with samples with PPM data
-        #if len(self.ftime) > 0:
-        #    for i, elem in enumerate(self.ftime):
-        #        row = AbsoluteDIStruct()
-        #        row.time = self.ftime[i]
-        #        row.f = self.f[i]
-
+        if len(self.ftime) > 0:
+            for i, elem in enumerate(self.ftime):
+                tt = datetime.strftime(num2date(self.ftime[i]), "%Y-%m-%d_%H:%M:%S")
+                datalist.append('{}  {}\n'.format(tt,self.f[i]))
+                row = AbsoluteDIStruct()
         datalist.append('Result:\n')
 
         return datalist
