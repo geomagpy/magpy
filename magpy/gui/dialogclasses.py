@@ -2452,24 +2452,106 @@ class AnalysisOffsetDialog(wx.Dialog):
             self.EndTimeTextCtrl.Enable()
             self.timeshiftTextCtrl.Disable()
 
-class AnalysisResampleDialog(wx.Dialog):
+class AnalysisPlotDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRITPTION
+        AnalysisPlotDialog
     """
-    def __init__(self, parent, title,keylst, period):
-        super(AnalysisResampleDialog, self).__init__(parent=parent,
-            title=title, size=(400, 600))
-        self.period = period
+
+    def __init__(self, parent, title, fig, xsize, ysize):
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        super(AnalysisPlotDialog, self).__init__(parent=parent,
+            title=title, style=style) #, size=(600, 600))
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        # Add Settings Panel
+        self.panel = AnalysisPlotPanel(self, fig)
+        self.panel.SetInitialSize((xsize, ysize))
+        self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
+        # Add Save/Cancel Buttons
+        self.createWidgets()
+        # Set sizer and window size
+        self.SetSizerAndFit(self.mainSizer)
+        #self.mainSizer.Fit(self)
+
+    def createWidgets(self):
+        """Create and layout the widgets in the dialog"""
+        btnSizer = wx.StdDialogButtonSizer()
+
+        cancelBtn = wx.Button(self, wx.ID_NO, label="Close",size=(160,30))
+        cancelBtn.Bind(wx.EVT_BUTTON, self.OnClose)
+        btnSizer.AddButton(cancelBtn)
+        btnSizer.Realize()
+        self.mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+
+    def OnClose(self, event):
+        self.Close(True)
+
+
+class AnalysisPlotPanel(scrolledpanel.ScrolledPanel):
+    """
+    Dialog for MetaData panel
+    """
+    def __init__(self, parent, fig):
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(600, 600))
+
+        #self.figure = plt.figure()
+        #self.plt = plt
+        self.figure = fig
+        self.canvas = FigureCanvas(self,-1,self.figure)
+
+
+        self.axes = self.figure.add_subplot(111)
+        #plt.axis("off") # turn off axis
+        self.canvas.draw()
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.createControls()
+        self.cnts=[0,0]
         self.doLayout()
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+        self.SetupScrolling()
 
     # Widgets
     def createControls(self):
-        self.periodLabel = wx.StaticText(self,label="Period")
-        self.periodTextCtrl = wx.TextCtrl(self,value=str(self.period))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+        pass
+    def doLayout(self):
+        pass
+
+
+class StreamFlagSelectionDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Parameter selection of flag range routine
+    USED BY:
+        Stream Method: onFlagRange()
+    """
+    def __init__(self, parent, title, shownkeylist, keylist):
+        super(StreamFlagSelectionDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.shownkeys=shownkeylist
+        self.selectedkey = shownkeylist[0]
+        self.keys2flag = ",".join(shownkeylist)
+        self.keys=keylist
+        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.comment = ''
+        self.createControls()
+        self.doLayout()
+        #print ("Dialog open", shownkeylist, keylist)
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
+        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
+        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
+        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
+        self.CommentText = wx.StaticText(self,label="Comment:")
+        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2482,17 +2564,24 @@ class AnalysisResampleDialog(wx.Dialog):
         emptySpace = ((0, 0), noOptions)
 
         # Add the controls to the sizers:
-        # (self.'+elem+'Label, noOptions),
+        # transform headerlist to an array with lines like cnts
         contlst = []
-        contlst.append((self.periodLabel, noOptions))
-        contlst.append((self.periodTextCtrl, expandOption))
+        contlst.append((self.KeyListText, noOptions))
+        contlst.append((self.FlagIDText, noOptions))
+        contlst.append((self.CommentText, noOptions))
+        # 8 row
+        contlst.append((self.AffectedKeysTextCtrl, expandOption))
+        contlst.append((self.FlagIDComboBox, expandOption))
+        contlst.append((self.CommentTextCtrl, expandOption))
+        contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
         # A GridSizer will contain the other controls:
-        cols = 2
+        cols = 3
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -2501,6 +2590,8 @@ class AnalysisResampleDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
+
+
 
 class AnalysisRotationDialog(wx.Dialog):
     """

@@ -4849,7 +4849,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         self.changeStatusbar("Power spectrum ...")
         comp = self.getComponent()
         if comp is not None:
-            mp.plotPS(self.plotstream, comp, gui=True)
+            fig = mp.plotPS(self.plotstream, comp, noshow=True)
+            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=600,ysize=500)
+            dlg.ShowModal()
+            dlg.Destroy()
+            fig.clear()
 
     def onSpectrumButton(self, event):
         """
@@ -4859,7 +4863,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         self.changeStatusbar("Spectral plot ...")
         comp = self.getComponent()
         if comp is not None:
-            mp.plotSpectrogram(self.plotstream, comp, gui=True)
+            #mp.plotSpectrogram(self.plotstream, comp, gui=True)
+            fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
+            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=700)
+            dlg.ShowModal()
+            dlg.Destroy()
+            fig.clear()
 
     def onStatsButton(self, event):
         """

@@ -1658,7 +1658,7 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
         window=mlab.window_hanning, noverlap=900,
         cmap=cm.Accent, cbar=False, xextent=None, pad_to=None,
         sides='default', scale_by_freq=None, minfreq = None, maxfreq = None,
-        plottitle=False, gui=False, **kwargs):
+        plottitle=False, gui=False, figure=False, **kwargs):
     """
     DEFINITION:
         Creates a spectrogram plot of selected keys.
@@ -1724,17 +1724,26 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
             print ("Maxfreq", maxfreq)
             if maxfreq < 1:
                 maxfreq = 1
-        ax1=subplot(211)
-        plt.plot_date(t,val,'-')
-        ax1.set_ylabel('{} [{}]'.format(stream.header.get('col-'+key,''),
-                stream.header.get('unit-col-'+key,'')))
-        ax1.set_xlabel('Time (UTC)')
-        ax2=subplot(212)
+        if not figure:
+            ax1=subplot(211)
+            plt.plot_date(t,val,'-')
+            ax1.set_ylabel('{} [{}]'.format(stream.header.get('col-'+key,''),
+                    stream.header.get('unit-col-'+key,'')))
+            ax1.set_xlabel('Time (UTC)')
+            ax2=subplot(212)
+        else:
+            ax2=subplot(111)
         ax2.set_yscale('log')
         #NFFT = 1024
         Pxx, freqs, bins, im = magpySpecgram(val, NFFT=NFFT, Fs=Fs,
                 noverlap=noverlap, cmap=cmap, minfreq=minfreq,
                 maxfreq=maxfreq)
+
+        if figure:
+            fig = plt.gcf()
+            axes = fig.axes
+            fig.colorbar(im, ax=np.ravel(axes).tolist())
+            return fig
 
         if plottitle:
             ax1.set_title(plottitle)
