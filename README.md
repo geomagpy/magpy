@@ -227,11 +227,15 @@ The data from `example1` has been read into a MagPy *DataStream* (or *stream*) o
 
 Several example data sets are provided within the MagPy package:
 
-   - `example1`: [INTERMAGNET] CDF (ImagCDF) file with 1 second xyzf data
-   - `example2`: [INTERMAGNET] Archive format (IAF) file for one month with 1 min, 1 hour, K and mean data
-   - `example3`: MagPy readable DI data file with data from 1 single DI measurement
-   - `example4`: MagPy Basevalue file (PYSTR) with analysis results of several DI data
+   - `example1`: [IAGA] ZIP (IAGA2002, zip compressed) file with 1 second HEZ data
+   - `example2`: [MagPy] Archive (CDF) file with 1 sec F data
+   - `example3`: [MagPy] Basevalue (TXT) ascii file with DI and baseline data
+   - `example4`: [INTERMAGNET] ImagCDF (CDF) file with one week of 1 second data 
+   - `example5`: [MagPy] Archive (CDF) raw data file with xyz and supporting data
+   - `example6a`: [MagPy] DI (txt) raw data file with DI measurement
+   - `example6b`: [MagPy] like 6a to be used with example4
 
+   - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1
 
 #### 2.2.1 Reading
 

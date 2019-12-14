@@ -2,7 +2,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-
+import sys
 exec(open('magpy/version.py').read())
 
 setup(
@@ -16,13 +16,25 @@ setup(
     license='LICENSE.txt',
     description='Geomagnetic analysis tools.',
     long_description=open('README.md').read(),
-    package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.bin','examples/*.txt']},
+    package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt']},
     install_requires=[
         "matplotlib >= 2.0.2",
         "numpy >= 1.5.0",
         "scipy >= 0.8.6",
         "paho-mqtt >= 1.2.0",
-        #"MySQL-python >= 1.2.3",
-        #"pexpect >= 3.1",
+        "pymysql >= 0.6.0",
+        "ffnet >= 0.8.0",
+        "spacepy >= 1.6.0",
+        "pexpect >= 3.1.0",
+    ]  if sys.version_info < (3, 5) else 
+    [
+        "matplotlib >= 2.0.2",
+        "numpy >= 1.5.0",
+        "scipy >= 0.8.6",
+        "paho-mqtt >= 1.2.0",
+        "pymysql >= 0.6.0",
+        "cdflib >= 0.3.0",
+        "pexpect >= 3.1.0",
     ],
 )
+
