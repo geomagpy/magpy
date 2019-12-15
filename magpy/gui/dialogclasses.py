@@ -2495,6 +2495,8 @@ class AnalysisPlotPanel(scrolledpanel.ScrolledPanel):
     def __init__(self, parent, fig):
         scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(600, 600))
 
+        from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+
         #self.figure = plt.figure()
         #self.plt = plt
         self.figure = fig
@@ -2502,16 +2504,16 @@ class AnalysisPlotPanel(scrolledpanel.ScrolledPanel):
 
 
         self.axes = self.figure.add_subplot(111)
-        #plt.axis("off") # turn off axis
-        self.canvas.draw()
+        self.toolbar = NavigationToolbar(self.canvas)
+        self.toolbar.Realize()
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-        self.createControls()
-        self.cnts=[0,0]
-        self.doLayout()
+        self.mainSizer.Add(self.canvas, 1, wx.EXPAND)
+        self.mainSizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
         self.SetSizer(self.mainSizer)
         self.mainSizer.Fit(self)
         self.SetupScrolling()
+        #self.canvas.draw()
 
     # Widgets
     def createControls(self):

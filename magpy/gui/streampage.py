@@ -58,11 +58,13 @@ class StreamPage(wx.Panel):
         self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
         #self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(160,30))
+        self.dropKeysButton = wx.Button(self,-1,"Drop Columns",size=(160,30))
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(160,30))
         self.restoreButton = wx.Button(self,-1,"Restore data",size=(160,30))
         self.changePlotButton = wx.Button(self,-1,"Plot Options",size=(160,30))
         self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(160,30))
         self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
+        self.getGapsButton = wx.Button(self,-1,"Get gaps",size=(160,30))
         #self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
         #self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
         #self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
@@ -122,7 +124,7 @@ class StreamPage(wx.Panel):
                  'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.changePlotButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
-                 '(0,0), noOptions',
+                 'self.dropKeysButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.compRadioBox, noOptions',
                  'self.symbolRadioBox, noOptions',
                  'self.annotateCheckBox, noOptions',
@@ -130,7 +132,7 @@ class StreamPage(wx.Panel):
                  'self.confinexCheckBox, noOptions',
                  'self.dailyMeansButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.errorBarsCheckBox, noOptions',
-                 '(0,0), noOptions',
+                 'self.getGapsButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.lineLabel3, noOptions',
                  'self.lineLabel4, noOptions']
                  #'self.flagOptionsLabel, noOptions',

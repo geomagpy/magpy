@@ -1233,6 +1233,7 @@ class MainFrame(wx.Frame):
         #self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
         self.Bind(wx.EVT_BUTTON, self.onTrimStreamButton, self.menu_p.str_page.trimStreamButton)
         self.Bind(wx.EVT_BUTTON, self.onSelectKeys, self.menu_p.str_page.selectKeysButton)
+        self.Bind(wx.EVT_BUTTON, self.onDropKeys, self.menu_p.str_page.dropKeysButton)
         self.Bind(wx.EVT_BUTTON, self.onExtractData, self.menu_p.str_page.extractValuesButton)
         self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
         self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
@@ -1241,6 +1242,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_CHECKBOX, self.onConfinexCheckBox, self.menu_p.str_page.confinexCheckBox)
         self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.str_page.dailyMeansButton)
         self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.str_page.applyBCButton)
+        self.Bind(wx.EVT_BUTTON, self.onGetGapsButton, self.menu_p.str_page.getGapsButton)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
         self.Bind(wx.EVT_RADIOBOX, self.onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
         #        Flags Page
@@ -1438,6 +1440,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.trimStreamButton.Disable()    # always
         self.menu_p.str_page.restoreButton.Disable()       # always
         self.menu_p.str_page.selectKeysButton.Disable()    # always
+        self.menu_p.str_page.dropKeysButton.Disable()    # always
         self.menu_p.str_page.extractValuesButton.Disable() # always
         self.menu_p.str_page.changePlotButton.Disable()    # always
         self.menu_p.fla_page.flagOutlierButton.Disable()   # always
@@ -1455,6 +1458,7 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.flagDropButton.Disable()      # activated if annotation are present
         self.menu_p.fla_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
+        self.menu_p.str_page.getGapsButton.Disable()       # activated if not MagPyDI
         self.menu_p.str_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
         self.menu_p.str_page.annotateCheckBox.Disable()    # activated if annotation are present
         self.menu_p.str_page.errorBarsCheckBox.Disable()   # activated delta columns are present and not DI file
@@ -1718,6 +1722,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.trimStreamButton.Enable()    # always
         self.menu_p.str_page.restoreButton.Enable()       # always
         self.menu_p.str_page.selectKeysButton.Enable()    # always
+        self.menu_p.str_page.dropKeysButton.Enable()      # always
         self.menu_p.str_page.extractValuesButton.Enable() # always
         self.menu_p.str_page.changePlotButton.Enable()    # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
@@ -1782,6 +1787,8 @@ class MainFrame(wx.Frame):
             if self.menu_p.str_page.annotateCheckBox.GetValue():
                 self.menu_p.str_page.annotateCheckBox.SetValue(True)
                 self.plotopt['annotate'] = True                   # activate annotation
+        if not formattype == 'MagPyDI' and not contenttype.startswith('MagPyDI'):
+            self.menu_p.str_page.getGapsButton.Enable()    # activated if not DI data
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
             self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
@@ -4850,7 +4857,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         comp = self.getComponent()
         if comp is not None:
             fig = mp.plotPS(self.plotstream, comp, noshow=True)
-            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=600,ysize=500)
+            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=650,ysize=600)
             dlg.ShowModal()
             dlg.Destroy()
             fig.clear()
@@ -4865,7 +4872,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         if comp is not None:
             #mp.plotSpectrogram(self.plotstream, comp, gui=True)
             fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
-            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=700)
+            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=600)
             dlg.ShowModal()
             dlg.Destroy()
             fig.clear()
@@ -5152,6 +5159,59 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.changeStatusbar("Failure")
 
 
+    def onDropKeys(self,event):
+        """
+        DESCRIPTION
+            open dialog to select shown keys (check boxes)
+        """
+
+        self.changeStatusbar("Dropping keys ...")
+
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
+        keylist = self.plotstream._get_key_headers(numerical=True)
+        self.keylist = keylist
+        shownkeylist = [el for el in self.shownkeylist if el in NUMKEYLIST]
+
+        namelist = []
+        unitlist = []
+        for key in keylist:
+            if not len(self.plotstream.ndarray[KEYLIST.index(key)]) == 0:
+                value = self.plotstream.header.get('col-'+key)
+                unit = self.plotstream.header.get('unit-col-'+key)
+                if not value == '':
+                    namelist.append(value)
+                else:
+                    namelist.append(key)
+                if not unit == '':
+                    unitlist.append(unit)
+                else:
+                    unitlist.append('')
+
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
+            #for elem in shownkeylist:
+            #    exec('dlg.'+elem+'CheckBox.SetValue(True)')
+            if dlg.ShowModal() == wx.ID_OK:
+                dropkeylist = []
+                for elem in keylist:
+                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                    if boolval:
+                        dropkeylist.append(elem)
+                        self.plotstream = self.plotstream._drop_column(elem)
+                if len(dropkeylist) == 0:
+                    self.changeStatusbar("Ready")
+                else:
+                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
+                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
+                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
+                    self.ActivateControls(self.plotstream)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                    self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
+
     def onExtractData(self,event):
         """
         DESCRIPTION:
@@ -5292,6 +5352,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         self.currentstreamindex = currentstreamindex
         self.plotoptlist.append(self.plotopt)
 
+        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+
+    def onGetGapsButton(self,event):
+        """
+        get gaps in timeseries (eventually missing data assuming periodic signals
+        and add this info (0,1) to var5 key
+        """
+        self.plotstream = self.plotstream.get_gaps()
+        print (self.plotstream._get_key_headers())
+        """
+                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
+                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
+                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
+                    self.ActivateControls(self.plotstream)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                    self.changeStatusbar("Ready")
+        """
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
