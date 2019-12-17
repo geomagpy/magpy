@@ -1174,8 +1174,11 @@ class MainFrame(wx.Frame):
         except:
             self.OptionsMenu.AppendItem(self.OptionsDIItem)
         #self.OptionsMenu.AppendSeparator()
-        #self.OptionsObsItem = wx.MenuItem(self.OptionsMenu, 403, "Observator&y specifications\tCtrl+Y", "Modify observatory specific meta data (e.g. pears, offsets)", wx.ITEM_NORMAL)
-        #self.OptionsMenu.AppendItem(self.OptionsObsItem)
+        #self.OptionsWSItem = wx.MenuItem(self.OptionsMenu, 403, "&Webservices\tCtrl+W", "Modify/Add predefined webservice access options)", wx.ITEM_NORMAL)
+        #try:
+        #    self.OptionsMenu.Append(self.OptionsWSItem)
+        #except:
+        #    self.OptionsMenu.AppendItem(self.OptionsWSItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
         self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
@@ -1219,7 +1222,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onInputSheet, self.DIInputSheet)
         self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.OnOptionsDI, self.OptionsDIItem)
-        #self.Bind(wx.EVT_MENU, self.OnOptionsObs, self.OptionsObsItem)
+        #self.Bind(wx.EVT_MENU, self.onWebServiceParameter, self.OptionsWSItem)
         self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
         self.Bind(wx.EVT_MENU, self.OnHelpReadFormats, self.HelpReadFormatsItem)
         self.Bind(wx.EVT_MENU, self.OnHelpWriteFormats, self.HelpWriteFormatsItem)
@@ -1759,6 +1762,10 @@ class MainFrame(wx.Frame):
         if self.options.get('experimental'):
             self.menu_p.ana_page.powerButton.Enable()         # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
+        #if self.options.get('experimental'):
+        #    self.menu_p.ana_page.powerButton.Enable()         # if experimental
+        #    self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
+
 
         self.menu_p.ana_page.statsButton.Enable()      # always
         # ----------------------------------------
@@ -2133,7 +2140,7 @@ advanced anaylsis routines, url/database accessability, DI analysis,
 non-geomagnetic data and more.
 """
 
-        licence = """Copyright (c) 2010-2019, MagPy developers
+        licence = """Copyright (c) 2010-2020, MagPy developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -2490,6 +2497,90 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg.ShowModal()
             self.changeStatusbar("Loading url failed ... Ready")
             dlg.Destroy()
+
+    def onWebServiceParameter(self,event):
+        """
+        open dialog to modify webservices
+        """
+        saveoptions = False
+        ok = False
+        """
+        try:
+            stationid = self.dipathlist.get('station','')
+        except:
+            stationid = ''
+        """
+        ws = self.options.get('webservices',{})
+
+        dlg = ParameterDictDialog(None, title="Review Webserive analysis parameter", dictionary=ws, preselect=['conrad'])
+        if dlg.ShowModal() == wx.ID_OK:
+            ok = True
+            """
+            valuedict = {}
+            for el in dlg.panel.elementlist:
+                if not el[1].GetName() == 'Label':
+                    try:
+                        val = el[1].GetValue()
+                        valuedict[el[1].GetName()] = val
+                    except:
+                        try:
+                            val = el[1].GetStringSelection()
+                            if val == 'False':
+                                val = False
+                            if val == 'True':
+                                val = True
+                            valuedict[el[1].GetName()] = val
+                            #print ("Val:", el[1].GetName(), val)
+                        except:
+                            pass
+            """
+
+        dlg.Destroy()
+
+        """
+        if ok:
+            #print ("Station", valuedict.get('stationid'))
+            stationid = valuedict.get('stationid')
+            exvals = dipara.get(valuedict.get('stationid'),{})
+            if not exvals == {} and not (valuedict == exvals):
+                exstationid =  dipara.get(valuedict.get('stationid')).get('stationid','')
+                #print ("StationID existing")
+                # Update
+                dipara[stationid] = valuedict
+                self.options['diparameter'] = dipara
+                # Modify data permanently?
+                updatedlg = wx.MessageDialog(self, "Update input\n"
+                        "Remember new settings?\n".format(time),
+                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
+
+                if updatedlg.ShowModal() == wx.ID_YES:
+                    saveoptions = True
+                    updatedlg.Destroy()
+
+            elif not (valuedict == exvals):
+                #print ("StationID not yet existing")
+                # add new station information?
+                updatedlg = wx.MessageDialog(self, "New Station ID\n"
+                        "Add new parameters for StationID {} ?\n".format(stationid),
+                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
+
+                if updatedlg.ShowModal() == wx.ID_YES:
+                    saveoptions = True
+                    updatedlg.Destroy()
+                if saveoptions:
+                    dipara[stationid] = valuedict
+                    self.options['diparameter'] = dipara
+
+            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
+
+        if saveoptions:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            self.dipathlist = tmppathlist
+        """
+
+
 
     def OnOpenDB(self, event):
         # a) get all DATAINFO IDs and store them in a list

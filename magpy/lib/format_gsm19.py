@@ -104,7 +104,7 @@ def roman_to_int(input):
    nums = ['M', 'D', 'C', 'L', 'X', 'V', 'I']
    ints = [1000, 500, 100, 50,  10,  5,   1]
    places = []
-   print("Ckeck: ", input)
+   #print("Ckeck: ", input)
    for c in input:
       if not c in nums:
          raise ValueError("input is not a valid roman numeral: %s" % input)
@@ -197,6 +197,19 @@ def readGSM19(filename, headonly=False, **kwargs):
    0  0  48420.21  0002.58 99 * 110805.0 * *
 
 
+    Manual looks like:
+    /Gem Systems GSM-19W 3101329 v7.0 28 VI 2019 M ew3fl.v7o 
+    /ID 1 file 17survey.m   28VIII19
+    /008362D8
+    /no AC filter
+    /12.5V
+    /tune initialize N auto-tune N 048.6uT
+    /115200bps
+    /X Y nT sq cor-nT time 
+     0  0  48981.44 99  000000.00 083002.8 
+     0  0  48981.36 99  000000.00 083026.0 
+
+ 
     """
 
     #print "Found GEM format"
@@ -334,6 +347,24 @@ def readGSM19(filename, headonly=False, **kwargs):
                     array[indf].append(float(elem[2]))
                     array[inddf].append(float(elem[3]))
                     array[indvar5].append(float(elem[4]))
+                    array[indvar1].append(float(elem[0]))
+                    array[indvar2].append(float(elem[1]))
+                except:
+                    logging.warning("Error in input data: %s - skipping bad value" % filename)
+                    pass
+            elif typus[0] == 'm':
+                try:
+                    headers['col-var1'] = 'Latitude'
+                    headers['col-var2'] = 'Longitude'
+                    headers['col-var5'] = 'Quality'
+                    hour = elem[5][:2]
+                    minute = elem[5][2:4]
+                    second = elem[5][4:]
+                    # add day
+                    strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
+                    array[0].append(date2num(strtime))
+                    array[indf].append(float(elem[2]))
+                    array[indvar5].append(float(elem[3]))
                     array[indvar1].append(float(elem[0]))
                     array[indvar2].append(float(elem[1]))
                 except:
