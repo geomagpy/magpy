@@ -445,6 +445,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'DKA',          # K value format Intermagnet
                 'DIDD',         # Output format from DIDD
                 'GSM19',        # Output format from GSM19 magnetometer
+                'COVJSON',      # Coverage JavaScript Object Notation
                 'JSON',         # JavaScript Object Notation
                 'LEMIHF',       # LEMI text format data
                 'LEMIBIN',      # Current LEMI binary data format at WIC
@@ -495,11 +496,13 @@ PYMAG_SUPPORTED_FORMATS = {
 # ----------------------------------------------------------------------------
 
 from pkg_resources import resource_filename
-example1 = resource_filename('magpy', 'examples/example1.cdf')  #ImagCDF
-example2 = resource_filename('magpy', 'examples/example2.bin')  #IAF
-example3 = resource_filename('magpy', 'examples/2015-03-25_08-18-00_A2_WIC.txt')
-example4 = resource_filename('magpy', 'examples/example4.txt')  #MagPy Str with basevalues
-example5 = resource_filename('magpy', 'examples/example5.cdf')  #MagPy CDF
+example1 = resource_filename('magpy', 'examples/example1.zip')  #Zip compressed IAGA02
+example2 = resource_filename('magpy', 'examples/example2.cdf')  #MagPy CDF with F
+example3 = resource_filename('magpy', 'examples/example3.txt')  #PyStr Baseline
+example4 = resource_filename('magpy', 'examples/example4.cdf')  #MagPy CDF
+example5 = resource_filename('magpy', 'examples/example5.cdf')  #Imag CDF
+example6a = resource_filename('magpy', 'examples/example6a.txt')  #DI file
+example6b = resource_filename('magpy', 'examples/example6b.txt')  #DI file
 
 # ----------------------------------------------------------------------------
 #  Part 4: Main classes -- DataStream, LineStruct and
