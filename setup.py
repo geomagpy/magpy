@@ -24,7 +24,7 @@ setup(
         "paho-mqtt >= 1.2.0",
         "pymysql >= 0.6.0",
         "ffnet >= 0.8.0",
-        "spacepy >= 1.6.0",
+        "spacepy >= 0.1.6",
         "pexpect >= 3.1.0",
     ]  if sys.version_info < (3, 5) else 
     [

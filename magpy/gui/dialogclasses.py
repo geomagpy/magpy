@@ -2452,6 +2452,58 @@ class AnalysisOffsetDialog(wx.Dialog):
             self.EndTimeTextCtrl.Enable()
             self.timeshiftTextCtrl.Disable()
 
+
+class AnalysisResampleDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+    def __init__(self, parent, title,keylst, period):
+        super(AnalysisResampleDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.period = period
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.periodLabel = wx.StaticText(self,label="Period")
+        self.periodTextCtrl = wx.TextCtrl(self,value=str(self.period))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        contlst.append((self.periodLabel, noOptions))
+        contlst.append((self.periodTextCtrl, expandOption))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
 class AnalysisPlotDialog(wx.Dialog):
     """
     DESCRITPTION
