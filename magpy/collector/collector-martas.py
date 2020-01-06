@@ -158,7 +158,7 @@ if __name__ == '__main__':
     os.setuid(uid)
  
     try:
-        print scpuser+'@'+clientip+':'+sensfile
+        print ("{}@{}:{}".format(scpuser,clientip,sensfile))
         scptransfer(scpuser+'@'+clientip+':'+sensfile,destsensfile,scppasswd)
     except:
         print ("Could not connect to/get sensor info of client %s - aborting" % clientname)
