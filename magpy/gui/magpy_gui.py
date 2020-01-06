@@ -2376,7 +2376,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg.Destroy()
 
     def OnOpenWebService(self, event):
-        defaultcommands = {'id':'id', 'starttime':'starttime', 'endtime':'endtime', 'format':'format', 'elements':'elements', 'type':'type','sampling_period':'sampling_period'}
+        defaultcommands = {'id':'id', 'starttime':'starttime', 'endtime':'endtime', 'format':'format', 'elements':'elements', 'type':'type','sampling_period':'sampling_period','group':'group'}
         stream = DataStream()
         success = False
         url = ''
@@ -2427,6 +2427,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 replacedict = services.get(dlg.serviceComboBox.GetValue()).get('commands',{})
                 defaultcommands = replaceCommands(defaultcommands, replacedict)
                 group = dlg.groupComboBox.GetValue()
+                #defaultcommands['group'] = None
+                if not group == 'magnetism':
+                    addgroup = '&{}={}'.format(defaultcommands.get('group'), dlg.groupComboBox.GetValue())
+                else:
+                    addgroup = ''
                 obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
                 start_time = '&{}={}T{}Z'.format(defaultcommands.get('starttime'), sd,sttime)
                 end_time = '&{}={}T{}Z'.format(defaultcommands.get('endtime'), ed,entime)
@@ -2436,7 +2441,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 period = '&{}={}'.format(defaultcommands.get('sampling_period'), dlg.sampleComboBox.GetValue())
                 base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
                 url = (base + '?' + obs_id + start_time + end_time + file_format +
-                      elements + data_type + period)
+                      elements + data_type + period + addgroup)
                 #print ("Constructed url:", url)
                 self.options['defaultservice'] = service
             else:

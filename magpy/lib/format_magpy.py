@@ -99,7 +99,7 @@ def isPYASCII(filename):
         temp = open(filename, 'rt').readline()
     except:
         return False
-    if not temp.startswith(' # MagPy ASCII'):
+    if not temp.find('# MagPy ASCII') > -1:
         return False
 
     logger.debug("format_magpy: Found PYASCII file %s" % filename)

@@ -48,7 +48,7 @@ class MartasInfo():
         try:
             scptransfer(scpuser+'@'+source,dest,scppasswd)
         except:
-            print "Could not connect to/get sensor info of client %s" % clientname
+            print ("Could not connect to/get sensor info of client %s" % clientname)
 
 
 # TODO

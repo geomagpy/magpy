@@ -10875,6 +10875,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
+            #print("_read: Testing format: {} ...".format(format_type))
             if debug:
                 logger.info("_read: Testing format: {} ...".format(format_type))
             if isFormat(filename, format_type):
