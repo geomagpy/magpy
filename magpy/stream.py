@@ -181,7 +181,10 @@ try:
     for gui in gui_env:
         try:
             logger.info("Testing backend {}".format(gui))
-            matplotlib.use(gui,warn=False, force=True)
+            try:
+                matplotlib.use(gui, warn=False, force=True)
+            except: # will be important from matplotlib3.3 onwards
+                matplotlib.use(gui, force=True)
             from matplotlib import pyplot as plt
             break
         except:
@@ -1832,7 +1835,7 @@ CALLED BY:
         Used by k_fmi with individual indicies
         """
         for i,array in enumerate(self.ndarray):
-            if isinstance( index, (int,long) ):
+            if isinstance( index, (int) ):   # removed long (not necessary for python3, error in win)
                 if len(array) > index:
                     self.ndarray[i] = np.delete(self.ndarray[i],index)
             else:
@@ -7149,8 +7152,12 @@ CALLED BY:
             else:
                 return float("NaN")
 
-        if not isinstance( percentage, (int,long)):
-            logger.error("mean: Percentage needs to be an integer!")
+        try:  #python2
+            if not isinstance( percentage, (int,long)):
+                logger.error("mean: Percentage needs to be an integer!")
+        except:
+            if not isinstance( percentage, (int)):
+                logger.error("mean: Percentage needs to be an integer!")
         if not key in KEYLIST[:16]:
             logger.error("mean: Column key not valid!")
 

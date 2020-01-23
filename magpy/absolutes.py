@@ -152,6 +152,11 @@ class DILineStruct(object):
         datalist.append('# Abs-Pillar: {}\n'.format(self.pier))
         datalist.append('# Abs-Scalar: {}\n'.format(self.f_inst))
         datalist.append('# Abs-Temperature: {}C\n'.format(self.t))
+        if isinstance(self.inputdate, float):
+            try:
+                self.inputdate = num2date(self.inputdate)
+            except:
+                self.inputdate = datetime.utcnow()
         datalist.append('# Abs-InputDate: {}\n'.format(datetime.strftime(self.inputdate,"%Y-%m-%d")))
 
         datalist.append('Miren:\n')

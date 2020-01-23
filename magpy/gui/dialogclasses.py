@@ -2081,11 +2081,24 @@ class AnalysisFitDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         try:
-            stfit = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
-            etfit = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
+            sttup = self.mintime.timetuple()
+            stt = time.mktime(sttup)
+            ettup = self.maxtime.timetuple()
+            ett = time.mktime(ettup)
+            stfit = wx.DateTime.FromTimeT(stt)
+            etfit = wx.DateTime.FromTimeT(ett)
         except:
             stfit = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
             etfit = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
+        try:
+            # Windows workaround for wx.DateTime issue
+            if not int(etfit.GetYear()) == int(time.strftime("%Y",ettup)):
+                etfit = etfit.SetYear(int(time.strftime("%Y",ettup)))
+            if not int(stfit.GetYear()) == int(time.strftime("%Y",sttup)):
+                stfit = stfit.SetYear(int(time.strftime("%Y",sttup)))
+        except:
+            pass
+
         self.funcLabel = wx.StaticText(self, label="Fit function:",size=(160,30))
         self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
             style=wx.CB_DROPDOWN, value=self.fitfunc,size=(160,-1))
@@ -5905,6 +5918,9 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         datalist = []
         self.dirname = os.path.expanduser('~')
         iagacode = 'undefined'
+
+        # If Open DI data then loadfile=True
+        loadfile = True
 
         if loadfile:
             dlg = wx.FileDialog(self, "Choose a DI raw data file", self.dirname, "", "*.*")

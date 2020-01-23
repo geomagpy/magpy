@@ -2180,7 +2180,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2017 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
+        info.SetCopyright('(C) 2011 - 2020 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
         info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec')
@@ -3959,20 +3959,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                             diff = subtractStreams(highresfilt,mindata,keys=['x','y','z'])
 
                             incon = False
-                            if not diff.amplitude('x') < 0.2:
+                            if not diff.amplitude('x') < 0.3:
                                 warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in x/h component ({}) significantly exceed numerical uncertainty\n".format(diff.amplitude('x'))
                                 incon = True
-                            elif not diff.amplitude('x') < 0.11:
+                            elif not diff.amplitude('x') < 0.12:
                                 reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in x/h component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('x'))
-                            if not diff.amplitude('y') < 0.2:
+                            if not diff.amplitude('y') < 0.3:
                                 warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in y/d component ({}) significantly  exceed numerical uncertainty\n".format(diff.amplitude('y'))
                                 incon = True
-                            elif not diff.amplitude('y') < 0.11:
+                            elif not diff.amplitude('y') < 0.12:
                                 reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in y/d component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('y'))
-                            if not diff.amplitude('z') < 0.2:
+                            if not diff.amplitude('z') < 0.3:
                                 warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in z component ({}) significantly  exceed numerical uncertainty\n".format(diff.amplitude('z'))
                                 incon = True
-                            elif not diff.amplitude('z') < 0.11:
+                            elif not diff.amplitude('z') < 0.12:
                                 reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in z component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('z'))
                             if len(diff._get_column(scal)) > 0:
                                 if not diff.amplitude(scal) < 0.30: ## uncertainty is larger because of df conversion (2 times rounding error)
@@ -4215,7 +4215,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
                 reportmsg += "\nStep 6: meta information \n"
                 reportmsg += "-----------------------\n"
-                excludelist = ['DataComponents','DataSamplingRate','DataPublicationDate','col-f','col-x','col-y','col-z','col-df','unit-col-f','unit-col-x','unit-col-y','unit-col-z','unit-col-df','DataSamplingFilter']
+                excludelist = ['DataFormat','SensorID','DataComponents','DataSamplingRate','DataPublicationDate','col-f','col-x','col-y','col-z','col-df','unit-col-f','unit-col-x','unit-col-y','unit-col-z','unit-col-df','DataSamplingFilter']
                 floatlist = {'DataElevation':0,'DataAcquisitionLongitude':2,'DataAcquisitionLatitude':2}
                 secmsg = ''
                 minmsg = ''
@@ -4223,9 +4223,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 if not primeheader == {}:
                     if not seconddata == 'None' and mindata and yearmeandata:
                         for key in secdata.header:
-                            refvalue = secdata.header.get(key)
-                            compvalue1 = mindata.header.get(key,'')
-                            compvalue2 = yearmeandata.header.get(key,'')
+                            refvalue = str(secdata.header.get(key))
+                            compvalue1 = str(mindata.header.get(key,''))
+                            compvalue2 = str(yearmeandata.header.get(key,''))
                             if not key.startswith('col') and not key.startswith('unit'):
                                 keyname = key.replace('Data','').replace('station','')
                                 secmsg += "Step 6: (Secondary (ImagCDF/IAGA) meta) {}: {}\n".format(keyname,refvalue)
@@ -4879,12 +4879,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             # add new stream, with baselinecorr
             # BASECORR
             dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
-                        "Baseline parameters added to meta information and option 'Baseline Corr' on 'Stream' panel now enabled.\n",
+                        "Baseline parameters added to meta information and option 'Baseline Corr' on 'Data' panel now enabled.\n",
                         "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
 
-            print ("SET", self.plotstream.header.get('DataAbsInfo'))
+            #print ("SET", self.plotstream.header.get('DataAbsInfo'))
 
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
