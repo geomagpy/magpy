@@ -19,6 +19,9 @@ Below you will find a quick guide to usage of the MagPy package. The quickest ap
 
 ## 1. INSTALLATION
 
+Pleas note that with the publication of MagPy 1.0 the recommended python enironment is >= 3.6. The following installation instructions will assume such an environment. Particularly if you are using Python2.7 please go to the end of this sections for help. 
+
+This section is currently updated and will be ready with the publication of MagPy 1.0.
 
 ### 1.1 Linux installation (Ubuntu,Debian)
 
@@ -58,9 +61,9 @@ The first line and the two #* packages are required, all other packages are opti
 
 If MagPy is already installed and you want to upgrade to the most recent version:
 
-        $ sudo pip install geomagpy==0.4.8  #*
+        $ sudo pip install geomagpy==0.9.2
 
-*replace with the most recent available version
+(replace version with the most recent available version)
 
 
 ### 1.2 Windows installation - WinPython Package

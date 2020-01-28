@@ -15,8 +15,8 @@ setup(
     url='http://pypi.python.org/pypi/geomagpy/',
     license='LICENSE.txt',
     description='Geomagnetic analysis tools.',
-    long_description=open('README.md').read(),
-    package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt']},
+    long_description=open('README.rst').read(),
+    package_data={'magpy': ['gui/*.png','gui/*.xpm','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.sec']},
     install_requires=[
         "matplotlib >= 2.0.2",
         "numpy >= 1.5.0",

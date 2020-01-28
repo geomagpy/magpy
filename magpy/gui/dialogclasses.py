@@ -5788,10 +5788,9 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
     def OnLoad(self, e):
         def _readDI(path):
             datalist = []
-            fh = open(path, 'rt')
-            for line in fh:
-                datalist.append(line.strip('\n'))
-            fh.close()
+            with open(path, "rt", encoding="latin-1") as fh:
+                for line in fh:
+                    datalist.append(line.strip('\n'))
             return datalist
 
         def _getDI():
