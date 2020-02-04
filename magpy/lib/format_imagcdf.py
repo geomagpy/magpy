@@ -58,7 +58,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     headers={}
     arraylist = []
     array = [[] for elem in KEYLIST]
-    mutipletimerange = False
+    multipletimedict = {}
     newdatalist = []
     tllist = []
     indexarray = np.asarray([])
@@ -85,17 +85,26 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     #Some specials:
     headers['StationIAGAcode'] = headers.get('StationID')
     headers['DataFormat'] = headers.get('DataFormat') + '; ' + cdfdat.globalattsget().get('FormatVersion')
-    pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
-    headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0]) 
+
+    try:
+        pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
+        headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0]) 
+    except:
+        print ("imagcdf warning: Publication date is not provided as tt_2000")
+        try:
+            pubdate = DataStream()._testtime(headers.get('DataPublicationDate'))
+            headers['DataPublicationDate'] = pubdate
+        except:
+            pass
 
     if debug:
         logger.info("readIMAGCDF: FOUND IMAGCDF file created with version {}".format(headers.get('DataFormat')))
 
     headers['DataLeapSecondUpdated'] = cdfdat.cdf_info().get('LeapSecondUpdated')
-
+    if debug:
+        print ("LEAP seconds updated:", cdfdat.cdf_info().get('LeapSecondUpdated'))
     # Get all available Variables - ImagCDF usually uses only zVariables
     datalist = cdfdat.cdf_info().get('zVariables')
-
 
     # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec 
     # and numerical publevel
@@ -116,7 +125,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     for elem in datalist:
         if elem.endswith('Times') and not elem.startswith('Flag'):
             try:
-                tl = int(cdfdat.varinq('GeomagneticVectorTimes').get('Last_Rec'))
+                #if elem in ['GeomagneticVectorTimes','GeomagneticTimes','GeomagneticScalarTimes']:
+                tl = int(cdfdat.varinq(elem).get('Last_Rec'))
                 tllist.append([tl,elem])
             except:
                 pass
@@ -137,6 +147,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     elif len(tllist) > 1:
         tl = [el[0] for el in tllist]
         if not max(tl) == min(tl):
+            if debug:
+                print ("Time columns of different length")
             logger.warning("readIMAGCDF: Time columns of different length. Choosing longest as basis")
             newdatalist.append(['time',max(tllist)[1]])
             datnumar1 = date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(max(tllist)[1]))]))
@@ -145,7 +157,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 indexarray = np.nonzero(np.in1d(datnumar1,datnumar2))[0]
             except:
                 indexarray = np.asarray([])
-            mutipletimerange = True
+            # create a dictionary with time column name and indexarray
+            multipletimedict = {min(tllist)[1]:indexarray}
         else:
             logger.info("readIMAGCDF: Equal length time axes found - assuming identical time")
             if 'GeomagneticVectorTimes' in datalist:
@@ -201,8 +214,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         logger.warning("readIMAGCDF: error encountered in key assignment - please check")
 
     # #########################################################
-    # 3. Create equal length array reducing all data to primary Times and filling nans for non-exist
-    # #########################################################
     # (4. eventually completely drop time cols and just store start date and sampling period in header)
     # Deal with scalar data (independent or whatever
 
@@ -223,7 +234,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 ind = KEYLIST.index(elem[0])
                 headers['col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                 headers['unit-col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
-                if len(indexarray) > 0 and elem[0] in ['f','df']:  ## this is no good - point to depend_0
+                if not multipletimedict == {} and list(multipletimedict.keys())[0] ==  cdfdat.varattsget(elem[1]).get('DEPEND_0'):
                     newar = np.asarray([np.nan]*arlen)
                     newar[indexarray] = ar
                     array[ind] = newar
