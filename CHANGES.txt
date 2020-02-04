@@ -11,6 +11,8 @@ Installation instructions can be found on the main download page.
     + CDF (data format) support either by cdflib (recommended) or NasaCDF
     + Tested on all platforms (Windows10, Linux (Ubuntu18.04), MacOS (vxx)
     + new LISENCE
+    + Updated Installation instructions
+    + Manual for XMagPy included
 
 1.0.0 fixes:
     + dialog methods (on all platforms) - solved e.g. merge data issue on MacOS

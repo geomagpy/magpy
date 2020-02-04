@@ -40,14 +40,17 @@ magpy/collector/collectormethods.py
 magpy/collector/subscribe2client.py
 magpy/collector/subscribe2marcos.py
 magpy/collector/websocket_server.py
+magpy/doc/xmagpy-manual.pdf
 magpy/examples/__init__.py
 magpy/examples/example1.zip
 magpy/examples/example2.cdf
 magpy/examples/example3.txt
 magpy/examples/example4.cdf
+magpy/examples/example5.sec
 magpy/examples/example6a.txt
 magpy/examples/example6b.txt
 magpy/examples/flagging_example.json
+magpy/examples/recipe1_flags.json
 magpy/gui/__init__.py
 magpy/gui/absolutespage.py
 magpy/gui/analysispage.py
@@ -55,6 +58,7 @@ magpy/gui/developpage.py
 magpy/gui/dialogclasses.py
 magpy/gui/flagpage.py
 magpy/gui/magpy.png
+magpy/gui/magpy128.jpg
 magpy/gui/magpy128.xpm
 magpy/gui/magpy_gui.py
 magpy/gui/magpy_gui_test.py

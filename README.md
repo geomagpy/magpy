@@ -15,7 +15,7 @@ Typical usage of the basic MagPy package for reading and visualising data looks 
         stream = read('filename_or_url')
         mp.plot(stream)
 
-Below you will find a quick guide to usage of the basic MagPy package. For instructions on *xmagpy* please refer to the document "An introduction to XMagPy" in the docs. You can also subscribe to our information channel at [Telegram] for further information on updates and current issues.
+Below you will find a quick guide to usage of the basic MagPy package. For instructions on *xmagpy* please refer to the document "[An introduction to XMagPy]" in the docs. You can also subscribe to our information channel at [Telegram] for further information on updates and current issues.
 
 ## 1. INSTALLATION
 
@@ -1322,4 +1322,4 @@ Please use the help method (section 2.3) for descriptions and return values.
    [Nagios]: <https://www.nagios.org/>
    [Telegram]: <https://t.me/geomagpy>
    [MagPy Windows installer]: <https://cobs.zamg.ac.at/data/index.php/en/downloads/category/1-magnetism>
-
+   [An introduction to XMagPy]: <https://github.com/geomagpy/magpy/blob/master/magpy/doc/xmagpy-manual.pdf>

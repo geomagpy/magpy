@@ -13,9 +13,11 @@ methods for data format conversion, plotting and mathematical procedures
 with specifically geomagnetic analysis routines such as basevalue and
 baseline calculation and database handling. Among the supported data
 formats are *ImagCDF, IAGA-02, WDC, IMF, IAF, BLV*, and many more. Full
-installation also provides a graphical user interface, *xmagpy*.
+installation also provides a graphical user interface, *xmagpy*. You
+will find a complete manual for *xmagpy* in the docs.
 
-Typical usage for reading and visualising data looks like this:
+Typical usage of the basic MagPy package for reading and visualising
+data looks like this:
 
 ::
 
@@ -23,118 +25,229 @@ Typical usage for reading and visualising data looks like this:
 
         from magpy.stream import read
         import magpy.mpplot as mp
-        stream = read(path_or_url='filename')
+        stream = read('filename_or_url')
         mp.plot(stream)
 
-Below you will find a quick guide to usage of the MagPy package. The
-quickest approach can be accomplished when skipping everything except
-the tutorials.
+Below you will find a quick guide to usage of the basic MagPy package.
+For instructions on *xmagpy* please refer to the document "`An
+introduction to
+XMagPy <https://github.com/geomagpy/magpy/blob/master/magpy/doc/xmagpy-manual.pdf>`__"
+in the docs. You can also subscribe to our information channel at
+`Telegram <https://t.me/geomagpy>`__ for further information on updates
+and current issues.
 
 1. INSTALLATION
 ---------------
 
-1.1 Windows installation - WinPython Package
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pleas note that with the publication of MagPy 1.0 the recommended python
+enironment is >= 3.6. The following installation instructions will
+assume such an environment. Particularly if you are using Python2.7
+please go to the end of this sections for help.
 
-1.1.1 Install NASA `CDF <https://cdf.gsfc.nasa.gov/>`__ support
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section is currently updated and will be ready with the publication
+of MagPy 1.0.
 
--  enables CDF support for formats like ImagCDF
--  package details and files at http://cdf.gsfc.nasa.gov/
--  download and install a recent version of CDF e.g.
-   cdf36\_2\_1-setup-32.exe
--  Note: please use 32 bit installer.
+1.1 Linux installation (Ubuntu,Debian)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1.1.2 Install MagPy for Windows
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1.1.1 Complete Install
+^^^^^^^^^^^^^^^^^^^^^^
 
--  find the MagPy Windows installer here (under Downloads):
-   http://www.conrad-observatory.at
--  download and execute magpy-0.x.x.exe
--  all required packages are included in the installer
+Tested for Ubuntu 18.04 and Debian Stretch (full installation with all
+optional packages). Please note that installation requires python 3.x.
 
-1.1.3 Post-installation information
+::
+
+        $ sudo pip3 install geomagpy    #Will install MagPy and all dependencies
+        $ sudo pip3 install wxpython    #Will install WX graphics system for XMagPy
+
+You can now run XMagPy by using the following command
+
+::
+
+        $ xmagpy
+
+1.1.2 Updates
+^^^^^^^^^^^^^
+
+To upgrade to the most recent version:
+
+::
+
+        $ sudo pip3 install -U geomagpy
+
+1.1.3 Creating a desktop link
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In order to create a desktop link on linux systems please refer to
+instruction too be found your distribution. For Ubunutu and other Debian
+systems such links are created as follows:
+
+Firstly create a file "xmagpy.desktop" which contains:
+
+::
+
+        [Desktop Entry]
+        Type=Application
+        Name=XMagPy
+        GenericName=GeoMagPy User Interface
+        Exec=xmagpy
+        Icon=/usr/local/lib/python3.7/dist-packages/magpy/gui/magpy128.xpm
+        Terminal=false
+        Categories=Application;Development;
+
+Then copy this file to the systems application folder:
+
+::
+
+        sudo cp xmagpy.desktop /usr/share/applications/
+
+1.2 MacOs installation
+~~~~~~~~~~~~~~~~~~~~~~
+
+1.2.1 Install a python3 interpreter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  MagPy should have a sub-folder in the Start menu. Here you will find
-   two items:
+-  we recommend
+   `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`__ or
+   `Anaconda <https://www.continuum.io/downloads>`__
+-  see e.g. https://docs.continuum.io/anaconda/install for more details
+-  before continuiung, test whether python is working. Open a terminal
+   and run python
+
+1.2.2 Install MagPy
+^^^^^^^^^^^^^^^^^^^
+
+Open a terminal and use the following commands:
+
+::
+
+        $ pip install geomagpy    #Will install MagPy and all dependencies
+        $ pip install wxpython    #Will install WX graphics system for XMagPy
+
+You can now run XMagPy from the terminal by using the following command
+
+::
+
+        $ xmagpyw
+
+1.2.3 Creating a desktop link
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Open Finder and search for xmagpyw. Copy it to the desktop. To change
+the icon, click on the xmagpyw link, open information and replace the
+image on the upper left with e.g. magpy128.jpg (also to be found using
+finder).
+
+1.3 Windows installation - WinPython Package
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1.3.1 Install MagPy for Windows
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+-  get the `MagPy Windows
+   installer <https://cobs.zamg.ac.at/data/index.php/en/downloads/category/1-magnetism>`__
+   here (under Downloads): https://cobs.zamg.ac.at
+-  download and execute magpy-x.x.x.exe
+-  all required packages are included in the installer
+
+1.3.2 Post-installation information
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+-  MagPy will have a sub-folder in the Start menu. Here you will find
+   three items:
 
    ::
 
-       * python -> opens a python shell ready for MagPy
-       * xmagpy -> opens the MagPy graphical user interface
+       * command -> opens a DOS shell within the Python environment e.g. for updates 
+       * python  -> opens a python shell ready for MagPy
+       * xmagpy  -> opens the MagPy graphical user interface
 
-1.2 Linux/MacOs installation - Anaconda
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1.2.1 Install `Anaconda <https://www.continuum.io/downloads>`__ on your operating system
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
--  download files from https://www.continuum.io/Downloads (tested with
-   Anaconda2 for Python 2.7)
--  see https://docs.continuum.io/anaconda/install for more details
-
-1.2.2 Install NASA CDF support
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
--  http://cdf.gsfc.nasa.gov/
--  download and install the latest cdf version for your operating system
-
-1.2.3 Install MagPy and SpacePy (required for CDF support)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
--  open a Terminal
--  ... known issues: eventually change to the anaconda2/bin directory
-   before running python (if not set as default)
--  ... check by starting python in the terminal
--  run './pip install spacepy'
--  ... known issues: installation of spacepy eventually requires a
-   fortran compiler
--  ... e.g. Linux: install gcc
--  ... e.g. MacOs: install gcc and gfortran
--  run './pip install geomagpy'
--  ... known issues: e.g. Linux: MySQL-python problem -> install
-   libmysqlclient-dev on linux (e.g. debian/ubuntu: sudo apt-get install
-   libmysqlclient-dev)
-
-1.2.4 Post-installation information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
--  please note that anaconda provides a full python environment with
-   many packages not used by MagPy
--  for a "slim" installation follow the "from scratch" instructions
-   below (for experienced users)
--  for upgrades: run './pip install geomagpy version==new-version'.
-   Installation provides both shell based magpy and the graphical user
-   interface xmagpy
-
--  running magpy: \* type "python" in a terminal -> opens a python shell
-   ready for MagPy \* type "xmagpy" in a terminal -> open the graphical
-   user interface of MagPy \* !! MacOS: !! type "xmagpyw" in a terminal
-   -> open the graphical user interface of MagPy (since v0.3.95)
-
--  adding a shortcut for xmagpy: coming soon
-
-1.3 MacOs installation - MacPorts
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1.3.1 Install `MacPorts <https://www.macports.org/>`__
+1.3.3 Update an existing MagPy installation on Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.3.2 coming soon
-^^^^^^^^^^^^^^^^^
+-  right-click on subfolder "command" in the start menu
+-  select "run as administrator"
+-  issue the following command "pip install -U geomagpy" (you can also
+   specify the version e.g. pip install geomagpy==0.x.x)
 
-1.4 Platform independent installations - Docker
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.3.4 Installation with user priviledges only
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.4.1 Install `Docker <https://www.docker.com/>`__ (toolbox) on your operating system
+-  Download a most recent version of WinPython3.x
+-  Unpack in your home directory
+-  Go to the WinPython Folder and run WinPython command prompt
+-  issue the same commands as for MacOS installation
+-  to run XMagPy: use xmagpy from the WinPython command promt.
+
+1.4 Installation instructions for Python 2.7
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The current version of magpy is still supporting python 2.7, although it
+is highly recommended to switch to python >= 3.6. Installation on python
+2.7 is more complex, as some packages for graphical user interface and
+CDF support not as well supported. Please note: None of the addtional
+steps is necessary for python 3.x.
+
+1.4.1 Pre-installation work
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Get a recent version of NasaCDF for your platform, enables CDF support
+for formats like ImagCDF. Package details and files can be found at
+http://cdf.gsfc.nasa.gov/
+
+On Linux such installation will look like
+(http://cdf.gsfc.nasa.gov/html/sw\_and\_docs.html)
+
+::
+
+        $ tar -zxvf cdf37_0-dist-all.tar.gz
+        $ cd cdf37...
+        $ make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
+        $ sudo make INSTALLDIR=/usr/local/cdf install
+
+Install the following additional compilers before continuing (required
+for spacepy): Linux: install gcc MacOs: install gcc and gfortran
+
+Install coordinate system transformation support:
+
+::
+
+        $ sudo apt-get install libproj-dev proj-data proj-bin
+
+1.4.2 Install MagPy and dependencies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On Linux this will look like:
+
+::
+
+        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
+        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
+        $ sudo apt-get install python-twisted  
+        $ sudo pip install ffnet
+        $ sudo pip install pyproj==1.9.5
+        $ sudo pip install pyserial
+        $ sudo pip install service_identity
+        $ sudo pip install ownet
+        $ sudo pip install spacepy
+        $ sudo pip install geomagpy  
+
+On Mac and Windows you need to download a python interpreter like
+`Anaconda <https://www.continuum.io/downloads>`__ or [WinPython] and
+then install similar packages, particluarly the old wxpython 3.x.
+
+1.5 Platform independent container - Docker
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1.5.1 Install `Docker <https://www.docker.com/>`__ (toolbox) on your operating system
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
      - https://docs.docker.com/engine/installation/
 
-1.4.2 Get the MagPy Image
+1.5.2 Get the MagPy Image
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
@@ -144,7 +257,7 @@ the tutorials.
             >>> docker pull geomagpy/magpy:latest
             >>> docker run -d --name magpy -p 8000:8000 geomagpy/magpy:latest
 
-1.4.3 Open a browser
+1.5.3 Open a browser
 ^^^^^^^^^^^^^^^^^^^^
 
 ::
@@ -158,85 +271,44 @@ the tutorials.
      - run python shell (not conda) 
      - in python shell
 
-
             >>> %matplotlib inline
             >>> from magpy.stream import read
             >>> ...
 
-1.5 Install from source (experts only)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.6 Install from source
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Requirements: - Python 2.7,3.x (*xmagpy* will only work with python 2.7)
+Requirements: - Python 2.7, 3.x (recommended is >=3.6)
 
-Recommended: - Python packages: \* NasaCDF \* SpacePy \* pexpect (for
-SSH support)
+Recommended: - Python packages: \* wxpython (for python2.7 it needs to
+be 3.x or older) \* NasaCDF (python 2.7 only) \* SpacePy (python 2.7
+only)
 
 -  Other useful Software:
 
+   -  pyproj (for geographic coordinate systems)
    -  MySQL (database features)
-   -  NetCDF4 (support is currently in preparation)
    -  Webserver (e.g. Apache2, PHP)
 
-1.5.1 Linux
-^^^^^^^^^^^
-
-A) Get python packages and other extensions (for other distros than
-   debian/ubuntu install similar packages):
-
-   ::
-
-       sudo apt-get install python-numpy python-scipy python-matplotlib python-nose python-wxgtk2.8 python-wxtools python-dev build-essential python-networkx python-h5py python-f2py gfortran ncurses-dev libhdf5-serial-dev hdf5-tools libnetcdf-dev python-netcdf python-serial python-twisted owfs python-ow python-setuptools git-core mysql-server python-mysqldb libmysqlclient-dev
-       sudo pip install ffnet
-       sudo pip install pexpect
-       sudo pip install pyproj
-
-B) Get CDF and Omni database support:
-
-   a) CDF (NASA): http://cdf.gsfc.nasa.gov/html/sw\_and\_docs.html
-      (tested with 3.6.1.0, please check validity of commands below to
-      make command for any future versions)
-
-      tar -zxvf cdf36\_1-dist-all.tar.gz cd cdf36\* make OS=linux
-      ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all sudo
-      make INSTALLDIR=/usr/local/cdf install
-
-   b) SpacePy (Los Alamos):
-      https://sourceforge.net/projects/spacepy/files/spacepy/ (tested
-      with 0.1.6)
-
-      sudo pip install spacepy
-
-C) Install MagPy
-
-   a) Using pip
-
-      sudo pip install GeomagPy
-
-      -  specific version: sudo pip install GeomagPy==v0.3.9
-
-   b) Using github (latest development versions)
-
-      git clone git://github.com/GeomagPy/MagPy.git cd MagPy\* sudo
+      git clone git://github.com/GeomagPy/MagPy.git cd magpy\* sudo
       python setup.py install
-
-1.5.2 Windows
-^^^^^^^^^^^^^
-
-| Tested on XP, Win7, Win10 a) Get a current version of Python(x,y) and
-  install it optionally select packages ffnet and netcdf during install
-  - for cdf support b) Download nasaCDF packages and install (see links
-  above) c) get python-spacepy package d) download and unpack
-  GeomagPy-x.x.x.tar.gz e) open a command window f) go to the unpacked
-  directory 
-  execute "setup.py install"
 
 2. A quick guide to MagPy
 -------------------------
 
 written by R. Leonhardt, R. Bailey (April 2017)
 
-2.1 Getting started
-~~~~~~~~~~~~~~~~~~~
+MagPy's functionality can be accessed basically in three different ways:
+1) Directly import and use the magpy package into a python environment
+2) Run the graphical user interface xmagpy (xmagpyw for Mac) 3) Use
+predefined applications "Scripts"
+
+The following section will primarily deal with way 1. For 2 - xmagpy -
+we refer to the video tutorials whcih can be found here: Section 3
+contains examples for predefined applications/scripts
+
+2.1 Getting started with the python package
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Start python. Import all stream methods and classes using:
 
@@ -284,14 +356,23 @@ data streams.
 
 Several example data sets are provided within the MagPy package:
 
--  ``example1``: `INTERMAGNET <http://www.intermagnet.org>`__ CDF
-   (ImagCDF) file with 1 second xyzf data
--  ``example2``: `INTERMAGNET <http://www.intermagnet.org>`__ Archive
-   format (IAF) file for one month with 1 min, 1 hour, K and mean data
--  ``example3``: MagPy readable DI data file with data from 1 single DI
+-  ``example1``: `IAGA <http://www.iaga-aiga.org/>`__ ZIP (IAGA2002, zip
+   compressed) file with 1 second HEZ data
+-  ``example2``: `MagPy <#magpy>`__ Archive (CDF) file with 1 sec F data
+-  ``example3``: `MagPy <#magpy>`__ Basevalue (TXT) ascii file with DI
+   and baseline data
+-  ``example4``: `INTERMAGNET <http://www.intermagnet.org>`__ ImagCDF
+   (CDF) file with one week of 1 second data
+-  ``example5``: `MagPy <#magpy>`__ Archive (CDF) raw data file with xyz
+   and supporting data
+-  ``example6a``: `MagPy <#magpy>`__ DI (txt) raw data file with DI
    measurement
--  ``example4``: MagPy Basevalue file (PYSTR) with analysis results of
-   several DI data
+-  ``example6b``: `MagPy <#magpy>`__ like 6a to be used with example4
+
+-  ``flagging_example``: `MagPy <#magpy>`__ FlagDictionary (JSON)
+   flagging info to be used with example1
+-  ``recipe1_flags``: `MagPy <#magpy>`__ FlagDictionary (JSON) to be
+   used with cookbook recipe 1
 
 2.2.1 Reading
 ^^^^^^^^^^^^^
@@ -406,28 +487,6 @@ applying the trim method, e.g. for a specific month:
 
         data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
-2.2.5 Tutorial
-^^^^^^^^^^^^^^
-   For the ongoing quick example please use the following steps. This will create daily IAGA02 files within the directory. Please make sure that the directory is empty before writing data to it.
-
-   A) Load example data
-
-   Within the MagPy package, several example data sets are provided:
-
-      example1: [INTERMAGNET] CDF (ImagCDF) file with 1 second data
-      example2: [INTERMAGNET] Archive format (IAF) file with 1 min, 1 hour, K and mean data
-      example3: MagPy readable DI data file with data from 1 single DI measurement
-      example4: MagPy Basevalue file (PYSTR) with analysis results of several DI data
-
-           # Replace example1 with a full path, if you have your own data 
-           data = read(example1)
-
-   B) Store it locally in your favorite directory
-
-           data.write('/tmp/',filenamebegins='MyExample', format_type='IAGA')
-
-   Please note that storing data in a different formt might require additional meta information. Checkout section (i) on how to deal with these aspects.-->
-
 2.3 Getting help on options and usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -456,7 +515,6 @@ directly calling the *DataStream* object method using:
 ::
 
         help(DataStream.fit)
-
 
 2.3.2 MagPy's logging system
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -543,16 +601,6 @@ another. Provide a list of streams and an array of keys:
 ::
 
         mp.plotStreams([data1,data2],[['x','y','z'],['f']])
-
-2.4.4 Tutorial
-^^^^^^^^^^^^^^
-   Read a second stream
-
-           otherdata = read(WDC)
-
-   Plot xyz data from both streams
-
-           mp.plotStreams([data,otherdata]) -->
 
 2.5 Flagging data
 ~~~~~~~~~~~~~~~~~
@@ -1598,9 +1646,1189 @@ for plotting.
         new = read('/tmp/cnb_20120802_000000_PT1S_1.cdf')
         mp.plot(new,['f'],annotate=True)
 
-2.17 List of all MagPy methods
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Predefined scripts
+---------------------
+
+MagPy comes with a steadily increasing number of applications for
+various purposes. These applications can be run from some command prompt
+and allow to simplify/automize some commonly used applications of MagPy.
+All applications have the same syntax, consisting of the name of
+application and options. The option -h is available for all applications
+and provides an overview about purpose and options of the application:
+
+::
+
+        $> application -h
+
+3.1 Running applications in Linux/MacOs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+On Linux Systems all applications are added the bin directory and can be
+run directly from any command interface/terminal after installation of
+MagPy:
+
+::
+
+        $> application -h
+
+3.2 Running applications in Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+After installing MagPy/GeomagPy on Windows, three executables are found
+in the MagPy program folder. For running applications you have to start
+the MagPy "command prompt". In this terminal you will have to go to the
+Scripts directory:
+
+::
+
+        .../> cd Scripts
+
+And here you now can run the application of your choice using the python
+environment:
+
+::
+
+        .../Scripts>python application -h
+
+3.3 Applications
+~~~~~~~~~~~~~~~~
+
+The available applications are briefly intruduced in the following.
+Please refer to "application -h" for all available options for each
+application.
+
+3.3.1 mpconvert
+^^^^^^^^^^^^^^^
+
+mpconvert converts bewteen data formats based on MagPy. Typical
+applications are the conversion of binary data formats to readable ASCII
+data sets or the conversion.
+
+Typical applications include
+
+a) Convert IAGA seconds to IMAGCDF and include obligatory meta
+   information:
+
+   ::
+
+       mpconvert -r "/iagaseconds/wic201701*" -f IMAGCDF -c month -w "/tmp"
+                    -m "DataStandardLevel:Full,IAGACode:WIC,DataReferences:myref"
+
+b) Convert IMAGCDF seconds to IAF minute (using IAGA/IM filtering
+   procedures):
+
+   ::
+
+       mpconvert -r "/imagcdf/wic_201701_000000_PT1S_4.cdf" -f IAF -i -w "/tmp"
+
+mpconvert -r
+"/srv/products/data/magnetism/definitive/wic2017/ImagCDF/wic\_201708\_000000\_PT1S\_4.cdf"
+-f IAF -i -w "/tmp"
+
+3.3.2 addcred
+^^^^^^^^^^^^^
+
+Used to store encrypted credential information for automatic data
+transfer. So that sensitive information has not to be written in plain
+text in scripts or cron jobs.
+
+a) Add information for ftp data transfer. This information is encrypted
+   and can be accessed by referring to the shortcut "zamg".
+
+   ::
+
+       addcred -t transfer -c zamg -u max -p geheim 
+                 -a "ftp://ftp.remote.ac.at" -l 21
+
+4. List of all MagPy methods
+----------------------------
 
 Please use the help method (section 2.3) for descriptions and return
 values.
 
++--------+---------+------------+
+| group  | method  | parameter  |
++========+=========+============+
+| -      | **findp | name, path |
+|        | ath**   |            |
++--------+---------+------------+
+| -      | \*\*\_p | method     |
+|        | ickle\_ |            |
+|        | method\ |            |
+|        | *\*     |            |
++--------+---------+------------+
+| -      | \*\*\_u | func\_name |
+|        | npickle | ,          |
+|        | \_metho | obj, cls   |
+|        | d\*\*   |            |
++--------+---------+------------+
+| stream | ****ini | self,      |
+|        | t****   | container= |
+|        |         | None,      |
+|        |         | header={}, |
+|        |         | ndarray=No |
+|        |         | ne         |
++--------+---------+------------+
+| stream | **ext** | self,      |
+|        |         | columnstru |
+|        |         | cture      |
++--------+---------+------------+
+| stream | **add** | self,      |
+|        |         | datlst     |
++--------+---------+------------+
+| stream | **lengt | self       |
+|        | h**     |            |
++--------+---------+------------+
+| stream | **repla | self,      |
+|        | ce**    | datlst     |
++--------+---------+------------+
+| stream | **copy* | self       |
+|        | *       |            |
++--------+---------+------------+
+| stream | ****str | self       |
+|        | ****    |            |
++--------+---------+------------+
+| stream | ****rep | self       |
+|        | r****   |            |
++--------+---------+------------+
+| stream | ****get | self,      |
+|        | item*** | index      |
+|        | *       |            |
++--------+---------+------------+
+| stream | ****len | self       |
+|        | ****    |            |
++--------+---------+------------+
+| stream | **clear | self       |
+|        | \_heade |            |
+|        | r**     |            |
++--------+---------+------------+
+| stream | **exten | self,datls |
+|        | d**     | t,header,n |
+|        |         | darray     |
++--------+---------+------------+
+| stream | **union | self,colum |
+|        | **      | n          |
++--------+---------+------------+
+| stream | **remov | self       |
+|        | eduplic |            |
+|        | ates**  |            |
++--------+---------+------------+
+| stream | **start | self,      |
+|        | **      | dateformt= |
+|        |         | None       |
++--------+---------+------------+
+| stream | **end** | self,      |
+|        |         | dateformt= |
+|        |         | None       |
++--------+---------+------------+
+| stream | **findt | self,time, |
+|        | ime**   | \*\*kwargs |
++--------+---------+------------+
+| stream | \*\*\_f | self       |
+|        | ind\_t\ |            |
+|        | _limits |            |
+|        | \*\*    |            |
++--------+---------+------------+
+| stream | \*\*\_p | self       |
+|        | rint\_k |            |
+|        | ey\_hea |            |
+|        | ders\*\ |            |
+|        | *       |            |
++--------+---------+------------+
+| stream | \*\*\_g | self,\*\*k |
+|        | et\_key | wargs      |
+|        | \_heade |            |
+|        | rs\*\*  |            |
++--------+---------+------------+
+| stream | \*\*\_g | self       |
+|        | et\_key |            |
+|        | \_names |            |
+|        | \*\*    |            |
++--------+---------+------------+
+| stream | **drope | self       |
+|        | mpty**  |            |
++--------+---------+------------+
+| stream | **fille | self,      |
+|        | mpty**  | ndarray,   |
+|        |         | keylist    |
++--------+---------+------------+
+| stream | **sorti | self       |
+|        | ng**    |            |
++--------+---------+------------+
+| stream | \*\*\_g | self, key, |
+|        | et\_lin | value      |
+|        | e\*\*   |            |
++--------+---------+------------+
+| stream | \*\*\_t | self, keys |
+|        | ake\_co |            |
+|        | lumns\* |            |
+|        | \*      |            |
++--------+---------+------------+
+| stream | \*\*\_r | self, key, |
+|        | emove\_ | value      |
+|        | lines\* |            |
+|        | \*      |            |
++--------+---------+------------+
+| stream | \*\*\_g | self, key  |
+|        | et\_col |            |
+|        | umn\*\* |            |
++--------+---------+------------+
+| stream | \*\*\_p | self,      |
+|        | ut\_col | column,    |
+|        | umn\*\* | key,       |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | \*\*\_m | self, key, |
+|        | ove\_co | put2key    |
+|        | lumn\*\ |            |
+|        | *       |            |
++--------+---------+------------+
+| stream | \*\*\_d | self,key   |
+|        | rop\_co |            |
+|        | lumn\*\ |            |
+|        | *       |            |
++--------+---------+------------+
+| stream | \*\*\_c | self, key  |
+|        | lear\_c |            |
+|        | olumn\* |            |
+|        | \*      |            |
++--------+---------+------------+
+| stream | \*\*\_r | self,      |
+|        | educe\_ | pointlimit |
+|        | stream\ | =100000    |
+|        | *\*     |            |
++--------+---------+------------+
+| stream | \*\*\_r | self       |
+|        | emove\_ |            |
+|        | nancolu |            |
+|        | mns\*\* |            |
++--------+---------+------------+
+| stream | \*\*\_a | self,      |
+|        | ic\*\*  | signal, k, |
+|        |         | debugmode= |
+|        |         | None       |
++--------+---------+------------+
+| stream | **harmf | self,nt,   |
+|        | it**    | val,       |
+|        |         | fitdegree  |
++--------+---------+------------+
+| stream | \*\*\_g | self, key, |
+|        | et\_max | returntime |
+|        | \*\*    | =False     |
++--------+---------+------------+
+| stream | \*\*\_g | self, key, |
+|        | et\_min | returntime |
+|        | \*\*    | =False     |
++--------+---------+------------+
+| stream | **ampli | self,key   |
+|        | tude**  |            |
++--------+---------+------------+
+| stream | \*\*\_g | self, t,   |
+|        | f\*\*   | tau        |
++--------+---------+------------+
+| stream | \*\*\_h | self, p, x |
+|        | f\*\*   |            |
++--------+---------+------------+
+| stream | \*\*\_r | self,      |
+|        | esidual | func, y    |
+|        | \_func\ |            |
+|        | *\*     |            |
++--------+---------+------------+
+| stream | \*\*\_t | self,      |
+|        | au\*\*  | period,    |
+|        |         | fac=0.8325 |
+|        |         | 5461       |
++--------+---------+------------+
+| stream | \*\*\_c | self,      |
+|        | onverts | coordinate |
+|        | tream\* | ,          |
+|        | \*      | \*\*kwargs |
++--------+---------+------------+
+| stream | \*\*\_d | self,index |
+|        | elete\* |            |
+|        | \*      |            |
++--------+---------+------------+
+| stream | \*\*\_a | self,strea |
+|        | ppend\* | m          |
+|        | \*      |            |
++--------+---------+------------+
+| stream | \*\*\_d | self,      |
+|        | et\_tra | period     |
+|        | nge\*\* |            |
++--------+---------+------------+
+| stream | \*\*\_i | self, s    |
+|        | s\_numb |            |
+|        | er\*\*  |            |
++--------+---------+------------+
+| stream | \*\*\_n | self,      |
+|        | ormaliz | column     |
+|        | e\*\*   |            |
++--------+---------+------------+
+| stream | \*\*\_t | self, time |
+|        | esttime |            |
+|        | \*\*    |            |
++--------+---------+------------+
+| stream | \*\*\_d | self, key  |
+|        | rop\_na |            |
+|        | ns\*\*  |            |
++--------+---------+------------+
+| stream | \*\*\_s | self, keys |
+|        | elect\_ |            |
+|        | keys\*\ |            |
+|        | *       |            |
++--------+---------+------------+
+| stream | \*\*\_s | self,      |
+|        | elect\_ | starttime= |
+|        | timeran | None,      |
+|        | ge\*\*  | endtime=No |
+|        |         | ne,        |
+|        |         | maxidx=-1  |
++--------+---------+------------+
+| stream | **aic\_ | self, key, |
+|        | calc**  | \*\*kwargs |
++--------+---------+------------+
+| stream | **basel | self,      |
+|        | ine**   | absoluteda |
+|        |         | ta,        |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **strea | self,      |
+|        | m2dict* | keys=['dx' |
+|        | *       | ,'dy','dz' |
+|        |         | ],         |
+|        |         | dictkey='D |
+|        |         | ataBaseVal |
+|        |         | ues'       |
++--------+---------+------------+
+| stream | **dict2 | self,dictk |
+|        | stream* | ey='DataBa |
+|        | *       | seValues'  |
++--------+---------+------------+
+| stream | **basel | self,      |
+|        | ineAdva | absdata,   |
+|        | nced**  | baselist,  |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **bc**  | self,      |
+|        |         | function=N |
+|        |         | one,       |
+|        |         | ctype=None |
+|        |         | ,          |
+|        |         | alpha=0.0, |
+|        |         | level='pre |
+|        |         | liminary'  |
++--------+---------+------------+
+| stream | **binde | self,key,f |
+|        | tector* | lagnum=1,k |
+|        | *       | eystoflag= |
+|        |         | ['x'],sens |
+|        |         | orid=None, |
+|        |         | text=None, |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **calc\ | self,      |
+|        | _f**    | \*\*kwargs |
++--------+---------+------------+
+| stream | **daily | self,      |
+|        | means** | keys=['x', |
+|        |         | 'y','z','f |
+|        |         | '],        |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **date\ | self,      |
+|        | _offset | offset     |
+|        | **      |            |
++--------+---------+------------+
+| stream | **delta | self,      |
+|        | \_f**   | \*\*kwargs |
++--------+---------+------------+
+| stream | **f\_fr | self,      |
+|        | om\_df* | \*\*kwargs |
+|        | *       |            |
++--------+---------+------------+
+| stream | **diffe | self,      |
+|        | rentiat | \*\*kwargs |
+|        | e**     |            |
++--------+---------+------------+
+| stream | **DWT\_ | self,key=' |
+|        | calc**  | x',wavelet |
+|        |         | ='db4',lev |
+|        |         | el=3,plot= |
+|        |         | False,outf |
+|        |         | ile=None,  |
++--------+---------+------------+
+| stream | **event | self, key, |
+|        | logger* | values,    |
+|        | *       | compare=No |
+|        |         | ne,        |
+|        |         | stringvalu |
+|        |         | es=None,   |
+|        |         | addcomment |
+|        |         | =None,     |
+|        |         | debugmode= |
+|        |         | None       |
++--------+---------+------------+
+| stream | **extra | self, key, |
+|        | ct**    | value,     |
+|        |         | compare=No |
+|        |         | ne,        |
+|        |         | debugmode= |
+|        |         | None       |
++--------+---------+------------+
+| stream | **extra | self,      |
+|        | ct2**   | keys,      |
+|        |         | get='>',   |
+|        |         | func=None, |
+|        |         | debugmode= |
+|        |         | None       |
++--------+---------+------------+
+| stream | **extra | self,      |
+|        | polate* | start, end |
+|        | *       |            |
++--------+---------+------------+
+| stream | **filte | self,\*\*k |
+|        | r**     | wargs      |
++--------+---------+------------+
+| stream | **fit** | self,      |
+|        |         | keys,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **extra | self       |
+|        | ctflags |            |
+|        | **      |            |
++--------+---------+------------+
+| stream | **flagf | self,index |
+|        | ast**   | array,flag |
+|        |         | ,          |
+|        |         | comment,ke |
+|        |         | ys=None    |
++--------+---------+------------+
+| stream | **flag\ | self,      |
+|        | _range* | \*\*kwargs |
+|        | *       |            |
++--------+---------+------------+
+| stream | **flag\ | self,      |
+|        | _outlie | \*\*kwargs |
+|        | r**     |            |
++--------+---------+------------+
+| stream | **flag* | self,      |
+|        | *       | flaglist,  |
+|        |         | removedupl |
+|        |         | icates=Fal |
+|        |         | se,        |
+|        |         | debug=Fals |
+|        |         | e          |
++--------+---------+------------+
+| stream | **flagl | self,flagl |
+|        | iststat | ist        |
+|        | s**     |            |
++--------+---------+------------+
+| stream | **flagl | self,flagl |
+|        | istclea | ist        |
+|        | n**     |            |
++--------+---------+------------+
+| stream | **strea | self,      |
+|        | m2flagl | userange=T |
+|        | ist**   | rue,       |
+|        |         | flagnumber |
+|        |         | =None,     |
+|        |         | keystoflag |
+|        |         | =None,     |
+|        |         | sensorid=N |
+|        |         | one,       |
+|        |         | comment=No |
+|        |         | ne         |
++--------+---------+------------+
+| stream | **flagl | self,      |
+|        | istmod* | mode='sele |
+|        | *       | ct',       |
+|        |         | flaglist=[ |
+|        |         | ],         |
+|        |         | parameter= |
+|        |         | 'key',     |
+|        |         | value=None |
+|        |         | ,          |
+|        |         | newvalue=N |
+|        |         | one        |
++--------+---------+------------+
+| stream | **flagl | self,      |
+|        | istadd* | flaglist,  |
+|        | *       | sensorid,  |
+|        |         | keys,      |
+|        |         | flagnumber |
+|        |         | ,          |
+|        |         | comment,   |
+|        |         | startdate, |
+|        |         | enddate=No |
+|        |         | ne         |
++--------+---------+------------+
+| stream | **flag\ | self, key, |
+|        | _stream | flag,      |
+|        | **      | comment,   |
+|        |         | startdate, |
+|        |         | enddate=No |
+|        |         | ne,        |
+|        |         | samplingra |
+|        |         | te=0.,     |
+|        |         | debug=Fals |
+|        |         | e          |
++--------+---------+------------+
+| stream | **simpl | self,basev |
+|        | ebaseva | alue,\*\*k |
+|        | lue2str | wargs      |
+|        | eam**   |            |
++--------+---------+------------+
+| stream | **func2 | self,funct |
+|        | stream* | ion,\*\*kw |
+|        | *       | args       |
++--------+---------+------------+
+| stream | **func\ | self,funct |
+|        | _add**  | ion,\*\*kw |
+|        |         | args       |
++--------+---------+------------+
+| stream | **func\ | self,funct |
+|        | _subtra | ion,\*\*kw |
+|        | ct**    | args       |
++--------+---------+------------+
+| stream | **get\_ | self,      |
+|        | gaps**  | \*\*kwargs |
++--------+---------+------------+
+| stream | **get\_ | self,      |
+|        | rotatio | xcompensat |
+|        | nangle* | ion=0,keys |
+|        | *       | =['x','y', |
+|        |         | 'z'],\*\*k |
+|        |         | wargs      |
++--------+---------+------------+
+| stream | **get\_ | self       |
+|        | samplin |            |
+|        | g\_peri |            |
+|        | od**    |            |
++--------+---------+------------+
+| stream | **sampl | self,      |
+|        | ingrate | \*\*kwargs |
+|        | **      |            |
++--------+---------+------------+
+| stream | **integ | self,      |
+|        | rate**  | \*\*kwargs |
++--------+---------+------------+
+| stream | **inter | self,      |
+|        | pol**   | keys,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **k\_ex | self,      |
+|        | tend**  | \*\*kwargs |
++--------+---------+------------+
+| stream | **k\_fm | self,      |
+|        | i**     | \*\*kwargs |
++--------+---------+------------+
+| stream | **lines | self       |
+|        | truct2n |            |
+|        | darray* |            |
+|        | *       |            |
++--------+---------+------------+
+| stream | **mean* | self, key, |
+|        | *       | \*\*kwargs |
++--------+---------+------------+
+| stream | **missi | self,v,win |
+|        | ngvalue | dow\_len,t |
+|        | **      | hreshold=0 |
+|        |         | .9,fill='m |
+|        |         | ean'       |
++--------+---------+------------+
+| stream | **MODWT | self,key=' |
+|        | \_calc* | x',wavelet |
+|        | *       | ='haar',le |
+|        |         | vel=1,plot |
+|        |         | =False,out |
+|        |         | file=None  |
++--------+---------+------------+
+| stream | **multi | self,      |
+|        | ply**   | factors,   |
+|        |         | square=Fal |
+|        |         | se         |
++--------+---------+------------+
+| stream | **offse | self,      |
+|        | t**     | offsets,   |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **plot* | self,      |
+|        | *       | keys=None, |
+|        |         | debugmode= |
+|        |         | None,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **power | self, key, |
+|        | spectru | debugmode= |
+|        | m**     | None,      |
+|        |         | outfile=No |
+|        |         | ne,        |
+|        |         | fmt=None,  |
+|        |         | axes=None, |
+|        |         | title=None |
+|        |         | ,\*\*kwarg |
+|        |         | s          |
++--------+---------+------------+
+| stream | **rando | self,perce |
+|        | mdrop** | ntage=None |
+|        |         | ,fixed\_in |
+|        |         | dicies=Non |
+|        |         | e          |
++--------+---------+------------+
+| stream | **remov | self,      |
+|        | e**     | starttime= |
+|        |         | None,      |
+|        |         | endtime=No |
+|        |         | ne         |
++--------+---------+------------+
+| stream | **remov | self,      |
+|        | e\_flag | \*\*kwargs |
+|        | ged**   |            |
++--------+---------+------------+
+| stream | **remov | self,      |
+|        | e\_outl | \*\*kwargs |
+|        | ier**   |            |
++--------+---------+------------+
+| stream | **resam | self,      |
+|        | ple**   | keys,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **rotat | self,\*\*k |
+|        | ion**   | wargs      |
++--------+---------+------------+
+| stream | **scale | self,      |
+|        | \_corre | keys,      |
+|        | ction** | scales,    |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **selec | self,      |
+|        | tkeys** | keys,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **smoot | self,      |
+|        | h**     | keys=None, |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **spect | self,      |
+|        | rogram* | keys,      |
+|        | *       | per\_lap=0 |
+|        |         | .9,        |
+|        |         | wlen=None, |
+|        |         | log=False, |
++--------+---------+------------+
+| stream | **stead | self, key, |
+|        | yrise** | timewindow |
+|        |         | ,          |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **stere | self,      |
+|        | oplot** | \*\*kwargs |
++--------+---------+------------+
+| stream | **trim* | self,      |
+|        | *       | starttime= |
+|        |         | None,      |
+|        |         | endtime=No |
+|        |         | ne,        |
+|        |         | newway=Fal |
+|        |         | se         |
++--------+---------+------------+
+| stream | **vario | self,      |
+|        | meterco | variopath, |
+|        | rrectio | thedate,   |
+|        | n**     | \*\*kwargs |
++--------+---------+------------+
+| stream | \*\*\_w | self,      |
+|        | rite\_f | format\_ty |
+|        | ormat\* | pe,        |
+|        | \*      | filenamebe |
+|        |         | gins,      |
+|        |         | filenameen |
+|        |         | ds,        |
+|        |         | coverage,  |
+|        |         | dateformat |
+|        |         | ,year      |
++--------+---------+------------+
+| stream | **write | self,      |
+|        | **      | filepath,  |
+|        |         | compressio |
+|        |         | n=5,       |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| stream | **idf2x | self,\*\*k |
+|        | yz**    | wargs      |
++--------+---------+------------+
+| stream | **xyz2i | self,\*\*k |
+|        | df**    | wargs      |
++--------+---------+------------+
+| stream | **xyz2h | self,\*\*k |
+|        | dz**    | wargs      |
++--------+---------+------------+
+| stream | **hdz2x | self,\*\*k |
+|        | yz**    | wargs      |
++--------+---------+------------+
+| -      | **coord | u,v,w,kind |
+|        | inatetr |            |
+|        | ansform |            |
+|        | **      |            |
++--------+---------+------------+
+| -      | **isNum | s          |
+|        | ber**   |            |
++--------+---------+------------+
+| -      | **find\ | array,valu |
+|        | _neares | e          |
+|        | t**     |            |
++--------+---------+------------+
+| -      | **ceil\ | dt,seconds |
+|        | _dt**   |            |
++--------+---------+------------+
+| -      | **read* | path\_or\_ |
+|        | *       | url=None,  |
+|        |         | dataformat |
+|        |         | =None,     |
+|        |         | headonly=F |
+|        |         | alse,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| -      | \*\*\_r | filename,  |
+|        | ead\*\* | dataformat |
+|        |         | =None,     |
+|        |         | headonly=F |
+|        |         | alse,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| -      | **savef | mylist=Non |
+|        | lags**  | e,path=Non |
+|        |         | e          |
++--------+---------+------------+
+| -      | **loadf | path=None, |
+|        | lags**  | sensorid=N |
+|        |         | one,begin= |
+|        |         | None,      |
+|        |         | end=None   |
++--------+---------+------------+
+| -      | **joinS | stream\_a, |
+|        | treams* | stream\_b, |
+|        | *       | \*\*kwargs |
++--------+---------+------------+
+| -      | **appen | streamlist |
+|        | dStream |            |
+|        | s**     |            |
++--------+---------+------------+
+| -      | **merge | stream\_a, |
+|        | Streams | stream\_b, |
+|        | **      | \*\*kwargs |
++--------+---------+------------+
+| -      | **dms2d | dms        |
+|        | **      |            |
++--------+---------+------------+
+| -      | **find\ | stream1,   |
+|        | _offset | stream2,   |
+|        | **      | guess\_low |
+|        |         | =-60.,     |
+|        |         | guess\_hig |
+|        |         | h=60.      |
++--------+---------+------------+
+| -      | **diffS | stream\_a, |
+|        | treams* | stream\_b, |
+|        | *       | \*\*kwargs |
++--------+---------+------------+
+| -      | **subtr | stream\_a, |
+|        | actStre | stream\_b, |
+|        | ams**   | \*\*kwargs |
++--------+---------+------------+
+| -      | **stack | streamlist |
+|        | Streams | ,          |
+|        | **      | \*\*kwargs |
++--------+---------+------------+
+| -      | **compa | stream\_a, |
+|        | reStrea | stream\_b  |
+|        | ms**    |            |
++--------+---------+------------+
+| -      | **array | listofarra |
+|        | 2stream | ys,        |
+|        | **      | keystring, |
+|        |         | starttime= |
+|        |         | None,sr=No |
+|        |         | ne         |
++--------+---------+------------+
+| -      | **obspy | opstream,  |
+|        | 2magpy* | keydict={} |
+|        | *       |            |
++--------+---------+------------+
+| -      | **extra | datestring |
+|        | ctDateF |            |
+|        | romStri |            |
+|        | ng**    |            |
++--------+---------+------------+
+| -      | **testT | time       |
+|        | imeStri |            |
+|        | ng**    |            |
++--------+---------+------------+
+| -      | **denor | column,    |
+|        | malize* | startvalue |
+|        | *       | ,          |
+|        |         | endvalue   |
++--------+---------+------------+
+| -      | **find\ | array,     |
+|        | _neares | value      |
+|        | t**     |            |
++--------+---------+------------+
+| -      | **maskN | column     |
+|        | AN**    |            |
++--------+---------+------------+
+| -      | **nan\_ | y          |
+|        | helper* |            |
+|        | *       |            |
++--------+---------+------------+
+| -      | **neare | x          |
+|        | stPow2* |            |
+|        | *       |            |
++--------+---------+------------+
+| -      | **test\ | time       |
+|        | _time** |            |
++--------+---------+------------+
+| -      | **conve | lon,lat,pr |
+|        | rtGeoCo | o1,pro2    |
+|        | ordinat |            |
+|        | e**     |            |
++--------+---------+------------+
+| mpplot | **plote | stream     |
+|        | asy**   |            |
++--------+---------+------------+
+| mpplot | **plot\ | stream,var |
+|        | _new**  | iables=[], |
+|        |         | specialdic |
+|        |         | t={},error |
+|        |         | bars=False |
+|        |         | ,padding=0 |
+|        |         | ,noshow=Fa |
+|        |         | lse        |
++--------+---------+------------+
+| mpplot | **plot* | stream,var |
+|        | *       | iables=[], |
+|        |         | specialdic |
+|        |         | t={},error |
+|        |         | bars=False |
+|        |         | ,padding=0 |
+|        |         | ,noshow=Fa |
+|        |         | lse        |
++--------+---------+------------+
+| mpplot | **plotS | streamlist |
+|        | treams* | ,variables |
+|        | *       | ,padding=N |
+|        |         | one,specia |
+|        |         | ldict={},e |
+|        |         | rrorbars=N |
+|        |         | one        |
++--------+---------+------------+
+| mpplot | **toggl | event      |
+|        | e\_sele |            |
+|        | ctor**  |            |
++--------+---------+------------+
+| mpplot | **addFl | data,      |
+|        | ag**    | flagger,   |
+|        |         | indeciesto |
+|        |         | beflagged, |
+|        |         | variables  |
++--------+---------+------------+
+| mpplot | **plotF | data,varia |
+|        | lag**   | bles=None, |
+|        |         | figure=Fal |
+|        |         | se         |
++--------+---------+------------+
+| mpplot | **plotE | stream,key |
+|        | MD**    | ,verbose=F |
+|        |         | alse,plott |
+|        |         | itle=None  |
++--------+---------+------------+
+| mpplot | **plotN | streamlist |
+|        | ormStre | ,          |
+|        | ams**   | key,       |
+|        |         | normalize= |
+|        |         | True,      |
+|        |         | normalizet |
+|        |         | =False     |
++--------+---------+------------+
+| mpplot | **plotP | stream,key |
+|        | S**     | ,debugmode |
+|        |         | =False,out |
+|        |         | file=None, |
+|        |         | noshow=Fal |
+|        |         | se         |
++--------+---------+------------+
+| mpplot | **plotS | mag\_strea |
+|        | atMag** | m,sat\_str |
+|        |         | eam,keys,o |
+|        |         | utfile=Non |
+|        |         | e,plottype |
+|        |         | ='disconti |
+|        |         | nuous'     |
++--------+---------+------------+
+| mpplot | **plotS | stream,    |
+|        | pectrog | keys,      |
+|        | ram**   | NFFT=1024, |
+|        |         | detrend=ml |
+|        |         | ab.detrend |
+|        |         | \_none     |
++--------+---------+------------+
+| mpplot | **magpy | x,         |
+|        | Specgra | NFFT=256,  |
+|        | m**     | Fs=2,      |
+|        |         | Fc=0,      |
+|        |         | detrend=ml |
+|        |         | ab.detrend |
+|        |         | \_none     |
++--------+---------+------------+
+| mpplot | **plotS | stream,foc |
+|        | tereopl | us='all',c |
+|        | ot**    | olorlist   |
+|        |         | =          |
+|        |         | ['b','r',' |
+|        |         | g','c','m' |
+|        |         | ,'y','k']  |
++--------+---------+------------+
+| mpplot | \*\*\_p | data,saved |
+|        | lot\*\* | pi=80,grid |
+|        |         | =True,grid |
+|        |         | color=grid |
+|        |         | color,nosh |
+|        |         | ow=False   |
++--------+---------+------------+
+| mpplot | \*\*\_c | ax, tmax,  |
+|        | onfinex | tmin,      |
+|        | \*\*    | timeunit   |
++--------+---------+------------+
+| mpplot | \*\*\_e | stream,    |
+|        | xtract\ | key        |
+|        | _data\_ |            |
+|        | for\_PS |            |
+|        | D\*\*   |            |
++--------+---------+------------+
+| databa | **dbget | db,pierid, |
+| se     | Pier**  | rp, value, |
+|        |         | maxdate=No |
+|        |         | ne,        |
+|        |         | l=False,   |
+|        |         | dic='Delta |
+|        |         | Dictionary |
+|        |         | '          |
++--------+---------+------------+
+| databa | **dbget | db,        |
+| se     | lines** | tablename, |
+|        |         | lines      |
++--------+---------+------------+
+| databa | **dbupd | db,tablena |
+| se     | ate**   | me,        |
+|        |         | keys,      |
+|        |         | values,    |
+|        |         | condition= |
+|        |         | None       |
++--------+---------+------------+
+| databa | **dbget | db,tablena |
+| se     | float** | me,sensori |
+|        |         | d,columnid |
+|        |         | ,revision= |
+|        |         | None       |
++--------+---------+------------+
+| databa | **dbget | db,tablena |
+| se     | string* | me,sensori |
+|        | *       | d,columnid |
+|        |         | ,revision= |
+|        |         | None       |
++--------+---------+------------+
+| databa | **dbupl | db,        |
+| se     | oad**   | path,stati |
+|        |         | onid,\*\*k |
+|        |         | wargs      |
++--------+---------+------------+
+| databa | **dbini | db         |
+| se     | t**     |            |
++--------+---------+------------+
+| databa | **dbdel | db,datainf |
+| se     | ete**   | oid,\*\*kw |
+|        |         | args       |
++--------+---------+------------+
+| databa | **dbdic | db,header\ |
+| se     | t2field | _dict,\*\* |
+|        | s**     | kwargs     |
++--------+---------+------------+
+| databa | **dbfie | db,datainf |
+| se     | lds2dic | oid        |
+|        | t**     |            |
++--------+---------+------------+
+| databa | **dbalt | db         |
+| se     | er**    |            |
++--------+---------+------------+
+| databa | **dbsel | db,        |
+| se     | ect**   | element,   |
+|        |         | table,     |
+|        |         | condition= |
+|        |         | None,      |
+|        |         | expert=Non |
+|        |         | e,         |
+|        |         | debug=Fals |
+|        |         | e          |
++--------+---------+------------+
+| databa | **dbcoo | db, pier,  |
+| se     | rdinate | epsgcode=' |
+|        | s**     | epsg:4326' |
++--------+---------+------------+
+| databa | **dbsen | db,sensori |
+| se     | sorinfo | d,sensorke |
+|        | **      | ydict=None |
+|        |         | ,sensorrev |
+|        |         | ision      |
+|        |         | = '0001'   |
++--------+---------+------------+
+| databa | **dbdat | db,sensori |
+| se     | ainfo** | d,datakeyd |
+|        |         | ict=None,t |
+|        |         | ablenum=No |
+|        |         | ne,default |
+|        |         | station='W |
+|        |         | IC',update |
+|        |         | db=True    |
++--------+---------+------------+
+| databa | **write | db,        |
+| se     | DB**    | datastream |
+|        |         | ,          |
+|        |         | tablename= |
+|        |         | None,      |
+|        |         | StationID= |
+|        |         | None,      |
+|        |         | mode='repl |
+|        |         | ace',      |
+|        |         | revision=N |
+|        |         | one,       |
+|        |         | debug=Fals |
+|        |         | e,         |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| databa | **dbset | db,        |
+| se     | Timesin | tablename, |
+|        | DataInf | colstr,uni |
+|        | o**     | tstr       |
++--------+---------+------------+
+| databa | **dbupd | db,        |
+| se     | ateData | tablename, |
+|        | Info**  | header     |
++--------+---------+------------+
+| databa | **strea | db,        |
+| se     | m2db**  | datastream |
+|        |         | ,          |
+|        |         | noheader=N |
+|        |         | one,       |
+|        |         | mode=None, |
+|        |         | tablename= |
+|        |         | None,      |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| databa | **readD | db, table, |
+| se     | B**     | starttime= |
+|        |         | None,      |
+|        |         | endtime=No |
+|        |         | ne,        |
+|        |         | sql=None   |
++--------+---------+------------+
+| databa | **db2st | db,        |
+| se     | ream**  | sensorid=N |
+|        |         | one,       |
+|        |         | begin=None |
+|        |         | ,          |
+|        |         | end=None,  |
+|        |         | tableext=N |
+|        |         | one,       |
+|        |         | sql=None   |
++--------+---------+------------+
+| databa | **dilin | db,        |
+| se     | e2db**  | dilinestru |
+|        |         | ct,        |
+|        |         | mode=None, |
+|        |         | \*\*kwargs |
++--------+---------+------------+
+| databa | **db2di | db,\*\*kwa |
+| se     | line**  | rgs        |
++--------+---------+------------+
+| databa | **apply | db, stream |
+| se     | Deltas* |            |
+|        | *       |            |
++--------+---------+------------+
+| databa | **getBa | db,sensori |
+| se     | seline* | d,         |
+|        | *       | date=None  |
++--------+---------+------------+
+| databa | **flagl | db,flaglis |
+| se     | ist2db* | t,mode=Non |
+|        | *       | e,sensorid |
+|        |         | =None,modi |
+|        |         | ficationda |
+|        |         | te=None    |
++--------+---------+------------+
+| databa | **db2fl | db,sensori |
+| se     | aglist* | d,         |
+|        | *       | begin=None |
+|        |         | ,          |
+|        |         | end=None,  |
+|        |         | comment=No |
+|        |         | ne,        |
+|        |         | flagnumber |
+|        |         | =-1,       |
+|        |         | key=None,  |
+|        |         | removedupl |
+|        |         | icates=Fal |
+|        |         | se         |
++--------+---------+------------+
+| databa | **strin | string     |
+| se     | g2dict* |            |
+|        | *       |            |
++--------+---------+------------+
+| tranfe | \*\*\_c | logfile    |
+| r      | hecklog |            |
+|        | file\*\ |            |
+|        | *       |            |
++--------+---------+------------+
+| tranfe | **ftpda | \*\*kwargs |
+| r      | tatrans |            |
+|        | fer**   |            |
++--------+---------+------------+
+| tranfe | \*\*\_m | myproxy,   |
+| r      | issingv | port,      |
+|        | als\*\* | login,     |
+|        |         | passwd,    |
+|        |         | logfile    |
++--------+---------+------------+
+| tranfe | **scptr | src,dest,p |
+| r      | ansfer* | asswd,\*\* |
+|        | *       | kwargs     |
++--------+---------+------------+
+| tranfe | **ssh\_ | remotepath |
+| r      | remotef | ,          |
+|        | ilelist | filepat,   |
+|        | **      | user,      |
+|        |         | host,      |
+|        |         | passwd     |
++--------+---------+------------+
+| tranfe | **ginup | filename=N |
+| r      | load**  | one,       |
+|        |         | user=None, |
+|        |         | password=N |
+|        |         | one,       |
+|        |         | url=None,\ |
+|        |         | *\*kwargs  |
++--------+---------+------------+
+| tranfe | **ftpdi | \*\*kwargs |
+| r      | rlist** |            |
++--------+---------+------------+
+| tranfe | **ftpre | \*\*kwargs |
+| r      | move**  |            |
++--------+---------+------------+
+| tranfe | **ftpge | ftpaddress |
+| r      | t**     | ,ftpname,f |
+|        |         | tppasswd,r |
+|        |         | emotepath, |
+|        |         | localpath, |
+|        |         | identifier |
+|        |         | ,port=None |
+|        |         | ,\*\*kwarg |
+|        |         | s          |
++--------+---------+------------+
