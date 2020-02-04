@@ -4,9 +4,9 @@
 Version Info: (please note: this package is still in a development state with frequent modifcations) please check the release notes.
 
 MagPy provides tools for geomagnetic data analysis with special focus on typical data processing routines in observatories. MagPy provides methods for data format conversion, plotting and mathematical procedures with specifically geomagnetic analysis routines such as basevalue and baseline calculation and database handling. Among the supported data formats are *ImagCDF, IAGA-02, WDC, IMF, IAF, BLV*, and many more.
-Full installation also provides a graphical user interface, *xmagpy*.
+Full installation also provides a graphical user interface, *xmagpy*. You will find a complete manual for *xmagpy* in the docs.
 
-Typical usage for reading and visualising data looks like this:
+Typical usage of the basic MagPy package for reading and visualising data looks like this:
 
         #!/usr/bin/env python
     
@@ -15,7 +15,7 @@ Typical usage for reading and visualising data looks like this:
         stream = read('filename_or_url')
         mp.plot(stream)
 
-Below you will find a quick guide to usage of the MagPy package. The quickest approach can be accomplished when skipping everything except the tutorials. 
+Below you will find a quick guide to usage of the basic MagPy package. For instructions on *xmagpy* please refer to the document "An introduction to XMagPy" in the docs. You can also subscribe to our information channel at [Telegram] for further information on updates and current issues.
 
 ## 1. INSTALLATION
 
@@ -27,117 +27,156 @@ This section is currently updated and will be ready with the publication of MagP
 
 #### 1.1.1 Complete Install
 
-Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages)
+Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages). Please note that installation requires python 3.x. 
 
-        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
-        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
-        $ sudo apt-get install python-twisted  
-        $ sudo pip install ffnet
-        $ sudo pip install pymysql
-        $ sudo pip install pyproj==1.9.5
-        $ sudo pip install pyserial
-        $ sudo pip install service_identity
-        $ sudo pip install ownet
-        $ sudo pip install spacepy
-        $ sudo pip install paho-mqtt   #*
-        $ sudo pip install geomagpy    #*
+        $ sudo pip3 install geomagpy    #Will install MagPy and all dependencies
+        $ sudo pip3 install wxpython    #Will install WX graphics system for XMagPy
 
-The first line and the two #* packages are required, all other packages are optional. For CDF features and Site coordinate transformation with EPSG codes please install the following packages as well  
+You can now run XMagPy  by using the following command
+
+        $ xmagpy
+
+#### 1.1.2 Updates
+
+To upgrade to the most recent version:
+
+        $ sudo pip3 install -U geomagpy
 
 
-    a) CDF (NASA): http://cdf.gsfc.nasa.gov/html/sw_and_docs.html (tested with 3.7.0, please check validity of commands below to make command for any future versions)
+#### 1.1.3 Creating a desktop link
+
+In order to create a desktop link on linux systems please refer to instruction too be found your distribution. For Ubunutu and other Debian systems such links are created as follows:
+
+Firstly create a file "xmagpy.desktop" which contains:
+
+        [Desktop Entry]
+        Type=Application
+        Name=XMagPy
+        GenericName=GeoMagPy User Interface
+        Exec=xmagpy
+        Icon=/usr/local/lib/python3.7/dist-packages/magpy/gui/magpy128.xpm
+        Terminal=false
+        Categories=Application;Development;
+
+Then copy this file to the systems application folder:
+
+        sudo cp xmagpy.desktop /usr/share/applications/
+
+
+
+### 1.2 MacOs installation
+
+#### 1.2.1 Install a python3 interpreter 
+
+  - we recommend [Miniconda] or [Anaconda] 
+  - see e.g. https://docs.continuum.io/anaconda/install for more details
+  - before continuiung, test whether python is working. Open a terminal and run python 
+
+#### 1.2.2 Install MagPy
+
+Open a terminal and use the following commands: 
+
+        $ pip install geomagpy    #Will install MagPy and all dependencies
+        $ pip install wxpython    #Will install WX graphics system for XMagPy
+
+You can now run XMagPy from the terminal by using the following command
+
+        $ xmagpyw
+
+#### 1.2.3 Creating a desktop link
+
+Open Finder and search for xmagpyw. Copy it to the desktop. To change the icon, click on the xmagpyw link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder). 
+
+
+### 1.3 Windows installation - WinPython Package
+
+#### 1.3.1 Install MagPy for Windows
+
+  - get the [MagPy Windows installer] here (under Downloads): 
+        https://cobs.zamg.ac.at
+  - download and execute magpy-x.x.x.exe
+  - all required packages are included in the installer
+
+#### 1.3.2 Post-installation information
+
+  - MagPy will have a sub-folder in the Start menu. Here you will find three items:
+
+        * command -> opens a DOS shell within the Python environment e.g. for updates 
+        * python  -> opens a python shell ready for MagPy
+        * xmagpy  -> opens the MagPy graphical user interface
+
+#### 1.3.3 Update an existing MagPy installation on Windows
+
+  - right-click on subfolder "command" in the start menu
+  - select "run as administrator"
+  - issue the following command "pip install -U geomagpy"
+    (you can also specify the version e.g. pip install geomagpy==0.x.x)
+
+#### 1.3.4 Installation with user priviledges only
+
+  - Download a most recent version of WinPython3.x
+  - Unpack in your home directory
+  - Go to the WinPython Folder and run WinPython command prompt
+  - issue the same commands as for MacOS installation
+  - to run XMagPy: use xmagpy from the WinPython command promt.
+
+
+
+### 1.4 Installation instructions for Python 2.7
+
+The current version of magpy is still supporting python 2.7, although it is highly recommended to switch to python >= 3.6. Installation on python 2.7 is more complex, as some packages for graphical user interface and CDF support not as well supported. Please note: None of the addtional steps is necessary for python 3.x.
+
+#### 1.4.1 Pre-installation work
+
+Get a recent version of NasaCDF for your platform, enables CDF support for formats like ImagCDF.
+Package details and files can be found at http://cdf.gsfc.nasa.gov/
+
+On Linux such installation will look like (http://cdf.gsfc.nasa.gov/html/sw_and_docs.html)
 
         $ tar -zxvf cdf37_0-dist-all.tar.gz
         $ cd cdf37...
         $ make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
         $ sudo make INSTALLDIR=/usr/local/cdf install
 
-    b) Proj4:
- 
+
+Install the following additional compilers before continuing (required for spacepy):
+     Linux: install gcc
+     MacOs: install gcc and gfortran
+
+Install coordinate system transformation support:
+
         $ sudo apt-get install libproj-dev proj-data proj-bin
 
 
-#### 1.1.2 Updates
+#### 1.4.2 Install MagPy and dependencies
 
-If MagPy is already installed and you want to upgrade to the most recent version:
+On Linux this will look like:
 
-        $ sudo pip install geomagpy==0.9.2
+        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
+        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
+        $ sudo apt-get install python-twisted  
+        $ sudo pip install ffnet
+        $ sudo pip install pyproj==1.9.5
+        $ sudo pip install pyserial
+        $ sudo pip install service_identity
+        $ sudo pip install ownet
+        $ sudo pip install spacepy
+        $ sudo pip install geomagpy  
 
-(replace version with the most recent available version)
-
-
-### 1.2 Windows installation - WinPython Package
-
-#### 1.2.1 Install NASA [CDF] support
-  - enables CDF support for formats like ImagCDF
-  - package details and files at http://cdf.gsfc.nasa.gov/
-  - download and install a recent version of CDF e.g. cdf37_0-setup-32.exe
-  - Note: please use 32 bit installer.
-
-#### 1.2.2 Install MagPy for Windows
-  - find the MagPy Windows installer here (under Downloads): http://www.conrad-observatory.at
-  - download and execute magpy-0.x.x.exe
-  - all required packages are included in the installer
-
-#### 1.2.3 Post-installation information
-  - MagPy should have a sub-folder in the Start menu. Here you will find three items:
-
-        * command -> opens a DOS shell within the Python environment e.g. for updates 
-        * python  -> opens a python shell ready for MagPy
-        * xmagpy  -> opens the MagPy graphical user interface
-
-#### 1.2.4 Update an existing MagPy installation on Windows
-  - right-click on subfolder "command" in the start menu
-  - select "run as administrator"
-  - issue the following command "pip install geomagpy"
-    (you can also specify the version e.g. pip install geomagpy==0.x.x)
+On Mac and Windows you need to download a python interpreter like [Anaconda] or [WinPython] and then install similar packages, particluarly the old wxpython 3.x.
 
 
-### 1.3 MacOs/Linux installation - based on Anaconda
+### 1.5 Platform independent container - Docker
 
-#### 1.3.1 Install [Anaconda] on your operating system
-  - download files from https://www.continuum.io/Downloads (tested with Anaconda2 for Python 2.7)
-  - see https://docs.continuum.io/anaconda/install for more details
-
-#### 1.3.2 Install NASA CDF support
-  - http://cdf.gsfc.nasa.gov/
-  - download and install the latest cdf version for your operating system
-
-#### 1.3.3 Install MagPy and SpacePy (required for CDF support)
-  - open a Terminal
-  - ... known issues: eventually change to the anaconda2/bin directory before running python (if not set as default)
-  - ...               check by starting python in the terminal
-  - run './pip install spacepy' 
-  - ... known issues: installation of spacepy eventually requires a fortran compiler
-  - ...               e.g. Linux: install gcc
-  - ...               e.g. MacOs: install gcc and gfortran
-  - run './pip install geomagpy'
-  - ... known issues: e.g. Linux: MySQL-python problem -> install libmysqlclient-dev on linux (e.g. debian/ubuntu: sudo apt-get install libmysqlclient-dev)
-
-#### 1.3.4 Post-installation information
-  - please note that anaconda provides a full python environment with many packages not used by MagPy 
-  - for a "slim" installation follow the "from scratch" instructions below (for experienced users)
-  - for upgrades: run './pip install geomagpy version==new-version'. Installation provides both shell based magpy and the graphical user interface xmagpy 
-
-  - running magpy:
-        * type "python" in a terminal -> opens a python shell ready for MagPy
-        * type "xmagpy" in a terminal -> open the graphical user interface of MagPy
-        * !! MacOS: !! type "xmagpyw" in a terminal -> open the graphical user interface of MagPy (since v0.3.95)
-
-  - adding a shortcut for xmagpy: coming soon
-
-
-### 1.4 Platform independent container - Docker
-
-#### 1.4.1 Install [Docker] (toolbox) on your operating system
+#### 1.5.1 Install [Docker] (toolbox) on your operating system
      - https://docs.docker.com/engine/installation/
-#### 1.4.2 Get the MagPy Image
+#### 1.5.2 Get the MagPy Image
      - open a docker shell
 
             >>> docker pull geomagpy/magpy:latest
             >>> docker run -d --name magpy -p 8000:8000 geomagpy/magpy:latest
 
-#### 1.4.3 Open a browser
+#### 1.5.3 Open a browser
      - open address http://localhost:8000 (or http://"IP of your VM":8000)
      - NEW: first time access might require a token or passwd
 
@@ -153,27 +192,25 @@ If MagPy is already installed and you want to upgrade to the most recent version
 
 
 
-### 1.5 Install from source (experts only)
+### 1.6 Install from source
 
 Requirements:
-  - Python 2.7,3.x (*xmagpy* will only work with python 2.7)
+  - Python 2.7, 3.x (recommended is >=3.6) 
 
 Recommended: 
   - Python packages:
-    * NasaCDF
-    * SpacePy
-    * wxpython 3.x (or older)
+    * wxpython (for python2.7 it needs to be 3.x or older)
+    * NasaCDF (python 2.7 only)
+    * SpacePy (python 2.7 only)
 
   - Other useful Software:
-    * pexpect (for SSH support)
+    * pyproj (for geographic coordinate systems)
     * MySQL (database features)
-    * NetCDF4 (support is currently in preparation)
     * Webserver (e.g. Apache2, PHP)
 
         git clone git://github.com/GeomagPy/MagPy.git
-        cd MagPy*
+        cd magpy*
         sudo python setup.py install
-
 
 
 
@@ -239,6 +276,7 @@ Several example data sets are provided within the MagPy package:
    - `example6b`: [MagPy] like 6a to be used with example4
 
    - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1
+   - `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1
 
 #### 2.2.1 Reading
 
@@ -310,29 +348,6 @@ The stream can be trimmed to a specific time interval after reading by applying 
         data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
 
-<!--#### 2.2.5 Tutorial
-
-For the ongoing quick example please use the following steps. This will create daily IAGA02 files within the directory. Please make sure that the directory is empty before writing data to it.
-
-A) Load example data
-
-Within the MagPy package, several example data sets are provided:
-
-   example1: [INTERMAGNET] CDF (ImagCDF) file with 1 second data
-   example2: [INTERMAGNET] Archive format (IAF) file with 1 min, 1 hour, K and mean data
-   example3: MagPy readable DI data file with data from 1 single DI measurement
-   example4: MagPy Basevalue file (PYSTR) with analysis results of several DI data
-
-        # Replace example1 with a full path, if you have your own data 
-        data = read(example1)
-
-B) Store it locally in your favorite directory
-
-        data.write('/tmp/',filenamebegins='MyExample_', format_type='IAGA')
-
-Please note that storing data in a different formt might require additional meta information. Checkout section (i) on how to deal with these aspects.-->
-
-
 ### 2.3 Getting help on options and usage
 
 #### 2.3.1 Python's help function
@@ -352,11 +367,6 @@ Note that this requires the existence of a "data" object, which is obtained e.g.
         help(DataStream.fit)
 
 
-<!--#### 2.3.2 Tutorial
-
-        help(data.fit)-->
-        
-        
 #### 2.3.2 MagPy's logging system
 
 MagPy automatically logs many function options and runtime information, which can be useful for debugging purposes. This log is saved by default in the temporary file directory of your operating system, e.g. for Linux this would be `/tmp/magpy.log`. The log is formatted as follows with the date, module and function in use and the message leve (INFO/WARNING/ERROR):
@@ -409,16 +419,6 @@ Defining a plot title and specific colors (see `help(mp.plot)` for list and all 
 Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
 
         mp.plotStreams([data1,data2],[['x','y','z'],['f']])
-
-<!--#### 2.4.4 Tutorial
-
-Read a second stream
-
-        otherdata = read(WDC)
-
-Plot xyz data from both streams
-
-        mp.plotStreams([data,otherdata]) -->
 
 
 ### 2.5 Flagging data 
@@ -1314,10 +1314,12 @@ Please use the help method (section 2.3) for descriptions and return values.
    [MARTAS]: <https://github.com/geomagpy/MARTAS>
    [MARCOS]: <https://github.com/geomagpy/MARCOS>
    [MacPorts]: <https://www.macports.org/>
+   [Miniconda]: <https://docs.conda.io/en/latest/miniconda.html>
    [Anaconda]: <https://www.continuum.io/downloads>
    [Docker]: <https://www.docker.com/>
    [CDF]: <https://cdf.gsfc.nasa.gov/>
    [ObsPy]: <https://github.com/obspy/obspy>
    [Nagios]: <https://www.nagios.org/>
-
+   [Telegram]: <https://t.me/geomagpy>
+   [MagPy Windows installer]: <https://cobs.zamg.ac.at/data/index.php/en/downloads/category/1-magnetism>
 
