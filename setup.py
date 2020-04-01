@@ -5,6 +5,28 @@ except ImportError:
 import sys
 exec(open('magpy/version.py').read())
 
+if sys.version_info < (3,5):
+        install_requires=[
+            "matplotlib >= 2.0.2",
+            "numpy >= 1.5.0",
+            "scipy >= 0.8.6",
+            "paho-mqtt >= 1.2.0",
+            "pymysql >= 0.6.0",
+            "ffnet >= 0.8.0",
+            "spacepy >= 0.1.6",
+            "pexpect >= 3.1.0",
+            ]
+else:
+        install_requires=[
+            "matplotlib >= 2.0.2",
+            "numpy >= 1.5.0",
+            "scipy >= 0.8.6",
+            "paho-mqtt >= 1.2.0",
+            "pymysql >= 0.6.0",
+            "cdflib >= 0.3.0",
+            "pexpect >= 3.1.0",
+        ]
+
 setup(
     name='geomagpy',
     version=__version__,
@@ -17,24 +39,6 @@ setup(
     description='Geomagnetic analysis tools.',
     long_description=open('README.rst').read(),
     package_data={'magpy': ['gui/*.png','gui/*.xpm','gui/*.jpg','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.sec','doc/*.pdf']},
-    install_requires=[
-        "matplotlib >= 2.0.2",
-        "numpy >= 1.5.0",
-        "scipy >= 0.8.6",
-        "paho-mqtt >= 1.2.0",
-        "pymysql >= 0.6.0",
-        "ffnet >= 0.8.0",
-        "spacepy >= 0.1.6",
-        "pexpect >= 3.1.0",
-    ]  if sys.version_info < (3, 5) else 
-    [
-        "matplotlib >= 2.0.2",
-        "numpy >= 1.5.0",
-        "scipy >= 0.8.6",
-        "paho-mqtt >= 1.2.0",
-        "pymysql >= 0.6.0",
-        "cdflib >= 0.3.0",
-        "pexpect >= 3.1.0",
-    ],
+    install_requires=install_requires,
 )
 

@@ -3587,6 +3587,8 @@ def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
 
     loggerdatabase.info("flaglist2db: Uploading {} new flags".format(len(dbflaglist)))
 
+    print ("Adding data to DB")
+
     for elem in dbflaglist:
         flagid = flagid+1
         try:

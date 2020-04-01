@@ -161,13 +161,25 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
         print ("buffer {}: bufferdirectory could not be created - check permissions".format(sensorid))
     try:
         savefile = os.path.join(path, sensorid+'_'+filedate+".bin")
-        if not os.path.isfile(savefile):
-            with open(savefile, "wb") as myfile:
-                myfile.write(header + "\n")
-                myfile.write(bindata + "\n")
+        if sys.version_info>(3,0,0):
+            if not os.path.isfile(savefile):
+                with open(savefile, "wb") as myfile:
+                    head = "{}{}".format(header,"\n")
+                    myfile.write(head.encode('utf-8'))
+                    myfile.write(bindata)
+                    myfile.write("\n".encode('utf-8'))
+            else:
+                with open(savefile, "ab") as myfile:
+                    myfile.write(bindata)
+                    myfile.write("\n".encode('utf-8'))
         else:
-            with open(savefile, "a") as myfile:
-                myfile.write(bindata + "\n")
+            if not os.path.isfile(savefile):
+                with open(savefile, "wb") as myfile:
+                    myfile.write(header + "\n")
+                    myfile.write("{}{}".format(bindata,"\n"))
+            else:
+                with open(savefile, "a") as myfile:
+                    myfile.write("{}{}".format(bindata,"\n"))
     except:
         print("buffer {}: Error while saving file".format(sensorid))
 

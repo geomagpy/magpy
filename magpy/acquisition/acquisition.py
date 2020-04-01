@@ -133,33 +133,33 @@ class WsMcuProtocol(WampServerProtocol):
         ##
         for sensor in sensorlist:
             if sensor[:3].upper() == 'ENV': # Environmental Sensor 5
-        	self.registerForPubSub("http://example.com/"+hostname+"/env#", True)
-       		## register methods for RPC
-		## does not work in python 2.6.5 (fine in 2.7.3)
-       		if sys.version_info >= (2, 7):
-           	    self.registerForRpc(self.factory.envProtocol, "http://example.com/"+hostname+"/env-control#")
-       		    #else:
-       		    #    self.registerMethodForRpc("http://example.com/"+hostname+"/mcu-control#",self.factory.mcuProtocol,McuProtocol.add)
+                self.registerForPubSub("http://example.com/"+hostname+"/env#", True)
+                ## register methods for RPC
+                ## does not work in python 2.6.5 (fine in 2.7.3)
+                if sys.version_info >= (2, 7):
+                    self.registerForRpc(self.factory.envProtocol, "http://example.com/"+hostname+"/env-control#")
+                    #else:
+                    #    self.registerMethodForRpc("http://example.com/"+hostname+"/mcu-control#",self.factory.mcuProtocol,McuProtocol.add)
 	    elif sensor[:3].upper() == 'KER': # Kern balance
-       		self.registerForPubSub("http://example.com/"+hostname+"/kern#", True)
+       	        self.registerForPubSub("http://example.com/"+hostname+"/kern#", True)
 	    elif sensor[:3].upper() == 'ARD': # Arduino board
-       		self.registerForPubSub("http://example.com/"+hostname+"/ard#", True)
+       	        self.registerForPubSub("http://example.com/"+hostname+"/ard#", True)
             elif sensor[:3].upper() == 'PAL': # PalmAcq
                 self.registerForPubSub("http://example.com/"+hostname+"/pal#", True)
 	    elif sensor[:3].upper() == 'LEM': # Lemi Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/lemi#", True)
+       	        self.registerForPubSub("http://example.com/"+hostname+"/lemi#", True)
 	    elif sensor[:2].upper() == 'OW': # OW Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/ow#", True) 
+       	        self.registerForPubSub("http://example.com/"+hostname+"/ow#", True) 
 	    elif sensor[:3].upper() == 'POS': # POS-1 Overhauzer Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/pos1#", True)
+       	        self.registerForPubSub("http://example.com/"+hostname+"/pos1#", True)
 	    elif sensor[:3].upper() == 'G82': # GSM CS Sensor
-       		self.registerForPubSub("http://example.com/"+hostname+"/cs#", True) 
+       	        self.registerForPubSub("http://example.com/"+hostname+"/cs#", True) 
 	    elif sensor[:3].upper() == 'SER': # standard serial
-       		self.registerForPubSub("http://example.com/"+hostname+"/ser#", True) 
+       	        self.registerForPubSub("http://example.com/"+hostname+"/ser#", True) 
 	    elif sensor[:3].upper() == 'GSM': # GEM Overhauzer Sensor (GSM90)
-       		self.registerForPubSub("http://example.com/"+hostname+"/gsm#", True)
+       	        self.registerForPubSub("http://example.com/"+hostname+"/gsm#", True)
 	    elif sensor[:3].upper() == 'G19': # GEM Overhauzer Sensor (GSM19)
-       		self.registerForPubSub("http://example.com/"+hostname+"/gsm#", True)
+       	        self.registerForPubSub("http://example.com/"+hostname+"/gsm#", True)
 	    else:
 	        log.msg('Sensor type %s is not supported.' % (sensor))
 

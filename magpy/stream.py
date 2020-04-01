@@ -5061,7 +5061,7 @@ CALLED BY:
             print (outputt)
         return outputt
 
-    def flaglistclean(self,flaglist):
+    def flaglistclean(self,flaglist,progress=False):
         """
         DESCRIPTION:
             identify and remove duplicates from flaglist, only the latest inputs are used
@@ -5073,7 +5073,6 @@ CALLED BY:
             flaglist = db2flaglist(db,'all')
             flaglistwithoutduplicates = stream.flaglistclean(flaglist)
         """
-
         # first step - remove all duplicates
         testflaglist = ['____'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
         uniques,indi = np.unique(testflaglist,return_index=True)
@@ -5086,6 +5085,8 @@ CALLED BY:
         ## (use only last input)
         indicies = []
         for ti, line in enumerate(flaglist):
+            if progress and ti/1000. == np.round(ti/1000.):
+                print ("Current state: {} percent".format(ti/len(flaglist)*100))
             if len(line) > 5:
                 inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2] and elem[5] == line[5]]
             else:

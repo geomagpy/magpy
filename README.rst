@@ -59,7 +59,11 @@ optional packages). Please note that installation requires python 3.x.
 ::
 
         $ sudo pip3 install geomagpy    #Will install MagPy and all dependencies
-        $ sudo pip3 install wxpython    #Will install WX graphics system for XMagPy
+        $ sudo pip3 install wxpython    #Will install WX graphics system
+
+If wxpython installation via pip3 fails you can try
+
+        $ sudo apt-get install python3-wxgtk4.0
 
 You can now run XMagPy by using the following command
 
