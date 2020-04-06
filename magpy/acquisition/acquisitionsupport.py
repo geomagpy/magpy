@@ -160,6 +160,7 @@ def dataToFile(outputdir, sensorid, filedate, bindata, header):
     except:
         print ("buffer {}: bufferdirectory could not be created - check permissions".format(sensorid))
     try:
+        print ("HERE")
         savefile = os.path.join(path, sensorid+'_'+filedate+".bin")
         if sys.version_info>(3,0,0):
             if not os.path.isfile(savefile):
