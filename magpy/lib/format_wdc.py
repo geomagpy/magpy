@@ -529,27 +529,49 @@ def writeWDC(datastream, filename, **kwargs):
                             fel.append(elemf)
                             fhourel.append(int(hour))
         # Finally save data of the last day, which dropped out by above procedure
+        # TODO Replace all eval methods with better attribute definitions 
+        class dailymean:
+            x = int(9999)
+            y = int(9999)
+            z = int(9999)
+            f = int(9999)
+        class base:
+            x = int(9999)
+            y = int(9999)
+            z = int(9999)
+            f = int(9999)
+        class mean:
+            x = int(9999)
+            y = int(9999)
+            z = int(9999)
+            f = int(9999)
         for comp in ['x','y','z','f']:
             if len(eval(comp+'el'))<1:
-                exec(comp+'dailymean = int(9999)')
-                exec(comp+'base = int(9999)')
+                #name='r0t%d%s' % (t,k) and value=getattr(temp, k)
+                #value = getattr(dailymean, comp)
+                setattr(dailymean, comp, int(9999))
+                setattr(base, comp, int(9999))
+                eval('{}dailymean = int(9999)'.format(comp))
+                #exec('{}dailymean = int(9999)'.format(comp))
+                eval(comp+'base = int(9999)')
             else:
-                exec(comp+'mean = round(np.mean(' + comp +'el),0)')
-                exec(comp+'base = ' + comp +'mean - 5000.0')
-                exec(comp+'base = int(' + comp +'base/100)')
-                exec(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)')
-            exec('row'+comp+'+= "%4i" % '+comp+'base')
+                #setattr(mean, comp, round(np.mean(eval(comp+'el')),0) )
+                eval(comp+'mean = round(np.mean(' + comp +'el),0)')
+                eval(comp+'base = ' + comp +'mean - 5000.0')
+                eval(comp+'base = int(' + comp +'base/100)')
+                eval(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)')
+            eval('row'+comp+'+= "%4i" % '+comp+'base')
             count = 0
             for i in range(24):
                 if len(eval(comp+'hourel')) > 0 and count < len(eval(comp+'hourel')) and eval(comp+'hourel[count]') == i:
-                    exec(comp+'val = int(' + comp +'el[count] - ' + comp + 'base*100)')
+                    eval(comp+'val = int(' + comp +'el[count] - ' + comp + 'base*100)')
                     count = count+1
                 else:
-                    exec(comp+'val = int(9999)')
-                    exec(comp+'dailymean = int(9999)')
-                exec('row' + comp + '+="%4i" % ' + comp + 'val')
+                    eval(comp+'val = int(9999)')
+                    eval(comp+'dailymean = int(9999)')
+                eval('row' + comp + '+="%4i" % ' + comp + 'val')
             eol = '\n'
-            exec('row' + comp + '+="%4i%s" % (' + comp + 'dailymean,eol)')
+            eval('row' + comp + '+="%4i%s" % (' + comp + 'dailymean,eol)')
             line.append(eval('row'+comp))
         line.sort()
         try:
