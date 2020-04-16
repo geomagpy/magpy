@@ -130,6 +130,10 @@ class Table:
       if fp is None:
          fp = sys.stdout
       elif type(fp) is type(""):
+         #if sys.version_info >= (3,0,0):
+         #    fp = open(fp, mode, newline='')
+         #else:
+         #    fp = open(fp, mode)
          fp = open(fp, 'w')
          we_open = True
       else:
@@ -219,3 +223,4 @@ class Table:
       if self.notes:
           fp.write("\\tablecomments{%s}\n" % (str(self.notes)))
       fp.write("\\end{deluxetable}\n")
+

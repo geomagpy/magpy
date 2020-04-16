@@ -277,6 +277,13 @@ def writeWDC(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     #createlatex = kwargs.get('createlatex')
 
+    def OpenFile(filename, mode='w'):
+        if sys.version_info >= (3,0,0):
+            f = open(filename, mode, newline='')
+        else:
+            f = open(filename, mode+'b')
+        return f
+
     keylst = datastream._get_key_headers()
     if not 'x' in keylst or not 'y' in keylst or not 'z' in keylst or not 'f' in keylst:
         print("formatWDC: writing WDC data requires x,y,z,f components")
@@ -286,18 +293,18 @@ def writeWDC(datastream, filename, **kwargs):
         if mode == 'skip': # skip existing inputs
             exst = pmRead(path_or_url=filename)
             datastream = mergeStreams(exst,datastream,extend=True)
-            myFile= open( filename, "wb" )
+            myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
             exst = pmRead(path_or_url=filename)
             datastream = mergeStreams(datastream,exst,extend=True)
-            myFile= open( filename, "wb" )
+            myFile= OpenFile(filename)
         elif mode == 'append':
-            myFile= open( filename, "ab" )
+            myFile= OpenFile(filename,mode='a')
         else: # overwrite mode
             #os.remove(filename)  ?? necessary ??
-            myFile= open( filename, "wb" )
+            myFile= OpenFile(filename)
     else:
-        myFile= open( filename, "wb" )
+        myFile= OpenFile(filename)
 
     success = False
     # 1.) Test whether min or hourly data are used

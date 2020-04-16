@@ -99,7 +99,12 @@ def writeLATEX(datastream, filename, **kwargs):
         if not justs:
             justs = 'p'*(numcols+1)
 
-        fout = open( filename, "wb" )
+        #fout = open( filename, "wb" )
+        if sys.version_info >= (3,0,0):
+            fout = open(filename, "w", newline='')
+        else:
+            fout = open(filename, "wb")
+
         t = Table(numcols+1, justs=justs, caption=caption, label=label, tablewidth=tablewidth, tablenum=tablenum, fontsize=fontsize, rotate=True)
         t.add_header_row(headline)
 
@@ -224,7 +229,11 @@ def writeLATEX(datastream, filename, **kwargs):
             exec('col'+ column + ' = datastream._get_column(\'' + key + '\')')
             addcollist.append(eval('col'+ column))
 
-        fout = open( filename, "wb" )
+        if sys.version_info >= (3,0,0):
+            fout = open(filename, "w", newline='')
+        else:
+            fout = open(filename, "wb")
+
         t = Table(numcols, justs=justs, caption=caption, label=label, tablewidth=tablewidth, tablenum=tablenum, fontsize=fontsize, rotate=rotate)
         t.add_header_row(headline)
         #col3 = [[0.12345,0.1],[0.12345,0.01],[0.12345,0.001]]
