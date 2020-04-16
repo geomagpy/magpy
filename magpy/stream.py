@@ -7410,13 +7410,16 @@ CALLED BY:
         if len(self.ndarray[0]) > 0:
             ndtype = True
 
+        sel = self.copy()
+
+
         for key in factors:
             if key in KEYLIST:
                 if ndtype:
                     ind = KEYLIST.index(key)
-                    val = self.ndarray[ind]
+                    val = sel.ndarray[ind]
                 else:
-                    val = self._get_column(key)
+                    val = sel._get_column(key)
                 if key == 'time':
                     logger.error("factor: Multiplying time? That's just plain silly.")
                 else:
@@ -7427,13 +7430,13 @@ CALLED BY:
                         newval = [elem ** factors[key] for elem in val]
                         logger.info('factor: Multiplied column %s by %s.' % (key, factors[key]))
                 if ndtype:
-                    self.ndarray[ind] = np.asarray(newval)
+                    sel.ndarray[ind] = np.asarray(newval)
                 else:
-                    self = self._put_column(newval, key)
+                    sel = sel._put_column(newval, key)
             else:
                 logger.warning("factor: Key '%s' not in keylist." % key)
 
-        return self
+        return sel
 
 
     def obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False,
