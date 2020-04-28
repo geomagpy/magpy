@@ -323,11 +323,55 @@ def writeWDC(datastream, filename, **kwargs):
     header = datastream.header
     iagacode = header.get('StationIAGAcode'," ").upper()
 
-    # 3.)
+    # 3.) Create component objects:
+
+    class x:
+        dailymean = int(9999)
+        base = int(9999)
+        mean = int(9999)
+        el = []
+        hourel = []
+        ind = 0
+        elem = int(9999)
+        name = ''
+        row = ''
+    class y:
+        dailymean = int(9999)
+        base = int(9999)
+        mean = int(9999)
+        el = []
+        hourel = []
+        ind = 0
+        elem = int(9999)
+        name = ''
+        row = ''
+    class z:
+        dailymean = int(9999)
+        base = int(9999)
+        mean = int(9999)
+        el = []
+        hourel = []
+        ind = 0
+        elem = int(9999)
+        name = ''
+        row = ''
+    class f:
+        dailymean = int(9999)
+        base = int(9999)
+        mean = int(9999)
+        el = []
+        hourel = []
+        ind = 0
+        elem = int(9999)
+        name = ''
+        row = ''
+    
+
+    # 4.)
     if hourly:
         #try:
         line, textable = [],[]
-        rowx, rowy, rowz, rowf = '','','',''
+        x.row, y.row, z.row, f.row = '','','',''
         latexrowx = ''
 
         ndtype = False
@@ -343,16 +387,16 @@ def writeWDC(datastream, filename, **kwargs):
         for i in range(fulllength):
             if not ndtype:
                 elem = datastream[i]
-                elemx = elem.x
-                elemy = elem.y
-                elemz = elem.z
-                elemf = elem.f
+                x.elem = elem.x
+                y.elem = elem.y
+                z.elem = elem.z
+                f.elem = elem.f
                 timeval = elem.time
             else:
-                elemx = datastream.ndarray[xind][i]
-                elemy = datastream.ndarray[yind][i]
-                elemz = datastream.ndarray[zind][i]
-                elemf = datastream.ndarray[find][i]
+                x.elem = datastream.ndarray[xind][i]
+                y.elem = datastream.ndarray[yind][i]
+                z.elem = datastream.ndarray[zind][i]
+                f.elem = datastream.ndarray[find][i]
                 timeval = datastream.ndarray[0][i]
             arb = '  '
             for key in KEYLIST:
@@ -365,214 +409,95 @@ def writeWDC(datastream, filename, **kwargs):
                         ye = year[2:]
                         ar = year[:-2]
                     except:
-                        rowx, rowy, rowz, rowf = '','','',''
+                        x.row, y.row, z.row, f.row = '','','',''
                         pass
-                elif key == 'x':
-                    xname = iagacode + ye + month + header['col-x'].upper() + day + '  ' + arb + ar
-                    if rowx[:16] == xname:
-                        if not isnan(elemx):
-                            xel.append(elemx)
-                            xhourel.append(int(hour))
-                    elif rowx == '':
-                        rowx = xname
-                        if not isnan(elemx):
-                            xel = [elemx]
-                            xhourel = [int(hour)]
+                elif key in ['x','y','z','f']:
+                    #print ("Dealing with key {}".format(key))
+                    if key == 'x':
+                        cl = x
+                    elif key == 'y':
+                        cl = y
+                    elif key == 'z':
+                        cl = z
+                    elif key == 'f':
+                        cl = f
+                    cl.name = "{}{}{}{}{}  {}{}".format(iagacode,ye,month,header['col-{}'.format(key)].upper()[0],day,arb,ar)
+                    if cl.row[:16] == cl.name:
+                        if not isnan(cl.elem):
+                            cl.el.append(cl.elem)
+                            cl.hourel.append(int(hour))
+                    elif cl.row == '':
+                        cl.row = cl.name
+                        if not isnan(cl.elem):
+                            cl.el = [cl.elem]
+                            cl.hourel = [int(hour)]
                         else:
-                            xel = []
-                            xhourel = []
+                            cl.el = []
+                            cl.hourel = []
                     else:
-                        if len(xel)<1:
-                            xdailymean = int(9999)
-                            xbase = int(9999)
+                        if len(cl.el)<1:
+                            cl.dailymean = int(9999)
+                            cl.base = int(9999)
                         else:
-                            xmean = round(np.mean(xel),0)
-                            xbase = xmean - 5000.0
-                            xbase = int(xbase/100)
-                            xdailymean = int(xmean - xbase*100)
-                        rowx += "%4i" % xbase
+                            cl.mean = round(np.mean(cl.el),0)
+                            cl.base = cl.mean - 5000.0
+                            cl.base = int(cl.base/100)
+                            cl.dailymean = int(cl.mean - cl.base*100)
+                        cl.row += "%4i" % cl.base
                         count = 0
                         for i in range(24):
-                            if len(xhourel) > 0 and count < len(xhourel) and xhourel[count] == i:
-                                xval = int(xel[count] - xbase*100)
+                            if len(cl.hourel) > 0 and count < len(cl.hourel) and cl.hourel[count] == i:
+                                cl.val = int(cl.el[count] - cl.base*100)
                                 count = count+1
                             else:
-                                xval = int(9999)
-                                xdailymean = int(9999)
-                            rowx+='%4i' % xval
+                                cl.val = int(9999)
+                                cl.dailymean = int(9999)
+                            cl.row+='%4i' % cl.val
                         eol = '\n'
-                        rowx+='%4i%s' % (xdailymean,eol)
-                        line.append(rowx)
-                        rowx = xname
-                        xel, xhourel = [], []
-                        if not isnan(elemx):
-                            xel.append(elemx)
-                            xhourel.append(int(hour))
-                elif key == 'y':
-                    yname = iagacode + ye + month + header['col-y'].upper() + day + '  ' + arb  + ar
-                    if rowy[:16] == yname:
-                        if not isnan(elemy):
-                            yel.append(elemy)
-                            yhourel.append(int(hour))
-                    elif rowy == '':
-                        rowy = yname
-                        if not isnan(elemy):
-                            yel = [elemy]
-                            yhourel = [int(hour)]
-                        else:
-                            yel = []
-                            yhourel = []
-                    else:
-                        if len(yel)<1:
-                            ydailymean = int(9999)
-                            ybase = int(9999)
-                        else:
-                            ymean = round(np.mean(yel),0)
-                            ybase = ymean - 5000.0
-                            ybase = int(ybase/100)
-                            ydailymean = int(ymean - ybase*100)
-                        rowy += "%4i" % ybase
-                        count = 0
-                        for i in range(24):
-                            if len(yhourel) > 0 and count < len(yhourel) and yhourel[count] == i:
-                                yval = int(yel[count] - ybase*100)
-                                count = count+1
-                            else:
-                                yval = int(9999)
-                                ydailymean = int(9999)
-                            rowy+='%4i' % yval
-                        rowy+='%4i\n' % ydailymean
-                        line.append(rowy)
-                        rowy = yname
-                        yel, yhourel = [], []
-                        if not isnan(elemy):
-                            yel.append(elemy)
-                            yhourel.append(int(hour))
-                elif key == 'z':
-                    zname = iagacode + ye + month + header['col-z'].upper() + day + '  ' + arb  + ar
-                    if rowz[:16] == zname:
-                        if not isnan(elemz):
-                            zel.append(elemz)
-                            zhourel.append(int(hour))
-                    elif rowz == '':
-                        rowz = zname
-                        if not isnan(elemz):
-                            zel = [elemz]
-                            zhourel = [int(hour)]
-                        else:
-                            zel = []
-                            zhourel = []
-                    else:
-                        if len(zel)<1:
-                            zdailymean = int(9999)
-                            zbase = int(9999)
-                        else:
-                            zmean = round(np.mean(zel),0)
-                            zbase = zmean - 5000.0
-                            zbase = int(zbase/100)
-                            zdailymean = int(zmean - zbase*100)
-                        rowz += "%4i" % zbase
-                        count = 0
-                        for i in range(24):
-                            if len(zhourel) > 0 and count < len(zhourel) and zhourel[count] == i:
-                                zval = int(zel[count] - zbase*100)
-                                count = count+1
-                            else:
-                                zval = int(9999)
-                                zdailymean = int(9999)
-                            rowz+='%4i' % zval
-                        rowz+='%4i\n' % zdailymean
-                        line.append(rowz)
-                        rowz = zname
-                        zel, zhourel = [], []
-                        if not isnan(elemz):
-                            zel.append(elemz)
-                            zhourel.append(int(hour))
-                elif key == 'f':
-                    fname = iagacode + ye + month + header['col-f'].upper() + day + '  ' + arb  + ar
-                    if rowf[:16] == fname:
-                        if not isnan(elemf):
-                            fel.append(elemf)
-                            fhourel.append(int(hour))
-                    elif rowf == '':
-                        rowf = fname
-                        if not isnan(elemf):
-                            fel = [elemf]
-                            fhourel = [int(hour)]
-                        else:
-                            fel = []
-                            fhourel = []
-                    else:
-                        if len(fel)<1:
-                            fdailymean = int(9999)
-                            fbase = int(9999)
-                        else:
-                            fmean = round(np.mean(fel),0)
-                            fbase = fmean - 5000.0
-                            fbase = int(fbase/100)
-                            fdailymean = int(fmean - fbase*100)
-                        rowf += "%4i" % fbase
-                        count = 0
-                        for i in range(24):
-                            if len(fhourel) > 0 and count < len(fhourel) and fhourel[count] == i:
-                                fval = int(fel[count] - fbase*100)
-                                count = count+1
-                            else:
-                                fval = int(9999)
-                                fdailymean = int(9999)
-                            rowf+='%4i' % fval
-                        rowf+='%4i\n' % fdailymean
-                        line.append(rowf)
-                        rowf = fname
-                        fel, fhourel = [], []
-                        if not isnan(elemf):
-                            fel.append(elemf)
-                            fhourel.append(int(hour))
+                        cl.row+='%4i%s' % (cl.dailymean,eol)
+                        line.append(cl.row)
+                        cl.row = cl.name
+                        cl.el, cl.hourel = [], []
+                        if not isnan(cl.elem):
+                            cl.el.append(cl.elem)
+                            cl.hourel.append(int(hour))
+
         # Finally save data of the last day, which dropped out by above procedure
         # TODO Replace all eval methods with better attribute definitions 
-        class dailymean:
-            x = int(9999)
-            y = int(9999)
-            z = int(9999)
-            f = int(9999)
-        class base:
-            x = int(9999)
-            y = int(9999)
-            z = int(9999)
-            f = int(9999)
-        class mean:
-            x = int(9999)
-            y = int(9999)
-            z = int(9999)
-            f = int(9999)
-        for comp in ['x','y','z','f']:
-            if len(eval(comp+'el'))<1:
+        for comp in [x,y,z,f]:
+            if len(comp.el)<1:
                 #name='r0t%d%s' % (t,k) and value=getattr(temp, k)
                 #value = getattr(dailymean, comp)
-                setattr(dailymean, comp, int(9999))
-                setattr(base, comp, int(9999))
-                eval('{}dailymean = int(9999)'.format(comp))
+                #setattr(dailymean, comp, int(9999))
+                #setattr(base, comp, int(9999))
+                comp.dailymean = int(9999)
                 #exec('{}dailymean = int(9999)'.format(comp))
-                eval(comp+'base = int(9999)')
+                #eval(comp+'base = int(9999)')
+                comp.base = int(9999)
             else:
+                comp.mean=np.round(np.mean(comp.el),0)
+                comp.base = comp.mean - 5000.0
+                comp.base = int(comp.base/100)
+                comp.dailymean = int(comp.mean - comp.base*100)
                 #setattr(mean, comp, round(np.mean(eval(comp+'el')),0) )
-                eval(comp+'mean = round(np.mean(' + comp +'el),0)')
-                eval(comp+'base = ' + comp +'mean - 5000.0')
-                eval(comp+'base = int(' + comp +'base/100)')
-                eval(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)')
-            eval('row'+comp+'+= "%4i" % '+comp+'base')
+                #eval("{}mean=np.round(np.mean({}el),0)".format(comp,comp))
+                #eval(comp+'base = ' + comp +'mean - 5000.0')
+                #eval(comp+'base = int(' + comp +'base/100)')
+                #eval(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)')
+            #eval('row'+comp+'+= "%4i" % '+comp+'base')
+            comp.row += "%4i" % comp.base
             count = 0
             for i in range(24):
-                if len(eval(comp+'hourel')) > 0 and count < len(eval(comp+'hourel')) and eval(comp+'hourel[count]') == i:
-                    eval(comp+'val = int(' + comp +'el[count] - ' + comp + 'base*100)')
+                if len(comp.hourel) > 0 and count < len(comp.hourel) and comp.hourel[count] == i:
+                    comp.val = int(comp.el[count] - comp.base*100)
                     count = count+1
                 else:
-                    eval(comp+'val = int(9999)')
-                    eval(comp+'dailymean = int(9999)')
-                eval('row' + comp + '+="%4i" % ' + comp + 'val')
+                    comp.val = int(9999)
+                    comp.dailymean = int(9999)
+                comp.row +="%4i" % comp.val
             eol = '\n'
-            eval('row' + comp + '+="%4i%s" % (' + comp + 'dailymean,eol)')
-            line.append(eval('row'+comp))
+            comp.row +="%4i%s" % (comp.dailymean,eol)
+            line.append(comp.row)
         line.sort()
         try:
             myFile.writelines( line )
