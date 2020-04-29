@@ -303,9 +303,10 @@ def writePYCDF(datastream, filename, **kwargs):
 
         ind = KEYLIST.index(key)
         col = datastream.ndarray[ind]
+
         if not key in NUMKEYLIST:
-            if not key == 'time':
-                col = np.asarray(col)
+            #if not key == 'time':  ### why??
+            col = np.asarray(col)
 
         # Sort out columns only containing nan's
         try:
@@ -320,14 +321,13 @@ def writePYCDF(datastream, filename, **kwargs):
 
         cdfkey = key.lower()
         if key.find('time') >= 0:
-            if key.endswith('time'):
-                if key == 'time':
+            if cdfkey.endswith('time'):
+                if cdfkey == 'time':
                     cdfkey = 'Epoch'
                 try: # Might fail for sectime
                     cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in col.astype(np.float64)] )
                 except:
                     cdfdata = np.asarray([])
-                    pass
                 var_spec['Data_Type'] = 33
         elif len(col) > 0:
             if not key in NUMKEYLIST:
@@ -347,6 +347,12 @@ def writePYCDF(datastream, filename, **kwargs):
             var_attrs['FIELDNAM'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.2
             var_attrs['UNITS'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style ## Version 1.2
             var_attrs['LABLAXIS'] = headdict.get('col-'+key,'') ## Version 1.2
+
+        #if cdfdata is just a single value, then it will be converted into an array
+        try:
+            test = len(cdfdata)
+        except:
+            cdfdata = np.asarray([cdfdata])
 
         if len(cdfdata) > 0:
             var_spec['Variable'] = cdfkey

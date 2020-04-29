@@ -210,6 +210,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             except:
                 pass # for lines which have no Label
 
+    if debug:
+        print ("Components in file: {}".format(newdatalist))
+
     if not len(datalist) == len(newdatalist)-1:
         logger.warning("readIMAGCDF: error encountered in key assignment - please check")
 
@@ -217,17 +220,31 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     # (4. eventually completely drop time cols and just store start date and sampling period in header)
     # Deal with scalar data (independent or whatever
 
+    delrow = False
+    index = 0
     for elem in newdatalist:
         if elem[0] == 'time':
             ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
             col = cdfdat.varget(elem[1])
-            ar = date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(col)]))
+            try:
+                ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+            except:
+                # if second value is 60 (tt_2000 leapsecond timestamp) cdfepoch.unixtime fails
+                print ("File contains leap second data - ignoring them")
+                seccol = np.asarray([row[5] for row in cdflib.cdfepoch.breakdown(col)])
+                # assume that seccol contains a 60 seconds step - identify and remove
+                index = seccol.argmax()
+                col = np.delete(col,index)
+                ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                delrow = True
             arlen= len(ar)
             arraylist.append(ar)
             ind = KEYLIST.index('time')
             array[ind] = ar
         else:
             ar = cdfdat.varget(elem[1])
+            if delrow:
+                ar = np.delete(ar,index)
             if elem[0] in NUMKEYLIST:
                 with np.errstate(invalid='ignore'):
                     ar[ar > 88880] = float(nan)
@@ -254,6 +271,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     stream = [LineStruct()]
 
     result = DataStream(stream,headers,ndarray)
+
+    print(result.length())
 
     if not headers.get('FlagRuleType','') == '' and len(flaglist) > 0:
         result = result.flag(flaglist)
