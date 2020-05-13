@@ -51,6 +51,7 @@ import os
 from os.path import expanduser
 import platform
 import sys
+import pwd
 
 pyversion = platform.python_version()
 PY3 = sys.version_info[0] >= 3

@@ -127,6 +127,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         variables = cdfdat.cdf_info().get('zVariables')
         timelength = 0
 
+        print (variables)
         for key in variables:
             if key.find('time')>=0 or key == 'Epoch':
                 # Time column identified
@@ -149,6 +150,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 ttdesc = cdfdat.varinq(key).get('Data_Type_Description')
                 col = cdfdat.varget(key)
                 #print (ttdesc, cdfdat.varinq(key).get('Data_Type'))
+                print (key, len(col), col)
+                #print ([ele for ele in col if not ele ==''])
                 if not len(col) == timelength and len(col) == 1:
                     array[ind] = np.asarray([col[0]]*timelength)
                     addhead = True
@@ -315,6 +318,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = np.asarray([])
         except:
             pass
+
         if not False in checkEqual3(col) and len(col) > 0:
             logger.warning("writePYCDF: Found identical values only for key: %s" % key)
             col = col[:1]
@@ -330,11 +334,12 @@ def writePYCDF(datastream, filename, **kwargs):
                     cdfdata = np.asarray([])
                 var_spec['Data_Type'] = 33
         elif len(col) > 0:
+            print (cdfkey)
             if not key in NUMKEYLIST:
                 col = list(col)
                 col = ['' if el is None else el for el in col]
                 col = np.asarray(col) # to get string conversion
-                col = list(col) # to get string conversion
+                col = list(col) # convert back to list for write_var
                 var_spec['Data_Type'] = 51
             else:
                 var_spec['Data_Type'] = 45
@@ -352,6 +357,7 @@ def writePYCDF(datastream, filename, **kwargs):
         try:
             test = len(cdfdata)
         except:
+            print ("Failed")
             cdfdata = np.asarray([cdfdata])
 
         if len(cdfdata) > 0:
