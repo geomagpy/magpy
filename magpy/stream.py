@@ -4423,8 +4423,9 @@ CALLED BY:
                         consecutives = list(map(itemgetter(1), g))
                         st = num2date(self.ndarray[0][consecutives[0]]).replace(tzinfo=None)
                         et = num2date(self.ndarray[0][consecutives[-1]]).replace(tzinfo=None)
-                        flagnumber = int(flags[consecutives[0]][indexflag])
-                        flaglist.append([st,et,key,flagnumber,comment,sensorid,now])
+                        flagnumber = flags[consecutives[0]][indexflag]
+                        if not flagnumber in ['-',None]:
+                            flaglist.append([st,et,key,int(flagnumber),comment,sensorid,now])
                     except:
                         print ("extractflags: error when extracting flaglist")
 

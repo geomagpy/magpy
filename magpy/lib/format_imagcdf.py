@@ -643,6 +643,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     success = filename
 
+
     if len(flaglist) > 0 and addflags == True:
         flagstart = 'FlagBeginTimes'
         flagend = 'FlagEndTimes'
