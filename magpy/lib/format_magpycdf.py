@@ -127,7 +127,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
         variables = cdfdat.cdf_info().get('zVariables')
         timelength = 0
 
-        print (variables)
         for key in variables:
             if key.find('time')>=0 or key == 'Epoch':
                 # Time column identified
@@ -149,9 +148,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 timelength = len(array[0])
                 ttdesc = cdfdat.varinq(key).get('Data_Type_Description')
                 col = cdfdat.varget(key)
-                #print (ttdesc, cdfdat.varinq(key).get('Data_Type'))
-                print (key, len(col), col)
-                #print ([ele for ele in col if not ele ==''])
+
                 if not len(col) == timelength and len(col) == 1:
                     array[ind] = np.asarray([col[0]]*timelength)
                     addhead = True
@@ -334,13 +331,13 @@ def writePYCDF(datastream, filename, **kwargs):
                     cdfdata = np.asarray([])
                 var_spec['Data_Type'] = 33
         elif len(col) > 0:
-            print (cdfkey)
             if not key in NUMKEYLIST:
                 col = list(col)
                 col = ['' if el is None else el for el in col]
                 col = np.asarray(col) # to get string conversion
                 col = list(col) # convert back to list for write_var
-                var_spec['Data_Type'] = 51
+                var_spec['Data_Type'] = 51 # CHAR
+                var_spec['Num_Elements'] = max([len(i) for i in col])
             else:
                 var_spec['Data_Type'] = 45
                 col = np.asarray([np.nan if el in [None,ch1] else el for el in col])
@@ -357,12 +354,13 @@ def writePYCDF(datastream, filename, **kwargs):
         try:
             test = len(cdfdata)
         except:
-            print ("Failed")
+            print ("Failed for {}".format(key))
             cdfdata = np.asarray([cdfdata])
 
         if len(cdfdata) > 0:
             var_spec['Variable'] = cdfkey
-            var_spec['Num_Elements'] = 1
+            if not var_spec.get('Num_Elements'):
+                var_spec['Num_Elements'] = 1
             var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
             var_spec['Dim_Sizes'] = []
 
