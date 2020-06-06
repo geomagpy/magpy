@@ -653,18 +653,33 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         flagsystemreference = 'FlagSystemReference'
         flagobserver = 'FlagObserver'
 
+
         trfl = np.transpose(flaglist)
         #print ("Transposed flaglist", trfl)
         #try:
         ok =True
         if ok:
-            mycdf.new(flagstart, type=cdf.const.CDF_TIME_TT2000)
-            mycdf[flagstart] = cdf.lib.v_datetime_to_tt2000(trfl[0])
-            mycdf.new(flagend, type=cdf.const.CDF_TIME_TT2000)
-            mycdf[flagend] = cdf.lib.v_datetime_to_tt2000(trfl[1])
-            mycdf.new(flagmodification, type=cdf.const.CDF_TIME_TT2000)
-            mycdf[flagmodification] = cdf.lib.v_datetime_to_tt2000(trfl[-1])
+            print ("Writing flag times")
+            var_spec['Data_Type'] = 33
+            var_spec['Num_Elements'] = 1
+            var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
+            var_spec['Dim_Sizes'] = []
+            var_spec['Variable'] = flagstart
+            cdfdata = cdflib.cdfepoch.compute_tt2000( trfl[0] )
+            mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
+            cdfdata = cdflib.cdfepoch.compute_tt2000( trfl[1] )
+            mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
+            cdfdata = cdflib.cdfepoch.compute_tt2000( trfl[-1] )
+            mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
 
+            #mycdf.new(flagstart, type=cdf.const.CDF_TIME_TT2000)
+            #mycdf[flagstart] = cdf.lib.v_datetime_to_tt2000(trfl[0])
+            #mycdf.new(flagend, type=cdf.const.CDF_TIME_TT2000)
+            #mycdf[flagend] = cdf.lib.v_datetime_to_tt2000(trfl[1])
+            #mycdf.new(flagmodification, type=cdf.const.CDF_TIME_TT2000)
+            #mycdf[flagmodification] = cdf.lib.v_datetime_to_tt2000(trfl[-1])
+
+            print ("Writing flag contents")
             # Here we can select between different content
             if len(flaglist[0]) == 7:
                 #[st,et,key,flagnumber,commentarray[idx],sensorid,now]
@@ -674,19 +689,33 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 # Future version ??
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
             for idx, cdfkey in enumerate(fllist):
+                print ("Saving key", cdfkey)
+                var_attrs = {}
+                var_spec = {}
                 if not cdfkey == flagcode:
                     ll = [el.encode('UTF8') for el in trfl[idx+2]]
                 else:
                     ll = trfl[idx+2]
-                mycdf[cdfkey] = ll
-                mycdf[cdfkey].attrs['DEPEND_0'] = "FlagBeginTimes"
-                mycdf[cdfkey].attrs['DISPLAY_TYPE'] = "time_series"
-                mycdf[cdfkey].attrs['LABLAXIS'] = cdfkey.strip('Flag')
-                mycdf[cdfkey].attrs['FILLVAL'] = np.nan
-                mycdf[cdfkey].attrs['FIELDNAM'] = cdfkey
+                #mycdf[cdfkey] = ll
+                cdfdata = ll
+                var_attrs['DEPEND_0'] = "FlagBeginTimes"
+                var_attrs['DISPLAY_TYPE'] = "time_series"
+                var_attrs['LABLAXIS'] = cdfkey.strip('Flag')
+                var_attrs['FILLVAL'] = np.nan
+                var_attrs['FIELDNAM'] = cdfkey
                 if cdfkey in ['flagcode']:
-                    mycdf[cdfkey].attrs['VALIDMIN'] = 0
-                    mycdf[cdfkey].attrs['VALIDMAX'] = 9
+                    var_attrs['VALIDMIN'] = 0
+                    var_attrs['VALIDMAX'] = 9
+                if cdfkey in [flagcomponents,flagcomment, flagsystemreference, flagobserver]:
+                    var_spec['Data_Type'] = 51
+                    var_spec['Num_Elements'] = max([len(i) for i in ll])
+                elif cdfkey in [flagcode]:
+                    var_spec['Data_Type'] = 45
+                    var_spec['Num_Elements'] = 1
+                var_spec['Variable'] = cdfkey
+                var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
+                var_spec['Dim_Sizes'] = []
+
         #except:
         #    print ("writeIMAGCDF: error when adding flags. skipping this part")
         logger.info("writeIMAGCDF: Flagging information added to file")
