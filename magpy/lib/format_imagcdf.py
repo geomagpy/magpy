@@ -170,22 +170,27 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         newdatalist.append(['time',tllist[0][1]])
 
     def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion):
-        if flagruletype in ['Conrad', 'conrad', 'MagPy','magpy']:
-            if flagruleversion in ['1.0','1',1]:
+        if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy']:
+            if rulesetversion in ['1.0','1',1]:
                 flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
                 flaglisttmp = []
                 for elem in flagcolsconrad:
                     flaglisttmp.append(cdfdat[elem][...])
+                flaglisttmp[0] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[0])
+                flaglisttmp[1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[1])
+                flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[-1])
                 flaglist = np.transpose(flaglisttmp)
                 flaglist = [list(elem) for elem in flaglist]
                 return list(flaglist)
         else:
             logger.warning("readIMAGCDF: Could  not interprete Ruleset")
 
-    if not headers.get('FlagRuleType','') == '':
-        logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRuleType',''),headers.get('FlagRuleVersion','')))
+    if not headers.get('FlagRulesetType','') == '':
+        if debug:
+            print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
+        logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         flagginglist = [elem for elem in datalist if elem.startswith('Flag')]
-        flaglist = Ruleset2Flaglist(flagginglist,headers.get('FlagRuleType',''),headers.get('FlagRuleVersion',''))
+        flaglist = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''))
 
     datalist = [elem for elem in datalist if not elem.endswith('Times') and not elem.startswith('Flag')]
 
@@ -272,9 +277,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     result = DataStream(stream,headers,ndarray)
 
-    print(result.length())
-
-    if not headers.get('FlagRuleType','') == '' and len(flaglist) > 0:
+    if not headers.get('FlagRulesetType','') == '' and len(flaglist) > 0:
         result = result.flag(flaglist)
 
     return result
@@ -384,8 +387,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if addflags:
         flaglist = datastream.extractflags()
         if len(flaglist) > 0:
-            globalAttrs['FlagRulesetVersion'] = '1.0'
-            globalAttrs['FlagRulesetType'] = 'Conrad'
+            globalAttrs['FlagRulesetVersion'] = { 0 : '1.0'}
+            globalAttrs['FlagRulesetType'] = { 0 : 'Conrad'}
 
     if not headers.get('DataPublicationDate','') == '':
         dat = tt(datastream._testtime(headers.get('DataPublicationDate','')))
@@ -657,30 +660,24 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
         trfl = np.transpose(flaglist)
         #print ("Transposed flaglist", trfl)
-        #try:
-        ok =True
-        if ok:
-            print ("Writing flag times")
+        try:
+            print ("Writing flagging information ...")
+            var_attrs = {}
+            var_spec = {}
             var_spec['Data_Type'] = 33
             var_spec['Num_Elements'] = 1
             var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
             var_spec['Dim_Sizes'] = []
             var_spec['Variable'] = flagstart
-            cdfdata = cdflib.cdfepoch.compute_tt2000( trfl[0] )
+            cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(el) for el in trfl[0]] )
             mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
-            cdfdata = cdflib.cdfepoch.compute_tt2000( trfl[1] )
+            var_spec['Variable'] = flagend
+            cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(el) for el in trfl[1]] )
             mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
-            cdfdata = cdflib.cdfepoch.compute_tt2000( trfl[-1] )
+            var_spec['Variable'] = flagmodification
+            cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(el) for el in trfl[-1]] )
             mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
 
-            #mycdf.new(flagstart, type=cdf.const.CDF_TIME_TT2000)
-            #mycdf[flagstart] = cdf.lib.v_datetime_to_tt2000(trfl[0])
-            #mycdf.new(flagend, type=cdf.const.CDF_TIME_TT2000)
-            #mycdf[flagend] = cdf.lib.v_datetime_to_tt2000(trfl[1])
-            #mycdf.new(flagmodification, type=cdf.const.CDF_TIME_TT2000)
-            #mycdf[flagmodification] = cdf.lib.v_datetime_to_tt2000(trfl[-1])
-
-            print ("Writing flag contents")
             # Here we can select between different content
             if len(flaglist[0]) == 7:
                 #[st,et,key,flagnumber,commentarray[idx],sensorid,now]
@@ -690,11 +687,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 # Future version ??
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
             for idx, cdfkey in enumerate(fllist):
-                print ("Saving key", cdfkey)
                 var_attrs = {}
                 var_spec = {}
                 if not cdfkey == flagcode:
-                    ll = [el.encode('UTF8') for el in trfl[idx+2]]
+                    ll = [str(el) for el in trfl[idx+2]]
                 else:
                     ll = trfl[idx+2]
                 #mycdf[cdfkey] = ll
@@ -702,7 +698,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 var_attrs['DEPEND_0'] = "FlagBeginTimes"
                 var_attrs['DISPLAY_TYPE'] = "time_series"
                 var_attrs['LABLAXIS'] = cdfkey.strip('Flag')
-                var_attrs['FILLVAL'] = np.nan
+                #var_attrs['FILLVAL'] = np.nan
                 var_attrs['FIELDNAM'] = cdfkey
                 if cdfkey in ['flagcode']:
                     var_attrs['VALIDMIN'] = 0
@@ -716,10 +712,12 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 var_spec['Variable'] = cdfkey
                 var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
                 var_spec['Dim_Sizes'] = []
+                mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
 
-        #except:
-        #    print ("writeIMAGCDF: error when adding flags. skipping this part")
-        logger.info("writeIMAGCDF: Flagging information added to file")
+            logger.info("writeIMAGCDF: Flagging information added to file")
+            print ("... success")
+        except:
+            print ("writeIMAGCDF: error when adding flags. skipping this part")
 
     mycdf.close()
     return success
