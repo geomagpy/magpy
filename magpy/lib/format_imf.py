@@ -987,7 +987,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     if 'UniqueIdentifier' in attrslist:
         headers['DataID'] = str(cdfdat.attrs['UniqueIdentifier'])
     if 'ParentIdentifiers' in attrslist:
-        headers['SensorID'] = str(cdfdat.attrs['ParentIdentifier'])
+        headers['SensorID'] = str(cdfdat.attrs.get('ParentIdentifiers'))
     if 'ReferenceLinks' in attrslist:
         headers['StationWebInfo'] = str(cdfdat.attrs['ReferenceLinks'])
     if 'FlagRulesetType' in attrslist:

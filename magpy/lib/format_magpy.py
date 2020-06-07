@@ -358,6 +358,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
         getfile = True
     logbaddata = False
 
+    print ("HERE")
+
     # Get format type:
     # Juergens DTU type is using different date format (MATLAB specific)
     # MagPy type is using datetime objects
@@ -399,14 +401,13 @@ def readPYCDF(filename, headonly=False, **kwargs):
         logger.info('readPYCDF: %s Format: %s ' % (filename, cdfformat))
 
         for key in cdf_file:
-            #print key
+            print ("KEY", key)
             #try:
             #    print key, cdf_file[key].attrs['LABLAXIS'], cdf_file[key].attrs['UNITS']
             #except:
             #    print key
             # first get time or epoch column
             #lst = cdf_file[key]
-            #print key
             if key.find('time')>=0 or key == 'Epoch':
                 #ti = cdf_file[key][...]
                 #row = LineStruct()
