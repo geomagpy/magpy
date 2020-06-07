@@ -291,7 +291,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
     globalAttrs['DataFormat'] = { 0 : 'MagPyCDF{}'.format(version)}
 
-    mycdf.write_globalattrs(globalAttrs)    
+    mycdf.write_globalattrs(globalAttrs)
 
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
@@ -338,17 +338,19 @@ def writePYCDF(datastream, filename, **kwargs):
                 col = list(col) # convert back to list for write_var
                 var_spec['Data_Type'] = 51 # CHAR
                 var_spec['Num_Elements'] = max([len(i) for i in col])
+                var_attrs['LABLAXIS'] = str(key) ## Version 1.2
+                var_attrs['FIELDNAM'] = str(key) # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.2
             else:
                 var_spec['Data_Type'] = 45
                 col = np.asarray([np.nan if el in [None,ch1] else el for el in col])
                 col = col.astype(float)
+                var_attrs['name'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.1
+                var_attrs['units'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style
+                var_attrs['FIELDNAM'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.2
+                var_attrs['UNITS'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style ## Version 1.2
+                var_attrs['LABLAXIS'] = headdict.get('col-'+key,'') ## Version 1.2
             cdfdata = col
 
-            var_attrs['name'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.1
-            var_attrs['units'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style
-            var_attrs['FIELDNAM'] = headdict.get('col-'+key,'')       # use 'FIELDNAM' to be conform with NASA / IMAGCDF style ## Version 1.2
-            var_attrs['UNITS'] = headdict.get('unit-col-'+key,'')  # use 'UNITS' to be conform with NASA style / IMAGCDF style ## Version 1.2
-            var_attrs['LABLAXIS'] = headdict.get('col-'+key,'') ## Version 1.2
 
         #if cdfdata is just a single value, then it will be converted into an array
         try:
