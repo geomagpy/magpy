@@ -51,14 +51,17 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     datalist = []
     pos = KEYLIST.index('str1')
     if getfile:
-        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as csvfile:
+        if sys.version_info[0] < 3: 
+            infile = open(filename, 'rb')
+        else:
+            infile = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
+        with infile as csvfile:
             neicreader = csv.reader(csvfile, delimiter=str(','), quotechar=str('"'))
             #print (neicreader)
             for row in neicreader:
                 #row = [el.encode('ascii','ignore') for el in row]
                 if len(row) > 0:
                   if row[0] == 'time':
-                    #print("Got Header")
                     #print(len(row))
                     dxp = KEYLIST.index('dy')
                     secp = KEYLIST.index('sectime')
