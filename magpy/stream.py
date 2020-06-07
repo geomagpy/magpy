@@ -4363,7 +4363,7 @@ CALLED BY:
         #    func = [functionkeylist, 0, 0]
         return func
 
-    def extractflags(self):
+    def extractflags(self, debug=False):
         """
     DEFINITION:
         Extracts flags asociated with the provided DataStream object
@@ -4393,8 +4393,9 @@ CALLED BY:
         uniquecomments = self.union(comments)
 
         # 1. Extract relevant keys from uniqueflags
-        print ("extractflags: Unique Flags -", uniqueflags)
-        print ("extractflags: Unique Comments -", uniquecomments)
+        if debug:
+            print ("extractflags: Unique Flags -", uniqueflags)
+            print ("extractflags: Unique Comments -", uniquecomments)
         # zeroflag = ''
         keylist = []
         for elem in uniqueflags:

@@ -1853,6 +1853,7 @@ class MainFrame(wx.Frame):
             Backups stream content and adds current strem and header info to streamlist and headerlist.
             Creates plotstream copy and stores pointer towards lists.
             Checks whether ndarray is resent and whether data is present at all
+            Eventually extracts flaglist
         """
 
         if not len(stream.ndarray[0]) > 0:
@@ -1863,6 +1864,13 @@ class MainFrame(wx.Frame):
             return False
         self.stream = stream
 
+        # Eventually extract flaglist from CDF formats
+        if 'flag' in stream._get_key_headers():
+            flaglist = stream.extractflags()
+            if not self.flaglist:
+                self.flaglist = flaglist
+            else:
+                self.flaglist.extend(flaglist)
         self.plotstream = self.stream.copy()
         currentstreamindex = len(self.streamlist)
         #self.streamlist.append(self.stream)
