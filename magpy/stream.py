@@ -3515,7 +3515,7 @@ CALLED BY:
             # Take the values in the middle of the window (not exact but changes are
             # not extreme over standard 5s window)
             #row.time = self[i+window/2].time
-            array[t_ind].append(self.ndarray[t_ind][i+window/2])
+            array[t_ind].append(self.ndarray[t_ind][i+int(window/2)])
             data_cut = data[i:i+window]
             #row.x = sum(data_cut)/float(window)
             array[x_ind].append(sum(data_cut)/float(window))
@@ -3581,7 +3581,7 @@ CALLED BY:
                                 plottitle="DWT Decomposition of %s (%s)" % (key,date))
 
         #return DWT_stream
-        return DataStream([LineStruct()], headers, np.asarray(array))
+        return DataStream([LineStruct()], headers, np.asarray([np.asarray(a) for a in array]))
 
 
     def eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):

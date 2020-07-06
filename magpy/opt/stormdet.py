@@ -53,6 +53,7 @@ EXAMPLE SCRIPT:
 from __future__ import print_function
 
 import sys, os
+import scipy.stats
 from magpy.stream import *
 from magpy.mpplot import *
 
@@ -594,8 +595,8 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
     # ----------------
     if verbose == True:
         print("Starting analysis with findSSC().")
-    #for row in var_stream:
-    for i in range(0,len(var_ar)):
+    #for i in range(0,len(var_ar)):
+    while True:
         #var = eval('row.'+var_key)
         var = var_ar[i]
 
@@ -604,23 +605,31 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
         if var >= a and possdet == False:
             #timepin = row.time
             timepin = t_ar[i]
+            ssc_init = num2date(timepin).replace(tzinfo=None)
             #x1 = row.x
             x1 = x_ar[i]
+            if verbose:
+                print("x1:", x1, ssc_init)
             possdet = True
-        elif var < a and possdet == True:
+        #elif var < a and possdet == True:  # old version. WARNING: Replacement may be buggy.
+        elif possdet == True:
             #duration = (num2date(row.time) - num2date(timepin)).seconds
-            duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
+            test_duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
 
             # CRITERION #2: Length of time that variable exceeds a must > p
             # *************************************************************
-            if duration >= p:
+            if test_duration >= p:
+                # Find full duration:
+                ssc_ends = np.where(var_ar[i:] < a)[0]
+                if len(ssc_ends) == 0: # not by the end of this time range
+                    duration = (num2date(t_ar[-1]) - num2date(timepin)).seconds
+                else:
+                    i += ssc_ends[0]
+                    duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
                 #x2 = row.x
                 x2 = x_ar[i]
                 d_amp = x2 - x1
-                ssc_init = num2date(timepin).replace(tzinfo=None)
-                if verbose == True:
-                    print("x1:", x1, ssc_init)
-                    #print "x2:", x2, num2date(row.time)
+                if verbose:
                     print("x2:", x2, num2date(t_ar[i]))
                     print("Possible detection with duration %s at %s with %s nT." % (duration, ssc_init, d_amp))
 
@@ -642,11 +651,17 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
 
                         # CRITERION #5: ACE storm must have occured 45 (+-20) min before detection
                         # ************************************************************************
+                        print("Using ACE results to compare SSC time...")
                         for sat_ssc in ACE_results:
                             det, final_probf = _calcProbWithSat(ssc_init, sat_ssc,
                                 dh_prob, dh_weight, satprob_weight, estt_weight, verbose=verbose)
                             if det == True:
+                                if verbose:
+                                    print("!!! Matches expected SSC time for SAT results {}".format(ACE_results))
                                 break
+                            else:
+                                if verbose:
+                                    print("No connection to SAT results {}".format(ACE_results))
 
                     elif useACE == True and ACE_results == []:
                         detection, det = False, False
@@ -669,9 +684,25 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
                         SSC_list.append(SSC_dict)
                         detection = True
 
-            possdet = False
+                else:
+                    if verbose:
+                        print("Detection is lower than threshold. Ignoring.")
 
-        i += 1
+                possdet = False
+
+            elif var < a:
+                if verbose:
+                    short_duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
+                    print("Peak fell below threshold. Duration was {:.0f} s".format(short_duration))
+                possdet = False
+            else:
+                i += 1
+
+
+        else:
+            i += 1
+        if i >= len(var_ar):
+            break
 
     return detection, SSC_list
 
@@ -1051,8 +1082,8 @@ def _calcProbWithSat(ssctime, sat_dict, dh_prob, dh_weight, satprob_weight, estt
         mu = 0.
         sigma = 10.
         base = 50.
-        factor = (100.-base)/mlab.normpdf(0, mu, sigma)
-        estt_prob = base + mlab.normpdf(diff, mu, sigma) * factor
+        factor = (100.-base)/scipy.stats.norm.pdf(0, mu, sigma)
+        estt_prob = base + scipy.stats.norm.pdf(diff, mu, sigma) * factor
         #if diff <= 10.: # minutes
         #    estt_prob = 100.
         #elif 10. < diff <= 20.:
