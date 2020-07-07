@@ -3159,8 +3159,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     savepath = saveFileDialog.GetPath()
                 saveFileDialog.Destroy()
                 if not savepath == '':
-                    with open(savepath, "wb") as myfile:
-                        myfile.write(report)
+                    if sys.version_info >= (3,0,0):
+                        with open(savepath, "w", newline='') as myfile:
+                            myfile.write(report)
+                    else:
+                        with open(savepath, "wb") as myfile:
+                            myfile.write(report)
                     return True
                     #self.Close(True)
                 return False
