@@ -4433,7 +4433,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             elif missingdata == 'interpolate':
                 miss = 'interpolate'
 
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resample_offset=resampleoffset,missingdata=miss,resample=True)
+            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resampleoffset=timedelta(seconds=resampleoffset),missingdata=miss,resample=True)
             self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
 
             self.ActivateControls(self.plotstream)

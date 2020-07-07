@@ -451,7 +451,7 @@ def writeIAF(datastream, filename, **kwargs):
         datastream.header['DataComponents'] = datastream.header.get('DataComponents','').upper()
         # Convert data to XYZ if HDZ
         if not datastream.header.get('DataComponents','').startswith('XYZ'):
-            logger.indo("Data contains: {}".format(datastream.header.get('DataComponents','')))
+            logger.info("Data contains: {}".format(datastream.header.get('DataComponents','')))
         if datastream.header.get('DataComponents').startswith('HDZ'):
             datastream = datastream.hdz2xyz()
     except:

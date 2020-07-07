@@ -277,6 +277,18 @@ def writeWDC(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     #createlatex = kwargs.get('createlatex')
 
+    try:
+        datastream.header['DataComponents'] = datastream.header.get('DataComponents','').upper()
+        # Convert data to XYZ if HDZ
+        if not datastream.header.get('DataComponents','').startswith('XYZ'):
+            logger.info("Data contains: {}".format(datastream.header.get('DataComponents','')))
+        if datastream.header.get('DataComponents').startswith('HDZ'):
+            datastream = datastream.hdz2xyz()
+    except:
+        logger.error("writeIAF: HeaderInfo on DataComponents seems to be missing")
+        return False
+
+
     def OpenFile(filename, mode='w'):
         if sys.version_info >= (3,0,0):
             f = open(filename, mode, newline='')
@@ -421,7 +433,7 @@ def writeWDC(datastream, filename, **kwargs):
                         cl = z
                     elif key == 'f':
                         cl = f
-                    cl.name = "{}{}{}{}{}  {}{}".format(iagacode,ye,month,header['col-{}'.format(key)].upper()[0],day,arb,ar)
+                    cl.name = "{}{}{}{}{}  {}{}".format(iagacode,ye,month,header.get('col-{}'.format(key),key).upper()[:1],day,arb,ar)
                     if cl.row[:16] == cl.name:
                         if not isnan(cl.elem):
                             cl.el.append(cl.elem)
