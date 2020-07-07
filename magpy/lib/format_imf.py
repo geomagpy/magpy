@@ -241,7 +241,6 @@ def readIAF(filename, headonly=False, **kwargs):
         #try:
         getline = True
         start = fh.read(64)
-        #print (len(start))
         if not len(start) == 64:
             break
         else:
@@ -258,6 +257,14 @@ def readIAF(filename, headonly=False, **kwargs):
             if getline:
                 # unpack header
                 if gethead:
+                    if sys.version_info.major>=3:
+                        head[0] = head[0].decode('ascii')
+                        head[5] = head[5].decode('ascii')
+                        head[6] = head[6].decode('ascii')
+                        head[8] = head[8].decode('ascii')
+                        head[9] = head[9].decode('ascii')
+                        head[12] = head[12].decode('ascii')
+                        head[13] = head[13].decode('ascii')
                     headers['StationIAGAcode'] = head[0].strip()
                     headers['StationID'] = head[0].strip()
                     #
@@ -293,15 +300,17 @@ def readIAF(filename, headonly=False, **kwargs):
                     headers['DataPublicationLevel'] = '4'
                     # New in 0.3.99 - provide a SensorID consisting of IAGA code, min 
                     # and numerical publevel
-                    #  IAGA code 
+                    #  IAGA code
                     headers['SensorID'] = head[0].strip().upper()+'min_4_0001'
                     try:
                         pubdate = datetime.strptime(str(head[13]),"%y%m")
                     except:
                         # Publications date not provided within the header - use current
                         pubdate = datetime.strptime(datetime.strftime(datetime.utcnow(),"%y%m"),"%y%m")
+
                     headers['DataPublicationDate'] = pubdate
                     gethead = False
+
                 # get minute data
                 xb = fh.read(5760)
                 x.extend(struct.unpack('<1440l', xb))
@@ -439,16 +448,19 @@ def writeIAF(datastream, filename, **kwargs):
         return False
 
     try:
+        datastream.header['DataComponents'] = datastream.header.get('DataComponents','').upper()
         # Convert data to XYZ if HDZ
         if not datastream.header.get('DataComponents','').startswith('XYZ'):
             logger.indo("Data contains: {}".format(datastream.header.get('DataComponents','')))
-        if datastream.header['DataComponents'].startswith('HDZ'):
+        if datastream.header.get('DataComponents').startswith('HDZ'):
             datastream = datastream.hdz2xyz()
     except:
         logger.error("writeIAF: HeaderInfo on DataComponents seems to be missing")
         return False
 
     dsf = datastream.header.get('DataSamplingFilter','')
+
+    print ("WRITING IAF DATA 2a")
 
     # Check whether f is contained (or delta f)
     # if f calc delta f
@@ -463,6 +475,7 @@ def writeIAF(datastream, filename, **kwargs):
     fpos = KEYLIST.index('f')
     dflen = len(datastream.ndarray[dfpos])
     flen = len(datastream.ndarray[fpos])
+
     if not dflen == len(datastream.ndarray[0]):
         #check for F and calc
         if not flen == len(datastream.ndarray[0]):
@@ -644,6 +657,7 @@ def writeIAF(datastream, filename, **kwargs):
                     print(" e.g. data.header['StationK9'] = 750")
                     return False
         """
+
         if len(misslist) > 0 and printhead:
             print ("The following meta information is missing. Please provide!")
             for he in misslist:
@@ -772,6 +786,7 @@ def writeIAF(datastream, filename, **kwargs):
         #print [num2date(elem) for elem in temp.ndarray[0]]
         line = struct.pack(packcode,*head)
         output = output + line
+
 
     path = os.path.split(filename)
     filename = os.path.join(path[0],path[1].upper())
