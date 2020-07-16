@@ -247,7 +247,7 @@ def dbinfo(db,destination='log',level='full'):
         - destination:  (string) either "log"(default) or "stdout"  
         - level:        (string) "full"(default) -> show size as well, else skip size  
     """
-
+    report = ""
     size = 'not determined'
     versionsql = "SELECT VERSION()"
     namesql = "SELECT DATABASE()"
@@ -263,10 +263,11 @@ def dbinfo(db,destination='log',level='full'):
     if destination == 'log':
         loggerdatabase.info("connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename,version,size))
     else:
-        print ("connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename,version,size))
+        report = "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename,version,size)
+        print (report)
     db.commit()
     cursor.close()
-
+    return report
 
 def dbgetPier(db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'):
     """

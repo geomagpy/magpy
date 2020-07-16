@@ -810,9 +810,21 @@ Reading and analyzing DI data requires valid DI file(s). For correct analysis, v
 
         diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
 
-Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, the analysis line looks like
+Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, an analysis can be perfomed as follows. Firstly we copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the filename. For the following commands to work you need to be within the examples directory.
 
-        diresult = di.absoluteAnalysis(example3,example2,example2)
+        $ mkdir /tmp/DI
+        $ cp example6a.txt /tmp/DI/2018-08-29_07-16-00_A2_WIC.txt
+        $ cp example5.sec /tmp/DI/
+
+The we start python and import necessary packages
+
+        >>>from magpy import absolutes as di
+        >>>import magpy.mpplot as mp
+        >>>from magpy.stream import read
+
+Finally we issue the analysis command.
+
+        >>>diresult = di.absoluteAnalysis('/tmp/DI/2018-08-29_07-16-00_A2_WIC.txt','/tmp/DI/*.sec','/tmp/DI/*.sec')
 
 
 Calling this method will provide terminal output as follows and a stream object `diresult` which can be used for further analyses.
@@ -847,7 +859,7 @@ Adopted baseline:
 
 Basevalues as obtained in (2.11.2) or (2.11.3) are stored in a normal data stream object, therefore all analysis methods outlined above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example4`, you will find some more DI analysis results. To plot these basevalues we can use the following plot command, where we specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H and Z, +/- 0.05 deg for D.
 
-        basevalues = read(example4)
+        basevalues = read(example3)
         mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5])
 
 Fitting a baseline can be easily accomplished with the `fit` method. First we test a linear fit to the data by fitting a polynomial function with degree 1.
