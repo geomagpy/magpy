@@ -494,9 +494,12 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     naninds = np.asarray([])
     ## Analyze F and dF columns:
     fcolname = 'S'
+    scal = ''
+    ftest = DataStream()
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
             if not 'df' in keylst:
+                 scal = 'f'
                  #print ("writeIMAGCDF: Found F column") # check whether F or S
                  comps = datastream.header.get('DataComponents')
                  if not comps.endswith('S'):
@@ -512,14 +515,26 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             pos = KEYLIST.index('f')
             col = datastream.ndarray[pos]
         if 'df' in keylst:
+            scal = 'df'
             #print ("writeIMAGCDF: Found dF column")
             pos = KEYLIST.index('df')
             col = datastream.ndarray[pos]
         col = col.astype(float)
-        
-        nonancol = col[~np.isnan(col)]
+
+        # Check sampling rates of main stream and f/df stream
+        mainsamprate = datastream.samplingrate()
+        ftest = datastream.copy()
+        ftest = ftest._drop_nans(scal)
+        fsamprate = ftest.samplingrate()
+
+        if fsamprate-0.1 < mainsamprate and  mainsamprate < fsamprate+0.1:
+            #Samplingrate of F column and Vector are similar
+            useScalarTimes=False
+        else:
+            useScalarTimes=True
             
         #print ("IMAG", len(nonancol),datastream.length()[0])
+        """
         if len(nonancol) < datastream.length()[0]/2.:
             #shorten col
             print ("writeIMF - reducing f column resolution:", len(nonancol), len(col))
@@ -530,7 +545,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         else:
             #keep column and (later) leave time       
             useScalarTimes=True  # change to False in order to use a single col
-
+        """
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
 
     for key in keylst:
@@ -538,22 +553,29 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         var_attrs = {}
         var_spec = {}
 
-        if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2']:
-            ind = KEYLIST.index(key)
-            if ndarray and len(datastream.ndarray[ind])>0:
-                col = datastream.ndarray[ind]
-            else:
-                col = datastream._get_column(key)
-            col = col.astype(float)
+        if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime']:
+            if not key == 'scalartime':
+                ind = KEYLIST.index(key)
+                if ndarray and len(datastream.ndarray[ind])>0:
+                    col = datastream.ndarray[ind]
+                else:
+                    col = datastream._get_column(key)
+                col = col.astype(float)
 
-            if not False in checkEqual3(col):
-                logger.warning("Found identical values only for {}".format(key))
-                col = col[:1]
+                if not False in checkEqual3(col):
+                    logger.warning("Found identical values only for {}".format(key))
+                    col = col[:1]
 
             #{'FIELDNAM': 'Geomagnetic Field Element X', 'VALIDMIN': array([-79999.]), 'VALIDMAX': array([ 79999.]), 'UNITS': 'nT', 'FILLVAL': array([ 99999.]), 'DEPEND_0': 'GeomagneticVectorTimes', 'DISPLAY_TYPE': 'time_series', 'LABLAXIS': 'X'}
             if key == 'time':
                 cdfkey = 'GeomagneticVectorTimes'
                 cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in col] )
+                var_spec['Data_Type'] = 33
+            elif key == 'scalartime':
+                cdfkey = 'GeomagneticScalarTimes'
+                ftimecol = ftest.ndarray[0]
+                # use ftest Datastream
+                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in ftimecol] )
                 var_spec['Data_Type'] = 33
             elif len(col) > 0:
                 #if len(col) > 1000000:
@@ -587,27 +609,34 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
                 nonetest = [elem for elem in col if not elem == None]
                 if len(nonetest) > 0:
-                    cdfdata = col
                     var_attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                     var_attrs['DISPLAY_TYPE'] = "time_series"
                     var_attrs['LABLAXIS'] = keyup
                     var_attrs['FILLVAL'] = np.nan
                     if key in ['x','y','z','h','e','g','t1','t2']:
+                        cdfdata = col
                         var_attrs['VALIDMIN'] = -88880.0
                         var_attrs['VALIDMAX'] = 88880.0
                     elif key == 'i':
+                        cdfdata = col
                         var_attrs['VALIDMIN'] = -90.0
                         var_attrs['VALIDMAX'] = 90.0
                     elif key == 'd':
+                        cdfdata = col
                         var_attrs['VALIDMIN'] = -360.0
                         var_attrs['VALIDMAX'] = 360.0
-                    elif key in ['f','s']:
+                    elif key in ['f','s','df']:
                         if useScalarTimes:
-                            if len(naninds) > 0:
-                                cdfdata = col[~np.isnan(col)]
+                            # write time column
+                            keylst.append('scalartime')
+                            fcol = ftest._get_column(key)
+                            #if len(naninds) > 0:
+                            #    cdfdata = col[~np.isnan(col)]
                             var_attrs['DEPEND_0'] = "GeomagneticScalarTimes"
-                        #else:
-                        #    mycdf[cdfkey] = col
+                            #mycdf[cdfkey] = fcol
+                            cdfdata = fcol
+                        else:
+                            cdfdata = col
                         var_attrs['VALIDMIN'] = 0.0
                         var_attrs['VALIDMAX'] = 88880.0
 
