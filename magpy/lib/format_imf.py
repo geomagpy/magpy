@@ -264,7 +264,11 @@ def readIAF(filename, headonly=False, **kwargs):
                         head[8] = head[8].decode('ascii')
                         head[9] = head[9].decode('ascii')
                         head[12] = head[12].decode('ascii')
-                        head[13] = head[13].decode('ascii')
+                        try:
+                            head[13] = head[13].decode('ascii')
+                        except:
+                            head[13] = None
+                        #print ("HEAD13", head[13])
                     headers['StationIAGAcode'] = head[0].strip()
                     headers['StationID'] = head[0].strip()
                     #
