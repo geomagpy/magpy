@@ -268,7 +268,6 @@ def readIAF(filename, headonly=False, **kwargs):
                             head[13] = head[13].decode('ascii')
                         except:
                             head[13] = None
-                        #print ("HEAD13", head[13])
                     headers['StationIAGAcode'] = head[0].strip()
                     headers['StationID'] = head[0].strip()
                     #
@@ -283,7 +282,7 @@ def readIAF(filename, headonly=False, **kwargs):
                         else:
                             headers['col-'+str(c)] = c
                             headers['unit-col-'+str(c)] = 'nT'
-                    keystr = ','.join([str(c) for c in head[5].lower()]).replace(' ','')
+                    keystr = ','.join([str(c) for c in head[5].lower().replace(' ','')]).replace(' ','')
                     keystr = keystr.strip()
                     if len(keystr) < 6 and not keystr.endswith('f'):
                         keystr = keystr + ',f'
@@ -398,7 +397,8 @@ def readIAF(filename, headonly=False, **kwargs):
         array[0] = np.asarray(ta)
         for idx,ar in enumerate(arlist):
             pos = KEYLIST.index(keylist[idx])
-            array[pos] = np.asarray(ar)
+            if not np.isnan(np.asarray(ar)).all():
+                array[pos] = np.asarray(ar)
 
         return np.asarray(array)
 
