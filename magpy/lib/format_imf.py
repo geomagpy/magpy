@@ -464,7 +464,7 @@ def writeIAF(datastream, filename, **kwargs):
 
     dsf = datastream.header.get('DataSamplingFilter','')
 
-    print ("WRITING IAF DATA 2a")
+    #print ("WRITING IAF DATA 2a")
 
     # Check whether f is contained (or delta f)
     # if f calc delta f
