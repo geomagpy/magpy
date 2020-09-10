@@ -13,7 +13,10 @@ Installation instructions can be found on the main download page.
     + new LISENCE
     + Updated Installation instructions
     + Manual for XMagPy included
-    + temporary versions 0.9.3 to 0.9.6 include transformation steps towards a full py3 compatibility
+    + temporary versions 0.9.3 to 0.9.7 include transformation steps towards a full py3 compatibility
+      - 0.9.6 -> included basic support for IAF data format
+      - 0.9.7 -> full IAF support and IMAGCDF with combinations
+                 of vectorial and scalar data of different resolution
 
 1.0.0 fixes:
     + dialog methods (on all platforms) - solved e.g. merge data issue on MacOS
