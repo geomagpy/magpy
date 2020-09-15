@@ -88,8 +88,13 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     headers['DataFormat'] = headers.get('DataFormat') + '; ' + cdfdat.globalattsget().get('FormatVersion')
 
     try:
-        pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
-        headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0]) 
+        try:
+            pubdate = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,headers.get('DataPublicationDate'))
+        except TypeError:
+            pubdate = cdflib.cdfepoch.to_datetime(headers.get('DataPublicationDate'))
+        headers['DataPublicationDate'] = pubdate[0]
+        #pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
+        #headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0]) 
     except:
         print ("imagcdf warning: Publication date is not provided as tt_2000")
         try:
@@ -233,16 +238,24 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
             col = cdfdat.varget(elem[1])
             try:
-                # only works with cdflib<=0.3.18
+                # cdflib version (<0.3.19... Problem: cdflib.cdfepoch.getVersion() does not change, although to_datetime is different and unixtime as well)
                 ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                cdfvers = 18
+            except TypeError:
+                # cdflib version (>=0.3.19)
+                ar = date2num(cdflib.cdfepoch.to_datetime(col))
+                cdfvers = 19
             except:
                 # if second value is 60 (tt_2000 leapsecond timestamp) cdfepoch.unixtime fails
-                print ("File contains leap second data - ignoring them")
+                print ("File contains a leap second - will be ignored")
                 seccol = np.asarray([row[5] for row in cdflib.cdfepoch.breakdown(col)])
                 # assume that seccol contains a 60 seconds step - identify and remove
                 index = seccol.argmax()
                 col = np.delete(col,index)
-                ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                try:
+                    ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                except TypeError:
+                    ar = date2num(cdflib.cdfepoch.to_datetime(col))
                 delrow = True
             arlen= len(ar)
             arraylist.append(ar)
@@ -272,7 +285,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     headers['col-z'] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                     headers['unit-col-z'] = cdfdat.varattsget(elem[1]).get('UNITS')
 
-    ndarray = np.array(array)  # decreapated .. add dtype=object
+    ndarray = np.array(array, dtype=object)  # decreapated .. add dtype=object
 
     stream = DataStream()
     stream = [LineStruct()]
