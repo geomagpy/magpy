@@ -6,6 +6,7 @@ Written by Roman Leonhardt October 2019
 - contains test, read and write functions for
         ImagCDF
 - supports python >= 3.5
+- currently requires cdflib<=0.3.18
 """
 
 from __future__ import print_function
@@ -232,6 +233,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
             col = cdfdat.varget(elem[1])
             try:
+                # only works with cdflib<=0.3.18
                 ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
             except:
                 # if second value is 60 (tt_2000 leapsecond timestamp) cdfepoch.unixtime fails
@@ -270,7 +272,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     headers['col-z'] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                     headers['unit-col-z'] = cdfdat.varattsget(elem[1]).get('UNITS')
 
-    ndarray = np.array(array)
+    ndarray = np.array(array)  # decreapated .. add dtype=object
 
     stream = DataStream()
     stream = [LineStruct()]
