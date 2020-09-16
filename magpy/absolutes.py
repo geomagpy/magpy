@@ -1004,7 +1004,7 @@ class AbsoluteData(object):
             else:
                 signum2 = -1.0
                 signum3 = -1.0
-            print ("INCSTART", incstart)
+            #print ("INCSTART", incstart)
             #signum2 = 1.0
             if incstart < 0: ###### check here
                 signum2 = -1.*signum2
