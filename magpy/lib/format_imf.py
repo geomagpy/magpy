@@ -258,12 +258,30 @@ def readIAF(filename, headonly=False, **kwargs):
                 # unpack header
                 if gethead:
                     if sys.version_info.major>=3:
-                        head[0] = head[0].decode('ascii')
-                        head[5] = head[5].decode('ascii')
-                        head[6] = head[6].decode('ascii')
-                        head[8] = head[8].decode('ascii')
-                        head[9] = head[9].decode('ascii')
-                        head[12] = head[12].decode('ascii')
+                        try:
+                            head[0] = head[0].decode('ascii')
+                        except:
+                            pass
+                        try:
+                            head[5] = head[5].decode('ascii')
+                        except:
+                            pass
+                        try:
+                            head[6] = head[6].decode('ascii')
+                        except:
+                            pass
+                        try:
+                            head[8] = head[8].decode('ascii')
+                        except:
+                            pass
+                        try:
+                            head[9] = head[9].decode('ascii')
+                        except:
+                            pass
+                        try:
+                            head[12] = head[12].decode('ascii')
+                        except:
+                            pass
                         try:
                             head[13] = head[13].decode('ascii')
                         except:
