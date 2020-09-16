@@ -871,6 +871,9 @@ class AbsoluteData(object):
         #     4. TODO basevalue is calculated at time t0
         #        -> According to Juerges excel sheet only D is determined at t0
         #        -> I and F are averages within time range of DI meas
+        #     5. TODO The current version is based on the DTU Excel sheet--- it would be necessary to base it on the 
+        #             original algorythm as given in Janokowski and Sucksberg, 1996
+        #              expect minor (negligible) differences in I and collimation 
         # ###################################
 
         nr_lines = len(poslst)
@@ -1001,6 +1004,8 @@ class AbsoluteData(object):
             else:
                 signum2 = -1.0
                 signum3 = -1.0
+            print ("INCSTART", incstart)
+            #signum2 = 1.0
             if incstart < 0: ###### check here
                 signum2 = -1.*signum2
             if cnt in [0,1]:
@@ -1016,6 +1021,7 @@ class AbsoluteData(object):
                 I0 = np.pi - (poslst[k].vc*np.pi/180.0 - signum2*rcorri)
                 sigdf = -1.0
 
+            #print ("I0:", I0*180.0/np.pi)
             # previous version -- I0 = (signum1*poslst[k].vc*np.pi/180.0 - signum2*rcorri - signum1*PiVal)
 
             #print ("Inc:", signum1*poslst[k].vc*200/180, quad, I0*200./np.pi, rcorri*200./np.pi, signum2, PiVal, ppmval[cnt])
@@ -1061,6 +1067,8 @@ class AbsoluteData(object):
 
             cnt += 1
 
+            #print ("I0list", I0list)
+
         i1list,i1tmp = [],[]
 
         for k in range(0,7,2):
@@ -1083,9 +1091,8 @@ class AbsoluteData(object):
         EZI2 = EZI2/2.
         EZI3 = EZI3/2.
 
-        i1list = [np.abs(elem) for elem in i1list]
+        #i1list = [np.abs(elem) for elem in i1list]
 
-        #print "Collimation", S0I1, S0I2, S0I3, EZI1, EZI2, EZI3
         # Variometer correction to start time is missing for f value and inc ???
         inc = np.mean(i1list)*180.0/np.pi + deltaI
 
@@ -1093,10 +1100,18 @@ class AbsoluteData(object):
             inc = 0.0
         # Dec is already variometer corrected (if possible) and transferred to time[0]
 
-        #print "Testing here", inc, meanf
-
         if inc > 90:
             inc = inc-180
+
+        # S0I1 is calculated with I0. I0 is obtained from each circle, recalculated already towards the intial circle. Thereby it is normalized towards the northern hemisphere.
+        # Please note: this differs from the Excel sheet of Juergs, yet it is apparently correct and can be tested by a zero hypothesis:
+        # Use a measurement without residual, calculate S0 for D and I and add -S0 into D and I lines. When recalculating
+        # this file, the S0 values should now be zero.
+        # S0I2 and S0I3 are not affected.
+        # A review is highly welcome
+
+        if inc < 0:
+            S0I1 = -S0I1
 
         # determine best F
         # Please note: excel sheet averages all Variometer corrected values:
@@ -1133,13 +1148,15 @@ class AbsoluteData(object):
         # #####      Calculating Collimation angles from average intensity and inc
         # ###################################################
         #print ("CHECK:", meanf, S0I1, S0I2, S0I3)
+        #print ("Collimation", S0I1, S0I2, S0I3, -S0I1/4.*meanf)
+
 
         if not meanf == 0:
             ### Please Note: There is an observable difference in the first term of s0i calculation in
             ### comparison to Juergs excel sheet
             ### the reason is unclear S0I1 is perfectly OK and meanf as well
             ### S0I1 however is usually very small wherefore rounding effects play an important role
-            #loggerabs.warning("S0I1 {}, {}, {}".format(S0I1,S0I2,S0I3))
+            ## The underlying formula can be found in Janukowski and Sucksdorf, 1996
             s0i = -S0I1/4.*meanf -  (S0I2*np.sin(inc*np.pi/180.) - S0I3*np.cos(inc*np.pi/180.))/4.
             epzi = (EZI1/4. - ( EZI2*np.sin(inc*np.pi/180.) - EZI3*np.cos(inc*np.pi/180.) )/(4.*meanf))* (meanf*np.sin(inc*np.pi/180.))
         else:
