@@ -390,9 +390,9 @@ class AbsoluteData(object):
             of DI data (within 2* samplingrate diff)
         """
         # 1. Drop all data without value
-        samprate = datastream.samplingrate()
         for key in keys:
             datastream = datastream._drop_nans(key)
+        samprate = datastream.samplingrate()
         if not datastream.length()[0] > 1:
             return False
 
@@ -402,10 +402,10 @@ class AbsoluteData(object):
         # 3. Get time column of DI data
         timeb = np.asarray([el.time for el in self])
         # 4. search
-        #print(len(timea), len(timeb), samprate)
-        #print(timea, timeb)
-        indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs(timea-float(el)))/(samprate/24./3600.)*2 <= 1.]
+        # corrected in version 0.9.9
+        indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs(timea-float(el)))/((samprate/24./3600.)*2) <= 1.]
         if not len(indtia) == len(timeb):
+            print ("_check_coverage: timesteps of scalar data are off by more than twice the sampling rate from DI measurements")
             return False
 
         return True
@@ -2153,7 +2153,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if variofound:
                 valuetest = stream._check_coverage(variostr)
                 if valuetest:
-                    stream = stream._insert_function_values(vafunc)
+                    stream = stream._insert_function_values(vafunc,funckeys=['x','y','z'])
                 else:
                     print("Warning! Variation data missing at DI time range")
                 #stream = stream._insert_function_values(vafunc)

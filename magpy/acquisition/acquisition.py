@@ -5,7 +5,7 @@ The main part remained unchanged. I added instrument specific parts for serial c
 The application is mainly based on twisted, autobahn and magpy modules. Please note that autobahn in the past frequently changed its module positions.
 Additional requirements:
 1) please change the user specific part acclording your system and attached instruments
-2) 
+2)
 Usage:
 sudo python acquisition.py
 
@@ -79,11 +79,11 @@ serialport = '/dev/tty' 	# dev/tty for linux like systems
 # ONEWIRE SPECIFIC
 timeoutow = 30.0		# Defining a measurement frequency in secs (should be >= amount of sensors connected)
 timeoutser = 60.0		# Defining a measurement frequency in secs (should be >= amount of sensors connected)
- 
+
 
 # -------------------------------------------------------------------
 # Read data of sensors attached to PC:
-# 
+#
 # "Sensors.txt" should have the following format:
 # SENSORNAME	SENSORPORT	SENSORBAUDRATE
 # e.g:
@@ -149,13 +149,13 @@ class WsMcuProtocol(WampServerProtocol):
 	    elif sensor[:3].upper() == 'LEM': # Lemi Sensor
        	        self.registerForPubSub("http://example.com/"+hostname+"/lemi#", True)
 	    elif sensor[:2].upper() == 'OW': # OW Sensor
-       	        self.registerForPubSub("http://example.com/"+hostname+"/ow#", True) 
+       	        self.registerForPubSub("http://example.com/"+hostname+"/ow#", True)
 	    elif sensor[:3].upper() == 'POS': # POS-1 Overhauzer Sensor
        	        self.registerForPubSub("http://example.com/"+hostname+"/pos1#", True)
 	    elif sensor[:3].upper() == 'G82': # GSM CS Sensor
-       	        self.registerForPubSub("http://example.com/"+hostname+"/cs#", True) 
+       	        self.registerForPubSub("http://example.com/"+hostname+"/cs#", True)
 	    elif sensor[:3].upper() == 'SER': # standard serial
-       	        self.registerForPubSub("http://example.com/"+hostname+"/ser#", True) 
+       	        self.registerForPubSub("http://example.com/"+hostname+"/ser#", True)
 	    elif sensor[:3].upper() == 'GSM': # GEM Overhauzer Sensor (GSM90)
        	        self.registerForPubSub("http://example.com/"+hostname+"/gsm#", True)
 	    elif sensor[:3].upper() == 'G19': # GEM Overhauzer Sensor (GSM19)
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     ##
     wsMcuFactory = WsMcuFactory(wsurl)
     listenWS(wsMcuFactory)
-   
+
     ## create serial port and serial port protocol; modify this according to attached sensors
     ##
     for sensor in sensorlist:
@@ -263,7 +263,7 @@ if __name__ == '__main__':
     	    try:
         	log.msg('%s: Attempting to open port %s [%d baud]...' % (sensor, port, baudrate))
                 if sensor.startswith('KER'):
-                    serialPort = SerialPort(protocol,port,reactor, baudrate=baudrate,bytesize=SEVENBITS,parity=PARITY_EVEN)    
+                    serialPort = SerialPort(protocol,port,reactor, baudrate=baudrate,bytesize=SEVENBITS,parity=PARITY_EVEN)
                 else:
    	       	    serialPort = SerialPort(protocol, port, reactor, baudrate = baudrate)
               	    log.msg('%s: Port %s [%d baud] connected' % (sensor, port, baudrate))
