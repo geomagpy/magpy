@@ -8606,9 +8606,15 @@ CALLED BY:
             if len(self.ndarray[ind1]) > 0 and len(self.ndarray[ind2]) > 0 and len(self.ndarray[ind3]) > 0:
                 ra = np.pi*alpha/(180.*ang_fac)
                 rb = np.pi*beta/(180.*ang_fac)
-                self.ndarray[ind1] = self.ndarray[ind1].astype(float)*np.cos(rb)*np.cos(ra)-self.ndarray[ind2].astype(float)*np.sin(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.cos(ra)
-                self.ndarray[ind2] = self.ndarray[ind1].astype(float)*np.cos(rb)*np.sin(ra)+self.ndarray[ind2].astype(float)*np.cos(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.sin(ra)
-                self.ndarray[ind3] = -self.ndarray[ind1].astype(float)*np.sin(rb)+self.ndarray[ind3].astype(float)*np.cos(rb)
+                xar = self.ndarray[ind1].astype(float)*np.cos(rb)*np.cos(ra)-self.ndarray[ind2].astype(float)*np.sin(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.cos(ra)
+
+                yar = self.ndarray[ind1].astype(float)*np.cos(rb)*np.sin(ra)+self.ndarray[ind2].astype(float)*np.cos(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.sin(ra)
+
+                zar = -self.ndarray[ind1].astype(float)*np.sin(rb)+self.ndarray[ind3].astype(float)*np.cos(rb)
+
+                self.ndarray[ind1] = xar
+                self.ndarray[ind2] = yar
+                self.ndarray[ind3] = zar
 
         """
         for elem in self:
@@ -10490,15 +10496,27 @@ class LineStruct(object):
             ang_fac = np.pi/180.
         else:
             ang_fac = 1.
+        xval = self.x
+        yval = self.y
+        zval = self.z
+        print ("2", self.x,self.y,self.z)
+
         ra = ni.pi*alpha/(180.*ang_fac)
         rb = ni.pi*beta/(180.*ang_fac)
         xs = self.x*np.cos(rb)*np.cos(ra)-self.y*np.sin(ra)+self.z*np.sin(rb)*np.cos(ra)
         ys = self.x*np.cos(rb)*np.sin(ra)+self.y*np.cos(ra)+self.z*np.sin(rb)*np.sin(ra)
         zs = self.x*np.sin(rb)+self.z*np.cos(rb)
 
+        xs2 = xval*np.cos(rb)*np.cos(ra)-yval*np.sin(ra)+zval*np.sin(rb)*np.cos(ra)
+        ys2 = xval*np.cos(rb)*np.sin(ra)+yval*np.cos(ra)+zval*np.sin(rb)*np.sin(ra)
+        zs2 = xval*np.sin(rb)+zval*np.cos(rb)
+
         self.x = xs
         self.y = ys
         self.z = zs
+        print ("1", xs,ys,zs)
+        print ("2", self.x,self.y,self.z)
+        print ("3", xs2,ys2,zs2)
 
         return self
 
