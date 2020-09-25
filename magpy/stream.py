@@ -10499,7 +10499,6 @@ class LineStruct(object):
         xval = self.x
         yval = self.y
         zval = self.z
-        print ("2", self.x,self.y,self.z)
 
         ra = ni.pi*alpha/(180.*ang_fac)
         rb = ni.pi*beta/(180.*ang_fac)
@@ -10514,9 +10513,6 @@ class LineStruct(object):
         self.x = xs
         self.y = ys
         self.z = zs
-        print ("1", xs,ys,zs)
-        print ("2", self.x,self.y,self.z)
-        print ("3", xs2,ys2,zs2)
 
         return self
 
