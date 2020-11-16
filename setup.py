@@ -7,7 +7,7 @@ exec(open('magpy/version.py').read())
 
 if sys.version_info < (3,5):
         install_requires=[
-            "matplotlib >= 2.0.2",
+            "matplotlib < 3.0.0",
             "numpy >= 1.5.0",
             "scipy <= 1.2.0",
             "paho-mqtt >= 1.2.0",
