@@ -72,10 +72,12 @@ SOURCEDICT = {
 		#'IMAGCDF': {'source':'/home/leon/Tmp/wic_2015_0000_PT1M_4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
 		#'IMAGCDF': {'source':'/home/leon/Tmp/wic_201808_000000_PT1S_4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
 		#'IMAGCDF': {'source':'/home/leon/Tmp/Examples/example4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
-		#'IMAGCDF': {'source':example1, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['IMAGCDF']},
+		'IAGA_ZIP': {'source':example1, 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA']},
+		#'IMAGCDF': {'source':example4, 'keys': ['x','y','z','f'], 'length': 604798, 'id':'', 'wformat': ['IMAGCDF']},
  		#'WEBSERVICE': {'source':'http://cobs.zamg.ac.at/data/index.php/en/data-access/webservice?id=WIC'},
+		#'IAGA': {'source':example5, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA','IMAGCDF']},
 		#'IAF': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/IAF/WIC18FEB.BIN', 'wformat': ['IAF','IMF']},
-		'WDC': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/WDC/WIC2018.WDC', 'wformat': ['WDC']},
+		#'WDC': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/WDC/WIC2018.WDC', 'wformat': ['WDC']},
 		#'PYBIN': {'source':'/home/leon/Cloud/Daten/LEMI036_2_0001_2019-10-10.bin'},
 		#'MagPyCDF1.1': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/magpy/Definitive_min_mag_2018.cdf','description':'PYCDF with pickled basevalue list in header - created in Py2'},
 		#'MagPyCDF1.1': {'source':'/home/leon/Cloud/Daten/BLVtest.cdf','description':'PYCDF with string columns and identical-value columns - created in Py2'},
@@ -124,7 +126,7 @@ if ok:
             print ("WARNING: length = 0")
         # Testing important header information
         # SensorElements, DataSamplingRate, ColumnUnits, ColumnContents, 
-        print (stream.header.get('DataFormat'))
+        print ("Underlying data format:", stream.header.get('DataFormat'))
         #print (stream.header.get('DataSamplingRate'))
         #print (stream.header.get('col-x'),stream.header.get('unit-col-x'))
         # Content verification
@@ -141,35 +143,37 @@ if ok:
         # Testing write function (if available)
         wlist = checkdict.get('wformat',[])
         if len(wlist) > 0:
-            print ("  --------")
-            print ("  WRITING test: {}".format(key))
             wpath = '/tmp'
             wname = '{}_all'.format(key)
-            print ("  writing to: {}/{}".format(wpath,wname))
             wresultdict = {}
             for wformat in wlist:
+                print ("  --------")
+                print ("  WRITING test: {} to {}".format(key,wformat))
+                print ("  -> writing to: {}/{}".format(wpath,wname))
                 wresultdict[wformat] = 'success'
                 t1 = datetime.utcnow()
                 fn = stream.write(wpath,filenamebegins=wname,coverage='all',format_type=wformat)
+                print ("  -> write returned: {}".format(fn))
                 if fn:
                     print ("  Writing successful")
                     t2 = datetime.utcnow()
                     print ("  Duration {}".format(t2-t1))
                     # Read again and analyze differences
-                    print ("Reading {} for cross check".format(fn))
+                    print ("  ---------------------------------------")
+                    print ("     Reading {} for cross check".format(fn))
                     data = read(fn)
-                    print ("Checking Metainformation after writing")
-                    print ("---------------------------------------")
-                    print ("Check", data.length()[0])
+                    print ("     Checking Metainformation after writing")
+                    print ("     ---------------------------------------")
+                    print ("     Check", data.length()[0])
                     added, removed, modified, same = dict_compare(stream.header, data.header)
-                    print ("Only in orignal:", added)
-                    print ("Only in reload:", removed)
-                    print ("Modified (org/new):", modified)
-                    print ("Same", same)
-                    print ("Checking Metainformation after writing")
-                    print ("---------------------------------------")
+                    print ("     Only in orignal:", added)
+                    print ("     Only in reload:", removed)
+                    print ("     Modified (org/new):", modified)
+                    print ("     Same", same)
+                    print ("     Checking Metainformation after writing")
+                    print ("     ---------------------------------------")
                     diff = subtractStreams(stream,data)
-                    if not foundkeys == data._get_key_headers():
+                    if not foundkeys == data._get_key_headers() and checkdict.get('keys'):
                         wresultdict[wformat] = "Crosscheck failure - keys: original {} unequal {} ".format(foundkeys,data._get_key_headers())
                     else:
                         for comp in foundkeys:
@@ -181,5 +185,5 @@ if ok:
                         wresultdict[wformat] = "Crosscheck failure - length"
                 else:
                     wresultdict[wformat] = "no success -- write function not existing -- check magpy.log for details"
-                print ("  -> Write and cross check result for {}: {}".format(wformat,wresultdict[wformat]))
+                print ("  => {}: Write and cross check result: {}".format(wformat,wresultdict[wformat]))
 

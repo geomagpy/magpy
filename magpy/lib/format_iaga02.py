@@ -677,4 +677,4 @@ def writeIAGA(datastream, filename, **kwargs):
         pass
 
 
-    return True
+    return filename

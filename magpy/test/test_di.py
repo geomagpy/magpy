@@ -159,6 +159,10 @@ def test_di():
 
 test = test_di()
 
-print ("RESULT", test)
+print ("RESULT:", test)
 
+if test:
+    sys.exit(0)
+else:
+    sys.exit(1)
 

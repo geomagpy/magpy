@@ -503,7 +503,7 @@ example1 = resource_filename('magpy', 'examples/example1.zip')  #Zip compressed 
 example2 = resource_filename('magpy', 'examples/example2.cdf')  #MagPy CDF with F
 example3 = resource_filename('magpy', 'examples/example3.txt')  #PyStr Baseline
 example4 = resource_filename('magpy', 'examples/example4.cdf')  #MagPy CDF
-example5 = resource_filename('magpy', 'examples/example5.cdf')  #Imag CDF
+example5 = resource_filename('magpy', 'examples/example5.sec')  #Imag CDF
 example6a = resource_filename('magpy', 'examples/example6a.txt')  #DI file
 example6b = resource_filename('magpy', 'examples/example6b.txt')  #DI file
 
