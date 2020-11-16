@@ -67,15 +67,10 @@ SOURCEDICT = {
 
 SOURCEDICT = {
                 ## GENERAL File Formats
-		#'IMAGCDF': {'source':'/home/leon/Downloads/wic_2017_0000_PT1M_4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
-		#'IMAGCDF': {'source':'/home/leon/Tmp/wic_2017_0000_PT1M_4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
-		#'IMAGCDF': {'source':'/home/leon/Tmp/wic_2015_0000_PT1M_4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
-		#'IMAGCDF': {'source':'/home/leon/Tmp/wic_201808_000000_PT1S_4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
-		#'IMAGCDF': {'source':'/home/leon/Tmp/Examples/example4.cdf', 'wformat': ['IMAGCDF','PYCDF']},
 		'IAGA_ZIP': {'source':example1, 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA']},
-		#'IMAGCDF': {'source':example4, 'keys': ['x','y','z','f'], 'length': 604798, 'id':'', 'wformat': ['IMAGCDF']},
- 		#'WEBSERVICE': {'source':'http://cobs.zamg.ac.at/data/index.php/en/data-access/webservice?id=WIC'},
-		#'IAGA': {'source':example5, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA','IMAGCDF']},
+		'IMAGCDF': {'source':example4, 'keys': ['x','y','z','f','t1','t2'], 'length': 604798, 'id':'', 'wformat': ['IMAGCDF']},
+ 		'WEBSERVICE': {'source':'http://cobs.zamg.ac.at/data/index.php/en/data-access/webservice?id=WIC'},
+		'IAGA': {'source':example5, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA','IMAGCDF']},
 		#'IAF': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/IAF/WIC18FEB.BIN', 'wformat': ['IAF','IMF']},
 		#'WDC': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/WDC/WIC2018.WDC', 'wformat': ['WDC']},
 		#'PYBIN': {'source':'/home/leon/Cloud/Daten/LEMI036_2_0001_2019-10-10.bin'},
@@ -83,7 +78,7 @@ SOURCEDICT = {
 		#'MagPyCDF1.1': {'source':'/home/leon/Cloud/Daten/BLVtest.cdf','description':'PYCDF with string columns and identical-value columns - created in Py2'},
 		#'AceCDF': {'source':'/home/leon/Cloud/Daten/ace_5m_2019-07-03.cdf','description':'ACECDF file from NASA'},
 		#'MagPyTxt': {'source':'/home/leon/Cloud/Daten/BLVdata.txt','description':'PYTXT with meta and various different column types including identical-value columns - created in Py2', 'wformat': ['PYCDF']},
- 		#'FTP': {'source':'ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc'}
+ 		'FTP': {'source':'ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc', 'length': 8760, 'keys': ['x', 'y', 'z', 'f'], 'wformat': ['WDC']}
              }
 
 
@@ -102,6 +97,7 @@ if ok:
     # Tested MagPy Version
     print ("MagPyVersion: {}".format(magpyversion))
     resultdict = {}
+    resultlist = []
     for key in SOURCEDICT:
         SensorID = False
         sensorid = ''
@@ -186,4 +182,16 @@ if ok:
                 else:
                     wresultdict[wformat] = "no success -- write function not existing -- check magpy.log for details"
                 print ("  => {}: Write and cross check result: {}".format(wformat,wresultdict[wformat]))
+        if wresultdict[wformat] == 'success':
+            resultlist.append(True)
+        else:
+            resultlist.append(False)
+
+print ("--------------------------------------------")
+print ("SUMMARY:")
+for res in resultdict:
+    print ("  {}: {}".format(res, resultdict.get(res)))
+
+if not all(resultlist):
+    sys.exit(1)
 
