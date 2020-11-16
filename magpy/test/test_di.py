@@ -72,6 +72,8 @@ def ExtractValues(stream, line):
 def test_di(): 
 
     exepath = os.getcwd()
+    if not exepath.endswith('test'):
+        exepath = os.path.join(exepath,'magpy','test') # travis...
     datadir = 'testdata'
     successlist = []
 

@@ -78,7 +78,8 @@ SOURCEDICT = {
 		#'MagPyCDF1.1': {'source':'/home/leon/Cloud/Daten/BLVtest.cdf','description':'PYCDF with string columns and identical-value columns - created in Py2'},
 		#'AceCDF': {'source':'/home/leon/Cloud/Daten/ace_5m_2019-07-03.cdf','description':'ACECDF file from NASA'},
 		#'MagPyTxt': {'source':'/home/leon/Cloud/Daten/BLVdata.txt','description':'PYTXT with meta and various different column types including identical-value columns - created in Py2', 'wformat': ['PYCDF']},
- 		'FTP': {'source':'ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc', 'length': 8760, 'keys': ['x', 'y', 'z', 'f'], 'wformat': ['WDC']}
+                # Not working in Travis CI tests
+ 		#'FTP': {'source':'ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc', 'length': 8760, 'keys': ['x', 'y', 'z', 'f'], 'wformat': ['WDC']}
              }
 
 
