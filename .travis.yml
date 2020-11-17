@@ -1,13 +1,22 @@
 language: python
+
 python:
   - "2.7"
   - "3.7"
   - "3.8"
+
 cache: pip
-before_install:
-  - sudo apt-get -y install gcc gfortran
+
+addons:
+  apt:
+    packages:
+        gcc
+        gfortran
+        libc-dev
+
 install:
   - python setup.py install
+
 script:
   - python magpy/test/test_di.py
   - python magpy/test/test_read_write.py
