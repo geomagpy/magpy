@@ -15,7 +15,7 @@ if sys.version_info < (3,5):
             "ffnet >= 0.8.0",
             "spacepy >= 0.1.6",
             "pexpect >= 3.1.0",
-            "kiwisolver <= 1.2.0", 
+            "kiwisolver <= 1.0.1",
             ]
 else:
         install_requires=[
