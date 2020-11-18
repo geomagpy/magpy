@@ -5970,7 +5970,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         comment = 'Flagged minimum'
         flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
-        if flagid is 0:
+        if flagid == 0:
             comment = ''
         for idx,me in enumerate(mini):
             if not keys[idx] == 'df':
@@ -6015,7 +6015,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         comment = 'Flagged maximum'
         flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
-        if flagid is 0:
+        if flagid == 0:
             comment = ''
         for idx,me in enumerate(maxi):
             if not keys[idx] == 'df':
