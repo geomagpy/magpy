@@ -1926,7 +1926,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         valalpha = rotdict.get(str(date.year),'')
                         if valalpha == '':
                             print (" -- no alpha value found for year {}".format(date.year))
-                            maxkey = max(int(k) for k, v in rotdict.iteritems())
+                            maxkey = max([int(k) for k in rotdict])
                             valalpha = rotdict.get(str(maxkey),0)
                             print (" -- using alpha for year {}".format(str(maxkey)))
                         valalpha = float(valalpha)
@@ -1942,7 +1942,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         rotdict = dbase.string2dict(rotstring,typ='oldlist')
                         valbeta = rotdict.get(str(date.year),'')
                         if valbeta == '':
-                            maxkey = max(int(k) for k, v in rotdict.iteritems())
+                            maxkey = max([int(k) for k in rotdict])
                             beta = rotdict[str(maxkey)]
                         valbeta = float(valbeta)
                         if not float(valbeta)==0.:
