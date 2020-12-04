@@ -5,6 +5,14 @@ jobs:
     - name: "Python 2.7 on Xenial Linux"
       python: 2.7           # this works for Linux but is ignored on macOS or Windows
       os: linux
+      before_install:
+        # NASA CDF
+        - wget -r -l1 -np -nd https://cdaweb.gsfc.nasa.gov/pub/software/cdf/dist/latest-release/linux/ -A cdf*-dist-all.tar.gz
+        - tar xf cdf*-dist-all.tar.gz
+        - cd cdf*dist
+        - make OS=linux ENV=gnu all
+        - sudo make INSTALLDIR=/usr/local/cdf install
+        - cd ..
     - name: "Python 3.7 on Xenial Linux"
       python: 3.7           # this works for Linux but is ignored on macOS or Windows
       os: linux
@@ -36,6 +44,8 @@ addons:
         gfortran
         libc-dev
         python-dev
+        libncurses5-dev
+
 
 install:
   - python3 setup.py install || python setup.py install
