@@ -40,6 +40,8 @@ magpy/collector/collectormethods.py
 magpy/collector/subscribe2client.py
 magpy/collector/subscribe2marcos.py
 magpy/collector/websocket_server.py
+magpy/core/__init__.py
+magpy/core/flagging.py
 magpy/doc/xmagpy-manual.pdf
 magpy/examples/__init__.py
 magpy/examples/example1.zip
