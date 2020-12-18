@@ -9,7 +9,7 @@ if sys.version_info < (3,5):
         install_requires=[
             "matplotlib < 3.0.0",
             "numpy >= 1.5.0",
-            "scipy == 1.2.1",
+            "scipy <= 1.2.1",
             "paho-mqtt >= 1.2.0",
             "pymysql >= 0.6.0",
             "ffnet >= 0.8.0",
@@ -33,7 +33,7 @@ setup(
     version=__version__,
     author='R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec',
     author_email='roman.leonhardt@zamg.ac.at',
-    packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui', 'magpy.doc'],
+    packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui', 'magpy.doc', 'magpy.core'],
     scripts=['magpy/gui/xmagpy','magpy/gui/xmagpyw','magpy/scripts/mpconvert','magpy/scripts/addcred','magpy/scripts/mptest'],
     url='http://pypi.python.org/pypi/geomagpy/',
     license='LICENSE.txt',

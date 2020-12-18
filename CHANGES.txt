@@ -18,7 +18,8 @@ Installation instructions can be found on the main download page.
       - 0.9.7 -> full IAF support and IMAGCDF with combinations
                  of vectorial and scalar data of different resolution
       - 0.9.8 -> new cdflib supported, di zero offset on southern hemisphere
-      - 0.9.9 -> corrected rotation and di calculation issues
+      - 0.9.9 -> corrected rotation and di calculation issues, added travis CI
+                 added new subdirectory core for future work on flagging etc
 
 1.0.0 fixes:
     + dialog methods (on all platforms) - solved e.g. merge data issue on MacOS
