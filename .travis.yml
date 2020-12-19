@@ -54,5 +54,5 @@ install:
 
 script:
   - python3 magpy/test/test_di.py || python magpy/test/test_di.py
-  - python3 magpy/test/test_read_write.py|| python magpy/test/test_read_write.py
+  - python3 magpy/test/test_read_write.py || python magpy/test/test_read_write.py
 
