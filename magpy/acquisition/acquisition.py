@@ -249,7 +249,7 @@ if __name__ == '__main__':
 
         if sensor[:3].upper() == 'SER':
             try:
-               log.msg('Serial Call: Initiating sensor and sending commands...')
+                log.msg('Serial Call: Initiating sensor and sending commands...')
                 # eventually define a command list
                 sprot = task.LoopingCall(wsMcuFactory.callProtocol.sendCommands)
                 sprot.start(timeoutser)
