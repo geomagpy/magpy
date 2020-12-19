@@ -2177,9 +2177,9 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
 
     for i in range(n_subplots):
 
-        subplt = "%d%d%d" %(n_subplots,1,i+1)
+        subplt = int("%d%d%d" %(n_subplots,1,i+1))
         if singlesubplot:
-            subplt = "111"
+            subplt = int("111")
 
         #------------------------------------------------------------
         # PART 1: Dealing with data
