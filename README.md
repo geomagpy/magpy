@@ -27,14 +27,16 @@ This section is currently updated and will be ready with the publication of MagP
 
 #### 1.1.1 Complete Install
 
-Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages). Please note that installation requires python 3.x. 
+Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages). Please note that installation requires python 3.x and the python3-pip package (usually already available, if not use "sudo apt-get install python3-pip"). 
 
         $ sudo pip3 install geomagpy    #Will install MagPy and all dependencies
-        $ sudo pip3 install wxpython    #Will install WX graphics system for XMagPy
 
-if wxpython install via pip3 fails you can try
+The graphical user interface xmagpy additionally requires WX. Use either
 
         $ sudo apt-get install python3-wxgtk4.0
+or
+        $ sudo pip3 install wxpython
+
 
 You can now run XMagPy  by using the following command
 
