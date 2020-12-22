@@ -5782,10 +5782,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             enddate=self.xlimits[1]
             starttime = num2date(startdate).strftime('%X')
             endtime = num2date(enddate).strftime('%X')
-            dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
-            dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
-            dlg.startFlagTimePicker.SetValue(starttime)
-            dlg.endFlagTimePicker.SetValue(endtime)
+            try:
+                dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
+                dlg.startFlagTimePicker.SetValue(starttime)
+            except:
+                pass
+            try:
+                dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
+                dlg.endFlagTimePicker.SetValue(endtime)
+            except:
+                pass
             if dlg.ShowModal() == wx.ID_OK:
                 # get values from dlg
                 flagtype = dlg.rangeRadioBox.GetStringSelection()
