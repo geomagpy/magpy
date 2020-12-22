@@ -3213,7 +3213,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 cdfname = '*'+str(rmonth).zfill(2)+'_000000_PT1S_4.cdf'
                 loadpath = os.path.join(secondpath,cdfname)
                 try:
-                    secdata = read(loadpath,debug=True)
+                    if os.path.isfile(loadpath):
+                        secdata = read(loadpath,debug=True)
+                    else:
+                        secdata = read(os.path.join(secondpath,'*.cdf'),starttime=starttime,endtime=endtime,debug=True)
                 except:
                     secdata = DataStream()
                     success = 6
@@ -3570,7 +3573,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         reportmsg += "Step 2: +++ Second data: each required header is present. IMPORTANT: did not check content !!\n"
                     else:
                         reportmsg += "Step 2: !!! Second data: meta information warnings found\n"
-                        succlst[1] = 5
+                        succlst[1] = 4
 
 
                 if succlst[1] <= 2:

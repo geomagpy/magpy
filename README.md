@@ -44,7 +44,7 @@ You can now run XMagPy  by using the following command
 
 #### 1.1.2 Updates
 
-To upgrade to the most recent version (replace x.x.x with the version number):
+To upgrade to the most recent version (replace x.x.x with the current version number):
 
         $ sudo pip3 install geomagpy==x.x.x 
 

@@ -1,7 +1,7 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<1.0.0>, <2019-11-22> --
+####v<1.0.0>, <2020-12-22> --
 
 1.0.0 general:
     + version 1.0.0 is the newest version of magpy and based on version 0.4.7
@@ -18,8 +18,9 @@ Installation instructions can be found on the main download page.
       - 0.9.7 -> full IAF support and IMAGCDF with combinations
                  of vectorial and scalar data of different resolution
       - 0.9.8 -> new cdflib supported, di zero offset on southern hemisphere
-      - 0.9.9 -> corrected rotation and di calculation issues, added travis CI
-                 added new subdirectory core for future work on flagging etc
+      - 0.9.9 -> corrected rotation and di calculation issues, added travis CI,
+                 definitive data analysis support for daily cdf files,
+                 added new subdirectory core for future work on flagging
 
 1.0.0 fixes:
     + dialog methods (on all platforms) - solved e.g. merge data issue on MacOS
