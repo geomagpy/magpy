@@ -1033,6 +1033,17 @@ MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data 
         magpydata = obspy2magpy(seeddata,keydict={'ObsPyColName': 'x'})
         mp.plotSpectrogram(magpydata,['x'])
 
+Possible issues with MagPy and ObsPy on the same machine as obspy requires specific, eventually conflicting scipy/numpy packages: 
+If you observe such problems, consider installing ObsPy via APT
+
+  https://github.com/obspy/obspy/wiki/Installation-on-Linux-via-Apt-Repository
+
+Afterwards you can install magpy as described above.
+Using essential python3 packages from apt is also useful, if dependency problems are observerd:
+
+        sudo apt install python3-scipy, python3-matplotlib, python3-numpy
+
+
 #### 2.16.2 Flagging in ImagCDF
 
         datawithspikes = read(example1)
