@@ -84,7 +84,7 @@ Then copy this file to the systems application folder:
 Open a terminal and use the following commands: 
 
         $ pip install geomagpy    #Will install MagPy and all dependencies
-        $ pip install wxpython    #Will install WX graphics system for XMagPy
+        $ pip install wxpython==4.0.7    #Will install WX graphics system for XMagPy
 
 You can now run XMagPy from the terminal by using the following command
 
