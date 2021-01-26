@@ -13,7 +13,7 @@ if sys.version_info < (3,5):
             "paho-mqtt >= 1.2.0",
             "pymysql >= 0.6.0",
             "ffnet >= 0.8.0",
-            "spacepy <= 0.1.6",
+            "spacepy <= 0.1.8",
             "pexpect >= 3.1.0",
             "kiwisolver <= 1.0.1",
             ]
