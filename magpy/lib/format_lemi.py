@@ -415,7 +415,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         print("Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff))
 
     if sectime:
-        print("Using NTP time as primary timestamp")
+        print("contains secondary time column with NTP time")
 
     for idx,ar in enumerate(array):
         if len(ar) > 0:
