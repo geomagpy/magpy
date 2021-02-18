@@ -3188,30 +3188,51 @@ def writeDKA(datastream, filename, **kwargs):
     elif filename.find('StringIO') > -1 and not os.path.exists(filename):
         if sys.version_info >= (3,0,0):
             import io
-            myFile = io.StringIO()
+            myfile = io.StringIO()
             returnstring = True
         else:
             import StringIO
-            myFile = StringIO.StringIO()
+            myfile = StringIO.StringIO()
             returnstring = True
     else:
         myfile = open(filename, "wb")
 
     # extract k string from datastream
     # check kvals
-    kstr = ''
+    kstr = []
+    # Get days out of ndarray:
+    times = list(set([num2date(elem).date() for elem in datastream.ndarray[0]]))
+    # Get all k values for each timestep
+    for d in times:
+        klist = [kval for idx,kval in enumerate(datastream.ndarray[KEYLIST.index('var1')]) if num2date(datastream.ndarray[0][idx]).date() == d]
+        klist = [1,2,3,4,5,6,1,1]
+        if len(klist) == 8:
+            sumk = "{:.1f}".format(np.sum(klist))
+        else:
+            sumk=''
+        kstring = "  {0:12}{1:8}{2:41}{3:>4}".format(d.strftime("%d-%b-%y"), d.strftime("%j"), "    ".join([str(int(k)) for k in klist]), sumk)
+        if len(kstring) > 39:
+            kstring = kstring[:39] + '  ' + kstring[39:]
+
+        kstr.append(kstring)
+
 
     if len(kstr) > 0:
         station=datastream.header['StationIAGAcode']
         k9=datastream.header['StationK9']
-        lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
-        lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
+        latnum = datastream.header.get('DataAcquisitionLatitude',0)
+        if not latnum: 
+            latnum = datastream.header.get('StationLatitude',0)
+        lat=np.round(float(latnum),3)
+        lonnum = datastream.header.get('DataAcquisitionLongitude',0)
+        if not lonnum: 
+            lonnum = datastream.header.get('StationLongitude',0)
+        lon=np.round(float(lonnum),3)
         year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
-        kfile = os.path.join(path[0],station.upper()+year+'K.DKA')
-        logger.info("Writing k summary file: {}".format(kfile))
+
         head = []
-        if not os.path.isfile(kfile):
+        if not os.path.isfile(filename):
             head.append("{0:^66}".format(station.upper()))
             head2 = '                  Geographical latitude: {:>10.3f} N'.format(lat)
             head3 = '                  Geographical longitude:{:>10.3f} E'.format(lon)
@@ -3225,18 +3246,18 @@ def writeDKA(datastream, filename, **kwargs):
             head.append("{0:<50}".format(emptyline))
             head.append("{0:<50}".format(head5))
             head.append("{0:<50}".format(emptyline))
-            with open(kfile, "wb") as myfile:
-                for elem in head:
-                    myfile.write(elem+'\r\n')
-                #print elem
-        # write data
-        with open(kfile, "a") as myfile:
-            for elem in kstr:
+            #with open(kfile, "wb") as myfile:
+            for elem in head:
                 myfile.write(elem+'\r\n')
-                #print elem
+            #print elem
+        # write data
+        #with open(kfile, "a") as myfile:
+        for elem in kstr:
+            myfile.write(elem+'\r\n')
+            #print elem
 
         if returnstring:
-            return myFile
-        myFile.close()
+            return myfile
+        myfile.close()
 
         return True
