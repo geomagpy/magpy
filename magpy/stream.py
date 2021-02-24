@@ -4082,6 +4082,8 @@ CALLED BY:
         if debugmode:
             print("Length time column:", len(t))
 
+        window_len = int(window_len)
+
         for key in keys:
             if debugmode:
                 print ("Start filtering for", key)
