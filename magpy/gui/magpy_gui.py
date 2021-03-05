@@ -5473,6 +5473,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         get gaps in timeseries (eventually missing data assuming periodic signals
         and add this info (0,1) to var5 key
         """
+        self.changeStatusbar("Identifying gaps ...")
         self.plotstream = self.plotstream.get_gaps()
         print (self.plotstream._get_key_headers())
         """
@@ -5486,6 +5487,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
 
 
     def onAnnotateCheckBox(self,event):
