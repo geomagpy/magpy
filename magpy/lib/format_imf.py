@@ -779,7 +779,7 @@ def writeIAF(datastream, filename, **kwargs):
         if kvals:
             dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
             kdat = dayk[KEYLIST.index('var1')]
-            kdat = [el*10. if not np.isnan(el) else 999 for el in kdat]
+            kdat = [int(el*10.) if not np.isnan(el) else 999 for el in kdat]
             #print("kvals", len(kdat), t0+i,t0+i+1,kdat,dayk[0],dayk[-1])
             packcode += '8l'
             if not len(kdat) == 8:
@@ -804,7 +804,7 @@ def writeIAF(datastream, filename, **kwargs):
         reserved = [0,0,0,0]
         head.extend(reserved)
 
-        #print("HERE", len(ks), len(head), head[-18:])
+        #print("HERE", len(ks), head)
         #print [num2date(elem) for elem in temp.ndarray[0]]
         line = struct.pack(packcode,*head)
         output = output + line
@@ -837,15 +837,26 @@ def writeIAF(datastream, filename, **kwargs):
             head.append("{0:<50}".format(emptyline))
             head.append("{0:<50}".format(head5))
             head.append("{0:<50}".format(emptyline))
-            with open(kfile, "wb") as myfile:
-                for elem in head:
-                    myfile.write(elem+'\r\n')
+            
+            if sys.version_info >= (3,0,0):
+                with open(kfile, "w", newline='') as myfile:
+                    for elem in head:
+                        myfile.write(elem+'\r\n')
+            else:
+                with open(kfile, "wb") as myfile:
+                    for elem in head:
+                        myfile.write(elem+'\r\n')
                 #print elem
         # write data
-        with open(kfile, "a") as myfile:
-            for elem in kstr:
-                myfile.write(elem+'\r\n')
-                #print elem
+        if sys.version_info >= (3,0,0):
+            with open(kfile, "a", newline='') as myfile:
+                for elem in kstr:
+                    myfile.write(elem+'\r\n')
+        else:
+            with open(kfile, "a") as myfile:
+                for elem in kstr:
+                    myfile.write(elem+'\r\n')
+                    #print elem
 
     logger.info("Writing monthly IAF data format to {}".format(path[1].upper()))
     if os.path.isfile(filename):
@@ -938,9 +949,14 @@ def writeIAF(datastream, filename, **kwargs):
             head.append("CONTACT      : ")
             for elem in contact:
                 head.append(elem)
-            with open(rfile, "wb") as myfile:
-                for elem in head:
-                    myfile.write(elem+'\r\n'.encode('utf-8'))
+            if sys.version_info >= (3,0,0):
+                with open(rfile, "w", newline='') as myfile:
+                    for elem in head:
+                        myfile.write(elem+'\r\n')
+            else:
+                with open(rfile, "wb") as myfile:
+                    for elem in head:
+                        myfile.write(elem+'\r\n'.encode('utf-8'))
             myfile.close()
 
     return True
