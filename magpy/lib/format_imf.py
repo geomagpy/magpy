@@ -2984,7 +2984,10 @@ def writeIYFV(datastream,filename, **kwargs):
     #_YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
     decsep= str(datalist[1]).split('.')
     incsep= str(datalist[2]).split('.')
-    newline = " {0}.500 {1:>3} {2:4.1f} {3:>3} {4:4.1f} {5:>6} {6:>6} {7:>6} {8:>6} {9:>6} {10:>1} {11:>4} {12:>3}\r\n".format(meanyear,decsep[0],float('0.'+str(decsep[1]))*60.,incsep[0],float('0.'+str(incsep[1]))*60.,int(np.round(datalist[3],0)),int(np.round(datalist[4],0)),int(np.round(datalist[5],0)),int(np.round(datalist[6],0)),int(np.round(datalist[7],0)), kind, comp.upper(), int(note))
+    if int(note) > 0:
+        newline = " {0}.500 {1:>3} {2:4.1f} {3:>3} {4:4.1f} {5:>6} {6:>6} {7:>6} {8:>6} {9:>6} {10:>1} {11:>4} {12:>3}\r\n".format(meanyear,decsep[0],float('0.'+str(decsep[1]))*60.,incsep[0],float('0.'+str(incsep[1]))*60.,int(np.round(datalist[3],0)),int(np.round(datalist[4],0)),int(np.round(datalist[5],0)),int(np.round(datalist[6],0)),int(np.round(datalist[7],0)), kind, comp.upper(), int(note))
+    else:
+        newline = " {0}.500 {1:>3} {2:4.1f} {3:>3} {4:4.1f} {5:>6} {6:>6} {7:>6} {8:>6} {9:>6} {10:>1} {11:>4} \r\n".format(meanyear,decsep[0],float('0.'+str(decsep[1]))*60.,incsep[0],float('0.'+str(incsep[1]))*60.,int(np.round(datalist[3],0)),int(np.round(datalist[4],0)),int(np.round(datalist[5],0)),int(np.round(datalist[6],0)),int(np.round(datalist[7],0)), kind, comp.upper())
 
     # create dummy header (check for existing values) and add data
     # inform observer to modify/check head
@@ -3005,7 +3008,7 @@ def writeIYFV(datastream,filename, **kwargs):
         content.append(empty)
         content.append("{:^70}\r\n".format(locationname))
         content.append(empty)
-        content.append("  COLATITUDE: {a:.2f}   LONGITUDE: {b:.2f} E   ELEVATION: {c:.0f} m\r\n".format(a=90.0-coordlist[0],b=coordlist[1],c=coordlist[2]))
+        content.append("  COLATITUDE: {a:.3f}   LONGITUDE: {b:.3f} E   ELEVATION: {c:.0f} m\r\n".format(a=90.0-coordlist[0],b=coordlist[1],c=coordlist[2]))
         content.append(empty)
         content.append("  YEAR        D        I       H      X      Y      Z      F   * ELE Note\r\n")
         content.append("           deg min  deg min    nT     nT     nT     nT     nT\r\n")
