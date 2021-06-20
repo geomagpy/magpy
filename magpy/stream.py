@@ -2506,18 +2506,22 @@ CALLED BY:
         tmpdict = bas2save.stream2dict()
         #print ("HERE5b:", bas2save.length()[0])
         self.header['DataBaseValues'] = tmpdict['DataBaseValues']
+        
+        # Get column heads of dx,dy and dz
+        # default is H-base[nT],D-base[deg],Z-base[nT]
+        basecomp = "HDZ"
+        try:
+            basecomp = "{}{}{}".format(absolutestream.header.get('col-dx')[0],absolutestream.header.get('col-dy')[0],absolutestream.header.get('col-dz')[0])
+        except:
+            pass
+        if not basecomp == "HDZ":
+            print ("     -> basevalues correspond to components {}".format(basecomp))
+        self.header['DataBaseComponents'] = basecomp
         #self.header['DataAbsMinTime'] = func[1] #num2date(func[1]).replace(tzinfo=None)
         #self.header['DataAbsMaxTime'] = func[2] #num2date(func[2]).replace(tzinfo=None)
         #self.header['DataAbsFunctionObject'] = func
 
-        #else:
-        #    self = self.func_add(func)
-
         logger.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
-
-        #for key in self.header:
-        #    if key.startswith('DataAbs'):
-        #        print(key, self.header[key])
 
         return func
 
@@ -2730,6 +2734,7 @@ CALLED BY:
         absvalues = self.header.get('DataBaseValues')
         func = self.header.get('DataAbsFunctionObject')
         datatype = self.header.get('DataType')
+        basecomp = self.header.get('DataBaseComponents')
 
         if datatype == 'BC':
             print ("BC: dataset is already baseline corrected - returning")
@@ -2783,17 +2788,31 @@ CALLED BY:
                         return self
                     funclist.append(func)
 
-            #print ("BC: Found a list of functions:", funclist)
-            bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
-            bcdata.header['col-x'] = 'H'
-            bcdata.header['unit-col-x'] = 'nT'
-            bcdata.header['col-y'] = 'D'
-            bcdata.header['unit-col-y'] = 'deg'
+            #TODO addbaseline
+            #if AbsData contain xyz use mode='add'
             datacomp = bcdata.header.get('DataComponents','')
-            if len(datacomp) == 4:
-                bcdata.header['DataComponents'] = 'HDZ'+datacomp[3]
+            if basecomp in ['xyz','XYZ']:
+                bcdata = bcdata.func2stream(funclist,mode='add',keys=keys)
+                bcdata.header['col-x'] = 'X'
+                bcdata.header['unit-col-x'] = 'nT'
+                bcdata.header['col-y'] = 'Y'
+                bcdata.header['unit-col-y'] = 'nT'
+                if len(datacomp) == 4:
+                    bcdata.header['DataComponents'] = 'XYZ'+datacomp[3]
+                else:
+                    bcdata.header['DataComponents'] = 'XYZ'            
             else:
-                bcdata.header['DataComponents'] = 'HDZ'
+                #print ("BC: Found a list of functions:", funclist)
+                bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
+                bcdata.header['col-x'] = 'H'
+                bcdata.header['unit-col-x'] = 'nT'
+                bcdata.header['col-y'] = 'D'
+                bcdata.header['unit-col-y'] = 'deg'
+                datacomp = bcdata.header.get('DataComponents','')
+                if len(datacomp) == 4:
+                    bcdata.header['DataComponents'] = 'HDZ'+datacomp[3]
+                else:
+                    bcdata.header['DataComponents'] = 'HDZ'
 
             # Add BC mark to datatype - data is baseline corrected
             bcdata.header['DataType'] = 'BC'

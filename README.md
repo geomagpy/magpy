@@ -894,6 +894,10 @@ The `baseline` method will determine and return a fit function between the two g
 
         corrdata = rawdata.bc()
 
+
+Pease note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt). 
+
+
 If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and combine the resulting baseline functions to  a list:
 
         stream = read(mydata,starttime='2016-01-01',endtime='2016-03-01')
