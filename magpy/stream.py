@@ -10923,12 +10923,18 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # auto detect format - go through all known formats in given sort order
         for format_type in PYMAG_SUPPORTED_FORMATS:
             # check format
-            #print("_read: Testing format: {} ...".format(format_type))
+            if debug:
+                print("_read: Testing format: {} ...".format(format_type))
             if debug:
                 logger.info("_read: Testing format: {} ...".format(format_type))
+            #try:
+            #    readsucc = isFormat(filename, format_type)
+            #except:
+            #    readsucc = False
             if isFormat(filename, format_type):
                 if debug:
                     logger.info("      -- found: {}".format(format_type))
+                    print ("      -- found: {}".format(format_type))
                 foundapproptiate = True
                 break
         if not foundapproptiate:

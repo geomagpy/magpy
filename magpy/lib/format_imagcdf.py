@@ -32,7 +32,6 @@ def isIMAGCDF(filename):
     """
     Checks whether a file is ImagCDF format
     """
-
     try:
         temp = cdflib.CDF(filename)
     except:
