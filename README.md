@@ -344,9 +344,9 @@ Getting data for a specific time window for local files:
 
         data = read(r'ftp://address/fur2013.wdc',starttime="2013-01-01", endtime="2013-02-01")
 
-Reading data from the INTERMAGNET Webservice (starting soon):
+Reading data from the INTERMAGNET Webservice:
 
-        data = read('http://www.intermagnet.org/test/ws/?id=WIC')
+        data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
 
 #### 2.2.4 Selecting timerange
 

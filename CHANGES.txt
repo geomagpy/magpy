@@ -9,10 +9,12 @@ Installation instructions can be found on the main download page.
 
 1.0.1 additions:
     + accepting basevalue data in XYZ in addition to HDZ 
+    + added webservice support for INTERMAGNET
 
 1.0.1 fixes:
     + exporting IAF in combination with k values (py3 issue)
     + exporting yearmean files (IYFV) (py3 issue)
+    + updated webservice addresses for USGS and Conrad Observatory
 
 
 ####v<1.0.0>, <2020-12-22> --
