@@ -208,13 +208,17 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         #                                      |       |
         #    defaultvalue  <--------------------       ----------> conrad specification
         optionsdict['webservices'] = { 'usgs':{
-                         'magnetism':{'address':'https://geomag.usgs.gov/ws/edge/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['1','60','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']},
+                         'magnetism':{'address':'https://geomag.usgs.gov/ws/data/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['60','1','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']},
                          'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
                          'commands':{} }, 
                                       'conrad': {
-                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
-                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/data-access/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']},
-                         'commands':{'format':'of'} } }
+                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
+                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']},
+                         'commands':{'format':'of'} },
+                                      'intermagnet': {                         
+                         'magnetism':{'address':'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices','format':['iaga2002'],'ids':['WIC','ABK','AIA','API','ARS','ASC','ASP','BDV','BEL','BFE','BFO','CKI','CNB','CNH','CPL','CSY','CTA','CYG','DOU','ESK','EY2','EYR','FUR','GAN','GCK','GNA','GNG','GZH','HAD','HBK','HER','HLP','HRN','HUA','HYB','IRT','ISK','IZN','JCO','KDU','KEP','KHB','KIV','KMH','LER','LON','LRM','LVV','LYC','MAB','MAW','MCQ','MGD','MZL','NCK','NGK','NUR','NVS','ORC','PAG','PEG','PET','PIL','PST','SBA','SBL','SOD','SON','THY','TSU','UPS','VAL','WMQ','WNG','YAK'],'elements':'X,Y,Z,F','sampling':['minute','second'],'type':['adj-or-rep']},
+                         'extra':{'baseextension':'','additionalelements':'request=GetData','displaytype':'download','mintime':'day'},
+                         'commands':{'format':'Format','id':'observatoryIagaCode', 'starttime':'dataStartDate','endtime':'dataEndDate','type':'publicationState', 'sampling_period':'samplesPerDay'} } }
     if optionsdict.get('scalevalue','') == '':
         optionsdict['scalevalue'] = 'True'
     if optionsdict.get('double','') == '':
@@ -2434,21 +2438,40 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 # get service depended commands dictionary
                 replacedict = services.get(dlg.serviceComboBox.GetValue()).get('commands',{})
                 defaultcommands = replaceCommands(defaultcommands, replacedict)
+                additionaloptions = services.get(dlg.serviceComboBox.GetValue()).get('extra',{})
                 group = dlg.groupComboBox.GetValue()
                 #defaultcommands['group'] = None
                 if not group == 'magnetism':
                     addgroup = '&{}={}'.format(defaultcommands.get('group'), dlg.groupComboBox.GetValue())
                 else:
-                    addgroup = ''
+                    addgroup = ''                    
                 obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
                 start_time = '&{}={}T{}Z'.format(defaultcommands.get('starttime'), sd,sttime)
-                end_time = '&{}={}T{}Z'.format(defaultcommands.get('endtime'), ed,entime)
                 file_format = '&{}={}'.format(defaultcommands.get('format'), dlg.formatComboBox.GetValue())
                 elements = '&{}={}'.format(defaultcommands.get('elements'), dlg.elementsTextCtrl.GetValue())
                 data_type = '&{}={}'.format(defaultcommands.get('type'), dlg.typeComboBox.GetValue())
                 period = '&{}={}'.format(defaultcommands.get('sampling_period'), dlg.sampleComboBox.GetValue())
                 base = services.get(dlg.serviceComboBox.GetValue()).get(group).get('address')
-                url = (base + '?' + obs_id + start_time + end_time + file_format +
+
+                add_elem=''
+                if additionaloptions:
+                    #print ("Found additional options")
+                    #'extra':{'baseextension':'','additionalelements':'request=GetData','displaytype':'download','mintime':'day'},
+                    add_elem = '{}&'.format(additionaloptions.get('additionalelements',''))
+                    mintime = additionaloptions.get('mintime',None)
+                    if mintime:
+                        if mintime in ['day','1d','DAY']:
+                            tdiff = (end-start).total_seconds()
+                            if tdiff <  86400:
+                                missing = 86400-tdiff
+                                newend = end + timedelta(0,missing)
+                                # add missing seconds to endtime
+                                ed = datetime.strftime(newend, "%Y-%m-%d")
+                                entime = datetime.strftime(newend, "%H:%M:%S")
+
+                end_time = '&{}={}T{}Z'.format(defaultcommands.get('endtime'), ed,entime)
+
+                url = (base + '?' + add_elem + obs_id + start_time + end_time + file_format +
                       elements + data_type + period + addgroup)
                 #print ("Constructed url:", url)
                 self.options['defaultservice'] = service
