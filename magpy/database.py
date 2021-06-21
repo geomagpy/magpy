@@ -730,8 +730,12 @@ def dbdelete(db,datainfoid,**kwargs):
     APPLICATION:
         Requires an existing mysql database (e.g. mydb)
         so first connect to the database
-        db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
-
+        db = mysql.connect(host="localhost",user="user",passwd="secret",db="mysql")
+        # Delete everything older then the last 3 days
+        dbdelete(db,'DIDD_3121331_0002_0001',timerange=3) 
+        # Keep data in dependency of the samplingrate
+        #  days2keep = ceil(samplingrate[sec] * samplingrateratio)  (e.g. 12 days for 1 sec data)
+        dbdelete(db,'DIDD_3121331_0002_0001',samplingrateratio=12) 
     TODO:
         - If sampling rate not given in DATAINFO get it from the datastream
     """
@@ -771,8 +775,20 @@ def dbdelete(db,datainfoid,**kwargs):
     # 3. Delete time interval
     loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange)))
     try:
-        deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
-        cursor.execute(deletesql)
+        delcount = 100000
+        countstr = "SELECT COUNT(*) FROM {} WHERE time < ADDDATE(NOW(), INTERVAL -{} {})".format(datainfoid, timerange, timeunit)
+        try:
+            cursor.execute(countstr)
+            msg = cursor.fetchone()
+            lines = int(msg[0])
+            rangemax = int(np.ceil(lines/delcount))
+            deletesql = "DELETE FROM {} WHERE time < ADDDATE(NOW(), INTERVAL -{} {}) LIMIT {}".format(datainfoid, timerange, timeunit, delcount)
+            for i in range(0,rangemax):
+                cursor.execute(deletesql)
+        except:
+            # old way ... faster on short sequences, considerable slower on large
+            deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (datainfoid, timerange, timeunit)
+            cursor.execute(deletesql)
     except:
         loggerdatabase.error("dbdelete: error when deleting data")
 

@@ -59,7 +59,6 @@ def isACECDF(filename):
     """
     try:
         temp = cdflib.CDF(filename)
-        print ("... done")
     except:
         return False
     try:
