@@ -2,6 +2,18 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
+####v<1.0.2>, <2021-07-31> --
+
+1.0.2 general:
+    + 
+    
+1.0.2 additions:
+    + 
+
+1.0.2 fixes:
+    + march31 time stamp error for IAGA2002 files
+
+
 ####v<1.0.1>, <2021-06-30> --
 
 1.0.1 general:
