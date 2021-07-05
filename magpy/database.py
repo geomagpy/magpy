@@ -49,7 +49,8 @@ dbupadteDataInfo(db, "MyTable_12345_0001", myheader)
 dbupdate(db, table, [key], [value], condition)
 dbselect(db, element, table, condition=None, expert=None):
 dbcoordinates(db, pier, epsgcode='epsg:4326')
-dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001'):
+dbsensorinfo(db,sensorid,sensorkeydict=None,sensorrevision = '0001')
+dbtableexists(db,tablename)
 dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',updatedb=True):
 writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, **kwargs):
 dbsetTimesinDataInfo(db, tablename,colstr,unitstr):
@@ -3877,6 +3878,38 @@ def dicgetlast(dictionary,pier=None,element=None):
                 value = testdic.get(str(max(years))).get(elem,'')
                 returndic[elem] = value
     return returndic
+
+
+def dbtableexists(db,tablename):
+    """
+    DESCRIPTION
+        check whether a table existis or not
+    VARIABLES:
+        db   :    a link to a mysql database
+        tablename  :  the table to be searched (%tablename%)
+                      e.g.  MyTable  wil find MyTable, NOTMyTable, OhItsMyTableIndeed
+    RETURNS
+        True : if one or more table with %tablename% are existing
+        False : if tablename is NOT found in database db
+    APPLICATION
+        db = mysql.connect(...)
+        return dbtableexists(db,'MyTable')
+        
+    -- added before 1.0.2 --
+    """
+    n = 0
+    sql = "SHOW TABLES LIKE '%{}%'".format(tablename)
+
+    cursor = db.cursor()
+    try:
+        n = cursor.execute(sql)
+    except:
+        pass
+    if n > 0:
+        return True
+    else:
+        return False
+
 
 """
     def string2dict(string):
