@@ -1845,7 +1845,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
             # Variometer data needs to be available as xyz in nT
             # Get current components
-            components = variostr.header.get('DataComponents')
+            components = variostr.header.get('DataComponents',[])
             if len(components)>3:
                 if components[:3] == 'HDZ':
                     print ("  Variationdata as HDZ -> converting to XYZ")
