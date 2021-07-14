@@ -119,13 +119,14 @@ SENSORSKEYLIST = ['SensorID','SensorName','SensorType','SensorSerialNum','Sensor
                   'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation', 
                   'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
                   'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
-                  'SensorResolution','SensorTime']
+                  'SensorResolution','SensorTime', 'SensorPicture', 'SensorManual']
 
 STATIONSKEYLIST = ['StationID','StationName','StationIAGAcode','StationInstitution','StationStreet',
                    'StationCity','StationPostalCode','StationCountry','StationWebInfo',
                    'StationEmail','StationDescription','StationK9','StationMeans','StationLongitude', 
                    'StationLatitude', 'StationLocationReference', 'StationElevation', 
-                   'StationElevationRef', 'StationType']
+                   'StationElevationRef', 'StationType', 'StationSince', 'StationUntil', 'StationPicture']
+
 
 FLAGSKEYLIST = ['FlagID','SensorID','FlagBeginTime','FlagEndTime','FlagComponents','FlagNum','FlagReason','ModificationDate']
 
