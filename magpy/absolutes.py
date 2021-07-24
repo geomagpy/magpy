@@ -2147,7 +2147,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
-            streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
+            try:
+                streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
+            except:
+                print (" Could not extract an appropriate date from data source") 
+                streamtime = "2233-03-22"
             if streamtime == datetime.strftime(date,"%Y-%m-%d"):
                 if debug:
                     print ("Times are fitting")
