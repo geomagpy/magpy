@@ -11147,10 +11147,12 @@ def joinStreams(stream_a,stream_b, **kwargs):
     # Get indicies of timesteps of stream_b of which identical times are existing in stream_a-> delelte those lines
     # --------------------------------------
     # IMPORTANT: If two streams with different keys should be combined then "merge" is the method of choice
-    indofb = np.nonzero(np.in1d(sb.ndarray[0], sa.ndarray[0]))[0]
-    for idx,elem in enumerate(sb.ndarray):
-        if len(sb.ndarray[idx]) > 0:
-            sb.ndarray[idx] = np.delete(sb.ndarray[idx],indofb)
+    # NEW: shape problems when removing data -> now use removeduplicates at the end 
+    # SHOULD WORK (already tested) as remove duplicate will keep the last value and drop earlier occurences
+    #indofb = np.nonzero(np.in1d(sb.ndarray[0], sa.ndarray[0]))[0]
+    #for idx,elem in enumerate(sb.ndarray):
+    #    if len(sb.ndarray[idx]) > 0:
+    #        sb.ndarray[idx] = np.delete(sb.ndarray[idx],indofb)
 
     # Now add stream_a to stream_b - regard for eventually missing column data
     # --------------------------------------
@@ -11176,6 +11178,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
             array[idx] = np.asarray([])
 
     stream = DataStream([LineStruct()],sa.header,np.asarray(array))
+    stream = stream.removeduplicates()
 
     return stream.sorting()
 
