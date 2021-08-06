@@ -11113,6 +11113,9 @@ def joinStreams(stream_a,stream_b, **kwargs):
     """
     DEFINITION:
         Copy two streams together eventually replacing already existing time steps.
+        Data of stream_a will replace data of stream_b
+    APPLICATION
+        combinedstream = joinStreams(stream_a,stream_b)
     """
     logger.info('joinStreams: Start joining at %s.' % str(datetime.now()))
 
