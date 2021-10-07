@@ -2310,18 +2310,18 @@ def writeBLV(datastream, filename, **kwargs):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream)
-            myFile= open( filename, "wt" )
+            myFile= open( filename, "wt", newline='' )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst)
-            myFile= open( filename, "wt" )
+            myFile= open( filename, "wt", newline='' )
         elif mode == 'append':
-            myFile= open( filename, "at" )
+            myFile= open( filename, "at", newline='' )
         else: # overwrite mode
             #os.remove(filename)  ?? necessary ??
-            myFile= open( filename, "wt" )
+            myFile= open( filename, "wt", newline='' )
     else:
-        myFile= open( filename, "wt" )
+        myFile= open( filename, "wt", newline='' )
 
     #print ("filename", filename)
     logger.info("writeBLV: file: {}".format(filename))
