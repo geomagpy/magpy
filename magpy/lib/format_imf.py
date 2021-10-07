@@ -2408,9 +2408,10 @@ def writeBLV(datastream, filename, **kwargs):
         if comps in ['IDFF','idff','idf','IDF']:
             datastream = datastream.idf2xyz()
             datastream = datastream.xyz2hdz()
-        elif comps in ['XYZF','xyzf','xyz','XYZ']:
-            datastream = datastream.xyz2hdz()
-        comps = 'HDZF'
+            comps = 'HDZF'
+        #elif comps in ['XYZF','xyzf','xyz','XYZ']:
+        #    datastream = datastream.xyz2hdz()
+        #comps = 'HDZF'
     except:
         # assume idf orientation
         datastream = datastream.idf2xyz()
@@ -2480,7 +2481,11 @@ def writeBLV(datastream, filename, **kwargs):
             if t2 >= elem >= t1:
                 day = datetime.strftime(num2date(elem),'%j')
                 x = float(datastream.ndarray[indx][idx])
-                y = float(datastream.ndarray[indy][idx])*60.
+                if comps.lower() in ['xyzf','xyz']:
+                    y = float(datastream.ndarray[indy][idx])
+                else:
+                    y = float(datastream.ndarray[indy][idx])*60.
+                #y = float(datastream.ndarray[indy][idx])*60.
                 z = float(datastream.ndarray[indz][idx])
                 df = float(datastream.ndarray[indf][idx])
                 try:

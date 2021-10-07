@@ -138,17 +138,11 @@ def isFormat(filename, format_type):
     elif (format_type == "DTU1"): # ASCII Data from the DTU's FGE systems
         if (isDTU1(filename)):
             return True
-    elif (format_type == "ACECDF"):
-        if (isACECDF(filename)):
-            return True
     elif (format_type == "PYSTR"):
         if (isPYSTR(filename)):
             return True
     elif (format_type == "PYASCII"):
         if (isPYASCII(filename)):
-            return True
-    elif (format_type == "PYCDF"):
-        if (isPYCDF(filename)):
             return True
     elif (format_type == "PYBIN"):
         if (isPYBIN(filename)):
@@ -221,6 +215,12 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "DKA"): # Intermagnet K-value Format
         if (isDKA(filename)):
+            return True
+    elif (format_type == "ACECDF"):
+        if (isACECDF(filename)):
+            return True
+    elif (format_type == "PYCDF"):
+        if (isPYCDF(filename)):
             return True
     elif (format_type == "IMAGCDF"): # Intermagnet CDF Format
         if (isIMAGCDF(filename)):
@@ -298,8 +298,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIMF(filename, headonly, **kwargs)
     elif (format_type == "IAF"):
         return readIAF(filename, headonly, **kwargs)
-    elif (format_type == "IMAGCDF"):
-        return readIMAGCDF(filename, headonly, **kwargs)
     elif (format_type == "BLV"): # Intermagnet IBFV2.00
         return readBLV(filename, headonly, **kwargs)
     elif (format_type == "IYFV"): # Intermagnet IYVF1.01
@@ -308,8 +306,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readDKA(filename, headonly, **kwargs)
     elif (format_type == "DIDD"):
         return readDIDD(filename, headonly, **kwargs)
-    elif (format_type == "ACECDF"): # cdf ACE
-        return readACECDF(filename, headonly, **kwargs)
     elif (format_type == "GDASA1"):
         return readGDASA1(filename, headonly, **kwargs)
     elif (format_type == "GDASB1"):
@@ -326,6 +322,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYSTR(filename, headonly, **kwargs)
     elif (format_type == "PYASCII"):
         return readPYASCII(filename, headonly, **kwargs)
+    elif (format_type == "IMAGCDF"):
+        return readIMAGCDF(filename, headonly, **kwargs)
+    elif (format_type == "ACECDF"): # cdf ACE
+        return readACECDF(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):
         return readPYCDF(filename, headonly, **kwargs)
     elif (format_type == "PYBIN"):
