@@ -138,67 +138,70 @@ def readPYASCII(filename, headonly=False, **kwargs):
 
     logger.info('readPYASCII: Reading %s' % (filename))
 
-    qFile= open( filename, "r", newline='' )
+    with open(filename, "r", newline='' ) as csv_file:
+        csv_reader = csv.reader(csv_file)
 
-    csvReader= csv.reader( qFile )
-    keylst = []
-    timeconv = False
-    timecol = -1
+        keylst = []
+        timeconv = False
+        timecol = -1
+        minimumlinelength = 2
 
-    for elem in csvReader:
-        if elem==[]:
-            # blank line
-            pass
-        elif elem[0].startswith('#'):
-            # blank header
-            pass
-        elif elem[0].startswith(' #') and not elem[0].startswith(' # MagPy ASCII'):
-            # attributes - assign header values
-            headlst = elem[0].strip(' # ').split(':')
-            headkey = headlst[0]
-            headval = headlst[1]
-            if not headkey.startswith('Column'):
-                headers[headkey] = headval.strip()
-        elif elem[0].startswith(' # MagPy ASCII'):
-            # blank header
-            pass
-        elif elem[0].startswith('Time'): # extract column info and keys
-            for i in range(len(elem)):
-                #print elem[i]
-                if not elem[i].startswith('Time'):
-                    try:  # neglecte columns without units (e.g. text)
-                         headval = elem[i].split('[')
-                         colval = headval[0]
-                         unitval = headval[1].strip(']')
-                         exec('headers["col-'+NUMKEYLIST[len(keylst)]+'"] = colval')
-                         exec('headers["unit-col-'+NUMKEYLIST[len(keylst)]+'"] = unitval')
-                         keylst.append(i)
-                    except:
-                         pass
-                elif elem[i] == 'Time' and not timecol > 0:
-                    timecol = i
-                    timeconv = True
-                elif elem[i] == 'Time-days':
-                    timecol = i
-                    timeconv = False
-            if len(keylst) > len(NUMKEYLIST):
-                keylst = keylist[:len(NUMKEYLIST)]
-        elif headonly:
-            # skip data for option headonly
-            continue
-        else:
-            try:
-                if timeconv:
-                    ti = date2num(stream._testtime(elem[timecol]))
-                else:
-                    ti = elem[timecol]
-                array[0].append(ti)
-                for idx,i in enumerate(keylst):
-                    array[idx+1].append(float(elem[i]))
-                    #print NUMKEYLIST[idx]
-            except ValueError:
+        for elem in csv_reader:
+            #print (elem)
+            if elem==[]:
+                # blank line
                 pass
-    qFile.close()
+            elif elem[0].startswith('#'):
+                # blank header
+                pass
+            elif elem[0].startswith(' #') and not elem[0].startswith(' # MagPy ASCII'):
+                # attributes - assign header values
+                headlst = elem[0].strip(' # ').split(':')
+                headkey = headlst[0]
+                headval = headlst[1]
+                if not headkey.startswith('Column'):
+                    headers[headkey] = headval.strip()
+            elif elem[0].startswith(' # MagPy ASCII'):
+                # blank header
+                pass
+            elif elem[0].startswith('Time'): # extract column info and keys
+                for i in range(len(elem)):
+                    #print elem[i]
+                    if not elem[i].startswith('Time'):
+                        try:  # neglecte columns without units (e.g. text)
+                             headval = elem[i].split('[')
+                             colval = headval[0]
+                             unitval = headval[1].strip(']')
+                             exec('headers["col-'+NUMKEYLIST[len(keylst)]+'"] = colval')
+                             exec('headers["unit-col-'+NUMKEYLIST[len(keylst)]+'"] = unitval')
+                             keylst.append(i)
+                        except:
+                             pass
+                    elif elem[i] == 'Time' and not timecol > 0:
+                        timecol = i
+                        timeconv = True
+                    elif elem[i] == 'Time-days':
+                        timecol = i
+                        timeconv = False
+                if len(keylst) > len(NUMKEYLIST):
+                    keylst = keylist[:len(NUMKEYLIST)]
+            elif headonly:
+                # skip data for option headonly
+                continue
+            elif len(elem) < minimumlinelength:
+                pass
+            else:
+                try:
+                    if timeconv:
+                        ti = date2num(stream._testtime(elem[timecol]))
+                    else:
+                        ti = elem[timecol]
+                    array[0].append(ti)
+                    for idx,i in enumerate(keylst):
+                        array[idx+1].append(float(elem[i]))
+                        #print NUMKEYLIST[idx]
+                except ValueError:
+                    pass
 
     # Clean up the file contents
     def checkEqual3(lst):

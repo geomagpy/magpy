@@ -10760,7 +10760,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         logger.info("read: Found URL to read at {}".format(path_or_url))
         content = urlopen(path_or_url).read()
         content = content.decode('utf-8')
-        if content.find('<pre>') > 0:
+        if content.find('<pre>') > -1:
             """
                 check whether content is coming with some html tags
             """
