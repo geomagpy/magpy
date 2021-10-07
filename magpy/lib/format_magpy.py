@@ -313,7 +313,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
 
 def readPYCDF(filename, headonly=False, **kwargs):
@@ -675,7 +675,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         del cdf_file
 
     if not oldtype:
-        return DataStream([LineStruct()], stream.header,np.asarray(array))
+        return DataStream([LineStruct()], stream.header,np.asarray(array).astype(object))
     else:
         return DataStream(stream, stream.header,stream.ndarray)
 

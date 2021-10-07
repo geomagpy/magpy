@@ -418,7 +418,7 @@ def readIAF(filename, headonly=False, **kwargs):
             if not np.isnan(np.asarray(ar)).all():
                 array[pos] = np.asarray(ar)
 
-        return np.asarray(array)
+        return np.asarray(array).astype(object)
 
     if resolution in ['day','days','Day','Days','DAY','DAYS']:
         ndarray = data2array([xd,yd,zd,fd],keystr.split(','),min(datelist),sr=86400)
@@ -2176,7 +2176,7 @@ def readBLV(filename, headonly=False, **kwargs):
     headers['DataType'] = 'MagPyDI0.1'
     headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
 
 def writeBLV(datastream, filename, **kwargs):
@@ -2881,7 +2881,7 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     #fh.close()
     array = [np.asarray(ar) for ar in array]
-    stream = DataStream([LineStruct()], headers, np.asarray(array))
+    stream = DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
     if not ele.lower().startswith('xyz') and ele.lower()[:3] in ['xyz','hdz','dhz','hez','idf']:
         if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
@@ -3195,7 +3195,7 @@ def readDKA(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'MagPyK'
 
     array = [np.asarray(ar) for ar in array]
-    stream = DataStream([LineStruct()], headers, np.asarray(array))
+    stream = DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 
     # Eventually add trim
     return stream
