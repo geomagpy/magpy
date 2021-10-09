@@ -426,6 +426,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'GFZTMP':['r', 'GeoForschungsZentrum ascii format'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'PHA':['r', 'Potentially Hazardous Asteroids (PHAs) from the International Astronomical Unions Minor Planet Center, (json, incomplete)'],
+                'BASICCSV':['rw','comma-separated CSV data'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
                 'PYCDF':['rw', 'MagPy CDF variant'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
@@ -488,6 +489,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'BDV1',         # ?
                 'GFZKP',        # GeoForschungsZentrum KP-Index format
                 'NOAAACE',      # NOAA ACE satellite data format
+                'BASICCSV',     # comma-separated CSV data with isoformat date in first column
                 'LATEX',        # LateX data
                 'CS',           # ?
                 'UNKOWN'        # 'Unknown'?

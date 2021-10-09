@@ -81,6 +81,7 @@ from magpy.lib.format_gfztmp import *
 from magpy.lib.format_neic import *
 from magpy.lib.format_rcs import *
 from magpy.lib.format_pha import *
+from magpy.lib.format_basiccsv import *
 
 from magpy.lib.format_imf import *
 try:
@@ -279,6 +280,9 @@ def isFormat(filename, format_type):
     elif (format_type == "GFZTMP"): # Data from the USB temperature logger
         if (isGFZTMP(filename)):
             return True
+    elif (format_type == "BASCICSV"): # Basic CSV data
+        if (isBASCICSV(filename)):
+            return True
     elif (format_type in ["PYNC", "AUTODIF", "SERMUL", "SERSIN", "LATEX"]): # Not yet supported
         return False
     elif (format_type == "UNKOWN"): # Unkown
@@ -397,6 +401,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readNEIC(filename, headonly, **kwargs)
     elif (format_type == "PHA"):
         return readPHA(filename, headonly, **kwargs)
+    elif (format_type == "BASICCSV"):
+        return readBASICCSV(filename, headonly, **kwargs)
     else:
         logger.info("No valid format found ({}). Returning empty stream.".format(format_type))
         return DataStream(empty,empty.header)
@@ -441,6 +447,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeAUTODIF_FREAD(datastream, filename, **kwargs)
     elif (format_type == "CR800"):
         return writeCR800(datastream, filename, **kwargs)
+    elif (format_type == "BASICCSV"):
+        return writeBASICCSV(datastream, filename, **kwargs)
     elif (format_type == "LATEX"):
         return writeLATEX(datastream, filename, **kwargs)
     else:
