@@ -426,7 +426,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'GFZTMP':['r', 'GeoForschungsZentrum ascii format'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'PHA':['r', 'Potentially Hazardous Asteroids (PHAs) from the International Astronomical Unions Minor Planet Center, (json, incomplete)'],
-                'BASICCSV':['rw','comma-separated CSV data'],
+                'CSV':['rw','comma-separated CSV data'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
                 'PYCDF':['rw', 'MagPy CDF variant'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
@@ -489,7 +489,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'BDV1',         # ?
                 'GFZKP',        # GeoForschungsZentrum KP-Index format
                 'NOAAACE',      # NOAA ACE satellite data format
-                'BASICCSV',     # comma-separated CSV data with isoformat date in first column
+                'CSV',     # comma-separated CSV data with isoformat date in first column
                 'LATEX',        # LateX data
                 'CS',           # ?
                 'UNKOWN'        # 'Unknown'?
@@ -9704,6 +9704,10 @@ CALLED BY:
                     fed = 'v'+middle+'.'+middle
                 filenameends = fed
 
+        if format_type == 'CSV':
+            if not filenameends:
+                filenameends = '.csv'
+
         if format_type == 'IMAGCDF':
             begin = (self.header.get('StationIAGAcode','')).lower()
             if begin == '':
@@ -10061,7 +10065,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         logger.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly)
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -10075,7 +10079,7 @@ CALLED BY:
             filename = filename.replace('\x00','')
             if debug:
                 print ("Writing file:", filename)
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind)
 
         return success
 

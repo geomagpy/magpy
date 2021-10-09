@@ -22,12 +22,12 @@ def check_date(date_string):
         try:
             dt = dateutil.parser.parse(date_string)
         except ValueError:
-            print("Invalid isoformat string: {}".format(date_string))
+            #print("Invalid isoformat string: {}".format(date_string))
             dt = False
         return dt
 
 
-def isBASICCSV(filename):
+def isCSV(filename):
     """
     Checks whether a file is BASIC csv file
     """
@@ -68,7 +68,7 @@ def isBASICCSV(filename):
     return True
 
 
-def readBASICCSV(filename, headonly=False, **kwargs):
+def readCSV(filename, headonly=False, **kwargs):
     """
     #DT_datatime,N_latency[ms],N_download[Mbyte/s],N_upload[Mbyte/s],N_serverdistance[km],S_sever,S_location
     #2021-09-20T00:05:02.628946Z,12.585,71.92494097727986,36.592751994082455,52.214518722142806,JStorfingerDE,Munich
@@ -93,7 +93,7 @@ def readBASICCSV(filename, headonly=False, **kwargs):
         getfile = True
 
     if getfile:
-      with open(path) as csv_file:
+      with open(filename) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         line_count = 0
         fulldata = []
@@ -124,7 +124,7 @@ def readBASICCSV(filename, headonly=False, **kwargs):
         # Convert header
         #  use only first line
         #  assign each index to a specific key of DATASTREAM
-        numkeys = ['x','y','z','f','t1','t2']
+        numkeys = NUMKEYLIST
         strkeys = ['str1','str2','str3']
         head = header[0]
         assign = {}
@@ -161,19 +161,19 @@ def readBASICCSV(filename, headonly=False, **kwargs):
                 array[pos] = np.asarray(el, dtype=float)
             except:
                 array[pos] = np.asarray(el, dtype=object)
-        array = np.asarray(array, dtype=object)
+        array = np.asarray([np.asarray(el).astype(object) for el in array], dtype=object)
 
         return DataStream(header=comments,ndarray=array)
 
 
 
-def writeBASICCSV(datastream, filename, xxx='simple',returnstring = False,**kwargs):
+def writeCSV(datastream, filename, kind='simple',returnstring = False,**kwargs):
     """
     Function to write basic CSV data
     """
 
     mode = kwargs.get('mode')  # simple (no meta), full (with meta)
-    # xxx  = 'simple' # simple (simple header), normal, full (with meta)
+    # kind  = 'simple' # simple (simple header), normal, full (with meta)
 
     #logger.info("writeBASICCSV: Writing file to %s" % filename)
 
@@ -238,7 +238,7 @@ def writeBASICCSV(datastream, filename, xxx='simple',returnstring = False,**kwar
                 u = headdict.get('unit-col-'+key,'')
                 if u:
                     unit = '[{}]'.format(u)
-            if xxx == 'simple':
+            if kind == 'simple':
                 title = "{}{}".format(headdict.get('col-'+key,'-'), unit)
                 tst = ''
             else:
