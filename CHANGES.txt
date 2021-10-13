@@ -5,13 +5,15 @@ Installation instructions can be found on the main download page.
 ####v<1.0.2>, <2021-07-31> --
 
 1.0.2 general:
+    + cdf_tmp errors when traing to read non-cdf data
     + 
     
 1.0.2 additions:
-    + 
+    + basic support for simple CSV files (read/write)
 
 1.0.2 fixes:
     + march31 time stamp error for IAGA2002 files
+    + basevalue data in XYZ in addition to HDZ 
 
 
 ####v<1.0.1>, <2021-06-30> --
