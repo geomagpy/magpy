@@ -13,7 +13,8 @@ Installation instructions can be found on the main download page.
 
 1.0.2 fixes:
     + march31 time stamp error for IAGA2002 files
-    + basevalue data in XYZ in addition to HDZ 
+    + basevalue data in XYZ in addition to HDZ
+    + when reading zipped files with time ranges: no unpacking of all existing files any more
 
 
 ####v<1.0.1>, <2021-06-30> --
