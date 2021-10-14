@@ -27,6 +27,7 @@ from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 import wx.lib.scrolledpanel as scrolledpanel
 from io import open
+import dateutil.parser
 
 
 
@@ -2345,6 +2346,32 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.val = {}
         self.val['time'] = '0'
         mtime = date2num(xlimits[1])
+        # Parsetime function
+        def parse_time(timestring):
+            #timestring can either be isotime or a string containing numerical datetime in old or new format
+            #returns a numerical time value within the current systems date2num matplotlib version 
+            try:
+                # first check whether timestring can converted to numerical value
+                timefloat = float(timestring)
+                # Assume a valid date after 1830:
+                #print (MATPLOTLIB_VERSION)
+                if MATPLOTLIB_VERSION[0] >= 3 and MATPLOTLIB_VERSION[1] >= 3 and timefloat > 660770:
+                    timefloat = timefloat-719163.0
+                elif MATPLOTLIB_VERSION[0] == 3 and MATPLOTLIB_VERSION[1] < 3 and  timefloat < 20000:
+                    timefloat = timefloat+719163.0
+                elif MATPLOTLIB_VERSION[0] < 3 and timefloat < 20000:
+                    timefloat = timefloat+719163.0
+                #730120, and a 64-bit floating point number has a resolution of 2^{-52}, or approximately 14 microseconds, so microsecond precision was lost. With the new default epoch "2020-01-01" is 10957.0,
+            except:
+                try:
+                     dt = dateutil.parser.parse(date_string)
+                     timefloat = date2num(dt).replace(tzinfo=None)
+                     #parse isotime
+                except:
+                    print ("ERROR: given endtime in DataDeltaValus could not be interpreted correctly")
+                    pass
+            return timefloat
+                     
         if not deltas == '':
             try:
                 dlist = deltas.split(',')
@@ -2354,9 +2381,10 @@ class AnalysisOffsetDialog(wx.Dialog):
                         self.val[de[0]] = str(de[1])
                     else:
                         self.val[de[0]] = str(de[1].strip(')').split('=')[-1])
-                    if de[0].strip() == 'et' and float(self.val[de[0]].split(';')[0]) >= mtime:
+                    #if de[0].strip() == 'et' and float(self.val[de[0]].split(';')[0]) >= mtime:
+                    if de[0].strip() == 'et' and parse_time(self.val[de[0]].split(';')[0]) >= mtime:
                         break
-                    print ("BB", self.val[de[0]], de[0])
+                    #print ("BB", self.val[de[0]], de[0])
             except:
                 pass
         self.createControls()
