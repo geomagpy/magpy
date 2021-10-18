@@ -219,7 +219,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
 
     headers['DataFormat'] = 'MagPy-ASCII-v1.0'
     if headers.get('SensorID','') == '':
-        headers['SensorID'] = 'unkown'
+        headers['SensorID'] = 'unknown_12345_0001'
 
     return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
 

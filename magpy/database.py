@@ -1792,7 +1792,7 @@ def dbdatainfo(db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',u
 
     return datainfoid
 
-def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, roundtime=0,debug=False, **kwargs):
+def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revision=None, roundtime=0, keepempty=False, debug=False, **kwargs):
 
     """
     DEFINITION:
@@ -1990,7 +1990,7 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
             if not False in checkEqual3(col) and not nantest:
                 # checking for identical elements
                 # TODO Unicode equal comparison in the following - see whether error still present after Jan2019
-                if not col[0] or col[0] in ['nan', '-','']: #remove place holders
+                if not keepempty and not col[0] or col[0] in ['nan', '-','']: #remove place holders
                     array[idx] = np.asarray([])
                     nosingleelem = False
         if key.endswith('time') and len(col) > 0 and nosingleelem:
