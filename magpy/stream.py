@@ -181,10 +181,10 @@ try:
     for gui in gui_env:
         try:
             logger.info("Testing backend {}".format(gui))
-            try:
-                matplotlib.use(gui, warn=False, force=True)
-            except: # will be important from matplotlib3.3 onwards
+            try:  # will be important from matplotlib3.3 onwards
                 matplotlib.use(gui, force=True)
+            except:
+                matplotlib.use(gui, warn=False, force=True)
             from matplotlib import pyplot as plt
             break
         except:
@@ -13199,13 +13199,19 @@ def convertGeoCoordinate(lon,lat,pro1,pro2):
     """
     try:
         from pyproj import Proj, transform
-        p1 = Proj(init=pro1)
+        try:
+            p1 = Proj(pro1)
+        except:
+            p1 = Proj(init=pro1)
         x1 = float(lon)
         y1 = float(lat)
         # projection 2: WGS 84
-        p2 = Proj(init=pro2)
+        try:
+            p2 = Proj(pro2)
+        except:
+            p2 = Proj(init=pro2)
         # transform this point to projection 2 coordinates.
-        x2, y2 = transform(p1,p2,x1,y1)
+        x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
         return x2, y2
     except:
         return lon, lat

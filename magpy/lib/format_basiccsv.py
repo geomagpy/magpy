@@ -31,7 +31,7 @@ def isCSV(filename):
     """
     Checks whether a file is BASIC csv file
     """
-    print ("Checking CSV")
+    #print ("Checking CSV")
     lines_to_check = 40
     try:
         with open(filename, newline='') as csvfile:
