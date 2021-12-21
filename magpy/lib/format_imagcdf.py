@@ -181,14 +181,28 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 flaglisttmp = []
                 for elem in flagcolsconrad:
                     flaglisttmp.append(cdfdat[elem][...])
-                flaglisttmp[0] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[0])
-                flaglisttmp[1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[1])
-                flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[-1])
+                try:
+                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[0])
+                except:
+                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(flaglisttmp[0])
+                try:
+                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[1])
+                except:
+                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(flaglisttmp[1])
+                try:
+                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[-1])
+                except:
+                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(flaglisttmp[-1])
                 flaglist = np.transpose(flaglisttmp)
                 flaglist = [list(elem) for elem in flaglist]
                 return list(flaglist)
+            else:
+                return []
         else:
+            print ("readIMAGCDF: Could  not interprete flags ruleset")
             logger.warning("readIMAGCDF: Could  not interprete Ruleset")
+            return []
+
 
     if not headers.get('FlagRulesetType','') == '':
         if debug:
