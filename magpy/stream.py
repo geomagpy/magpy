@@ -13214,6 +13214,7 @@ def convertGeoCoordinate(lon,lat,pro1,pro2):
         x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
         return x2, y2
     except:
+        print ("convertGeoCoordinate: problem (impport pyproj or conversion error)")
         return lon, lat
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
