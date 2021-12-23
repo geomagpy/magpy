@@ -38,6 +38,7 @@ jobs:
     - os: windows
     - python: 2.7
     - python: 3.7
+    - os: osx
 
 cache: pip
 
