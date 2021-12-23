@@ -37,6 +37,7 @@ jobs:
   allow_failures:
     - os: windows
     - python: 2.7
+    - python: 3.7
 
 cache: pip
 
