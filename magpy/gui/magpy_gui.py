@@ -2189,7 +2189,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2020 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
+        info.SetCopyright('(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
         info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec')
