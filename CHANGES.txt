@@ -6,8 +6,10 @@ Installation instructions can be found on the main download page.
 
 1.0.2 general:
     + cdf_tmp errors when traing to read non-cdf data
-    + 
-    
+    + wx warnings
+    + IMAGCDF 1.3 support including flags
+    + minor warning fixes and db optimization
+
 1.0.2 additions:
     + basic support for simple CSV files (read/write)
 

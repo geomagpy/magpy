@@ -175,7 +175,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         newdatalist.append(['time',tllist[0][1]])
 
     def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion):
-        if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy']:
+        if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
             if rulesetversion in ['1.0','1',1]:
                 flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
                 flaglisttmp = []
@@ -199,7 +199,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             else:
                 return []
         else:
-            print ("readIMAGCDF: Could  not interprete flags ruleset")
+            print ("readIMAGCDF: Could  not interprete flags ruleset or flagginglist is empty")
             logger.warning("readIMAGCDF: Could  not interprete Ruleset")
             return []
 
@@ -210,7 +210,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         flagginglist = [elem for elem in datalist if elem.startswith('Flag')]
         flaglist = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''))
-
+        if debug:
+            print ("readIMAGCDF: Flagging information extracted")
+            
     datalist = [elem for elem in datalist if not elem.endswith('Times') and not elem.startswith('Flag')]
 
     # #########################################################
@@ -582,6 +584,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         var_spec = {}
 
         if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime']:
+          try:
             if not key == 'scalartime':
                 ind = KEYLIST.index(key)
                 if ndarray and len(datastream.ndarray[ind])>0:
@@ -700,6 +703,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             var_spec['Dim_Sizes'] = []
 
             mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
+          except:
+            pass
 
     success = filename
 
@@ -743,6 +748,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             elif len(flaglist[0]) == 8:  
                 # Future version ??
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
+            #print (fllist)
             for idx, cdfkey in enumerate(fllist):
                 var_attrs = {}
                 var_spec = {}
