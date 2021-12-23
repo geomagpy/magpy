@@ -101,21 +101,14 @@ def isBLV(filename):
         pass
     else:
         return False
-    if not 24 <= len(temp1) <= 30:
+    #if temp2.startswith('0'):
+    #    pass
+    #else:
+    #    return False
+    if not 15 <= len(temp1) <= 30:
         return False
     if not 43 <= len(temp2) <= 45:
         return False
-    #try:
-    #    if 
-    #    print ("Reading BLV1", len(temp1), temp1, len(temp2), temp2)
-    #    if not 63 <= len(temp1) <= 65:  # Range which regards any variety of return
-    #        return False
-    #    if temp1[3] == ' ' and temp1[11] == ' ' and temp1[29] == ' ' and temp1[45] == ' ' and temp1[46] == 'R':
-    #        pass
-    #    else:
-    #        return False
-    #except:
-    #    return False
     
     logger.debug("isBLV: Found BLV data")
     return True
@@ -2084,7 +2077,7 @@ def readBLV(filename, headonly=False, **kwargs):
                         dttime = dttime+timedelta(seconds=1)
                     array[0].append(date2num(dttime))
                     array[xpos].append(float(block[1]))
-                    if headers.get('DataComponents').startswith('HDZ') or headers.get('DataComponents').startswith('hdz'):
+                    if headers.get('DataComponents','').startswith('HDZ') or headers.get('DataComponents','').startswith('hdz'):
                         array[ypos].append(float(block[2])/60.0)
                     else:
                         array[ypos].append(float(block[2]))
@@ -2133,20 +2126,23 @@ def readBLV(filename, headonly=False, **kwargs):
                     array[dfpos].append(dfval)
                     array[strpos].append(strval)
                 else:
-                    if strval in ['d','D']:
-                        tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray]))
-                        func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
-                        func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
-                        funclist.append(func1)
-                        funclist.append(func2)
-                        farray = [[] for key in KEYLIST]
-                    farray[0].append(dt)
-                    farray[xpos].append(xval)
-                    farray[ypos].append(yval)
-                    farray[zpos].append(zval)
-                    farray[fpos].append(fval)
-                    farray[dfpos].append(dfval)
-                    farray[strpos].append(strval)
+                    try:
+                        if strval in ['d','D']:
+                            tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray]))
+                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
+                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                            funclist.append(func1)
+                            funclist.append(func2)
+                            farray = [[] for key in KEYLIST]
+                        farray[0].append(dt)
+                        farray[xpos].append(xval)
+                        farray[ypos].append(yval)
+                        farray[zpos].append(zval)
+                        farray[fpos].append(fval)
+                        farray[dfpos].append(dfval)
+                        farray[strpos].append(strval)
+                    except:
+                        pass
             elif line.startswith('*'):
                 # data info
                 starfound.append('*')

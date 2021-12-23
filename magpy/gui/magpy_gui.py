@@ -8,34 +8,31 @@ from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
 try:
-    from pypubsub import setupkwargs
+    from pubsub import pub
 except:
     try: # Necessary for wx2.8.11.0
         from wx.lib.pubsub import setupkwargs
     except:
         pass
-try:
-    from pypubsub import pub
-except:
     from wx.lib.pubsub import pub
 
 from wx.lib.dialogs import ScrolledMessageDialog
 import wx.lib.scrolledpanel as scrolled
 
 try:
-    # wx 2.x, 3.x
-    from wx import ST_SIZEGRIP as wxSTB_SIZEGRIP
-    from wx import AboutDialogInfo as wxAboutDialogInfo
-    from wx import AboutBox as wxAboutBox
-    from wx import MULTIPLE as wxMULTIPLE
-    print ("WX Version 3.x")
-except:
     # wx 4.x
     from wx import STB_SIZEGRIP as wxSTB_SIZEGRIP
     from wx.adv import AboutDialogInfo as wxAboutDialogInfo
     from wx.adv import AboutBox as wxAboutBox
     from wx import FD_MULTIPLE as wxMULTIPLE
     print ("WX Version 4.x")
+except:
+    # wx 2.x, 3.x
+    from wx import ST_SIZEGRIP as wxSTB_SIZEGRIP
+    from wx import AboutDialogInfo as wxAboutDialogInfo
+    from wx import AboutBox as wxAboutBox
+    from wx import MULTIPLE as wxMULTIPLE
+    print ("WX Version 3.x")
 
 
 from magpy.stream import read
