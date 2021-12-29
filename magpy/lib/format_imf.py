@@ -229,6 +229,9 @@ def readIAF(filename, headonly=False, **kwargs):
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
 
+    if debug:
+        print ("readIAF: opening file...")
+
     fh = open(filename, 'rb')
     while True:
         #try:
@@ -238,15 +241,17 @@ def readIAF(filename, headonly=False, **kwargs):
             break
         else:
             head = struct.unpack('<4s4l4s4sl4s4sll4s4sll', start)
-            head = [el.decode('utf-8') if not isinstance(el,(int,basestring)) else el for el in head]
+            newhead = []
+            for el in head:
+                if not isinstance(el,(int,basestring)):
+                    try:
+                        el = el.decode('utf-8')
+                    except: # might fail e.g. for empty publication date 
+                        el = None
+                newhead.append(el)
+            head = newhead
             date = datetime.strptime(str(head[1]),"%Y%j")
             datelist.append(date)
-            #if starttime:  ## This does not work
-            #    if date < begin:
-            #        getline = False
-            #if endtime:
-            #    if date > end:
-            #        getline = False
             if getline:
                 # unpack header
                 if gethead:
@@ -362,6 +367,8 @@ def readIAF(filename, headonly=False, **kwargs):
         #break
     fh.close()
 
+    if debug:
+        print ("readIAF: extracted data from binary file") 
     #x = np.asarray([val for val in x if not val > 888880])/10.   # use a pythonic way here
     x = np.asarray(x)/10.
     x[x > 88880] = float(nan)
@@ -396,6 +403,9 @@ def readIAF(filename, headonly=False, **kwargs):
     k = np.asarray(k).astype(float)/10.
     k[k > 88] = float(nan)
     ir = np.asarray(ir)
+
+    if debug:
+        print ("readIAF: asigned arrays") 
 
     # ndarray
     def data2array(arlist,keylist,starttime,sr):
