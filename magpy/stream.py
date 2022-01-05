@@ -10827,6 +10827,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for filename in iglob(pathname):
             getfile = True
             theday = extractDateFromString(filename)
+            #print (" Extracted date:", theday) # Doesnt work for IAF files
             try:
                 if starttime:
                     if not theday[-1] >= datetime.date(st._testtime(starttime)):
