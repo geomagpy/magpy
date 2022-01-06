@@ -2597,7 +2597,7 @@ class AnalysisPlotPanel(scrolledpanel.ScrolledPanel):
         self.canvas = FigureCanvas(self,-1,self.figure)
 
 
-        self.axes = self.figure.add_subplot(111)
+        #self.axes = self.figure.add_subplot(111)
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
 

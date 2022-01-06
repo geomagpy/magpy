@@ -4991,6 +4991,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         comp = self.getComponent()
         if comp is not None:
             fig = mp.plotPS(self.plotstream, comp, noshow=True)
+            # TODO works fine in linux but not on windows
             dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=650,ysize=600)
             dlg.ShowModal()
             dlg.Destroy()
@@ -5006,6 +5007,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         if comp is not None:
             #mp.plotSpectrogram(self.plotstream, comp, gui=True)
             fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
+            # TODO works fine in linux but not on windows
             dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=600)
             dlg.ShowModal()
             dlg.Destroy()
