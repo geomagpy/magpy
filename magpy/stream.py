@@ -139,6 +139,8 @@ try:
     except ImportError: # python 3
         from io import StringIO
         pyvers = 3
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)

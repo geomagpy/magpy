@@ -2470,7 +2470,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
                 url = (base + '?' + add_elem + obs_id + start_time + end_time + file_format +
                       elements + data_type + period + addgroup)
-                print ("Constructed url:", url)
+                #print ("Constructed url:", url)
                 self.options['defaultservice'] = service
             else:
                 msg = wx.MessageDialog(self, "Invalid time range!\n"
