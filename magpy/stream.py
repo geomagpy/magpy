@@ -139,6 +139,8 @@ try:
     except ImportError: # python 3
         from io import StringIO
         pyvers = 3
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
 except ImportError as e:
     logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
     badimports.append(e)
@@ -937,7 +939,7 @@ CALLED BY:
                     y = np.asarray(col)[col!=ch1]
                     x = np.asarray(y)[y!=ch2]
                 test.append(x)
-            test = np.asarray(test)
+            test = np.asarray(test,dtype=object)
         except:
             # print ("Fallback -- pretty slowly")
             #print ("Fallback2")
@@ -1001,7 +1003,7 @@ CALLED BY:
                 newelem = np.delete(elem, duplicateindicies)
                 array[idx] = newelem
 
-        return DataStream(self, self.header, np.asarray(array))
+        return DataStream(self, self.header, np.asarray(array,dtype=object))
 
 
     def start(self, dateformt=None):
@@ -1218,7 +1220,7 @@ CALLED BY:
             if not key in keylist:
                 lst.insert(i,[])
 
-        newndarray = np.asarray(lst)
+        newndarray = np.asarray(lst,dtype=object)
         return newndarray
 
     def sorting(self):
@@ -1985,7 +1987,7 @@ CALLED BY:
         else:
             newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
 
-        return DataStream(newst,self.header,np.asarray(array))
+        return DataStream(newst,self.header,np.asarray(array,dtype=object))
 
 
     def _select_keys(self, keys):
@@ -2100,7 +2102,7 @@ CALLED BY:
         #t3 = datetime.utcnow()
         #print "_select_timerange - deleting :", t3-t2
 
-        return np.asarray(ndarray)
+        return np.asarray(ndarray,dtype=object)
 
     # ------------------------------------------------------------------------
     # C. Application methods
@@ -2615,7 +2617,7 @@ CALLED BY:
             pos = KEYLIST.index(key)
             array[pos] = collst[idx]
 
-        return DataStream([LineStruct()], {}, np.asarray(array))
+        return DataStream([LineStruct()], {}, np.asarray(array,dtype=object))
 
 
     def baselineAdvanced(self, absdata, baselist, **kwargs):
@@ -3889,7 +3891,7 @@ CALLED BY:
             self.add(line)
 
 
-        stream = DataStream(self,self.header,np.asarray(array))
+        stream = DataStream(self,self.header,np.asarray(array,dtype=object))
         #print "extra", stream.ndarray
         #print "extra", stream.length()
 
@@ -5625,7 +5627,7 @@ CALLED BY:
         testx = []
 
         for function in funct:
-            print ("Testing", function)
+            #print ("Testing", function)
             if not function:
                 return self
             # Changed that - 49 sec before, no less then 2 secs
@@ -5650,7 +5652,7 @@ CALLED BY:
                 validkey = False
                 ind = KEYLIST.index(key)
                 if key in keys: # new
-                    print ("DEALING: ", key)
+                    #print ("DEALING: ", key)
                     keyind = keys.index(key)
                     if fkeys:
                         fkey = fkeys[keyind]
@@ -5721,7 +5723,7 @@ CALLED BY:
                 else:
                     totalarray[idx] = array[idx]
 
-        return DataStream(self,self.header,np.asarray(totalarray))
+        return DataStream(self,self.header,np.asarray(totalarray,dtype=object))
 
 
     def func_add(self,funclist,**kwargs):
@@ -5765,7 +5767,7 @@ CALLED BY:
                 else:
                     print("func2stream: mode not recognized")
 
-            return DataStream(self,self.header,np.asarray(array))
+            return DataStream(self,self.header,np.asarray(array,dtype=object))
 
         for elem in self:
             # check whether time step is in function range
@@ -7121,7 +7123,7 @@ CALLED BY:
             else:
                 array[ind] = []
 
-        array = np.asarray(array)
+        array = np.asarray(array,dtype=object)
         steam = DataStream()
         stream = [LineStruct()]
         return DataStream(stream,self.header,array)
@@ -8141,7 +8143,7 @@ CALLED BY:
             #array[flagind] = np.asarray([])
             #array[commind] = np.asarray([])
 
-        return DataStream(liste, self.header,np.asarray(newar))
+        return DataStream(liste, self.header,np.asarray(newar,dtype=object))
 
 
 
@@ -9300,7 +9302,7 @@ CALLED BY:
                     length = len(newarray[i])
                     if length >= idx:
                         newarray[i] = newarray[i][:idx+1]
-        newarray = np.asarray(newarray)
+        newarray = np.asarray(newarray,dtype=object)
         #-ndarrray---------------------------------------
 
 
@@ -10827,6 +10829,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for filename in iglob(pathname):
             getfile = True
             theday = extractDateFromString(filename)
+            #print (" Extracted date:", theday) # Doesnt work for IAF files
             try:
                 if starttime:
                     if not theday[-1] >= datetime.date(st._testtime(starttime)):

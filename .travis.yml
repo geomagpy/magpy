@@ -18,8 +18,12 @@ jobs:
       os: linux
       before_install:
         - pip3 install numpy==1.16.5
+        - pip3 install scipy==1.2.1
     - name: "Python 3.8 on Xenial Linux"
       python: 3.8           # this works for Linux but is ignored on macOS or Windows
+      os: linux
+    - name: "Python 3.9 on Xenial Linux"
+      python: 3.9           # this works for Linux but is ignored on macOS or Windows
       os: linux
     - name: "Python 3.7.4 on macOS"
       os: osx
@@ -37,6 +41,8 @@ jobs:
   allow_failures:
     - os: windows
     - python: 2.7
+    - python: 3.7
+    - os: osx
 
 cache: pip
 

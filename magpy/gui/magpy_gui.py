@@ -209,8 +209,8 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
                          'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
                          'commands':{} }, 
                                       'conrad': {
-                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
-                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']},
+                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
+                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'sampling':['60'],'type':['adjusted']},
                          'commands':{'format':'of'} },
                                       'intermagnet': {                         
                          'magnetism':{'address':'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices','format':['iaga2002'],'ids':['WIC','ABK','AIA','API','ARS','ASC','ASP','BDV','BEL','BFE','BFO','CKI','CNB','CNH','CPL','CSY','CTA','CYG','DOU','ESK','EY2','EYR','FUR','GAN','GCK','GNA','GNG','GZH','HAD','HBK','HER','HLP','HRN','HUA','HYB','IRT','ISK','IZN','JCO','KDU','KEP','KHB','KIV','KMH','LER','LON','LRM','LVV','LYC','MAB','MAW','MCQ','MGD','MZL','NCK','NGK','NUR','NVS','ORC','PAG','PEG','PET','PIL','PST','SBA','SBL','SOD','SON','THY','TSU','UPS','VAL','WMQ','WNG','YAK'],'elements':'X,Y,Z,F','sampling':['minute','second'],'type':['adj-or-rep']},
@@ -443,14 +443,14 @@ class PlotPanel(scrolled.ScrolledPanel):
                         self.array[idx].extend(el)
 
             try:
-                tmp = DataStream([],{},np.asarray(self.array)).samplingrate()
+                tmp = DataStream([],{},np.asarray(self.array,dtype=object)).samplingrate()
                 coverage = int(int(self.datavars[6])/tmp)
             except:
                 pass
             self.array = [el[-coverage:] for el in self.array]
 
         if len(self.array[0]) > 2:
-            ind = np.argsort(np.asarray(self.array)[0])
+            ind = np.argsort(np.asarray(self.array,dtype=object)[0])
             for idx,line in enumerate(self.array):
                 if len(line) == len(ind):
                     self.array[idx] = list(np.asarray(line)[ind])
@@ -2189,7 +2189,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2020 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
+        info.SetCopyright('(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
         info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec')
@@ -3102,8 +3102,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             time = num2date(time)
         try:
             for elem in self.shownkeylist:
-                ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
-                ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
+                ul = np.nan
+                ll = np.nan
+                if not np.all(np.isnan(self.plotstream.ndarray[KEYLIST.index(elem)])):
+                    ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
+                    ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
                 if ll < pickY < ul:
                     possible_key += elem
                     possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
@@ -4988,6 +4991,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         comp = self.getComponent()
         if comp is not None:
             fig = mp.plotPS(self.plotstream, comp, noshow=True)
+            # TODO works fine in linux but not on windows
             dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=650,ysize=600)
             dlg.ShowModal()
             dlg.Destroy()
@@ -5003,6 +5007,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         if comp is not None:
             #mp.plotSpectrogram(self.plotstream, comp, gui=True)
             fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
+            # TODO works fine in linux but not on windows
             dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=600)
             dlg.ShowModal()
             dlg.Destroy()
@@ -6642,7 +6647,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         array[idx] = np.asarray(el).astype(float)
                     else:
                         array[idx] = np.asarray(el)
-                absstream.ndarray = np.asarray(array)
+                absstream.ndarray = np.asarray(array,dtype=object)
                 self.stream = absstream.copy()
                 self.plotstream = absstream.copy()
                 currentstreamindex = len(self.streamlist)
