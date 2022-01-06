@@ -2615,7 +2615,7 @@ CALLED BY:
             pos = KEYLIST.index(key)
             array[pos] = collst[idx]
 
-        return DataStream([LineStruct()], {}, np.asarray(array))
+        return DataStream([LineStruct()], {}, np.asarray(array,dtype=object))
 
 
     def baselineAdvanced(self, absdata, baselist, **kwargs):
@@ -3889,7 +3889,7 @@ CALLED BY:
             self.add(line)
 
 
-        stream = DataStream(self,self.header,np.asarray(array))
+        stream = DataStream(self,self.header,np.asarray(array,dtype=object))
         #print "extra", stream.ndarray
         #print "extra", stream.length()
 
@@ -5625,7 +5625,7 @@ CALLED BY:
         testx = []
 
         for function in funct:
-            print ("Testing", function)
+            #print ("Testing", function)
             if not function:
                 return self
             # Changed that - 49 sec before, no less then 2 secs
@@ -5650,7 +5650,7 @@ CALLED BY:
                 validkey = False
                 ind = KEYLIST.index(key)
                 if key in keys: # new
-                    print ("DEALING: ", key)
+                    #print ("DEALING: ", key)
                     keyind = keys.index(key)
                     if fkeys:
                         fkey = fkeys[keyind]
@@ -5721,7 +5721,7 @@ CALLED BY:
                 else:
                     totalarray[idx] = array[idx]
 
-        return DataStream(self,self.header,np.asarray(totalarray))
+        return DataStream(self,self.header,np.asarray(totalarray,dtype=object))
 
 
     def func_add(self,funclist,**kwargs):
@@ -5765,7 +5765,7 @@ CALLED BY:
                 else:
                     print("func2stream: mode not recognized")
 
-            return DataStream(self,self.header,np.asarray(array))
+            return DataStream(self,self.header,np.asarray(array,dtype=object))
 
         for elem in self:
             # check whether time step is in function range
@@ -7121,7 +7121,7 @@ CALLED BY:
             else:
                 array[ind] = []
 
-        array = np.asarray(array)
+        array = np.asarray(array,dtype=object)
         steam = DataStream()
         stream = [LineStruct()]
         return DataStream(stream,self.header,array)

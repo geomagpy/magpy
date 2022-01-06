@@ -209,8 +209,8 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
                          'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
                          'commands':{} }, 
                                       'conrad': {
-                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/index.php/webservice','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
-                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/index.php/webservice','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'elements':'T,rh,P,SH,N,Wv,Wd,S,SYNOP','sampling':['60'],'type':['adjusted']},
+                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
+                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'sampling':['60'],'type':['adjusted']},
                          'commands':{'format':'of'} },
                                       'intermagnet': {                         
                          'magnetism':{'address':'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices','format':['iaga2002'],'ids':['WIC','ABK','AIA','API','ARS','ASC','ASP','BDV','BEL','BFE','BFO','CKI','CNB','CNH','CPL','CSY','CTA','CYG','DOU','ESK','EY2','EYR','FUR','GAN','GCK','GNA','GNG','GZH','HAD','HBK','HER','HLP','HRN','HUA','HYB','IRT','ISK','IZN','JCO','KDU','KEP','KHB','KIV','KMH','LER','LON','LRM','LVV','LYC','MAB','MAW','MCQ','MGD','MZL','NCK','NGK','NUR','NVS','ORC','PAG','PEG','PET','PIL','PST','SBA','SBL','SOD','SON','THY','TSU','UPS','VAL','WMQ','WNG','YAK'],'elements':'X,Y,Z,F','sampling':['minute','second'],'type':['adj-or-rep']},
@@ -443,14 +443,14 @@ class PlotPanel(scrolled.ScrolledPanel):
                         self.array[idx].extend(el)
 
             try:
-                tmp = DataStream([],{},np.asarray(self.array)).samplingrate()
+                tmp = DataStream([],{},np.asarray(self.array,dtype=object)).samplingrate()
                 coverage = int(int(self.datavars[6])/tmp)
             except:
                 pass
             self.array = [el[-coverage:] for el in self.array]
 
         if len(self.array[0]) > 2:
-            ind = np.argsort(np.asarray(self.array)[0])
+            ind = np.argsort(np.asarray(self.array,dtype=object)[0])
             for idx,line in enumerate(self.array):
                 if len(line) == len(ind):
                     self.array[idx] = list(np.asarray(line)[ind])
@@ -2470,7 +2470,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
                 url = (base + '?' + add_elem + obs_id + start_time + end_time + file_format +
                       elements + data_type + period + addgroup)
-                #print ("Constructed url:", url)
+                print ("Constructed url:", url)
                 self.options['defaultservice'] = service
             else:
                 msg = wx.MessageDialog(self, "Invalid time range!\n"
@@ -6645,7 +6645,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         array[idx] = np.asarray(el).astype(float)
                     else:
                         array[idx] = np.asarray(el)
-                absstream.ndarray = np.asarray(array)
+                absstream.ndarray = np.asarray(array,dtype=object)
                 self.stream = absstream.copy()
                 self.plotstream = absstream.copy()
                 currentstreamindex = len(self.streamlist)
