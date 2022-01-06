@@ -176,7 +176,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         del cdfdat
 
     #print (stream.header)
-    return DataStream([LineStruct()], stream.header,np.asarray(array))
+    return DataStream([LineStruct()], stream.header,np.asarray(array,dtype=object))
 
 
 def writePYCDF(datastream, filename, **kwargs):

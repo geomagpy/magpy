@@ -2082,15 +2082,15 @@ class AnalysisFitDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         try:
-            sttup = self.mintime.timetuple()
-            stt = time.mktime(sttup)
-            ettup = self.maxtime.timetuple()
-            ett = time.mktime(ettup)
-            stfit = wx.DateTime.FromTimeT(stt)
-            etfit = wx.DateTime.FromTimeT(ett)
+            stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month,self.mintime.year,)
+            etfit = wx.DateTime.FromDMY(self.maxtime.day,self.maxtime.month,self.maxtime.year,)
         except:
-            stfit = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
-            etfit = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
+            try:
+                stfit = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
+                etfit = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
+            except:
+                stfit = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
+                etfit = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
         try:
             # Windows workaround for wx.DateTime issue
             if not int(etfit.GetYear()) == int(time.strftime("%Y",ettup)):
@@ -2110,6 +2110,7 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.UpperTimeText = wx.StaticText(self,label="Fit data before:")
         self.LowerTimeText = wx.StaticText(self,label="Fit data after:")
+        print ("Here", stfit)
         self.startFitDatePicker = wxDatePickerCtrl(self, dt=stfit,size=(160,30))
         self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
         self.endFitDatePicker = wxDatePickerCtrl(self, dt=etfit,size=(160,30))
@@ -7260,11 +7261,10 @@ wx.ART_MESSAGE_BOX, (32, 32))
             bitmap = wx.ArtProvider.GetBitmap(wx.ART_INFORMATION,
 wx.ART_MESSAGE_BOX, (32, 32))
         graphic = wx.StaticBitmap(self, -1, bitmap)
-        box2.Add(graphic, 0, wx.EXPAND | wx.ALIGN_CENTER | wx.ALL, 10)
+        box2.Add(graphic, 0, wx.EXPAND | wx.ALL, 10)
         # Add the message
         message = wx.StaticText(self, -1, msg)
-        box2.Add(message, 0, wx.EXPAND | wx.ALIGN_CENTER |
-wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
+        box2.Add(message, 0, wx.EXPAND | wx.ALL, 10)
         box.Add(box2, 0, wx.EXPAND)
         # Handle layout
         self.SetAutoLayout(True)

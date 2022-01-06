@@ -937,7 +937,7 @@ CALLED BY:
                     y = np.asarray(col)[col!=ch1]
                     x = np.asarray(y)[y!=ch2]
                 test.append(x)
-            test = np.asarray(test)
+            test = np.asarray(test,dtype=object)
         except:
             # print ("Fallback -- pretty slowly")
             #print ("Fallback2")
@@ -1001,7 +1001,7 @@ CALLED BY:
                 newelem = np.delete(elem, duplicateindicies)
                 array[idx] = newelem
 
-        return DataStream(self, self.header, np.asarray(array))
+        return DataStream(self, self.header, np.asarray(array,dtype=object))
 
 
     def start(self, dateformt=None):
@@ -1218,7 +1218,7 @@ CALLED BY:
             if not key in keylist:
                 lst.insert(i,[])
 
-        newndarray = np.asarray(lst)
+        newndarray = np.asarray(lst,dtype=object)
         return newndarray
 
     def sorting(self):
@@ -1985,7 +1985,7 @@ CALLED BY:
         else:
             newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
 
-        return DataStream(newst,self.header,np.asarray(array))
+        return DataStream(newst,self.header,np.asarray(array,dtype=object))
 
 
     def _select_keys(self, keys):
@@ -2100,7 +2100,7 @@ CALLED BY:
         #t3 = datetime.utcnow()
         #print "_select_timerange - deleting :", t3-t2
 
-        return np.asarray(ndarray)
+        return np.asarray(ndarray,dtype=object)
 
     # ------------------------------------------------------------------------
     # C. Application methods
@@ -8141,7 +8141,7 @@ CALLED BY:
             #array[flagind] = np.asarray([])
             #array[commind] = np.asarray([])
 
-        return DataStream(liste, self.header,np.asarray(newar))
+        return DataStream(liste, self.header,np.asarray(newar,dtype=object))
 
 
 
@@ -9300,7 +9300,7 @@ CALLED BY:
                     length = len(newarray[i])
                     if length >= idx:
                         newarray[i] = newarray[i][:idx+1]
-        newarray = np.asarray(newarray)
+        newarray = np.asarray(newarray,dtype=object)
         #-ndarrray---------------------------------------
 
 

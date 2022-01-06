@@ -3102,8 +3102,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             time = num2date(time)
         try:
             for elem in self.shownkeylist:
-                ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
-                ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
+                ul = np.nan
+                ll = np.nan
+                if not np.all(np.isnan(self.plotstream.ndarray[KEYLIST.index(elem)])):
+                    ul = np.nanmax(self.plotstream.ndarray[KEYLIST.index(elem)])
+                    ll = np.nanmin(self.plotstream.ndarray[KEYLIST.index(elem)])
                 if ll < pickY < ul:
                     possible_key += elem
                     possible_val += [self.plotstream.ndarray[KEYLIST.index(elem)][idx]]
