@@ -148,7 +148,10 @@ def isLIPPGRAV(filename):
     try:
         test = datetime.strptime(comp[0],"%Y%m%d%H%M%S")
     except:
-        return False
+        try:
+            test = datetime.strptime(comp[0],"%Y%m%d%H%M%S.%f")
+        except:
+            return False
     return True
 
 
@@ -734,7 +737,10 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
                 row = LineStruct()
                 try:
                     date = colsstr[0]+'-'+colsstr[1]
-                    array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S")))
+                    try:
+                        array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S")))
+                    except:
+                        array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S.%f")))
                     array[posx].append(float(colsstr[1]))
                     array[posy].append(float(colsstr[2]))
                     array[post1].append(float(colsstr[3]))
