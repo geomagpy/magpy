@@ -221,7 +221,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
     if headers.get('SensorID','') == '':
         headers['SensorID'] = 'unknown_12345_0001'
 
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 
@@ -313,7 +313,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 def readPYCDF(filename, headonly=False, **kwargs):
@@ -675,7 +675,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
         del cdf_file
 
     if not oldtype:
-        return DataStream([LineStruct()], stream.header,np.asarray(array).astype(object))
+        return DataStream([LineStruct()], stream.header,np.asarray(array,dtype=object))
     else:
         return DataStream(stream, stream.header,stream.ndarray)
 

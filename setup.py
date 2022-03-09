@@ -26,6 +26,7 @@ else:
             "pymysql >= 0.6.0",
             "cdflib >= 0.3.0",
             "pexpect >= 3.1.0",
+            "pypubsub >= 4.0.0",
         ]
 
 setup(

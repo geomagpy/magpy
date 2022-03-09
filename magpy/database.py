@@ -2102,21 +2102,24 @@ def writeDB(db, datastream, tablename=None, StationID=None, mode='replace', revi
     ## Alternative upload for very large lists (from 0.4.6 on) 
     START_INDEX = 0
     LIST_LENGTH=1000
+    errorfound = True
     while values[START_INDEX:START_INDEX+LIST_LENGTH]:
-        cursor.executemany(insertmanysql,values[START_INDEX:START_INDEX+LIST_LENGTH])
+        try:
+            cursor.executemany(insertmanysql,values[START_INDEX:START_INDEX+LIST_LENGTH])
+            errorfound = False
+        except mysql.Error as e:
+            emsg = str(e)
+            print ("writeDB: mysql error when writing - {}".format(emsg))
+        except:
+            print ("writeDB: unknown error when checking for existing tables")
         START_INDEX += LIST_LENGTH
-
-    ## Previous way - direct upload (up to 0.4.5)
-    #cursor.executemany(insertmanysql,values)
-
-    #t2 = datetime.utcnow()
-    #print (t2-t1)
 
     # ----------------------------------------------
     #   update DATAINFO - move to a separate method
     # ----------------------------------------------
 
-    dbsetTimesinDataInfo(db, tablename,','.join(collst),','.join(unitlst))
+    if not errorfound:
+        dbsetTimesinDataInfo(db, tablename,','.join(collst),','.join(unitlst))
 
     db.commit()
     cursor.close ()

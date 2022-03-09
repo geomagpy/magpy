@@ -335,7 +335,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array))
+    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
     sr = stream.samplingrate()
 
     return stream

@@ -77,6 +77,7 @@ magpy/lib/format_abs_magpy.py
 magpy/lib/format_acecdf.py
 magpy/lib/format_autodif.py
 magpy/lib/format_autodif_fread.py
+magpy/lib/format_basiccsv.py
 magpy/lib/format_bdv.py
 magpy/lib/format_covjson.py
 magpy/lib/format_cr800.py

@@ -2417,7 +2417,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             array[idx] = np.asarray(el).astype(float)
         else:
             array[idx] = np.asarray(el)
-    resultstream.ndarray = np.asarray(array)
+    resultstream.ndarray = np.asarray(array,dtype=object)
 
     return resultstream
 

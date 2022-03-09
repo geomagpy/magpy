@@ -2,12 +2,30 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
+####v<1.0.3>, <2022-01-06> --
+
+1.0.3 general:
+    + ready for newest wx4
+    + tested on windows 10 with newest winpython 3.9
+    + ready for creating new windows installer
+
+1.0.3 additions:
+    + update of conrad webservice defaults
+    + ssl exceptions for BGS INTERMAGNET access allowed (affected access from win)
+
+1.0.3 fixes:
+    + IAF publication date issue solved (some IAF files could not be read)
+    + Deprecation warnings for dtype=object in array definitions
+    + several fixes regarding newest versions of matplotlib and wxpython
+
 ####v<1.0.2>, <2021-07-31> --
 
 1.0.2 general:
     + cdf_tmp errors when traing to read non-cdf data
-    + 
-    
+    + wx warnings
+    + IMAGCDF 1.3 support including flags
+    + minor warning fixes and db optimization
+
 1.0.2 additions:
     + basic support for simple CSV files (read/write)
 
@@ -15,7 +33,7 @@ Installation instructions can be found on the main download page.
     + march31 time stamp error for IAGA2002 files
     + basevalue data in XYZ in addition to HDZ
     + when reading zipped files with time ranges: no unpacking of all existing files any more
-
+    + BLV file reading - ignoring non-interpretable 'd' markers
 
 ####v<1.0.1>, <2021-06-30> --
 
