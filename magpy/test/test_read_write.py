@@ -69,7 +69,7 @@ SOURCEDICT = {
                 ## GENERAL File Formats
 		'IAGA_ZIP': {'source':example1, 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA']},
 		'IMAGCDF': {'source':example4, 'keys': ['x','y','z','f','t1','t2'], 'length': 604798, 'id':'', 'wformat': ['IMAGCDF']},
- 		'WEBSERVICE': {'source':'http://cobs.zamg.ac.at/data/index.php/en/data-access/webservice?id=WIC'},
+ 		'WEBSERVICE': {'source':'https://cobs.zamg.ac.at/data/webservice/query.php?id=WIC'},
 		'IAGA': {'source':example5, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA','IMAGCDF']},
 		#'IAF': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/IAF/WIC18FEB.BIN', 'wformat': ['IAF','IMF']},
 		#'WDC': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/WDC/WIC2018.WDC', 'wformat': ['WDC']},
