@@ -315,7 +315,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
     fh.close()
 
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 def readLNM(filename, headonly=False, **kwargs):
@@ -470,7 +470,7 @@ def readLNM(filename, headonly=False, **kwargs):
 
     headers['DataFormat'] = 'Theiss-LaserNiederschlagsMonitor'
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 def readUSBLOG(filename, headonly=False, **kwargs):
@@ -533,7 +533,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
     headers['SensorGroup'] = 'environment'
 
 
-    array = np.asarray([np.asarray(el) for el in array])
+    array = np.asarray([np.asarray(el) for el in array],dtype=object)
     stream = [LineStruct()]
     return DataStream(stream, headers, array)
 
@@ -670,7 +670,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if debug:
         print ("METEO: Successfully loaded METEO data")
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 def readLIPPGRAV(filename, headonly=False, **kwargs):
@@ -767,7 +767,7 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
         for idx,el in enumerate(array):
             array[idx] = np.asarray(el)
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 def readIWT(filename, headonly=False, **kwargs):
     """
@@ -849,7 +849,7 @@ def readIWT(filename, headonly=False, **kwargs):
         array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
 
 
-        ndarray = np.array(array)
+        ndarray = np.asarray(array,dtype=object)
 
         stream = DataStream()
         stream = [LineStruct()]
@@ -950,7 +950,7 @@ def readCS(filename, headonly=False, **kwargs):
             headers['col-t2'] = 'Dewpoint'
             headers['col-var1'] = 'RH'
 
-    array = np.asarray([np.asarray(el) for el in array])
+    array = np.asarray([np.asarray(el) for el in array],dtype=object)
     stream = [LineStruct()]
     return DataStream(stream, headers, array)
 
