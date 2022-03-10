@@ -380,6 +380,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     # check DataComponents for correctness
     dcomps = headers.get('DataComponents','')
+    print ("COMPONETS : ", dcomps)
     dkeys = datastream._get_key_headers()
     if 'f' in dkeys and len(dcomps) == 3:
         dcomps = dcomps+'S'
@@ -474,11 +475,18 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     proj = headers.get('DataLocationReference','')
     longi = headers.get('DataAcquisitionLongitude','')
     lati = headers.get('DataAcquisitionLatitude','')
+    ele = headers.get('DataElevation','')
     try:
         longi = "{:.3f}".format(float(longi))
         lati = "{:.3f}".format(float(lati))
     except:
         print("writeIMAGCDF: could not convert lat long to floats")
+    try:
+        ele = "{:.3f}".format(float(ele))
+    except:
+        print("writeIMAGCDF: could not convert elevation to float")
+    if not ele=='':
+        globalAttrs['Elevation'] = { 0 : float(ele) }
     if not longi=='' or lati=='':
         if proj == '':
             patt = mycdf.attrs
