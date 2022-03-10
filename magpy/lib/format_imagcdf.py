@@ -380,7 +380,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     # check DataComponents for correctness
     dcomps = headers.get('DataComponents','')
-    print ("COMPONETS : ", dcomps)
     dkeys = datastream._get_key_headers()
     if 'f' in dkeys and len(dcomps) == 3:
         dcomps = dcomps+'S'
@@ -584,6 +583,15 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             #keep column and (later) leave time       
             useScalarTimes=True  # change to False in order to use a single col
         """
+
+    ## Update DataComponents regarding S or F        
+    comps = datastream.header.get('DataComponents')
+    if len(dcomps) == 4 and 'f' in keylist:
+        comps[4] = fcolname
+        print ("HERRRE", comps)
+
+    headers['DataComponents'] = comps
+
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
 
     for key in keylst:
