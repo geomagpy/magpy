@@ -970,7 +970,7 @@ CALLED BY:
                         array[idx] = np.append(nullvals, ndarray[idx]).astype(object)
                     else:
                         array[idx] = ndarray[idx].astype(object)
-            self.ndarray = np.asarray(array)
+            self.ndarray = np.asarray(array, dtype=object)
 
     def union(self,column):
         seen = set()
