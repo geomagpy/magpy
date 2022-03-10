@@ -2,6 +2,15 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
+####v<1.0.4>, <2022-03-10> --
+
+1.0.4 general:
+    + IMAGCDF issues - elevation as float, F versus S
+    + removed further ndarray decrepation warnings
+
+1.0.4 additions:
+    + supporting new propritary data format used for tilt measurements
+
 ####v<1.0.3>, <2022-01-06> --
 
 1.0.3 general:
