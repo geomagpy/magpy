@@ -510,7 +510,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         globalAttrs['IagaCode'] = { 0 : headers.get('StationID','')}
 
 
-    mycdf.write_globalattrs(globalAttrs)    
+    # writing of global attributes after checking for independency of eventually provided F (S) record - line 595
+    #mycdf.write_globalattrs(globalAttrs)    
 
     ### #########################################
     ###               Data 
@@ -584,13 +585,14 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             useScalarTimes=True  # change to False in order to use a single col
         """
 
-    ## Update DataComponents regarding S or F        
+    ## Update DataComponents/Elements records regarding S (independent) or F (vector)
     comps = datastream.header.get('DataComponents')
-    if len(dcomps) == 4 and 'f' in keylist:
-        comps[4] = fcolname
-        print ("HERRRE", comps)
-
-    headers['DataComponents'] = comps
+    if len(comps) == 4 and 'f' in keylst:
+        comps = comps[:3] + fcolname
+        globalAttrs['ElementsRecorded'] = { 0 : comps}
+        
+    ## writing Global header data
+    mycdf.write_globalattrs(globalAttrs)
 
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
 
@@ -723,7 +725,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             pass
 
     success = filename
-
 
     if len(flaglist) > 0 and addflags == True:
         flagstart = 'FlagBeginTimes'
