@@ -2081,6 +2081,9 @@ class AnalysisFitDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
+        stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month-1,self.mintime.year,)
+        etfit = wx.DateTime.FromDMY(self.maxtime.day,self.maxtime.month-1,self.maxtime.year,)
+        """
         try:
             stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month,self.mintime.year,)
             etfit = wx.DateTime.FromDMY(self.maxtime.day,self.maxtime.month,self.maxtime.year,)
@@ -2099,7 +2102,7 @@ class AnalysisFitDialog(wx.Dialog):
                 stfit = stfit.SetYear(int(time.strftime("%Y",sttup)))
         except:
             pass
-
+        """
         self.funcLabel = wx.StaticText(self, label="Fit function:",size=(160,30))
         self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
             style=wx.CB_DROPDOWN, value=self.fitfunc,size=(160,-1))
