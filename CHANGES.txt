@@ -6,9 +6,13 @@ Installation instructions can be found on the main download page.
 
 1.0.5 general:
     + removed locale modifications for interpreting months 
+    + basevalue data: when removing flagged data and adding to data to memory, 
+      this "new" data can be selected for baeline analysis
+      previously always the original/uncorrected data was used 
 
 1.0.5 additions:
     + func2header allows to add functions as header info - can be saved with pycdf format
+    + func2header is used in GUI if fit functions are calculated, popup asks user
 
 1.0.5 fixes:
     + correct usage of datetime in fitting options of GUI
