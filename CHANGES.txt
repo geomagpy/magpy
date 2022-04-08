@@ -5,12 +5,16 @@ Installation instructions can be found on the main download page.
 ####v<1.0.5>, <2022-xx-xx> --
 
 1.0.5 general:
+    + removed locale modifications for interpreting months 
 
 1.0.5 additions:
+    + func2header allows to add functions as header info - can be saved with pycdf format
 
 1.0.5 fixes:
     + correct usage of datetime in fitting options of GUI
-    + GUI time issues affecting windows
+    + GUI time issues mainly affecting windows
+    + alphabetic sorting of files when loading from directory
+    + no popup when canceling file opening
 
 ####v<1.0.4>, <2022-03-15> --
 

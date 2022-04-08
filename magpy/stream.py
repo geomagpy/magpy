@@ -5853,6 +5853,22 @@ CALLED BY:
         return st
 
 
+
+    def func2header(self,funclist,debug=False):
+        """
+        DESCRIPTION
+            Add a list of functions into the data header
+        """
+
+        if isinstance(funclist[0], dict):
+            funct = [funclist]
+        else:
+            funct = funclist
+
+        self.header['DataFunctionObject'] = funct
+
+        return self
+
     def GetKeyName(self,key):
         """
         DESCRIPTION

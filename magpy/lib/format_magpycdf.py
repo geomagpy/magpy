@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 import gc
 import cdflib
+# for export of objects:
+import codecs
 
 def isPYCDF(filename):
     """
@@ -101,7 +103,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             value = value[0]
                 except:
                     pass
-                if not att in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
+                if not att in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList','DataFunctionObject']:
                     stream.header[att] = value
                 else:
                         print ("Found special header content !!!!!!!!!!!!!!!! --  version {}".format(version))
@@ -109,8 +111,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         logger.debug("readPYCDF: Found object - loading and unpickling")
                         func = ''
                         try:
-                            func = pickle.loads(str.encode(value), encoding="bytes")
+                            func = pickle.loads(codecs.decode(value.encode(), "base64"))
                         except:
+                          try:
+                              func = pickle.loads(str.encode(value), encoding="bytes")
+                          except:
                             try:
                                 print ("old unpickling version")
                                 func = pickle.loads(value)
@@ -118,6 +123,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                                 print ("FAILED to load special content")
                                 logger.debug("readPYCDF: Failed to load Object - constructed before v0.2.000?")
                         stream.header[att] = func
+                        print (" -> functions loaded")
 
         logger.info('readPYCDF: %s Format: %s ' % (filename, cdfformat))
 
@@ -286,12 +292,14 @@ def writePYCDF(datastream, filename, **kwargs):
         for key in headdict:
             if not key.find('col-') >= 0:
                 #print (key, headdict[key])
-                if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
+                if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList','DataFunctionObject']:
                     globalAttrs[key] = { 0 : str(headdict[key]) }
                 else:
                     logger.info("writePYCDF: Found Object in header - pickle and dump ")
-                    pfunc = pickle.dumps(headdict[key])
-                    globalAttrs[key] = { 0 : pfunc }
+                    #print("writePYCDF: Found Object in header - pickle and dump ")
+                    pfunc = codecs.encode(pickle.dumps(headdict[key]), "base64").decode()
+                    #pfunc = pickle.dumps(headdict[key])
+                    globalAttrs[key] = { 0 : str(pfunc) }
 
     globalAttrs['DataFormat'] = { 0 : 'MagPyCDF{}'.format(version)}
 

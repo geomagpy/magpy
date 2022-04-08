@@ -2040,6 +2040,10 @@ class MainFrame(wx.Frame):
         # Init Controls
         self.ActivateControls(self.plotstream)
 
+        if self.plotstream.header.get('DataFunctionObject',False):
+            #print ("HERE - found functions:", self.plotstream.header.get('DataFunctionObject') )
+            self.plotopt['function'] = self.plotstream.header.get('DataFunctionObject')
+
         # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
         keylist = self.UpdatePlotCharacteristics(self.plotstream)
 
@@ -2770,8 +2774,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     elif fileformat == 'PYCDF':
                         # Open Yes/No message box and to select whether flags should be stored or not
                         print ("Writing PYCDF data")  # add function here
-                        addflags = False
+                        if self.plotopt['function']:
+                            # Function
+                            fdlg = wx.MessageDialog(self, 'Found fit functions - add them to the data file?', 'Export fit functions', wx.YES_NO | wx.ICON_QUESTION)
+                            if fdlg.ShowModal() == wx.ID_YES:
+                                print (" -> found fit functions - adding them")
+                                self.plotstream.func2header(self.plotopt['function'])
+                            fdlg.Destroy()
                         # Test whether flags are present at all
+                        addflags = False
+                        # Compression
                         cdlg = wx.MessageDialog(self, 'Compress? (selecting "NO" improves compatibility between different operating systems', 'Compression', wx.YES_NO | wx.ICON_QUESTION)
                         compression = 0
                         if cdlg.ShowModal() == wx.ID_YES:
