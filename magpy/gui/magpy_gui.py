@@ -1574,16 +1574,6 @@ class MainFrame(wx.Frame):
                 dis = str(value)
             return dis
 
-        def compare_dicts(d1, d2, ignore_keys):
-            """
-            # https://stackoverflow.com/questions/10480806/compare-dictionaries-ignoring-specific-keys
-            used for checking existance of baseline parameters
-            """
-            if {k: v for k,v in d1.items() if k not in ignore_keys} == {k: v for k,v in d2.items() if k not in ignore_keys}:
-                return True
-            else:
-                return False
-
         if len(self.shownkeylist) == 0:   ## Initiaize self.shownkeylist if not yet done
             keylist = [elem for elem in keys if elem in NUMKEYLIST]
             self.shownkeylist = keylist[:9]
@@ -1678,6 +1668,8 @@ class MainFrame(wx.Frame):
             # Obtain the correct stream idx function
             streamidx = self.currentstreamindex
 
+            self.append_baseline(mintime,maxtime,basename,streamidx)
+            """
             basedict = {'startdate':num2date(mintime).replace(tzinfo=None),'enddate':num2date(maxtime).replace(tzinfo=None), 'filename':basename, 'streamidx': streamidx, 'function': self.options.get('fitfunction'), 'knotstep': self.options.get('fitknotstep'), 'degree': self.options.get('fitdegree')}
             #print (basedict)
 
@@ -1689,6 +1681,7 @@ class MainFrame(wx.Frame):
             if not basedictexisting:
                 self.baselinedictlst.append(basedict)
                 #print ("Extending baseline data sets")
+            """
 
         def checkbaseline(baselinedictlst, sensorid, mintime, maxtime, stationid=None):
             """
@@ -1847,6 +1840,30 @@ class MainFrame(wx.Frame):
         sourcelist = ['file','database','webservice']
         self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[self.options.get('didictionary').get('divariosource')]))
         self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[self.options.get('didictionary').get('discalarsource')]))
+
+    def append_baseline(self, mintime,maxtime,basename,streamidx):
+
+        def compare_dicts(d1, d2, ignore_keys):
+            """
+            # https://stackoverflow.com/questions/10480806/compare-dictionaries-ignoring-specific-keys
+            used for checking existance of baseline parameters
+            """
+            if {k: v for k,v in d1.items() if k not in ignore_keys} == {k: v for k,v in d2.items() if k not in ignore_keys}:
+                return True
+            else:
+                return False
+
+        basedict = {'startdate':num2date(mintime).replace(tzinfo=None),'enddate':num2date(maxtime).replace(tzinfo=None), 'filename':basename, 'streamidx': streamidx, 'function': self.options.get('fitfunction'), 'knotstep': self.options.get('fitknotstep'), 'degree': self.options.get('fitdegree')}
+
+        # Check if such an input is already existing... if not append to baselinelst
+        basedictexisting = False
+        for tempdict in self.baselinedictlst:
+            #if compare_dicts(basedict, tempdict, ['streamidx']):
+            if compare_dicts(basedict, tempdict, []):
+                basedictexisting = True
+        if not basedictexisting:
+            self.baselinedictlst.append(basedict)
+            #print ("Extending baseline data sets")
 
     def InitialRead(self,stream):
         """
@@ -6269,6 +6286,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         self.headerlist.append(self.plotstream.header)
         self.currentstreamindex = currentstreamindex
         self.plotoptlist.append(self.plotopt)
+        if self.plotstream.header.get('DataFormat','').startswith('MagPyDI'):
+            basename = self.plotstream.header.get('DataID','')
+            print ("Adding a new baselinestream", currentstreamindex, basename)
+            self.append_baseline(self.plotstream._get_min('time'),self.plotstream._get_max('time'),basename,currentstreamindex)
 
 
     # ------------------------------------------------------------------------------------------
