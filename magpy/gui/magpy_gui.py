@@ -2273,11 +2273,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         stream.header = {}
         filelist = []
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
-        if dlg.ShowModal() == wx.ID_OK:
+        
+        answer = dlg.ShowModal()
+        if answer == wx.ID_OK:
             self.changeStatusbar("Loading data ...")
             pathlist = dlg.GetPaths()
         dlg.Destroy()
-
+        if answer == wx.ID_CANCEL:
+            return
+        
         loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
         try:
                 for path in pathlist:
@@ -2326,12 +2330,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             bookmarks = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab','http://www.intermagnet.org/test/ws/?id=BOU']
 
         dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
-        if dlg.ShowModal() == wx.ID_OK:
+        
+        answer = dlg.ShowModal()
+        if answer == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
             self.changeStatusbar("Loading data ... be patient")
             self.options['bookmarks'] = dlg.favorites
         dlg.Destroy()
-
+        if answer == wx.ID_CANCEL:
+            return
+        
         try:
                 if not url.endswith('/'):
                     loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
