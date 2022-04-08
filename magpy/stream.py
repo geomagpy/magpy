@@ -12878,6 +12878,7 @@ def extractDateFromString(datestring):
     APPLICATION:
        datelist = extractDateFromString(filename)
     """
+
     date = False
     # get day from filename (platform independent)
     localechanged = False
@@ -12888,20 +12889,20 @@ def extractDateFromString(datestring):
     except:
         daystring = datestring
 
-    try:
-        # IMPORTANT: when interpreting %b, then the local time format is very important (OKT vc OCT)
-        old_locale = locale.getlocale()
-        locale.setlocale(locale.LC_TIME, ('en_US', 'UTF-8'))
-        localechanged = True
-    except:
-        pass
+    #try: # uncommented by leon - don't see any reason why to force locale to en_US. strptime is always using en_US by default independent from locale settings
+    #    # IMPORTANT: when interpreting %b, then the local time format is very important (OKT vc OCT)
+    #    old_locale = locale.getlocale()
+    #    locale.setlocale(locale.LC_TIME, ('en_US', 'UTF-8'))
+    #    localechanged = True
+    #except:
+    #    pass
     try:
         #logger.warning("Got Here2: {}".format(daystring[-7:]))
         #logger.warning("Got Here3: {}".format(datetime.strptime(str(daystring[-7:]), '%b%d%y')))
         date = datetime.strptime(daystring[-7:], '%b%d%y')
         dateform = '%b%d%y'
-        if localechanged:
-            locale.setlocale(locale.LC_TIME, old_locale)
+        #if localechanged:
+        #    locale.setlocale(locale.LC_TIME, old_locale)
     except:
         # test for day month year
         try:
@@ -12972,7 +12973,6 @@ def extractDateFromString(datestring):
                 date = datetime.strptime(tmpdaystring[-6:],dateform)
             except:
                 pass
-
     try:
         return [datetime.date(date)]
     except:
