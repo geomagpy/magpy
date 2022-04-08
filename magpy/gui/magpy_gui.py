@@ -2231,7 +2231,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         if dialog.ShowModal() == wx.ID_OK:
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
             self.dirname = dialog.GetPath() # modify self.dirname
-            files = sorted(filelist, key=os.path.getmtime)
+            #files = sorted(filelist, key=os.path.getmtime)
+            files = sorted(filelist)
             try:
                 oldest = extractDateFromString(files[0])[0]
                 #old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
