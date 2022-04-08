@@ -10,6 +10,15 @@ Installation instructions can be found on the main download page.
 
 1.0.5 fixes:
     + correct usage of datetime in fitting options of GUI
+    + GUI time issues affecting windows
+
+####v<1.0.4>, <2022-03-15> --
+
+1.0.4 additions:
+    + support for tilt data files 
+
+1.0.4 fixes:
+    + some datetime issues in GUI
 
 ####v<1.0.3>, <2022-01-06> --
 

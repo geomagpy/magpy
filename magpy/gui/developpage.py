@@ -340,9 +340,11 @@ class GraphPage(wx.Panel):
         self.SaveVarioButton = wx.Button(self,-1,"Save data")
         self.dateLabel = wx.StaticText(self, label="Insert time range:")
         self.startdateLabel = wx.StaticText(self, label="Start date:")
-        self.startDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-10-22","%Y-%m-%d").timetuple())))
+        dt = wx.DateTime.FromDMY(day=22,month=10,year=2011) # dummy date value
+        #dt = wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-10-22","%Y-%m-%d").timetuple()))
+        self.startDatePicker = wx.DatePickerCtrl(self, dt=dt)
         self.enddateLabel = wx.StaticText(self, label="End date:")
-        self.endDatePicker = wx.DatePickerCtrl(self, dt=wx.DateTimeFromTimeT(time.mktime(datetime.strptime("2011-10-22","%Y-%m-%d").timetuple())))
+        self.endDatePicker = wx.DatePickerCtrl(self, dt=dt)
         self.instLabel = wx.StaticText(self, label="Select variometer:")
         self.resolutionLabel = wx.StaticText(self, label="Select resolution:")
         self.scalarLabel = wx.StaticText(self, label="Select F source:")

@@ -1468,11 +1468,15 @@ class StreamFlagRangeDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         try:
-            stda = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
-            edda = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
+            #stda = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
+            #edda = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
+            stda = wx.DateTime.FromDMY(day=self.mintime.day,month=self.mintime.month-1,year=self.mintime.year)
+            edda = wx.DateTime.FromDMY(day=self.maxtime.day,month=self.maxtime.month-1,year=self.maxtime.year)
         except:
-            stda = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
-            edda = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
+            #stda = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
+            #edda = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
+            stda = wx.DateTimeFromDMY(day=self.mintime.day,month=self.mintime.month-1,year=self.mintime.year)
+            edda = wx.DateTimeFromDMY(day=self.maxtime.day,month=self.maxtime.month-1,year=self.maxtime.year)
         # countvariables for specific header blocks
         self.TimeRangeText = wx.StaticText(self,label="Flag time range")
         self.ValueRangeText = wx.StaticText(self,label="Flag value range")
@@ -2081,8 +2085,12 @@ class AnalysisFitDialog(wx.Dialog):
 
     # Widgets
     def createControls(self):
-        stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month-1,self.mintime.year,)
-        etfit = wx.DateTime.FromDMY(self.maxtime.day,self.maxtime.month-1,self.maxtime.year,)
+        try:
+            stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month-1,self.mintime.year)
+            etfit = wx.DateTime.FromDMY(self.maxtime.day,self.maxtime.month-1,self.maxtime.year)
+        except:
+            stfit = wx.DateTimeFromDMY(self.mintime.day,self.mintime.month-1,self.mintime.year)
+            etfit = wx.DateTimeFromDMY(self.maxtime.day,self.maxtime.month-1,self.maxtime.year)
         """
         try:
             stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month,self.mintime.year,)
@@ -5661,14 +5669,18 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         import time
         datet = wxdate2pydate(self.DatePicker.GetValue())
         try:
-            mintime  = wx.DateTime.FromTimeT(time.mktime(datet.timetuple()))
+            mintime = wx.DateTime.FromDMY(datet.day,datet.month-1,datet.year)
+            #mintime  = wx.DateTime.FromTimeT(time.mktime(datet.timetuple()))
         except:
-            mintime  = wx.DateTimeFromTimeT(time.mktime(datet.timetuple()))
+            mintime = wx.DateTimeFromDMY(datet.day,datet.month-1,datet.year)
+            #mintime  = wx.DateTimeFromTimeT(time.mktime(datet.timetuple()))
         maxdate = datet+timedelta(days=1)
         try:
-            maxtime  = wx.DateTime.FromTimeT(time.mktime(maxdate.timetuple()))
+            maxtime = wx.DateTime.FromDMY(maxdate.day,maxdate.month-1,maxdate.year)
+            #maxtime  = wx.DateTime.FromTimeT(time.mktime(maxdate.timetuple()))
         except:
-            maxtime  = wx.DateTimeFromTimeT(time.mktime(maxdate.timetuple()))
+            maxtime = wx.DateTime.FromDMY(maxdate.day,maxdate.month-1,maxdate.year)
+            #maxtime  = wx.DateTimeFromTimeT(time.mktime(maxdate.timetuple()))
         extension = '*.*'
         dlg = LoadDataDialog(None, title='Select timerange:',mintime=mintime,maxtime=maxtime, extension=extension)
         if dlg.ShowModal() == wx.ID_OK:
@@ -6066,9 +6078,12 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                     #print line
                     pass
             try:
-                self.DatePicker.SetValue(wx.DateTime.FromTimeT(time.mktime(mdate.timetuple())))
+                new = wx.DateTime.FromDMY(day=mdate.day,month=mdate.month-1,year=mdate.year)
+                #self.DatePicker.SetValue(wx.DateTime.FromTimeT(time.mktime(mdate.timetuple())))
+                self.DatePicker.SetValue(wx.DateTime.FromDMY(day=mdate.day,month=mdate.month-1,year=mdate.year))
             except:
-                self.DatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mdate.timetuple())))
+                #self.DatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mdate.timetuple())))
+                self.DatePicker.SetValue(wx.DateTimeFromDMY(day=mdate.day,month=mdate.month-1,year=mdate.year))
 
             if len(ffield) > 0:
                 self.FValsTextCtrl.SetValue("".join(ffield))
