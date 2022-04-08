@@ -2234,10 +2234,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             files = sorted(filelist, key=os.path.getmtime)
             try:
                 oldest = extractDateFromString(files[0])[0]
-                old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
+                #old  = wx.DateTimeFromTimeT(time.mktime(oldest.timetuple()))
+                old = wx.DateTime.FromDMY(day=oldest.day,month=oldest.month-1,year=oldest.year)
                 newest = extractDateFromString(files[-1])[0]
                 newest = newest+timedelta(days=1)
-                new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
+                #new  = wx.DateTimeFromTimeT(time.mktime(newest.timetuple()))
+                new = wx.DateTime.FromDMY(day=newest.day,month=newest.month-1,year=newest.year)
                 self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
                 self.menu_p.str_page.fileTextCtrl.SetValue("*")
                 success = True
