@@ -2740,8 +2740,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 export = True
 
             if export == True:
-                if filenamebegins == '':
-                     filenamebegins='youforgottodefineafilename'
+                #if filenamebegins == '':
+                #     filenamebegins='youforgottodefineafilename'
 
                 if self.plotstream.header.get('DataFormat') == 'MagPyDI':
                     divers = '1.0'
