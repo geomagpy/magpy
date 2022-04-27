@@ -492,6 +492,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'BDV1',         # ?
                 'GFZKP',        # GeoForschungsZentrum KP-Index format
                 'NOAAACE',      # NOAA ACE satellite data format
+                'PREDSTORM'     # PREDSTORM space weather prediction data format
                 'CSV',     # comma-separated CSV data with isoformat date in first column
                 'LATEX',        # LateX data
                 'CS',           # ?

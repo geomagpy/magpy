@@ -91,7 +91,7 @@ def readPREDSTORM(filename, headonly=False, **kwargs):
     if debug:
         print (header)
         print (nparray)
-    stream = DataStream([LineStruct],header,nparray)
+    stream = DataStream([LineStruct()],header,nparray)
     if starttime:
         stream = stream.trim(starttime=starttime)
     if endtime:
