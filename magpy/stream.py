@@ -428,6 +428,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'GFZTMP':['r', 'GeoForschungsZentrum ascii format'],
                 'GFZKP':['r', 'GeoForschungsZentrum KP-Index format'],
                 'PHA':['r', 'Potentially Hazardous Asteroids (PHAs) from the International Astronomical Unions Minor Planet Center, (json, incomplete)'],
+                'PREDSTORM':['r','PREDSTORM space weather prediction data format'],
                 'CSV':['rw','comma-separated CSV data'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
                 'PYCDF':['rw', 'MagPy CDF variant'],
