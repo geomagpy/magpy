@@ -13,6 +13,7 @@ Installation instructions can be found on the main download page.
 1.0.5 additions:
     + func2header allows to add functions as header info - can be saved with pycdf format
     + func2header is used in GUI if fit functions are calculated, popup asks user
+    + added support for PREDSTORM data format
 
 1.0.5 fixes:
     + correct usage of datetime in fitting options of GUI
