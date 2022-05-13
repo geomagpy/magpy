@@ -1,7 +1,7 @@
-FROM debian:jessie
+FROM debian:buster
 
 MAINTAINER Roman Leonhardt <roman.leonhardt@zamg.ac.at>
-LABEL geomagpy.magpy.version=0.3.95
+LABEL geomagpy.magpy.version=1.0.5
 
 # update os
 RUN apt-get update --fix-missing && \
@@ -27,7 +27,7 @@ RUN apt-get update --fix-missing && \
 # install conda
 ENV PATH /conda/bin:$PATH
 RUN echo 'export PATH=/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
-    curl https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh \
+    curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
         -o ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /conda && \
     rm ~/miniconda.sh
@@ -35,7 +35,7 @@ RUN echo 'export PATH=/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
 
 # install obspy and dependencies via conda
 RUN conda config --add channels obspy && \
-    conda install --yes jupyter mysql-python obspy && \
+    conda install --yes jupyter obspy matplotlib && \
     conda clean -i -l -t -y && \
     useradd \
         -c 'Docker image user' \
@@ -53,16 +53,8 @@ COPY . /magpy
 
 # install cdf, spacepy, and magpy
 RUN cd /tmp && \ 
-    wget http://cdaweb.gsfc.nasa.gov/pub/software/cdf/dist/cdf36_4/linux/cdf36_4-dist-all.tar.gz && \
-    tar zxvf cdf36_4-dist-all.tar.gz && \
-    cd cdf36* && \
-    make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all && \
-    make INSTALLDIR=/usr/local/cdf install && \
-    cd /tmp && \
-    pip install spacepy && \
     pip install geomagpy && \
     cd /tmp && \
-    rm -rf /tmp/cdf36*
 
 
 USER magpy_user
