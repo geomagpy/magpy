@@ -580,6 +580,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
 
     count = 0
     inccount = 0
+    lcount = 0
 
     newset = False  # To distinguish between different absolute sets within one file
 
@@ -605,6 +606,9 @@ def readAUTODIF(filename, headonly=False, **kwargs):
             # Position mesurements
             posstr = line.split()
             try:
+                if line.startswith('Laser'):
+                    lcount += 1
+                    #print ("Lasercount", lcount)
                 if not line.startswith('Inclination'):
                     if newset == True:
                         count = 0
@@ -619,6 +623,21 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                         row.pier = pier
                         abslist.append(row)
                         row = DILineStruct(24)
+                    if line.startswith('Declination'):
+                        if lcount > 0 and lcount < 3:
+                            # exception for only 2 laser measurements:
+                            for c in range(2):
+                                newcnt = count + c
+                                #print ("Adding additional Lasercount from {} at {}".format(newcnt-2,  newcnt))
+                                row.time[newcnt] = row.time[newcnt-2]
+                                row.laser[newcnt] = row.laser[newcnt-2]
+                                row.res[newcnt] = row.res[newcnt-2]
+                                row.opt[newcnt] = row.opt[newcnt-2]
+                                row.vc[newcnt] = row.vc[newcnt-2]
+                                row.hc[newcnt] = row.hc[newcnt-2]
+                            count = newcnt +1
+                        lcount = 0
+                    #print ("adding value at count", count)
                     try:
                         row.time[count] = date2num(datetime.strptime(posstr[2] + '_' + posstr[3],"%Y-%m-%d_%H:%M:%S"))
                     except:
@@ -631,6 +650,20 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                     row.hc[count] = float(posstr[8])
                     count = count +1
                 else:
+                    if lcount > 0 and lcount < 3:
+                            # exception for only 2 laser measurements:
+                            for c in range(2):
+                                newcnt = count + c
+                                #print ("Adding additional Lasercount from {} at {}".format(newcnt-2,  newcnt))
+                                row.time[newcnt] = row.time[newcnt-2]
+                                row.laser[newcnt] = row.laser[newcnt-2]
+                                row.res[newcnt] = row.res[newcnt-2]
+                                row.opt[newcnt] = row.opt[newcnt-2]
+                                row.vc[newcnt] = row.vc[newcnt-2]
+                                row.hc[newcnt] = row.hc[newcnt-2]
+                            count = newcnt +1
+                    lcount = 0
+                    # adding 8 inclination measurements
                     inccount = inccount +1
                     if inccount == 8:
                         newset = True
