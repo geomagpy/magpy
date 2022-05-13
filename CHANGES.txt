@@ -20,6 +20,7 @@ Installation instructions can be found on the main download page.
     + GUI time issues mainly affecting windows
     + alphabetic sorting of files when loading from directory
     + no popup when canceling file opening
+    + AutoDIF files accepted even with only two azimuth measurements
 
 ####v<1.0.4>, <2022-03-15> --
 
