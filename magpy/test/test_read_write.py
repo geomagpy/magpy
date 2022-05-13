@@ -65,12 +65,18 @@ SOURCEDICT = {
 
 #TODO add a cdf file with leapseconds
 
+exepath = os.getcwd()
+datadir = 'testdata'
+if not exepath.endswith('test'):
+    exepath = os.path.join(exepath,'magpy','test') # travis...
+
 SOURCEDICT = {
                 ## GENERAL File Formats
 		'IAGA_ZIP': {'source':example1, 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA']},
 		'IMAGCDF': {'source':example4, 'keys': ['x','y','z','f','t1','t2'], 'length': 604798, 'id':'', 'wformat': ['IMAGCDF']},
  		'WEBSERVICE': {'source':'https://cobs.zamg.ac.at/data/webservice/query.php?id=WIC'},
 		'IAGA': {'source':example5, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['PYCDF','IAGA','IMAGCDF']},
+		'DKA': {'source':os.path.join(exepath,datadir,'kvalue.dka'), 'keys': ['var1'], 'length': 2920, 'id':''},
 		#'IAF': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/IAF/WIC18FEB.BIN', 'wformat': ['IAF','IMF']},
 		#'WDC': {'source':'/media/leon/6439-3834/products/data/magnetism/definitive/wic2018/WDC/WIC2018.WDC', 'wformat': ['WDC']},
 		#'PYBIN': {'source':'/home/leon/Cloud/Daten/LEMI036_2_0001_2019-10-10.bin'},

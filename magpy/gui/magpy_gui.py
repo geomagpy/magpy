@@ -3352,12 +3352,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
         ## get random month for quick check
         from random import randint
-        import locale  # to get english month descriptions
-        old_loc = locale.getlocale(locale.LC_TIME)
-        try:
-            locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
-        except:
-            pass
+        #import locale  # to get english month descriptions
+        #old_loc = locale.getlocale(locale.LC_TIME)
+        #try:
+        #    locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
+        #except:
+        #    pass
 
         rmonth = randint(1,11) ## Not 12 as this would unnecessarily complicate start and endtime selection
         month = datetime(1900, rmonth, 1).strftime('%b')
