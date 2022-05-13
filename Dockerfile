@@ -1,65 +1,56 @@
 FROM debian:buster
 
 MAINTAINER Roman Leonhardt <roman.leonhardt@zamg.ac.at>
-LABEL geomagpy.magpy.version=1.0.5
+LABEL geomagpy.magpy.version=1.0.4
 
 # update os
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
-        bzip2 \
         ca-certificates \
         curl \
         wget \
-        gcc \
-        gfortran \
-        libcurl4-gnutls-dev \
-        libglib2.0-0 \
-        libgnutls28-dev \
-        libncurses5 \
-        libncurses5-dev \
-        libsm6 \
-        libxext6 \
-        libxrender1 \
         make && \
     apt-get clean
 
 
 # install conda
-ENV PATH /conda/bin:$PATH
+ENV PATH="/conda/bin":$PATH
+ARG PATH="/conda/bin":$PATH
+
 RUN echo 'export PATH=/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
-    curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-        -o ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /conda && \
-    rm ~/miniconda.sh
+    wget \
+    https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && bash Miniconda3-latest-Linux-x86_64.sh -b -p /conda \
+    && rm -f Miniconda3-latest-Linux-x86_64.sh 
 
+# install packages and dependencies via conda
+RUN conda --version  && \
+    conda install --yes jupyter scipy matplotlib  && \
+    conda clean -i -t -y
 
-# install obspy and dependencies via conda
-RUN conda config --add channels obspy && \
-    conda install --yes jupyter obspy matplotlib && \
-    conda clean -i -l -t -y && \
-    useradd \
+RUN useradd \
         -c 'Docker image user' \
         -m \
         -r \
         -s /sbin/nologin \
-         magpy_user && \
-    mkdir -p /home/magpy_user/notebooks && \
-    chown -R magpy_user:magpy_user /home/magpy_user
+         magpyuser && \
+    mkdir -p /home/magpyuser/notebooks && \
+    mkdir -p /home/magpyuser/.conda && \
+    chown -R magpyuser:magpyuser /home/magpyuser
 
 
 # copy library (ignores set in .dockerignore)
 COPY . /magpy
 
 
-# install cdf, spacepy, and magpy
+# install magpy
 RUN cd /tmp && \ 
     pip install geomagpy && \
-    cd /tmp && \
+    cd /tmp
 
+USER magpyuser
 
-USER magpy_user
-
-WORKDIR /home/magpy_user
+WORKDIR /home/magpyuser
 EXPOSE 80
 # entrypoint needs double quotes
 ENTRYPOINT [ "/magpy/docker-entrypoint.sh" ]

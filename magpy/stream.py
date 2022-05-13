@@ -1485,7 +1485,7 @@ CALLED BY:
             except:
                 # Some array don't allow that, shape error e.g. PYSTRING -> then use this
                 array = [np.asarray(el) if idx is not ind else np.asarray([]) for idx,el in enumerate(self.ndarray)]
-                self.ndarray = np.asarray(array)
+                self.ndarray = np.asarray(array,dtype=object)
 
 
             colkey = "col-%s" % key
@@ -1590,7 +1590,7 @@ CALLED BY:
                     array[idx] = self.ndarray[idx]
         else:
             pass
-        return DataStream(self,self.header,np.asarray(array))
+        return DataStream(self,self.header,np.asarray(array,dtype=object))
 
 
     # ------------------------------------------------------------------------
@@ -7427,7 +7427,7 @@ CALLED BY:
         for key in KEYLIST:
             array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
 
-        return DataStream([LineStruct()], headers, np.asarray(array))
+        return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
     def multiply(self, factors, square=False):
@@ -8572,7 +8572,7 @@ CALLED BY:
             except:
                 logger.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
-        res_stream.ndarray = np.asarray(array)
+        res_stream.ndarray = np.asarray(array,dtype=object)
 
         logger.info("resample: Data resampling complete.")
         #return DataStream(res_stream,self.headers)
@@ -11207,7 +11207,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
         else:
             array[idx] = np.asarray([])
 
-    stream = DataStream([LineStruct()],sa.header,np.asarray(array))
+    stream = DataStream([LineStruct()],sa.header,np.asarray(array,dtype=object))
     stream = stream.removeduplicates()
 
     return stream.sorting()
@@ -12281,7 +12281,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             #for key in keys:
             #    subtractedstream = subtractedstream._drop_nans(key)
 
-            return DataStream([LineStruct()],sa.header,np.asarray(array))
+            return DataStream([LineStruct()],sa.header,np.asarray(array,dtype=object))
 
 
     if np.min(timeb) < np.min(timea):
@@ -12646,7 +12646,7 @@ def stackStreams(streamlist, **kwargs): # TODO
     for idx,elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
     array[0] = np.asarray([result.ndarray[0][ind] for ind in idxA])
-    array = np.asarray(array)
+    array = np.asarray(array,dtype=object)
     #print array
 
     return DataStream([LineStruct()],result.header,array)
@@ -12881,7 +12881,7 @@ def obspy2magpy(opstream, keydict={}):
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    mpstream = DataStream([], mpstream.header, np.asarray(array))
+    mpstream = DataStream([], mpstream.header, np.asarray(array,dtype=object))
 
     return mpstream
 

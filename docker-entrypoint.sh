@@ -14,7 +14,7 @@ trap _term SIGTERM
 # run jupyter notebook server
 jupyter notebook \
     --ip='*' \
-    --notebook-dir=/home/magpy_user/notebooks \
+    --notebook-dir=/home/magpyuser/notebooks \
     --no-browser \
     --port=8000 &
 

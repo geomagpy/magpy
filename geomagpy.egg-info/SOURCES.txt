@@ -101,6 +101,7 @@ magpy/lib/format_neic.py
 magpy/lib/format_noaa.py
 magpy/lib/format_pha.py
 magpy/lib/format_pos1.py
+magpy/lib/format_predstorm.py
 magpy/lib/format_qspin.py
 magpy/lib/format_rcs.py
 magpy/lib/format_sfs.py
