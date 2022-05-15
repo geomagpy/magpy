@@ -79,18 +79,23 @@ Then copy this file to the systems application folder:
   - see e.g. https://docs.continuum.io/anaconda/install for more details
   - before continuiung, test whether python is working. Open a terminal and run python 
 
-#### 1.2.2 Install MagPy
+#### 1.2.2 Install MagPy within an anaconda environment
 
-Open a terminal and use the following commands: 
-
+Open a terminal by clicking on 
+Create a python environment with packages for magpy:
+ 
+        $ conda create env magpy wxpython  #Will create an environment called magpy which is suitable for wxpython
+        $ conda install matplotlib scipy    #Will basic python packages
         $ pip install geomagpy    #Will install MagPy and all dependencies
-        $ pip install wxpython==4.0.7    #Will install WX graphics system for XMagPy
+
 
 You can now run XMagPy from the terminal by using the following command
 
         $ xmagpyw
 
 #### 1.2.3 Creating a desktop link
+
+To execute a python program within a specific environment it is recommended to create a small startupscript:
 
 Open Finder and search for xmagpyw. Copy it to the desktop. To change the icon, click on the xmagpyw link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder). 
 
@@ -131,52 +136,14 @@ Open Finder and search for xmagpyw. Copy it to the desktop. To change the icon, 
 
 ### 1.4 Installation instructions for Python 2.7
 
-The current version of magpy is still supporting python 2.7, although it is highly recommended to switch to python >= 3.6. Installation on python 2.7 is more complex, as some packages for graphical user interface and CDF support not as well supported. Please note: None of the addtional steps is necessary for python 3.x.
-
-#### 1.4.1 Pre-installation work
-
-Get a recent version of NasaCDF for your platform, enables CDF support for formats like ImagCDF.
-Package details and files can be found at http://cdf.gsfc.nasa.gov/
-
-On Linux such installation will look like (http://cdf.gsfc.nasa.gov/html/sw_and_docs.html)
-
-        $ tar -zxvf cdf37_0-dist-all.tar.gz
-        $ cd cdf37...
-        $ make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
-        $ sudo make INSTALLDIR=/usr/local/cdf install
-
-
-Install the following additional compilers before continuing (required for spacepy):
-     Linux: install gcc
-     MacOs: install gcc and gfortran
-
-Install coordinate system transformation support:
-
-        $ sudo apt-get install libproj-dev proj-data proj-bin
-
-
-#### 1.4.2 Install MagPy and dependencies
-
-On Linux this will look like:
-
-        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
-        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
-        $ sudo apt-get install python-twisted  
-        $ sudo pip install ffnet
-        $ sudo pip install pyproj==1.9.5
-        $ sudo pip install pyserial
-        $ sudo pip install service_identity
-        $ sudo pip install ownet
-        $ sudo pip install spacepy
-        $ sudo pip install geomagpy  
-
-On Mac and Windows you need to download a python interpreter like [Anaconda] or [WinPython] and then install similar packages, particluarly the old wxpython 3.x.
+  - has been moved to the appendix 5.1
 
 
 ### 1.5 Platform independent container - Docker
 
 #### 1.5.1 Install [Docker] (toolbox) on your operating system
      - https://docs.docker.com/engine/installation/
+
 #### 1.5.2 Get the MagPy Image
      - open a docker shell
 
@@ -195,7 +162,9 @@ On Mac and Windows you need to download a python interpreter like [Anaconda] or 
 
             >>> %matplotlib inline
             >>> from magpy.stream import read
-            >>> ...
+            >>> import magpy.mpplot as mp
+            >>> data = read(example1)
+            >>> mp.plot(data)
 
 
 
@@ -1336,6 +1305,51 @@ Please use the help method (section 2.3) for descriptions and return values.
 | tranfer | **ftpget** | ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=None,**kwargs |
 
 
+## 5. Appendix
+
+
+### 5.1 Installation instructions for Python 2.7
+
+The current version of magpy is still supporting python 2.7, although it is highly recommended to switch to python >= 3.6. Installation on python 2.7 is more complex, as some packages for graphical user interface and CDF support not as well supported. Please note: None of the addtional steps is necessary for python 3.x.
+
+#### 1.4.1 Pre-installation work
+
+Get a recent version of NasaCDF for your platform, enables CDF support for formats like ImagCDF.
+Package details and files can be found at http://cdf.gsfc.nasa.gov/
+
+On Linux such installation will look like (http://cdf.gsfc.nasa.gov/html/sw_and_docs.html)
+
+        $ tar -zxvf cdf37_0-dist-all.tar.gz
+        $ cd cdf37...
+        $ make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
+        $ sudo make INSTALLDIR=/usr/local/cdf install
+
+
+Install the following additional compilers before continuing (required for spacepy):
+     Linux: install gcc
+     MacOs: install gcc and gfortran
+
+Install coordinate system transformation support:
+
+        $ sudo apt-get install libproj-dev proj-data proj-bin
+
+
+#### 1.4.2 Install MagPy and dependencies
+
+On Linux this will look like:
+
+        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
+        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
+        $ sudo apt-get install python-twisted  
+        $ sudo pip install ffnet
+        $ sudo pip install pyproj==1.9.5
+        $ sudo pip install pyserial
+        $ sudo pip install service_identity
+        $ sudo pip install ownet
+        $ sudo pip install spacepy
+        $ sudo pip install geomagpy  
+
+On Mac and Windows you need to download a python interpreter like [Anaconda] or [WinPython] and then install similar packages, particluarly the old wxpython 3.x.
 
    [magpy-git]: <https://github.com/geomagpy/magpy>
    [magpy_win]: <http://www.conrad-observatory.at>

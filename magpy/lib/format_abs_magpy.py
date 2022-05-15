@@ -626,6 +626,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                     if line.startswith('Declination'):
                         if lcount > 0 and lcount < 3:
                             # exception for only 2 laser measurements:
+                            # PLEASE NOTE: This is just a workaround to get some data analyzed. The results are however not useable... 
                             for c in range(2):
                                 newcnt = count + c
                                 #print ("Adding additional Lasercount from {} at {}".format(newcnt-2,  newcnt))
@@ -633,8 +634,8 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                                 row.laser[newcnt] = row.laser[newcnt-2]
                                 row.res[newcnt] = row.res[newcnt-2]
                                 row.opt[newcnt] = row.opt[newcnt-2]
-                                row.vc[newcnt] = row.vc[newcnt-2]
-                                row.hc[newcnt] = row.hc[newcnt-2]
+                                row.vc[newcnt] = row.vc[newcnt-2]+180.755  # the average value at COBS
+                                row.hc[newcnt] = row.hc[newcnt-2]+179.32 # the average value at COBS
                             count = newcnt +1
                         lcount = 0
                     #print ("adding value at count", count)
@@ -659,8 +660,8 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                                 row.laser[newcnt] = row.laser[newcnt-2]
                                 row.res[newcnt] = row.res[newcnt-2]
                                 row.opt[newcnt] = row.opt[newcnt-2]
-                                row.vc[newcnt] = row.vc[newcnt-2]
-                                row.hc[newcnt] = row.hc[newcnt-2]
+                                row.vc[newcnt] = row.vc[newcnt-2]+180.755  # the average value at COBS
+                                row.hc[newcnt] = row.hc[newcnt-2]+179.32 # the average value at COBS
                             count = newcnt +1
                     lcount = 0
                     # adding 8 inclination measurements

@@ -1681,6 +1681,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     filelist, datelist = [],[]
     failinglist = []
     successlist = []
+    difiles = []
     if db:
         import magpy.database as dbase
 
@@ -2248,22 +2249,24 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         #print ("expD", expD, expT, stream[0], stream[0].time)
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]
-                        failinglist.append(xl[0])
-                        print("absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test)
+                        if len(xl) > 0:
+                            failinglist.append(xl[0])
+                        print("absoluteAnalysis: Failed to analyse {} - threshold for acceptable angular offset in Dec exceeded".format(test))
                         dataok = False
                     except:
-                        print("absoluteAnalysis: Value error while determining time - failed analysis")
+                        print("absoluteAnalysis: checking expD - Value error likely while determining time - failed analysis")
                         dataok = False
             if expI and dataok:
                 if not float(expI)-float(expT) < result.x < float(expI)+float(expT):
                     try:
                         test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
                         xl = [ el for el in difiles if test in el]
-                        failinglist.append(xl[0])
-                        print("absoluteAnalysis: Failed to analyse %s - threshold for acceptable angular offset exceeded" % test)
+                        if len(xl) > 0:
+                            failinglist.append(xl[0])
+                        print("absoluteAnalysis: Failed to analyse {} - threshold for acceptable angular offset in Inc exceeded".format(test))
                         dataok = False
                     except:
-                        print("absoluteAnalysis: Value error while determining time - failed analysis")
+                        print("absoluteAnalysis: checking expI - Value error likely while determining time - failed analysis")
                         dataok = False
             if dataok:
                 resultstream.add(result)
