@@ -3450,6 +3450,82 @@ def getBaseline(db,sensorid, date=None):
     return vals
 
 
+"""
+the following code should replace the upper one - leon 2022-05
+is tested and works but is not really required..
+to improve it would be better to return a dictionary
+
+def getBaseline(db,sensorid, date=None, debug=False):
+    #""
+    DESCRIPTION:
+       Method to extract a list of baseline fitting data from db.
+
+    PARAMETER:
+       db:              name of the mysql data base
+       sensorid:        identification id of sensor in database
+       date:            if provided only the line matching the given date will be returned
+
+    RETURNS:
+       a list with all selected baseline data
+    #""
+    # find out the version of the baseline table:
+    # if BaseID is existing then MaxTime column == 3
+    # else MaxTime ==2
+    maxtcol = 2
+    def checking_baseline_table(db):
+        vers = '1.0'
+        query = "SELECT * FROM BASELINE"
+        cur = db.cursor()
+        cur.execute(query)
+        columns = cur.description
+        cur.close()
+        result = [{column[0]:index for index, column in enumerate(columns)}]
+        result = result[0]
+        if 'BaseID' in result:
+            idpos = result.get('BaseID')
+            if idpos == 0:
+                vers = '1.1'
+            else:
+                vers = '1.2'
+        maxtcol = result.get('MaxTime')
+        return maxtcol, vers
+    maxtcol, basetableversion = checking_baseline_table(db)
+    if debug:
+        print ("get baseline: Found BASELINE table version {}".format(basetableversion))
+    if not date:
+        where = 'SensorID LIKE "%'+sensorid+'%"'
+        if debug:
+            print("get baseline: searchsql: {}".format(where))
+        vals = dbselect(db,'*','BASELINE', where)
+        vals = np.asarray(vals).transpose()
+    else:
+        dt = datetime.strftime(DataStream()._testtime(date),"%Y-%m-%d %H:%M:%S")
+        where = 'SensorID LIKE "%{a}%" AND "{b}" >= MinTime'.format(a=sensorid,b=dt)
+        if debug:
+            print("get baseline: searchsql: {}".format(where))
+        vals = dbselect(db,'*','BASELINE', where)
+        vals = [elem for elem in vals if elem[maxtcol]=='' or DataStream()._testtime(elem[maxtcol]) >= DataStream()._testtime(date)]
+        vals = np.asarray(vals).transpose()
+    if maxtcol == 3:
+        # delete the first element with BaseID as related to version 1.1
+        vals = vals[1:]
+    for i,elem in enumerate(vals):
+        if i==2:
+            for j, el in enumerate(elem):
+                if el == '':
+                    vals[i][j] = datetime.strftime(datetime.utcnow(),"%Y-%m-%d %H:%M:%S")
+    if debug:
+        print ("Finally got:", vals)
+    # Fallback
+    if not len(vals) > 0:
+        print ("getBaseline: Did not find baseline parameters matching search criteria - returning dummy values for spline fit")
+        now = datetime.strftime(datetime.utcnow(),"%Y-%m-%d %H:%M:%S")
+        past = datetime.strftime(datetime.utcnow()-timedelta(days=365),"%Y-%m-%d %H:%M:%S")
+        vals = [[sensorid],[past],[now],['spline'],[1],[0.1],['Dummy']]
+    return vals
+"""
+
+
 def flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
     """
     DESCRIPTION:
