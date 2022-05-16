@@ -81,23 +81,29 @@ Then copy this file to the systems application folder:
 
 #### 1.2.2 Install MagPy within an anaconda environment
 
-Open a terminal by clicking on 
-Create a python environment with packages for magpy:
- 
-        $ conda create env magpy wxpython  #Will create an environment called magpy which is suitable for wxpython
-        $ conda install matplotlib scipy    #Will basic python packages
-        $ pip install geomagpy    #Will install MagPy and all dependencies
-
+Open a terminal and create a python environment with packages for magpy which supports wxpython:
+        $ conda create -n magpy wxpython
+Switch into this environment:
+        $ conda activate magpy
+Install some basic packages required for MagPy:
+        $ conda install numpy matplotlib scipy
+and MagPy:
+        $ pip install geomagpy 
 
 You can now run XMagPy from the terminal by using the following command
-
         $ xmagpyw
 
 #### 1.2.3 Creating a desktop link
 
-To execute a python program within a specific environment it is recommended to create a small startupscript:
+To execute a python program within a specific environment it is recommended to create a small startupscript i.e. named xmagpy:
 
-Open Finder and search for xmagpyw. Copy it to the desktop. To change the icon, click on the xmagpyw link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder). 
+        #!/bin/bash
+        eval "$(conda shell.bash hook)"
+        conda activate magpy
+        xmagpyw
+
+Make it executable e.g. by chmod 755 xmagpy.
+Open Finder and search for your script "xmagpy". Copy it to the desktop. To change the icon, click on the xmagpy link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder). 
 
 
 ### 1.3 Windows installation - WinPython Package
