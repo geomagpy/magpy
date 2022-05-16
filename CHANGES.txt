@@ -2,13 +2,14 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
-####v<1.0.5>, <2022-xx-xx> --
+####v<1.0.5>, <2022-05-16> --
 
 1.0.5 general:
     + removed locale modifications for interpreting months 
-    + basevalue data: when removing flagged data and adding to data to memory, 
+    + basevalue data: when removing flagged data and adding data to memory, 
       this "new" data can be selected for baeline analysis
       previously always the original/uncorrected data was used 
+    + new Docker image available
 
 1.0.5 additions:
     + func2header allows to add functions as header info - can be saved with pycdf format
@@ -21,6 +22,7 @@ Installation instructions can be found on the main download page.
     + alphabetic sorting of files when loading from directory
     + no popup when canceling file opening
     + AutoDIF files accepted even with only two azimuth measurements
+    + correct conversion of strings to integers (baseline adoption)
 
 ####v<1.0.4>, <2022-03-15> --
 

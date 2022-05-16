@@ -2779,7 +2779,7 @@ CALLED BY:
                 #print("BC", num2date(float(parameter[0])))
                 #print("BC", num2date(float(parameter[1])))
                 if not funckeys == ['df']:
-                    func = bcdata.baseline(absstream, startabs=float(parameter[0]), endabs=float(parameter[1]), extradays=int(parameter[2]), fitfunc=parameter[3], fitdegree=int(parameter[4]), knotstep=float(parameter[5]), keys=funckeys)
+                    func = bcdata.baseline(absstream, startabs=float(parameter[0]), endabs=float(parameter[1]), extradays=int(float(parameter[2])), fitfunc=parameter[3], fitdegree=int(float(parameter[4])), knotstep=float(parameter[5]), keys=funckeys)
                     if 'dx' in funckeys:
                         func[0]['fx'] = func[0]['fdx']
                         func[0]['fy'] = func[0]['fdy']
