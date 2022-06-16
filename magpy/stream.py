@@ -935,7 +935,7 @@ CALLED BY:
                         x = np.asarray(col)[~np.isnan(col)]
                     except: # fallback 1 -> should not needed any more
                         #print ("Fallback1")
-                        x = np.asarray([elem for elem in col if not np.isnan(elem)]) 
+                        x = np.asarray([elem for elem in col if not np.isnan(elem)])
                 else:
                     #y = np.asarray(col)[col!='-']
                     #x = np.asarray(y)[y!='']
@@ -2016,7 +2016,7 @@ CALLED BY:
         """
 
         ndarray = [[] for key in KEYLIST]
-        ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)])
+        ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)],dtype=object)
 
         return DataStream([LineStruct()],result.header,ndarray)
 
@@ -2513,7 +2513,7 @@ CALLED BY:
         tmpdict = bas2save.stream2dict()
         #print ("HERE5b:", bas2save.length()[0])
         self.header['DataBaseValues'] = tmpdict['DataBaseValues']
-        
+
         # Get column heads of dx,dy and dz
         # default is H-base[nT],D-base[deg],Z-base[nT]
         basecomp = "HDZ"
@@ -2807,7 +2807,7 @@ CALLED BY:
                 if len(datacomp) == 4:
                     bcdata.header['DataComponents'] = 'XYZ'+datacomp[3]
                 else:
-                    bcdata.header['DataComponents'] = 'XYZ'            
+                    bcdata.header['DataComponents'] = 'XYZ'
             else:
                 #print ("BC: Found a list of functions:", funclist)
                 bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
@@ -3041,9 +3041,9 @@ CALLED BY:
             to the vector x,y,z.
             Compensation fields are provided in mirco Tesla (according to LEMI data).
             Please note that any additional provided "DataDeltaValues" are also applied
-            by default (to avoid use option skipdelta=True). 
+            by default (to avoid use option skipdelta=True).
             Calculation:
-            
+
             This method uses header information data.header[''].
             After successfull application data.header['DeltaValuesApplied']
             is set to 1.
@@ -3063,7 +3063,7 @@ CALLED BY:
 
         if not self.length()[0] > 0:
             return self
- 
+
         stream = self.copy()
         logger.info("compensation: applying compensation field values to variometer data ...")
         deltas = stream.header.get('DataDeltaValues','')
@@ -3097,17 +3097,17 @@ CALLED BY:
         PARAMETER:
             stream    :    datastream
             length    :    provide the amount of lines to be returned (default: percent of stream length)
-            kind      :    define the kind of length parameter  
+            kind      :    define the kind of length parameter
                            = 0 (default): length is given in percent
                            = 1: length is given in number of lines
-            order     :    define from which side   
+            order     :    define from which side
                            = 0 (default): the last amount of lines are returned
-                           = 1: lines are counted from the beginning 
+                           = 1: lines are counted from the beginning
         VERSION:
             added in MagPy 0.4.6
         APPLICATION:
             # length of stream: 86400
-            cutstream = stream.cut(50) 
+            cutstream = stream.cut(50)
             # length of cutstream: 43200
         """
         stream = self.copy()
@@ -4720,7 +4720,7 @@ CALLED BY:
         - returnflaglist	(bool) if True, a flaglist is returned instead of stream
         - markall       	(bool) default is False. If True, all components (provided keys)
                                  are flagged even if outlier is only detected in one. Useful for
-                                 vectorial data 
+                                 vectorial data
     RETURNS:
         - stream:       (DataStream Object) Stream with flagged data.
 
@@ -4908,7 +4908,7 @@ CALLED BY:
         # Keep it simple - no cleaning here - just produce new format
         if len(flaglist)>0:
             #flaglist = sorted(flaglist, key=lambda x: x[0])
-            for line in flaglist: 
+            for line in flaglist:
                 newlist.append([num2date(line[0]-numuncert).replace(tzinfo=None),num2date(line[1]-numuncert).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
         else:
             newlist = []
@@ -5512,7 +5512,7 @@ CALLED BY:
             self.ndarray[commentind] = np.array(array[commentind], dtype=np.object)
 
             # up to 0.3.98 the following code was used (~10 times slower)
-            # further significant speed up requires some structural changes: 
+            # further significant speed up requires some structural changes:
             #   1. use keylist here
             #self.ndarray[flagind] = np.asarray(array[flagind]).astype(object)
             #self.ndarray[commentind] = np.asarray(array[commentind]).astype(object)
@@ -5526,7 +5526,7 @@ CALLED BY:
                     fllist[pos] = str(flag)
                     elem.flag=''.join(fllist)
                     elem.comment = comment
-        
+
         if flag == 1 or flag == 3 and debug:
             if enddate:
                 #print ("flag_stream: Flagged data from %s to %s -> (%s)" % (startdate.isoformat(),enddate.isoformat(),comment))
@@ -5876,10 +5876,10 @@ CALLED BY:
         """
         DESCRIPTION
            get the content name of a specific key
-           will scan header information until successful: 
-           (1) col-"key" names 
-           (2) ColumnContent header info 
-           (3) SensorElements header info 
+           will scan header information until successful:
+           (1) col-"key" names
+           (2) ColumnContent header info
+           (3) SensorElements header info
            if no Name for the key is found, then the key itself is returned
         APPLICATION:
            element = datastream.GetKeyName('var1')
@@ -5919,9 +5919,9 @@ CALLED BY:
         """
         DESCRIPTION
            get the content name of a specific key
-           will scan header information until successful: 
-           (1) unit-col-"key" names 
-           (2) ColumnUnit header info 
+           will scan header information until successful:
+           (1) unit-col-"key" names
+           (2) ColumnUnit header info
            if no unit for the key is found, then an empty string is returned
         APPLICATION:
            unit = datastream.GetKeyUnit('var1')
@@ -6125,6 +6125,8 @@ CALLED BY:
         RETURNS:
             rotangle   (float) The estimated rotation angle in degree
         """
+        print ("METHOD get_rotationangle is deprecated and will not be availbale in future versions. Please use get_rotation instead.")
+        print ("The first return value of get_rotation is identical as expected here.")
         annualmeans = kwargs.get('annualmeans')
 
         #1. get vector from data
@@ -6161,6 +6163,64 @@ CALLED BY:
         logger.info('getrotation: Rotation angle determined: {} deg'.format(rotangle))
 
         return rotangle
+
+    def get_rotation(self,referenceD=0.0,referenceI=None,keys = ['x','y','z'],debug=False):
+        """
+        DESCRIPTION:
+            "Estimating" the rotation angle alpha and beta relative to a magnetic
+            coordinate system defined by expected Declination, expected Inclination
+            and Intensity F, asuming F is similar. Please note: You need to provide a
+            field vector with similar intensity as the reference field. A reference inclination
+            of 0 is not possible. Please provide a very small value if you need to do that.
+        VARIABLES:
+            datastream : MagPy Datastream containing the vector data
+            expectedD  : expected Declination of the reference field
+            expectedI  : expected Inclination of the reference field, if Null/None than 0.0 will be returned
+            keys       : the three keys in which the vector is stored
+        RETURNS:
+            alpha, beta : (float) The estimated rotation angles in degree
+        """
+        alpha = 0.0
+        beta = 0.0
+        if not keys:
+            keys = ['x','y','z']
+
+        if not len(keys) == 3:
+            logger.error('get_rotation: provided keylist need to have three components.')
+            return 0.0,0.0
+
+        logger.info('get_rotation: Determining rotation angle towards a magnetic coordinate system assuming z to be vertical down.')
+
+        ind1 = KEYLIST.index(keys[0])
+        ind2 = KEYLIST.index(keys[1])
+        ind3 = KEYLIST.index(keys[2])
+
+        if len(self.ndarray[0]) > 0:
+            if len(self.ndarray[ind1]) > 0 and len(self.ndarray[ind2]) > 0 and len(self.ndarray[ind3]) > 0:
+                # get mean disregarding nans
+                xl = [el for el in self.ndarray[ind1] if not np.isnan(el)]
+                yl = [el for el in self.ndarray[ind2] if not np.isnan(el)]
+                zl = [el for el in self.ndarray[ind3] if not np.isnan(el)]
+                meanx = np.mean(xl)
+                meany = np.mean(yl)
+                meanz = np.mean(zl)
+                meanh = np.sqrt(meanx*meanx + meany*meany)
+                if debug:
+                    print ("get_rotation debug: means of x={}, y={}, z={} and h={}".format(meanx,meany,meanz,meanh))
+                alpha = np.arctan2(-meany,meanx) * (180.) / np.pi - referenceD
+                if debug:
+                    print ("get_rotation debug: alpha={}".format(alpha))
+                if referenceI:
+                    beta = np.arctan2(meanz,meanh) * (180.) / np.pi  - referenceI
+                    if debug:
+                        print ("get_rotation debug: beta={}".format(beta))
+                else:
+                    if debug:
+                        print ("get_rotation debug: no reference Inclination given. Therefore beta={}".format(beta))
+
+        logger.info('getrotation: Rotation angles determined: alpha={}deg, beta={}deg'.format(alpha,beta))
+
+        return alpha, beta
 
 
     def get_sampling_period(self):
@@ -6433,22 +6493,22 @@ CALLED BY:
         func = [functionkeylist, sv, ev]
 
         return func
-    
-    
+
+
     def interpolate_nans(self, keys):
         """"
-    DEFINITION: 
+    DEFINITION:
         Provides a simple linear nan interpolator that returns the interpolated
         data in the stream. Uses method that is already present elsewhere, e.g.
         in filter, for easy and quick access.
-    
+
     PARAMETERS:
         - keys:         List of keys to interpolate.
-        
+
     RETURNS:
         - stream:       Original stream with nans replaced by linear interpolation.
         """
-    
+
         for key in keys:
             if key not in NUMKEYLIST:
                 logger.error("interpolate_nans: {} is an invalid key! Cannot interpolate.".format(key))
@@ -6458,7 +6518,7 @@ CALLED BY:
             self._put_column(y, key)
             logger.info("interpolate_nans: Replaced nans in {} with linearly interpolated values.".format(key))
         return self
-    
+
 
     def k_extend(self, **kwargs):
         """
@@ -8149,7 +8209,7 @@ CALLED BY:
             newar = [np.asarray([]) for el in KEYLIST]
             for idx,el in enumerate(array):
                 if idx == flagind:
-                    pass 
+                    pass
                 elif idx == commind:
                     pass
                 else:
@@ -8368,9 +8428,9 @@ CALLED BY:
         Uses Numpy interpolate.interp1d to resample stream to requested period.
 
         Two methods:
-           fast: is only valid if time stamps at which resampling is conducted are part of the 
+           fast: is only valid if time stamps at which resampling is conducted are part of the
                  original time series. e.g. org = second (58,59,0,1,2) resampled at 0
-           slow: general method if time stamps for resampling are not contained (e.g. 58.23, 59.24, 0.23,...) 
+           slow: general method if time stamps for resampling are not contained (e.g. 58.23, 59.24, 0.23,...)
                  resampled at 0
     PARAMETERS:
     Variables:
@@ -8481,7 +8541,7 @@ CALLED BY:
         multiplicator = float(self.length()[0])/float(len(t_list))
         logger.info("resample a: {},{},{}".format(float(self.length()[0]), float(len(t_list)),startperiod))
 
-        #print ("Times:", self.ndarray[0][0],self.ndarray[0][-1],t_list[0],t_list[-1]) 
+        #print ("Times:", self.ndarray[0][0],self.ndarray[0][-1],t_list[0],t_list[-1])
         stwithnan = self.copy()
 
         # What is this good for (leon 17.04.2019)???
@@ -9827,22 +9887,22 @@ CALLED BY:
         format_type='IAGA'
         ------------------
            *General:
-            The meta information provided within the header of each IAGA file is automatically 
-            generated from the header information provided along with the following keys 
+            The meta information provided within the header of each IAGA file is automatically
+            generated from the header information provided along with the following keys
             (define by stream.header[key]):
             - Obligatory: StationInstitution, StationName, StationIAGAcode (or StationID),
                         DataElevation, DataSensorOrientation, DataDigitalSampling
-            - Optional:   SensorID, DataPublicationDate, DataComments, DataConversion, StationK9, 
-                          SecondarySensorID (F sensor), StationMeans (used for 'Approx H') 
+            - Optional:   SensorID, DataPublicationDate, DataComments, DataConversion, StationK9,
+                          SecondarySensorID (F sensor), StationMeans (used for 'Approx H')
             - Header input "IntervalType": can either be provided by using key 'DataIntervalType'
                           or is automatically created from DataSamplingRate.
-                          Filter details as contained in DataSamplingFilter are added to the 
+                          Filter details as contained in DataSamplingFilter are added to the
                           commentary part
             - Header input "Geodetic Longitude and Latitude":
                           - defined with keys 'DataAcquisitionLatitude','DataAcquisitionLongitude'
                           - if an EPSG code is provided in key 'DataLocationReference'
                             this code is used to convert Lat and Long into the WGS84 system
-                            e.g. stream.header['DataLocationReference'] = 'M34, EPSG: ' 
+                            e.g. stream.header['DataLocationReference'] = 'M34, EPSG: '
 
            *Specific parameters:
             - useg          (Bool) if F is available, and G not yet caluclated: calculate G (deltaF) and
@@ -9867,7 +9927,7 @@ CALLED BY:
 
            *Specific parameters:
             - addflags      (BOOL) add flags to IMAGCDF output if True
-                    
+
         format_type='BLV'
         ------------------
            *Specific parameters:
@@ -11177,7 +11237,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
     # Get indicies of timesteps of stream_b of which identical times are existing in stream_a-> delelte those lines
     # --------------------------------------
     # IMPORTANT: If two streams with different keys should be combined then "merge" is the method of choice
-    # NEW: shape problems when removing data -> now use removeduplicates at the end 
+    # NEW: shape problems when removing data -> now use removeduplicates at the end
     # SHOULD WORK (already tested) as remove duplicate will keep the last value and drop earlier occurences
     #indofb = np.nonzero(np.in1d(sb.ndarray[0], sa.ndarray[0]))[0]
     #for idx,elem in enumerate(sb.ndarray):
@@ -11649,7 +11709,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         print("     -> needed {} for {}".format(met-mst,key))
 
                     array[0] = np.asarray(sa.ndarray[0])
-                    array = np.asarray(array)
+                    array = np.asarray(array,dtype=object)
 
             #try:
             #    header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
@@ -12200,12 +12260,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                                 nanind.extend(nankeys)
                             array[keyind] = diff
                     nanind = np.unique(np.asarray(nanind))
-                    array[0] = np.asarray([sa.ndarray[0][ind] for ind in indtia])
+                    array[0] = np.asarray([sa.ndarray[0][ind] for ind in indtia],dtype=object)
                     if foundnan:
                         for ind,elem in enumerate(array):
                             if len(elem) > 0:
                                 array[ind] = np.delete(np.asarray(elem), nanind)
-                    array = np.asarray(array)
+                    array = np.asarray(array,dtype=object)
             else:
                 if debug:
                     print("Did not find identical timesteps - linearily interpolating stream b")
@@ -12257,7 +12317,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                         for ind,elem in enumerate(array):
                             if len(elem) > 0:
                                 array[ind] = np.delete(np.asarray(elem), nanind)
-                    array = np.asarray(array)
+                    array = np.asarray(array,dtype=object)
 
             #t2e = datetime.utcnow()
             #print "Total Timediff %s" % str(t2e-t1s)
@@ -13182,7 +13242,7 @@ def test_time(time):
 def LeapTime(t):
     """
     converts strings to datetime, considering leap seconds
-    """ 
+    """
     nofrag, frag = t.split('.')
     if len(frag) < 6:  # IAGA string has only millisecond resolution:
         frag = frag.ljust(6, '0')
