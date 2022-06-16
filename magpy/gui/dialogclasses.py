@@ -166,7 +166,7 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.elements = services.get(self.selectedservice).get(self.selectedgroup).get('elements','')
 
         self.createControls()
-        
+
         self.doLayout()
         self.bindControls()
 
@@ -326,16 +326,16 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.elements = parameter.get('elements')
 
         self.idComboBox.Clear()
-        self.idComboBox.AppendItems(self.ids) 
+        self.idComboBox.AppendItems(self.ids)
         self.idComboBox.SetValue(self.ids[0])
         self.typeComboBox.Clear()
-        self.typeComboBox.AppendItems(self.types) 
+        self.typeComboBox.AppendItems(self.types)
         self.typeComboBox.SetValue(self.types[0])
         self.formatComboBox.Clear()
-        self.formatComboBox.AppendItems(self.formats) 
+        self.formatComboBox.AppendItems(self.formats)
         self.formatComboBox.SetValue(self.formats[0])
         self.sampleComboBox.Clear()
-        self.sampleComboBox.AppendItems(self.sampling) 
+        self.sampleComboBox.AppendItems(self.sampling)
         self.sampleComboBox.SetValue(self.sampling[0])
         self.elementsTextCtrl.Clear()
         self.elementsTextCtrl.SetValue(self.elements)
@@ -551,7 +551,7 @@ class ExportDataDialog(wx.Dialog):
         if dialog.ShowModal() == wx.ID_OK:
             #self.ReactivateStreamPage()
             self.path = dialog.GetPath()
-            self.selectedTextCtrl.SetValue(self.path)            
+            self.selectedTextCtrl.SetValue(self.path)
         #self.menu_p.rep_page.logMsg('- Directory for file export defined')
         #dialog.Destroy()
 
@@ -1504,7 +1504,7 @@ class StreamFlagRangeDialog(wx.Dialog):
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.rangeRadioBox = wx.RadioBox(self,
             label="Select flagging range type:",
-            choices=self.rangetype, majorDimension=2, style=wx.RA_SPECIFY_COLS)
+            choices=self.rangetype, majorDimension=2, style=wx.RA_SPECIFY_COLS, size=(160,-1))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1871,7 +1871,7 @@ class StreamSaveFlagDialog(wx.Dialog):
         flagname = saveFileDialog.GetPath()
         if not flagname.endswith(extensions[extind]):
             flagname = flagname+extensions[extind]
-        
+
         saveFileDialog.Destroy()
         saveflags(self.flaglist,flagname)
         self.Close(True)
@@ -2361,7 +2361,7 @@ class AnalysisOffsetDialog(wx.Dialog):
         # Parsetime function
         def parse_time(timestring):
             #timestring can either be isotime or a string containing numerical datetime in old or new format
-            #returns a numerical time value within the current systems date2num matplotlib version 
+            #returns a numerical time value within the current systems date2num matplotlib version
             try:
                 # first check whether timestring can converted to numerical value
                 timefloat = float(timestring)
@@ -2383,7 +2383,7 @@ class AnalysisOffsetDialog(wx.Dialog):
                     print ("ERROR: given endtime in DataDeltaValus could not be interpreted correctly")
                     pass
             return timefloat
-                     
+
         if not deltas == '':
             try:
                 dlist = deltas.split(',')
@@ -2777,10 +2777,10 @@ class AnalysisBaselineDialog(wx.Dialog):
         for idx, ele in enumerate(dictlst):
             st = ele.get('startdate')
             et = ele.get('enddate')
-            line = "{}: {}_{}_{}".format(str(idx),ele.get('filename'),datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d")) 
+            line = "{}: {}_{}_{}".format(str(idx),ele.get('filename'),datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d"))
             self.absstreamlist.append(line)
             self.starttime = st  # as the last one is selected by default
-            self.endtime = et 
+            self.endtime = et
 
         self.selecteddict = dictlst[-1]
 
@@ -3173,7 +3173,7 @@ class LoadDIDialog(wx.Dialog):
 
     Essetial parameters for DI analysis:
     self.dipathlist                :  contains the obtained dictionary from the Load process with a diline structure
-    self.divariopath               :  the sourcepath 
+    self.divariopath               :  the sourcepath
     self.discalarpath              :  the sourcepath
     self.dirname                   :  initial path for vario, scalar and di data
     self.options['didictionary']   :  basically all options and defauts for variometer and scalar
@@ -3201,7 +3201,7 @@ class LoadDIDialog(wx.Dialog):
         """
         DESCRIPTION
           Obtain only services providing basevalues
-          Return a service dictionary and a service list for preselection in ComboBox 
+          Return a service dictionary and a service list for preselection in ComboBox
         """
         basevaluedict = {}
         for service in services:
@@ -3309,7 +3309,7 @@ class LoadDIDialog(wx.Dialog):
 
                 absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
 
-            try: 
+            try:
                 if not len(absst) > 1: # Manual
                     stream = absst[0].getAbsDIStruct()
                     abslist.append(absst[0])
@@ -3334,7 +3334,7 @@ class LoadDIDialog(wx.Dialog):
         azimuthlist = list(set(azimuthlist))
         if len(pierlist) > 1:
             print ("Multiple piers selected - TODO")
-            # TODO do something here 
+            # TODO do something here
 
         didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
         didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
@@ -3395,7 +3395,7 @@ class LoadDIDialog(wx.Dialog):
                 dlg.Destroy()
                 self.Close(True)
                 return
-        # 3. check contents of DIDATA_Obscode 
+        # 3. check contents of DIDATA_Obscode
         if self.db:
             cursor = self.db.cursor()
             # cycle through all tables
@@ -3414,7 +3414,7 @@ class LoadDIDialog(wx.Dialog):
                 output = [[el[0],el[1],el[2],datetime.strptime(el[3],"%Y-%m-%d %H:%M:%S")] for el in output]
                 #
                 # get unique list of piers and observers
-                #   
+                #
                 dicont['piers'] = piers
                 dicont['observers'] = observers
                 dicont['data'] = output
@@ -4022,7 +4022,7 @@ class DIConnectDatabaseDialog(wx.Dialog):
             return wx.DateTime.FromDMY(*dmy)
         except:
             return wx.DateTimeFromDMY(*dmy)
- 
+
     def wxdate2pydate(self,date):
         assert isinstance(date, wx.DateTime)
         if date.IsValid():
@@ -4117,9 +4117,9 @@ class DIConnectDatabaseDialog(wx.Dialog):
         self.startTimePicker.SetValue(self.stationdict.get('mintime'))
         self.startDatePicker.SetValue(self.stationdict.get('mindate'))
         self.piersComboBox.Clear()
-        self.piersComboBox.AppendItems(self.stationdict.get('piers')) 
+        self.piersComboBox.AppendItems(self.stationdict.get('piers'))
         self.observersComboBox.Clear()
-        self.observersComboBox.AppendItems(self.stationdict.get('observers')) 
+        self.observersComboBox.AppendItems(self.stationdict.get('observers'))
 
 
 class DefineVarioDialog(wx.Dialog):
@@ -4456,13 +4456,13 @@ class ParameterDictDialog(wx.Dialog):
     def OnUpdate(self, event):
         #print ("YESS")
         #print (self.elementlist)
-        selected = [] 
+        selected = []
         for idx,el in enumerate(self.layhead):
             pos = idx*2
             selected.append(self.elementlist[pos][1].GetValue())
             #print ( "SEL", self.elementlist[pos][1].GetValue() )
 
-        print ("Selected", selected) 
+        print ("Selected", selected)
         self.lastlayer, self.layhead, self.selected = self.getHeadsAndLast(self.depth, self.dict, selected)
         self.panel.Destroy()
         self.setupPanel(self.lastlayer,self.selected)
@@ -5287,7 +5287,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         if not len(self.dichoices) > 0:
             self.memdataComboBox.Hide()
         #else:
-        #    self.memdataComboBox.SetValue(self.dichoices[0]) 
+        #    self.memdataComboBox.SetValue(self.dichoices[0])
 
         if not self.layout['double'] == 'False':
             #self.SD2TimeTextCtrl.Hide()
@@ -6683,13 +6683,13 @@ class SelectMARTASDialog(wx.Dialog):
 
 
     def OnNew(self, e):
-        # get current value in dropdown and append it to 
+        # get current value in dropdown and append it to
         newval = self.addressComboBox.GetValue()
         if not newval in self.favoritemartas:
             self.favoritemartas.append(newval)
 
     def OnRemove(self, e):
-        # get current value in dropdown and append it to 
+        # get current value in dropdown and append it to
         #self.favoritemartas = self.options.get('favoritemartas')
         dropval = self.addressComboBox.GetValue()
         if dropval in self.favoritemartas:
@@ -7156,7 +7156,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 mergekeylist.append(self.streamkeylist[idx])
         if len(mergestreamlist) == 2:
             #print (mergestreamlist[0].length(),mergestreamlist[1].length())
+            dlg = wx.ProgressDialog("Merging...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+            dlg.Update(0, "please wait ... and ignore the progress bar")
             self.result = mergeStreams(mergestreamlist[0],mergestreamlist[1])
+            dlg.Update(100, "done")
+            dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             #self.streamlist.append(self.result)
@@ -7191,7 +7195,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:
+            dlg = wx.ProgressDialog("Subtracting...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+            dlg.Update(0, "please wait ... and ignore the progress bar")
             self.result = subtractStreams(substreamlist[0],substreamlist[1])
+            dlg.Update(100, "done")
+            dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             self.Close(True)
@@ -7219,7 +7227,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 elem = elem._select_keys(self.streamkeylist[idx])
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
+        dlg = wx.ProgressDialog("Stacking...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+        dlg.Update(0, "please wait ... and ignore the progress bar")
         self.result = stackStreams(substreamlist,get='mean',uncert='True')
+        dlg.Update(100, "done")
+        dlg.Destroy()
         self.resultkeys = self.result._get_key_headers()
         self.modify = True
 
@@ -7241,15 +7253,19 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:
             print ("Combine streams:", substreamlist[0].length()[0],substreamlist[1].length()[0])
+            dlg = wx.ProgressDialog("Combining(join)...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+            dlg.Update(0, "please wait ... and ignore the progress bar")
             self.result = joinStreams(substreamlist[0],substreamlist[1])
+            dlg.Update(100, "done")
+            dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             self.Close(True)
             self.parent.Close(True)
         else:
-            dlg = wx.MessageDialog(self, "Subtract requires two records\n"
+            dlg = wx.MessageDialog(self, "Combine/Join requires two records\n"
                             " - not less, not more\n",
-                            "Subtract error", wx.OK|wx.ICON_INFORMATION)
+                            "Combine error", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
 
@@ -7258,9 +7274,9 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
 
 
 class WaitDialog(wx.Dialog):
-    """ 
+    """
     A popup dialog for to inform users
-    that work is in progress 
+    that work is in progress
     """
 
     def __init__(self, parent, title, msg):
@@ -7294,4 +7310,3 @@ wx.ART_MESSAGE_BOX, (32, 32))
         self.Show()
         # Make sure the screen gets fully drawn before continuing.
         wx.Yield()
-
