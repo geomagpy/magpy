@@ -7156,7 +7156,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 mergekeylist.append(self.streamkeylist[idx])
         if len(mergestreamlist) == 2:
             #print (mergestreamlist[0].length(),mergestreamlist[1].length())
+            dlg = wx.ProgressDialog("Merging...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+            dlg.Update(0, "please wait ... and ignore the progress bar")
             self.result = mergeStreams(mergestreamlist[0],mergestreamlist[1])
+            dlg.Update(100, "done")
+            dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             #self.streamlist.append(self.result)
@@ -7191,15 +7195,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:
-            #dlg = wx.ProgressDialog(self,"Subtracting...", "message", maximum=100, parent=None,
-            #   style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
-            #dlg.Update(0, "run")
-            #dlg = wx.MessageDialog(self, "Please wait ...\n",
-            #                "Subtract")
-            #dlg.ShowModal()
+            dlg = wx.ProgressDialog("Subtracting...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+            dlg.Update(0, "please wait ... and ignore the progress bar")
             self.result = subtractStreams(substreamlist[0],substreamlist[1])
-            #dlg.Update(100, "done")
-            #dlg.Destroy()
+            dlg.Update(100, "done")
+            dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             self.Close(True)
@@ -7227,7 +7227,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 elem = elem._select_keys(self.streamkeylist[idx])
                 substreamlist.append(elem)
                 subkeylist.append(self.streamkeylist[idx])
+        dlg = wx.ProgressDialog("Stacking...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+        dlg.Update(0, "please wait ... and ignore the progress bar")
         self.result = stackStreams(substreamlist,get='mean',uncert='True')
+        dlg.Update(100, "done")
+        dlg.Destroy()
         self.resultkeys = self.result._get_key_headers()
         self.modify = True
 
@@ -7249,7 +7253,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 subkeylist.append(self.streamkeylist[idx])
         if len(substreamlist) == 2:
             print ("Combine streams:", substreamlist[0].length()[0],substreamlist[1].length()[0])
+            dlg = wx.ProgressDialog("Combining(join)...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
+            dlg.Update(0, "please wait ... and ignore the progress bar")
             self.result = joinStreams(substreamlist[0],substreamlist[1])
+            dlg.Update(100, "done")
+            dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
             self.modify = True
             self.Close(True)
