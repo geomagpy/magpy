@@ -32,7 +32,7 @@ else:
 setup(
     name='geomagpy',
     version=__version__,
-    author='R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec',
+    author='R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec, S. Bracke',
     author_email='roman.leonhardt@zamg.ac.at',
     packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui', 'magpy.doc', 'magpy.core'],
     scripts=['magpy/gui/xmagpy','magpy/gui/xmagpyw','magpy/scripts/mpconvert','magpy/scripts/addcred','magpy/scripts/mptest'],
@@ -43,4 +43,3 @@ setup(
     package_data={'magpy': ['gui/*.png','gui/*.xpm','gui/*.jpg','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.sec','doc/*.pdf']},
     install_requires=install_requires,
 )
-
