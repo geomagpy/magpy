@@ -5589,7 +5589,7 @@ CALLED BY:
                     array[ind] = self.ndarray[ind].astype(object)
 
         self.header['DataComponents'] = 'HDZ'
-        return DataStream(self,self.header,np.asarray(array))
+        return DataStream(self,self.header,np.asarray(array, dtype=object))
 
 
     def func2stream(self,funclist,**kwargs):
@@ -11601,7 +11601,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                     fllst.append([ttt,ttt,key,flagid,comment])
 
                     array[0] = np.asarray(sa.ndarray[0])
-                    array = np.asarray(array)
+                    array = np.asarray(array, dtype=object)
 
             else:
                 print("mergeStreams: Did not find identical timesteps - linearily interpolating stream b...")
