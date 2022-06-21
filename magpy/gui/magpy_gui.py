@@ -200,19 +200,19 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
     if optionsdict.get('webservices','') == '':
         # default commands are:
         # id, starttime, endtime, format, elements, type, sampling_period
-        # to change them, use commands dictionary below the webservice input: 
+        # to change them, use commands dictionary below the webservice input:
         # e.g. {'conrad' :  { 'commands' : {'format':'of'}, 'magnetism' : {...} } }
         #                                      |       |
         #    defaultvalue  <--------------------       ----------> conrad specification
         optionsdict['webservices'] = { 'usgs':{
                          'magnetism':{'address':'https://geomag.usgs.gov/ws/data/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['60','1','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']},
                          'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
-                         'commands':{} }, 
+                         'commands':{} },
                                       'conrad': {
                          'magnetism':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
                          'meteorology':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'sampling':['60'],'type':['adjusted']},
                          'commands':{'format':'of'} },
-                                      'intermagnet': {                         
+                                      'intermagnet': {
                          'magnetism':{'address':'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices','format':['iaga2002'],'ids':['WIC','ABK','AIA','API','ARS','ASC','ASP','BDV','BEL','BFE','BFO','CKI','CNB','CNH','CPL','CSY','CTA','CYG','DOU','ESK','EY2','EYR','FUR','GAN','GCK','GNA','GNG','GZH','HAD','HBK','HER','HLP','HRN','HUA','HYB','IRT','ISK','IZN','JCO','KDU','KEP','KHB','KIV','KMH','LER','LON','LRM','LVV','LYC','MAB','MAW','MCQ','MGD','MZL','NCK','NGK','NUR','NVS','ORC','PAG','PEG','PET','PIL','PST','SBA','SBL','SOD','SON','THY','TSU','UPS','VAL','WMQ','WNG','YAK'],'elements':'X,Y,Z,F','sampling':['minute','second'],'type':['adj-or-rep']},
                          'extra':{'baseextension':'','additionalelements':'request=GetData','displaytype':'download','mintime':'day'},
                          'commands':{'format':'Format','id':'observatoryIagaCode', 'starttime':'dataStartDate','endtime':'dataEndDate','type':'publicationState', 'sampling_period':'samplesPerDay'} } }
@@ -401,7 +401,7 @@ class PlotPanel(scrolled.ScrolledPanel):
 
         sumtime = 0
 
-        debug = False ## PLEASE NOTE Oct 2019: MARTAS is receiving data only at the defined interval, not inbetween 
+        debug = False ## PLEASE NOTE Oct 2019: MARTAS is receiving data only at the defined interval, not inbetween
 
         #print (self.datavars[0][:-5])
         coverage = int(self.datavars[6])
@@ -467,7 +467,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         PARAMETERS:
             kwargs:  - all plot args
         """
-        # moved to MARTAS 
+        # moved to MARTAS
         pass
 
 
@@ -578,13 +578,13 @@ class PlotPanel(scrolled.ScrolledPanel):
                 mqtt.Client.connected_flag=False
                 client = mqtt.Client()
 
-                if not martasuser in ['',None,'None','-']: 
+                if not martasuser in ['',None,'None','-']:
                     #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
                     client.username_pw_set(martasuser, password=martaspasswd)
 
                 client.on_connect = colsup.on_connect
                 client.on_message = colsup.on_message
-                try: 
+                try:
                     client.connect(martasaddress, int(martasport), int(martasdelay))
                 except:
                     dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
@@ -995,7 +995,7 @@ class MainFrame(wx.Frame):
         self.stats_p = StatisticsPanel(self.sp)
         self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
         self.sp.Unsplit(self.stats_p)
- 
+
         #self.plot_p = PlotPanel(self.sp,-1)
         #self.menu_p = MenuPanel(self.sp,-1)
         #self.sp.SplitVertically(self.plot_p, self.menu_p, 800)
@@ -2210,10 +2210,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         info.SetName('MagPy')
         info.SetVersion(__version__)
         info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec')
+        info.SetCopyright('(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec, Stephan Bracke')
         info.SetWebSite('http://www.conrad-observatory.at')
         info.SetLicence(licence)
-        info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec')
+        info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec, Stephan Bracke')
         info.AddDocWriter('Leonhardt,Bailey,Miklavec,Matzka')
         info.AddArtist('Leonhardt')
         info.AddTranslator('Bailey')
@@ -2294,7 +2294,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         stream.header = {}
         filelist = []
         dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
-        
+
         answer = dlg.ShowModal()
         if answer == wx.ID_OK:
             self.changeStatusbar("Loading data ...")
@@ -2302,7 +2302,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         dlg.Destroy()
         if answer == wx.ID_CANCEL:
             return
-        
+
         loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
         try:
                 for path in pathlist:
@@ -2351,7 +2351,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             bookmarks = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab','http://www.intermagnet.org/test/ws/?id=BOU']
 
         dlg = OpenWebAddressDialog(None, title='Open URL', favorites=bookmarks)
-        
+
         answer = dlg.ShowModal()
         if answer == wx.ID_OK:
             url = dlg.urlTextCtrl.GetValue()
@@ -2360,7 +2360,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         dlg.Destroy()
         if answer == wx.ID_CANCEL:
             return
-        
+
         try:
                 if not url.endswith('/'):
                     loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
@@ -2473,7 +2473,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 if not group == 'magnetism':
                     addgroup = '&{}={}'.format(defaultcommands.get('group'), dlg.groupComboBox.GetValue())
                 else:
-                    addgroup = ''                    
+                    addgroup = ''
                 obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
                 start_time = '&{}={}T{}Z'.format(defaultcommands.get('starttime'), sd,sttime)
                 file_format = '&{}={}'.format(defaultcommands.get('format'), dlg.formatComboBox.GetValue())
@@ -2868,7 +2868,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 self.db = False
         else:
             self.db = False
-        
+
         if self.db:
             self.DBOpen.Enable(True)
             self.menu_p.rep_page.logMsg('- MySQL Database {} on {} connected.'.format(dbname,host))
@@ -4209,16 +4209,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 # internally check yearmean  (Not yet)
                 # check whether all data files contain the same means
 
-                def diffs (success, hmean1,zmean1,hmean2,zmean2,source1='blv',source2='iaf',threshold=0.5):
+                def diffs (success, hmean1,zmean1,hmean2,zmean2,source1='blv',source2='iaf',threshold=0.9):
                     repmsg = ''
                     warnmsg = ''
                     if not np.isnan(hmean1) and not np.isnan(hmean2):
                         diffh = np.abs(hmean1-hmean2)
                         diffz = np.abs(zmean1-zmean2)
                         if diffh < threshold and diffz < threshold:
-                            repmsg += "Step 6: yearly means between {} and {} files are consistent\n".format(source1, source2)
+                            repmsg += "Step 6: yearly means between {} and {} files are consistent within an threshold of {} nT\n".format(source1, source2, threshold)
                         else:
-                            repmsg += "Step 6: yearly means differ between {} and {} files. {}: H={}nT,Z={}nT; {}: H={}nT, Z={}nT \n".format(source1, source2, source1, hmean1,zmean1, source2, hmean2,zmean2)
+                            repmsg += "Step 6: yearly means differ between {} and {} files. {}: H={.2f}nT,Z={.2f}nT; {}: H={.2f}nT, Z={.2f}nT \n".format(source1, source2, source1, hmean1,zmean1, source2, hmean2,zmean2)
                             success = 5
                             if source1 == 'yearmean':
                                 repmsg += "    ->   difference might be related to data jumps within the Yearmean file, which are considered when reading this file\n"
@@ -4851,7 +4851,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 self.plotstream = self.plotstream.flag(self.flaglist)
                 self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(self.flaglist)))
                 self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)        
+                self.OnPlot(self.plotstream,self.shownkeylist)
             else:
                 pass
             pass
@@ -5276,7 +5276,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 except:
                     print ("Reading failed")
 
-            loadDlg.Destroy()            
+            loadDlg.Destroy()
             return stream
 
         else:
@@ -5517,6 +5517,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         """
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         #print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
+        self.changeStatusbar("Applying baseline ...")
+
         self.plotstream = self.plotstream.bc()
         # Eventually update delta F
         if 'df' in self.plotstream._get_key_headers():
@@ -5531,7 +5533,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
-
+        self.changeStatusbar("Ready")
 
     def onGetGapsButton(self,event):
         """
@@ -6595,7 +6597,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                             db = self.db
                     elif el == 'divariocorr':
                         magrotation = value
-                        # does only work with db? compensation data is path of the vario source 
+                        # does only work with db? compensation data is path of the vario source
             elif primaryparametersource == 'file':
                 pass
 
@@ -6660,7 +6662,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 absstream = DataStream()
 
             try:
-                if not divariopath == '' and not discalapath == '': 
+                if not divariopath == '' and not discalapath == '':
                     variid = absstream.header.get('SensorID').split('_')[1]
                     scalid = absstream.header.get('SensorID').split('_')[2]
                     msgtxt = ''
@@ -6825,7 +6827,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     # ################
     # ------------------------------------------------------------------------------------------
 
-    """     
+    """
     def onConnectMQTTButton(self, event):
         # start a subscribe to client call
         success = True
@@ -6926,7 +6928,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.menu_p.com_page.logMsg(' - IP: {}'.format(martasaddress))
             self.menu_p.com_page.coverageTextCtrl.Enable()    # always
             self.menu_p.com_page.frequSlider.Enable()         # always
-    """     
+    """
 
     def onConnectMARCOSButton(self, event):
         # active if database is connected
@@ -7066,7 +7068,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         if mqttimport:
             client = mqtt.Client()
 
-            if not martasuser in ['',None,'None','-']: 
+            if not martasuser in ['',None,'None','-']:
                 #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
                 client.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
 
@@ -7095,7 +7097,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             except:
                 print ("Could not get scantime from options - using approx 20 seconds")
                 maxloop = 200
-            self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))            
+            self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
             try:
                 self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
                 while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
@@ -7145,7 +7147,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     self.menu_p.com_page.getMARTASButton.Enable()
                     self.ActivateControls(self.plotstream)
                     sensorid = sensorlist[0]
-                    
+
                 dlg.Destroy()
 
                 self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
