@@ -110,7 +110,7 @@ def isBLV(filename):
         return False
     if not 43 <= len(temp2) <= 45:
         return False
-    
+
     logger.debug("isBLV: Found BLV data")
     return True
 
@@ -123,7 +123,7 @@ def isIYFV(filename):
     """
     # Search for identifier in the first three line
     if sys.version_info >= (3, 0):
-        code = 'rt' 
+        code = 'rt'
         try:
             fi = open(filename, code, errors='replace')
         except:
@@ -247,7 +247,7 @@ def readIAF(filename, headonly=False, **kwargs):
                 if not isinstance(el,(int,basestring)):
                     try:
                         el = el.decode('utf-8')
-                    except: # might fail e.g. for empty publication date 
+                    except: # might fail e.g. for empty publication date
                         el = None
                 newhead.append(el)
             head = newhead
@@ -318,7 +318,7 @@ def readIAF(filename, headonly=False, **kwargs):
                     headers['DataDigitalSampling'] = str(float(head[11])/1000.) + ' sec'
                     headers['DataSensorOrientation'] = head[12].lower()
                     headers['DataPublicationLevel'] = '4'
-                    # New in 0.3.99 - provide a SensorID consisting of IAGA code, min 
+                    # New in 0.3.99 - provide a SensorID consisting of IAGA code, min
                     # and numerical publevel
                     #  IAGA code
                     headers['SensorID'] = head[0].strip().upper()+'min_4_0001'
@@ -369,7 +369,7 @@ def readIAF(filename, headonly=False, **kwargs):
     fh.close()
 
     if debug:
-        print ("readIAF: extracted data from binary file") 
+        print ("readIAF: extracted data from binary file")
     #x = np.asarray([val for val in x if not val > 888880])/10.   # use a pythonic way here
     x = np.asarray(x)/10.
     x[x > 88880] = float(nan)
@@ -406,7 +406,7 @@ def readIAF(filename, headonly=False, **kwargs):
     ir = np.asarray(ir)
 
     if debug:
-        print ("readIAF: asigned arrays") 
+        print ("readIAF: asigned arrays")
 
     # ndarray
     def data2array(arlist,keylist,starttime,sr):
@@ -490,7 +490,7 @@ def writeIAF(datastream, filename, **kwargs):
 
     # Check whether f is contained (or delta f)
     # if f calc delta f
-    #   a) replaceing s by f     
+    #   a) replaceing s by f
     if datastream.header.get('DataComponents','') in ['HDZS','hdzs']:
         datastream.header['DataComponents'] = 'HDZF'
     if datastream.header.get('DataComponents','') in ['XYZS','xyzs']:
@@ -509,7 +509,7 @@ def writeIAF(datastream, filename, **kwargs):
         else:
             datastream = datastream.delta_f()
             df=True
-            if len(datastream.header.get('DataComponents','')) == 4: 
+            if len(datastream.header.get('DataComponents','')) == 4:
                 datastream.header['DataComponents'] = datastream.header.get('DataComponents','')[:3]
             if datastream.header.get('DataComponents','') in ['HDZ','XYZ']:
                 datastream.header['DataComponents'] += 'G'
@@ -517,7 +517,7 @@ def writeIAF(datastream, filename, **kwargs):
                 datastream.header['DataSensorOrientation'] += datastream.header.get('DataSensorOrientation','').upper() + 'F'
     else:
         df=True
-        if len(datastream.header.get('DataComponents','')) == 4: 
+        if len(datastream.header.get('DataComponents','')) == 4:
             datastream.header['DataComponents'] = datastream.header.get('DataComponents','')[:3]
         if datastream.header.get('DataComponents','') in ['HDZ','XYZ']:
             datastream.header['DataComponents'] += 'G'
@@ -647,7 +647,7 @@ def writeIAF(datastream, filename, **kwargs):
                     value = 0
                 else:
                     value = datastream.header.get(elem,'')
-                
+
                 if not datastream._is_number(value):
                     if len(value) < 4:
                         value = value.ljust(4)
@@ -841,7 +841,7 @@ def writeIAF(datastream, filename, **kwargs):
             head.append("{0:<50}".format(emptyline))
             head.append("{0:<50}".format(head5))
             head.append("{0:<50}".format(emptyline))
-            
+
             if sys.version_info >= (3,0,0):
                 with open(kfile, "w", newline='') as myfile:
                     for elem in head:
@@ -1052,7 +1052,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     if 'FlagRulesetVersion' in attrslist:
         flagruleversion = str(cdfdat.attrs['FlagRulesetVersion'])
 
-    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec 
+    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec
     # and numerical publevel
     #  IAGA code
     if headers.get('SensorID','') == '':
@@ -1218,7 +1218,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 def writeIMAGCDF(datastream, filename, **kwargs):
     """
     Writing Intermagnet CDF format (currently: vers1.2) + optional flagging info
-    
+
     """
 
     logger.info("Writing IMAGCDF Format {}".format(filename))
@@ -1277,7 +1277,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     headers['DataComponents'] = dcomps
 
     ### #########################################
-    ###            Check Header 
+    ###            Check Header
     ### #########################################
 
     ## 1. Fixed Part -- current version is 1.2
@@ -1330,7 +1330,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if len(flaglist) > 0:
             mycdf.attrs['FlagRulesetVersion'] = '1.0'
             mycdf.attrs['FlagRulesetType'] = 'Conrad'
-    
+
 
     #pubdate = cdf.lib.datetime_to_tt2000(datastream._testtime(headers.get('DataPublicationDate','')))
     if not headers.get('DataPublicationDate','') == '':
@@ -1433,7 +1433,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         mycdf.attrs['IagaCode'] = headers.get('StationID','')
 
     ### #########################################
-    ###               Data 
+    ###               Data
     ### #########################################
 
     def checkEqualIvo(lst):
@@ -1473,9 +1473,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             pos = KEYLIST.index('df')
             col = datastream.ndarray[pos]
         col = col.astype(float)
-        
+
         nonancol = col[~np.isnan(col)]
-            
+
         #print ("IMAG", len(nonancol),datastream.length()[0])
         if len(nonancol) < datastream.length()[0]/2.:
             #shorten col
@@ -1485,7 +1485,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             useScalarTimes=True
             #[inds]=np.take(col_mean,inds[1])
         else:
-            #keep column and (later) leave time       
+            #keep column and (later) leave time
             useScalarTimes=True  # change to False in order to use a single col
 
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
@@ -1636,7 +1636,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 #[st,et,key,flagnumber,commentarray[idx],sensorid,now]
                 # eventually change flagcomponent in the future
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference] # , flagobserver]
-            elif len(flaglist[0]) == 8:  
+            elif len(flaglist[0]) == 8:
                 # Future version ??
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
             for idx, cdfkey in enumerate(fllist):
@@ -1881,7 +1881,7 @@ def writeIMF(datastream, filename, **kwargs):
     if not xlen > 0 or not ylen > 0 or not zlen > 0:
         logger.error("writeIMF: vector data seems to be missing or incomplete - aborting")
         return False
- 
+
     if not flen > 0 and not dflen > 0:
         logger.error("writeIMF: required information on f is missing - aborting")
         return False
@@ -2199,16 +2199,16 @@ def writeBLV(datastream, filename, **kwargs):
         deltaF          : (float) average field difference in nT between DI pier and F
                                    measurement position.
                           OR
-                          (string) which is either 'mean', 'median', or an absinfo string 
+                          (string) which is either 'mean', 'median', or an absinfo string
                                    providing fitting methods.
                           Mean or median require deltaF values in basevalue file.
-                          DeltaF represents the adopted value for all days 
+                          DeltaF represents the adopted value for all days
         diff            : (ndarray) array containing daily averages of delta F values between
                           variometer and F measurement
     """
 
     absinfo = kwargs.get('absinfo')   # new in v0.3.95
-    fitfunc = kwargs.get('fitfunc')   # replaced by absinfo 
+    fitfunc = kwargs.get('fitfunc')   # replaced by absinfo
     fitdegree = kwargs.get('fitdegree')   # replaced by absinfo
     knotstep = kwargs.get('knotstep')   # replaced by absinfo
     extradays = kwargs.get('extradays')   # replaced by absinfo
@@ -2234,8 +2234,8 @@ def writeBLV(datastream, filename, **kwargs):
         if not absinfolist[0].startswith('7') and not len(absinfolist) > 5:
             return None
         funclist = []
-        for absinfo in absinfolist:
-            parameter = absinfo.split('_')
+        for absi in absinfolist:
+            parameter = absi.split('_')
             startabs=float(parameter[0])
             endabs=float(parameter[1])
             extradays=int(parameter[2])
@@ -2253,7 +2253,7 @@ def writeBLV(datastream, filename, **kwargs):
             if len(parameter) >= 14:
                     #extract pier information
                     pierdata = True
-                    pierlon = float(parameter[9]) 
+                    pierlon = float(parameter[9])
                     pierlat = float(parameter[10])
                     pierlocref = parameter[11]
                     pierel = float(parameter[12])
@@ -2717,7 +2717,7 @@ def readIYFV(filename, headonly=False, **kwargs):
 
 
     if sys.version_info >= (3, 0):
-        code = 'rt' 
+        code = 'rt'
         fh = open(filename, code, errors='ignore')  # python3
     else:
         code = 'rb'
@@ -2725,7 +2725,7 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     if debug:
         print ("readIYVF: sysinfo = {}".format(sys.version_info))
-    
+
     for line in fh:
             line = dropnonascii(line)
             line = line.rstrip()
@@ -3185,7 +3185,7 @@ def readDKA(filename, headonly=False, **kwargs):
                     for i in range(8):
                         # TODO Locale language settings is important to correctly interpret date
                         # e.g. "01-Mar-14" fails for de_DE
-                        # solved by tring to switch to english-US 
+                        # solved by tring to switch to english-US
                         # - might not work if language not installed and on windows
                         # switched to dparser for MagPy 1.0.5 as independent of locale
                         ti = dparser.parse(block[0]) + timedelta(minutes=90) + timedelta(minutes=180*i)
@@ -3254,11 +3254,11 @@ def writeDKA(datastream, filename, **kwargs):
         station=datastream.header['StationIAGAcode']
         k9=datastream.header['StationK9']
         latnum = datastream.header.get('DataAcquisitionLatitude',0)
-        if not latnum: 
+        if not latnum:
             latnum = datastream.header.get('StationLatitude',0)
         lat=np.round(float(latnum),3)
         lonnum = datastream.header.get('DataAcquisitionLongitude',0)
-        if not lonnum: 
+        if not lonnum:
             lonnum = datastream.header.get('StationLongitude',0)
         lon=np.round(float(lonnum),3)
         year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
