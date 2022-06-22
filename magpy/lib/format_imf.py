@@ -2231,7 +2231,8 @@ def writeBLV(datastream, filename, **kwargs):
         absinfostring = absinfostring.replace(',epsg',' EPSG')
         # 2. split absinfo list
         absinfolist = absinfostring.split(',')
-        if not absinfolist[0].startswith('7') and not len(absinfolist) > 5:
+        # check whether format looks ok
+        if not (absinfolist[0].startswith('7') or absinfolist[0].startswith('1')) and not len(absinfolist) > 5:
             return None
         funclist = []
         for absi in absinfolist:
@@ -2286,8 +2287,10 @@ def writeBLV(datastream, filename, **kwargs):
                 #knotstep = float(absinfoline[5])
                 #keys = ['dx','dy','dz']#,'df'] # absinfoline[6]
 
-    print ("Checking absinfo")
-    if not absinfo:
+    if absinfo:
+        parameterlist = getAbsInfo(absinfo)
+    if not absinfo or not parameterlist:
+        print ("writeBLV: did not find absinfo or valid parameterlist")
         if not extradays:
             extradays = 15
         if not fitfunc:
@@ -2299,8 +2302,6 @@ def writeBLV(datastream, filename, **kwargs):
         if not keys:
             keys = ['dx','dy','dz']#,'df']
         parameterlist = [[t1,t2,extradays,fitfunc,fitdegree,knotstep,keys]]
-    else:
-        parameterlist = getAbsInfo(absinfo)
 
     # Get functionlist:
     basefunctionlist =[]
