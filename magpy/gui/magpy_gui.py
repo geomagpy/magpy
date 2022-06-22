@@ -4218,7 +4218,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         if diffh < threshold and diffz < threshold:
                             repmsg += "Step 6: yearly means between {} and {} files are consistent within an threshold of {} nT\n".format(source1, source2, threshold)
                         else:
-                            repmsg += "Step 6: yearly means differ between {} and {} files. {}: H={.2f}nT,Z={.2f}nT; {}: H={.2f}nT, Z={.2f}nT \n".format(source1, source2, source1, hmean1,zmean1, source2, hmean2,zmean2)
+                            repmsg += "Step 6: yearly means differ between {} and {} files. {}: H={:.2f}nT,Z={:.2f}nT; {}: H={:.2f}nT, Z={:.2f}nT \n".format(source1, source2, source1, hmean1,zmean1, source2, hmean2,zmean2)
                             success = 5
                             if source1 == 'yearmean':
                                 repmsg += "    ->   difference might be related to data jumps within the Yearmean file, which are considered when reading this file\n"
