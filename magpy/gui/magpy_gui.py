@@ -3658,7 +3658,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        locale.setlocale(locale.LC_TIME, old_loc)
+                        #locale.setlocale(locale.LC_TIME, old_loc)
                         self.changeStatusbar("Ready")
                         return
 
@@ -3912,7 +3912,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        locale.setlocale(locale.LC_TIME, old_loc)
+                        #locale.setlocale(locale.LC_TIME, old_loc)
                         self.changeStatusbar("Ready")
                         return
 
@@ -4086,7 +4086,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        locale.setlocale(locale.LC_TIME, old_loc)
+                        #locale.setlocale(locale.LC_TIME, old_loc)
                         self.changeStatusbar("Ready")
                         return
 
@@ -4194,7 +4194,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        locale.setlocale(locale.LC_TIME, old_loc)
+                        #locale.setlocale(locale.LC_TIME, old_loc)
                         self.changeStatusbar("Ready")
                         return
 
@@ -4276,7 +4276,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         yearmeanh = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany)
                         yearmeanf = np.sqrt(yearmeanx*yearmeanx + yearmeany*yearmeany + yearmeanz*yearmeanz)
                         # extract data for year
-                        rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,minhmean,minfmean,source1='yearmean',source2='iaf',threshold=0.5)
+                        rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,minhmean,minfmean,source1='yearmean',source2='iaf',threshold=0.6)
                         reportmsg += rep
                         warningmsg += warn
                         rep, warn, succlst[5] = diffs(succlst[5],yearmeanh,yearmeanf,blvhmean,blvfmean,source1='yearmean',source2='blv',threshold=1.0)
@@ -4364,7 +4364,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        locale.setlocale(locale.LC_TIME, old_loc)
+                        #locale.setlocale(locale.LC_TIME, old_loc)
                         self.changeStatusbar("Ready")
                         return
 
@@ -4429,12 +4429,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         saveReport(dlg.contlabel, dlg.report)
                     else:
                         dlg.Destroy()
-                        locale.setlocale(locale.LC_TIME, old_loc)
+                        #locale.setlocale(locale.LC_TIME, old_loc)
                         self.changeStatusbar("Ready")
                         return
 
 
-        locale.setlocale(locale.LC_TIME, old_loc)
+        #locale.setlocale(locale.LC_TIME, old_loc)
         self.changeStatusbar("Check data finished - Ready")
 
 
