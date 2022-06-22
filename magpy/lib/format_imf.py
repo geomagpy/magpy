@@ -2286,6 +2286,7 @@ def writeBLV(datastream, filename, **kwargs):
                 #knotstep = float(absinfoline[5])
                 #keys = ['dx','dy','dz']#,'df'] # absinfoline[6]
 
+    print ("Checking absinfo")
     if not absinfo:
         if not extradays:
             extradays = 15
