@@ -9,6 +9,7 @@ Installation instructions can be found on the main download page.
 
 1.0.6 fixes:
     + fixed rotation method in stream and absolute treatment to correctly use beta
+    + fixed CheckAngle Button in DI input sheet
 
 ####v<1.0.5>, <2022-05-16> --
 
