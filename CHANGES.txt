@@ -2,6 +2,15 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
+####v<1.0.7>, <2022-xx-xx> --
+
+1.0.7 general:
+
+1.0.7 additions:
+    + added library support for GFZ index webservice
+
+1.0.7 fixes:
+
 ####v<1.0.6>, <2022-07-26> --
 
 1.0.6 additions:
@@ -14,10 +23,10 @@ Installation instructions can be found on the main download page.
 ####v<1.0.5>, <2022-05-16> --
 
 1.0.5 general:
-    + removed locale modifications for interpreting months 
-    + basevalue data: when removing flagged data and adding data to memory, 
+    + removed locale modifications for interpreting months
+    + basevalue data: when removing flagged data and adding data to memory,
       this "new" data can be selected for baeline analysis
-      previously always the original/uncorrected data was used 
+      previously always the original/uncorrected data was used
     + new Docker image available
 
 1.0.5 additions:
@@ -36,7 +45,7 @@ Installation instructions can be found on the main download page.
 ####v<1.0.4>, <2022-03-15> --
 
 1.0.4 additions:
-    + support for tilt data files 
+    + support for tilt data files
 
 1.0.4 fixes:
     + some datetime issues in GUI
@@ -96,7 +105,7 @@ Installation instructions can be found on the main download page.
     + minor bug fixes
 
 1.0.1 additions:
-    + accepting basevalue data in XYZ in addition to HDZ 
+    + accepting basevalue data in XYZ in addition to HDZ
     + added webservice support for INTERMAGNET
 
 1.0.1 fixes:
@@ -129,15 +138,15 @@ Installation instructions can be found on the main download page.
 1.0.0 fixes:
     + dialog methods (on all platforms) - solved e.g. merge data issue on MacOS
     + flagging inaccuracies due to platform and system depended rounding uncertainites in time conversion
-    + monitor options for MAGPY based acquisition systems like MARTAS (MQTT) 
+    + monitor options for MAGPY based acquisition systems like MARTAS (MQTT)
     + flagging outlier: 'markall' option is now working correctly
     + IYFV format now correctly interpreted (as good as possible for free form)
-    + subsecond resolution for IAGA-2002 file now possible 
+    + subsecond resolution for IAGA-2002 file now possible
 
 1.0.0 additions:
     + input filter for GFZ ascii format
     + new cdf input and output libraries based on cdflib
-    + coverage json support 
+    + coverage json support
     + scroll bars in GUI panels
     + general webservice support (currently for usgs and zamg)
 
@@ -147,13 +156,13 @@ Installation instructions can be found on the main download page.
 
 v0.4.7 general:
     + version 0.4.7 was used to obtain and test the validity of one second and mintute data
-      of the Conrad Observatory 2018. All below mentioned bug fixes and additions were 
+      of the Conrad Observatory 2018. All below mentioned bug fixes and additions were
       considered for this purpose.
 
 v0.4.7 fixes:
     + reading all generations of NASA CDF with correct interpretetion of archived Epoch variable
       and leap seconds tables
-    + database: error in applyDeltas method corrected (used for offset determination, delta F, 
+    + database: error in applyDeltas method corrected (used for offset determination, delta F,
       compensation fields)
     + database: sorting of input data corrected
     + flagging outlier: 'markall' option is now working correctly
@@ -171,7 +180,7 @@ v0.4.6 fixes:
     + writeDB - resolution in timecolumns changeable by roundtime variable
     + GUI - polynomial fit now working in GUI
     + writeDB: method will now work even for very large datasets
-    + GUI: freezing error when double clicking solved 
+    + GUI: freezing error when double clicking solved
     + writeDB: treatment of columns with only nan values has been corrected
     + GUI: when opening multiple data set: sorting by time column
     + FlagOutlier: combination of susequent time steps corrected -
@@ -181,9 +190,9 @@ v0.4.6 fixes:
     + python3 import of IYFV files now possible
 
 v0.4.6 additions:
-    + added method 'cut' to extract lines from a stream from the beginning or end 
+    + added method 'cut' to extract lines from a stream from the beginning or end
     + updated import library for ionometer
-    + GUI: added better names + dates to Streamlist operations 
+    + GUI: added better names + dates to Streamlist operations
     + GUI: streamlist is now scrollable
 
 
@@ -196,7 +205,7 @@ v0.4.5 fixes:
     + updated some transfer methods mainly used by MARTAS
 
 -------------------------------------------------
-####v<0.4.4>, <2018-08-10> -- 
+####v<0.4.4>, <2018-08-10> --
 
 v0.4.4 fixes:
     + fixed rounding of microseconds in writeDB
@@ -204,7 +213,7 @@ v0.4.4 fixes:
 
 
 -------------------------------------------------
-####v<0.4.3>, <2018-07-27> -- 
+####v<0.4.3>, <2018-07-27> --
 
 v0.4.3 additions:
     + added help on scripts to manual (section 3)
@@ -215,23 +224,23 @@ v0.4.3 fixes:
 
 
 -------------------------------------------------
-####v<0.4.02>, <2018-07-03> -- 
+####v<0.4.02>, <2018-07-03> --
 
 v0.4.02 additions:
-    + "mpconvert" conversion enabled for windows  
+    + "mpconvert" conversion enabled for windows
 
 v0.4.02 fixes:
     + added paho-mqtt requirement to setup
 
 -------------------------------------------------
-####v<0.4.01>, <2018-07-01> -- 
+####v<0.4.01>, <2018-07-01> --
 
 v0.4.01 general:
     + added suggestion from IAGA workshop
 
 v0.4.01 fixes:
     + IAF export and read updated - more stable when f ot k missing
-    + IYFV import - corrected error when importing hdz,dhz data types 
+    + IYFV import - corrected error when importing hdz,dhz data types
 
 v0.4.01 additions:
     + added filter option to script mpconvert:
@@ -241,7 +250,7 @@ v0.4.01 additions:
 
 
 -------------------------------------------------
-####v<0.4.00>, <2018-06-13> -- 
+####v<0.4.00>, <2018-06-13> --
 
 v0.4.00 general:
     + removed capital letters from package title in pypi: GeomagPy -> geomagpy
@@ -255,14 +264,14 @@ v0.4.00 general:
 v0.4.00 fixes:
     + updated flaglist2db and db2flaglist methods - considerably faster now and more reliable
     + CheckData in GUI: check for filename compliance, speed up read if not ok, relax checks with
-              numerical uncertainties, add optional flag for non-required information, 
-              updated all texts to comply with IM rules, 
+              numerical uncertainties, add optional flag for non-required information,
+              updated all texts to comply with IM rules,
     + reading yearly mean format IYFV: less sensitive to slight variations in data format
     + improved speed of flagging methods in general
     + gui: outlier flagging is not applied twice any more
     + remove_flagged: shape issue solved
     + flags: saving flags to database create correct timesteps, 'replace' set to default
-    + cdfpath returns NONE: illegal operation -> solved 
+    + cdfpath returns NONE: illegal operation -> solved
     + corrected invalid GridSizeres in panels
     + corrected unicode issues
 
@@ -280,18 +289,18 @@ v0.4.00 additions:
     + database: added column DataDeltaValuesApplied (0,1)
     + database: added column DataTimezone (e.g. UTC)
     + database: added dbinfo method to get version and size
-    + database+gui: try to reconnect to DB if connection has been lost e.g. due to time limit 
+    + database+gui: try to reconnect to DB if connection has been lost e.g. due to time limit
     + gui: added flag info button
     + gui: added option to calculate F values from x,y,z
-    + gui: added option to mark all shown components when using outlier detection 
+    + gui: added option to mark all shown components when using outlier detection
     + absolutes: added option compensation to apply compensation fields to variometer data
-                 - use option skipvariodb=True to avoid 
+                 - use option skipvariodb=True to avoid
     + saveflags: creates directory if not yet existing
     + added compensation method for applying fluxgates compensation fields when available in the header
     + added Clear Flags button to remove all flags
     + updated monitor panel: full mqtt support to view broker data (e.g. MARTAS) plus authentication
     + modified spectral plot options and its default colorscale
-    + moved most runtime information to debug 
+    + moved most runtime information to debug
 
 v0.4.00 removals:
     + cleaned up logs and removed unnecessary log info
@@ -356,7 +365,7 @@ v0.3.96 fixes:
 
 v0.3.96 additions:
     + GUI: added menu item for data checkers and definitive data check option
-      Data check currently supports minute (IAF) and one second (ImagCDF/IAGA02) data 
+      Data check currently supports minute (IAF) and one second (ImagCDF/IAGA02) data
     + Added preliminary MQTT acquisition and collection support
     + GUI: added power spectrum and spectrogram plots - preliminary - options not yet available
     + GUI: DI sheet - added possibility to load F data from file
@@ -385,12 +394,12 @@ General:
 v0.3.95 additions:
 DI analysis:
     GUI: added additional fields to DI input sheet (Comments)
-    DI pier location will be used (if provided) after baselione correction 
+    DI pier location will be used (if provided) after baselione correction
     GUI: updated feedback information on DI sheet
     GUI: overwrite warnings
     IBFV2.00 export supports multiple baselinelines and jumps inbetween
     IBFV2.00 export supports adopted scalar baseline techniques
-    when opening IBFV2.00 data, adopted baseline are imported and displayed as functions 
+    when opening IBFV2.00 data, adopted baseline are imported and displayed as functions
 General:
     multiple functions can be fitted to one stream
 
@@ -476,7 +485,7 @@ None
 v0.3.6 additions:
 MagPy is now Python 3 compatible !
 An Exception is the GUI as this is based on wx, which is not properly supported on py3.
-If you are using the graphical user interface, then you should run MagPy with Py2.7 
+If you are using the graphical user interface, then you should run MagPy with Py2.7
 
 Minor adds:
 - added a analysis monitoring method for logging information on automated analyses
