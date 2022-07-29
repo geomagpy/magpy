@@ -149,6 +149,9 @@ def isFormat(filename, format_type):
     elif (format_type == "PYBIN"):
         if (isPYBIN(filename)):
             return True
+    elif (format_type == "GFZINDEXJSON"):
+        if (isGFZINDEXJSON(filename)):
+            return True
     elif (format_type == "COVJSON"):
         if (isCOVJSON(filename)):
             return True
@@ -338,6 +341,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYCDF(filename, headonly, **kwargs)
     elif (format_type == "PYBIN"):
         return readPYBIN(filename, headonly, **kwargs)
+    elif (format_type == "GFZINDEXJSON"):
+        return readGFZINDEXJSON(filename, headonly, **kwargs)
     elif (format_type == "JSON"):
         return readJSON(filename, headonly, **kwargs)
     elif (format_type == "GSM19"):

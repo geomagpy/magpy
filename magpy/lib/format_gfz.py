@@ -10,6 +10,69 @@ ToDo: Filter for minute data
 from __future__ import print_function
 
 from magpy.stream import *
+import json
+
+def isGFZINDEXJSON(filename):
+    """
+    Checks whether a file is JSON format.
+    """
+    try:
+        jsonfile = open(filename, 'r')
+        j = json.load(jsonfile)
+    except:
+        return False
+    try:
+        if not j.get("metadata").get("source") == 'GFZ Potsdam':
+            # Found other json - use separate filter
+            return False
+    except:
+        pass
+    return True
+
+def readGFZINDEXJSON(filename, headonly=False, **kwargs):
+    """
+    Reading JSON format data.
+    """
+    stream = DataStream()
+    header = {}
+    array = [[] for key in KEYLIST]
+    posskeys = ['var1','var2','var3','var4','var5']
+    ind = 0
+
+    with open(filename, 'r') as jsonfile:
+        dataset = json.load(jsonfile)
+        loggerlib.info('Read: %s, Format: %s ' % (filename, "GFZINDEXJSON"))
+
+        metadata = dataset.get('metadata')
+        datetime = dataset.get('datetime')
+        status = dataset.get('status',[])
+        for key in dataset:
+            if not key in ["datetime","metadata","status"]:
+                datacol = dataset.get(key)
+                data = [np.nan if x is None else float(x) for x in datacol]
+                if ind < 5:
+                    array[KEYLIST.index(posskeys[ind])] = data
+                    header['col-'+posskeys[ind]] = key
+                    header['unit-col-'+posskeys[ind]] = ''
+                ind += 1
+        timecol = [date2num(testTimeString(str(x))) for x in datetime]
+        array[0] = timecol
+        if len(status) == len(timecol):
+            array[KEYLIST.index('str1')] = status
+
+    for idx, elem in enumerate(array):
+        array[idx] = np.asarray(array[idx],dtype=object)
+
+    header['SensorID'] = "GFZ_{}".format(header.get("col-var1"))
+    header['DataSource'] = metadata.get("source")
+    if header.get("col-var1") == "Kp":
+        header['DataFormat'] = 'MagPyK'
+    header["DataTerms"] = metadata.get("license")
+    header['DataReferences'] = 'https://kp.gfz-potsdam.de/'
+
+    stream = DataStream([],header,np.asarray(array,dtype=object))
+
+    return stream
 
 
 def isGFZKP(filename):

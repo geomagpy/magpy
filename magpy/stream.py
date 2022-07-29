@@ -390,6 +390,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'DKA':['rw', 'K value format Intermagnet'],
                 'DIDD':['rw','Output format from MinGeo DIDD'],
                 'GSM19':['r', 'Output format from GSM19 magnetometer'],
+                'GFZINDEXJSON':['r', 'JSON structure for indicies (i.e. Kp) at GFZ webservice'],
                 'COVJSON':['rw', 'Coverage JSON'],
                 'JSON':['rw', 'JavaScript Object Notation'],
                 'LEMIHF':['r', 'LEMI text format data'],
@@ -453,6 +454,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'DKA',          # K value format Intermagnet
                 'DIDD',         # Output format from DIDD
                 'GSM19',        # Output format from GSM19 magnetometer
+                'GFZINDEXJSON', # JSON structure for indicies (i.e. Kp) at GFZ webservice
                 'COVJSON',      # Coverage JavaScript Object Notation
                 'JSON',         # JavaScript Object Notation
                 'LEMIHF',       # LEMI text format data
