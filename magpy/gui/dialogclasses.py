@@ -5787,7 +5787,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         vallst = []
         for el in self.layout['order'][2:6]:
             for num in ['1','2']:
-                exec("valel = self.{}{}AngleTextCtrl.GetValue()".format(el,num))
+                valel = eval("self.{}{}AngleTextCtrl.GetValue()".format(el,num))
                 try:
                     valel = float(self._degminsec2deg(valel))
                     if not valel == 0 and not np.isnan(valel):
