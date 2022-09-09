@@ -871,9 +871,9 @@ class AbsoluteData(object):
         #     4. TODO basevalue is calculated at time t0
         #        -> According to Juerges excel sheet only D is determined at t0
         #        -> I and F are averages within time range of DI meas
-        #     5. TODO The current version is based on the DTU Excel sheet--- it would be necessary to base it on the 
+        #     5. TODO The current version is based on the DTU Excel sheet--- it would be necessary to base it on the
         #             original algorythm as given in Janokowski and Sucksberg, 1996
-        #              expect minor (negligible) differences in I and collimation 
+        #              expect minor (negligible) differences in I and collimation
         # ###################################
 
         nr_lines = len(poslst)
@@ -1803,7 +1803,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         if "://" in url:
             print (url)
             ind = url.find('starttime')
-            if ind < 0: 
+            if ind < 0:
                 st = datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ")
                 et = datetime.strftime(starttime+timedelta(days=1),"%Y-%m-%dT%H:%M:%SZ")
                 url = "{}&starttime={}&endtime={}".format(url,st, et)
@@ -1896,13 +1896,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     variostr = dbase.applyDeltas(db,variostr)
                 except:
                     print("Applying delta values failed")
-            if db and (magrotation or compensation):
+            #if db and (magrotation or compensation):
+            if magrotation or compensation:
                 print("absoluteAnalysis: Applying compensation fields to variometer data ...")
                 deltasapplied = int(variostr.header.get('DataDeltaValuesApplied',0))
 
                 try:   # Compensation values are essential for correct rotation estimates
                     if not offset and not deltasapplied == 1:  # if offset is provided then it overrides DB contents
-                        print("Compensation values from db:")
+                        print("Compensation values:")
+                        if db:
+                            print (" from db:")
                         offdict = {}
                         xcomp = variostr.header.get('DataCompensationX','0')
                         ycomp = variostr.header.get('DataCompensationY','0')
@@ -2092,7 +2095,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         deltaF = 0.0
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
 
-                    try: 
+                    try:
                         if not len(absst) > 1: # Manual
                             stream = absst[0].getAbsDIStruct()
                             abslist.append(absst)
@@ -2151,14 +2154,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
             except:
-                print (" Could not extract an appropriate date from data source") 
+                print (" Could not extract an appropriate date from data source")
                 streamtime = "2233-03-22"
             if streamtime == datetime.strftime(date,"%Y-%m-%d"):
                 if debug:
                     print ("Times are fitting")
             else:
                 continue
-    
+
             if stream[0].person == 'AutoDIF' and not usestep:
                 usestep = 2
 
@@ -2531,5 +2534,3 @@ if __name__ == '__main__':
     print("Starting a test of the Absolutes program:")
     #msg = PyMagLog()
     ### TODO: To be implemented
-
-
