@@ -431,6 +431,7 @@ class AbsoluteData(object):
 
         funckeys = kwargs.get('funckeys')
         offset = kwargs.get('offset')
+        debug = kwargs.get('debug')
         if not funckeys:
             funckeys = ['x','y','z','f']
         if not offset:
@@ -440,6 +441,8 @@ class AbsoluteData(object):
             # check whether time step is in function range
             if function[1] <= elem.time <= function[2]:
                 functime = (elem.time-function[1])/(function[2]-function[1])
+                #if debug:
+                #    print ("Inserting at {}:".format(num2date(functime)))
                 for key in funckeys:
                     if not key in KEYLIST[1:15]:
                         raise ValueError("Column key not valid")
@@ -450,6 +453,8 @@ class AbsoluteData(object):
                         except:
                             newval = float('nan')
                         exec('elem.var'+key+' = newval')
+                    #if debug:
+                    #    print (" -> key {}: {}".format(key,newval))
                     else:
                         pass
             else:
@@ -532,7 +537,7 @@ class AbsoluteData(object):
         #hbasis = 3903.6
         if not hbasis:
             hbasis = hstart
-        #print ("Running declination calc:", xstart, ystart, hstart, hbasis)
+        #print (" Running declination calc:", xstart, ystart, hstart, hbasis)
 
 
         #drop NANs from input stream - positions
@@ -624,7 +629,7 @@ class AbsoluteData(object):
             if hstart == 0:
                 rescorr = 0
             else:
-                #print "Check", signum, poslst[k].res, hstart, xstart, variox
+                #print ("Check: ", hbasis, poslst[k].varx, poslst[k].vary)
                 if not isnan(poslst[k].varx) and not isnan(poslst[k].vary):
                     rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (scale_y*poslst[k].vary)**2 ) )
                 else:
@@ -703,12 +708,13 @@ class AbsoluteData(object):
 
         #print("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
 
-        #print ("Hallo", decmean, mirediff, variocorr[0], deltaD)
+        #print ("Hallo", decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
 
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
 
         loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
+        #print ("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
 
         #print "HStart for collimation D", hstart, dec
         if not hstart == 0:
@@ -1261,6 +1267,7 @@ class AbsoluteData(object):
         linestruct.var4 = s0i  # replaces Mirediff from _calcdec
         linestruct.var5 = epzi
         linestruct.str4 = str4 # Holds F type
+        #print ("Basevalues", basex,linestruct.dy,basez)
 
         return linestruct, hstart, h_adder
         #return linestruct, xstart, ystart
@@ -1357,8 +1364,8 @@ class AbsoluteData(object):
         else:
             incstart = 0.0
 
-        #print "-----------------------------------------"
-        #print self
+        #print ("-----------------------------------------")
+        #print (self)
         #print ("-----------------------------------------")
         #print ("Lines in file:", len(self))
 
@@ -1371,7 +1378,6 @@ class AbsoluteData(object):
             #print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
             if debugmode:
                 print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
-                print("All results: " , resultline)
             # requires succesful declination determination
             if isnan(resultline.y):
                 try:
@@ -1391,6 +1397,7 @@ class AbsoluteData(object):
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             if debugmode:
                 print("Calculated I (%f) - iteration step %d" %(outline[1],i))
+                print("All results: " , outline)
 
         # Temporary cleanup for extraordinary high values (failed calculations) - replace by 999999.99
         for key in FLAGKEYLIST:
@@ -2171,7 +2178,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if variofound:
                 valuetest = stream._check_coverage(variostr)
                 if valuetest:
-                    stream = stream._insert_function_values(vafunc,funckeys=['x','y','z'])
+                    stream = stream._insert_function_values(vafunc,funckeys=['x','y','z'],debug=debug)
                 else:
                     print("Warning! Variation data missing at DI time range")
                 #stream = stream._insert_function_values(vafunc)
@@ -2179,7 +2186,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 # TODO Check offset values
                 valuetest = stream._check_coverage(scalarstr,keys=['f'])
                 if valuetest:
-                    stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF)
+                    stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF,debug=debug)
                 else:
                     print ("Warning! Scalar data missing at DI time range")
             try:
@@ -2215,7 +2222,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
                 #print ("Running calc:", usestep, annualmeans, deltaD, deltaI, meantime, scalevalue)
 
-                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=False,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue)
+                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=debug,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue)
                 print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
                 print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
                 if not deltaF == 0:

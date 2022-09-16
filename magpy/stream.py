@@ -2810,8 +2810,24 @@ CALLED BY:
                     bcdata.header['DataComponents'] = 'XYZ'+datacomp[3]
                 else:
                     bcdata.header['DataComponents'] = 'XYZ'
+            if basecomp in ['hdz','HDZ']:
+                #ycomp = bcdata._get_column("y")
+                bcdata = bcdata.xyz2hdz()
+                print (bcdata.ndarray)
+                #bcdata = bcdata._put_column(ycomp,"y")
+                bcdata = bcdata.func2stream(funclist,mode='add',keys=keys)
+                bcdata.header['col-x'] = 'H'
+                bcdata.header['unit-col-x'] = 'nT'
+                bcdata.header['col-y'] = 'D'
+                bcdata.header['unit-col-y'] = 'deg'
+                datacomp = bcdata.header.get('DataComponents','')
+                if len(datacomp) == 4:
+                    bcdata.header['DataComponents'] = 'HDZ'+datacomp[3]
+                else:
+                    bcdata.header['DataComponents'] = 'HDZ'
             else:
                 #print ("BC: Found a list of functions:", funclist)
+                print ("BC", basecomp, datacomp)
                 bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
                 bcdata.header['col-x'] = 'H'
                 bcdata.header['unit-col-x'] = 'nT'
@@ -5670,9 +5686,10 @@ CALLED BY:
                     except:
                         pass
                     if mode == 'add' and validkey:
-                        print ("here", ar, function[0]['f'+fkey](functimearray))
+                        print ("here add", ar, function[0]['f'+fkey](functimearray))
                         array[ind] = ar + function[0]['f'+fkey](functimearray)
                     elif mode == 'addbaseline' and validkey:
+                        print ("here add base", ar, function[0]['f'+fkey](functimearray))
                         if key == 'y':
                             #indx = KEYLIST.index('x')
                             #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
@@ -5682,6 +5699,7 @@ CALLED BY:
                             self.header['unit-col-y'] = 'deg'
                         else:
                             #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
+                            # X needs to be converted to arrayh otherwise it only works for y close to zero
                             array[ind] = ar + function[0]['f'+fkey](functimearray)
                             if len(array[posstr]) == 0:
                                 #print ("Assigned values to str1: function {}".format(function[1]))
