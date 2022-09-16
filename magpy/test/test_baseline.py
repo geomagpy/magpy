@@ -49,7 +49,7 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     #apply baseline correction
     vario = vario.bc()
     if debug:
-        print ("Applied baseline correction: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
+        print ("After applied baseline correction: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
     #print (vario.ndarray)
     #subtract from orgdata
     varioxyz = vario.hdz2xyz()
@@ -62,7 +62,7 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
 
 exepath = "/Users/leon/Cloud/Daten/FGE"
 dipath = os.path.join(exepath,"di-data")
-variopath = os.path.join(exepath,"vario1")
+variopath = os.path.join(exepath,"vario2")
 scalarpath = os.path.join(exepath,"scalar")
 # Using compensation values requires db access
 debug = True

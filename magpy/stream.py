@@ -2810,12 +2810,15 @@ CALLED BY:
                     bcdata.header['DataComponents'] = 'XYZ'+datacomp[3]
                 else:
                     bcdata.header['DataComponents'] = 'XYZ'
-            if basecomp in ['hdz','HDZ']:
-                #ycomp = bcdata._get_column("y")
+            elif basecomp in ['hdz','HDZ']:
+                #required input (see Excel: #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv)
+                # thus i extract the y component, calulate H and then add y again
+                # h_corr is then created in func2stream with the addbaseline option
+                ycomp = bcdata._get_column("y")
                 bcdata = bcdata.xyz2hdz()
-                print (bcdata.ndarray)
-                #bcdata = bcdata._put_column(ycomp,"y")
-                bcdata = bcdata.func2stream(funclist,mode='add',keys=keys)
+                #print (bcdata.ndarray)
+                bcdata = bcdata._put_column(ycomp,"y")
+                bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
                 bcdata.header['col-x'] = 'H'
                 bcdata.header['unit-col-x'] = 'nT'
                 bcdata.header['col-y'] = 'D'
@@ -2827,7 +2830,9 @@ CALLED BY:
                     bcdata.header['DataComponents'] = 'HDZ'
             else:
                 #print ("BC: Found a list of functions:", funclist)
-                print ("BC", basecomp, datacomp)
+                ycomp = bcdata._get_column("y")
+                bcdata = bcdata.xyz2hdz()
+                bcdata = bcdata._put_column(ycomp,"y")
                 bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
                 bcdata.header['col-x'] = 'H'
                 bcdata.header['unit-col-x'] = 'nT'
@@ -5686,10 +5691,9 @@ CALLED BY:
                     except:
                         pass
                     if mode == 'add' and validkey:
-                        print ("here add", ar, function[0]['f'+fkey](functimearray))
                         array[ind] = ar + function[0]['f'+fkey](functimearray)
                     elif mode == 'addbaseline' and validkey:
-                        print ("here add base", ar, function[0]['f'+fkey](functimearray))
+                        #print ("here add base", ar, function[0]['f'+fkey](functimearray))
                         if key == 'y':
                             #indx = KEYLIST.index('x')
                             #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
