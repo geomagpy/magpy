@@ -3019,6 +3019,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
             self.options['stationid']=dlg.stationidTextCtrl.GetValue()
 
+            self.options['baselinedirect']=dlg.baselinedirectCheckBox.GetValue()
             self.options['fitfunction']=dlg.fitfunctionComboBox.GetValue()
             self.options['fitknotstep']=dlg.fitknotstepTextCtrl.GetValue()
             self.options['fitdegree']=dlg.fitdegreeTextCtrl.GetValue()
@@ -4926,11 +4927,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             #print ("Here", dlg.absstreamComboBox.GetStringSelection())
             #print ("Here2", dlg.absstreamComboBox.GetValue())
             self.options = dlg.options
+            # fitparameters is a dictionary containing fitting parameters
+            # like fitdict = {1: {"keys":None, "fitfunc":"poly","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime},
+            #             2: {"keys":None, "fitfunc":"mean","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime}}
+            fitparameters = dlg.fitparameters
+            # basedict contains ?
+            basedict = dlg.selecteddict # tmpbasedict[0]
+            print ("Basedict looks like", basedict)
+            absstream = self.streamlist[int(basedict.get('streamidx'))]
+
+            """
             starttime = dlg.starttime
             endtime = dlg.endtime
-            basedict = dlg.selecteddict # tmpbasedict[0]
             #idx = basedict.get('streamidx') #int(dlg.absstreamComboBox.GetValue().split(':')[0])
-            absstream = self.streamlist[int(basedict.get('streamidx'))]
             fitfunc = basedict.get('function','spline')
             knotstep = basedict.get('knotstep',0.3)
             degree = basedict.get('degree',5)
@@ -4946,27 +4955,49 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             if not dlg.starttime:
                 starttime, endtime = absstream._find_t_limits()
                 #print ("TIMES", starttime, endtime)
+            """
 
-            #print ("CHECK BAS DATES", num2date(absstream.ndarray[0][0]),num2date(absstream.ndarray[0][-1]))
-            #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(self.options.get('fitknotstep','0.3')), fitdegree=int(self.options.get('fitdegree','5')))
-            print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
-            baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)
+            #print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
+            #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)
+            baselinefunclist = []
+            if not fitparameters:
+                self.menu_p.rep_page.logMsg('- baseline adoption aborted as no fit function defined')
+                self.changeStatusbar("Ready")
+            else:
+                for fitparameter in fitparameters:
+                    fitpara = fitparameters.get(fitparameter)
+                    #print ("Correcting with ", fitpara)
+                    baselinefunclist.append(self.plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
 
-            #keys = self.shownkeylist
-            self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
-            # add new stream, with baselinecorr
-            # BASECORR
-            dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
-                        "Baseline parameters added to meta information and option 'Baseline Corr' on 'Data' panel now enabled.\n",
-                        "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
+                #keys = self.shownkeylist
+                self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
+                # add new stream, with baselinecorr
+                # BASECORR
+                # provide possibility to directly calculate bc
+                calc_bc = self.options.get("baselinedirect")
+                if calc_bc:
+                    msgtext = "Baseline correction performed - Ready"
+                    self.plotstream = self.plotstream.bc(function=baselinefunclist)
+                    # Eventually update delta F
+                    if 'df' in self.plotstream._get_key_headers():
+                        self.plotstream = self.plotstream.delta_f()
+                    currentstreamindex = len(self.streamlist)
+                    self.streamlist.append(self.plotstream)
+                    self.streamkeylist.append(self.shownkeylist)
+                    self.headerlist.append(self.plotstream.header)
+                    self.currentstreamindex = currentstreamindex
+                    self.plotoptlist.append(self.plotopt)
+                else:
+                    msgtext = "BC function available - Ready"
+                    dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
+                               "Baseline parameters added to meta information and option 'Baseline Corr' on 'Data' panel now enabled.\n",
+                               "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    dlg.Destroy()
 
-            #print ("SET", self.plotstream.header.get('DataAbsInfo'))
-
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-            self.changeStatusbar("BC function available - Ready")
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar(msgtext)
         else:
             self.changeStatusbar("Ready")
 

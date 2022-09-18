@@ -1663,7 +1663,7 @@ def plotSpectrogram(stream, keys, NFFT=1024, detrend=mlab.detrend_none,
     DEFINITION:
         Creates a spectrogram plot of selected keys.
         Parameter description at function obspyspectrogram
-        Uses samp_rate_multiplicator (=24*3600): Changes the 
+        Uses samp_rate_multiplicator (=24*3600): Changes the
         frequency relative to one day sampling rate given as days ->
         multiplied by x to create Hz,
 
@@ -2355,10 +2355,12 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
             if isinstance(funclist[0], dict):
                  funct = [funclist]
             else:
-                 funct = funclist   # TODO: cycle through list
+                 funct = funclist
             for function in funct:
-                for nu in range(int(len(function)/3.)):
-                    indexadd = nu*3
+                # length of function - an old version just added up functions in one list
+                funclength = len(function)
+                for nu in range(int(len(function)/funclength)):
+                    indexadd = nu*funclength
                     if fkey in function[0+indexadd]:
                         # --> Get the minimum and maximum relative times
                         ttmp = arange(0,1,0.0001)

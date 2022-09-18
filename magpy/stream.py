@@ -103,6 +103,7 @@ try:
     #import locale
     import copy as cp
     import fnmatch
+    import json
     import dateutil.parser as dparser
     from tempfile import NamedTemporaryFile
     import warnings
@@ -2280,6 +2281,7 @@ CALLED BY:
         plotfilename = kwargs.get('plotfilename')
         startabs =  kwargs.get('startabs')
         endabs =  kwargs.get('endabs')
+        debug =  kwargs.get('debug')
 
         orgstartabs = None
         orgendabs = None
@@ -2335,7 +2337,6 @@ CALLED BY:
 
         absolutestream  = absolutedata.copy()
 
-        #print("Baseline", absolutestream.length())
         absolutestream = absolutestream.remove_flagged()
         #print("Baseline", absolutestream.length())
         #print("Baseline", absolutestream.ndarray[0])
@@ -2369,8 +2370,9 @@ CALLED BY:
         if not orgendabs:
             orgendabs = endabs
 
-        #print ("HERE2a: Time range absolutes  - {} {} {} {}".format(startabs, endabs, num2date(startabs), num2date(endabs)))
-        #print ("HERE2b: Time range datastream - {} {}".format(starttime, endtime))
+        if debug:
+            print (" baseline: Time range absolutes  - {} {} {} {}".format(startabs, endabs, num2date(startabs), num2date(endabs)))
+            print (" baseline: Time range datastream - {} {}".format(starttime, endtime))
 
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
@@ -2401,6 +2403,9 @@ CALLED BY:
         extrapolate = False
         # upper
         if fixend:
+            if debug:
+                print (" baseline: fixend", endabs, extradays)
+
             #absolutestream = absolutestream.trim(endtime=endabs)  # should I trim here already - leon ??
             # time range long enough
             baseendtime = endabs+extradays
@@ -2415,6 +2420,9 @@ CALLED BY:
         #    baseendtime = date2num(endtime)+extradays
         # lower
         if fixstart:
+            if debug:
+                print (" baseline: fixstart", startabs, extradays)
+
             #absolutestream = absolutestream.trim(starttime=startabs)  # should I trim here already - leon ??
             basestarttime = startabs-extradays
             if basestarttime > orgstartabs:
@@ -2442,13 +2450,19 @@ CALLED BY:
         #print ("HERE3b: length of selected absolutes: ", bas.length()[0])
 
         if extrapolate: # and not extradays == 0:
+            if debug:
+                print (" baseline: Extrapolating ", bas.length()[0])
             bas = bas.extrapolate(basestarttime,baseendtime)
+            # Now remove duplicates - if start and end are existing they are duplicated be extrapolate
+            bas = bas.removeduplicates()
+            if debug:
+                print ("    -> done ", bas.length()[0])
 
         #keys = ['dx','dy','dz']
 
         try:
-            print ("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
-            print (keys, fitfunc, fitdegree, knotstep)
+            print ("Fitting Baseline between: {a} and {b} using {c}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0]))),c=fitfunc))
+            #print (keys, fitfunc, fitdegree, knotstep)
             logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
             #print ("Baseline", bas.length(), keys)
             #for elem in bas.ndarray:
@@ -2511,7 +2525,9 @@ CALLED BY:
         self.header['DataAbsInfo'] = exabsstring  # 735582.0_735978.0_0_spline_5_0.3_dx_dy_dz
 
         #print ("HERE5a:", minstarttime, maxendtime, absolutestream.length()[0])
-        bas2save = absolutestream.trim(starttime=minstarttime,endtime=maxendtime)
+        # please note: maxendtime is the last absvalue. trim however uses <= and thus excludes the last value
+        # therefore we add a very small timefraction to use the last time
+        bas2save = absolutestream.trim(starttime=minstarttime,endtime=maxendtime+0.000000001)
         tmpdict = bas2save.stream2dict()
         #print ("HERE5b:", bas2save.length()[0])
         self.header['DataBaseValues'] = tmpdict['DataBaseValues']
@@ -2717,7 +2733,7 @@ CALLED BY:
         return streamlist
 
 
-    def bc(self, function=None, ctype=None, alpha=0.0,level='preliminary'):
+    def bc(self, function=[], ctype=None, alpha=0.0, beta=0.0, level='preliminary',debug=False):
         """
         DEFINITION:
             Method to obtain baseline corrected data. By default flagged data is removed
@@ -2730,7 +2746,7 @@ CALLED BY:
             Example:  For XYZ data please add the option alpha=DeclinationAtYourSite in a
                       float format of 0.00000 deg
         PARAMETERS:
-            function      (function object) provide the function directly - not from header
+            function      (list of function objects) provide functionlist directly - not from header
             ctype         (string) one of 'fff', 'fdf', 'ddf' - denoting nT components 'f' and degree 'd'
             alpha/beta    (floats) provide rotation angles for the variometer data to be applied
                                    before correction - data is rotated back after correction
@@ -2749,56 +2765,13 @@ CALLED BY:
             print ("BC: dataset is already baseline corrected - returning")
             return self
 
+        pierdata = {}
         bcdata = self.copy()
 
         logger.debug("BC: Components of stream: {}".format(self.header.get('DataComponents')))
         logger.debug("BC: baseline adoption information: {}".format(absinfostring))
 
-        if absinfostring and type(absvalues) in [list,np.ndarray,tuple]:
-            #print("BC: Found baseline adoption information in meta data - correcting")
-            absinfostring = absinfostring.replace(', EPSG',' EPSG')
-            absinfostring = absinfostring.replace(',EPSG',' EPSG')
-            absinfostring = absinfostring.replace(', epsg',' EPSG')
-            absinfostring = absinfostring.replace(',epsg',' EPSG')
-            absinfolist = absinfostring.split(',')
-            funclist = []
-            for absinfo in absinfolist:
-                #print("BC: TODO repeat correction several times and check header info")
-                # extract baseline data
-                absstream = bcdata.dict2stream()
-                #print("BC: abstream length", absstream.length()[0])
-                parameter = absinfo.split('_')
-                #print("BC:", parameter, len(parameter))
-                funckeys = parameter[6:9]
-                if len(parameter) >= 14:
-                    #extract pier information
-                    pierdata = True
-                    pierlon = float(parameter[9])
-                    pierlat = float(parameter[10])
-                    pierlocref = parameter[11]
-                    pierel = float(parameter[12])
-                    pierelref =  parameter[13]
-                #print("BC", num2date(float(parameter[0])))
-                #print("BC", num2date(float(parameter[1])))
-                if not funckeys == ['df']:
-                    func = bcdata.baseline(absstream, startabs=float(parameter[0]), endabs=float(parameter[1]), extradays=int(float(parameter[2])), fitfunc=parameter[3], fitdegree=int(float(parameter[4])), knotstep=float(parameter[5]), keys=funckeys)
-                    if 'dx' in funckeys:
-                        func[0]['fx'] = func[0]['fdx']
-                        func[0]['fy'] = func[0]['fdy']
-                        func[0]['fz'] = func[0]['fdz']
-                        func[0].pop('fdx', None)
-                        func[0].pop('fdy', None)
-                        func[0].pop('fdz', None)
-                        keys = ['x','y','z']
-                    elif 'x' in funckeys:
-                        keys = ['x','y','z']
-                    else:
-                        print("BC: could not interpret BaseLineFunctionObject - returning")
-                        return self
-                    funclist.append(func)
-
-            #TODO addbaseline
-            #if AbsData contain xyz use mode='add'
+        def baseline_adoption(bcdata,funclist,keys,basecomp,pierdata):
             datacomp = bcdata.header.get('DataComponents','')
             if basecomp in ['xyz','XYZ']:
                 bcdata = bcdata.func2stream(funclist,mode='add',keys=keys)
@@ -2829,6 +2802,7 @@ CALLED BY:
                 else:
                     bcdata.header['DataComponents'] = 'HDZ'
             else:
+                # Default: asume HDZ
                 #print ("BC: Found a list of functions:", funclist)
                 ycomp = bcdata._get_column("y")
                 bcdata = bcdata.xyz2hdz()
@@ -2849,13 +2823,72 @@ CALLED BY:
 
             # Update location data from absinfo
             if pierdata:
-                self.header['DataAcquisitionLongitude'] = pierlon
-                self.header['DataAcquisitionLatitude'] = pierlat
-                self.header['DataLocationReference'] = pierlocref
-                self.header['DataElevation'] = pierel
-                self.header['DataElevationRef'] = pierelref
+                self.header['DataAcquisitionLongitude'] = pierdata.get("pierlon")
+                self.header['DataAcquisitionLatitude'] = pierdata.get("pierlat")
+                self.header['DataLocationReference'] = pierdata.get("pierlocref")
+                self.header['DataElevation'] = pierdata.get("pierel")
+                self.header['DataElevationRef'] = pierdata.get("pierelref")
 
             return bcdata
+
+
+        if function:
+            if debug:
+                print("BC: baseline adoption information provided in function list - correcting")
+            for func in function:
+                func[0]['fx'] = func[0]['fdx']
+                func[0]['fy'] = func[0]['fdy']
+                func[0]['fz'] = func[0]['fdz']
+                func[0].pop('fdx', None)
+                func[0].pop('fdy', None)
+                func[0].pop('fdz', None)
+            keys = ['x','y','z']
+            bcdata = baseline_adoption(bcdata,function,keys,basecomp,pierdata)
+        elif absinfostring and type(absvalues) in [list,np.ndarray,tuple]:
+            if debug:
+                print("BC: Found baseline adoption information in meta data - recalculating baseline(s) with given parameters")
+            absinfostring = absinfostring.replace(', EPSG',' EPSG')
+            absinfostring = absinfostring.replace(',EPSG',' EPSG')
+            absinfostring = absinfostring.replace(', epsg',' EPSG')
+            absinfostring = absinfostring.replace(',epsg',' EPSG')
+            absinfolist = absinfostring.split(',')
+            funclist = []
+            for absinfo in absinfolist:
+                # extract baseline data
+                absstream = bcdata.dict2stream()
+                #print("BC: abstream length", absstream.length()[0])
+                parameter = absinfo.split('_')
+                #print("BC:", parameter, len(parameter))
+                funckeys = parameter[6:9]
+                if len(parameter) >= 14:
+                    #extract pier information
+                    pierdata = {}
+                    pierdata["pierlon"] = float(parameter[9])
+                    pierdata["pierlat"] = float(parameter[10])
+                    pierdata["pierlocref"] = parameter[11]
+                    pierdata["pierel"] = float(parameter[12])
+                    pierdata["pierelref"] =  parameter[13]
+                #print("BC", num2date(float(parameter[0])))
+                #print("BC", num2date(float(parameter[1])))
+                if not funckeys == ['df']:
+                    print ("baseline parameters", parameter)
+                    func = bcdata.baseline(absstream, startabs=float64(parameter[0]), endabs=float64(parameter[1]), extradays=int(float(parameter[2])), fitfunc=parameter[3], fitdegree=int(float(parameter[4])), knotstep=float(parameter[5]), keys=funckeys, debug=debug)
+                    if 'dx' in funckeys:
+                        func[0]['fx'] = func[0]['fdx']
+                        func[0]['fy'] = func[0]['fdy']
+                        func[0]['fz'] = func[0]['fdz']
+                        func[0].pop('fdx', None)
+                        func[0].pop('fdy', None)
+                        func[0].pop('fdz', None)
+                        keys = ['x','y','z']
+                    elif 'x' in funckeys:
+                        keys = ['x','y','z']
+                    else:
+                        print("BC: could not interpret BaseLineFunctionObject - returning")
+                        return self
+                    funclist.append(func)
+
+            bcdata = baseline_adoption(bcdata,funclist,keys,basecomp,pierdata)
 
         elif func:
             # 1.) move content of basevalue function to columns 'x','y','z'?
@@ -2892,17 +2925,13 @@ CALLED BY:
             #self = self._drop_nans('y')
             #print len(self.ndarray[0])
 
-            bcdata = bcdata.func2stream(func,mode='addbaseline',keys=['x','y','z'])
-            bcdata.header['col-x'] = 'H'
-            bcdata.header['unit-col-x'] = 'nT'
-            bcdata.header['col-y'] = 'D'
-            bcdata.header['unit-col-y'] = 'deg'
-            bcdata.header['DataComponents'] = 'HDZ'
-            return bcdata
+            bcdata = baseline_adoption(bcdata,func,keys,basecomp,pierdata)
 
         else:
             print("BC: No data for correction available - header needs to contain DataAbsFunctionObject")
             return self
+
+        return bcdata
 
 
     def bindetector(self,key,flagnum=1,keystoflag=['x'],sensorid=None,text=None,**kwargs):
@@ -4409,8 +4438,10 @@ CALLED BY:
             exec('functionkeylist["f'+key+'"] = f'+key)
 
         #if tok:
-        func = [functionkeylist, sv, ev]
+        func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime, keys]
+        #func = [functionkeylist, sv, ev]
         #else:
+        funcnew = {"keys":keys, "fitfunc":fitfunc,"fitdegree":fitdegree, "knotstep":knotstep, "starttime":starttime,"endtime":endtime, "functionlist":functionkeylist, "sv":sv, "ev":ev}
         #    func = [functionkeylist, 0, 0]
         return func
 
@@ -5879,8 +5910,6 @@ CALLED BY:
 
         return st
 
-
-
     def func2header(self,funclist,debug=False):
         """
         DESCRIPTION
@@ -5895,6 +5924,35 @@ CALLED BY:
         self.header['DataFunctionObject'] = funct
 
         return self
+
+    def func_to_file(self,functionpath,funclist,debug=False):
+        """
+        DESCRIPTION
+            Save function to file
+        """
+
+        if isinstance(funclist[0], dict):
+            funct = [funclist]
+        else:
+            funct = funclist
+
+        if debug:
+            print ("func_to_file: writing function data to file")
+
+        funcres = {}
+        for idx, func in enumerate(funct):
+            #func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime]
+            if len(func) >= 9:
+                funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "functionlist":func[0], "sv":func[1], "ev":func[2]}
+                funcres[idx] = funcdict
+            if debug:
+                print (funcdict)
+        try:
+            with open(functionpath, 'w', encoding='utf-8') as f:
+                json.dump(funcres, f, ensure_ascii=False, indent=4)
+        except:
+            return False
+        return True
 
     def GetKeyName(self,key):
         """
@@ -6514,7 +6572,10 @@ CALLED BY:
 
         logger.info("interpol: Interpolation complete.")
 
-        func = [functionkeylist, sv, ev]
+        #func = [functionkeylist, sv, ev]
+        func = [functionkeylist, sv, ev, kind, None, None, None, None, keys]
+        funcnew = {"keys":keys, "fitfunc":kind,"fitdegree":None, "knotstep":None, "starttime":None,"endtime":None, "functionlist":functionkeylist, "sv":sv, "ev":ev}
+
 
         return func
 
@@ -11110,7 +11171,6 @@ def saveflags(mylist=None,path=None, overwrite=False):
     if path.endswith('.json'):
         print(" -- using json format ")
         try:
-            import json
             def dateconv(d):
                 # Converter to serialize datetime objects in json
                 if isinstance(d,datetime):
@@ -11161,7 +11221,6 @@ def loadflags(path=None,sensorid=None,begin=None, end=None):
         return []
     if path.endswith('.json'):
         try:
-            import json
             print ("Reading a json style flaglist...")
             def dateparser(dct):
                 # Convert dates in dictionary to datetime objects

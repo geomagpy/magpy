@@ -2161,11 +2161,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             try:
                 streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
             except:
-                print (" Could not extract an appropriate date from data source")
+                print (" absoluteAnalysis: Could not extract an appropriate date from data source")
                 streamtime = "2233-03-22"
             if streamtime == datetime.strftime(date,"%Y-%m-%d"):
                 if debug:
-                    print ("Times are fitting")
+                    print (" absoluteAnalysis: Times are fitting - whatever that means ")
             else:
                 continue
 
