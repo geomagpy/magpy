@@ -4541,21 +4541,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         self.xlimits = self.plot_p.xlimits
         dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
                 options=self.options, stream = self.plotstream,
-                shownkeylist=self.shownkeylist, keylist=self.keylist)
+                shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotopt, hide_file=False)
         startdate=self.xlimits[0]
         enddate=self.xlimits[1]
         dlg.setTimeRange(startdate, enddate)
         if dlg.ShowModal() == wx.ID_OK:
             params = dlg.getFitParameters()
             self.options['fitfunction'] = params['fitfuncname']
-            self.options['fitknotstep'] = str(params['knots'])
-            self.options['fitdegree'] = str(params['degree'])
+            self.options['fitknotstep'] = str(params['knotstep'])
+            self.options['fitdegree'] = str(params['fitdegree'])
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
                     params['fitfuncname'], params['knots'], params['degree']))
             if len(self.plotstream.ndarray[0]) > 0:
                 func = self.plotstream.fit(keys=keys,
                         fitfunc=params['fitfunc'],
-                        fitdegree=params['degree'], knotstep=params['knots'],
+                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
                         starttime=params['starttime'],
                         endtime=params['endtime'])
                 if params['fitfunc'] == 'none':
@@ -4571,6 +4571,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             else:
                 # Msgbox to load data first
                 pass
+        else:
+            parameter = dlg.fitparameter
+            if parameter:
+                funclist = []
+                for key in parameter:
+                    params=parameter[key]
+                    funclist.append(self.plotstream.fit(keys=keys,
+                        fitfunc=params['fitfunc'],
+                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
+                        starttime=params['starttime'],
+                        endtime=params['endtime']))
+                self.plotopt['function'] = funclist
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
 
         dlg.Destroy()
         self.menu_p.rep_page.logMsg('- data fitted')
@@ -4916,7 +4930,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 self.plotstream.header['DataBaseValues'] = None
             existdlg.Destroy()
 
-        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotoptlist)
         # open dlg which allows to choose baseline data stream, function and parameters
         # Drop down for baseline data stream (idx: filename)
         # Text window describing baseline parameter
@@ -4933,29 +4947,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             fitparameters = dlg.fitparameters
             # basedict contains ?
             basedict = dlg.selecteddict # tmpbasedict[0]
-            print ("Basedict looks like", basedict)
             absstream = self.streamlist[int(basedict.get('streamidx'))]
-
-            """
-            starttime = dlg.starttime
-            endtime = dlg.endtime
-            #idx = basedict.get('streamidx') #int(dlg.absstreamComboBox.GetValue().split(':')[0])
-            fitfunc = basedict.get('function','spline')
-            knotstep = basedict.get('knotstep',0.3)
-            degree = basedict.get('degree',5)
-            #fitfunc = self.options.get('fitfunction','spline')
-
-            if fitfunc.startswith('poly'):
-                self.options['fitfunction'] = 'poly'
-                fitfunc = 'poly'
-            elif fitfunc.startswith('linear'):
-                fitfunc = 'least-squares'
-
-            # Obtain the dates from the dialog
-            if not dlg.starttime:
-                starttime, endtime = absstream._find_t_limits()
-                #print ("TIMES", starttime, endtime)
-            """
 
             #print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
             #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)

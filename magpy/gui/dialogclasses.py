@@ -2066,7 +2066,7 @@ class AnalysisFitDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, options, stream, shownkeylist, keylist):
+    def __init__(self, parent, title, options, stream, shownkeylist, keylist, plotopt, hide_file):
         super(AnalysisFitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
 
@@ -2076,10 +2076,13 @@ class AnalysisFitDialog(wx.Dialog):
         self.keys=keylist
         self.stream = stream
         self.options = options
+        self.plotopt = plotopt
+        self.fitparameter = {}
         self.fitfunc = self.options.get('fitfunction','spline')
         self.funclist = ['spline','polynomial', 'linear least-squares', 'mean', 'none']
         self.fitknots = self.options.get('fitknotstep','0.3')
         self.fitdegree = self.options.get('fitdegree','5')
+        self.hide_file = hide_file
         self.mintime = num2date(stream.ndarray[0][0])
         self.maxtime = num2date(stream.ndarray[0][-1])
         self.createControls()
@@ -2094,26 +2097,6 @@ class AnalysisFitDialog(wx.Dialog):
         except:
             stfit = wx.DateTimeFromDMY(self.mintime.day,self.mintime.month-1,self.mintime.year)
             etfit = wx.DateTimeFromDMY(self.maxtime.day,self.maxtime.month-1,self.maxtime.year)
-        """
-        try:
-            stfit = wx.DateTime.FromDMY(self.mintime.day,self.mintime.month,self.mintime.year,)
-            etfit = wx.DateTime.FromDMY(self.maxtime.day,self.maxtime.month,self.maxtime.year,)
-        except:
-            try:
-                stfit = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
-                etfit = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
-            except:
-                stfit = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
-                etfit = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
-        try:
-            # Windows workaround for wx.DateTime issue
-            if not int(etfit.GetYear()) == int(time.strftime("%Y",ettup)):
-                etfit = etfit.SetYear(int(time.strftime("%Y",ettup)))
-            if not int(stfit.GetYear()) == int(time.strftime("%Y",sttup)):
-                stfit = stfit.SetYear(int(time.strftime("%Y",sttup)))
-        except:
-            pass
-        """
         self.funcLabel = wx.StaticText(self, label="Fit function:",size=(160,30))
         self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
             style=wx.CB_DROPDOWN, value=self.fitfunc,size=(160,-1))
@@ -2124,16 +2107,19 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.UpperTimeText = wx.StaticText(self,label="Fit data before:")
         self.LowerTimeText = wx.StaticText(self,label="Fit data after:")
-        print ("Here", stfit)
         self.startFitDatePicker = wxDatePickerCtrl(self, dt=stfit,size=(160,30))
         self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
         self.endFitDatePicker = wxDatePickerCtrl(self, dt=etfit,size=(160,30))
         self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
+        self.loadButton = wx.Button(self, label='Load fit',size=(160,30))
+        self.saveButton = wx.Button(self, label='Save fit(s)',size=(160,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
         self.funcComboBox.Bind(wx.EVT_COMBOBOX, self.onUpdate)
+        self.loadButton.Bind(wx.EVT_BUTTON, self.on_load)
+        self.saveButton.Bind(wx.EVT_BUTTON, self.on_save)
 
 
     def doLayout(self):
@@ -2161,6 +2147,10 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.UpperTimeText, noOptions))
         contlst.append((self.endFitDatePicker, expandOption))
         contlst.append((self.endFitTimePicker, expandOption))
+        if not self.hide_file:
+            contlst.append(emptySpace)
+            contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
+            contlst.append((self.saveButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
@@ -2179,6 +2169,35 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+    def on_load(self,e):
+        openFileDialog = wx.FileDialog(self, "Open", "", "",
+                                       "json fit parameter (*.json)|*.json|all files (*.*)|*.*",
+                                       wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        openFileDialog.ShowModal()
+        fitname = openFileDialog.GetPath()
+        self.fitparameter = DataStream().func_from_file(fitname,debug=False)
+        openFileDialog.Destroy()
+        self.Close(True)
+        self.Destroy()
+
+    def on_save(self,e):
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "json fit parameter (*.json)|*.json",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        extensions = ['.json']
+        extind = saveFileDialog.GetFilterIndex()
+
+        savename = saveFileDialog.GetPath()
+        if not savename.endswith(extensions[extind]):
+            savename = savename+extensions[extind]
+
+        saveFileDialog.Destroy()
+        if self.plotopt.get('function',False):
+            DataStream().func_to_file(self.plotopt.get('function'),savename,debug=False)
+        self.Close(True)
+        self.Destroy()
+
     def getFitParameters(self):
         params = {}
         params['starttime'], params['endtime'] = self.getTimeRange()
@@ -2195,12 +2214,12 @@ class AnalysisFitDialog(wx.Dialog):
             knots = 0.5
         else:
             knots = float(knots)
-        params['knots'] = knots
+        params['knotstep'] = knots
         if not int(degree)>0:
             degree = 1
         else:
             degree = int(degree)
-        params['degree'] = degree
+        params['fitdegree'] = degree
         return params
 
     def getTimeRange(self):
@@ -2763,7 +2782,7 @@ class AnalysisBaselineDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, idxlst, dictlst, options, stream, shownkeylist, keylist):
+    def __init__(self, parent, title, idxlst, dictlst, options, stream, shownkeylist, keylist, plotopt):
         super(AnalysisBaselineDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
         self.options = options
@@ -2773,6 +2792,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.idxlst = idxlst
         self.dictlst = dictlst
         self.activedict = self.dictlst[-1]
+        self.plotoptlist = plotopt
         self.starttime = None
         self.endtime = None
         self.absstreamlist = []
@@ -2785,19 +2805,27 @@ class AnalysisBaselineDialog(wx.Dialog):
             self.starttime = st  # as the last one is selected by default
             self.endtime = et
 
-        if self.options.get('fitparameters'):
-            self.fitparameters = self.options.get('fitparameters')
-        else:
-            self.fitparameters = {0:{"keys":keylist, "fitfunc":self.options.get('fitfunction','spline'),"fitdegree":self.options.get('fitdegree','5'), "knotstep":self.options.get('fitknotstep',"0.3"), "starttime":self.starttime,"endtime":self.endtime}}
-        #print (self.starttime, self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),self.endtime)
-
         self.selecteddict = dictlst[-1]
+        self.fitparameters = self.get_fitpara(self.selecteddict, self.plotoptlist, starttime=self.starttime,endtime=self.endtime)
 
         #self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndttime: {}\n".format(self.starttime, self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),self.endtime)
         self.parameterstring = self.create_fitparameterstring(self.fitparameters)
         self.createControls()
         self.doLayout()
         self.bindControls()
+
+    def get_fitpara(self,selecteddict, plotoptlist,starttime=None,endtime=None):
+        fitparameters = {}
+        idx = int(selecteddict.get("streamidx",0))
+        plotopt = plotoptlist[idx]
+        functlist = plotopt.get('function',[])
+        if functlist and len(functlist) > 0:
+            for idx,func in enumerate(functlist):
+                funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "sv":func[1], "ev":func[2]}
+                fitparameters[idx] = funcdict
+        else:
+            fitparameters = {0:{"keys":[], "fitfunc":selecteddict.get('fitfunction','spline'),"fitdegree":selecteddict.get('fitdegree','5'), "knotstep":selecteddict.get('fitknotstep',"0.3"), "starttime":starttime,"endtime":endtime}}
+        return fitparameters
 
     def create_fitparameterstring(self,fitparameters):
         ps = "Adopted Baseline:\n"
@@ -2887,10 +2915,32 @@ class AnalysisBaselineDialog(wx.Dialog):
         # extradays = 1
         # if endtime == "now":
         #     endtime = datetime.utcnow()+timedelta(days=extradays)
-        pass
+        openFileDialog = wx.FileDialog(self, "Open", "", "",
+                                       "json fit parameter (*.json)|*.json|all files (*.*)|*.*",
+                                       wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        openFileDialog.ShowModal()
+        fitname = openFileDialog.GetPath()
+        self.fitparameters = DataStream().func_from_file(fitname,debug=False)
+        openFileDialog.Destroy()
+        self.parameterTextCtrl.Clear()
+        self.parameterstring = self.create_fitparameterstring(self.fitparameters)
+        self.parameterTextCtrl.SetValue(self.parameterstring)
 
     def OnSave(self, e):
-        pass
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "json fit parameter (*.json)|*.json",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        extensions = ['.json']
+        extind = saveFileDialog.GetFilterIndex()
+
+        savename = saveFileDialog.GetPath()
+        if not savename.endswith(extensions[extind]):
+            savename = savename+extensions[extind]
+
+        saveFileDialog.Destroy()
+        DataStream().func_to_file(self.fitparameters,savename,debug=False)
+        self.Close(True)
 
     def OnClear(self, e):
         # delete current fitparameter
@@ -2903,7 +2953,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         idx = int(self.absstreamComboBox.GetValue().split(':')[0])
         keynums = []
         for key in self.fitparameters:
-            keynums.append(key)
+            keynums.append(int(key))
         if len(keynums) > 0:
             nextkey = max(keynums) +1
             lastfitparameter = self.fitparameters.get(max(keynums))
@@ -2911,7 +2961,7 @@ class AnalysisBaselineDialog(wx.Dialog):
             nextkey = 0
             lastfitparameter = {}
 
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=False, hide_file=True)
         #startdate=self.dictlst[idx].get('startdate')
         #enddate=self.dictlst[idx].get('enddate')
         if lastfitparameter:
@@ -2920,42 +2970,20 @@ class AnalysisBaselineDialog(wx.Dialog):
         else:
             startdate=self.dictlst[idx].get('startdate')
             enddate=self.dictlst[idx].get('enddate')
-        """
-        starttime = num2date(startdate).strftime('%X')
-        endtime = num2date(enddate).strftime('%X')
-        dlg.startFitDatePicker.SetValue(self._pydate2wxdate(num2date(startdate)))
-        dlg.endFitDatePicker.SetValue(self._pydate2wxdate(num2date(enddate)))
-        dlg.startFitTimePicker.SetValue(starttime)
-        dlg.endFitTimePicker.SetValue(endtime)
-        """
 
         dlg.setTimeRange(date2num(startdate), date2num(enddate))
 
         if dlg.ShowModal() == wx.ID_OK:
             params = dlg.getFitParameters()
             fitset = {}
-            #self.options['fitfunction'] = params['fitfunc']
-            #self.options['fitknotstep'] = str(params['knots'])
-            #self.options['fitdegree'] = str(params['degree'])
-            #self.starttime = params['starttime']
-            #self.endtime = params['endtime']
-
-            self.options['fitparameters'] = self.fitparameters
             fitset['fitfunc'] = params['fitfunc']
-            fitset['knotstep'] = float(params['knots'])
-            fitset['fitdegree'] = float(params['degree'])
+            fitset['knotstep'] = float(params['knotstep'])
+            fitset['fitdegree'] = float(params['fitdegree'])
             fitset['starttime'] = params['starttime']
             fitset['endtime'] = params['endtime']
             self.fitparameters[nextkey] = fitset
 
             self.parameterstring = self.create_fitparameterstring(self.fitparameters)
-            """
-            self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndtime: {}\n".format(params['starttime'],
-                    self.options.get('fitfunction',''),
-                    self.options.get('fitknotstep',''),
-                    self.options.get('fitdegree',''),
-                    params['endtime'])
-            """
             self.parameterTextCtrl.SetValue(self.parameterstring)
             #self.selecteddict['function'] = params['fitfunc']
             #self.selecteddict['knotstep'] = str(params['knots'])
@@ -2964,16 +2992,14 @@ class AnalysisBaselineDialog(wx.Dialog):
 
     def OnUpdate(self, e):
         # open fit dlg
-        print ("OnUpdate has been called in baseline")
         idx = int(self.absstreamComboBox.GetValue().split(':')[0])
         self.selecteddict = self.dictlst[idx]
-        self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndtime: {}\n".format(self.selecteddict.get('startdate'),
-                    self.selecteddict.get('function',''),
-                    self.selecteddict.get('knotstep',''),
-                    self.selecteddict.get('degree',''),
-                    self.selecteddict.get('enddate'))
+
         self.starttime=self.dictlst[idx].get('startdate')
         self.endtime=self.dictlst[idx].get('enddate')
+        # get the selected data from plotoptlist - and then update the data here
+        self.fitparameters = self.get_fitpara(self.selecteddict, self.plotoptlist, starttime=self.starttime,endtime=self.endtime)
+        self.parameterstring = self.create_fitparameterstring(self.fitparameters)
         ## also add funtional parameters to the dictionary
         self.parameterTextCtrl.Clear()
         self.parameterTextCtrl.SetValue(self.parameterstring)

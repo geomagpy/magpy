@@ -50,7 +50,7 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     func2 = vario.baseline(absresult, fitfunc="mean", extradays=0, startabs=meanabs, endabs=absresult._find_t_limits()[1],debug=debug)
     func = [func1,func2]
 
-    vario.func_to_file(func, debug=debug)
+    #vario.func_to_file(func, "/tmp/tmpfit.json" debug=debug)
 
     if debug:
         print ("Baseline correction done")
@@ -80,18 +80,35 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     if debug:
         print (teststream.ndarray)
         #print ("Applied baseline correction: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
+    meanx = teststream.mean('x')
+    meany = teststream.mean('y')
+    meanz = teststream.mean('z')
+    if debug:
+        print ("Mean differences between DI and BL corrected varion: ", meanx, meany, meanz)
+    val = True
+    for el in [meanx, meany, meanz]:
+        if abs(meanx) > 1:
+            val = False
+    return val
 
+exepath = os.getcwd()
+if not exepath.endswith('test'):
+    exepath = os.path.join(exepath,'magpy','test') # travis...
+datadir = 'testdata'
+dipath = os.path.join(exepath,datadir,"di-data")
+variopath = os.path.join(exepath,datadir,"vario1")
+scalarpath = os.path.join(exepath,datadir,"scalar")
 
-exepath = "/Users/leon/Cloud/Daten/FGE"
-dipath = os.path.join(exepath,"di-data")
-variopath = os.path.join(exepath,"vario2")
-scalarpath = os.path.join(exepath,"scalar")
 # Using compensation values requires db access
-debug = True
+debug = False
 
-test = test_baseline(dipath=dipath, variopath=variopath, scalarpath=scalarpath,debug=debug)
+try:
+    test = test_baseline(dipath=dipath, variopath=variopath, scalarpath=scalarpath,debug=debug)
+except:
+    test = False
 
-print ("RESULT:", test)
+if test:
+    print ("baseline test successfully finished")
 
 if test:
     sys.exit(0)

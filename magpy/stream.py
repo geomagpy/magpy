@@ -2461,7 +2461,7 @@ CALLED BY:
         #keys = ['dx','dy','dz']
 
         try:
-            print ("Fitting Baseline between: {a} and {b} using {c}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0]))),c=fitfunc))
+            print ("Adopting baseline between: {a} and {b} using {c}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0]))),c=fitfunc))
             #print (keys, fitfunc, fitdegree, knotstep)
             logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
             #print ("Baseline", bas.length(), keys)
@@ -2871,7 +2871,7 @@ CALLED BY:
                 #print("BC", num2date(float(parameter[0])))
                 #print("BC", num2date(float(parameter[1])))
                 if not funckeys == ['df']:
-                    print ("baseline parameters", parameter)
+                    #print ("baseline parameters", parameter)
                     func = bcdata.baseline(absstream, startabs=float64(parameter[0]), endabs=float64(parameter[1]), extradays=int(float(parameter[2])), fitfunc=parameter[3], fitdegree=int(float(parameter[4])), knotstep=float(parameter[5]), keys=funckeys, debug=debug)
                     if 'dx' in funckeys:
                         func[0]['fx'] = func[0]['fdx']
@@ -5925,31 +5925,96 @@ CALLED BY:
 
         return self
 
-    def func_to_file(self,functionpath,funclist,debug=False):
+    def func_from_file(self,functionpath,debug=False):
+        """
+        DESCRIPTION
+            Load function parameters from file
+        """
+        fitparameters = {}
+        try:
+            if debug:
+                print ("Reading a json style fit parameter list...")
+            def dateparser(dct):
+                # Convert dates in dictionary to datetime objects
+                for (key,value) in dct.items():
+                    try:
+                        value = float(value)
+                    except:
+                        try:
+                            value = str(value)
+                            if str(value).count('-') + str(value).count(':') == 4:
+                                try:
+                                    try:
+                                        value = datetime.strptime(value,"%Y-%m-%d %H:%M:%S.%f")
+                                    except:
+                                        value = datetime.strptime(value,"%Y-%m-%d %H:%M:%S")
+                                except:
+                                    pass
+                            elif value.startswith("now"):
+                                tst=value.split("+")
+                                if len(tst)>1 and isinstance(tst[1],int):
+                                    value = datetime.utcnow()+timedelta(days=int(tst[1]))
+                                else:
+                                    value = datetime.utcnow()
+                        except:
+                            pass
+                    dct[key] = value
+                return dct
+
+            if os.path.isfile(functionpath):
+                with open(functionpath,'r') as file:
+                    fitparameters = json.load(file)
+                    #fitparameters = json.load(file,object_hook=dateparser)
+                for key in fitparameters:
+                    value = fitparameters[key]
+                    key = int(key)
+                    value = dateparser(value)
+                if debug:
+                    print (" -> success", fitparameters)
+            else:
+                if debug:
+                    print ("Fit parameter file not existing ...")
+        except:
+            if debug:
+                print ("Loading fit parameter - general error")
+
+        return fitparameters
+
+    def func_to_file(self,funcparameter,functionpath,debug=False):
         """
         DESCRIPTION
             Save function to file
         """
-
-        if isinstance(funclist[0], dict):
-            funct = [funclist]
-        else:
-            funct = funclist
+        def dateconv(d):
+            # Converter to serialize datetime objects in json
+            if isinstance(d,datetime):
+                return d.__str__()
 
         if debug:
             print ("func_to_file: writing function data to file")
-
-        funcres = {}
-        for idx, func in enumerate(funct):
-            #func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime]
-            if len(func) >= 9:
-                funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "functionlist":func[0], "sv":func[1], "ev":func[2]}
-                funcres[idx] = funcdict
+        if isinstance(funcparameter, dict):
             if debug:
-                print (funcdict)
+                print ("Found dictionary")
+            funcres = funcparameter
+        else:
+            if isinstance(funcparameter[0], dict):
+                funct = [funcparameter]
+            else:
+                funct = funcparameter
+            if debug:
+                print ("Found list/single function")
+            funcres = {}
+            for idx, func in enumerate(funct):
+                #func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime]
+                if len(func) >= 9:
+                    funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "functionlist":"dropped", "sv":func[1], "ev":func[2]}
+                    funcres[idx] = funcdict
+            if debug:
+                print (funcres)
+        #convert date times and remove function object
         try:
             with open(functionpath, 'w', encoding='utf-8') as f:
-                json.dump(funcres, f, ensure_ascii=False, indent=4)
+                json.dump(funcres, f, ensure_ascii=False, indent=4, default=dateconv)
         except:
             return False
         return True
