@@ -225,7 +225,11 @@ def writePYCDF(datastream, filename, **kwargs):
     main_cdf_spec = {}
     main_cdf_spec['Compressed'] = False
 
-    leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
+    try:
+        leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
+    except:
+        # removed in new cdflib version
+        leapsecondlastupdate = ""
 
     if not skipcompression:
         try:
