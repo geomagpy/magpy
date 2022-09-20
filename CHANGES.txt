@@ -5,6 +5,8 @@ Installation instructions can be found on the main download page.
 ####v<1.1.0>, <2022-xx-xx> --
 
 1.1.0 general:
+    + updated xmagpy manual
+    + enabled support for cdflib 1.0.0
 
 1.1.0 additions:
     + added library support for GFZ index webservice

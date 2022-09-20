@@ -190,7 +190,7 @@ def writePYCDF(datastream, filename, **kwargs):
     VARIABLES
         new: use compression variable instead of skipcompression
         compression = 0: skip compression
-        compression = 1-9: use this compression factor: 
+        compression = 1-9: use this compression factor:
                            9 high compreesion (slow)
                            1 low compression (fast)
                default is 5
@@ -247,7 +247,10 @@ def writePYCDF(datastream, filename, **kwargs):
             exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream,extend=True)
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
         elif mode == 'replace': # replace existing inputs
             #print filename
             #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -262,19 +265,31 @@ def writePYCDF(datastream, filename, **kwargs):
                 logger.error("writePYCDF: Could not interprete existing data set - aborting")
                 sys.exit()
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
         elif mode == 'append':
             #print filename
             exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream,extend=True)
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
         else: # overwrite mode
             #print filename
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
     else:
-        mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+        try:
+            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+        except:
+            mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
 
     keylst = datastream._get_key_headers()
 
@@ -386,6 +401,3 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mycdf.close()
     return testname
-
-
-

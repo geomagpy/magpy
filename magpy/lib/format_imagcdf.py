@@ -79,7 +79,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if not att in HEADTRANSLATE:
             attname = 'Data'+att
         else:
-            attname = HEADTRANSLATE[att] 
+            attname = HEADTRANSLATE[att]
         headers[attname] = value
 
     #Some specials:
@@ -93,7 +93,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             pubdate = cdflib.cdfepoch.to_datetime(headers.get('DataPublicationDate'))
         headers['DataPublicationDate'] = pubdate[0]
         #pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
-        #headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0]) 
+        #headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0])
     except:
         print ("imagcdf warning: Publication date is not provided as tt_2000")
         try:
@@ -111,7 +111,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     # Get all available Variables - ImagCDF usually uses only zVariables
     datalist = cdfdat.cdf_info().get('zVariables')
 
-    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec 
+    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec
     # and numerical publevel
 
     #  IAGA code
@@ -124,7 +124,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
 
     # #########################################################
-    # 1. Now getting individual data and check time columns 
+    # 1. Now getting individual data and check time columns
     # #########################################################
     zpos = KEYLIST.index('z') # used for idf records
     for elem in datalist:
@@ -145,7 +145,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             # TODO Write that function
             st = cdfdat.globalattsget().get('StartTime','')
             sr = cdfdat.globalattsget().get('SamplingPeriod','')
-            # get length of f or x 
+            # get length of f or x
         else:
             logger.error("readIMAGCDF: No Time information available - aborting")
             return
@@ -212,7 +212,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         flaglist = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''))
         if debug:
             print ("readIMAGCDF: Flagging information extracted")
-            
+
     datalist = [elem for elem in datalist if not elem.endswith('Times') and not elem.startswith('Flag')]
 
     # #########################################################
@@ -316,7 +316,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 def writeIMAGCDF(datastream, filename, **kwargs):
     """
     Writing Intermagnet CDF format (currently: vers1.2) + optional flagging info
-    
+
     """
 
     print ("Writing CDF data based on cdflib")
@@ -335,7 +335,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     main_cdf_spec = {}
     main_cdf_spec['Compressed'] = False
 
-    leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
+    try:
+        leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
+    except:
+        leapsecondlastupdate = ""
 
     if not skipcompression:
         try:
@@ -353,18 +356,30 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             exst = read(path_or_url=filename)
             datastream = joinStreams(exst,datastream)
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
         elif mode == 'replace' or mode == 'append': # replace existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst)
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
         else: # overwrite mode
             #print filename
             os.remove(filename)
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            try:
+                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
     else:
-        mycdf = cdflib.CDF(filename)
+        try:
+            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+        except:
+            mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
 
     keylst = datastream._get_key_headers()
     tmpkeylst = ['time']
@@ -388,7 +403,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     headers['DataComponents'] = dcomps
 
     ### #########################################
-    ###            Check Header 
+    ###            Check Header
     ### #########################################
 
     INVHEADTRANSLATE = {v: k for k, v in HEADTRANSLATE.items()}
@@ -511,10 +526,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
 
     # writing of global attributes after checking for independency of eventually provided F (S) record - line 595
-    #mycdf.write_globalattrs(globalAttrs)    
+    #mycdf.write_globalattrs(globalAttrs)
 
     ### #########################################
-    ###               Data 
+    ###               Data
     ### #########################################
 
     def checkEqualIvo(lst):
@@ -570,7 +585,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             useScalarTimes=False
         else:
             useScalarTimes=True
-            
+
         #print ("IMAG", len(nonancol),datastream.length()[0])
         """
         if len(nonancol) < datastream.length()[0]/2.:
@@ -581,7 +596,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             useScalarTimes=True
             #[inds]=np.take(col_mean,inds[1])
         else:
-            #keep column and (later) leave time       
+            #keep column and (later) leave time
             useScalarTimes=True  # change to False in order to use a single col
         """
 
@@ -590,7 +605,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if len(comps) == 4 and 'f' in keylst:
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
-        
+
     ## writing Global header data
     mycdf.write_globalattrs(globalAttrs)
 
@@ -762,7 +777,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 #[st,et,key,flagnumber,commentarray[idx],sensorid,now]
                 # eventually change flagcomponent in the future
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference] # , flagobserver]
-            elif len(flaglist[0]) == 8:  
+            elif len(flaglist[0]) == 8:
                 # Future version ??
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
             #print (fllist)
@@ -801,5 +816,3 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     mycdf.close()
     return success
-
-

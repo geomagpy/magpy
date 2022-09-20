@@ -24,7 +24,10 @@ if local:
 from magpy.stream import *
 import magpy.absolutes as di
 import copy
-from deepdiff import DeepDiff
+try:
+    from deepdiff import DeepDiff
+except:
+    print ("Deepdiff not installed -  skipping indepth header analysis")
 
 def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     if not dipath:
@@ -59,19 +62,12 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     if debug:
         print ("After applied baseline correction: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
     testdict2 = copy.deepcopy(vario.header)
-    diff = DeepDiff(testdict1, testdict2)
-    print ("header differences after running baseline and bc", diff)
+    try:
+        diff = DeepDiff(testdict1, testdict2)
+        print ("header differences after running baseline and bc", diff)
+    except:
+        pass
 
-    """
-    # checked ongoing stability of repeated BC - perfectly fine
-    for i in range(0,5):
-        vario = vario.bc(debug=debug)#function=[func])
-        if debug:
-            print ("After applied baseline correction: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
-        testdict3 = copy.deepcopy(vario.header)
-        diff = DeepDiff(testdict2, testdict3)
-        print ("ongoing diff", diff)
-    """
     #print (vario.ndarray)
     #subtract from orgdata
     varioxyz = vario.hdz2xyz()
