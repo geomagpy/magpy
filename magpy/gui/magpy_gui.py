@@ -4551,7 +4551,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.options['fitknotstep'] = str(params['knotstep'])
             self.options['fitdegree'] = str(params['fitdegree'])
             self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
-                    params['fitfuncname'], params['knots'], params['degree']))
+                    params['fitfuncname'], params['knotstep'], params['fitdegree']))
             if len(self.plotstream.ndarray[0]) > 0:
                 func = self.plotstream.fit(keys=keys,
                         fitfunc=params['fitfunc'],
