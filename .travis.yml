@@ -13,12 +13,15 @@ jobs:
         - make OS=linux ENV=gnu all
         - sudo make INSTALLDIR=/usr/local/cdf install
         - cd ..
+        - pip install cycler==0.10.0
     - name: "Python 3.7 on Xenial Linux"
       python: 3.7           # this works for Linux but is ignored on macOS or Windows
       os: linux
       before_install:
+        - pip3 install --upgrade pip  # all three OSes agree about 'pip3'
         - pip3 install numpy==1.16.5
         - pip3 install scipy==1.2.1
+        - pip3 install matplotlib==3.5.1
         - pip3 install importlib-metadata==4.12
     - name: "Python 3.8 on Xenial Linux"
       python: 3.8           # this works for Linux but is ignored on macOS or Windows
@@ -26,19 +29,11 @@ jobs:
     - name: "Python 3.9 on Xenial Linux"
       python: 3.9           # this works for Linux but is ignored on macOS or Windows
       os: linux
-    - name: "Python 3.10 on Xenial Linux"
+    - name: "Python 3.10 on Ubuntu 20.04 Linux"
       python: 3.10          # this works for Linux but is ignored on macOS or Windows
       os: linux
-    - name: "Python 3.7.4 on macOS"
-      os: osx
-      osx_image: xcode11.2  # Python 3.7.4 running on macOS 10.14.4
-      language: shell       # 'language: python' is an error on Travis CI macOS
-      before_install:
-        - pip3 install --upgrade pip  # all three OSes agree about 'pip3'
-        - pip3 install numpy==1.16.5
-        - pip3 install scipy==1.2.1
-        - pip3 install importlib-metadata==4.12
-    - name: "Python 3.8.9 on macOS"
+      dist: focal
+    - name: "Python 3.8.9 on macOS 12.4"
       os: osx
       osx_image: xcode13.4  # Python 3.7.4 running on macOS 12.4
       language: shell       # 'language: python' is an error on Travis CI macOS
