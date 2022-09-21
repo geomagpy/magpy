@@ -6,13 +6,14 @@ Installation instructions can be found on the main download page.
 
 1.1.0 general:
     + updated xmagpy manual
-    + enabled support for cdflib 1.0.0
+    + updated cdf libraries to account for cdflib 1.0.0 changes
 
 1.1.0 additions:
-    + added library support for GFZ index webservice
+    + added library support for new GFZ index webservices
     + added multiple baseline features
-    + added direct baseline calcluation option for "baseline" button
+    + added direct baseline calculation option for "baseline" button
     + added load, save and clear options for baseline parameters
+    + added load and save options for fitting parameters
 
 1.1.0 fixes:
     + IMPORTANT: corrected baseline adoption function (bc)
