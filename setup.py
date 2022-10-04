@@ -19,7 +19,7 @@ if sys.version_info < (3,5):
             ]
 else:
         install_requires=[
-            "matplotlib >= 2.0.2",
+            "matplotlib < 3.6.0",
             "numpy >= 1.5.0",
             "scipy >= 0.8.6",
             "paho-mqtt >= 1.2.0",
