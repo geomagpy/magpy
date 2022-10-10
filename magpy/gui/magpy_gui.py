@@ -3274,26 +3274,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 endmonth = 1
             endtime=str(endyear)+'-'+str(endmonth).zfill(2)+'-01'
             if seconddata == 'cdf':
-                cdfname = '*'+str(rmonth).zfill(2)+'_000000_PT1S_4.cdf'
+                cdfname = '*'+str(year)+str(rmonth).zfill(2)+'_000000_PT1S_4.cdf'
                 loadpath = os.path.join(secondpath,cdfname)
                 try:
-                    if os.path.isfile(loadpath):
-                        secdata = read(loadpath,debug=True)
-                    else:
-                        secdata = read(os.path.join(secondpath,'*.cdf'),starttime=starttime,endtime=endtime,debug=True)
+                    secdata = read(loadpath,debug=True)
                 except:
                     secdata = DataStream()
                     success = 6
                 if not secdata.length()[0] > 0:
+                    print ("did not find an appropriate monthly cdf file")
                     cdfname = '*.cdf'
-                    loadpath = os.path.join(secondpath,cdfname)
-                    # File name issue !!
-                    try:
-                        secdata = read(loadpath,debug=True, starttime=starttime, endtime=endtime)
-                        success = 3
-                    except:
-                        secdata = DataStream()
-                        success = 6
+                    cdfnamelist = ['*_000000_PT1S_4.cdf','*.cdf']
+                    success = 1
+                    for cdfname in cdfnamelist:
+                        loadpath = os.path.join(secondpath,cdfname)
+                        success += 1
+                        # File name issue !!
+                        try:
+                            secdata = read(loadpath,debug=True, starttime=starttime, endtime=endtime)
+                            success = success
+                        except:
+                            secdata = DataStream()
+                            success = 6
+                        if secdata.length()[0] > 0:
+                            break
 
             elif seconddata == 'pycdf':
                 if dataid:
@@ -3593,7 +3597,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 try:
                     year = num2date(mindata.ndarray[0][-1]).year
                 except:
-                    year = 1777
+                    frame = wx.Frame(None, -1, 'win.py')
+                    frame.SetDimensions(0,0,200,50)
+                    dlg = wx.TextEntryDialog(frame, 'Enter the YEAR you are checking','Entry')
+                    dlg.SetValue("2021")
+                    if dlg.ShowModal() == wx.ID_OK:
+                        yearstr = dlg.GetValue()
+                    dlg.Destroy()
+                    try:
+                        year = int(yearstr)
+                    except:
+                        year = 1777
 
                 if not seconddata == 'None':
                     reportmsg += "\nStep 2:  Secondary data:\n"
@@ -3606,7 +3620,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         errormsg += "Step 2: Reading of one second data failed - check file format and/or file name convention and/or dates\n"
                         succlst[1] = 5
                     elif fail == 3:
-                        errormsg += "Step 2: Reading of one second data - file names do not follow the ImagCDF convention\n"
+                        errormsg += "Step 2: Reading of one second data - file names do not follow the (monthly) ImagCDF convention\n"
                         succlst[1] = 3
                     self.changeStatusbar("Step 2: Reading one second data ... Done ")
                     if secdata.length()[0] > 1:
@@ -3628,9 +3642,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         META = IMAGCDFMETA
                     elif seconddata == 'iaga':
                         META = IAGAMETA
+                    noncriticalheadlist = ['DataReferences']
                     for head in META:
                         value = secdata.header.get(head,'')
-                        if value == '':
+                        if head in noncriticalheadlist and value == '':
+                            warningmsg += "Step 2: (info) Second data: no meta information for {} (not critical)\n".format(head.replace('Data',''))
+                        elif value == '':
                             warningmsg += "Step 2: (warning) !!! Second data: no meta information for {}\n".format(head)
                             headfailure = True
                     if not headfailure:
