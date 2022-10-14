@@ -22,7 +22,7 @@ from itertools import chain
 import time
 from statistics import mode
 
-debug = True # Print every single output
+debug = False # Print every single output
 
 import matplotlib.pyplot as plt
 print( 'pyplot imported as plt for debugging purposes')
