@@ -8,3 +8,4 @@ build
 dist
 dist/*.egg
 GeomagPy.egg-info
+SuperGradPos.npy
