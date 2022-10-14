@@ -158,12 +158,12 @@ except:
 # ----------
 try:
     import matplotlib
-    gui_env = ['TKAgg','GTKAgg','Qt4Agg','WXAgg','Agg']
+    gui_env = ['WXAgg','TKAgg','GTKAgg','Qt4Agg','Agg']
 
     try:
         if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
             logger.info("No terminal connected - assuming cron job and using Agg for matplotlib")
-            gui_env = ['Agg','TKAgg','GTKAgg','Qt4Agg','WXAgg']
+            #gui_env = ['WXAgg','TKAgg','Agg','GTKAgg','Qt4Agg']
             matplotlib.use('Agg') # For using cron
     except:
         logger.warning("Problems with identfying cron job - windows system?")
