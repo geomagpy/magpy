@@ -79,8 +79,8 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     meanx = teststream.mean('x')
     meany = teststream.mean('y')
     meanz = teststream.mean('z')
-    if debug:
-        print ("Mean differences between DI and BL corrected varion: ", meanx, meany, meanz)
+    #if debug:
+    print ("Mean differences between DI and BL corrected varion: ", meanx, meany, meanz)
     val = True
     for el in [meanx, meany, meanz]:
         if abs(meanx) > 1:
