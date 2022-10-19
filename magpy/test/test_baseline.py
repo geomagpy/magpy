@@ -54,12 +54,29 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     func = [func1,func2]
 
     #vario.func_to_file(func, "/tmp/tmpfit.json" debug=debug)
+    test = "simple"
+    if test == "simple":
+        print (" Testing simple baseline methods")
+        print ("     -- dropping all line with NAN in basevalues")
+        absresult = absresult._drop_nans('dx')
+        absresult = absresult._drop_nans('dy')
+        absresult = absresult._drop_nans('dz')
+        print ("     -- calculation medians for basevalues")
+        bh, bhstd = absresult.mean('dx',meanfunction='median',std=True)
+        bd, bdstd = absresult.mean('dy',meanfunction='median',std=True)
+        bz, bzstd = absresult.mean('dz',meanfunction='median',std=True)
+        print ("       -> Basevalues:")
+        print ("          Delta H = {a} +/- {b}".format(a=bh, b=bhstd))
+        print ("          Delta D = {a} +/- {b}".format(a=bd, b=bdstd))
+        print ("          Delta Z = {a} +/- {b}".format(a=bz, b=bzstd))
+        print ("     -- Performing constant basevalue correction")
+        vario = vario.simplebasevalue2stream([bh,bd,bz])
+    else:
+        #apply baseline correction
+        vario = vario.bc(debug=debug)#function=[func])
 
     if debug:
         print ("Baseline correction done")
-    #apply baseline correction
-    vario = vario.bc(debug=debug)#function=[func])
-    if debug:
         print ("After applied baseline correction: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
     testdict2 = copy.deepcopy(vario.header)
     try:

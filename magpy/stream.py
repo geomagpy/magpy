@@ -5596,7 +5596,7 @@ CALLED BY:
 
         return self
 
-    def simplebasevalue2stream(self,basevalue,**kwargs):
+    def simplebasevalue2stream(self,basevalue,basecomp="HDZ",**kwargs):
         """
       DESCRIPTION:
         simple baselvalue correction using a simple basevalue list
@@ -5604,6 +5604,7 @@ CALLED BY:
       PARAMETERS:
         basevalue       (list): [baseH,baseD,baseZ]
         keys            (list): default = 'x','y','z'
+        basecomp        (i.e. HDZ): HDZ will transform the stream for HDZ correction
 
       APPLICTAION:
         used by stream.baseline
@@ -5617,6 +5618,13 @@ CALLED BY:
             print("simplebasevalue2stream: requires ndarray")
             return self
 
+        # Prepare the datastream and put h on xposition
+        if basecomp in ["HDZ","hdz"]:
+            # stream needs to contain H comp, V comp and original y comp
+            ycomp = self._get_column("y")
+            self = self.xyz2hdz()
+            self = self._put_column(ycomp,"y")
+
         #1. calculate function value for each data time step
         array = [[] for key in KEYLIST]
         array[0] = self.ndarray[0]
@@ -5627,7 +5635,7 @@ CALLED BY:
             if key in keys: # new
                 #print keys.index(key)
                 ar = self.ndarray[ind].astype(float)
-                if key == 'y':
+                if key == 'y' and basecomp in ["HDZ","hdz"]:
                     #indx = KEYLIST.index('x')
                     #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
                     #print type(self.ndarray[ind]), key, self.ndarray[ind]
