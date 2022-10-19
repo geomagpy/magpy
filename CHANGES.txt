@@ -2,7 +2,13 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
-####v<1.1.0>, <2022-xx-xx> --
+####v<1.1.1>, <2022-09-19> --
+
+1.1.1 fixes:
+    + corrected simple baseline adoption function (simplebaseline)
+    + updated backend tests to select appropriate matplotlib backends
+
+####v<1.1.0>, <2022-09-01> --
 
 1.1.0 general:
     + updated xmagpy manual

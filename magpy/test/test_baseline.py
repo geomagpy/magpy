@@ -54,7 +54,7 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     func = [func1,func2]
 
     #vario.func_to_file(func, "/tmp/tmpfit.json" debug=debug)
-    test = "simple"
+    test = ""
     if test == "simple":
         print (" Testing simple baseline methods")
         print ("     -- dropping all line with NAN in basevalues")
