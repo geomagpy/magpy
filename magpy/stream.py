@@ -158,7 +158,7 @@ except:
 # ----------
 try:
     import matplotlib
-    gui_env = ['WXAgg','TKAgg','GTKAgg','Qt4Agg','Agg']
+    gui_env = ['WXAgg','TKAgg','GTKAgg','Agg']
 
     try:
         if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
