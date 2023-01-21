@@ -3276,7 +3276,7 @@ CALLED BY:
         data.header['DataFormat'] = 'MagPyDailyMean'
 
         array = [np.asarray(el) for el in array]
-        retstream = DataStream([LineStruct()],data.header,np.asarray(array))
+        retstream = DataStream([LineStruct()],data.header,np.asarray(array,dtype=object))
         retstream = retstream.sorting()
         return retstream
 
@@ -11081,28 +11081,34 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                 getfile = True
 
             if getfile:
+                zipped = False
                 if filename.endswith('.gz') or filename.endswith('.GZ'):
                     ## Added gz support to read IMO compressed data directly - future option might include tarfiles
                     import gzip
-                    print ("Found zipped file (gz) ... unpacking")
+                    #print ("Found zipped file (gz) ... unpacking")
                     fname = os.path.split(filename)[1]
                     fname = fname.strip('.gz')
                     with NamedTemporaryFile(suffix=fname,delete=False) as fh:
                         shutil.copyfileobj(gzip.open(filename), fh)
                         filename = fh.name
+                    zipped = True
                 if filename.endswith('.zip') or filename.endswith('.ZIP'):
                     ## Added gz support to read IMO compressed data directly - future option might include tarfiles
                     from zipfile import ZipFile
-                    print ("Found zipped file (zip) ... unpacking")
+                    #print ("Found zipped file (zip) ... unpacking")
                     with ZipFile(filename) as myzip:
                         fname =  myzip.namelist()[0]
                         with NamedTemporaryFile(suffix=fname,delete=False) as fh:
                             shutil.copyfileobj(myzip.open(fname), fh)
                             filename = fh.name
+                    zipped = True
 
                 stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
                 try:
                     stp = _read(filename, dataformat, headonly, **kwargs)
+                    if zipped:
+                        # delete the temporary file
+                        os.remove(filename)
                 except:
                     stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
                     logger.warning("read: File {} could not be read. Skipping ...".format(filename))

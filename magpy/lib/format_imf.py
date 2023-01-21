@@ -422,7 +422,7 @@ def readIAF(filename, headonly=False, **kwargs):
             if not np.isnan(np.asarray(ar)).all():
                 array[pos] = np.asarray(ar)
 
-        return np.asarray(array).astype(object)
+        return np.asarray(array,dtype=object)
 
     if resolution in ['day','days','Day','Days','DAY','DAYS']:
         ndarray = data2array([xd,yd,zd,fd],keystr.split(','),min(datelist),sr=86400)

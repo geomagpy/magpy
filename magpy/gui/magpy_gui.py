@@ -3260,7 +3260,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             return report
 
 
-        def readSecData(secondpath,seconddata,rmonth,year,dataid=None):
+        def readSecData(secondpath,seconddata,rmonth,year,dataid=None,debug=False):
             """
             Definition:
                   reading one second data from ImagCDF or IAGA02 formats (or MagPy)
@@ -3277,7 +3277,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 cdfname = '*'+str(year)+str(rmonth).zfill(2)+'_000000_PT1S_4.cdf'
                 loadpath = os.path.join(secondpath,cdfname)
                 try:
-                    secdata = read(loadpath,debug=True)
+                    secdata = read(loadpath,debug=debug)
                 except:
                     secdata = DataStream()
                     success = 6
@@ -3291,7 +3291,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         success += 1
                         # File name issue !!
                         try:
-                            secdata = read(loadpath,debug=True, starttime=starttime, endtime=endtime)
+                            secdata = read(loadpath,debug=debug, starttime=starttime, endtime=endtime)
                             success = success
                         except:
                             secdata = DataStream()
@@ -3303,20 +3303,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 if dataid:
                     cdfname = dataid+'_vario_sec_'+str(year)+str(rmonth).zfill(2)+'.cdf'
                     loadpath = os.path.join(secondpath,cdfname)
-                    secdata = read(loadpath,debug=True)
+                    secdata = read(loadpath,debug=debug)
                 else:
                     print ("please provide a sensorid")
             elif seconddata == 'iaga':
                 loadpath = os.path.join(secondpath,'*.sec')
                 try:
-                    secdata = read(loadpath,starttime=starttime,endtime=endtime,debug=True)
+                    secdata = read(loadpath,starttime=starttime,endtime=endtime,debug=debug)
                 except:
                     secdata = DataStream()
                     success = 6
 
             return secdata, success
 
-        def readMinData(checkchoice,minutedata,minutepath,month,rmonth,year=1900,resolution=None):
+        def readMinData(checkchoice,minutedata,minutepath,month,rmonth,year=1900,resolution=None,debug=False):
             """
             Definition:
                   reading one minute data from IAF formats (and others)
@@ -3342,9 +3342,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     path = minutepath
                 try:
                     if resolution:
-                        mindata = read(path, resolution=resolution, debug=True)
+                        mindata = read(path, resolution=resolution, debug=debug)
                     else:
-                        mindata = read(path, debug=True)
+                        mindata = read(path, debug=debug)
                 except:
                     mindata = DataStream()
                     success = 6
@@ -3414,6 +3414,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     iafcnt += len(glob.glob(os.path.join(minutepath,"*.bin")))
                     if iafcnt > 0 and iafpath == '':
                         iafpath = os.path.join(minutepath,"*.bin")
+                    else:
+                        iafcnt += len(glob.glob(os.path.join(minutepath,"*.zip")))
+                        if iafcnt > 0 and iafpath == '':
+                            iafpath = os.path.join(minutepath,"*.zip")
                 if not iafcnt == 12:
                     succlst[0] = 6
                     errormsg += "Step 1: !!! IAF error: didn't find 12 monthly files\n"
@@ -3505,6 +3509,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     seconddata = 'iaga'
                 if not seconddata in ['cdf','iaga']:
                     warningmsg += "Step 1: !!! one second error: didn't find either ImagCDF (*.cdf) or IAGA02 (*.sec) files\n"
+                    if succlst[0]<4:
+                        succlst[0]=4
                 else:
                     reportmsg += "Step 1: +++ Found appropriate amount of one second data files\n"
                     #print ("Here", minutepath, succlst)
@@ -3514,7 +3520,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         checkparameter['step3'] = False
                         checkparameter['step5'] = False
                         checkparameter['step7'] = False
-                    succlst[0]=1
+                    if succlst[0]<1:
+                        succlst[0]=1
             else:
                 warningmsg += "Step 1: Could not access provided directory of one second data {}\n".format(secondpath)
 
@@ -3955,20 +3962,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     else:
                         # read data for each month
                         monthlist = range(1,13)
-                    readnew = False # Data needs only to be read again for full analysis
+                        if secdata.length()[0] > 0:
+                            oldsecdata = secdata.copy()
                     for checkmonth in monthlist:
-                        if (checkmonth == rmonth) and secdata.length()[0] > 0 and not readnew:
-                            secdata = secdata
+                        print ("Loading month {}".format(checkmonth))
+                        if (checkmonth == rmonth) and secdata.length()[0] > 0:
+                            self.changeStatusbar("Step 4: Taking one second data (loaded already for data checks) for month {} ... be patient".format(checkmonth))
+                            secdata = oldsecdata.copy()
                         else:
                             self.changeStatusbar("Step 4: Reading one second data for month {} ... be patient".format(checkmonth))
-                            secdata, fail = readSecData(secondpath,seconddata,rmonth,year)
-                            readnew = True
+                            secdata, fail = readSecData(secondpath,seconddata,checkmonth,year,debug=False)
+                            #readnew = True
+                        #print (secdata._find_t_limits())
 
                         if not onlysec:
                             if (checkmonth == rmonth) and mindataback.length()[0] > 0:
                                 mindata = mindataback.copy()
                             else:
-                                mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth)
+                                mindata, fail = readMinData(checkchoice,'iaf',iafpath,month,checkmonth)
                         else:
                             mindata = DataStream()
 
@@ -3988,7 +3999,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         fcol = secdata._get_column('f')
                         dfcol = secdata._get_column('df')
                         if len(fcol) == 0 and len(dfcol) == 0:
-                            reportmsg += "Step 4: !!! One second data: failed to find scalar (F, dF) data ... Failed\n"
+                            reportmsg += "Step 4: !!! One second data (month {}): failed to find scalar (F, dF) data ... Failed\n".format(checkmonth)
                             succlst[3] = 2
                         else:
                             scal=''
@@ -4006,15 +4017,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                             reportmsg += "Step 4: +++ found an average delta F of {:.3f} +/- {:.3f}\n".format(fmean, fstd)
                             if fmean >= 1.0:
                                 reportmsg += "Step 4: !!! large deviation of mean delta F - check baseline corr\n"
-                                warningmsg += "Step 4: large deviation of mean delta F - check baseline corr\n"
+                                warningmsg += "Step 4: (month {}) large deviation of mean delta F - check baseline corr\n".format(checkmonth)
                                 succlst[3] = 3
                             if fstd >= 3.0:
                                 reportmsg += "Step 4: !!! large scatter about mean\n"
-                                warningmsg += "Step 4: dF/G shows large scatter about mean\n"
+                                warningmsg += "Step 4: (month {}) dF/G shows large scatter about mean\n".format(checkmonth)
                                 succlst[3] = 4
                             if fmean < 0.001 and fstd < 0.001:
                                 reportmsg += "Step 4: !!! F seems not to be measured independently \n"
-                                warningmsg += "Step 4: F seems not to be measured independently\n"
+                                warningmsg += "Step 4: (month {}) F seems not to be measured independently\n".format(checkmonth)
                                 succlst[2] = 3
 
                         #reportmsg += "\nStep 4: Filtering second data and comparing it to minute IAF data \n"
@@ -4053,29 +4064,31 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         #    diff = subtractStreams(highresfilt,mindata,keys=['x','y','z'])
                         if not onlysec:
                             diff = subtractStreams(highresfilt,mindata,keys=['x','y','z'])
+                            diff = diff.trim(starttime=diff.ndarray[0][0]+0.00069)
+                            print ("  -> diff length: {}".format(diff.length()[0]))
 
                             incon = False
                             if not diff.amplitude('x') < 0.3:
-                                warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in x/h component ({}) significantly exceed numerical uncertainty\n".format(diff.amplitude('x'))
+                                warningmsg += "Step 4: (month {}) !!! IAF versus filtered second data: maximum differences in x/h component ({}) significantly exceed numerical uncertainty\n".format(checkmonth,diff.amplitude('x'))
                                 incon = True
                             elif not diff.amplitude('x') < 0.12:
                                 reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in x/h component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('x'))
                             if not diff.amplitude('y') < 0.3:
-                                warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in y/d component ({}) significantly  exceed numerical uncertainty\n".format(diff.amplitude('y'))
+                                warningmsg += "Step 4: (month {}) !!! IAF versus filtered second data: maximum differences in y/d component ({}) significantly  exceed numerical uncertainty\n".format(checkmonth,diff.amplitude('y'))
                                 incon = True
                             elif not diff.amplitude('y') < 0.12:
                                 reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in y/d component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('y'))
                             if not diff.amplitude('z') < 0.3:
-                                warningmsg += "Step 4: !!! IAF versus filtered second data: maximum differences in z component ({}) significantly  exceed numerical uncertainty\n".format(diff.amplitude('z'))
+                                warningmsg += "Step 4: (month {}) !!! IAF versus filtered second data: maximum differences in z component ({}) significantly  exceed numerical uncertainty\n".format(checkmonth,diff.amplitude('z'))
                                 incon = True
                             elif not diff.amplitude('z') < 0.12:
                                 reportmsg += "Step 4: (info) IAF/Filtered(Sec): maximum differences in z component ({}) slightly exceed numerical uncertainty\n".format(diff.amplitude('z'))
                             if len(diff._get_column(scal)) > 0:
                                 if not diff.amplitude(scal) < 0.30: ## uncertainty is larger because of df conversion (2 times rounding error)
-                                    warningmsg += "Step 4: IAF versus filtered second data: maximum differences in f component ({}) exceed numerical uncertainty -- PLEASE NOTE: COBS standard procedure is to use mean F for minute and single best F for second\n".format(diff.amplitude('f'))
+                                    warningmsg += "Step 4: (month {}) IAF versus filtered second data: maximum differences in f component ({}) exceed numerical uncertainty -- PLEASE NOTE: COBS standard procedure is to use mean F for minute and single best F for second\n".format(checkmonth,diff.amplitude('f'))
                                     try:
                                         ttf, ttstd = diff.mean('f',std=True)
-                                        warningmsg += "Step 4: !!! IAF versus filtered second data: mean f = {} +/- {}\n".format(ttf,ttstd)
+                                        warningmsg += "Step 4: (month {}) !!! IAF versus filtered second data: mean f = {} +/- {}\n".format(checkmonth,ttf,ttstd)
                                         incon = True
                                     except:
                                         pass
@@ -4194,7 +4207,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
                 else:
                     reportmsg += "Step 5: could not open baseline data \n"
-                    errormsg += "Step 5: failed to open baseline data\n"
+                    warningmsg += "Step 5: failed to open baseline data\n"
                     succlst[4] = 6
 
                 if succlst[4] <= 2:
@@ -4243,7 +4256,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                                 success = 4
                             warnmsg += "Step 6: yearly means differ between {} and {} files\n".format(source1, source2)
                     else:
-                        repmsg += "Step 6: did not compare yearly means of {} and {} data - select step 3 and full to perform this check \n".format(source1, source2)
+                        repmsg += "Step 6: did not compare yearly means of {} and {} data \n".format(source1, source2)
                     return repmsg, warnmsg, success
 
                 reportmsg += "Step 6: yearly means \n"
@@ -4258,6 +4271,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         blvdata = read(blvpath)
                     blvhmean = blvdata.header.get('DataScaleX')
                     blvfmean = blvdata.header.get('DataScaleZ')
+                else:
+                    reportmsg += "Step 6: blv file not available \n"
+                    succlst[5] = 6
 
                 #iaf yearly means
                 minhmean = np.nan
@@ -4301,6 +4317,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         reportmsg += rep
                         warningmsg += warn
                         reportmsg += "Step 6: yearlmean.imo contains data from {} until {} \n".format(num2date(yearmeandata.ndarray[0][0]).year,num2date(yearmeandata.ndarray[0][-1]).year)
+                else:
+                    reportmsg += "Step 6: yearlmean not available \n"
+                    succlst[5] = 6
 
                 if not seconddata == 'None':
                     primeheader = secdata.header
@@ -4402,17 +4421,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         warningmsg += 'Step 7: Could not read provided dka file !!!\n'
                     else:
                         if dkadata.amplitude('var1') > 9:
-                            warningmsg += 'Step 7: k values in DKA file exceed 9 !!!\n'
+                            warningmsg += 'Step 7: k values in DKA file exceed k level 9 !!!\n'
                             succlst[6] = 4
                 try:
-                    iafk, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth,resolution='k')
+                    iafk, fail = readMinData(checkchoice,'iaf',iafpath,month,rmonth,resolution='k',debug=False)
                     if iafk.amplitude('var1') > 9:
                         warningmsg += 'Step 7: k values in IAF exceed 9 !!!\n'
                         succlst[6] = 5
                     if self.InitialRead(iafk):
                         self.OnInitialPlot(self.plotstream)
                 except:
-                    errormsg += "Step 7: Could not extract k values from IAF file\n"
+                    warningmsg += "Step 7: Could not extract k values from IAF file\n"
                     dayprob = True
                     succlst[6] = 5
 
@@ -4423,13 +4442,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         for el in kdiffs.ndarray[posk]:
                             if el >= 0.1:
                                 warningmsg += 'Step 7: difference between k in IAF and DKA files at {}: IAF: {}, DKA: {}\n'.format(num2date(kdiffs.ndarray[0][idx]).replace(tzinfo=None), iafk.ndarray[posk][idx], dkadata.ndarray[posk][idx])
-                                succlst[6] = 4
+                                succlst[6] = 3
                     else:
                         warningmsg += 'Step 7: (optional) k value check with DKA not performed.\n'
                         succlst[6] = 2
                 else:
                     #warningmsg += 'Step 7: k value check not performed\n'
-                    succlst[6] = 2
+                    #succlst[6] = 2
+                    pass
 
                 if succlst[6] <= 2:
                     reportmsg += "Step 7: k values ... OK\n"
