@@ -778,6 +778,13 @@ def writeIAF(datastream, filename, **kwargs):
             head.append(888888)
 
         #print("3:", len(head))
+        calck = True
+        if not kvals and calck:
+            #calculate kvalues
+            print (" K values not provided - calculating them")
+            if not datastream.header.get('StationK9',None):
+                print (" -> no K9 value provided for Station: using 500nT as default")
+            kvals = datastream.k_fmi()
 
         # add k values
         if kvals:
@@ -817,15 +824,60 @@ def writeIAF(datastream, filename, **kwargs):
     path = os.path.split(filename)
     filename = os.path.join(path[0],path[1].upper())
 
-    if len(kstr) > 0:
-        station=datastream.header['StationIAGAcode']
-        k9=datastream.header['StationK9']
+    logger.info("Writing monthly IAF data format to {}".format(path[1].upper()))
+    if os.path.isfile(filename):
+        if mode == 'append':
+            with open(filename, "a") as myfile:
+                myfile.write(output)
+        else: # overwrite mode
+            os.remove(filename)
+            myfile = open(filename, "wb")
+            myfile.write(output)
+            myfile.close()
+    else:
+        myfile = open(filename, "wb")
+        myfile.write(output)
+        myfile.close()
+
+    if tdiff >= 365:
+        writedka = True
+        if debug:
+            print (" writeIAF: One of data available: writing DKA file")
+    else:
+        writedka = False
+        if debug:
+            print (" writeIAF: Timeseries covers only {} days: DKA files will be written if at least one year of data is provided")
+    if len(kstr) > 0 and writedka:
+        try:
+            success = writeIAFDKA(datastream,kstr,path[0],debug=debug)
+        except:
+            success = False
+        if success:
+            print (" DKA file successfully written ")
+
+    readme = True
+    if readme:
+        try:
+            success = writeIAFREADME(datastream,path[0],debug=debug)
+        except:
+            success = False
+        if success:
+            print (" README file successfully written")
+
+    return True
+
+def writeIAFDKA(datastream,kstr,path, debug=False):
+        if debug:
+            print (" debugDKA: Creating DKA file from k values info in {}".format(path))
+        station=datastream.header.get('StationIAGAcode',"XXX")
+        k9=int(datastream.header.get('StationK9',500))
         lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
         lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
         year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
-        kfile = os.path.join(path[0],station.upper()+year+'K.DKA')
-        logger.info("Writing k summary file: {}".format(kfile))
+        kfile = os.path.join(path,station.upper()+year+'K.DKA')
+        if debug:
+            print (" debugDKA: Writing k summary file: {}".format(kfile))
         head = []
         if not os.path.isfile(kfile):
             head.append("{0:^66}".format(station.upper()))
@@ -861,58 +913,50 @@ def writeIAF(datastream, filename, **kwargs):
                 for elem in kstr:
                     myfile.write(elem+'\r\n')
                     #print elem
+        return True
 
-    logger.info("Writing monthly IAF data format to {}".format(path[1].upper()))
-    if os.path.isfile(filename):
-        if mode == 'append':
-            with open(filename, "a") as myfile:
-                myfile.write(output)
-        else: # overwrite mode
-            os.remove(filename)
-            myfile = open(filename, "wb")
-            myfile.write(output)
-            myfile.close()
-    else:
-        myfile = open(filename, "wb")
-        myfile.write(output)
-        myfile.close()
-
-    logger.info("Creating README from header info in {}".format(path[1].upper()))
-    readme = True
-    if readme:
+def writeIAFREADME(datastream,path,debug=False):
+        if debug:
+            print(" debugREADME: Creating README from header info in {}".format(path))
         requiredhead = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo', 'StationEmail','StationK9']
         acklist = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo' ]
         conlist = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry', 'StationEmail']
 
         for h in requiredhead:
-            try:
-                test = datastream.header[h]
-            except:
-                logger.error("README file could not be generated. Info on {0} is missing".format(h))
-                return True
+            test = datastream.header.get(h,None)
+            if not test:
+                print (" README generation: Info on {0} is missing".format(h))
         ack = []
         contact = []
         for a in acklist:
             try:
-                ack.append("               {0}".format(datastream.header[a]))
+                ack.append("               {0}".format(datastream.header.get(a)))
             except:
                 pass
         for c in conlist:
             try:
-                contact.append("               {0}".format(datastream.header[c]))
+                contact.append("               {0}".format(datastream.header.get(c)))
             except:
                 pass
 
         # 1. Check completeness of essential header information
-        station=datastream.header['StationIAGAcode']
-        stationname = datastream.header['StationName']
-        k9=datastream.header['StationK9']
+        station=datastream.header.get('StationIAGAcode','XXX')
+        stationname = datastream.header.get('StationName','to be provided')
+        try:
+            k9=int(datastream.header.get('StationK9',500))
+        except:
+            k9 = 500
+        dsf = datastream.header.get('DataSamplingFilter','')
         lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
         lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
         ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
-        rfile = os.path.join(path[0],"README."+station.upper())
+        rfile = os.path.join(path,"README."+station.upper())
+        if os.path.isfile(rfile):
+            print (" README file already existing - skipping writeREADME")
+            return False
         head = []
-        logger.info("Writing README file: {}".format(rfile))
+        if debug:
+            print("Writing README file: {}".format(rfile))
 
         dummy = "please insert manually"
         if not os.path.isfile(rfile):
@@ -926,17 +970,17 @@ def writeIAF(datastream, filename, **kwargs):
                 head.append(elem)
             head.append("{0:<50}".format(emptyline))
             head.append("STATION ID   : {0}".format(station.upper()))
-            head.append("LOCATION     : {0}, {1}".format(datastream.header['StationCity'],datastream.header['StationCountry']))
-            head.append("ORGANIZATION : {0:<50}".format(datastream.header['StationInstitution']))
+            head.append("LOCATION     : {0}, {1}".format(datastream.header.get('StationCity','city'),datastream.header.get('StationCountry','country')))
+            head.append("ORGANIZATION : {0:<50}".format(datastream.header.get('StationInstitution','institution')))
             head.append("CO-LATITUDE  : {:.3f} Deg.".format(90.-float(lat)))
             head.append("LONGITUDE    : {:.3f} Deg. E".format(float(lon)))
-            head.append("ELEVATION    : {0} meters".format(int(datastream.header['DataElevation'])))
+            head.append("ELEVATION    : {0} meters".format(int(datastream.header.get('DataElevation','elevation'))))
             head.append("{0:<50}".format(emptyline))
             head.append("ABSOLUTE")
             head.append("INSTRUMENTS  : please insert manually")
             head.append("RECORDING")
             head.append("VARIOMETER   : {}".format(datastream.header.get('SensorName',dummy)))
-            head.append("ORIENTATION  : {}".format(datastream.header['DataSensorOrientation']))
+            head.append("ORIENTATION  : {}".format(datastream.header.get('DataSensorOrientation','orientation')))
             head.append("{0:<50}".format(emptyline))
             head.append("DYNAMIC RANGE: {}".format(datastream.header.get('SensorDynamicRange',dummy)))
             head.append("RESOLUTION   : {}".format(datastream.header.get('SensorResolution',dummy)))
@@ -962,9 +1006,7 @@ def writeIAF(datastream, filename, **kwargs):
                     for elem in head:
                         myfile.write(elem+'\r\n'.encode('utf-8'))
             myfile.close()
-
-    return True
-
+        return True
 
 def readIMAGCDF(filename, headonly=False, **kwargs):
     """
@@ -1666,6 +1708,25 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     mycdf.close()
     return success
 
+def comp_decode(type, value)-> float:
+    """
+    type : variable is deg or nT
+    value the value to decode
+    """
+
+    if type == 'deg':
+        return value/6000
+    else:
+        return value/10
+def comp_encode(type, value)-> float:
+    """
+    type : variable is deg or nT
+    value the value to encorde
+    """
+    if type == 'deg':
+        return value*6000
+    else:
+        return value*10
 
 def readIMF(filename, headonly=False, **kwargs):
     """
@@ -1677,6 +1738,44 @@ def readIMF(filename, headonly=False, **kwargs):
 
     headers={}
     array = [[] for elem in KEYLIST]
+
+    def add_col_info_headers(header, components):
+        #components = XYZF or HDZF etc
+        header["col-x"] = components[0].upper()
+        header["col-y"] = components[1].upper()
+        header["col-z"] = components[2].upper()
+        header["unit-col-x"] = 'nT'
+        header["unit-col-y"] = 'nT'
+        header["unit-col-z"] = 'nT'
+        header["unit-col-f"] = 'nT'
+        if components.endswith('g'):
+            header["unit-col-df"] = 'nT'
+            header["col-df"] = 'G'
+            header["col-f"] = 'F'
+        else:
+            header["col-f"] = 'F'
+        # print ("VAR", varstr)
+        if components in ['dhzf', 'dhzg']:
+            header["unit-col-y"] = 'deg'
+            header['DataComponents'] = 'HDZF'
+        elif components in ['ehzf', 'ehzg']:
+            # consider the different order in the file
+            header["col-x"] = 'H'
+            header["col-y"] = 'E'
+            header["col-z"] = 'Z'
+            header['DataComponents'] = 'HEZF'
+        elif components in ['dhif', 'dhig']:
+            header["col-x"] = 'I'
+            header["col-y"] = 'D'
+            header["col-z"] = 'F'
+            header["unit-col-x"] = 'deg'
+            header["unit-col-y"] = 'deg'
+            header['DataComponents'] = 'IDFF'
+        elif components in ['hdzf', 'hdzg']:
+            header["unit-col-y"] = 'deg'
+            header['DataComponents'] = 'HDZF'
+        else:
+            header['DataComponents'] = 'XYZF'
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -1722,7 +1821,8 @@ def readIMF(filename, headonly=False, **kwargs):
                 headers['StationID'] = block[0]
                 headers['DataAcquisitionLatitude'] = float(block[7][:4])/10
                 headers['DataAcquisitionLongitude'] = float(block[7][4:])/10
-                headers['DataComponents'] = block[4]
+                comps = block[4].lower()
+                add_col_info_headers(headers, comps)
                 headers['DataSensorAzimuth'] = float(block[8])/10/60
                 headers['DataSamplingRate'] = '60 sec'
                 headers['DataType'] = block[5]
@@ -1749,30 +1849,19 @@ def readIMF(filename, headonly=False, **kwargs):
 
                         index = int(4*i)
                         if not int(data[0+index]) > 999990:
-                            #row.x = float(data[0+index])/10
-                            array[1].append(float(data[0+index])/10)
+                              array[1].append(comp_decode(headers["unit-col-x"], float(data[0 + index])))
                         else:
-                            #row.x = float(nan)
-                            array[1].append(np.nan)
+                              array[1].append(np.nan)
                         if not int(data[1+index]) > 999990:
-                            #row.y = float(data[1+index])/10
-                            array[2].append(float(data[1+index])/10)
+                              array[2].append(comp_decode(headers["unit-col-y"], float(data[1 + index])))
                         else:
-                            #row.y = float(nan)
-                            array[2].append(np.nan)
+                              array[2].append(np.nan)
                         if not int(data[2+index]) > 999990:
-                            #row.z = float(data[2+index])/10
-                            array[3].append(float(data[2+index])/10)
+                              array[3].append(comp_decode(headers["unit-col-z"], float(data[2 + index])))
                         else:
-                            #row.z = float(nan)
-                            array[3].append(np.nan)
+                              array[3].append(np.nan)
                         if not int(data[3+index]) > 999990:
-                            #row.f = float(data[3+index])/10
-                            array[4].append(float(data[3+index])/10)
-                        else:
-                            #row.f = float(nan)
-                            array[4].append(np.nan)
-                        #typus = block[4].lower()
+                              array[4].append(comp_decode(headers["unit-col-f"],float(data[3+index])))
                         #stream.add(row)
                     except:
                         logging.error('format_imf: problem with dataformat - check block header')
@@ -1860,11 +1949,7 @@ def writeIMF(datastream, filename, **kwargs):
     dataline,blockline = '',''
     minuteprev = 0
 
-    elemtype = 'XYZF'
-    try:
-        elemtpye = datastream.header['']
-    except:
-        pass
+    elemtype = datastream.header.get('DataComponents','XYZF').upper().replace("G","F")
 
     fulllength = datastream.length()[0]
     ndtype = False
@@ -1883,6 +1968,7 @@ def writeIMF(datastream, filename, **kwargs):
         return False
 
     if not flen > 0 and not dflen > 0:
+        print ("writeIMF: required information on f is missing - aborting")
         logger.error("writeIMF: required information on f is missing - aborting")
         return False
 
@@ -1940,19 +2026,19 @@ def writeIMF(datastream, filename, **kwargs):
                         dataline = '9999999 9999999 9999999 999999'
                     j = j+1
         if not isnan(elemx):
-            x = elemx*10
+            x = comp_encode(header['unit-col-x'],elemx)
         else:
             x = 999999
         if not isnan(elemy):
-            y = elemy*10
+            y =comp_encode(header['unit-col-y'],elemy)
         else:
             y = 999999
         if not isnan(elemz):
-            z = elemz*10
+            z = comp_encode(header['unit-col-z'],elemz)
         else:
             z = 999999
         if not isnan(elemf):
-            f = elemf*10
+            f = comp_encode(header['unit-col-f'],elemf)
         else:
             f = 999999
         if minute > minuteprev + 1:

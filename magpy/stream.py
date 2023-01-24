@@ -10279,7 +10279,7 @@ CALLED BY:
                     #print "write", len(ndarray), len(ndarray[0])
                     if len(ndarray[0]) > 0:
                         #maxidx = len(ndarray[0])*2 ## That does not work for few seconds of first day and full coverage of all other days
-                        dailystream.ndarray = np.asarray([array[(len(ndarray[0])-1):] for array in dailystream.ndarray])
+                        dailystream.ndarray = np.asarray([array[(len(ndarray[0])-1):] for array in dailystream.ndarray],dtype=object)
                         #print dailystream.length()
                     #print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
                 else:

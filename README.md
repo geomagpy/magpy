@@ -9,7 +9,7 @@ Full installation also provides a graphical user interface, *xmagpy*. You will f
 Typical usage of the basic MagPy package for reading and visualising data looks like this:
 
         #!/usr/bin/env python
-    
+
         from magpy.stream import read
         import magpy.mpplot as mp
         stream = read('filename_or_url')
@@ -19,7 +19,7 @@ Below you will find a quick guide to usage of the basic MagPy package. For instr
 
 ## 1. INSTALLATION
 
-Pleas note that with the publication of MagPy 1.0 the recommended python enironment is >= 3.6. The following installation instructions will assume such an environment. Particularly if you are using Python2.7 please go to the end of this sections for help. 
+Pleas note that with the publication of MagPy 1.0 the recommended python enironment is >= 3.6. The following installation instructions will assume such an environment. Particularly if you are using Python2.7 please go to the end of this sections for help.
 
 This section is currently updated and will be ready with the publication of MagPy 1.0.
 
@@ -27,7 +27,7 @@ This section is currently updated and will be ready with the publication of MagP
 
 #### 1.1.1 Complete Install
 
-Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages). Please note that installation requires python 3.x and the python3-pip package (usually already available, if not use "sudo apt-get install python3-pip"). 
+Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages). Please note that installation requires python 3.x and the python3-pip package (usually already available, if not use "sudo apt-get install python3-pip").
 
         $ sudo pip3 install geomagpy    #Will install MagPy and all dependencies
 
@@ -46,7 +46,7 @@ You can now run XMagPy  by using the following command
 
 To upgrade to the most recent version (replace x.x.x with the current version number):
 
-        $ sudo pip3 install geomagpy==x.x.x 
+        $ sudo pip3 install geomagpy==x.x.x
 
 Please do not use the -U option if not recommended for the new upgrade.
 
@@ -73,11 +73,11 @@ Then copy this file to the systems application folder:
 
 ### 1.2 MacOs installation
 
-#### 1.2.1 Install a python3 interpreter 
+#### 1.2.1 Install a python3 interpreter
 
-  - we recommend [Miniconda] or [Anaconda] 
+  - we recommend [Miniconda] or [Anaconda]
   - see e.g. https://docs.continuum.io/anaconda/install for more details
-  - before continuiung, test whether python is working. Open a terminal and run python 
+  - before continuiung, test whether python is working. Open a terminal and run python
 
 #### 1.2.2 Install MagPy within an anaconda environment
 
@@ -88,7 +88,7 @@ Switch into this environment:
 Install some basic packages required for MagPy:
         $ conda install numpy matplotlib scipy
 and MagPy:
-        $ pip install geomagpy 
+        $ pip install geomagpy
 
 You can now run XMagPy from the terminal by using the following command
         $ xmagpyw
@@ -103,14 +103,14 @@ To execute a python program within a specific environment it is recommended to c
         xmagpyw
 
 Make it executable e.g. by chmod 755 xmagpy.
-Open Finder and search for your script "xmagpy". Copy it to the desktop. To change the icon, click on the xmagpy link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder). 
+Open Finder and search for your script "xmagpy". Copy it to the desktop. To change the icon, click on the xmagpy link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder).
 
 
 ### 1.3 Windows installation - WinPython Package
 
 #### 1.3.1 Install MagPy for Windows
 
-  - get the [MagPy Windows installer] here (under Downloads): 
+  - get the [MagPy Windows installer] here (under Downloads):
         https://cobs.zamg.ac.at
   - download and execute magpy-x.x.x.exe
   - all required packages are included in the installer
@@ -119,7 +119,7 @@ Open Finder and search for your script "xmagpy". Copy it to the desktop. To chan
 
   - MagPy will have a sub-folder in the Start menu. Here you will find three items:
 
-        * command -> opens a DOS shell within the Python environment e.g. for updates 
+        * command -> opens a DOS shell within the Python environment e.g. for updates
         * python  -> opens a python shell ready for MagPy
         * xmagpy  -> opens the MagPy graphical user interface
 
@@ -162,8 +162,8 @@ Open Finder and search for your script "xmagpy". Copy it to the desktop. To chan
 
             >>> docker logs magpy
 
-          will show the token 
-     - run python shell (not conda) 
+          will show the token
+     - run python shell (not conda)
      - in python shell
 
             >>> %matplotlib inline
@@ -177,9 +177,9 @@ Open Finder and search for your script "xmagpy". Copy it to the desktop. To chan
 ### 1.6 Install from source
 
 Requirements:
-  - Python 2.7, 3.x (recommended is >=3.6) 
+  - Python 2.7, 3.x (recommended is >=3.6)
 
-Recommended: 
+Recommended:
   - Python packages:
     * wxpython (for python2.7 it needs to be 3.x or older)
     * NasaCDF (python 2.7 only)
@@ -205,9 +205,9 @@ MagPy's functionality can be accessed basically in three different ways:
     2) Run the graphical user interface xmagpy (xmagpyw for Mac)
     3) Use predefined applications "Scripts"
 
-The following section will primarily deal with way 1. 
+The following section will primarily deal with way 1.
 For 2 - xmagpy - we refer to the video tutorials whcih can be found here:
-Section 3 contains examples for predefined applications/scripts 
+Section 3 contains examples for predefined applications/scripts
 
 ### 2.1 Getting started with the python package
 
@@ -233,8 +233,8 @@ MagPy supports the following data formats and thus conversions between them:
    - POS1: 	POS-1 binary output
    - BLV: 	Baseline format Intermagnet
    - IYFV: 	Yearly mean format Intermagnet
-   
-... and many others. To get a full list, use: 
+
+... and many others. To get a full list, use:
 
         from magpy.stream import *
         print(PYMAG_SUPPORTED_FORMATS)
@@ -244,7 +244,7 @@ You will find several example files provided with MagPy. The `cdf` file is store
 If you do not have any geomagnetic data file you can access example data by using the following command (after `import *`):
 
         data = read(example1)
-        
+
 The data from `example1` has been read into a MagPy *DataStream* (or *stream*) object. Most data processing routines in MagPy are applied to data streams.
 
 Several example data sets are provided within the MagPy package:
@@ -252,7 +252,7 @@ Several example data sets are provided within the MagPy package:
    - `example1`: [IAGA] ZIP (IAGA2002, zip compressed) file with 1 second HEZ data
    - `example2`: [MagPy] Archive (CDF) file with 1 sec F data
    - `example3`: [MagPy] Basevalue (TXT) ascii file with DI and baseline data
-   - `example4`: [INTERMAGNET] ImagCDF (CDF) file with one week of 1 second data 
+   - `example4`: [INTERMAGNET] ImagCDF (CDF) file with one week of 1 second data
    - `example5`: [MagPy] Archive (CDF) raw data file with xyz and supporting data
    - `example6a`: [MagPy] DI (txt) raw data file with DI measurement
    - `example6b`: [MagPy] like 6a to be used with example4
@@ -264,11 +264,11 @@ Several example data sets are provided within the MagPy package:
 
 For a file in the same directory:
 
-        data = read(r'myfile.min') 
+        data = read(r'myfile.min')
 
 ... or for specific paths in Linux:
 
-        data = read(r'/path/to/file/myfile.min') 
+        data = read(r'/path/to/file/myfile.min')
 
 ... or for specific paths in Windows:
 
@@ -323,7 +323,32 @@ Reading data from the INTERMAGNET Webservice:
 
         data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
 
-#### 2.2.4 Selecting timerange
+
+#### 2.2.4 Format-specific options
+
+Some file formats contain multiple data sources and when writing certain archive formats, additional information will bve save in separate files. Below you will find descriptions for such format-specific pecularities.
+
+##### IAF format
+
+The IAF (INTERMAGNET archive format) contains 1-minute data along with filtered 1-hour data and daily averages. Typically components X,Y,Z and delta F (G) values are provided. Beside the geomagnetic components, the K indicies (3 hour resolution) are also contained within  the IAF structure.
+When reading IAF data, by default only the 1-minute data is loaded. If you want to access other resolutions data or K values you can use the following "resolution" options (hour, day, k) while reading (please note: XMagPy only allows for reading minute data):
+
+        data = read('/path/to/IAF/*.bin', resolution='hour')
+
+When writing IAF data, you need to provide 1-minute geomagnetic data covering at least one month. Hourly means, daily averages and, if not provided, k values are automatically determined using IAGA/IM recommendations and saved within the IAF structure. You can however provide k values also using an independent data stream with such data:
+
+        data.write('/path/to/export/IAF/', kvals=k_datastream)
+
+Additionally a README.IMO file will be created and filled with existing meta information. If at least on year of 1-minute data is written, then also a DKA file will be created containing K values separatly. Please checkout INTERMAGNET format specifications for further details on DKA, README and IAF formats.   
+
+##### IMF format
+
+The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI (for Edinbourgh). To change that use the "gin" option.
+
+        data.write('/path/to/export/IMF/', gin="GOL")
+
+
+#### 2.2.5 Selecting timerange
 
 The stream can be trimmed to a specific time interval after reading by applying the trim method, e.g. for a specific month:
 
@@ -361,13 +386,13 @@ Custom loggers can be defined by creating a logger object after importing MagPy 
 
         from magpy.stream import *
         import logging
-        
+
         logger = logging.getLogger()
         hdlr = logging.FileHandler('testlog.log')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
-        
+
 The logger can also be configured to print to shell (stdout, without formatting):
 
         import sys
@@ -376,7 +401,7 @@ The logger can also be configured to print to shell (stdout, without formatting)
         logger.addHandler(stdoutlog)
 
 
-### 2.4 Plotting 
+### 2.4 Plotting
 
 You will find some example plots at the [Conrad Observatory](http://www.conrad-observatory.at).
 
@@ -390,7 +415,7 @@ You will find some example plots at the [Conrad Observatory](http://www.conrad-o
 Select specific keys to plot:
 
         mp.plot(data,variables=['x','y','z'])
-        
+
 Defining a plot title and specific colors (see `help(mp.plot)` for list and all options):
 
         mp.plot(data,variables=['x','y'],plottitle="Test plot",
@@ -403,7 +428,7 @@ Various datasets from multiple data streams will be plotted above one another. P
         mp.plotStreams([data1,data2],[['x','y','z'],['f']])
 
 
-### 2.5 Flagging data 
+### 2.5 Flagging data
 
 The flagging procedure allows the observer to mark specific data points or ranges. Falgs are useful for labelling data spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a type number. The flagtype number ranges between 0 and 4:
 
@@ -412,7 +437,7 @@ The flagging procedure allows the observer to mark specific data points or range
   - 2:  data marked by observer as valid geomagnetic signature (e.g. storm onset, pulsation). Such data cannot be marked invalid by automated procedures
   - 3:  data marked by observer as invalid (e.g. lightning, magnetic disturbance)
   - 4:  merged data (e.g. data inserted from another source/instrument as defined in the comment)   
-        
+
 Flags can be stored along with the data set (requires CDF format output) or separately in a binary archive. These flags can then be applied to the raw data again, ascertaining perfect reproducibility.
 
 
@@ -435,8 +460,8 @@ Show flagged data in a plot:
 
 Flag a certain time range:
 
-        flaglist = flaggeddata.flag_range(keys=['f'], starttime='2012-08-02T04:33:40', 
-                                          endtime='2012-08-02T04:44:10', 
+        flaglist = flaggeddata.flag_range(keys=['f'], starttime='2012-08-02T04:33:40',
+                                          endtime='2012-08-02T04:44:10',
                                           flagnum=3, text="iron metal near sensor")
 
 Apply these flags to the data:
@@ -482,13 +507,13 @@ For some analyses it is necessary to use "clean" data, which can be produced by 
         mp.plot(cleandata, ['f'], plottitle='Flagged data dropped')
 
 
-### 2.6 Basic methods 
+### 2.6 Basic methods
 
 #### 2.6.1 Filtering
 
 MagPy's `filter` uses the settings recommended by [IAGA]/[INTERMAGNET]. Ckeck `help(data.filter)` for further options and definitions of filter types and pass bands.
 
-First, get the sampling rate before filtering in seconds: 
+First, get the sampling rate before filtering in seconds:
 
         print("Sampling rate before [sec]:", cleandata.samplingrate())
 
@@ -496,7 +521,7 @@ Filter the data set with default parameters (`filter` automatically chooses the 
 
         filtereddata = cleandata.filter()
 
-Get sampling rate and filtered data after filtering (please note that all filter information is added to the data's meta information dictionary (data.header): 
+Get sampling rate and filtered data after filtering (please note that all filter information is added to the data's meta information dictionary (data.header):
 
         print("Sampling rate after [sec]:", filtereddata.samplingrate())
         print("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
@@ -519,7 +544,7 @@ If the data file contains xyz (hdz, idf) data and an independently measured f va
 Mean values for certain data columns can be obtained using the `mean` method. The mean will only be calculated for data with the percentage of valid data (in contrast to missing data) points not falling below the value given by the percentage option (default 95). If too much data is missing, then no mean is calulated and the function returns NaN.
 
         print(cleandata.mean('df', percentage=80))
-        
+
 The median can be calculated by defining the `meanfunction` option:
 
         print(cleandata.mean('df', meanfunction='median'))
@@ -552,7 +577,7 @@ Time derivatives, which are useful to identify outliers and sharp changes, are c
 
 
 #### 2.6.9 All methods at a glance
-        
+
 For a summary of all supported methods, see the section **List of all MagPy methods** below.
 
 
@@ -560,7 +585,7 @@ For a summary of all supported methods, see the section **List of all MagPy meth
 
 #### 2.7.1 Determination of K indices
 
-MagPy supports the FMI method for determination of K indices. Please consult the MagPy publication for details on this method and application. 
+MagPy supports the FMI method for determination of K indices. Please consult the MagPy publication for details on this method and application.
 
 A month of one minute data is provided in `example2`, which corresponds to an [INTERMAGNET] IAF archive file. Reading a file in this format will load one minute data by default. Accessing hourly data and other information is described below.
 
@@ -573,7 +598,7 @@ The determination of K values will take some time as the filtering window is dyn
                        specialdict = [{},{'var1':[0,9]}],
                        symbollist=['-','z'],
                        bartrange=0.06)
-        
+
 `'z'` in `symbollist` refers to the second subplot (K), which should be plotted as bars rather than the standard line (`'-'`).
 
 
@@ -588,7 +613,7 @@ Geomagnetic storm detection is supported by MagPy using two procedures based on 
         stormdata = stormdata.smooth('x', window_len=25)
         detection, ssc_list = seekStorm(stormdata, method="MODWT")
         print("Possible SSCs detected:", ssc_list)
-        
+
 The method `seekStorm` will return two variables: `detection` is True if any detection was made, while `ssc_list` is a list of dictionaries containing data on each detection. Note that this method alone can return a long list of possible SSCs (most incorrectly detected), particularly during active storm times. It is most useful when additional restrictions based on satellite solar wind data apply (currently only optimised for ACE data, e.g. from the NOAA website):
 
         satdata_ace_1m = read('20150317_ace_swepam_1m.txt')
@@ -611,11 +636,11 @@ A common and important application used in the geomagnetism community is a gener
 
 A) Validity of data formats, e.g.:
 
-        data = read('myiaffile.bin', debug=True) 
+        data = read('myiaffile.bin', debug=True)
 
 B) Completeness of meta-information
 
-C) Conformity of applied techniques to respective rules 
+C) Conformity of applied techniques to respective rules
 
 D) Internal consistency of data
 
@@ -624,14 +649,14 @@ E) Optional: regional consistency
 
 #### 2.7.5 Spectral Analysis and Noise
 
-For analysis of the spectral content of data, MagPy provides two basic plotting methods. `plotPS` will calculate and display a power spectrum of the selected component. `plotSpectrogram` will plot a spectrogram of the time series. As usual, there are many options for plot window and processing parameters that can be accessed using the help method. 
- 
+For analysis of the spectral content of data, MagPy provides two basic plotting methods. `plotPS` will calculate and display a power spectrum of the selected component. `plotSpectrogram` will plot a spectrogram of the time series. As usual, there are many options for plot window and processing parameters that can be accessed using the help method.
+
         data = read(example1)
         mp.plotPS(data,key='f')
         mp.plotSpectrogram(data,['f'])
 
 
-### 2.8 Handling multiple streams 
+### 2.8 Handling multiple streams
 
 #### 2.8.1 Merging streams
 
@@ -677,7 +702,7 @@ If you want to have a more readable list of the header information, do:
 #### 2.9.1 Conversion to ImagCDF - Adding meta-information
 
 To convert data from [IAGA] or IAF formats to the new [INTERMAGNET] CDF format, you will usually need to add additional meta-information required for the new format. MagPy can assist you here, firstly by extracting and correctly adding already existing meta-information into newly defined fields, and secondly by informing you of which information needs to be added for producing the correct output format.
- 
+
 Example of IAGA02 to ImagCDF:
 
         mydata = read('IAGA02-file.min')
@@ -705,7 +730,7 @@ Similar reminders to fill out complete header information will be shown for othe
         mydata.write('/tmp',format_type='WDC')
 
 
-#### 2.9.2 Providing location data 
+#### 2.9.2 Providing location data
 
 Providing location data usually requires information on the reference system (ellipsoid,...). By default MagPy assumes that these values are provided in WGS84/WGS84 reference system. In order to facilitate most easy referencing and conversions, MagPy supports [EPSG] codes for coordinates. If you provide the geodetic references as follows, and provided that the [proj4] Python package is available, MagPy will automatically convert location data to the requested output format (currently WGS84).
 
@@ -717,7 +742,7 @@ Providing location data usually requires information on the reference system (el
         >>>writeIMAGCDF: converting coordinates to epsg 4326
         >>>...
 
-#### 2.9.3 Special meta-information fields 
+#### 2.9.3 Special meta-information fields
 
 The meta-information fields can hold much more information than required by most output formats. This includes basevalue and baseline parameters, flagging details, detailed sensor information, serial numbers and much more. MagPy makes use of these possibilities. In order to save this meta-information along with your data set you can use MagPy internal archiving format, `PYCDF`, which can later be converted to any of the aforementioned output formats. You can even reconstruct a full data base. Any upcoming meta-information or output request can be easily added/modified without disrupting already existing data sets and the ability to read and analyse old data. This data format is also based on Nasa CDF. ASCII outputs are also supported by MagPy, of which the `PYSTR` format also contains all meta information and `PYASCII` is the most compact. Please consider that ASCII formats require a lot of memory, especially for one second and higher resolution data.
 
@@ -726,7 +751,7 @@ The meta-information fields can hold much more information than required by most
 
 
 
-### 2.10 Data transfer 
+### 2.10 Data transfer
 
 MagPy contains a number of methods to simplify data transfer for observatory applications. Methods within the basic Python functionality can also be very useful. Using the implemented methods requires:
 
@@ -741,7 +766,7 @@ Use the `read` method as outlined above. No additional imports are required.
 Files can also be uploaded to an FTP server:
 
         mt.ftpdatatransfer(localfile='/path/to/data.cdf',ftppath='/remote/directory/',myproxy='ftpaddress or address of proxy',port=21,login='user',passwd='passwd',logfile='/path/mylog.log')
-        
+
 The upload methods using FTP, SCP and GIN support logging. If the data file failed to upload correctly, the path is added to a log file and, when called again, upload of the file is retried. This option is useful for remote locations with unstable network connections.
 
 #### 2.10.3 Secure communication protocol (SCP)
@@ -767,12 +792,12 @@ Credentials will be saved to a hidden file with encrypted passwords. To add info
         mpcred.cc('transfer', 'MyRemoteFTP', user='user', passwd='secure', address='192.168.0.99', port=21)
 
 Extracting passwd information within your data transfer scripts:
- 
+
         user = mpcred.lc('MyRemoteFTP', 'user')
         password = mpcred.lc('MyRemoteFTP','passwd')
 
 
-### 2.11 DI measurements, basevalues and baselines 
+### 2.11 DI measurements, basevalues and baselines
 
 These procedures require an additional import:
 
@@ -870,7 +895,7 @@ The `baseline` method will determine and return a fit function between the two g
         corrdata = rawdata.bc()
 
 
-Pease note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt). 
+Pease note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
 
 
 If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and combine the resulting baseline functions to  a list:
@@ -900,7 +925,7 @@ Getting dailymeans and correction for scalar baseline can be acomplished by:
         meanstream = stream.dailymeans()
         meanstream = meanstream.func2stream(scalarbasefunc,mode='sub',keys=['f'],fkeys=['df'])
         meanstream = meanstream.delta_f()
- 
+
 Please note that here the function originally determined from the deltaF (df) values of the basevalue data needs to be applied to the F column (f) from the data stream. Before saving we will also extract the baseline parameters from the meta information, which is automatically generated by the `baseline` method.
 
         absinfo = stream.header.get('DataAbsInfo','')
@@ -913,28 +938,28 @@ The following will create a BLV file:
 
         basevalues.write('/my/path', coverage='all', format_type='BLV', diff=meanstream, year='2016', absinfo=absinfo, deltaF=fabsinfo)
 
-Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched above. 
+Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched above.
 
 
 ### 2.12 Database support
 
-MagPy supports database access and many methods for optimizing data treatment in connection with databases. Among many other benefits, using a database simplifies many typical procedures related to meta-information. Currently, MagPy supports [MySQL] databases. To use these features, you need to have MySQL installed on your system. In the following we provide a brief outline of how to set up and use this optional addition. Please note that a proper usage of the database requires sensor-specific information. In geomagnetism, it is common to combine data from different sensors into one file structure. In this case, such data needs to remain separate for database usage and is only combined when producing [IAGA]/[INTERMAGNET] definitive data. Furthermore, unique sensor information such as type and serial number is required. 
+MagPy supports database access and many methods for optimizing data treatment in connection with databases. Among many other benefits, using a database simplifies many typical procedures related to meta-information. Currently, MagPy supports [MySQL] databases. To use these features, you need to have MySQL installed on your system. In the following we provide a brief outline of how to set up and use this optional addition. Please note that a proper usage of the database requires sensor-specific information. In geomagnetism, it is common to combine data from different sensors into one file structure. In this case, such data needs to remain separate for database usage and is only combined when producing [IAGA]/[INTERMAGNET] definitive data. Furthermore, unique sensor information such as type and serial number is required.
 
         import magpy import database as mdb
 
 
 #### 2.12.1 Setting up a MagPy database (using MySQL)
 
-Open mysql (e.g. Linux: `mysql -u root -p mysql`) and create a new database. Replace `#DB-NAME` with your database name (e.g. `MyDB`). After creation, you will need to grant priviledges to this database to a user of your choice. Please refer to official MySQL documentations for details and further commands. 
+Open mysql (e.g. Linux: `mysql -u root -p mysql`) and create a new database. Replace `#DB-NAME` with your database name (e.g. `MyDB`). After creation, you will need to grant priviledges to this database to a user of your choice. Please refer to official MySQL documentations for details and further commands.
 
-         mysql> CREATE DATABASE #DB-NAME; 
+         mysql> CREATE DATABASE #DB-NAME;
          mysql> GRANT ALL PRIVILEGES ON #DB-NAME.* TO '#USERNAME'@'%' IDENTIFIED BY '#PASSWORD';
 
 
 #### 2.12.2 Initializing a MagPy database
 
 Connecting to a database using MagPy is done using following command:
-        
+
         db = mdb.mysql.connect(host="localhost",user="#USERNAME",passwd="#PASSWORD",db="#DB-NAME")
         mdb.dbinit(db)
 
@@ -960,7 +985,7 @@ All available meta-information will be added automatically to the relevant datab
 
 To read data from an established database:
 
-        data = mdb.readDB(db,'GSM90_12345_0002') 
+        data = mdb.readDB(db,'GSM90_12345_0002')
 
 Options e.g. starttime='' and endtime='' are similar as for normal `read`.
 
@@ -988,11 +1013,11 @@ Automated analysis can e easily accomplished by adding a series of MagPy command
         # check some arbitray threshold
         analysisdict.check({'data_threshold_f_GSM90': [mean_f,'>',20000]})
 
-If provided criteria are invalid, then the logfile is changed accordingly. This method can assist you particularly in checking data actuality, data contents, data validity, upload success, etc. In combination with an independent monitoring tool like [Nagios], you can easily create mail/SMS notfications of such changes, in addition to monitoring processes, live times, disks etc. [MARCOS] comes along with some instructions on how to use Nagios/MagPy for data acquisition monitoring. 
+If provided criteria are invalid, then the logfile is changed accordingly. This method can assist you particularly in checking data actuality, data contents, data validity, upload success, etc. In combination with an independent monitoring tool like [Nagios], you can easily create mail/SMS notfications of such changes, in addition to monitoring processes, live times, disks etc. [MARCOS] comes along with some instructions on how to use Nagios/MagPy for data acquisition monitoring.
 
 ### 2.14 Data acquisition support
 
-MagPy contains a couple of packages which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere. 
+MagPy contains a couple of packages which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere.
 
 
 ### 2.15 Graphical user interface
@@ -1003,7 +1028,7 @@ To use this check the installation instructions for your operating system. You w
 
 ### 2.16 Current developments
 
-#### 2.16.1 Exchange data objects with [ObsPy] 
+#### 2.16.1 Exchange data objects with [ObsPy]
 
 MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data objects of both python packages are very similar. Note: ObsPy assumes regular spaced time intervals. Please be careful if this is not the case with your data. The example below shows a simple import routine, on how to read a seed file and plot a spectrogram (which you can identically obtain from ObsPy as well). Conversions to MagPy allow for vectorial analyses, and geomagnetic applications. Conversions to ObsPy are useful for effective high frequency analysis, requiring evenly spaced time intervals, and for exporting to seismological data formats.
 
@@ -1012,7 +1037,7 @@ MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data 
         magpydata = obspy2magpy(seeddata,keydict={'ObsPyColName': 'x'})
         mp.plotSpectrogram(magpydata,['x'])
 
-Possible issues with MagPy and ObsPy on the same machine as obspy requires specific, eventually conflicting scipy/numpy packages: 
+Possible issues with MagPy and ObsPy on the same machine as obspy requires specific, eventually conflicting scipy/numpy packages:
 If you observe such problems, consider installing ObsPy via APT
 
   https://github.com/obspy/obspy/wiki/Installation-on-Linux-via-Apt-Repository
@@ -1030,7 +1055,7 @@ Using essential python3 packages from apt is also useful, if dependency problems
         mp.plot(flaggeddata,['f'],annotate=True)
         flaggeddata.write(tmpdir,format_type='IMAGCDF',addflags=True)
 
-The `addflags` option denotes that flagging information will be added to the ImagCDF format. Please note that this is still under development and thus content and format specifications may change. So please use it only for test purposes and not for archiving. To read and view flagged ImagCDF data, just use the normal read command, and activate annotation for plotting. 
+The `addflags` option denotes that flagging information will be added to the ImagCDF format. Please note that this is still under development and thus content and format specifications may change. So please use it only for test purposes and not for archiving. To read and view flagged ImagCDF data, just use the normal read command, and activate annotation for plotting.
 
         new = read('/tmp/cnb_20120802_000000_PT1S_1.cdf')
         mp.plot(new,['f'],annotate=True)
@@ -1090,8 +1115,8 @@ Used to store encrypted credential information for automatic data transfer. So t
 
 
 a) Add information for ftp data transfer. This information is encrypted and can be accessed by referring to the shortcut "zamg".
- 
-        addcred -t transfer -c zamg -u max -p geheim 
+
+        addcred -t transfer -c zamg -u max -p geheim
                   -a "ftp://ftp.remote.ac.at" -l 21
 
 ## 4. List of all MagPy methods
@@ -1202,7 +1227,7 @@ Please use the help method (section 2.3) for descriptions and return values.
 | stream | **linestruct2ndarray** | self |
 | stream | **mean** | self, key, **kwargs |
 | stream | **missingvalue** | self,v,window_len,threshold=0.9,fill='mean' |
-| stream | **MODWT_calc** | self,key='x',wavelet='haar',level=1,plot=False,outfile=None | 
+| stream | **MODWT_calc** | self,key='x',wavelet='haar',level=1,plot=False,outfile=None |
 | stream | **multiply** | self, factors, square=False |
 | stream | **offset** | self, offsets, **kwargs |
 | stream | **plot** | self, keys=None, debugmode=None, **kwargs |

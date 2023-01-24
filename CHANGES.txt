@@ -6,9 +6,14 @@ Installation instructions can be found on the main download page.
 
 1.1.2 general:
     + temporary files (i.e. unzip) are deleted after reading
+    + added IAF read/write descriptions to README
+
+1.1.2 additions:
+    + IAF export will calculate K values if not provided
 
 1.1.2 fixes:
     + definitive data check has been corrected und updated (full analysis)
+    + IAF export will write README, and in case of one year, DKA files
 
 ####v<1.1.1>, <2022-09-19> --
 
