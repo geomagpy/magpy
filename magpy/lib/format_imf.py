@@ -2244,7 +2244,7 @@ def readBLV(filename, headonly=False, **kwargs):
                 # data info
                 starfound.append('*')
                 if len(starfound) > 1: # Comment section starts here
-                    tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray]))
+                    tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray],dtype=object))
                     func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                     func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                     funclist.append(func1)
@@ -2269,7 +2269,7 @@ def readBLV(filename, headonly=False, **kwargs):
     headers['DataType'] = 'MagPyDI0.1'
     headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)
 
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 def writeBLV(datastream, filename, **kwargs):

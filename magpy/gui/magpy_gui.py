@@ -209,8 +209,8 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
                          'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
                          'commands':{} },
                                       'conrad': {
-                         'magnetism':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['iaga2002', 'json'],'ids':['WIC', 'GAM', 'SWA', 'SGO'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
-                         'meteorology':{'address':'https://cobs.zamg.ac.at/data/webservice/query.php','format':['ascii', 'json'],'ids':['WIC', 'SGO'],'sampling':['60'],'type':['adjusted']},
+                         'magnetism':{'address':'https://cobs.zamg.ac.at/gsa/webservice/query.php','format':['iaga2002', 'json', 'csv'],'ids':['WIC', 'GAM', 'SWZ'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
+                         'meteorology':{'address':'https://cobs.zamg.ac.at/gsa/webservice/query.php','format':['ascii', 'json', 'csv'],'ids':['WIC', 'SGO'],'sampling':['60'],'type':['adjusted']},
                          'commands':{'format':'of'} },
                                       'intermagnet': {
                          'magnetism':{'address':'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices','format':['iaga2002'],'ids':['WIC','ABK','AIA','API','ARS','ASC','ASP','BDV','BEL','BFE','BFO','CKI','CNB','CNH','CPL','CSY','CTA','CYG','DOU','ESK','EY2','EYR','FUR','GAN','GCK','GNA','GNG','GZH','HAD','HBK','HER','HLP','HRN','HUA','HYB','IRT','ISK','IZN','JCO','KDU','KEP','KHB','KIV','KMH','LER','LON','LRM','LVV','LYC','MAB','MAW','MCQ','MGD','MZL','NCK','NGK','NUR','NVS','ORC','PAG','PEG','PET','PIL','PST','SBA','SBL','SOD','SON','THY','TSU','UPS','VAL','WMQ','WNG','YAK'],'elements':'X,Y,Z,F','sampling':['minute','second'],'type':['adj-or-rep']},
@@ -2546,6 +2546,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
         if success:
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
+            print ("HERE", stream.header)
             if self.InitialRead(stream):
                 self.OnInitialPlot(self.plotstream)
             saveini(self.options)

@@ -42,7 +42,7 @@ def splittexttolines(text, linelength):
     EXAMPLE:
         comment = "De Bello Gallico\nJulius Caesar\nGallia est omnis divisa in partes tres, quarum unam incolunt Belgae, aliam Aquitani, tertiam qui ipsorum lingua Celtae, nostra Galli appellantur. Hi omnes lingua, institutis, legibus inter se differunt. Gallos ab Aquitanis Garumna flumen, a Belgis Matrona et Sequana dividit. Horum omnium fortissimi sunt Belgae, propterea quod a cultu atque humanitate provinciae longissime absunt, minimeque ad eos mercatores saepe commeant atque ea quae ad effeminandos animos pertinent important, proximique sunt Germanis, qui trans Rhenum incolunt, quibuscum continenter bellum gerunt. Qua de causa Helvetii quoque reliquos Gallos virtute praecedunt, quod fere cotidianis proeliis cum Germanis contendunt, cum aut suis finibus eos prohibent aut ipsi in eorum finibus bellum gerunt. Eorum una, pars, quam Gallos obtinere dictum est, initium capit a flumine Rhodano, continetur Garumna flumine, Oceano, finibus Belgarum, attingit etiam ab Sequanis et Helvetiis flumen Rhenum, vergit ad septentriones."
         output = splittexttolines(comment, 64)
-    """ 
+    """
     newline = ''
     linelst = text.split('\n')
     output = []
@@ -321,11 +321,22 @@ def readIAGA(filename, headonly=False, **kwargs):
 
     fh.close()
 
-    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min 
+    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min
     # and numerical publevel
     #  IAGA code
     try:
-        tmp, fileext = os.path.splitext(filename)
+        # if path is a url the following will not be optimal
+        fileext = ""
+        if filename.find("sampling_period") > 0:
+            fsp = filename.split("sampling_period=")
+            if fsp[1].startswith("60"):
+                fileext = "min"
+            if fsp[1].startswith("1"):
+                fileext = "sec"
+            if fsp[1].startswith("3600"):
+                fileext = "hou"
+        elif filename.count(".") == 1 and len(filename) < 30 and not filename.find("&")>-1:
+            tmp, fileext = os.path.splitext(filename)
         stream.header['SensorID'] = stream.header.get('StationIAGAcode','NoCode').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
     except:
         pass
@@ -423,7 +434,7 @@ def writeIAGA(datastream, filename, **kwargs):
         datacomp = datacomp+'G'
     elif favail and useg:
         datacomp = datacomp+'G'
-    else: 
+    else:
         datacomp = datacomp+'F'
 
     """
@@ -504,7 +515,7 @@ def writeIAGA(datastream, filename, **kwargs):
 
         sf = header.get('DataSamplingFilter','')
         sflist = sf.split()
-       
+
         if len(sflist) > 3:
             #try:
             filtercomment = '{} filter with {} {} passband{}'.format(sflist[0],sflist[-2],sflist[-1],filteradd)
