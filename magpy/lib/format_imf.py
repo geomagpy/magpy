@@ -3292,7 +3292,7 @@ def readDKA(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'MagPyK'
 
     array = [np.asarray(ar) for ar in array]
-    stream = DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
     # Eventually add trim
     return stream

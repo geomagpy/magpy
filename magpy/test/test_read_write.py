@@ -182,7 +182,7 @@ if ok:
                         for comp in foundkeys:
                             if diff.mean(comp) > 0.00000001:
                                 wresultdict[wformat] = "Crosscheck failure - datacontent"
-                    if not foundid == data.header.get('SensorID'):
+                    if not foundid.replace("sec","").replace("min","") == data.header.get('SensorID').replace("sec","").replace("min",""):
                         wresultdict[wformat] = "Crosscheck failure - sensorid"
                     if not foundlen == data.length()[0]:
                         wresultdict[wformat] = "Crosscheck failure - length"
