@@ -82,15 +82,23 @@ Then copy this file to the systems application folder:
 #### 1.2.2 Install MagPy within an anaconda environment
 
 Open a terminal and create a python environment with packages for magpy which supports wxpython:
+
         $ conda create -n magpy wxpython
+
 Switch into this environment:
+
         $ conda activate magpy
+
 Install some basic packages required for MagPy:
+
         $ conda install numpy matplotlib scipy
+
 and MagPy:
+
         $ pip install geomagpy
 
 You can now run XMagPy from the terminal by using the following command
+
         $ xmagpyw
 
 #### 1.2.3 Creating a desktop link
