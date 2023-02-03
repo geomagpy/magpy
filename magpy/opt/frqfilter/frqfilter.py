@@ -29,6 +29,16 @@ print( 'pyplot imported as plt for debugging purposes')
 
 class FrqFilter:
     """
+    FrqFilter, V1.5
+    
+    
+    Implemented lbub-filter type ( lower boundary upper boundary filter
+    with exponential decay on both sides defineable through lower bound frq lb
+    , upper bound frq ub and damping decrement de). Frequencies and Periods are
+    supported but have to mentioned by PeriodAxis = True in the calling process
+    .
+    
+    ...
     FrqFilter, V1.4
     
     
@@ -36,6 +46,13 @@ class FrqFilter:
     Change from scale = self.fmin to scale = np.sqrt( self.fmin* self.dt**2.0)
     init scale as self.AmplitudeScale
     on 13.10.2022.
+    
+    
+    Correct linear interpolation inaccuracy by replacing
+    
+    self.t = np.arange( 0, self.len* self.dt, self.dt)
+    
+    with self.t = np.arange( 0, self.len)* self.dt
     
     ...
     FrqFilter, V1.3
@@ -61,7 +78,7 @@ class FrqFilter:
     
     Addtional an average noise level for spectra can be calculated using
     GetNoiseLevel() and the filtered spectra as well as the filtered timeseries'
-    using fqfilter()
+    using frqfilter()
     
     ...
     
@@ -285,9 +302,13 @@ class FrqFilter:
         
         
         
-        fqfilter(): --- under construction ---
+        frqfilter():
             Derives the filtered spectrum as well as the filtered timeseries
-            and returns the filtered "faxis", "fdata", "filter" and "filtdata"
+            and returns the filtered "faxis", "fdata", "filter" and "filtdata".
+            faxis, fdata both are having the appropriate length/ shape
+            according to FFT rules. filter on the contrary can be different in
+            length if field augmentation is True. filtdata is the filtered 
+            data with the same length as the original data used.
         
         
         
@@ -335,12 +356,12 @@ class FrqFilter:
             Two arrays ( MagAnaSig, PhAnaSig) containing the 
             analytical-signal's magnitudes and phase-angles
         
-        filter:  --- under construction ---
+        filter:
             numpy.array
             Array of window for filtering for twosided FFT (neg. and pos. 
             frequencies)
         
-        filtdata:  --- under construction ---
+        filtdata:
             numpy.array
             Array of filtered timeseries'
         
@@ -378,17 +399,19 @@ class FrqFilter:
         
         FrqCont = FrqFilter(data = data, axis = 0, 
                             dt = 10.0, aug = True, 
-                            lbub = ( lb, ub, de), kind = 'pass', rplval = 'linear')
+                            lbub = ( lb, ub, de), kind = 'pass', 
+                            rplval = 'linear')
         
-        faxis, fdata, filter, filtdata = FrqCont.fqfilter()
+        faxis, fdata, filter, filtdata = FrqCont.frqfilter()
         
         
         
         FrqCont = FrqFilter(data = data, axis = 0, 
                             dt = 10.0, aug = True, 
-                            exp = ( ce, de), kind = 'block', rplval = 'linear')
+                            exp = ( ce, de), kind = 'block', 
+                            rplval = 'linear')
         
-        faxis, fdata, filter, filtdata = FrqCont.fqfilter()
+        faxis, fdata, filter, filtdata = FrqCont.frqfilter()
         
         
         
@@ -517,7 +540,8 @@ class FrqFilter:
                         print( 'self.dt is: {}'.format( self.dt))
                     self.len = self.shape[self.axis]
                     self.baklen = self.len
-                    self.t = np.arange( 0, float( self.len)* self.dt, self.dt)
+                    #self.t = np.arange( 0, float( self.len)* self.dt, self.dt)
+                    self.t = np.arange( 0, float( self.len))* self.dt
                     if( self.debug):
                         print( 'self.t is: {}'.format( self.t))
                     self.fnyq = 1.0/ 2.0/ self.dt
@@ -649,6 +673,10 @@ class FrqFilter:
         self.fmin = 1.0/ float( self.len)/ self.dt
         self.fnyq = 1.0/ 2.0/ self.dt
         self.faxis = fft.fftshift( fft.fftfreq( self.len, self.dt))
+        if( self.debug):
+            print( 'self.faxis is: {}'.format( self.faxis))
+            print( 'np.max( np.abs( self.faxis)) is: {}'.format( np.max( np.abs( self.faxis))))
+            print( 'self.fnyq is: {}'.format( self.fnyq))
         poscheck = np.array( self.faxis >= 0.0, dtype = bool)
         posind = np.argwhere( poscheck).flatten()
         self.faxis[posind] = self.faxis[posind] + self.fmin
@@ -680,10 +708,13 @@ class FrqFilter:
         self.negind = np.argwhere( c & d).flatten()#[0]
         if( self.debug):
             print( 'self.faxis is: {}'.format( self.faxis))
+            print( 'np.max( np.abs( self.faxis)) is: {}'.format( np.max( np.abs( self.faxis))))
+            print( 'self.fnyq is: {}'.format( self.fnyq))
             print( 'self.faxis, self.posind, self.negind are: {}, {}, {}'.format( self.faxis, self.posind, self.negind))
-        if( False):
+        if( self.debug):
             print( 'self.faxis is: {}'.format( self.faxis))
             print( 'shapes of self.faxis, self.posind, self.negind are: {}, {}, {}'.format( np.shape( self.faxis), np.shape( self.posind), np.shape( self.negind)))
+        #sys.exit()
         return
     
     
@@ -740,7 +771,8 @@ class FrqFilter:
                                 if( self.debug):
                                     print( 'self.dt is: {}'.format( self.dt))
                                 self.len = self.shape[self.axis]
-                                self.t = np.arange( 0, float( self.len)* self.dt, self.dt)
+                                #self.t = np.arange( 0, float( self.len)* self.dt, self.dt)
+                                self.t = np.arange( 0, float( self.len))* self.dt
                                 if( self.debug):
                                     print( 'self.t is: {}'.format( self.t))
                     except:
@@ -758,6 +790,14 @@ class FrqFilter:
         ###########################
         #print('levels of signal variation which is acceptable:\n\t{}'.format( lvl))
         #chkData = np.gradient( self.data, axis = self.axis)
+        self.shape = np.shape( self.data)
+        #print( 'self.shape', self.shape)
+        self.len = self.shape[self.axis]
+        self.t = np.arange( 0, float( self.len))* self.dt
+        
+        #print( 'self.len', self.len)
+        #print( 'np.shape( self.t)', np.shape( self.t))
+        #sys.exit()
         N, M = np.shape( self.data)
         if( debug):
             print('shape of self.data is: {}x{}'.format( N, M))
@@ -766,6 +806,8 @@ class FrqFilter:
             #Data = self.data.T
             if( debug):
                 print('shape of Data after np.diff is: {}'.format( np.shape( Data)))
+            if( debug):
+                print('self.axis == 0 shape of Data after np.diff is: {}'.format( np.shape( Data)))
             Data = np.hstack( ( Data.T, Data[-1,:])).T
             Data = np.hstack( ( Data[0,:], Data.T)).T
             chkavgs = np.nanmedian( Data, axis = self.axis)
@@ -776,6 +818,8 @@ class FrqFilter:
             #Data = self.data
             if( debug):
                 print('shape of Data after np.diff is: {}'.format( np.shape( Data)))
+            if( debug):
+                print('self.axis == 1 shape of Data after np.diff is: {}'.format( np.shape( Data)))
             Data = np.vstack( ( Data.T, Data[:,-1])).T
             Data = np.vstack( ( Data[:,0], Data.T)).T
             chkavgs = np.nanmedian( Data, axis = self.axis)
@@ -1701,6 +1745,11 @@ class FrqFilter:
         self.fdata = fft.fft( dummy, axis = self.axis)* self.AmplitudeScale # * np.sqrt( self.fmin* self.dt**2.0) # Scaling with np.sqrt( self.fmin* self.dt**2.0) to ensure unit of A/sqrt( Hz)
         #self.fdata = fft.fft( dummy, axis = self.axis) * np.sqrt( self.fmin* self.dt)
         self.fdata = fft.fftshift( self.fdata, axes = self.axis)
+        if( np.argmax( np.shape( self.fdata)) != np.argmax( np.shape( self.data))):
+            print( 'np.shape( self.fdata)', np.shape( self.fdata))
+            print( 'np.shape( self.data)', np.shape( self.data))
+            #sys.exit()
+            self.fdata = self.fdata.T
         if( self.debug):
             print( 'shape of self.fdata is:\t{}'.format( np.shape( self.fdata)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
@@ -2210,17 +2259,10 @@ class FrqFilter:
         self.fmin = 1.0/ float( self.len)/ self.dt
         #self.AmplitudeScale = np.sqrt( self.fmin* self.dt**2.0)
         self.__faxis__()
-        if( False):
-            if( self.PeriodAxis):
-                #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                self.faxis = 1.0/ np.arange( -self.fnyq, self.fnyq, self.fmin)
-                self.posind = np.argwhere( self.faxis >= 1.0/ self.fnyq).flatten()#[0]
-                self.negind = np.argwhere( self.faxis <= -1.0/ self.fnyq).flatten()#[0]
-            else:
-                #self.faxis = np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                self.faxis =  np.arange( -self.fnyq, self.fnyq, self.fmin)
-                self.posind = np.argwhere( self.faxis >= self.fmin)#[0]
-                self.negind = np.argwhere( self.faxis <= self.fmin)#[0]
+
+        ########
+        # pos frequencies
+        ########
         if( self.debug):
             print( 'self.ce is :\t{}'.format( self.ce))
         self.ctrind = np.argmin( np.abs( self.faxis - self.ce))
@@ -2238,6 +2280,9 @@ class FrqFilter:
         tauval = float( N)/2.0 * 8.69/ D # https://en.wikipedia.org/wiki/Window_function from Exponential or Poisson window
         #w = sg.exponential( upperind -lowerind, center = np.argmax( np.abs( fData[:,lowerind:upperind:])), tau = tauval, sym = False) # exponential window function https://en.wikipedia.org/wiki/Window_function
         w = ( sg.exponential( N, center = self.ctrind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+        ########
+        # neg frequencies
+        ########
         self.ctrind = np.argmin( np.abs( self.faxis + self.ce))
         if( self.debug):
             print( 'self.ctrind is:\t{}'.format( self.ctrind))
@@ -2254,25 +2299,26 @@ class FrqFilter:
         #sys.exit()
         if( False):
             w = w + np.hstack( ( np.zeros( ( self.ctrind - 1, ) ), 1.0, np.zeros( ( N - self.ctrind,))))
-        self.fqfilter = w
+        self.frqfilter = w
         if( self.debug):
-            print( 'shape of self.fqfilter is:\t{}'.format( np.shape( self.fqfilter)))
+            print( 'shape of self.frqfilter is:\t{}'.format( np.shape( self.frqfilter)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
-            plt.plot( self.faxis, np.abs( self.fqfilter))
+            plt.plot( self.faxis, np.abs( self.frqfilter))
             plt.grid(True)
             plt.show()
         #self.__myFFTproc__()
         if( self.debug):
-            print( 'shape of self.fqfilter is: {}'.format( np.shape( self.fqfilter)))
+            print( 'shape of self.frqfilter is: {}'.format( np.shape( self.frqfilter)))
             print( 'shape of self.fdata is: {}'.format( np.shape( self.fdata)))
         #scale = self.AmplitudeScale#np.sqrt( self.fmin* self.dt**2.0)
         absfdata = np.abs( self.fdata)# will be done in __myInvFFTProc__ /self.AmplitudeScale#/ scale
         angfdata = np.angle( self.fdata)
+        
         if( self.dim > 1):
-            self.filtfdata = ( absfdata * np.atleast_2d( self.fqfilter).T) * np.exp( 1j* angfdata)
+            self.filtfdata = ( absfdata * np.atleast_2d( self.frqfilter).T) * np.exp( 1j* angfdata)
         else:
-            self.filtfdata = absfdata * self.fqfilter * np.exp( 1j* angfdata)
+            self.filtfdata = absfdata * self.frqfilter * np.exp( 1j* angfdata)
         
         #self.fdataMag = fdata.T
         if( self.debug):
@@ -2280,17 +2326,28 @@ class FrqFilter:
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
             #plt.plot( self.faxis, np.abs( self.filtfdata))
-            plt.loglog( self.faxis[self.posind], np.abs( self.filtfdata[self.posind,:]))
+            plt.loglog( self.faxis[self.posind], np.abs( absfdata[self.posind,:]), 'g', alpha = 0.2)
+            plt.loglog( self.faxis[self.posind], np.abs( self.filtfdata[self.posind,:]), 'r', alpha = 0.2)
+            plt.loglog( self.faxis[self.posind], np.abs( self.frqfilter[self.posind]), 'b', alpha = 0.1)
             plt.grid(True)
             plt.show()
         #self.filtdata = np.real( fft.ifft( fft.ifftshift( self.filtfdata, axes = self.axis), axis = self.axis))#[self.orgStartInd:self.orgEndInd, :]
         self.__myInvFFTProc__()
         #self.filtdata = np.real( fft.ifft( self.filtfdata))[self.orgStartInd:self.orgEndInd, :]
+        if( self.debug):
+            plt.plot( self.augt[self.orgStartInd:self.orgEndInd], self.data.T, 'g', alpha = 0.2)
+            plt.plot( self.augt[self.orgStartInd:self.orgEndInd], self.filtdata[self.orgStartInd:self.orgEndInd], 'r', alpha = 0.2)
+            plt.grid(True)
+            plt.show()
+            #sys.exit()
+        
+        
+        
         return self.augt[self.orgStartInd:self.orgEndInd], self.filtdata
     
     
     
-    def __lbubfilt__( self): # --- under construction ---
+    def __lbubfilt__( self):
         
         #from scipy.signal.windows import dpss
         
@@ -2332,78 +2389,331 @@ class FrqFilter:
         
         """
         self.len = np.shape( self.augt)[self.axis]
-        self.fnyq = 1.0/ 2.0/ self.dt
+        #self.fnyq = 1.0/ 2.0/ self.dt # will be derived in self.__faxis__()
         if( self.debug):
             print( 'self.len is: {}'.format( self.len))
         self.fmin = 1.0/ float( self.len)/ self.dt
         self.__faxis__()
-        if( False):
-            if( self.PeriodAxis):
-                #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                self.faxis = 1.0/ np.arange( -self.fnyq, self.fnyq, self.fmin)
-                self.posind = np.argwhere( self.faxis >= 1.0/ self.fnyq).flatten()#[0]
-                self.negind = np.argwhere( self.faxis <= -1.0/ self.fnyq).flatten()#[0]
-            else:
-                #self.faxis = np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                self.faxis =  np.arange( -self.fnyq, self.fnyq, self.fmin)
-                self.posind = np.argwhere( self.faxis >= self.fmin).flatten()#[0]
-                self.negind = np.argwhere( self.faxis <= self.fmin).flatten()#[0]
+        
         if( self.debug):
+            print( 'self.PeriodAxis is :\t{}'.format( self.PeriodAxis))
             print( 'self.lb is :\t{}'.format( self.lb))
             print( 'self.ub is :\t{}'.format( self.ub))
-        ######
+            print( 'self.faxis', self.faxis)
+            print( 'np.max( np.abs( self.faxis))', np.max( np.abs( self.faxis)))
+            #for f in self.faxis:
+            #    print( f)
+            #sys.exit()
+        
+        
+        
+        
+        if( self.debug):
+            sortind = np.argwhere( self.faxis > 0.0).flatten()
+            
+            print( 'shape of self.faxis[sortind] is:\t{}'.format( np.shape( self.faxis[sortind])))
+            plt.semilogx( np.arange( 0, len( sortind)), self.faxis[sortind], '+')
+            #plt.plot( self.faxis, w)
+            plt.grid(True)
+            plt.show()
+            sys.exit()
+        """
         # pos frequencies
-        ######
-        self.lbind = np.argmin( np.abs( self.faxis - self.lb))
-        self.ubind = np.argmin( np.abs( self.faxis - self.ub))
+        """
+        if( not self.PeriodAxis):
+            self.lbind = np.argmin( np.abs( self.faxis[self.posind] - self.lb))
+            self.ubind = np.argmin( np.abs( self.faxis[self.posind] - self.ub))
+        else:
+            self.lbind = np.argmin( np.abs( self.faxis[self.posind] - self.lb))
+            self.ubind = np.argmin( np.abs( self.faxis[self.posind] - self.ub))            
         if( self.debug):
             print( 'self.lbind is:\t{}'.format( self.lbind))
             print( 'self.ubind is:\t{}'.format( self.ubind))
-        if( self.dim > 1):
-            N, M = np.shape( self.augdata)
-        else:
-            N = np.shape( self.augdata)
+            print( 'self.lb is :\t{}'.format( self.lb))
+            print( 'self.ub is :\t{}'.format( self.ub))
+            sys.exit()
+        
         if( False):
-            w = np.hstack( ( np.zeros( ( self.lbind - 1, ) ), np.ones( ( self.ubind - self.lbind, ) ), np.zeros( ( N - self.ubind,))))
+            if( self.dim > 1):
+                N, M = np.shape( self.augdata)
+            else:
+                N = np.shape( self.augdata)
+        else:
+            if( self.dim > 1):
+                N, M = len( self.faxis[np.argwhere( self.faxis > 0)]), np.shape( self.augdata)[1]
+            else:
+                N = len( self.faxis[np.argwhere( self.faxis > 0)])
         D = np.exp( self.de) # dezibel decay over half of window length
         #w = sg.gaussian( upperind -lowerind, std = 3.0* np.nanstd( np.abs( np.nanmean( fData[:,lowerind:upperind:], axis = 0))))
         #w = np.power( sg.parzen( upperind -lowerind), 4.0)
         tauval = float( N)/2.0 * 8.69/ D # https://en.wikipedia.org/wiki/Window_function from Exponential or Poisson window
         #w = sg.exponential( upperind -lowerind, center = np.argmax( np.abs( fData[:,lowerind:upperind:])), tau = tauval, sym = False) # exponential window function https://en.wikipedia.org/wiki/Window_function
-        w = ( sg.exponential( N, center = self.ubind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-        wmaxind = np.argmax( w)
-        upslope = w[wmaxind:]
+        if( self.debug):
+            print( 'self.ub', self.ub)
+            print( 'self.ubind', self.ubind)
+            print( 'self.lb', self.lb)
+            print( 'self.lbind', self.lbind)
+            #sys.exit()
+        """
+        Upper Slope of exponential window
+        """
+        """
+        Derive the index of self.faxis from the sample closest to 0 Hz/ seconds
+        """
+        if( not self.PeriodAxis):
+            ZeroClosestInd = np.argmin( np.abs( self.faxis[self.posind] - self.fnyq))
+            if( self.debug):
+                print( 'self.fnyq', self.fnyq)
+                print( 'ZeroClosestInd', ZeroClosestInd)
+        else:
+            ZeroClosestInd = np.argmin( np.abs( self.faxis[self.posind] - self.fmin))
+            if( self.debug):
+                print( 'self.fmin', self.fmin)
+                print( 'ZeroClosestInd', ZeroClosestInd)
+
+        """
+        Define an array to determine which index is further away from ZeroClosestInd
+        """
+        windbnds = np.array( [ self.lbind, self.ubind]).flatten()
+        """
+        Find the index which is further away from ZeroClosestInd
+        """
+        if( not self.PeriodAxis):
+            uprbndInd = np.argmin( np.abs( windbnds - ZeroClosestInd))
+        else:
+            uprbndInd = np.argmax( np.abs( windbnds - ZeroClosestInd))
+        
+        """
+        Use this cloest index to derive an exp-window with its peak at this closest index to zero Hertz
+        """
+        w = ( sg.exponential( N, center = windbnds[uprbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+        
+        #wmaxind = np.argmax( np.abs( w))
+        #w = ( sg.exponential( N, center = self.ubind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+        wmaxind = np.argmax( np.abs( w))
+        if( self.debug):
+            w = w/ w[wmaxind]
+            #sortind = np.argsort( self.faxis).flatten()
+            #sortind = np.argwhere( self.faxis > 0.0).flatten()
+            print( 'shape of w is:\t{}'.format( np.shape( w)))
+            print( 'self.faxis[self.posind] is:\t{}'.format( self.faxis[self.posind]))
+            print( 'shape of self.faxis[self.posind] is:\t{}'.format( np.shape( self.faxis[self.posind])))
+            plt.semilogx( self.faxis[self.posind], w)
+            #plt.plot( self.faxis, w)
+            plt.grid(True)
+            plt.show()
+            sys.exit()
+            """
+            !!! self.faxis is starting for PeriodAxis== True  with SI=0.1s from -0.2 decreasing to -200000, jumping to +20000 and decreasing to 0.2 
+            
+            !!! take care during derivation of exponential window
+            """
         
         
-        rect = np.ones( ( self.ubind - self.lbind, ))
-        w = ( sg.exponential( N, center = self.lbind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-        wmaxind = np.argmax( w)
-        lwslope = w[0:wmaxind]
+        """
+        take care if PeriodAxis is used
+        """
+        if( not self.PeriodAxis):
+            selind = np.arange( wmaxind, len( w))
+            upslope = w[selind]
+            if( self.debug):
+                print( 'self.PeriodAxis; indices of w are {}'.format( selind))
+                print( 'upslope is:\t{}'.format( upslope))
+                sys.exit()
+        else:
+            selind = np.arange( 0, wmaxind + 1)
+            upslope = w[selind]
+            if( self.debug):
+                print( 'not self.PeriodAxis; indices of w are {}'.format( selind))
+                print( 'upslope is:\t{}'.format( upslope))
+        posselind = selind
+        if( self.debug):
+            #w = w/ w[wmaxind]
+            sortind = np.argsort( self.faxis[posselind]).flatten()
+            print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
+            print( 'shape of self.faxis[selind] is:\t{}'.format( np.shape( self.faxis[posselind])))
+            plt.semilogx( self.faxis[self.posind][posselind], upslope, '+')
+            #plt.plot( self.faxis[wmaxind:][sortind], upslope)
+            plt.grid(True)
+            plt.show()
+            sys.exit()
+
+        """
+        rectangular window part take care of self.PeriodAxis == True
+        """
+        if( self.debug):
+            print( 'self.ub', self.ub)
+            print( 'self.ubind', self.ubind)
+            print( 'self.lb', self.lb)
+            print( 'self.lbind', self.lbind)
+        if( self.ubind >= self.lbind):
+            rect = np.ones( ( self.ubind - self.lbind - 1, ))
+        else:
+            rect = np.ones( ( self.lbind - self.ubind - 1, ))
+            
+        """
+        Lower slope of exponential window
+        """
+        """
+        Derive the index of self.faxis from the sample closest to 0 Hz/ seconds
+        """
+        #ZeroClosestInd = np.argmin( np.abs( self.faxis - self.fmin))
+        """
+        Define an array to determine which index is closer to ZeroClosestInd
+        """
+        windbnds = np.array( [ self.lbind, self.ubind]).flatten()
+        """
+        Find the index which is closer to ZeroClosestInd
+        """
+        #lwrbndInd = np.argmin( np.abs( windbnds - ZeroClosestInd))
+        if( not self.PeriodAxis):
+            lwrbndInd = np.argmax( np.abs( windbnds - ZeroClosestInd))
+        else:
+            lwrbndInd = np.argmin( np.abs( windbnds - ZeroClosestInd))
+        """
+        Use this cloest index to derive an exp-window with its peak at this closest index to zero Hertz
+        """
+        w = ( sg.exponential( N, center = windbnds[lwrbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
         
-        poswin = np.hstack( ( lwslope, rect, upslope))
+        wmaxind = np.argmax( np.abs( w))
+        
+        if( self.debug):
+            print( 'self.ub', self.ub)
+            print( 'self.ubind', self.ubind)
+            print( 'self.lb', self.lb)
+            print( 'self.lbind', self.lbind)
+            print( 'windbnds[uprbndInd]', windbnds[uprbndInd])
+            print( 'windbnds[lwrbndInd]', windbnds[lwrbndInd])
+            walt = ( sg.exponential( N, center = windbnds[uprbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+            waltmaxind = np.argmax( np.abs( walt))
+            w = w/ w[wmaxind]
+            walt = walt/walt[waltmaxind]
+            #sortind = np.argwhere( self.faxis > 0.0).flatten()
+            print( 'shape of w is:\t{}'.format( np.shape( w)))
+            print( 'shape of walt is:\t{}'.format( np.shape( walt)))
+            print( 'shape of self.faxis[sortind] is:\t{}'.format( np.shape( self.faxis[self.posind])))
+            plt.semilogx( self.faxis[self.posind], w, 'g')
+            plt.semilogx( self.faxis[self.posind], walt, 'r')
+            #plt.plot( self.faxis[sortind], poswin[sortind])
+            plt.grid(True)
+            plt.show()
+            sys.exit()
+        
+        
+        """
+        take care if PeriodAxis is used
+        """
+        #if( not self.PeriodAxis):
+        #    lwslope = w[wmaxind:]
+        #else:
+        #    lwslope = w[0:wmaxind]
+        
+        
+        if( not self.PeriodAxis):
+            selind = np.arange( 0, wmaxind + 1)
+            lwslope = w[selind]
+            if( self.debug):
+                print( 'self.PeriodAxis; indices of w are {}'.format( selind))
+                print( 'upslope is:\t{}'.format( upslope))
+        else:
+            selind = np.arange( wmaxind, len( w))
+            lwslope = w[selind]
+            if( self.debug):
+                print( 'not self.PeriodAxis; indices of w are {}'.format( selind))
+                print( 'upslope is:\t{}'.format( upslope))
+        if( self.debug):
+            #w = w/ w[wmaxind]
+            sortind = np.argwhere( self.faxis[selind]).flatten()
+            print( 'shape of lwslope is:\t{}'.format( np.shape( lwslope)))
+            print( 'shape of self.faxis[self.posind][selind] is:\t{}'.format( np.shape( self.faxis[self.posind][selind])))
+            plt.semilogx( self.faxis[self.posind][selind], lwslope, '+b')
+            sortind = posselind#np.argwhere( self.faxis[posselind]).flatten()
+            print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
+            print( 'shape of self.faxis[selind] is:\t{}'.format( np.shape( self.faxis[sortind])))
+            plt.semilogx( self.faxis[self.posind][sortind], upslope, '+r')
+            #plt.plot( self.faxis[wmaxind:][sortind], upslope)
+            plt.grid(True)
+            plt.show()
+            sys.exit()
+        
+        #poswin = np.hstack( ( lwslope, rect, upslope))
+        if( not self.PeriodAxis):
+            poswin = np.hstack( ( lwslope, rect, upslope))
+        else:
+            poswin = np.hstack( ( upslope, rect, lwslope))
+        
+        #poswin = poswin[posind]
+        
+        
+        if( self.debug):
+            #sortind = np.argwhere( self.faxis > 0.0).flatten()
+            print( 'shape of poswin is:\t{}'.format( np.shape( poswin)))
+            print( 'shape of self.faxis[self.posind] is:\t{}'.format( np.shape( self.faxis[self.posind])))
+            plt.semilogx( self.faxis[self.posind], poswin)
+            #plt.plot( self.faxis[sortind], poswin[sortind])
+            plt.grid(True)
+            plt.show()
+            sys.exit()
+        
+        
+        
         
         
         ######
         # neg frequencies
         ######
-        self.lbind = np.argmin( np.abs( self.faxis + self.lb))
-        self.ubind = np.argmin( np.abs( self.faxis + self.ub))
+        if( False):
+            if( not self.PeriodAxis):
+                self.lbind = np.argmin( np.abs( self.faxis + self.lb))
+                self.ubind = np.argmin( np.abs( self.faxis + self.ub))
+            else:
+                self.lbind = np.argmin( np.abs( self.faxis + self.ub))
+                self.ubind = np.argmin( np.abs( self.faxis + self.lb))            
+            if( self.debug):
+                print( 'self.lbind is:\t{}'.format( self.lbind))
+                print( 'self.ubind is:\t{}'.format( self.ubind))
+            w = ( sg.exponential( N, center = self.ubind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+            wmaxind = np.argmax( np.abs( w))
+            """
+            take care if PeriodAxis is used
+            """
+            if( not self.PeriodAxis):
+                lwslope = w[wmaxind:]
+            else:
+                lwslope = w[0:wmaxind]
+            
+            
+            if( self.ubind >= self.lbind):
+                rect = np.ones( ( self.ubind - self.lbind, ))
+            else:
+                rect = np.ones( ( self.lbind - self.ubind, ))
+            w = ( sg.exponential( N, center = self.lbind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+            wmaxind = np.argmax( np.abs(w))
+            """
+            take care if PeriodAxis is used
+            """
+            if( not self.PeriodAxis):
+                upslope = w[0:wmaxind]
+            else:
+                upslope = w[wmaxind:]
+            
+            negwin = np.hstack( ( lwslope, rect, upslope))
+        else:
+            negwin = poswin[::-1]
+        
         if( self.debug):
-            print( 'self.lbind is:\t{}'.format( self.lbind))
-            print( 'self.ubind is:\t{}'.format( self.ubind))
-        w = ( sg.exponential( N, center = self.ubind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-        wmaxind = np.argmax( w)
-        lwslope = w[0:wmaxind]
+            w = w/ w[wmaxind]
+            sortind = np.argwhere( self.faxis < 0.0).flatten()
+            print( 'shape of poswin is:\t{}'.format( np.shape( poswin)))
+            print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
+            #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
+            plt.plot( self.faxis[sortind], negwin)
+            plt.grid(True)
+            plt.show()
+            sys.exit()
         
-        
-        rect = np.ones( ( self.lbind - self.ubind, ))
-        w = ( sg.exponential( N, center = self.lbind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-        wmaxind = np.argmax( w)
-        upslope = w[wmaxind:]
-        
-        negwin = np.hstack( ( lwslope, rect, upslope))
-        
-        w = poswin + negwin
+        #w = poswin + negwin
+        w = np.hstack( ( negwin, poswin))
         w = w/ np.nanmax( w)
         if( self.kind == 'block'):
             w = np.ones( np.shape( w)) - w
@@ -2413,27 +2723,41 @@ class FrqFilter:
             print( '\n\n\nWrong input for "kind"-option...stopping')
             return
         #sys.exit()
-        if( False):
-            w = w + np.hstack( ( np.zeros( ( self.ctrind - 1, ) ), 1.0, np.zeros( ( N - self.ctrind,))))
-        self.fqfilter = w
+        #if( False):
+        #    w = w + np.hstack( ( np.zeros( ( self.ctrind - 1, ) ), 1.0, np.zeros( ( N - self.ctrind,))))
+        self.frqfilter = w
+        
         if( self.debug):
-            print( 'shape of self.fqfilter is:\t{}'.format( np.shape( self.fqfilter)))
+            print( 'shape of self.frqfilter is:\t{}'.format( np.shape( self.frqfilter)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
+            sortind = np.argsort( self.faxis).flatten()
+            sortind = np.argwhere( self.faxis).flatten()
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
-            plt.plot( self.faxis, np.abs( self.fqfilter))
+            #plt.semilogx( self.faxis - np.min( self.faxis), np.abs( self.frqfilter))
+            plt.plot( self.faxis[sortind], np.abs( self.frqfilter)[sortind])
             plt.grid(True)
             plt.show()
+            sys.exit()
+        
         self.__myFFTproc__()
         if( self.debug):
-            print( 'shape of self.fqfilter is: {}'.format( np.shape( self.fqfilter)))
+            print( 'shape of self.frqfilter is: {}'.format( np.shape( self.frqfilter)))
             print( 'shape of self.fdata is: {}'.format( np.shape( self.fdata)))
         #scale = self.AmplitudeScale#np.sqrt( self.fmin* self.dt**2.0)
         absfdata = np.abs( self.fdata)# will be done in __myInvFFTProc__ /self.AmplitudeScale
         angfdata = np.angle( self.fdata)
+        if( self.debug):
+            print( 'shape of self.frqfilter is: {}'.format( np.shape( self.frqfilter)))
+            print( 'shape of self.fdata is: {}'.format( np.shape( self.fdata)))
+            print( 'shape of absfdata is: {}'.format( np.shape( absfdata)))
+            print( 'shape of angfdata is: {}'.format( np.shape( angfdata)))
         if( self.dim > 1):
-            self.filtfdata = ( absfdata * np.atleast_2d( self.fqfilter).T) * np.exp( 1j* angfdata)
+            try:
+                self.filtfdata = ( absfdata * np.atleast_2d( self.frqfilter).T) * np.exp( 1j* angfdata)
+            except:
+                self.filtfdata = ( absfdata * self.frqfilter) * np.exp( 1j* angfdata)
         else:
-            self.filtfdata = absfdata * self.fqfilter * np.exp( 1j* angfdata)
+            self.filtfdata = absfdata * self.frqfilter * np.exp( 1j* angfdata)
         
         #self.fdataMag = fdata.T
         if( self.debug):
@@ -2441,12 +2765,25 @@ class FrqFilter:
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
             #plt.plot( self.faxis, np.abs( self.filtfdata))
-            plt.loglog( self.faxis[self.posind], np.abs( self.filtfdata[self.posind,:]))
+            filtmax = np.max( np.abs( absfdata[self.posind,:]))/ np.max( np.abs( self.frqfilter[self.posind]))
+            plt.loglog( self.faxis[self.posind], np.abs( absfdata[self.posind,:]), 'g', alpha = 0.2)
+            plt.loglog( self.faxis[self.posind], np.abs( self.filtfdata[self.posind,:]), 'r', alpha = 0.2)
+            plt.loglog( self.faxis[self.posind], np.abs( self.frqfilter[self.posind])* filtmax, 'b', alpha = 0.1)
             plt.grid(True)
             plt.show()
         #self.filtdata = np.real( fft.ifft( fft.ifftshift( self.filtfdata, axes = self.axis), axis = self.axis))#[self.orgStartInd:self.orgEndInd, :]
         self.__myInvFFTProc__()
         #self.filtdata = np.real( fft.ifft( self.filtfdata))[self.orgStartInd:self.orgEndInd, :]
+        if( self.debug):
+            filtmax = np.max( np.std( self.data.T))/ np.max( np.std( self.filtdata[self.orgStartInd:self.orgEndInd]))
+            try:
+                plt.plot( self.augt[self.orgStartInd:self.orgEndInd], self.data, 'g', alpha = 0.2)
+            except:
+                plt.plot( self.augt[self.orgStartInd:self.orgEndInd], self.data.T, 'g', alpha = 0.2)
+            plt.plot( self.augt[self.orgStartInd:self.orgEndInd], self.filtdata[self.orgStartInd:self.orgEndInd]* filtmax, 'r', alpha = 0.2)
+            plt.grid(True)
+            plt.show()
+            sys.exit()
         return #self.faxis, self.fdataMag
     
     
@@ -2543,7 +2880,8 @@ class FrqFilter:
         self.len = self.shape[self.axis]
         if( self.debug):
             print( 'self.len is: {}'.format( self.len))
-        self.t = np.arange( 0, float( self.len)* self.dt, self.dt)
+        #self.t = np.arange( 0, float( self.len)* self.dt, self.dt)
+        self.t = np.arange( 0, float( self.len))* self.dt
         if( self.debug):
             print( 'self.t is: {}'.format( self.t))
         #print( 'self.t is: {}'.format( np.shape( self.t)))
@@ -2584,8 +2922,8 @@ class FrqFilter:
                     #print( 'Checking length of {}'.format( el))
                     #####or el.startswith( 'faxis')
                     if( el.startswith( 'fdata') or el.startswith( 'filtf') or el.startswith( 'filte')):
-                        #if( self.debug):
-                        #    print( 'el is', el)
+                        if( True):
+                            print( 'el is', el)
                         if( True):
                             varname = 'self.' + el
                             if( self.debug):
@@ -2593,11 +2931,13 @@ class FrqFilter:
                                 print( 'to shape of {} taken from self.faxis'.format( np.shape( self.faxis)))
                         if( self.__dict__[el].ndim > 1):
                             if( np.argmax( np.shape( self.data)) != np.argmax( np.shape( self.__dict__[el]))):
+                                print( 'transposing {} with shape {} to shape {}'.format( el, np.shape( self.__dict__[el]), np.shape( self.__dict__[el].T)))
                                 self.__dict__[el] = self.__dict__[el].T
+                                print( 'transposed {} to shape {}'.format( el, np.shape( self.__dict__[el])))
                             if( self.debug):
-                                print( 'bakax, self.__dict__[el], axis = self.axis')
+                                print( 'bakax', 'self.__dict__[el]', 'self.axis', 'self.rplval')
                                 for bl, name in zip( [bakax, self.__dict__[el], self.axis, self.rplval], ['bakax', 'self.__dict__[el]', 'self.axis', 'self.rplval']):
-                                    print( 'shape of {} is {}, vals: {}'.format( name, np.shape( bl), bl))
+                                    print( 'shape of {} is {}\n\tvals: {}'.format( name, np.shape( bl), bl))
                                 #if( el.startswith( 'filtf')):
                                 #    print( 'el is', el)
                                 #    print( 'shape of {} is {}, vals: {}'.format( el, np.shape( self.__dict__[el]), self.__dict__[el]))
@@ -2756,13 +3096,13 @@ class FrqFilter:
     
     
     
-    def fqfilter( self):
+    def frqfilter( self):
         if( self.type == 'exp'):
             self.__expfilt__()
         elif( self.type == 'lbub'):
             self.__lbubfilt__()
         self.__Ret2OldLen__()
-        return self.faxis, self.filtfdata, self.fqfilter, self.filtdata
+        return self.faxis, self.filtfdata, self.frqfilter, self.filtdata
     
     
     
