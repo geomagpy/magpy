@@ -306,7 +306,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 ar = np.delete(ar,index)
             if elem[0] in NUMKEYLIST:
                 fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
-                print ("Fillvalue:", elem[1],fillval)
                 if isnan(fillval):
                     # if it is nan than the following replace wont work anyway
                     fillval = 99999.0
