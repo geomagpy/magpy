@@ -371,6 +371,7 @@ MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy
 
         data.write('/path/to/export/IMAGCDF/', addflags=True)
 
+Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous" to display graphs of low resolution data sets.  
 
 #### 2.2.5 Selecting timerange
 

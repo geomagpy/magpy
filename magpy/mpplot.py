@@ -292,7 +292,7 @@ def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=Fal
 def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
         t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-        noshow=False,labels=False,flagontop=False,resolution=None,**kwargs):
+        noshow=False,labels=False,flagontop=False,resolution=None,debug=False,**kwargs):
     '''
     DEFINITION:
         This function plots multiple streams in one plot for easy comparison.
@@ -442,7 +442,7 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
         except:
             t = np.asarray([row[0] for row in stream])
             logger.info("Start plotting of stream with length %i" % len(stream))
-        #t = np.asarray([row[0] for row in stream])
+        orgt = np.asarray([ti for ti in t]) # orgt is needed if time column is modified (i.e. continuous plots)
         for j in range(len(variables[i])):
             data_dict = {}
             key = variables[i][j]
@@ -464,7 +464,6 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                     raise Exception("Dimensions of time and %s do not match!")
             except:
                 y = np.asarray([float(row[ind]) for row in stream])
-            #y = np.asarray([row[ind] for row in stream])
 
             if len(y) == 0:
                 logger.error("Cannot plot stream of zero length!")
@@ -476,30 +475,20 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
                 flags = stream.ndarray[flagind]
                 ind = KEYLIST.index(key)
                 flagarray =  np.asarray([list(el)[ind] for el in flags])
-                print("Flagarray", flagarray)
+                if debug:
+                    print("Flagarray", flagarray)
                 indicies = np.where(flagarray == '1')
-                print("Indicis", indicis)
-                #for index in indicies:
-                #    y[index] = NaN
-                    #y[index] = float('nan')
-                    #newflag = flags[0][ind]
-                    #newflag[indexflag] = '0'
-                    #data[i]['flags'][0][ind] == newflag
-                #y = np.delete(np.asarray(y),indicies)
-
-
-            #print len(t), len(y), np.asarray(y)
+                if debug:
+                    print("Indicis", indicis)
 
             # Fix if NaNs are present:
             if plottype == 'discontinuous':
                 y = maskNAN(y)
             else:
                 nans, test = nan_helper(y)
-                newt = [t[idx] for idx, el in enumerate(y) if not nans[idx]]
+                newt = [orgt[idx] for idx, el in enumerate(y) if not nans[idx]]
                 t = newt
                 y = [el for idx, el in enumerate(y) if not nans[idx]]
-
-            #print len(t), len(y), np.asarray(y), np.asarray(t)
 
             if len(y) == 0:
                 logger.error("Cannot plot stream without data - Filling with 9999999!")
