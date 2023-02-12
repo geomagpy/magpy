@@ -1208,7 +1208,7 @@ CALLED BY:
                newndarray.append(np.asarray(elem).astype(object))
                indexarray.append(ind)
         keylist = [el for ind,el in enumerate(KEYLIST) if ind in indexarray]
-        return np.asarray(newndarray), keylist
+        return np.asarray(newndarray, dtype=object), keylist
 
     def fillempty(self, ndarray, keylist):
         """
@@ -10945,10 +10945,14 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         - disableproxy: (bool) If True, will use urllib2.install_opener()
         - endtime:      (str/datetime object) Description.
         - starttime:    (str/datetime object) Description.
+        - select:       (str object) Select.
 
     Format specific kwargs:
         IAF:
             - resolution: (str) can be either 'day','hour','minute'(default) or 'k'
+        IMAGCDF:
+            - select:     (str object) Select specific data if more than one time columns are contained.
+                          i.e. select='Scalar'
 
     RETURNS:
         - stream:       (DataStream object) Stream containing data in file

@@ -13,7 +13,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
 from __future__ import division
-from io import open
 
 from magpy.stream import *
 
@@ -54,6 +53,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     """
 
     debug = kwargs.get('debug')
+    select = kwargs.get('select')
 
     headers={}
     arraylist = []
@@ -61,12 +61,16 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     multipletimedict = {}
     newdatalist = []
     tllist = []
+    referencetimecol = None
     indexarray = np.asarray([])
 
     cdfdat = cdflib.CDF(filename)
 
     if debug:
         print ("Reading ImagCDF with cdflib")
+
+    if select:
+        print ("Only data associated with {} time column will be extracted".format(select))
 
     for att in cdfdat.globalattsget():
         value = cdfdat.globalattsget().get(att)
@@ -95,7 +99,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         #pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
         #headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0])
     except:
-        print ("imagcdf warning: Publication date is not provided as tt_2000")
+        if debug:
+            print ("imagcdf warning: Publication date is not provided as tt_2000")
         try:
             pubdate = DataStream()._testtime(headers.get('DataPublicationDate'))
             headers['DataPublicationDate'] = pubdate
@@ -110,9 +115,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         print ("LEAP seconds updated:", cdfdat.cdf_info().get('LeapSecondUpdated'))
     # Get all available Variables - ImagCDF usually uses only zVariables
     datalist = cdfdat.cdf_info().get('zVariables')
-
-    # New in 0.3.99 - provide a SensorID as well consisting of IAGA code, min/sec
-    # and numerical publevel
 
     #  IAGA code
     if headers.get('SensorID','') == '':
@@ -131,7 +133,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if elem.endswith('Times') and not elem.startswith('Flag'):
             try:
                 #if elem in ['GeomagneticVectorTimes','GeomagneticTimes','GeomagneticScalarTimes']:
-                tl = int(cdfdat.varinq(elem).get('Last_Rec'))
+                tl = int(cdfdat.varinq(elem).get('Last_Rec'))+1
                 tllist.append([tl,elem])
             except:
                 pass
@@ -150,20 +152,44 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             logger.error("readIMAGCDF: No Time information available - aborting")
             return
     elif len(tllist) > 1:
+        tllist = sorted(tllist)
         tl = [el[0] for el in tllist]
+        namelst = [el[1] for el in tllist]
         if not max(tl) == min(tl):
             if debug:
-                print ("Time columns of different length")
-            logger.warning("readIMAGCDF: Time columns of different length. Choosing longest as basis")
-            newdatalist.append(['time',max(tllist)[1]])
-            datnumar1 = date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(max(tllist)[1]))]))
-            datnumar2 = date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(min(tllist)[1]))]))
-            try:
-                indexarray = np.nonzero(np.in1d(datnumar1,datnumar2))[0]
-            except:
-                indexarray = np.asarray([])
-            # create a dictionary with time column name and indexarray
-            multipletimedict = {min(tllist)[1]:indexarray}
+                print (" Found multiple time columns in file with different lengths")
+            timecol = None
+            pos = -1
+            if select:
+                for idx,na in enumerate(namelst):
+                    nam = na.lower()
+                    if nam.find(select.lower()) > -1:
+                        timecol = na
+                        referencetimecol = na
+                        pos = idx
+            else:
+                logger.warning("readIMAGCDF: Time columns of different length. Choosing longest as basis")
+                timecol = max(tllist)[1]
+            if not timecol:
+                timecol = max(tllist)[1]
+            newdatalist.append(['time',timecol])
+            if debug:
+                print (" selected primary time column: {}".format(timecol))
+            datnumar = []
+            for na in namelst:
+                datnumar.append(date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(na))])))
+            multipletimedict = {}
+            for idx,na in enumerate(datnumar):
+                refnumar = datnumar[pos]
+                if pos == -1:
+                    pos = len(datnumar)-1
+                if not idx == pos:
+                    try:
+                        multipletimedict[namelst[idx]]=np.nonzero(np.in1d(refnumar,datnumar[idx]))[0]
+                    except:
+                        multipletimedict[namelst[idx]]=np.asarray([])
+            #if debug:
+            #    print (" Lengths of different time columns:", multipletimedict)
         else:
             logger.info("readIMAGCDF: Equal length time axes found - assuming identical time")
             if 'GeomagneticVectorTimes' in datalist:
@@ -199,7 +225,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             else:
                 return []
         else:
-            print ("readIMAGCDF: Could  not interprete flags ruleset or flagginglist is empty")
+            print ("readIMAGCDF: Could  not interprete flagging ruleset or flagginglist is empty")
             logger.warning("readIMAGCDF: Could  not interprete Ruleset")
             return []
 
@@ -219,6 +245,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     # 2. Sort the datalist according to KEYLIST
     # #########################################################
     for key in KEYLIST:
+        # TODO: V (field strength along inclination is not yet supported)
         possvals = [key]
         if key == 'x':
             possvals.extend(['h','i'])
@@ -281,16 +308,27 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             if delrow:
                 ar = np.delete(ar,index)
             if elem[0] in NUMKEYLIST:
+                fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
+                if isnan(fillval):
+                    # if it is nan than the following replace wont work anyway
+                    fillval = 99999.0
                 with np.errstate(invalid='ignore'):
-                    ar[ar > 88880] = float(nan)
+                    ar[ar > fillval-1] = float(nan)
                 ind = KEYLIST.index(elem[0])
                 headers['col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                 headers['unit-col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
-                if not multipletimedict == {} and list(multipletimedict.keys())[0] ==  cdfdat.varattsget(elem[1]).get('DEPEND_0'):
+                timecolumns = list(multipletimedict.keys())
+                timedepend = cdfdat.varattsget(elem[1]).get('DEPEND_0')
+                if not multipletimedict == {} and timedepend in timecolumns and not referencetimecol:
+                    indexarray = multipletimedict.get(timedepend)
                     newar = np.asarray([np.nan]*arlen)
                     newar[indexarray] = ar
                     array[ind] = newar
                     arraylist.append(newar)
+                elif not multipletimedict == {} and referencetimecol:
+                    if timedepend == referencetimecol:
+                        array[ind] = ar
+                        arraylist.append(ar)
                 else:
                     array[ind] = ar
                     arraylist.append(ar)
@@ -300,7 +338,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     headers['col-z'] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                     headers['unit-col-z'] = cdfdat.varattsget(elem[1]).get('UNITS')
 
-    ndarray = np.array(array, dtype=object)  # decreapated .. add dtype=object
+    ndarray = np.array(array, dtype=object)
 
     stream = DataStream()
     stream = [LineStruct()]

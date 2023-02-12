@@ -355,6 +355,13 @@ The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute dat
 
         data.write('/path/to/export/IMF/', gin="GOL")
 
+##### IMAGCDF format
+
+The IMAGCDF format can contain several data sets from different instruments represented by different time columns. Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower resolution.
+MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and "missing values" will be represented as NaN.
+The select options allows you to specifically load lower resolution data like scalar or temperature readings.  
+
+        data = read('/path/to/IMAGCDF/*.cdf', select='scalar')
 
 #### 2.2.5 Selecting timerange
 
