@@ -6123,7 +6123,7 @@ CALLED BY:
         - stream:       (Datastream)
 
     EXAMPLE:
-        >>> stream_with_gaps_filled = stream_with_aps.get_gaps(['f'])
+        >>> stream_with_gaps_filled = stream_with_gaps.get_gaps(key='f')
 
     APPLICATION:
         used by nfilter() for correct filtering
@@ -10085,6 +10085,7 @@ CALLED BY:
 
            *Specific parameters:
             - addflags      (BOOL) add flags to IMAGCDF output if True
+            - fillvalue     (float) define a fill value for non-existing data (default is np.nan)
 
         format_type='BLV'
         ------------------
@@ -10142,6 +10143,7 @@ CALLED BY:
         skipcompression = kwargs.get('skipcompression')
         debug = kwargs.get('debug')
         addflags = kwargs.get('addflags')
+        fillvalue = kwargs.get('fillvalue')
         headonly = kwargs.get('headonly')
 
         success = True
@@ -10218,7 +10220,7 @@ CALLED BY:
                 # remove any eventually existing null byte
                 filename = filename.replace('\x00','')
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -10246,7 +10248,7 @@ CALLED BY:
                 filename = filename.replace('\x00','')
 
                 if len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags)
+                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
                 # get next endtime
                 starttime = endtime
                 cyear = cyear + 1
@@ -10304,7 +10306,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         logger.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind)
+                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,headonly=headonly,kind=kind,debug=debug)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -10318,7 +10320,7 @@ CALLED BY:
             filename = filename.replace('\x00','')
             if debug:
                 print ("Writing file:", filename)
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind,fillvalue=fillvalue,debug=debug)
 
         return success
 

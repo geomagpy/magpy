@@ -20,7 +20,6 @@ import cdflib
 
 #import ciso8601 ## fast datetime parser  ciso8601.parse_datetime should be 10 times faster than datetime.strftime
 
-import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -41,8 +40,6 @@ def isIMAGCDF(filename):
             return False
     except:
         return False
-
-    print ("Running new ImagCDF import filter")
 
     logger.debug("isIMAGCDF: Found INTERMAGNET CDF data - using cdflib")
     return True
@@ -309,6 +306,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 ar = np.delete(ar,index)
             if elem[0] in NUMKEYLIST:
                 fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
+                print ("Fillvalue:", elem[1],fillval)
                 if isnan(fillval):
                     # if it is nan than the following replace wont work anyway
                     fillval = 99999.0
@@ -356,19 +354,26 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     Writing Intermagnet CDF format (currently: vers1.2) + optional flagging info
 
     """
+    debug = kwargs.get('debug')
+    fillval = kwargs.get('fillvalue')
+    mode = kwargs.get('mode')
+    addflags = kwargs.get('addflags')
+    skipcompression = kwargs.get('skipcompression')
 
-    print ("Writing CDF data based on cdflib")
+    logger.info("Writing IMAGCDF Format {}".format(filename))
+    if debug:
+        print (" Writing CDF data based on cdflib")
+
+    if not fillval:
+        fillval = np.nan
+    else:
+        if debug:
+            print (" Fillvalue of {} selected for filling gaps".format(fillval))
 
     def tt(my_dt_ob):
         ms = my_dt_ob.microsecond/1000.  # fraction
         date_list = [my_dt_ob.year, my_dt_ob.month, my_dt_ob.day, my_dt_ob.hour, my_dt_ob.minute, my_dt_ob.second, ms]
         return date_list
-
-
-    logger.info("Writing IMAGCDF Format {}".format(filename))
-    mode = kwargs.get('mode')
-    addflags = kwargs.get('addflags')
-    skipcompression = kwargs.get('skipcompression')
 
     main_cdf_spec = {}
     main_cdf_spec['Compressed'] = False
@@ -382,7 +387,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         try:
             main_cdf_spec['Compressed'] = True
         except:
-            logger.warning("writeIMAGCDF: Compression failed for unknown reason - storing uncompresed data")
+            logger.warning("writeIMAGCDF: Compression failed for unknown reason - storing uncompressed data")
             pass
 
     testname = str(filename+'.cdf')
@@ -395,29 +400,28 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             datastream = joinStreams(exst,datastream)
             os.remove(filename)
             try:
-                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
-            except:
                 mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
         elif mode == 'replace' or mode == 'append': # replace existing inputs
             exst = read(path_or_url=filename)
             datastream = joinStreams(datastream,exst)
             os.remove(filename)
             try:
-                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
-            except:
                 mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
         else: # overwrite mode
-            #print filename
             os.remove(filename)
             try:
-                mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
-            except:
                 mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+            except:
+                mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
     else:
         try:
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
-        except:
             mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+        except:
+            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
 
     keylst = datastream._get_key_headers()
     tmpkeylst = ['time']
@@ -587,6 +591,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     fcolname = 'S'
     scal = ''
     ftest = DataStream()
+    useScalarTimes = False
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
             if not 'df' in keylst:
@@ -617,35 +622,39 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         ftest = datastream.copy()
         ftest = ftest._drop_nans(scal)
         fsamprate = ftest.samplingrate()
+        if ftest.length()[0] > 0:
+            ftest = ftest.get_gaps()
 
-        if fsamprate-0.1 < mainsamprate and  mainsamprate < fsamprate+0.1:
+        if fsamprate-0.1 < mainsamprate and mainsamprate < fsamprate+0.1:
+            print ("HERE")
             #Samplingrate of F column and Vector are similar
             useScalarTimes=False
         else:
             useScalarTimes=True
-
-        #print ("IMAG", len(nonancol),datastream.length()[0])
-        """
-        if len(nonancol) < datastream.length()[0]/2.:
-            #shorten col
-            print ("writeIMF - reducing f column resolution:", len(nonancol), len(col))
-            naninds = np.where(np.isnan(col))[0]
-            #print (naninds, len(naninds))
-            useScalarTimes=True
-            #[inds]=np.take(col_mean,inds[1])
-        else:
-            #keep column and (later) leave time
-            useScalarTimes=True  # change to False in order to use a single col
-        """
 
     ## Update DataComponents/Elements records regarding S (independent) or F (vector)
     comps = datastream.header.get('DataComponents')
     if len(comps) == 4 and 'f' in keylst:
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
-
     ## writing Global header data
     mycdf.write_globalattrs(globalAttrs)
+
+    ttest = DataStream()
+    useTemperatureTimes = False
+    if 't1' in keylst:
+        # Check sampling rates of t1/t2 stream
+        ttest = datastream.copy()
+        ttest = ttest._drop_nans('t1')
+        tsamprate = ttest.samplingrate()
+        ttest = ttest.get_gaps()
+        print ("t lenght", ttest.length())
+
+        if tsamprate-0.1 < mainsamprate and  mainsamprate < tsamprate+0.1:
+            #Samplingrate of t1/t2 column and Vector are similar
+            useTemperatureTimes=False
+        else:
+            useTemperatureTimes=True
 
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
 
@@ -654,15 +663,19 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         var_attrs = {}
         var_spec = {}
 
-        if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime']:
+        if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime','temptime']:
           try:
-            if not key == 'scalartime':
+            if not key in ['scalartime','temptime']:
                 ind = KEYLIST.index(key)
                 if ndarray and len(datastream.ndarray[ind])>0:
                     col = datastream.ndarray[ind]
                 else:
                     col = datastream._get_column(key)
                 col = col.astype(float)
+
+                # eventually use a different fill value (default is nan)
+                if not isnan(fillval):
+                    col = np.nan_to_num(col, nan=fillval)
 
                 if not False in checkEqual3(col):
                     logger.warning("Found identical values only for {}".format(key))
@@ -673,15 +686,19 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 cdfkey = 'GeomagneticVectorTimes'
                 cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in col] )
                 var_spec['Data_Type'] = 33
-            elif key == 'scalartime':
+            elif key == 'scalartime' and useScalarTimes:
                 cdfkey = 'GeomagneticScalarTimes'
                 ftimecol = ftest.ndarray[0]
                 # use ftest Datastream
                 cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in ftimecol] )
                 var_spec['Data_Type'] = 33
+            elif key == 'temptime' and useTemperatureTimes:
+                cdfkey = 'TemperatureTimes'
+                ttimecol = ttest.ndarray[0]
+                # use ttest Datastream
+                cdfdata = cdflib.cdfepoch.compute_tt2000([tt(num2date(elem).replace(tzinfo=None)) for elem in ttimecol])
+                var_spec['Data_Type'] = 33
             elif len(col) > 0:
-                #if len(col) > 1000000:
-                #    print ("Starting with {}".format(key))
                 var_spec['Data_Type'] = 45
                 comps = datastream.header.get('DataComponents','')
                 keyup = key.upper()
@@ -714,8 +731,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     var_attrs['DEPEND_0'] = "GeomagneticVectorTimes"
                     var_attrs['DISPLAY_TYPE'] = "time_series"
                     var_attrs['LABLAXIS'] = keyup
-                    var_attrs['FILLVAL'] = np.nan
-                    if key in ['x','y','z','h','e','g','t1','t2']:
+                    var_attrs['FILLVAL'] = fillval
+                    if key in ['x','y','z','h','e','g']:
                         cdfdata = col
                         var_attrs['VALIDMIN'] = -88880.0
                         var_attrs['VALIDMAX'] = 88880.0
@@ -727,6 +744,16 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         cdfdata = col
                         var_attrs['VALIDMIN'] = -360.0
                         var_attrs['VALIDMAX'] = 360.0
+                    elif key in ['t1','t2']:
+                        var_attrs['VALIDMIN'] = -273.15
+                        var_attrs['VALIDMAX'] = 88880.0
+                        if useTemperatureTimes:
+                            keylst.append('temptime')
+                            tcol = ttest._get_column(key)
+                            var_attrs['DEPEND_0'] = "TemperatureTimes"
+                            cdfdata = tcol
+                        else:
+                            cdfdata = col
                     elif key in ['f','s','df']:
                         if useScalarTimes:
                             # write time column

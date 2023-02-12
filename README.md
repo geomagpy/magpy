@@ -363,6 +363,15 @@ The select options allows you to specifically load lower resolution data like sc
 
         data = read('/path/to/IMAGCDF/*.cdf', select='scalar')
 
+When writing IMAGCDF files MagPy is using np.nan as fill value for missing data. You can change that by providing a different fill value using the option fillvalue:
+
+        data.write('/path/to/export/IMAGCDF/', fillvalue=99999.0)
+
+MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy is also supports flagging information to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):
+
+        data.write('/path/to/export/IMAGCDF/', addflags=True)
+
+
 #### 2.2.5 Selecting timerange
 
 The stream can be trimmed to a specific time interval after reading by applying the trim method, e.g. for a specific month:
