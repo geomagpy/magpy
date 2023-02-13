@@ -1711,7 +1711,7 @@ class StreamLoadFlagDialog(wx.Dialog):
     DESCRIPTION
         Dialog for Loading Flagging data from file or DB
     """
-    def __init__(self, parent, title, db, sensorid, start, end):
+    def __init__(self, parent, title, db, sensorid, start, end,last_dir: string =''):
         super(StreamLoadFlagDialog, self).__init__(parent=parent,
             title=title, size=(300, 300))
         self.flaglist = []
@@ -1722,6 +1722,7 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.createControls()
         self.doLayout()
         self.bindControls()
+        self.last_dir = last_dir
 
     # Widgets
     def createControls(self):
@@ -1778,19 +1779,21 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.Close(True)
 
     def OnLoadFile(self, e):
-        openFileDialog = wx.FileDialog(self, "Open", "", "",
+        openFileDialog = wx.FileDialog(self, "Open", self.last_dir, "",
                                        "json flaglist (*.json)|*.json|pickle flaglist (*.pkl)|*.pkl|all files (*.*)|*.*",
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
-        openFileDialog.ShowModal()
-        flagname = openFileDialog.GetPath()
-        try:
-            self.flaglist = loadflags(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
-        except:
-            self.flaglist = []
-        openFileDialog.Destroy()
-        dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound {} flag inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+        if openFileDialog.ShowModal() == wx.ID_OK:
+            flagname = openFileDialog.GetPath()
+            try:
+                self.flaglist = loadflags(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
+            except:
+                self.flaglist = []
+            openFileDialog.Destroy()
+            dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound {} flag inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            openFileDialog.Destroy()
         self.Close(True)
 
 
@@ -1799,11 +1802,12 @@ class StreamSaveFlagDialog(wx.Dialog):
     DESCRIPTION
         Dialog for Loading Flagging data from file or DB
     """
-    def __init__(self, parent, title, db, flaglist):
+    def __init__(self, parent, title, db, flaglist, last_dir: string =''):
         super(StreamSaveFlagDialog, self).__init__(parent=parent,
             title=title, size=(300, 300))
         self.flaglist = flaglist
         self.db = db
+        self.last_dir = last_dir
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1864,19 +1868,19 @@ class StreamSaveFlagDialog(wx.Dialog):
         self.Close(True)
 
     def OnSaveFile(self, e):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+        saveFileDialog = wx.FileDialog(self, "Save As", self.last_dir,"",
                                        "json flaglist (*.json)|*.json|pickle flaglist (*.pkl)|*.pkl",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        saveFileDialog.ShowModal()
-        extensions = ['.json','.pkl']
-        extind = saveFileDialog.GetFilterIndex()
+        if saveFileDialog.ShowModal() == wx.ID_OK:
+            extensions = ['.json','.pkl']
+            extind = saveFileDialog.GetFilterIndex()
 
-        flagname = saveFileDialog.GetPath()
-        if not flagname.endswith(extensions[extind]):
-            flagname = flagname+extensions[extind]
+            flagname = saveFileDialog.GetPath()
+            if not flagname.endswith(extensions[extind]):
+                flagname = flagname+extensions[extind]
 
-        saveFileDialog.Destroy()
-        saveflags(self.flaglist,flagname)
+            saveFileDialog.Destroy()
+            saveflags(self.flaglist,flagname)
         self.Close(True)
 
 # ###################################################
@@ -2066,7 +2070,7 @@ class AnalysisFitDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, options, stream, shownkeylist, keylist, plotopt, hide_file):
+    def __init__(self, parent, title, options, stream, shownkeylist, keylist, plotopt, hide_file,last_dir : string = ''):
         super(AnalysisFitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
 
@@ -2077,6 +2081,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.stream = stream
         self.options = options
         self.plotopt = plotopt
+        self.last_dir = last_dir
         self.fitparameter = {}
         self.fitfunc = self.options.get('fitfunction','spline')
         self.funclist = ['spline','polynomial', 'linear least-squares', 'mean', 'none']
@@ -2170,7 +2175,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
     def on_load(self,e):
-        openFileDialog = wx.FileDialog(self, "Open", "", "",
+        openFileDialog = wx.FileDialog(self, "Open", self.last_dir, "",
                                        "json fit parameter (*.json)|*.json|all files (*.*)|*.*",
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
@@ -2181,7 +2186,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.Destroy()
 
     def on_save(self,e):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+        saveFileDialog = wx.FileDialog(self, "Save As", self.last_dir, "",
                                        "json fit parameter (*.json)|*.json",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
@@ -2782,10 +2787,11 @@ class AnalysisBaselineDialog(wx.Dialog):
     Select shown keys
     """
 
-    def __init__(self, parent, title, idxlst, dictlst, options, stream, shownkeylist, keylist, plotopt):
+    def __init__(self, parent, title, idxlst, dictlst, options, stream, shownkeylist, keylist, plotopt,last_dir: string = ''):
         super(AnalysisBaselineDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
         self.options = options
+        self.last_dir = last_dir
         self.plotstream = stream
         self.shownkeylist = shownkeylist
         self.keylist = keylist
@@ -2915,32 +2921,36 @@ class AnalysisBaselineDialog(wx.Dialog):
         # extradays = 1
         # if endtime == "now":
         #     endtime = datetime.utcnow()+timedelta(days=extradays)
-        openFileDialog = wx.FileDialog(self, "Open", "", "",
+        openFileDialog = wx.FileDialog(self, "Open", self.last_dir, "",
                                        "json fit parameter (*.json)|*.json|all files (*.*)|*.*",
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
-        openFileDialog.ShowModal()
-        fitname = openFileDialog.GetPath()
-        self.fitparameters = DataStream().func_from_file(fitname,debug=False)
-        openFileDialog.Destroy()
-        self.parameterTextCtrl.Clear()
-        self.parameterstring = self.create_fitparameterstring(self.fitparameters)
-        self.parameterTextCtrl.SetValue(self.parameterstring)
+        if openFileDialog.ShowModal() == wx.ID_OK:
+            fitname = openFileDialog.GetPath()
+            self.fitparameters = DataStream().func_from_file(fitname,debug=False)
+            openFileDialog.Destroy()
+            self.parameterTextCtrl.Clear()
+            self.parameterstring = self.create_fitparameterstring(self.fitparameters)
+            self.parameterTextCtrl.SetValue(self.parameterstring)
+        else:
+            openFileDialog.Destroy()
 
     def OnSave(self, e):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+        saveFileDialog = wx.FileDialog(self, "Save As", self.last_dir, "",
                                        "json fit parameter (*.json)|*.json",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        saveFileDialog.ShowModal()
-        extensions = ['.json']
-        extind = saveFileDialog.GetFilterIndex()
+        if saveFileDialog.ShowModal() == wx.ID_OK:
+            extensions = ['.json']
+            extind = saveFileDialog.GetFilterIndex()
 
-        savename = saveFileDialog.GetPath()
-        if not savename.endswith(extensions[extind]):
-            savename = savename+extensions[extind]
+            savename = saveFileDialog.GetPath()
+            if not savename.endswith(extensions[extind]):
+                savename = savename+extensions[extind]
 
-        saveFileDialog.Destroy()
-        DataStream().func_to_file(self.fitparameters,savename,debug=False)
-        self.Close(True)
+            saveFileDialog.Destroy()
+            DataStream().func_to_file(self.fitparameters,savename,debug=False)
+            self.Close(True)
+        else:
+             saveFileDialog.Destroy()
 
     def OnClear(self, e):
         # delete current fitparameter
