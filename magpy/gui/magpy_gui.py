@@ -1404,7 +1404,9 @@ class MainFrame(wx.Frame):
         # Variable initializations
         pwd = dictionary.get('passwd')
         #self.passwd = base64.b64decode(pwd)
-        self.dirname = dictionary.get('dirname','')
+        #contains last visited directory
+        self.last_dir = dictionary.get('dirname', '')
+
         self.dipathlist = dictionary.get('dipathlist','')
         self.options = dictionary
         self.options['passwd'] = base64.b64decode(pwd)
@@ -2028,7 +2030,7 @@ class MainFrame(wx.Frame):
         ''' Return a dictionary with file dialog options that can be
             used in both the save file dialog as well as in the open
             file dialog. '''
-        return dict(message='Choose a file', defaultDir=self.dirname,
+        return dict(message='Choose a file', defaultDir=self.last_dir,
                     wildcard='*.*')
 
     def askUserForFilename(self, **dialogOptions):
@@ -2036,7 +2038,7 @@ class MainFrame(wx.Frame):
         if dialog.ShowModal() == wx.ID_OK:
             userProvidedFilename = True
             self.filename = dialog.GetFilename()
-            self.dirname = dialog.GetDirectory()
+            self.last_dir = dialog.GetDirectory()
             #self.SetTitle() # Update the window title with the new filename
         else:
             userProvidedFilename = False
@@ -2248,10 +2250,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     def OnOpenDir(self, event):
         stream = DataStream()
         success = False
-        dialog = wx.DirDialog(None, "Choose a directory:",self.dirname,style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
+        dialog = wx.DirDialog(None, "Choose a directory:", self.last_dir, style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
         if dialog.ShowModal() == wx.ID_OK:
             filelist = glob.glob(os.path.join(dialog.GetPath(),'*'))
-            self.dirname = dialog.GetPath() # modify self.dirname
+            self.last_dir = dialog.GetPath() # modify self.last_dir
             #files = sorted(filelist, key=os.path.getmtime)
             files = sorted(filelist)
             try:
@@ -2272,8 +2274,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
 
         if success:
-            stream = self.openStream(path=self.dirname,mintime=old, maxtime=new, extension='*')
-            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.dirname,len(stream.ndarray[0])))
+            stream = self.openStream(path=self.last_dir, mintime=old, maxtime=new, extension='*')
+            self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.last_dir, len(stream.ndarray[0])))
 
             if self.InitialRead(stream):
                 #self.ActivateControls(self.plotstream)
@@ -2287,13 +2289,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     dlg.Destroy()
 
     def OnOpenFile(self, event):
-        #self.dirname = ''
+        #self.last_dir = ''
         stream = DataStream()
         success = False
         message = "Yeah - working fine\n"
         stream.header = {}
         filelist = []
-        dlg = wx.FileDialog(self, "Choose a file", self.dirname, "", "*.*", wxMULTIPLE)
+
+        dlg = wx.FileDialog(self, "Choose a file", self.last_dir, "", "*.*", wxMULTIPLE)
 
         answer = dlg.ShowModal()
         if answer == wx.ID_OK:
@@ -2307,18 +2310,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         try:
                 for path in pathlist:
                     elem = os.path.split(path)
-                    self.dirname = elem[0]
+                    self.last_dir = elem[0]
                     filelist.append(elem[1])
                     self.changeStatusbar(path)
                     tmp = read(path)
                     self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
                     stream.extend(tmp.container,tmp.header,tmp.ndarray)
                 stream=stream.sorting()
-                #stream = read(path_or_url=os.path.join(self.dirname, self.filename),tenHz=True,gpstime=True)
+                #stream = read(path_or_url=os.path.join(self.last_dir, self.filename),tenHz=True,gpstime=True)
                 #self.menu_p.str_page.lengthStreamTextCtrl.SetValue(str(len(stream)))
                 self.filename = ' ,'.join(filelist)
                 self.menu_p.str_page.fileTextCtrl.SetValue(self.filename)
-                self.menu_p.str_page.pathTextCtrl.SetValue(self.dirname)
+                self.menu_p.str_page.pathTextCtrl.SetValue(self.last_dir)
                 self.menu_p.rep_page.logMsg('{}: found {} data points'.format(self.filename,len(stream.ndarray[0])))
                 success = True
         except:
@@ -2717,7 +2720,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     def OnExportData(self, event):
 
         self.changeStatusbar("Writing data ...")
-        dlg = ExportDataDialog(None, title='Export Data',path=self.dirname,stream=self.plotstream,defaultformat='PYCDF')
+        dlg = ExportDataDialog(None, title='Export Data', path=self.last_dir, stream=self.plotstream, defaultformat='PYCDF')
         if dlg.ShowModal() == wx.ID_OK:
             filenamebegins = dlg.filenamebegins
             filenameends = dlg.filenameends
@@ -2990,7 +2993,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
 
     def OnSave(self, event):
-        textfile = open(os.path.join(self.dirname, self.filename), 'w')
+        textfile = open(os.path.join(self.last_dir, self.filename), 'w')
         textfile.write(self.control.GetValue())
         textfile.close()
 
@@ -3102,8 +3105,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     def onOpenAuxButton(self, event):
         if self.askUserForFilename(style=wx.OPEN,
                                    **self.defaultFileDialogOptions()):
-            #dat = read_general(os.path.join(self.dirname, self.filename), 0)
-            textfile = open(os.path.join(self.dirname, self.filename), 'r')
+            #dat = read_general(os.path.join(self.last_dir, self.filename), 0)
+            textfile = open(os.path.join(self.last_dir, self.filename), 'r')
             self.menu_p.gen_page.AuxDataTextCtrl.SetValue(textfile.read())
             textfile.close()
             #print dat
@@ -4578,7 +4581,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.plotstream = self.stream.copy()
         self.xlimits = self.plot_p.xlimits
         dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
-                options=self.options, stream = self.plotstream,
+                options=self.options,last_dir = self.last_dir, stream = self.plotstream,
                 shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotopt, hide_file=False)
         startdate=self.xlimits[0]
         enddate=self.xlimits[1]
@@ -4968,7 +4971,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 self.plotstream.header['DataBaseValues'] = None
             existdlg.Destroy()
 
-        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst, dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotoptlist)
+        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst,
+                                     dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream,
+                                     shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotoptlist,
+                                     last_dir = self.last_dir)
         # open dlg which allows to choose baseline data stream, function and parameters
         # Drop down for baseline data stream (idx: filename)
         # Text window describing baseline parameter
@@ -6007,7 +6013,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         sensorid = self.plotstream.header.get('SensorID','')
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
-        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),end=self.plotstream.end())
+        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),
+                                   end=self.plotstream.end(),last_dir = self.last_dir)
         dlg.ShowModal()
         if len(dlg.flaglist) > 0:
             flaglist = dlg.flaglist
@@ -6041,7 +6048,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         #print ("FlagSave", self.flaglist)
 
         self.changeStatusbar("Saving flags ...")
-        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist)
+        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist,
+                                   last_dir=self.last_dir)
         if dlg.ShowModal() == wx.ID_OK:
             #flaglist = dlg.flaglist
             pass
@@ -6845,7 +6853,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             Save data of the logger to file
         """
         # TODO When starting ANalysis -> stout is redirected .. switch back to normal afterwards
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
                                        "DI analysis report (*.txt)|*.txt",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
@@ -6869,7 +6877,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
 
     def onSaveLogButton(self, event):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
                                        "Log files (*.log)|*.log",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
