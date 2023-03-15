@@ -290,7 +290,7 @@ def isFormat(filename, format_type):
     elif (format_type == "CSV"): # Basic CSV data
         if (isCSV(filename)):
             return True
-    elif (format_type in ["PYNC", "AUTODIF", "SERMUL", "SERSIN", "LATEX"]): # Not yet supported
+    elif (format_type in ["PYNC", "AUTODIF","AUTODIFABS", "SERMUL", "SERSIN", "LATEX"]): # Not yet supported
         return False
     elif (format_type == "UNKOWN"): # Unkown
         return False

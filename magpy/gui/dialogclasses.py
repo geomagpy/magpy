@@ -3400,44 +3400,26 @@ class LoadDIDialog(wx.Dialog):
         """
         didict = {}
         abslist = []
-        datelist, pierlist = [], []
+        datelist, pierlist,stationlist = [], [], []
         azimuthlist = []
         for elem in pathlist:
             if elem.endswith('.json'):
                 absst = readJSONABS(elem)
                 #print ("Json", absst)
             else:
-                # get pier from filename
-                tmpname = os.path.split(elem)[1].split('.')[0].split('_')
-                try:
-                    pier = tmpname[-2]
-                except:
-                    #pier = self.options.get('pier')
-                    pass
-                try:
-                    stationid = tmpname[-1]
-                except:
-                    #stationid = self.options.get('stationid')
-                    pass
-
-                absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
+                pier = None
+                stationid = None
+                absst = absRead(elem,output='DIListStruct')
 
             try:
-                if not len(absst) > 1: # Manual
-                    stream = absst[0].getAbsDIStruct()
-                    abslist.append(absst[0])
+
+                for a in absst:
+                    stream =a.getAbsDIStruct()
+                    abslist.append(a)
                     datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
-                    pierlist.append(absst[0].pier)
-                    azimuthlist.append(absst[0].azimuth)
-                else: # AutoDIF
-                    for a in absst:
-                        stream = a.getAbsDIStruct()
-                        abslist.append(a)
-                        datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
-                        pierlist.append(a.pier)
-                        azimuthlist.append(a.azimuth)
-                #print "absoluteAnalysis: Successful analyse of %s" % elem
-                #successlist.append(elem)
+                    pierlist.append(a.pier)
+                    azimuthlist.append(a.azimuth)
+                    stationlist.append(a.stationid)
             except:
                 print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
                 #failinglist.append(elem)
@@ -3448,39 +3430,47 @@ class LoadDIDialog(wx.Dialog):
         if len(pierlist) > 1:
             print ("Multiple piers selected - TODO")
             # TODO do something here
-
+        if len(abslist) == 0:
+            raise Exception("DI File has no valid measurements")
         didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
         didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
         didict['selectedpier'] = pierlist[0]
         didict['azimuth'] = azimuthlist[0]
+        didict['station'] = stationlist[0]
         didict['source'] = source
         didict['absdata'] = abslist
 
         # stationid needs to be defined !!!!
-        if not stationid:
+        if stationlist[0] is None:
             # Open a dialog to set the stationid
             stationid = 'NONE'
-            dlg = SetStationIDDialog(None, title='Define a StationID (e.g. IAGA code)', stationid=stationid)
+            dlg = SetStationIDDialog(self, title='Define a StationID (e.g. IAGA code)', stationid=stationid)
             if dlg.ShowModal() == wx.ID_OK:
                 stationid = dlg.StationTextCtrl.GetValue()
             dlg.Destroy()
-        didict['station'] =  stationid
+            didict['station'] =  stationid
         return didict
 
 
     def OnLoadDIFiles(self,e):
-        self.difiledirname = ''
-        stream = DataStream()
-        dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wxMULTIPLE)
-        if dlg.ShowModal() == wx.ID_OK:
-            try:
-                self.dirname = os.path.split(dlg.GetPaths()[0])[0]
-            except:
-                pass
-            self.pathlist = self.LoadFiles(dlg.GetPaths())
+        try:
+            self.difiledirname = ''
+            stream = DataStream()
+            dlg = wx.FileDialog(self, "Choose file(s)", self.dirname, "", "*.*", wxMULTIPLE)
+            if dlg.ShowModal() == wx.ID_OK:
+                try:
+                    self.dirname = os.path.split(dlg.GetPaths()[0])[0]
+                except Exception as exc:
+                    logger.error(exc)
 
-        dlg.Destroy()
-        self.Close(True)
+                self.pathlist = self.LoadFiles(dlg.GetPaths())
+
+        except Exception as exc:
+            logger.error(exc)
+        finally:
+            dlg.Destroy()
+            self.Close(True)
+
 
     def OnLoadDIDB(self,e):
         # 1. check whether data is accessible
