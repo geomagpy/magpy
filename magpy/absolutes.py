@@ -51,7 +51,7 @@ from magpy.transfer import *
 
 import dateutil.parser as dparser
 
-MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','AUTODIF','JSONABS','UNKNOWN']
+MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','JSONABS','AUTODIFABS','AUTODIF','UNKNOWN']
 ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
 
 miredict = {'UA': 290.0, 'MireTower':41.80333,'MireChurch':51.1831,'MireCobenzl':353.698}
@@ -82,7 +82,9 @@ class AbsoluteDIStruct(object):
 
 
 class DILineStruct(object):
-    def __init__(self, ndi, nf=0, time=float('nan'), laser=float('nan'), hc=float('nan'), vc=float('nan'), res=float('nan'), ftime=float('nan'), f=float('nan'), opt=float('nan'), t=float('nan'), scaleflux=float('nan'), scaleangle=float('nan'), azimuth=float('nan'), pier='', person='', di_inst='', f_inst='', fluxgatesensor ='', inputdate=''):
+    def __init__(self, ndi, nf=0, time=float('nan'), laser=float('nan'), hc=float('nan'), vc=float('nan'), res=float('nan'), ftime=float('nan'), f=float('nan'), opt=float('nan'), t=float('nan'), scaleflux=float('nan'), scaleangle=float('nan'), azimuth=float('nan'),
+                 pier='', person='', di_inst='', f_inst='', fluxgatesensor ='', inputdate='',
+                 stationid=None):
         self.time = ndi*[time]
         self.hc = ndi*[hc]
         self.vc = ndi*[vc]
@@ -97,6 +99,7 @@ class DILineStruct(object):
         self.azimuth = azimuth
         self.person = person
         self.pier = pier
+        self.stationid = stationid
         self.di_inst = di_inst
         self.f_inst = f_inst
         self.fluxgatesensor = fluxgatesensor
@@ -2086,22 +2089,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
             if len(difiles) > 0:
                 for elem in difiles:
-                    # Get stationid and pier from name (if not provided)
-                    tmpname = os.path.split(elem)[1].split('.')[0].split('_')
-                    if not stationid or stationid == '':
-                        try:
-                            stationid = tmpname[-1]
-                        except:
-                            print ("Please provide station name: stationid='WIC'")
-                    if not pier or pier == '':
-                        try:
-                            pier = tmpname[-2]
-                        except:
-                            print ("Please provide pier name: pier='MyPier'")
                     if not deltaF:
                         deltaF = 0.0
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
-
                     try:
                         if not len(absst) > 1: # Manual
                             stream = absst[0].getAbsDIStruct()

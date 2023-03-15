@@ -38,7 +38,10 @@ def isMAGPYNEWABS(filename):
     return True
 
 
-def isAUTODIF(filename):
+
+@deprecate()
+# this format isn't supported by AUTODIF MK3 anymore
+def isAUTODIFRAW(filename):
     """
     Checks whether a file is AUTODIF format.
     """
@@ -50,6 +53,17 @@ def isAUTODIF(filename):
     if not line.startswith('AUTODIF') and not line.startswith('auto'):
         return False
     return True
+
+
+# AUTODIF ABS VALUES AVAILABLE IN FILE .ABS
+def isAUTODIFABS(filename: string):
+    """
+    Checks whether a file is AUTODIF format.
+    """
+    return filename.endswith('.abs')
+
+
+
 
 
 def isJSONABS(filename):
@@ -92,6 +106,13 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
 
     azimuth = kwargs.get('azimuth')
     output = kwargs.get('output')
+    stationid = ''
+    # get stationid from filename
+    tmpname = os.path.split(filename)[1].split('.')[0].split('_')
+    try:
+        stationid = tmpname[-1]
+    except:
+        pass
 
     if not output:
         output = 'AbsoluteDIStruct' # else 'DILineStruct'
@@ -138,6 +159,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
             dirow.azimuth = expectedmire
             headers['pillar'] = colsstr[3]
             dirow.pier = colsstr[3]
+            dirow.stationid =stationid
             if numelements > 4:
                 f_inst = colsstr[4]
                 dirow.f_inst = f_inst
@@ -301,7 +323,13 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     """
     azimuth = kwargs.get('azimuth')
     output = kwargs.get('output')
-
+    stationid = ''
+    # get stationid from filename
+    tmpname = os.path.split(filename)[1].split('.')[0].split('_')
+    try:
+        stationid = tmpname[-1]
+    except:
+        pass
     if not output:
         output = 'AbsoluteDIStruct' # else 'DILineStruct'
 
@@ -318,6 +346,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     key = None
     headfound = False
     dirow = DILineStruct(25)
+    dirow.stationid = stationid
     count = 4
     goon = False
 
