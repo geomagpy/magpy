@@ -4115,8 +4115,13 @@ CALLED BY:
 
         window_period = filter_width.total_seconds()
         si = timedelta(seconds=self.get_sampling_period()*24*3600)
-
+        # default - rounding to 0.01 second for LF signals
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
+        if sampling_period < 0.02:
+            # HF signal - 50 Hz or larger
+            if debugmode:
+                print ("Found HF signal - using full microsecond resolution")
+            sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,6)
 
         if debugmode:
             print("Timedelta and sampling period:", si, sampling_period)
