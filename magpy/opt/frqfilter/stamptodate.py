@@ -57,19 +57,42 @@ def worker(zerotime): # python3
     
     l = 1
     cz = int64( 0)
+    
     minz = min( zerotime)
     maxz = max( zerotime)
     
     z = minz#, maxz]:
-    while( float( cz) <= float( z) - dayseconds):
-        #print( 'float( cz) <= float( z)', float( cz) <= float( z), 'float( cz), float( z)', float( cz),  float( z))
-        bakcz = cz
-        if( ( ( mod( l, 4) == 0) or ( mod( l, 400) == 0)) and ( mod( l, 100) != 0)):
-            cz = cz + int64( 366* 86400)
-        else:
-            cz = cz + int64( 365* 86400)
-        #print( 'cz', cz, 'l', l)
-        l += 1
+    if( debug):
+        print( 'cz', cz)
+        print( 'z', z)
+        print( 'float( z) - dayseconds', float( z) - dayseconds)
+        print( 'minz', minz)
+        print( 'maxz', maxz)
+    
+    if( float( z) >= dayseconds):
+        if( debug):
+            print( 'float( z) >= dayseconds', float( z) >= dayseconds)
+        while( ( float( cz) <= float( z) - dayseconds)):
+            #print( 'float( cz) <= float( z)', float( cz) <= float( z), 'float( cz), float( z)', float( cz),  float( z))
+            bakcz = cz
+            if( ( ( mod( l, 4) == 0) or ( mod( l, 400) == 0)) and ( mod( l, 100) != 0)):
+                cz = cz + int64( 366* 86400)
+            else:
+                cz = cz + int64( 365* 86400)
+            #print( 'cz', cz, 'l', l)
+            l += 1
+    else:
+        if( debug):
+            print( 'float( z) >= dayseconds', float( z) >= dayseconds)
+        while( ( float( cz) <= dayseconds)):
+            #print( 'float( cz) <= dayseconds', float( cz) <= dayseconds, 'float( cz), dayseconds', float( cz),  dayseconds)
+            bakcz = cz
+            if( ( ( mod( l, 4) == 0) or ( mod( l, 400) == 0)) and ( mod( l, 100) != 0)):
+                cz = cz + int64( 366* 86400)
+            else:
+                cz = cz + int64( 365* 86400)
+            #print( 'cz', cz, 'l', l)
+            l += 1
     cz = float( bakcz)
     #print( 'float( cz) <= float( z)', float( cz) <= float( z), 'float( cz), float( z)', float( cz),  float( z))
     l -= 1
@@ -88,21 +111,38 @@ def worker(zerotime): # python3
         #cz = int64( 0)
         l = realbakl
         cz = realbakcz
-        while( float( cz) <= float( z) - dayseconds):
-            #print( 'float( cz) <= float( z)', float( cz) <= float( z), 'float( cz), float( z)', float( cz),  float( z))
-            bakcz = cz
-            if( ( ( mod( l, 4) == 0) or ( mod( l, 400) == 0)) and ( mod( l, 100) != 0)):
-                cz = cz + int64( 366* 86400)
-            else:
-                cz = cz + int64( 365* 86400)
-            #print( 'cz', cz, 'l', l)
-            l += 1
+        if( float( z) >= dayseconds):
+            if( debug):
+                print( 'float( z) >= dayseconds', float( z) >= dayseconds)
+            while( float( cz) <= float( z) - dayseconds):
+                #print( 'float( cz) <= float( z)', float( cz) <= float( z), 'float( cz), float( z)', float( cz),  float( z))
+                bakcz = cz
+                if( ( ( mod( l, 4) == 0) or ( mod( l, 400) == 0)) and ( mod( l, 100) != 0)):
+                    cz = cz + int64( 366* 86400)
+                else:
+                    cz = cz + int64( 365* 86400)
+                #print( 'cz', cz, 'l', l)
+                l += 1
+        else:
+            if( debug):
+                print( 'float( z) >= dayseconds', float( z) >= dayseconds)
+            while( ( float( cz) <= dayseconds)):
+                #print( 'float( cz) <= dayseconds', float( cz) <= dayseconds, 'float( cz), dayseconds', float( cz),  dayseconds)
+                bakcz = cz
+                if( ( ( mod( l, 4) == 0) or ( mod( l, 400) == 0)) and ( mod( l, 100) != 0)):
+                    cz = cz + int64( 366* 86400)
+                else:
+                    cz = cz + int64( 365* 86400)
+                #print( 'cz', cz, 'l', l)
+                l += 1
         cz = float( bakcz)
         #print( 'float( cz) <= float( z)', float( cz) <= float( z), 'float( cz), float( z)', float( cz),  float( z))
         l -= 1
         #print( 'z', z, 'cz', cz, 'l', l)
         #sys.exit()
         #year.append( int32( floor( z/ float( 86400)/ float( 365.2425))))
+        if( l < 1970):
+            l = 1970
         year.append( l)
         #print( 'year[-1], l', year[-1], l)
         #sys.exit()
@@ -178,6 +218,8 @@ def worker(zerotime): # python3
         pastdays = pastdays + int32( multi)
         #if( n > 12):
         n -= 1
+        if( n == 0): # month zero is not possible
+            n = n + 1
         if( debug):
             print( 'STAMPTODATE: remaining days {} month {} multi is {}'.format( pastdays, n, multi))
         #removalpart = removalpart - multi
@@ -194,7 +236,10 @@ def worker(zerotime): # python3
         #else:
         #    dd.append( int32( floor( pastdays + 1)))
         #dd.append( int32( floor( pastdays + 1)))
-        dd.append( int32( floor( pastdays)))
+        daytoAdd = int32( floor( pastdays))
+        if( daytoAdd == 0):
+            daytoAdd = daytoAdd + 1
+        dd.append( daytoAdd)
         if( debug):
             print( 'STAMPTODATE: remaining days {} month {} multi is {}'.format( pastdays, dd[-1], multi))
         #if( k > 10):
@@ -202,17 +247,21 @@ def worker(zerotime): # python3
         #dd.append( int32( floor( bakpastdays - removalpart)))
         #print 'dd is:', dd[-1]
         #hh.append( int32( floor( 24.0*( fpastdays - float( dd[-1])))))
+        #print( 'fpastdays', fpastdays, 'float( pastdays)* dayseconds', float( pastdays)* dayseconds)
         temp = float( 24.0)* ( NoMinFloor( ( ( fpastdays - float( pastdays)* dayseconds)/ dayseconds)))
+        #print( 'temp hh', temp)
         hh.append( int32( floor( temp)))#float( dd[-1])))))
         #print 'hh is:', hh[-1]
         #print 'temp is:', temp
         #mm.append( int32( floor( 1440.0*( pastdays - float( dd[-1])) - 60.0* ( float( hh[-1])))))
         temp = float( 60.0)* NoMinFloor(temp)
+        #print( 'temp mm', temp)
         mm.append( int32( floor( temp)))
         #print 'mm is:', mm[-1]
         #print 'temp is:', temp
         #ss.append( float( 86400.0* ( pastdays - float( dd[-1])) - 3600.0* float( hh[-1])- 60.0* float( mm[-1])))
         temp = float( 60.0)* NoMinFloor(temp)
+        #print( 'temp ss', temp)
         ss.append( float( temp))
         if( debug):
             print( 'STAMPTODATE: remaining days {} year {} month {} day {} hh {} mm {} ss {} multi {}'.format( pastdays, year[-1], n, dd[-1], hh[-1], mm[-1], ss[-1], multi))
@@ -286,14 +335,14 @@ def worker(zerotime): # python3
 
 
 def STAMPTODATE(zerotime):
-############
-# year ... integer 4 digits
-# mon  ... integer 2 digits
-# dd   ... integer 2 digits
-# hh   ... integer 2 digits
-# mm   ... integer 2 digits
-# ss   ... float float
-############
+    """
+    # year ... integer 4 digits
+    # mon  ... integer 2 digits
+    # dd   ... integer 2 digits
+    # hh   ... integer 2 digits
+    # mm   ... integer 2 digits
+    # ss   ... float float
+    """
     dump = []
     if( isinstance( zerotime, float)):
         dump.append( zerotime)

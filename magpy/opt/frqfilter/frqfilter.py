@@ -38,6 +38,10 @@ class FrqFilter:
     supported but have to mentioned by PeriodAxis = True in the calling process
     .
     
+    Implemented field-augmentation on both axis ... error was present for 
+    augmentation on axis == 0
+    solved??? -- TODO
+    
     ...
     FrqFilter, V1.4
     
@@ -618,13 +622,25 @@ class FrqFilter:
                     """
                     
                     
-                    get passing or blocking behaviour of filter
+                    get DynNumOfSlep of filter
                     """
                     self.DynNumOfSlep = value
                     #ce = value[0] # center frequency
                     #de = value[1] # damping decrement
                     if( self.debug):
                         print( 'self.DynNumOfSlep is: {}'.format( self.DynNumOfSlep))
+                if( 'NumOfSlep' == item):
+                    
+                    """
+                    
+                    
+                    get NumOfSlep of filter
+                    """
+                    self.NumOfSlep = value
+                    #ce = value[0] # center frequency
+                    #de = value[1] # damping decrement
+                    if( self.debug):
+                        print( 'self.NumOfSlep is: {}'.format( self.NumOfSlep))
             ###########
             # OLD
             ###########
@@ -681,6 +697,7 @@ class FrqFilter:
         posind = np.argwhere( poscheck).flatten()
         self.faxis[posind] = self.faxis[posind] + self.fmin
         #self.faxis = fft.fftfreq( self.len, self.dt)
+        
         if( self.PeriodAxis):
             self.faxis = 1.0/ self.faxis
             fmax = 1.0/ self.fmin
@@ -700,12 +717,16 @@ class FrqFilter:
             negfmin = -self.fmin
             #self.posind = np.argwhere( self.faxis >= self.fmin).flatten()#[0]
             #self.negind = np.argwhere( self.faxis <= -self.fmin).flatten()#[0]
+        if( self.debug):
+            print( 'fmin', fmin, 'fmax', fmax, 'negfmax', negfmax, 'negfmin', negfmin)
         a = self.faxis >= fmin
         b = self.faxis <= fmax
         c = self.faxis >= negfmax
         d = self.faxis <= negfmin
+        
         self.posind = np.argwhere( a & b).flatten()#[0]
-        self.negind = np.argwhere( c & d).flatten()#[0]
+        #self.negind = np.argwhere( c & d).flatten()#[0]
+        self.negind = np.argwhere( np.invert( a & b)).flatten()#[0]
         if( self.debug):
             print( 'self.faxis is: {}'.format( self.faxis))
             print( 'np.max( np.abs( self.faxis)) is: {}'.format( np.max( np.abs( self.faxis))))
@@ -1136,23 +1157,27 @@ class FrqFilter:
                 aseries = atleast_2d( aseries)
             M, N = shape(aseries)
             minDim, maxDim = [ argmin( [M, N]), argmax( [M, N])]
-            length = [ M, N][maxDim]
-            columns = [ M, N][minDim]
+            #length = [ M, N][maxDim]
+            length = [ M, N][self.axis]
+            columns = [ M, N][not self.axis]
             if( self.debug):
                 print( 'Dimensions of aseries: \n M, N:{},{}'.format( M, N ))
                 print( 'Dimensions of aseries: \n minDim, maxDim:{},{}'.format( minDim, maxDim ))
                 print( 'shape of aseries is:\t{}'.format( shape( aseries)))
                 print( 'shape of tseries is:\t{}'.format( shape( tseries)))
+                print( 'length of aseries is:\t{}'.format( length))
+                #sys.exit()
             
-            if( M > N):
-                aseries = aseries.T # ROTATE IF aseries has more rows than columns
+            #if( M > N):
+            #    aseries = aseries.T # ROTATE IF aseries has more rows than columns
             #####
             # RECHECK DIMENSIONS
             #####
             M, N = shape(aseries)
             minDim, maxDim = [ argmin( [M, N]), argmax( [M, N])]
-            length = [ M, N][maxDim]
-            columns = [ M, N][minDim]
+            #length = [ M, N][maxDim]
+            length = [ M, N][self.axis]
+            columns = [ M, N][not self.axis]
             #print( 'Dimensions of aseries after transposition: \n M, N:{},{}'.format( M, N ))
             #print( 'Dimensions of aseries after transposition: \n minDim, maxDim:{},{}'.format( minDim, maxDim ))
             
@@ -1170,18 +1195,26 @@ class FrqFilter:
             if( self.debug):
                 print( 'sampling interval:{}'.format( dt))
                 print( 'length of tseries:{}'.format( max( shape( tseries))))
+                print( 'length of aseries is:\t{}'.format( length))
             #print( 'length of aseries:{}'.format( max( shape( aseries))))
             
-            arev = aseries[:, ::-1] # reversed aseries for use in three_aseries
-            three_aseries = hstack(( arev, aseries[:, 1::], arev[:,1::])) # three time long amplitude-series for further processing
+            if( self.axis == 1):
+                arev = aseries[:, ::-1] # reversed aseries for use in three_aseries
+                three_aseries = hstack(( arev, aseries[:, 1::], arev[:,1::])) # three time long amplitude-series for further processing
+            elif( self.axis == 0):
+                arev = aseries[::-1, :] # reversed aseries for use in three_aseries
+                three_aseries = vstack(( arev, aseries[1::, :], arev[1::, :])) # three time long amplitude-series for further processing                
             del arev
-            
+            if( self.debug):
+                print( 'sampling interval:{}'.format( dt))
+                print( 'length of three_aseries:{}'.format( max( shape( three_aseries))))
+                print( 'shape of three_aseries is:\t{}'.format( np.shape( three_aseries)))
             #print( 'length of three_aseries:{}'.format( max( shape( three_aseries))))
             
             U, V = shape(three_aseries) # dimensions of three_aseries
             minDim, maxDim = [ argmin( [U, V]), argmax( [U, V])]
-            three_length = [ U, V][maxDim]
-            three_columns = [ U, V][minDim]
+            three_length = [ U, V][self.axis]
+            three_columns = [ U, V][not self.axis]
             atseries = tseries[0] + arange( tseries[0] - tseries[-1] , 2.0*( tseries[-1] - tseries[0]) + dt, dt)
             #print( 'Dimensions of three_aseries: \n U, V:{},{}'.format( U, V ))
             #print( 'Dimensions of three_aseries: \n minDim, maxDim:{},{}'.format( minDim, maxDim ))
@@ -1191,6 +1224,7 @@ class FrqFilter:
             #print( 'length of atseries:{}'.format( max( shape( atseries))))
             if( self.debug):
                 print( 'three_length is: {}'.format( three_length))
+                print( 'three_columns is: {}'.format( three_columns))
             if( False):
                 # only for debugging
                 import matplotlib.pyplot as plt 
@@ -1200,6 +1234,12 @@ class FrqFilter:
                 plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
                 plt.show()
                 sys.exit()
+            
+            
+            if( self.debug):
+                print( 'three_length is: {}'.format( three_length))
+                print( 'length is: {}'.format( length))
+                print( '1.5*length is: {}'.format( 1.5*length))
             
             cutlen = int( 1.5*length)
             pow2len = int( power( 2.0, float( ceil( log2( float( cutlen)))))) # new length multiple of power 2
@@ -1213,7 +1253,13 @@ class FrqFilter:
             
             firsthalfremlen = int( floor( float( remlen)/2.0))
             secondhalfremlen = int( ceil( float( remlen)/2.0))
-            
+            if( self.debug):
+                print( 'cutlen is: {}'.format( cutlen))
+                print( 'pow2len is: {}'.format( pow2len))
+                print( 'remlen is: {}'.format( remlen))
+                print( 'firsthalfremlen is: {}'.format( firsthalfremlen))
+                print( 'secondhalfremlen is: {}'.format( secondhalfremlen))
+
             ######
             # CHECK IF BOTH LENGTHS firsthalfremlen and secondhalfremlen TOGETHER ARE remlen long and correct if neccesary
             ######
@@ -1227,15 +1273,22 @@ class FrqFilter:
                 print( 'remlen is: {}'.format( remlen))
                 print( 'three_length - secondhalfremlen is: {}'.format( three_length - secondhalfremlen))
             #aaseries = three_aseries[:, firsthalfremlen + 1:firsthalfremlen + 1 + pow2len:]#  CUT augmented timeseries so that it is as long as aaseries in the end
-            aaseries = three_aseries[:, firsthalfremlen + 1:firsthalfremlen + 1 + pow2len:]#  CUT augmented timeseries so that it is as long as aaseries in the end
+            if( self.axis == 1):
+                aaseries = three_aseries[:, firsthalfremlen + 1:firsthalfremlen + 1 + pow2len:]#  CUT augmented timeseries so that it is as long as aaseries in the end
+            elif( self.axis == 0):
+                aaseries = three_aseries[firsthalfremlen + 1:firsthalfremlen + 1 + pow2len:, :]#  CUT augmented timeseries so that it is as long as aaseries in the end
             orgStartInd = int( length) - ( firsthalfremlen + 2)
             #orgStartInd, orgEndInd = int( length) - ( firsthalfremlen + 2), int( cutlen - 1) - ( firsthalfremlen) - 1 # REMEMBER indices of original timestamps tseries[0] and tseries[-1] in atseries 
             orgEndInd = orgStartInd + length # REMEMBER indices of original timestamps tseries[0] and tseries[-1] in atseries 
             #orgStartInd, orgEndInd = int( length) - ( firsthalfremlen + 1), int( 2* length -1) - ( firsthalfremlen) # REMEMBER indices of original timestamps tseries[0] and tseries[-1] in atseries 
             if( self.debug):
                 print( 'orgStartind is:\n\t{}\norgEndInd is:\n\t{}'.format( orgStartInd, orgEndInd))
-            if( max( shape( aaseries)) != pow2len): # only if i'm completedly confused
-                aaseries = three_aseries[:, firsthalfremlen + 1:firsthalfremlen + 2 + pow2len:]
+            if( self.axis == 1):
+                if( max( shape( aaseries)) != pow2len): # only if i'm completedly confused
+                    aaseries = three_aseries[:, firsthalfremlen + 1:firsthalfremlen + 2 + pow2len:]
+            elif( self.axis == 0):
+                if( max( shape( aaseries)) != pow2len): # only if i'm completedly confused
+                    aaseries = three_aseries[firsthalfremlen + 1:firsthalfremlen + 2 + pow2len:, :]                
             atseries = atseries[firsthalfremlen + 1:firsthalfremlen + 1 + pow2len:] # CUT augmented timeseries so that it is as long as aaseries in the end
             #print( 'atseries is: {}'.format( atseries))
             #print( 'shape of atseries is: {}'.format( shape( atseries)))
@@ -1244,11 +1297,25 @@ class FrqFilter:
             ####
             # detrending boundary timeranges
             ####
-            temp = vstack( ( aaseries[:,0], aaseries[:,-1])).T
-            #print( 'shape of temp is: \n:{}'.format( shape( temp) ))
-            avg_int_lvls = nanmean( temp, axis = 1) 
+            if( self.axis == 1):
+                temp = vstack( ( aaseries[:,0], aaseries[:,-1])).T
+                #print( 'shape of temp is: \n:{}'.format( shape( temp) ))
+                avg_int_lvls = nanmean( temp, axis = self.axis) 
+            elif( self.axis == 0):
+                temp = vstack( ( aaseries[0,:].T, aaseries[-1,:].T))
+                #print( 'shape of temp is: \n:{}'.format( shape( temp) ))
+                avg_int_lvls = nanmean( temp, axis = self.axis)                 
+            if( self.debug):
+                print( 'temp', temp)
+                print( 'avg_int_lvls', avg_int_lvls)
+                print( 'shape( avg_int_lvls)', shape( avg_int_lvls))
+                print( 'shape( aaseries)', shape( aaseries))
+                print( 'shape( temp)', shape( temp))
+                #sys.exit()
+            
             del temp
             
+
             #aaseries = (aaseries.T - avg_int_lvls).T
             
             if( False):
@@ -1283,31 +1350,66 @@ class FrqFilter:
             if( self.debug):
                 print( 'trendind is:\t{}'.format( trendind))
                 print( 'shape of aaseries is:\t{}'.format( np.shape( aaseries)))
-            if( np.isrealobj(avg_int_lvls)):
-                #temp = np.zeros( np.shape( chgData))
-                trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]))
-            elif( np.iscomplexobj(avg_int_lvls)):
-                #temp = np.zeros( np.shape( chgData))
-                trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]), dtype = complex)
+                print( 'M is:\t{}'.format( M))
+                print( '[M,N][not self.axis] is:\t{}'.format( [M,N][not self.axis]))
+            if( self.axis == 1):
+                if( np.isrealobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( columns, 1 + trendind[-1] - trendind[0]))
+                elif( np.iscomplexobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( columns, 1 + trendind[-1] - trendind[0]), dtype = complex)
+            elif( self.axis == 0):
+                if( np.isrealobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( 1 + trendind[-1] - trendind[0], columns))
+                elif( np.iscomplexobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( 1 + trendind[-1] - trendind[0], columns), dtype = complex)
             #trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]))
-            for k, a in enumerate( (aaseries[:, trendind].T ).T): #  - aaseries[:,trendind[-1]]
-                polynom = polyfit( atseries[trendind], [avg_int_lvls[k], 0.0], 1, rcond = power( 10.0, -40.0))
-                trendfct[k, :] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])# + avg_int_lvls[k]
-            #print( 'shape of trendfct is: {}'.format( shape( trendfct)))
+            if( self.debug):
+                print( 'trendfct is:\t{}'.format( trendfct))
+                print( 'shape of trendfct is:\t{}'.format( np.shape( trendfct)))
+                #print( 'aaseries[ :, trendind]', aaseries[ :, trendind])
+                #print( 'np.shape( aaseries[ :, trendind])', np.shape( aaseries[ :, trendind]))
+            if( self.axis == 1):
+                for k, a in enumerate( (aaseries[ :, trendind].T ).T): #  - aaseries[:,trendind[-1]]
+                    polynom = polyfit( atseries[trendind], [avg_int_lvls[k], 0.0], 1, rcond = power( 10.0, -40.0))
+                    trendfct[k, :] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])# + avg_int_lvls[k]
+            elif( self.axis == 0):
+                for k, a in enumerate( (aaseries[ trendind, :] )): #  - aaseries[:,trendind[-1]]
+                    #print( 'avg_int_lvls[k]', avg_int_lvls[k])
+                    #print( 'atseries[trendind[0]:trendind[-1] + 1]', atseries[trendind[0]:trendind[-1] + 1])
+                    #print( 'np.shape( atseries[trendind[0]:trendind[-1] + 1])', np.shape( atseries[trendind[0]:trendind[-1] + 1]))
+                    polynom = polyfit( atseries[trendind], [avg_int_lvls[k], 0.0], 1, rcond = power( 10.0, -40.0))
+                    trendfct[:, k] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])# + avg_int_lvls[k]
+            if( self.debug):
+                print( 'shape of trendfct is: {}'.format( shape( trendfct)))
+                print( 'np.shape( aaseries[trendind[0]:trendind[-1] + 1, :])', np.shape( aaseries[trendind[0]:trendind[-1] + 1, :]))
+            #sys.exit()
             #for f,g in zip( trendind, trendfct):
             #    print( 'trendfct[{}] is: {}'.format( f, g[f - 1]))
-            aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] - trendfct
-            #print( 'aaseries after removal of beginings trend: {}'.format( aaseries[:,0:orgStartInd]))
-            #aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:halftplen + 1] # TAPERING
-            try:
-                aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:maxind] # TAPERING
-            except:
-                aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:maxind + 1] # TAPERING
+            if( self.axis == 1):
+                aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] - trendfct
+                #print( 'aaseries after removal of beginings trend: {}'.format( aaseries[:,0:orgStartInd]))
+                #aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:halftplen + 1] # TAPERING
+                try:
+                    aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:maxind] # TAPERING
+                except:
+                    aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:maxind + 1] # TAPERING
+            elif( self.axis == 0):
+                aaseries[trendind[0]:trendind[-1] + 1, :] = aaseries[trendind[0]:trendind[-1] + 1, :] - trendfct
+                #print( 'aaseries after removal of beginings trend: {}'.format( aaseries[:,0:orgStartInd]))
+                #aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[:halftplen + 1] # TAPERING
+                try:
+                    aaseries[trendind[0]:trendind[-1] + 1, :] = aaseries[trendind[0]:trendind[-1] + 1, :] * taper[:maxind] # TAPERING
+                except:
+                    aaseries[trendind[0]:trendind[-1] + 1, :] = aaseries[trendind[0]:trendind[-1] + 1, :] * np.atleast_2d( taper[:maxind + 1]).T # TAPERING
             
             G, H = shape(aaseries) # dimensions of three_aseries
             minDim, maxDim = [ argmin( [G, H]), argmax( [G, H])]
-            pow2_length = [ G, H][maxDim]
-            pow2_columns = [ G, H][minDim]
+            pow2_length = [ G, H][self.axis]
+            pow2_columns = [ G, H][not self.axis]
             
             if( False):
                 # only for debugging
@@ -1326,24 +1428,41 @@ class FrqFilter:
             #######
             # REMOVE TREND AT ENDING
             #######
-            trendind = [ orgEndInd - 2, pow2_length - 1]
+            #trendind = [ orgEndInd - 2, pow2_length - 1]
+            trendind = [ orgEndInd, pow2_length - 1]
             if( self.debug):
                 print( 'orgEndInd:{}\npow2_length:{}\nM:{}'.format( orgEndInd, pow2_length, M))
             #trendind = [ orgEndInd -3, pow2_length - 1]
-            if( np.isrealobj(avg_int_lvls)):
-                #temp = np.zeros( np.shape( chgData))
-                trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]))
-            elif( np.iscomplexobj(avg_int_lvls)):
-                #temp = np.zeros( np.shape( chgData))
-                trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]), dtype = complex)
-            #trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]))
-            for k, a in enumerate( (aaseries[:, trendind].T ).T):
-                polynom = polyfit( atseries[trendind], [0.0, avg_int_lvls[k]], 1, rcond = power( 10.0, -40.0))
-                trendfct[k, :] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])
-            #print( 'shape of trendfct is: {}'.format( shape( trendfct)))
-            #for f,g in zip( trendind, trendfct):
-            #    print( 'trendfct[{}] is: {}'.format( f, g[f - 1 - orgEndInd]))
-            aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] - trendfct
+            if( self.axis == 1):
+                if( np.isrealobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( pow2_columns, 1 + trendind[-1] - trendind[0]))
+                elif( np.iscomplexobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( pow2_columns, 1 + trendind[-1] - trendind[0]), dtype = complex)
+                #trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]))
+                for k, a in enumerate( (aaseries[:, trendind].T ).T):
+                    polynom = polyfit( atseries[trendind], [0.0, avg_int_lvls[k]], 1, rcond = power( 10.0, -40.0))
+                    trendfct[k, :] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])
+                #print( 'shape of trendfct is: {}'.format( shape( trendfct)))
+                #for a, f,g in zip( aaseries, trendind, trendfct):
+                #    print( 'aaseries[{}] trendfct[{}] is: {}'.format( a[f], f, g[f - 1 - orgEndInd]))
+                aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] - trendfct
+            elif( self.axis == 0):
+                if( np.isrealobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( 1 + trendind[-1] - trendind[0], pow2_columns))
+                elif( np.iscomplexobj(avg_int_lvls)):
+                    #temp = np.zeros( np.shape( chgData))
+                    trendfct = zeros( ( 1 + trendind[-1] - trendind[0], pow2_columns), dtype = complex)
+                #trendfct = zeros( ( M, 1 + trendind[-1] - trendind[0]))
+                for k, a in enumerate( (aaseries[trendind, ]).T):
+                    polynom = polyfit( atseries[trendind], [0.0, avg_int_lvls[k]], 1, rcond = power( 10.0, -40.0))
+                    trendfct[:, k] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])
+                #print( 'shape of trendfct is: {}'.format( shape( trendfct)))
+                #for a, f,g in zip( aaseries, trendind, trendfct):
+                #    print( 'aaseries[{}] trendfct[{}] is: {}'.format( a[f], f, g[f - 1 - orgEndInd]))
+                aaseries[trendind[0]:trendind[-1] + 1, :] = aaseries[trendind[0]:trendind[-1] + 1, :] - trendfct
             #print( 'aaseries after removal of endings trend: {}'.format( aaseries[:,trendind[0]:trendind[-1]]))
             #aaseries[:,trendind[0]:trendind[-1]] = aaseries[:,trendind[0]:trendind[-1]] * taper[halftplen + 1::] # TAPERING
             #print( 'trendind[0]:trendind[-1] is: {} : {}\n trendind[-1] - trendind[0] is: {}'.format( trendind[0], trendind[-1], trendind[-1] - trendind[0]))
@@ -1353,7 +1472,19 @@ class FrqFilter:
             #except:
             #    aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[maxind + 2::] # TAPERING
             #try:
-            aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[-(trendind[-1] + 1 - trendind[0])::] # TAPERING
+            if( self.debug):
+                print( 'aaseries[:,trendind[0]:trendind[-1] + 1]', aaseries[:,trendind[0]:trendind[-1] + 1])
+                print( 'aaseries[trendind[0]:trendind[-1] + 1, :]', aaseries[trendind[0]:trendind[-1] + 1, :])
+                print( 'taper[ -(trendind[-1] - trendind[0]) - 1::]', taper[ -(trendind[-1] - trendind[0]) - 1::])
+                print( 'np.shape( aaseries[:,trendind[0]:trendind[-1] + 1])', np.shape( aaseries[:, trendind[0]:trendind[-1] + 1]))
+                print( 'np.shape( aaseries[trendind[0]:trendind[-1] + 1, :])', np.shape( aaseries[trendind[0]:trendind[-1] + 1, :]))
+                print( 'np.shape( taper[ -(trendind[-1] - trendind[0]) - 1::])', np.shape( taper[ -(trendind[-1] - trendind[0]) - 1::]))
+            if( self.axis == 1):
+                aaseries[ :, trendind[0]:trendind[-1] + 1] = aaseries[ :, trendind[0]:trendind[-1] + 1] * taper[ -( 1 + trendind[-1] - trendind[0])::] # TAPERING
+            elif( self.axis == 0):
+                aaseries[trendind[0]:trendind[-1] + 1, :] = aaseries[trendind[0]:trendind[-1] + 1, :] * np.atleast_2d( taper[ -( 1 + trendind[-1] - trendind[0])::]).T # TAPERING
+                #aaseries[trendind[0]:trendind[-1] + 1, :] = aaseries[trendind[0]:trendind[-1] + 1, :] * np.atleast_2d( taper[maxind::]).T # TAPERING
+                #taper[:maxind + 1]
             #except:
             #    aaseries[:,trendind[0]:trendind[-1] + 1] = aaseries[:,trendind[0]:trendind[-1] + 1] * taper[maxind + 2::] # TAPERING
     
@@ -1361,7 +1492,7 @@ class FrqFilter:
             #aaseries = (aaseries.T + avg_int_lvls).T
             
             
-            if( False):
+            if( self.debug):
                 # only for debugging
                 import matplotlib
                 matplotlib.use('TkAgg')
@@ -1370,10 +1501,16 @@ class FrqFilter:
                 k = 2
                 k = 2
                 #plt.plot( atseries, (aaseries.T - nanmean( aaseries[:, orgStartInd: orgEndInd], axis = 1))[:,k], 'r')
-                plt.plot( atseries, aaseries.T[:,k], 'r')
-                #plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
-                plt.plot( atseries[trendind[0]:trendind[-1] + 1], trendfct[k,:], 'b')
-                plt.plot( atseries[trendind[0]:trendind[-1] + 1], taper[maxind + 1::]*max( trendfct[k,:]), 'g')
+                if( self.axis == 1):
+                    plt.plot( atseries, aaseries.T[:,k], 'r')
+                    #plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
+                    plt.plot( atseries[trendind[0]:trendind[-1] + 1], trendfct[k,:], 'b')
+                    plt.plot( atseries[trendind[0]:trendind[-1] + 1], taper[maxind + 1::]*max( trendfct[k,:]), 'g')
+                elif( self.axis == 0):
+                    plt.plot( atseries, aaseries.T[k,:], 'r')
+                    #plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
+                    plt.plot( atseries[trendind[0]:trendind[-1] + 1], trendfct[:,k], 'b')
+                    #plt.plot( atseries[trendind[0]:trendind[-1] + 1], taper[maxind + 1::]*max( trendfct[:,k]), 'g')                    
                 plt.show()
                 sys.exit()
             
@@ -1385,7 +1522,10 @@ class FrqFilter:
             if( self.debug):
                 print( 'length of augmented timeseries (atseries):{}'.format( max( shape( atseries))))
             self.augt = atseries
-            self.augdata = aaseries.T
+            if( np.argmax( np.shape( aaseries)) != self.axis):
+                self.augdata = aaseries.T
+            else:
+                self.augdata = aaseries
             self.orgStartInd = orgStartInd
             self.orgEndInd = orgEndInd
             self.len = len( self.augt)
@@ -1396,7 +1536,7 @@ class FrqFilter:
                 print( 'shape of self.augdata is:\t{}'.format( shape( self.augdata)))
                 print( 'self.orgStartInd is:\t{}'.format( self.orgStartInd))
                 print( 'self.orgEndInd is:\t{}'.format( self.orgEndInd))
-            return atseries, aaseries.T, orgStartInd, orgEndInd
+            return atseries, aaseries, orgStartInd, orgEndInd
         
         """
         If the FIELDAUGMENTATION is called as an argument of another function an artificial timeseries with sampling interval of
@@ -1410,10 +1550,12 @@ class FrqFilter:
             
             M, N = shape(aseries)
             minDim, maxDim = [ argmin( [M, N]), argmax( [M, N])]
-            length = [ M, N][maxDim]
+            #length = [ M, N][maxDim]
+            length = [M, N][maxDim]
             columns = [ M, N][minDim]
             print( 'Dimensions of aseries: \n M, N:{},{}'.format( M, N ))
             print( 'Dimensions of aseries: \n minDim, maxDim:{},{}'.format( minDim, maxDim ))
+            print( 'length of aseries: \n length:{}'.format( length))
             if( self.debug):
                 print( 'shape of aseries is:\t{}'.format( shape( aseries)))
                 print( 'shape of tseries is:\t{}'.format( shape( tseries)))
@@ -1692,9 +1834,14 @@ class FrqFilter:
         if( self.debug):
             print( 'self.len is: {}'.format( self.len))
         self.fmin = 1.0/ float( self.len)/ self.dt
+        
         if( self.debug):
             print( 'self.fmin is: {}'.format( self.fmin))
         self.__faxis__()
+        self.fmin = np.min( self.faxis[self.posind])
+        if( self.debug):
+            print( 'self.fmin is: {}'.format( self.fmin))
+            sys.exit()
         if( False):
             if( self.PeriodAxis):
                 #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
@@ -1731,7 +1878,8 @@ class FrqFilter:
             self.taper = sg.windows.hanning( self.len)
         
         if( self.data.ndim == 2):
-            self.taper = np.atleast_2d( self.taper).T
+            if( self.axis != np.max( np.shape( self.taper))):
+                self.taper = np.atleast_2d( self.taper).T
         if( self.debug):
             print( 'shape of self.taper is:\t{}'.format( np.shape( self.taper)))
         if( self.axis == 0):
@@ -1750,6 +1898,8 @@ class FrqFilter:
             print( 'np.shape( self.data)', np.shape( self.data))
             #sys.exit()
             self.fdata = self.fdata.T
+            print( 'np.shape( self.fdata) transposed: ', np.shape( self.fdata))
+            #sys.exit()
         if( self.debug):
             print( 'shape of self.fdata is:\t{}'.format( np.shape( self.fdata)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
@@ -2111,7 +2261,8 @@ class FrqFilter:
         if( np.shape( dump)[0] == np.shape( self.data)[1] or np.shape( dump)[1] == np.shape( self.data)[0]):
             self.augdata = dump.T
             dump = self.augdata
-        print( 'shape of dump: {}'.format( np.shape( dump)))
+        if( self.debug):
+            print( 'shape of dump: {}'.format( np.shape( dump)))
         """
         
         derive frequency axis cause field-augmentation has to be concerned
@@ -2136,14 +2287,22 @@ class FrqFilter:
                 self.posind = np.argwhere( self.faxis >= self.fmin).flatten()#[0]
                 self.negind = np.argwhere( self.faxis <= self.fmin).flatten()#[0]
         N, M = np.shape( dump)
-        print( 'Length for dpss: {}'.format( [N, M][self.axis]))
+        if( self.debug):
+            print( 'Length for dpss: {}'.format( [N, M][self.axis]))
         #slep = dpss( [N, M][self.axis], 5, self.NumOfSlep, norm = 2)
-        slep = dpss( [N, M][self.axis], 5, self.NumOfSlep, norm = 'approximate')
+        BW = 2.0*self.fmin
+        twoNW = int( self.len* self.dt* BW) # from scipy doc(https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.dpss.html): Standardized half bandwidth corresponding to 2*NW = BW/f0 = BW*N*dt where dt is taken as 1
+        if( self.debug):
+            print( 'self.NumOfSlep', self.NumOfSlep)
+        #sys.exit()
+        slep = dpss( [N, M][self.axis], twoNW, self.NumOfSlep, norm = 'approximate')
         #if( self.axis == 1):
         #    slep = slep.T
         if( self.debug):
             print( 'shape of slep is: {}'.format( np.shape( slep)))
-        fdata = np.zeros( ( N, M))
+        fdata = np.zeros( ( N, M), dtype = complex)
+        if( self.debug):
+            classicfdata = np.copy( fdata)
         #!!! Slepian dimension Problem !!!
         if( self.axis == 0):
             for k, d in enumerate( dump.T):
@@ -2161,7 +2320,12 @@ class FrqFilter:
                 if( self.debug):
                     print( 'shape of d* slep is: {}'.format( np.shape( dummy)))
                 #fdata[k,:] = np.nanmean( np.abs( fft.fft( dummy, axis = self.axis) * np.sqrt( self.fmin)), axis = 1)
-                fdata[:, k] = np.nanmean( np.angle( fft.fft( dummy, axis = self.axis)), axis = 1)
+                #fdata[:, k] = np.nanmean( np.angle( fft.fft( dummy, axis = self.axis)), axis = 1)
+                pureFFT = fft.fft( dummy, axis = self.axis)
+                fdata[:, k] = np.nanmean( pureFFT.real, axis = 1) + 1j* np.nanmean( pureFFT.imag, axis = 1)
+                #print( 'mean of fdata[:, {}] with nans is: {}'.format( k, np.mean( fdata[:, k])))
+                if( self.debug):
+                    classicfdata[:,k] = fft.fft( d* sg.parzen( len(d)), axis = self.axis)
             #print( 'shape of fData in MySlepianApproach is:\n\t{}'.format( np.shape( fData)))
             #sys.exit()
         elif( self.axis == 1):
@@ -2180,18 +2344,32 @@ class FrqFilter:
                 if( self.debug):
                     print( 'shape of d* slep is: {}'.format( np.shape( dummy)))
                 #fdata[k,:] = np.nanmean( np.abs( fft.fft( dummy, axis = self.axis) * np.sqrt( self.fmin)), axis = 1)
-                fdata[k, :] = np.nanmean( np.angle( fft.fft( dummy, axis = self.axis)), axis = 0).T
+                #fdata[k, :] = np.nanmean( np.angle( fft.fft( dummy, axis = self.axis)), axis = 0).T
+                pureFFT = fft.fft( dummy, axis = self.axis)
+                fdata[k, :] = ( np.nanmean( pureFFT.real, axis = 0) + 1j* np.nanmean( pureFFT.imag, axis = 0)).T
+                if( self.debug):
+                    classicfdata[k,:] = fft.fft( d* sg.parzen( len(d)), axis = self.axis).T
             #print( 'shape of fData in MySlepianApproach is:\n\t{}'.format( np.shape( fData)))
             #sys.exit()
         self.fdataAng = fft.fftshift( fdata, axes = self.axis)
+        if( self.debug):
+            classicfdata = fft.fftshift( classicfdata, axes = self.axis)
         #self.fdataMag = fdata.T
         if( self.debug):
             print( 'shape of self.fdataAng is:\t{}'.format( np.shape( self.fdataAng)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             if( self.axis == 0):
-                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng[self.posind, :]))
+                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng[self.posind, :]), label = 'Slepian-windowed')
+                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng.real[self.posind, :]), label = 'Slepian-windowed.real')
+                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng.imag[self.posind, :]), label = 'Slepian-windowed.imag')
+                if( self.debug):
+                    plt.loglog( self.faxis[self.posind], np.abs( classicfdata[self.posind, :]), alpha = 0.2, label = 'Parzens-windowed')
             elif( self.axis == 1):
-                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng[:, self.posind]).T)
+                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng[:, self.posind]).T, label = 'Slepian-windowed')
+                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng.real[:, self.posind]).T, label = 'Slepian-windowed.real')
+                plt.loglog( self.faxis[self.posind], np.abs( self.fdataAng.imag[:, self.posind]).T, label = 'Slepian-windowed.imag')
+                if( self.debug):
+                    plt.loglog( self.faxis[self.posind], np.abs( classicfdata[:, self.posind]), alpha = 0.2, label = 'Parzens-windowed')
         #if( self.debug and self.axis == 1):
         #    print( 'shape of self.fdataMag is:\t{}'.format( np.shape( self.fdataMag)))
         #    print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
@@ -2199,7 +2377,9 @@ class FrqFilter:
         #    #plt.plot( self.faxis, np.abs( self.fdataMag))
         if( self.debug):
             plt.grid(True)
+            plt.legend( loc='best')
             plt.show()
+            #sys.exit()
         return #self.faxis, self.fdataMag
     
     
@@ -2299,26 +2479,26 @@ class FrqFilter:
         #sys.exit()
         if( False):
             w = w + np.hstack( ( np.zeros( ( self.ctrind - 1, ) ), 1.0, np.zeros( ( N - self.ctrind,))))
-        self.frqfilter = w
+        self.filter = w
         if( self.debug):
-            print( 'shape of self.frqfilter is:\t{}'.format( np.shape( self.frqfilter)))
+            print( 'shape of self.filter is:\t{}'.format( np.shape( self.filter)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
-            plt.plot( self.faxis, np.abs( self.frqfilter))
+            plt.plot( self.faxis, np.abs( self.filter))
             plt.grid(True)
             plt.show()
         #self.__myFFTproc__()
         if( self.debug):
-            print( 'shape of self.frqfilter is: {}'.format( np.shape( self.frqfilter)))
+            print( 'shape of self.filter is: {}'.format( np.shape( self.filter)))
             print( 'shape of self.fdata is: {}'.format( np.shape( self.fdata)))
         #scale = self.AmplitudeScale#np.sqrt( self.fmin* self.dt**2.0)
         absfdata = np.abs( self.fdata)# will be done in __myInvFFTProc__ /self.AmplitudeScale#/ scale
         angfdata = np.angle( self.fdata)
         
         if( self.dim > 1):
-            self.filtfdata = ( absfdata * np.atleast_2d( self.frqfilter).T) * np.exp( 1j* angfdata)
+            self.filtfdata = ( absfdata * np.atleast_2d( self.filter).T) * np.exp( 1j* angfdata)
         else:
-            self.filtfdata = absfdata * self.frqfilter * np.exp( 1j* angfdata)
+            self.filtfdata = absfdata * self.filter * np.exp( 1j* angfdata)
         
         #self.fdataMag = fdata.T
         if( self.debug):
@@ -2328,7 +2508,7 @@ class FrqFilter:
             #plt.plot( self.faxis, np.abs( self.filtfdata))
             plt.loglog( self.faxis[self.posind], np.abs( absfdata[self.posind,:]), 'g', alpha = 0.2)
             plt.loglog( self.faxis[self.posind], np.abs( self.filtfdata[self.posind,:]), 'r', alpha = 0.2)
-            plt.loglog( self.faxis[self.posind], np.abs( self.frqfilter[self.posind]), 'b', alpha = 0.1)
+            plt.loglog( self.faxis[self.posind], np.abs( self.filter[self.posind]), 'b', alpha = 0.1)
             plt.grid(True)
             plt.show()
         #self.filtdata = np.real( fft.ifft( fft.ifftshift( self.filtfdata, axes = self.axis), axis = self.axis))#[self.orgStartInd:self.orgEndInd, :]
@@ -2352,6 +2532,7 @@ class FrqFilter:
         #from scipy.signal.windows import dpss
         
         #fmin = 1.0/ np.max( np.shape( self.data))/ self.dt
+        #self.debug = True
         """
         if( self.aug):
             " if there is some field augmentation applied"
@@ -2388,13 +2569,22 @@ class FrqFilter:
         derive frequency axis cause field-augmentation has to be concerned
         
         """
+        
+        #print( 'self.fmin before augment', self.fmin)
         self.len = np.shape( self.augt)[self.axis]
         #self.fnyq = 1.0/ 2.0/ self.dt # will be derived in self.__faxis__()
         if( self.debug):
             print( 'self.len is: {}'.format( self.len))
-        self.fmin = 1.0/ float( self.len)/ self.dt
+        #self.fmin = 1.0/ float( self.len)/ self.dt
         self.__faxis__()
-        
+        self.fmin = np.min( self.faxis[self.posind]) # changed due to problems 
+        #with small arrays. fmin was wrong then, cause artificial shift to
+        #ensure equal samples at positive and negative spectrum
+        #print( 'self.fmin after augment', self.fmin)
+        #print( 'np.min( np.abs( self.faxis))', np.min( np.abs( self.faxis)))
+        #print( 'np.max( np.abs( self.faxis))', np.max( np.abs( self.faxis)))
+        #sys.exit()
+        #self.fmin = 1.0/ float( self.len)/ self.dt
         if( self.debug):
             print( 'self.PeriodAxis is :\t{}'.format( self.PeriodAxis))
             print( 'self.lb is :\t{}'.format( self.lb))
@@ -2440,20 +2630,24 @@ class FrqFilter:
                 N = np.shape( self.augdata)
         else:
             if( self.dim > 1):
-                N, M = len( self.faxis[np.argwhere( self.faxis > 0)]), np.shape( self.augdata)[1]
+                N, M = len( self.faxis[self.posind]), np.shape( self.augdata)[1]
             else:
-                N = len( self.faxis[np.argwhere( self.faxis > 0)])
+                N = len( self.faxis[self.posind])
         D = np.exp( self.de) # dezibel decay over half of window length
         #w = sg.gaussian( upperind -lowerind, std = 3.0* np.nanstd( np.abs( np.nanmean( fData[:,lowerind:upperind:], axis = 0))))
         #w = np.power( sg.parzen( upperind -lowerind), 4.0)
         tauval = float( N)/2.0 * 8.69/ D # https://en.wikipedia.org/wiki/Window_function from Exponential or Poisson window
         #w = sg.exponential( upperind -lowerind, center = np.argmax( np.abs( fData[:,lowerind:upperind:])), tau = tauval, sym = False) # exponential window function https://en.wikipedia.org/wiki/Window_function
-        if( self.debug):
+        if( debug):
+            print( 'N', N)
+            if( self.dim > 1):
+                print( 'M', M)
             print( 'self.ub', self.ub)
             print( 'self.ubind', self.ubind)
             print( 'self.lb', self.lb)
             print( 'self.lbind', self.lbind)
             #sys.exit()
+        rectlen = np.abs( self.ubind - self.lbind)
         """
         Upper Slope of exponential window
         """
@@ -2475,6 +2669,7 @@ class FrqFilter:
         Define an array to determine which index is further away from ZeroClosestInd
         """
         windbnds = np.array( [ self.lbind, self.ubind]).flatten()
+        
         """
         Find the index which is further away from ZeroClosestInd
         """
@@ -2482,27 +2677,38 @@ class FrqFilter:
             uprbndInd = np.argmin( np.abs( windbnds - ZeroClosestInd))
         else:
             uprbndInd = np.argmax( np.abs( windbnds - ZeroClosestInd))
+        if( self.debug):
+            print( 'uprbndInd', uprbndInd)
         
         """
         Use this cloest index to derive an exp-window with its peak at this closest index to zero Hertz
         """
-        w = ( sg.exponential( N, center = windbnds[uprbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+        if( self.debug):
+            print( 'N', N)
+        w = sg.exponential( N, center = windbnds[uprbndInd], tau = tauval, sym = False) # exponential window function https://en.wikipedia.org/wiki/Window_function
         
         #wmaxind = np.argmax( np.abs( w))
         #w = ( sg.exponential( N, center = self.ubind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
         wmaxind = np.argmax( np.abs( w))
         if( self.debug):
+            print( 'wmaxind upslope', wmaxind)
+        if( self.debug):
+            #
+            #plt.ion()
             w = w/ w[wmaxind]
             #sortind = np.argsort( self.faxis).flatten()
             #sortind = np.argwhere( self.faxis > 0.0).flatten()
             print( 'shape of w is:\t{}'.format( np.shape( w)))
             print( 'self.faxis[self.posind] is:\t{}'.format( self.faxis[self.posind]))
             print( 'shape of self.faxis[self.posind] is:\t{}'.format( np.shape( self.faxis[self.posind])))
-            plt.semilogx( self.faxis[self.posind], w)
+            plt.loglog( self.faxis[self.posind], w)
             #plt.plot( self.faxis, w)
             plt.grid(True)
             plt.show()
-            sys.exit()
+            #plt.pause(0.1)
+            #plt.clf()
+            #plt.ioff()
+            #sys.exit()
             """
             !!! self.faxis is starting for PeriodAxis== True  with SI=0.1s from -0.2 decreasing to -200000, jumping to +20000 and decreasing to 0.2 
             
@@ -2515,18 +2721,39 @@ class FrqFilter:
         """
         if( not self.PeriodAxis):
             selind = np.arange( wmaxind, len( w))
+            #selind = np.arange( 0, wmaxind - rectlen)
+            
             upslope = w[selind]
             if( self.debug):
                 print( 'self.PeriodAxis; indices of w are {}'.format( selind))
-                print( 'upslope is:\t{}'.format( upslope))
+                print( 'np.shape( upslope) is:\t{}'.format( np.shape( upslope)))
                 sys.exit()
         else:
-            selind = np.arange( 0, wmaxind + 1)
-            upslope = w[selind]
+            #selind = np.arange( 0, wmaxind)
+            #selind = np.arange( wmaxind, len( w) - rectlen)
+            selind = np.arange( 0, wmaxind)#wmaxind, len( w) - rectlen)
+            upslope = w[selind] 
             if( self.debug):
-                print( 'not self.PeriodAxis; indices of w are {}'.format( selind))
-                print( 'upslope is:\t{}'.format( upslope))
-        posselind = selind
+                print( 'indices of upslope are {}'.format( selind))
+                print( 'np.shape( upslope) is:\t{}'.format( np.shape( upslope)))
+        if( self.debug):
+            #
+            #plt.ion()
+            
+            #sortind = np.argsort( self.faxis).flatten()
+            #sortind = np.argwhere( self.faxis > 0.0).flatten()
+            print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
+            print( 'self.faxis[self.posind][selind] is:\t{}'.format( self.faxis[self.posind][selind]))
+            print( 'shape of self.faxis[self.posind][selind] is:\t{}'.format( np.shape( self.faxis[self.posind][selind])))
+            plt.loglog( self.faxis[self.posind][selind], upslope)
+            #plt.plot( self.faxis, w)
+            plt.grid(True)
+            plt.show()
+            #plt.pause(0.1)
+            #plt.clf()
+            #plt.ioff()
+            #sys.exit()
+        posselind = np.copy( selind)
         if( self.debug):
             #w = w/ w[wmaxind]
             sortind = np.argsort( self.faxis[posselind]).flatten()
@@ -2546,10 +2773,23 @@ class FrqFilter:
             print( 'self.ubind', self.ubind)
             print( 'self.lb', self.lb)
             print( 'self.lbind', self.lbind)
-        if( self.ubind >= self.lbind):
-            rect = np.ones( ( self.ubind - self.lbind - 1, ))
+    
+        if( np.abs( self.ubind - self.lbind) > 0):
+            if( self.ubind >= self.lbind):
+                #rect = np.ones( ( self.ubind - self.lbind - 1, ))
+                rect = np.ones( ( self.ubind - self.lbind, ))
+            else:
+                #rect = np.ones( ( self.lbind - self.ubind - 1, ))
+                rect = np.ones( ( self.lbind - self.ubind, ))
         else:
-            rect = np.ones( ( self.lbind - self.ubind - 1, ))
+            rect = np.ones( ( 0, ))
+        
+        
+        if( self.debug):
+            print( 'self.lbind', self.lbind)
+            print( 'self.ubind', self.ubind)
+            print( 'shape of rect is:\t{}'.format( np.shape( rect)))
+            
             
         """
         Lower slope of exponential window
@@ -2561,7 +2801,7 @@ class FrqFilter:
         """
         Define an array to determine which index is closer to ZeroClosestInd
         """
-        windbnds = np.array( [ self.lbind, self.ubind]).flatten()
+        #windbnds = np.array( [ self.lbind, self.ubind]).flatten()
         """
         Find the index which is closer to ZeroClosestInd
         """
@@ -2570,13 +2810,37 @@ class FrqFilter:
             lwrbndInd = np.argmax( np.abs( windbnds - ZeroClosestInd))
         else:
             lwrbndInd = np.argmin( np.abs( windbnds - ZeroClosestInd))
+        if( self.debug):
+            print( 'lwrbndInd', lwrbndInd)
+            
+        if( self.debug):
+            #w = w/ w[wmaxind]
+            #plt.loglog( self.faxis[self.posind], w, 'b', alpha = 0.6, label = 'lowerslope_window')
+            #sortind = np.argwhere( self.faxis[selind]).flatten()
+            
+            
+            plt.loglog( self.posind, self.faxis[self.posind], 'g', alpha = 0.4, label = 'whole axis')
+            plt.loglog( self.posind[windbnds[ lwrbndInd]], self.faxis[self.posind][windbnds[ lwrbndInd]], '+b', alpha = 0.2, label = 'windbnds[ lwrbndInd]')
+            plt.loglog( self.posind[windbnds[ uprbndInd]], self.faxis[self.posind][windbnds[ uprbndInd]], 'xr', alpha = 0.2, label = 'windbnds[ uprbndInd]')
+            #print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
+            #print( 'self.faxis[self.posind][selind] is:\t{}'.format( self.faxis[self.posind][selind]))
+            #print( 'shape of self.faxis[self.posind][selind] is:\t{}'.format( np.shape( self.faxis[self.posind][selind])))
+            #plt.loglog( self.faxis[self.posind][selind], upslope)
+            #plt.plot( self.faxis, w)
+            #plt.grid(True)
+            #plt.show()
+            #plt.plot( self.faxis[wmaxind:][sortind], upslope)
+            plt.grid(True)
+            plt.legend( loc = 'best')
+            plt.show()
         """
         Use this cloest index to derive an exp-window with its peak at this closest index to zero Hertz
         """
-        w = ( sg.exponential( N, center = windbnds[lwrbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+        w = sg.exponential( N, center = windbnds[lwrbndInd], tau = tauval, sym = False) # exponential window function https://en.wikipedia.org/wiki/Window_function
         
         wmaxind = np.argmax( np.abs( w))
-        
+        if( self.debug):
+            print( 'wmaxind lwslope', wmaxind)
         if( self.debug):
             print( 'self.ub', self.ub)
             print( 'self.ubind', self.ubind)
@@ -2584,21 +2848,22 @@ class FrqFilter:
             print( 'self.lbind', self.lbind)
             print( 'windbnds[uprbndInd]', windbnds[uprbndInd])
             print( 'windbnds[lwrbndInd]', windbnds[lwrbndInd])
-            walt = ( sg.exponential( N, center = windbnds[uprbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-            waltmaxind = np.argmax( np.abs( walt))
-            w = w/ w[wmaxind]
-            walt = walt/walt[waltmaxind]
-            #sortind = np.argwhere( self.faxis > 0.0).flatten()
-            print( 'shape of w is:\t{}'.format( np.shape( w)))
-            print( 'shape of walt is:\t{}'.format( np.shape( walt)))
-            print( 'shape of self.faxis[sortind] is:\t{}'.format( np.shape( self.faxis[self.posind])))
-            plt.semilogx( self.faxis[self.posind], w, 'g')
-            plt.semilogx( self.faxis[self.posind], walt, 'r')
-            #plt.plot( self.faxis[sortind], poswin[sortind])
-            plt.grid(True)
-            plt.show()
-            sys.exit()
-        
+            if( self.debug):
+                #walt = ( sg.exponential( N, center = windbnds[uprbndInd], tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
+                #waltmaxind = np.argmax( np.abs( walt))
+                w = w/ w[wmaxind]
+                #walt = walt/walt[waltmaxind]
+                #sortind = np.argwhere( self.faxis > 0.0).flatten()
+                print( 'shape of w is:\t{}'.format( np.shape( w)))
+                #print( 'shape of walt is:\t{}'.format( np.shape( walt)))
+                print( 'np.shape( self.faxis[self.posind]) is:\t{}'.format( np.shape( self.faxis[self.posind])))
+                plt.semilogx( self.faxis[self.posind], w, 'g')
+                #plt.semilogx( self.faxis[self.posind], walt, 'r')
+                #plt.plot( self.faxis[sortind], poswin[sortind])
+                plt.grid(True)
+                plt.show()
+                #sys.exit()
+
         
         """
         take care if PeriodAxis is used
@@ -2610,37 +2875,100 @@ class FrqFilter:
         
         
         if( not self.PeriodAxis):
-            selind = np.arange( 0, wmaxind + 1)
+            selind = np.arange( 0, wmaxind)
+            #selind = np.arange( wmaxind, len( w) - rectlen)
+            
             lwslope = w[selind]
             if( self.debug):
                 print( 'self.PeriodAxis; indices of w are {}'.format( selind))
-                print( 'upslope is:\t{}'.format( upslope))
+                print( 'np.shape( lwslope) is:\t{}'.format( np.shape( lwslope)))
         else:
+            #selind = np.arange( wmaxind, len( w) - rectlen)
+            #selind = np.arange( 0, wmaxind - rectlen + 1)
             selind = np.arange( wmaxind, len( w))
-            lwslope = w[selind]
+            lwslope = w[selind]#[::-1]
             if( self.debug):
-                print( 'not self.PeriodAxis; indices of w are {}'.format( selind))
-                print( 'upslope is:\t{}'.format( upslope))
+                print( 'indices of lwslope are {}'.format( selind))
+                print( 'np.shape( lwslope) is:\t{}'.format( np.shape( lwslope)))
+        negselind = np.copy( selind)
         if( self.debug):
             #w = w/ w[wmaxind]
-            sortind = np.argwhere( self.faxis[selind]).flatten()
+            #plt.loglog( self.faxis[self.posind], w, 'b', alpha = 0.6, label = 'lowerslope_window')
+            #sortind = np.argwhere( self.faxis[selind]).flatten()
+            
             print( 'shape of lwslope is:\t{}'.format( np.shape( lwslope)))
-            print( 'shape of self.faxis[self.posind][selind] is:\t{}'.format( np.shape( self.faxis[self.posind][selind])))
-            plt.semilogx( self.faxis[self.posind][selind], lwslope, '+b')
-            sortind = posselind#np.argwhere( self.faxis[posselind]).flatten()
+            print( 'shape of self.faxis[self.posind][negselind] is:\t{}'.format( np.shape( self.faxis[self.posind][negselind])))
+            print( 'self.faxis[self.posind][self.ubind] is:\t{}'.format( self.faxis[self.posind][self.ubind]))
+            print( 'shape of self.faxis[self.posind][self.lbind:] is:\t{}'.format( np.shape( self.faxis[self.posind][self.lbind:])))
+            
+            #sortind = posselind#np.argwhere( self.faxis[posselind]).flatten()
+
             print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
-            print( 'shape of self.faxis[selind] is:\t{}'.format( np.shape( self.faxis[sortind])))
-            plt.semilogx( self.faxis[self.posind][sortind], upslope, '+r')
+            print( 'shape of self.faxis[self.posind][posselind] is:\t{}'.format( np.shape( self.faxis[self.posind][posselind])))
+            print( 'self.faxis[self.posind][self.lbind] is:\t{}'.format( self.faxis[self.posind][self.lbind]))
+            print( 'shape of self.faxis[self.posind][:self.lbind] is:\t{}'.format( np.shape( self.faxis[self.posind][:self.lbind])))
+            if( self.debug):
+                plt.loglog( self.faxis[self.posind][self.lbind:], lwslope, '+b', alpha = 0.4, label = 'lwslope')
+                if( not self.PeriodAxis):
+                    plt.loglog( self.faxis[self.posind][self.lbind:self.ubind], rect, '+g', alpha = 0.4, label = 'rect')
+                else:
+                    plt.loglog( self.faxis[self.posind][self.ubind:self.lbind], rect, '+g', alpha = 0.4, label = 'rect')
+                plt.loglog( self.faxis[self.posind][:self.ubind], upslope, 'xr', alpha = 0.2, label = 'upslope')
+                plt.grid(True)
+                plt.legend( loc = 'best')
+                plt.show()
+            #print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
+            #print( 'self.faxis[self.posind][selind] is:\t{}'.format( self.faxis[self.posind][selind]))
+            #print( 'shape of self.faxis[self.posind][selind] is:\t{}'.format( np.shape( self.faxis[self.posind][selind])))
+            #plt.loglog( self.faxis[self.posind][selind], upslope)
+            #plt.plot( self.faxis, w)
+            #plt.grid(True)
+            #plt.show()
             #plt.plot( self.faxis[wmaxind:][sortind], upslope)
-            plt.grid(True)
-            plt.show()
-            sys.exit()
+            #plt.grid(True)
+            #plt.legend( loc = 'best')
+            #plt.show()
+            
+            #sys.exit()
+        
+        if( self.debug):
+            print( 'shape of lwslope is:\t{}'.format( np.shape( lwslope)))
+            print( 'shape of upslope is:\t{}'.format( np.shape( upslope)))
         
         #poswin = np.hstack( ( lwslope, rect, upslope))
-        if( not self.PeriodAxis):
-            poswin = np.hstack( ( lwslope, rect, upslope))
-        else:
-            poswin = np.hstack( ( upslope, rect, lwslope))
+        if( self.ubind != self.lbind):
+            if( not self.PeriodAxis):
+                poswin = np.hstack( ( lwslope, rect, upslope))
+            else:
+                poswin = np.hstack( ( upslope, rect, lwslope))
+
+        else: # taking care for cases when the self.ubind == self.lbind and therefore there is no rectangle part
+            if( not self.PeriodAxis):
+                poswin = np.hstack( ( lwslope[:-1:], upslope))
+            else:
+                poswin = np.hstack( ( upslope, lwslope[:-1:]))
+                if( self.debug):
+                    print( 'len( poswin)*2', len( poswin)*2 - 1)
+                    print( 'self.len', self.len)
+                if( len( poswin)*2 - 1 != self.len):
+                    while( len( np.hstack( ( upslope, lwslope[:-1:])))*2 - 1 != self.len):
+                        if( self.debug):
+                            for el, name in zip( [ len( lwslope), len( upslope), len( rect)], [ 'len( lwslope)', 'len( upslope)', 'len( rect)']):
+                                print( 'len {} is: {}'.format( name, el))
+                            print( 'len of self.len: {}, len( np.hstack( ( upslope, lwslope[:-1:])))*2 - 1: {} '.format( self.len, len( np.hstack( ( upslope, lwslope[:-1:])))*2 - 1))
+                            #sys.exit()
+                            if( len( lwslope) == 0):
+                                sys.exit()
+                        lwslope = lwslope[:-1:]
+                        poswin = np.hstack( ( upslope, lwslope))
+                if( self.debug):
+                    print( 'upslope', upslope)
+                    print( 'lwslope', lwslope)
+                    #print( 'lwslope[:-1:]', lwslope[:-1:])
+        if( self.debug):
+            print( 'shape of poswin is:\t{}'.format( np.shape( poswin)))
+            
+                
         
         #poswin = poswin[posind]
         
@@ -2655,51 +2983,35 @@ class FrqFilter:
             plt.show()
             sys.exit()
         
-        
+
         
         
         
         ######
         # neg frequencies
         ######
-        if( False):
-            if( not self.PeriodAxis):
-                self.lbind = np.argmin( np.abs( self.faxis + self.lb))
-                self.ubind = np.argmin( np.abs( self.faxis + self.ub))
-            else:
-                self.lbind = np.argmin( np.abs( self.faxis + self.ub))
-                self.ubind = np.argmin( np.abs( self.faxis + self.lb))            
-            if( self.debug):
-                print( 'self.lbind is:\t{}'.format( self.lbind))
-                print( 'self.ubind is:\t{}'.format( self.ubind))
-            w = ( sg.exponential( N, center = self.ubind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-            wmaxind = np.argmax( np.abs( w))
-            """
-            take care if PeriodAxis is used
-            """
-            if( not self.PeriodAxis):
-                lwslope = w[wmaxind:]
-            else:
-                lwslope = w[0:wmaxind]
-            
-            
-            if( self.ubind >= self.lbind):
-                rect = np.ones( ( self.ubind - self.lbind, ))
-            else:
-                rect = np.ones( ( self.lbind - self.ubind, ))
-            w = ( sg.exponential( N, center = self.lbind, tau = tauval, sym = False)) # exponential window function https://en.wikipedia.org/wiki/Window_function
-            wmaxind = np.argmax( np.abs(w))
-            """
-            take care if PeriodAxis is used
-            """
-            if( not self.PeriodAxis):
-                upslope = w[0:wmaxind]
-            else:
-                upslope = w[wmaxind:]
-            
-            negwin = np.hstack( ( lwslope, rect, upslope))
+        if( len( self.posind) == len( self.negind)):
+            negwin = poswin[::-1]
         else:
             negwin = poswin[::-1]
+            if( len( self.posind) + len( self.negind) != len( poswin) + len( negwin)):
+                negwin = np.hstack( ( negwin, negwin[-1]))
+        
+        if( ( len( poswin) + len( negwin) != np.max( np.shape( self.fdata))) | ( len( poswin) + len( negwin) != self.len)):
+            print( 'np.mod( self.len, 2) == 0', np.mod( self.len, 2) == 0)
+            print( 'len( poswin)', len( poswin), 'len( negwin)', len( negwin))
+            print( 'len( poswin) + len( negwin)', len( poswin) + len( negwin))
+            print( 'len( self.posind)', len( self.posind), 'len( self.negind)', len( self.negind))
+            print( 'len( self.posind) + len( self.negind)', len( self.posind) + len( self.negind))
+            print( 'np.shape( self.fdata)', np.shape( self.fdata))
+            print( 'self.len', self.len)
+            #if( np.mod( self.len, 2) == 0):
+            #    if( ( len( poswin) + len( negwin) != np.max( np.shape( self.fdata))) | ( len( poswin) + len( negwin) != self.len)):
+            #        sys.exit()
+            #else:
+            #    if( ( len( poswin) + len( negwin) != np.max( np.shape( self.fdata))) | ( len( poswin) + len( negwin) != self.len)):
+            sys.exit()
+            #negwin = np.hstack( ( negwin, negwin[-1]))
         
         if( self.debug):
             w = w/ w[wmaxind]
@@ -2713,7 +3025,20 @@ class FrqFilter:
             sys.exit()
         
         #w = poswin + negwin
+        if( self.debug):
+            print( 'self.len', self.len)
+        if( False):
+            if( np.mod( self.len, 2) == 0):
+                w = np.hstack( ( negwin, poswin))
+            else:
+                w = np.hstack( ( negwin, poswin[1::]))
         w = np.hstack( ( negwin, poswin))
+        
+        if( self.debug):
+            print( 'len( w)', len( w))
+            print( 'np.shape( self.fdata)', np.shape( self.fdata))
+            if( len( w) != np.max( np.shape( self.fdata))):
+                sys.exit()
         w = w/ np.nanmax( w)
         if( self.kind == 'block'):
             w = np.ones( np.shape( w)) - w
@@ -2725,39 +3050,39 @@ class FrqFilter:
         #sys.exit()
         #if( False):
         #    w = w + np.hstack( ( np.zeros( ( self.ctrind - 1, ) ), 1.0, np.zeros( ( N - self.ctrind,))))
-        self.frqfilter = w
+        self.filter = w
         
         if( self.debug):
-            print( 'shape of self.frqfilter is:\t{}'.format( np.shape( self.frqfilter)))
+            print( 'shape of self.filter is:\t{}'.format( np.shape( self.filter)))
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             sortind = np.argsort( self.faxis).flatten()
             sortind = np.argwhere( self.faxis).flatten()
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
-            #plt.semilogx( self.faxis - np.min( self.faxis), np.abs( self.frqfilter))
-            plt.plot( self.faxis[sortind], np.abs( self.frqfilter)[sortind])
+            #plt.semilogx( self.faxis - np.min( self.faxis), np.abs( self.filter))
+            plt.plot( self.faxis[sortind], np.abs( self.filter)[sortind])
             plt.grid(True)
             plt.show()
             sys.exit()
         
         self.__myFFTproc__()
         if( self.debug):
-            print( 'shape of self.frqfilter is: {}'.format( np.shape( self.frqfilter)))
+            print( 'shape of self.filter is: {}'.format( np.shape( self.filter)))
             print( 'shape of self.fdata is: {}'.format( np.shape( self.fdata)))
         #scale = self.AmplitudeScale#np.sqrt( self.fmin* self.dt**2.0)
         absfdata = np.abs( self.fdata)# will be done in __myInvFFTProc__ /self.AmplitudeScale
         angfdata = np.angle( self.fdata)
         if( self.debug):
-            print( 'shape of self.frqfilter is: {}'.format( np.shape( self.frqfilter)))
+            print( 'shape of self.filter is: {}'.format( np.shape( self.filter)))
             print( 'shape of self.fdata is: {}'.format( np.shape( self.fdata)))
             print( 'shape of absfdata is: {}'.format( np.shape( absfdata)))
             print( 'shape of angfdata is: {}'.format( np.shape( angfdata)))
         if( self.dim > 1):
             try:
-                self.filtfdata = ( absfdata * np.atleast_2d( self.frqfilter).T) * np.exp( 1j* angfdata)
+                self.filtfdata = ( absfdata * np.atleast_2d( self.filter).T) * np.exp( 1j* angfdata)
             except:
-                self.filtfdata = ( absfdata * self.frqfilter) * np.exp( 1j* angfdata)
+                self.filtfdata = ( absfdata * self.filter) * np.exp( 1j* angfdata)
         else:
-            self.filtfdata = absfdata * self.frqfilter * np.exp( 1j* angfdata)
+            self.filtfdata = absfdata * self.filter * np.exp( 1j* angfdata)
         
         #self.fdataMag = fdata.T
         if( self.debug):
@@ -2765,10 +3090,21 @@ class FrqFilter:
             print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
             #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
             #plt.plot( self.faxis, np.abs( self.filtfdata))
-            filtmax = np.max( np.abs( absfdata[self.posind,:]))/ np.max( np.abs( self.frqfilter[self.posind]))
+            filtmax = np.max( np.abs( absfdata[self.posind,:]))/ np.max( np.abs( self.filter[self.posind]))
             plt.loglog( self.faxis[self.posind], np.abs( absfdata[self.posind,:]), 'g', alpha = 0.2)
             plt.loglog( self.faxis[self.posind], np.abs( self.filtfdata[self.posind,:]), 'r', alpha = 0.2)
-            plt.loglog( self.faxis[self.posind], np.abs( self.frqfilter[self.posind])* filtmax, 'b', alpha = 0.1)
+            plt.loglog( self.faxis[self.posind], np.abs( self.filter[self.posind])* filtmax, 'b', alpha = 0.1)
+            plt.grid(True)
+            plt.show()
+        if( self.debug):
+            print( 'shape of self.filtfdata is:\t{}'.format( np.shape( self.filtfdata)))
+            print( 'shape of self.faxis is:\t{}'.format( np.shape( self.faxis)))
+            #plt.semilogx( self.faxis[self.posind], self.fdataAng[self.posind, :])
+            #plt.plot( self.faxis, np.abs( self.filtfdata))
+            filtmax = np.max( np.abs( absfdata[self.negind,:]))/ np.max( np.abs( self.filter[self.negind]))
+            plt.loglog( np.abs( self.faxis)[self.negind], np.abs( absfdata[self.negind,:]), 'g', alpha = 0.2)
+            plt.loglog( np.abs( self.faxis)[self.negind], np.abs( self.filtfdata[self.negind,:]), 'r', alpha = 0.2)
+            plt.loglog( np.abs( self.faxis)[self.negind], np.abs( self.filter[self.negind])* filtmax, 'b', alpha = 0.1)
             plt.grid(True)
             plt.show()
         #self.filtdata = np.real( fft.ifft( fft.ifftshift( self.filtfdata, axes = self.axis), axis = self.axis))#[self.orgStartInd:self.orgEndInd, :]
@@ -2784,7 +3120,7 @@ class FrqFilter:
             plt.grid(True)
             plt.show()
             sys.exit()
-        return #self.faxis, self.fdataMag
+        return self.augt[self.orgStartInd:self.orgEndInd], self.filtdata
     
     
     
@@ -2877,6 +3213,8 @@ class FrqFilter:
         #print( '\nshape of self.fdata\t{}'.format( np.shape( self.fdata)))
         #print( '\nshape of self.fDataMag\t{}'.format( np.shape( self.fdataMag)))
         #print( '\nshape of self.fdataAng\t{}'.format( np.shape( self.fdataAng)))
+        #print( 'shape of self.filter', np.shape( self.filter))
+        #sys.exit()
         self.len = self.shape[self.axis]
         if( self.debug):
             print( 'self.len is: {}'.format( self.len))
@@ -2922,7 +3260,7 @@ class FrqFilter:
                     #print( 'Checking length of {}'.format( el))
                     #####or el.startswith( 'faxis')
                     if( el.startswith( 'fdata') or el.startswith( 'filtf') or el.startswith( 'filte')):
-                        if( True):
+                        if( self.debug):
                             print( 'el is', el)
                         if( True):
                             varname = 'self.' + el
@@ -2931,9 +3269,11 @@ class FrqFilter:
                                 print( 'to shape of {} taken from self.faxis'.format( np.shape( self.faxis)))
                         if( self.__dict__[el].ndim > 1):
                             if( np.argmax( np.shape( self.data)) != np.argmax( np.shape( self.__dict__[el]))):
-                                print( 'transposing {} with shape {} to shape {}'.format( el, np.shape( self.__dict__[el]), np.shape( self.__dict__[el].T)))
+                                if( self.debug):
+                                    print( 'transposing {} with shape {} to shape {}'.format( el, np.shape( self.__dict__[el]), np.shape( self.__dict__[el].T)))
                                 self.__dict__[el] = self.__dict__[el].T
-                                print( 'transposed {} to shape {}'.format( el, np.shape( self.__dict__[el])))
+                                if( self.debug):
+                                    print( 'transposed {} to shape {}'.format( el, np.shape( self.__dict__[el])))
                             if( self.debug):
                                 print( 'bakax', 'self.__dict__[el]', 'self.axis', 'self.rplval')
                                 for bl, name in zip( [bakax, self.__dict__[el], self.axis, self.rplval], ['bakax', 'self.__dict__[el]', 'self.axis', 'self.rplval']):
@@ -2956,12 +3296,14 @@ class FrqFilter:
                         #if( self.debug):
                         if( True):
                             varname = 'self.' + el
-                            print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
+                            if( self.debug):
+                                print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
                         if( self.__dict__[el].ndim > 1):
                             if( np.argmax( np.shape( self.data)) != np.argmax( np.shape( self.__dict__[el]))):
                                 self.__dict__[el] = self.__dict__[el].T
-                            print( 'shape of {} is {}, vals: {}'.format( el, np.shape( self.__dict__[el]), self.__dict__[el]))
-                            print( 'shape of {} is {}, vals: {}'.format( 'self.augt', np.shape( self.augt), self.augt))
+                            if( self.debug):
+                                print( 'shape of {} is {}, vals: {}'.format( el, np.shape( self.__dict__[el]), self.__dict__[el]))
+                                print( 'shape of {} is {}, vals: {}'.format( 'self.augt', np.shape( self.augt), self.augt))
                             self.__dict__[el] = ipol.interp1d( self.augt, self.__dict__[el].reshape( np.shape( self.__dict__[el])), axis = self.axis, bounds_error=False, kind=self.rplval, fill_value = 'extrapolate')(self.t.T)
                         else:
                             #self.__dict__[el] = self.__dict__[el]
@@ -2974,7 +3316,8 @@ class FrqFilter:
                     if( el.startswith( 'fdata') or el.startswith( 'filtf') or el.startswith( 'filte')):
                         if( self.debug):
                             varname = 'self.' + el
-                            print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
+                            if( self.debug):
+                                print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
                         if( self.__dict__[el].ndim > 1):
                             if( np.argmax( np.shape( self.data)) != np.argmax( np.shape( self.__dict__[el]))):
                                 self.__dict__[el] = self.__dict__[el].T
@@ -2987,7 +3330,8 @@ class FrqFilter:
                     if( el.startswith( 'filtd')):
                         if( self.debug):
                             varname = 'self.' + el
-                            print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
+                            if( self.debug):
+                                print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
                         if( self.__dict__[el].ndim > 1):
                             if( np.argmax( np.shape( self.data)) != np.argmax( np.shape( self.__dict__[el]))):
                                 self.__dict__[el] = self.__dict__[el].T
@@ -3011,7 +3355,7 @@ class FrqFilter:
                         plt.loglog( self.faxis, np.abs( self.__dict__[el]).T)
             plt.grid(True)
             plt.show()
-        if( True):
+        if( self.debug):
             print( 'faxis len ', np.shape( self.faxis))
             print( 'faxis fdataMag shape ', np.shape( self.fdataMag))
             #plt.loglog( self.faxis, np.abs( self.fdataMag).T)
@@ -3102,7 +3446,7 @@ class FrqFilter:
         elif( self.type == 'lbub'):
             self.__lbubfilt__()
         self.__Ret2OldLen__()
-        return self.faxis, self.filtfdata, self.frqfilter, self.filtdata
+        return self.faxis, self.filtfdata, self.filter, self.filtdata
     
     
     

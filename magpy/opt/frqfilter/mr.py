@@ -22,7 +22,7 @@ except Exception as ex:
     print( 'Obspy not available, continuing...')
     pass
 from os import listdir, walk
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from os.path import isfile, isdir, join, abspath, dirname
 from fnmatch import fnmatch
 mrpath = dirname( abspath( __file__))
@@ -532,6 +532,8 @@ class MR:
                                     self.SearchString = 'picologtxt'
                                 elif( self.sensortype == 'GFZKpRead'):
                                     self.SearchString = 'GFZKpRead'
+                                elif( self.sensortype == 'IAGAtxt'):
+                                    self.SearchString = ''
                                 for it, val in kwargs.items():
                                     if( it == 'path'):
                                         """
@@ -556,10 +558,42 @@ class MR:
                                             date = self.starttime
                                             val = str( date.year) + '_' + str( '{:02d}'.format( date.month)) + '_' + str('{:02d}'.format( date.day)) + '_' + str('{:02d}'.format( date.hour)) + str('{:02d}'.format( date.minute)) + str('{:02d}'.format( date.second))
                                             self.SearchString = val
-                                            
                             except Exception as ex:
                                 #print( 'Sensortype is: {}. Filepath missing...stopping!'.format( self.sensortype))
                                 self.MyException(ex)
+                        elif( self.sensortype.startswith( 'mp')):
+                            if( self.sensortype == 'mpascii'):
+                                try:
+                                    self.SearchString = 'MPascii'
+                                    #print( 'init self.SearchString with : {}'.format( self.SearchString))
+                                    #sys.exit()
+                                    for it, val in kwargs.items():
+                                        if( it == 'path'):
+                                            """
+                                            do .....
+                                            
+                                            get common filepath to be investigated
+                                            """
+                                            self.path = val
+                                            if( debug):
+                                                print( 'self.path is: {}'.format( self.path))
+                                        if( it == 'SrcStr'):
+                                            """
+                                            
+                                            
+                                            define specific search string besides self.filetype
+                                            """
+                                            if( self.sensortype != 'picologtxt'):
+                                                self.SearchString = val
+                                                if( debug):
+                                                    print( 'self.SearchString', self.SearchString)
+                                            else: # SEARCH FOR picologtxt files beginning with date as name
+                                                date = self.starttime
+                                                val = str( date.year) + '_' + str( '{:02d}'.format( date.month)) + '_' + str('{:02d}'.format( date.day)) + '_' + str('{:02d}'.format( date.hour)) + str('{:02d}'.format( date.minute)) + str('{:02d}'.format( date.second))
+                                                self.SearchString = val
+                                except Exception as ex:
+                                    #print( 'Sensortype is: {}. Filepath missing...stopping!'.format( self.sensortype))
+                                    self.MyException(ex)
                     if( debug):
                         print( 'self.sensortype is: {}'.format( self.sensortype))
                 if( item == 'channels'):
@@ -3228,9 +3262,15 @@ class MR:
         
         sensname = 'LEMI036_1_0002_'
         if( len( self.SearchString) < len( sensname) and fnmatch( sensname, '*' + self.SearchString + '*')):
-            pass
+            #pass
+            if( debug):
+                print( 'sensname still {}'.format( sensname))
+                print( 'self.SearchString still {}'.format( self.SearchString))
         else:
             sensname = self.SearchString
+            if( debug):
+                print( 'sensname changed to {}'.format( sensname))
+                print( 'self.SearchString changed to {}'.format( self.SearchString))
             #if( not self.SearchString.startswith( 'GSM90_1013973') and not self.SearchString.startswith( 'GSM19_6067473')):
             if( not self.SearchString.startswith( 'GSM90') and not self.SearchString.startswith( 'GSM19') and not self.SearchString.startswith( 'LEMI')):
                 sensname = sensname[0:16] # reducing again to sensorname without date info
@@ -4072,17 +4112,20 @@ class MR:
         #print( 'self.filetype', self.filetype)
         #sys.exit()
         fileending = self.filetype
-        
+        print( 'fileending', fileending)
         #########################
         # READ picologtxt
         #########################
         
-        
+        if( debug):
+            print( 'self.SearchString', self.SearchString)
         sensname = '2016'
         if( len( self.SearchString) < len( sensname) and fnmatch( sensname, '*' + self.SearchString + '*')):
+            sensname = self.SearchString
             if( debug):
                 print( 'sensname is: {}'.format( sensname))
-        elif( len( self.SearchString) & ( fileending.endswith( '.sec'))):
+                
+        elif( ( len( self.SearchString) >= len( sensname)) & ( fileending.endswith( '.sec'))):
             """
             CASE OF IAGA-2002 ascii files
             """
@@ -4098,6 +4141,8 @@ class MR:
             if( debug):
                 print( 'sensname is: {}'.format( sensname))
             #sys.exit()
+        if( debug):
+            print( 'self.SearchString', self.SearchString)
         #sys.exit()
         #for d in days:
         #    print( 'd', d)
@@ -4117,8 +4162,8 @@ class MR:
         channelvario = np.unique( sum(channelvario,[]))
         if( debug):
             print( 'channelvario is: {}'.format( channelvario))
-        #sys.exit()
-        if( debug):
+            #sys.exit()
+        if( True):
             print( 'Looking for files like this:')
             for el in channelvario:
                 print( el)
@@ -4141,8 +4186,8 @@ class MR:
         
         tij = dirstring 
         """
-        for el in channelvario:
-            print(el)
+        #for el in channelvario:
+        #    print(el)
         #sys.exit()
         
         
@@ -4153,6 +4198,7 @@ class MR:
             print( 'Found files like this:')
             for el in self.files:
                 print( el)
+                #sys.exit()
             #sys.exit()
         allfiles = []
         n = 0
@@ -4209,7 +4255,13 @@ class MR:
             
             #print( temp.header['DataCompensationX'])
             data = temp.read()
+            bakdata = data
             data = data.split( '\n')
+            if( debug):
+                print( 'data')
+                print( data)
+                print( 'shape of data', np.shape(data))
+                #sys.exit()
             #self.DataSourceHeader = []
             if( data[0].endswith('IAGA-2002                                    |')):
                 linecount = 1
@@ -4291,6 +4343,18 @@ class MR:
                             if( len( el) != 0):
                                 columncount = columncount + 1
                         #print( 'assuming {} columns will be found'.format( columncount))
+            elif( ( data[0].startswith('20')) | ( data[0].endswith('1 65')) | ( data[0].endswith('1 60')) | ( data[0].endswith('1 80'))):
+                linecount = 1
+                line = data[0]
+                if( debug):
+                    print( 'line in data[0::] is: {}'.format( line))
+                    #sys.exit()
+                if( line.startswith( '20')):
+                    for el in line[:-1].split( ' '):
+                        if( len( el) != 0):
+                            columncount = columncount + 1
+                    print( 'assuming {} columns will be found'.format( columncount))
+                #sys.exit()
         
         #print( 'columncount', columncount)
         #sys.exit()
@@ -4430,19 +4494,96 @@ class MR:
                 #print( 'x' , x)
                 #print( 'shape of dataarray' , np.shape( dataarray))
                 #sys.exit()
+            elif( ( data[0].startswith('20')) | ( data[0].endswith('1 65')) | ( data[0].endswith('1 60')) | ( data[0].endswith('80'))): # WIK - txt files
+                linecount = 1
+                self.DataSourceHeader.append( 'WIK-LEMI025')
+                for line in data[0::]:
+                    if( line.startswith( '20')):
+                        #print( 'index found {}'.format( line.rfind( 'Source of Data') + len( ' Source of Data')))
+                        #sys.exit()
+                        #print( ' Source of Data {}'.format( self.DataSourceHeader[-1]))
+                        linecount = linecount  + 1
+                mydate = []
+                #x = [[] for i in range( columncount - 10)]
+                #print( 'shape of x is: {}'.format( np.shape( x)))
+                #sys.exit()
+                x = []
+                baklinecount = linecount
+                for k, line in enumerate( data[0::]):
+                    #print( 'line in data is: {}'.format( line))
+                    elements = line.split( ' ')
+                    #print( 'elements in line: {}'.format( elements))
+                    usableind = np.argwhere( [len( f) != 0 for f in elements] ).flatten()
+                    #print( 'usableind', usableind)
+                    if( len( usableind) > 0):
+                        date = elements[usableind[0]] + '-' + elements[usableind[1]] + '-' + elements[usableind[2]]
+                        time = elements[usableind[3]] + ':' + elements[usableind[4]] + ':' + elements[usableind[5]]
+                        #time = time.split( '.')[0]
+                        #microsec = elements[usableind[1]].split( '.')[1]
+                        #doy = elements[2]
+                        #for i in range( columncount - 10):
+                            #print( i)
+                            #print( 'elements[i + 3]', elements[usableind[i + 3]])
+                            #x[i].append( [ float( elements[6]), float( elements[7]), float( elements[8])])
+                            #print( 'x[i]', x[i])
+                            #y.append( float( elements[4]))
+                            #z.append( float( elements[5]))
+                            #f.append( float( elements[6]))
+                        x.append( [ float( elements[6]), float( elements[7]), float( elements[8])])
+                        #print( 'x[-1]', x[-1])
+                        #print( 'x', x)
+                        #sys.exit()
+                        datestring = date + ' ' + time
+                        if( debug):
+                            print( 'date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)): {}'.format( datestring))
+                        #sys.exit()
+                        mydate.append( datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S.%f"))
+                        #print( 'mydate[-1] is: {}'.format( mydate[-1]))
+                    #print( 'NUM2DATE20TIME( mydate[-1]) is: {}'.format( NUM2DATE20TIME( mydate[-1])))
+                    #sys.exit()
+                    #for el in line.split( ''):
+                    #    print( 'el in line is: {}'.format( el))
+                #print( 'self.DataSourceHeader: {}'.format( self.DataSourceHeader))
+                #print( 'ztime' , ztime)
+                #print( 'shape of ztime' , np.shape( ztime))
+                #print( 'x' , x)
+                #print( 'shape of dataarray' , np.shape( dataarray))
+                #sys.exit()
             [ allmydate.append( f) for f in mydate]
             #[ allx.append( f) for f in x]
-            for l, triple in enumerate( np.array( x).T):
+            for l, triple in enumerate( np.array( x)):
                 #print( 'triple[{}]={}'.format( l, triple))
                 #print( 'np.shape( triple)', np.shape( np.atleast_2d( triple)))
                 #sys.exit()
                 allx.append( triple)
             
             #[ allx.append( f) for f in g for g in x]
+            if( debug):
+                print( 'np.shape( allx)', np.shape( allx))
+                #sys.exit()
+        #if( False):
+        #    print( 'allmydate')
+        #    if( type( allmydate[0]) == datetime):
+        #        print( 'datetime.datetime found')
+        #        sys.exit()
+        #    for el in allmydate:
+        #        print( 'el in allmydate {}'.format( el))
+        #        print( 'type( el)', type( el))
+        #        if( type( el) == datetime):
+        #            print( 'datetime.datetime found')
+        #            sys.exit()
+        #sys.exit()
         ztime = np.array( NUM2DATE20TIME( allmydate))
+        #print( 'ztime')
+        #for el in ztime:
+        #    print( 'el in ztime', el)
+        #sys.exit()
         sortind = np.argsort( ztime)
         ztime = ztime[sortind]
         dataarray = np.array( allx)[sortind, :]
+        #print( 'ztime')
+        #for el in ztime:
+        #    print( 'el in ztime {}'.format( el))
         #sys.exit()
         #
         #print( data)
@@ -4462,8 +4603,12 @@ class MR:
         #sys.exit()
         
         colmp = np.hstack( ( np.atleast_2d( ztime).T, dataarray)) # CONCATENATE MAGPY STREAMS
-        print(' shape( colmp)', shape( colmp))
-        res = date2num( STAMPTODATE( ztime))
+        #print(' shape( colmp)', shape( colmp))
+        res = date2num( STAMPTODATE( ztime))#.astype( float)
+        #print( 'res')
+        #for el in res:
+        #    print( 'el in res', el)
+        #sys.exit()
         colmp[:,0] = res
         bakcolmp = colmp
         #plt.plot( bakcolmp[:-1,0], np.diff( bakcolmp[:,1:], axis = 0), alpha = 0.2)
@@ -4489,7 +4634,10 @@ class MR:
         colmp.ndarray = array
         for dictel, d in zip( dictlist, bakcolmp.T):
             colmp.ndarray[colmp.KEYLIST.index(dictel)] = np.asarray( d, dtype = object)
-        colmp.header['SensorID'] = self.DataSourceHeader[2]#'GFZ'
+        if( data[0].endswith('IAGA-2002                                    |')):
+            colmp.header['SensorID'] = self.DataSourceHeader[2]#'GFZ'
+        else:
+            colmp.header['SensorID'] = str( 'UNKNOWN')
         #colmp = colmp._put_column(colmp[:,0], 'time', columnname='Rain',columnunit='mm in 1h')
         #print( 'colmp', colmp.ndarray[[1,2,3]])
         #dirvar = colmp.header.items()
@@ -4517,16 +4665,31 @@ class MR:
             if( np.any( colmp.ndarray[16] == b'P')): # CHECKING IF GPS-status is bad
                 print( 'BAD GPS-STATUS!...SWITCHING TO SECONDARY TIME BEFORE TRIMMING!')
                 colmp = colmp.use_sectime( swap = True) # SWITCH TIMECOLUMNS SO THAT NTP TIMECOLUMN IS IN COLUMN 0 AND TRIM CAN BE APPLIED PROPERLY
+            #print( 'sstartdate', sstartdate)
+            #print( 'enddate', enddate)
+            #print( 'STAMPTODATE( ztime[0])', STAMPTODATE( ztime[0]))
+            #print( 'STAMPTODATE( ztime[-1])', STAMPTODATE( ztime[-1]))
+            if( debug):
+                print( 'colmp.ndarray[0] before triming', colmp.ndarray[0])
             temp = colmp.trim( starttime = sstartdate, endtime = enddate) # CUT OUT ONLY TIME OF INTEREST
             colmp = temp
+            if( debug):
+                print( 'colmp.ndarray[0] after triming', colmp.ndarray[0])
             del temp
             #print( sstartdate)
             #print( enddate)
             #print( colmp.ndarray[0])
             #sys.exit()
             colmp = colmp.removeduplicates()
+            if( debug):
+                print( 'colmp.ndarray[0] after removedduplicates', colmp.ndarray[0])
             colmp = colmp.sorting()
-            self.stationinfo = str( colmp.header['SensorID'])
+            if( debug):
+                print( 'colmp.ndarray[0] after sorting', colmp.ndarray[0])
+            try:
+                self.stationinfo = str( colmp.header['SensorID'])
+            except:
+                self.stationinfo = str( 'UNKNOWN')
             
             
             
@@ -4568,6 +4731,8 @@ class MR:
             print( 'Got timestamps, datacolumn-names, column indices and arraydim')
         #sys.exit()
         #sum_leng = len(iterateTime)
+        #print( 'iterateTime', iterateTime)
+        #sys.exit()
         try:
             #xI = vario.KEYLIST.index('dx')
             #yI = vario.KEYLIST.index('dy')
@@ -4582,6 +4747,8 @@ class MR:
             if( debug):
                 print( 'iterateTime is:\n{}'.format( iterateTime))
             time_vario = iterateTime
+            #print( 'time_vario', time_vario)
+            #sys.exit()  
             time_vario_zero = NUM2DATE20TIME( num2date( time_vario))
             if( debug):
                 print( 'time vario zero is:\n{}'.format( time_vario_zero))
@@ -4589,6 +4756,7 @@ class MR:
         except Exception as ex:
             print( 'Something went wrong with the timestamps')
             self.MyException(ex)
+        #import matplotlib.pyplot as plt
         #plt.plot( time_vario_zero, ( colmp.ndarray[index_vec]).T, alpha = 0.2)
         #plt.show()
         #sys.exit()
@@ -4634,13 +4802,13 @@ class MR:
         vseries = vario
         vtime = ietime
         
-        print( 'Reading {}-Data...done\n'.format( self.DataSourceHeader[2]))
+        print( 'Reading {}-Data...done\n'.format( colmp.header['SensorID']))
         #print( 'vseries is\n{}'.format( vseries))
         #print( 'vtime is\n{}'.format( vtime))
         
         gc.collect()
         del gc.garbage[:]
-        self.data = vseries* nano
+        self.data = vseries#* nano
         self.zerotime = vtime
         return self.zerotime, self.data
         #return vtime, vseries#, np.vstack(( aseries, bseries))
@@ -5539,7 +5707,7 @@ class MR:
         #
         # READ IN SUPERGRAD NS-SENSORS GRADIENTS
         ##################
-        VarioSensorString = 'LEMI036_1_0002_0001'
+        VarioSensorString = self.SearchString#'LEMI036_1_0002_0001'
         try:
             vario = readDB( self.dB, VarioSensorString, starttime = startdate, endtime = enddate)
             #ns.sorting()
@@ -6172,6 +6340,674 @@ class MR:
     
     
     
+    """
+    READING IAGA-2002 ascii files
+    --- under construction ---
+    """
+    def MPascii( self):
+        if( debug):
+            print( '\n\n\nStarting MPascii...')
+        #startdate = datetime.strptime("2018-02-07", "%Y-%m-%d")
+        #sstartdate = startdate
+        startdate = self.starttime
+        enddate = self.endtime
+        sstartdate = startdate
+        zstartdate = NUM2DATE20TIME( startdate)
+        zenddate = NUM2DATE20TIME( enddate)
+        ##enddate = datetime.strptime("2017-06-26", "%Y-%m-%d")
+        #enddate = datetime.strptime("2018-02-08", "%Y-%m-%d")
+        
+        #sys.exit()
+        self.__getdays__()
+        days = self.days
+        print( 'days', days)
+        #sys.exit()
+        startdate = self.starttime
+        #channelse = ['pri0','pri1']
+        #print(startdate)
+        print ( '\n\n\n\tstarttime\t\t=\tzstarttime\n\n\n')
+        print ( '\t{}\t=\t{}'.format( startdate, zstartdate))
+        print ( '\n\n\n\tendtime\t\t\t=\tzendtime\n\n\n')
+        print ( '\t{}\t=\t{}'.format( enddate, zenddate))
+        #sys.exit()
+        ###################################
+        # TIMERANGE DEFINITION
+        ###################################
+        cut_start = zstartdate # ZEROTIME FOR TIMERANGE TO ANALYSE
+        #cutoffset = 3600.0*24.0 # DURATION OF TIMERANGE TO ANALYSE
+        
+        #cut_end = zstartdate + cutoffset # ENDTIME FOR TIMERANGE TO ANALYSE
+        
+        colmp = []
+        cut_end = zenddate # ENDTIME FOR TIMERANGE TO ANALYSE
+        
+        #print( 'self.filetype', self.filetype)
+        #sys.exit()
+        fileending = self.filetype
+        print( 'fileending', fileending)
+        #########################
+        # READ picologtxt
+        #########################
+        
+        if( debug):
+            print( 'self.SearchString', self.SearchString)
+        sensname = '2016'
+        if( len( self.SearchString) < len( sensname) and fnmatch( sensname, '*' + self.SearchString + '*')):
+            sensname = self.SearchString
+            if( debug):
+                print( 'sensname is: {}'.format( sensname))
+                
+        elif( ( len( self.SearchString) >= len( sensname)) & ( fileending.endswith( '.sec'))):
+            """
+            CASE OF magpy ascii files
+            """
+            sensname = self.SearchString
+        else:
+            sensname = self.SearchString
+            if( debug):
+                print( 'sensname is: {}'.format( sensname))
+                #sys.exit()
+            #if( not self.SearchString.startswith( 'GSM90_1013973') and not self.SearchString.startswith( 'GSM19_6067473')):
+            if( not self.SearchString.startswith( 'GSM90') and not self.SearchString.startswith( 'GSM19') and not self.SearchString.startswith( 'LEMI') and not self.SearchString.endswith( '.sec')):
+                sensname = sensname[0:17] # reducing again to sensorname without date info
+            if( debug):
+                print( 'sensname is: {}'.format( sensname))
+            #sys.exit()
+        if( debug):
+            print( 'self.SearchString', self.SearchString)
+        #sys.exit()
+        #for d in days:
+        #    print( 'd', d)
+        #    daystring = datetime.strftime( d, '%Y%m%d')
+        #    print( 'daystring', daystring)
+        #sys.exit()
+        channelvario = [[sensname + datetime.strftime( f, '%Y-%m-%d') + fileending for f in days]] # appending days datainfo to searchlist
+        
+        #sys.exit()
+        #channels = ['LEMI036_1_0002_' + liststart + '.bin': 'LEMI036_1_0002_' + listend + '.bin']
+        #tage = sorted(listdir(dirstring+'/'))
+        if( debug):
+            print( 'channelvario is: {}'.format( channelvario))
+        #print( 'channelvario is: {}'.format( channelvario))
+        #sys.exit()
+        
+        channelvario = np.unique( sum(channelvario,[]))
+        if( debug):
+            print( 'channelvario is: {}'.format( channelvario))
+            #sys.exit()
+        if( debug):
+            print( 'Looking for files like this:')
+            for el in channelvario:
+                print( el)
+            #sys.exit()
+        """
+        a = [sorted(listdir(f+'/')) for f in dirstring]
+        
+        #print ( 'all selected data: {}'.format( a))
+        
+        
+        #tage = original_sum(a,[])
+        
+        tage = a
+        alltage = []
+        for k in range( 0, len(tage)):
+            for channel in channelew:
+                alltage += ( sorted(fnmatch.filter(tage[k], channel)))
+                #print ( 'verzeichnis: {}, file: {}'.format(channel, tage[k]))
+        #print ('allfiles magnetic list: {}'.format( alltage))
+        
+        tij = dirstring 
+        """
+        #for el in channelvario:
+        #    print(el)
+        #sys.exit()
+        
+        
+        self.__LookForFilesMatching__()
+        
+        
+        if( debug):
+            print( 'Found files like this:')
+            for el in self.files:
+                print( el)
+                #sys.exit()
+            #sys.exit()
+        allfiles = []
+        n = 0
+        for vel in channelvario:
+            for el in self.files:
+                if( debug):
+                    print( 'el\t= {},\tvel = {}'.format( el, vel))
+                #if( fnmatch( el, '*' + vel)):
+                #print( 'el endswith vel : {}'.format( el.endswith( vel)))
+                if( el.endswith( vel)):
+                    n = n + 1
+                    allfiles.append( el)
+                    print( 'Vario #{} file is: {}'.format( n, el))
+                    #sys.exit()
+        #sys.exit()
+        if( debug):
+            print( 'allfiles is: {}'.format( allfiles))
+        #sys.exit()
+        if( len( allfiles) < 1):
+            print( 'No files for {} found for time: {}-{}...stopping'.format( sensname, self.starttime, self.endtime))
+            sys.exit()
+        #print( 'No files for {} found for time: {}-{}...stopping'.format( sensname, self.starttime, self.endtime))
+        #sys.exit()
+        
+        if( debug):
+            print( 'Found matching files:')
+            for el in allfiles:
+                print( el)
+        #sys.exit()
+        """
+        allfiles = []
+        for day in alltage:
+            for folder in tij:
+                #print ( folder + '/' + day)
+                if( os.path.isfile( folder + '/' + day)):
+                    allfiles.append( folder + '/' + day)
+        allfiles = sorted( allfiles)
+        for k, f in enumerate( allfiles):
+            print( 'EW #{} file is: {}'.format( k+1, f))
+        """
+        #temp = DataStream()
+        #import codecs# to reencode read files
+        """
+        Checking how many data columns are needed
+        """
+        
+        for k, f in enumerate( allfiles):
+            columncount = 0
+            #with codecs.open(f,'r','string-escape') as file:
+            #temp=f.read()
+            print( 'reading \n{}...'.format( f))
+            temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
+            print( '...Magpy ASCII txt #{} file \n{} read.'.format( k, f))
+            
+            #print( temp.header['DataCompensationX'])
+            data = temp.read()
+            bakdata = data
+            data = data.split("\n")
+            if( debug):
+                print( 'data')
+                print( data)
+                print( 'data[0]')
+                print( data[0])
+                print( 'shape of data', np.shape(data))
+                #sys.exit()
+            #self.DataSourceHeader = []
+            if( data[0].endswith(' # MagPy - ASCII')):
+                linecount = 1
+                
+                AvailableColumns = []
+                print( ' # MagPy - ASCII line found...')
+                #import time as tim
+                for line in data[1::]:
+                    #print( ' line: "{}"'.format( line))
+                    #tim.sleep(1)
+                    if( ( line.startswith( '" #') or line.startswith( ' #') or line.startswith( '# head') or line.startswith( '-[') or line.startswith( ' # Station')) and not line.startswith( '# data')):
+                        if( line.startswith( ' # DataCompensationZ')):
+                            self.DataSourceHeader.append( 'DataCompensationZ' + ' = ' + str( line[ line.rfind( ' # DataCompensationZ:') + len( ' # DataCompensationZ') + 1:]))
+                            print( 'self.DataSourceHeader[-1]',self.DataSourceHeader[-1])
+                        elif( line.startswith( ' # DataCompensationY')):
+                            self.DataSourceHeader.append( 'DataCompensationY' + ' = ' + str( line[ line.rfind( ' # DataCompensationY:') + len( ' # DataCompensationY') + 1:]))
+                            print( 'self.DataSourceHeader[-1]',self.DataSourceHeader[-1])
+                        elif( line.startswith( ' # DataCompensationX')):
+                            self.DataSourceHeader.append( 'DataCompensationX' + ' = ' + str( line[ line.rfind( ' # DataCompensationX:') + len( ' # DataCompensationX') + 1:]))
+                            print( 'self.DataSourceHeader[-1]',self.DataSourceHeader[-1])
+                        elif( line.startswith( '# head')):
+                            linecount = linecount + 1
+                            #print( 'linecount', linecount)
+                        elif( line.startswith( '-[],x[nT],y[nT],z[nT]')):
+                            items = line.split( ',')
+                            for o, item in enumerate( items):
+                                if( item != '-[]'):
+                                    columncount = columncount + 1
+                                    self.DataSourceHeader.append( 'col{}'.format( o) + ' = ' + item)
+                                    AvailableColumns.append( [ o, item])
+                                    print( 'self.DataSourceHeader[-1]',self.DataSourceHeader[-1])
+                            #linecount = linecount + 1
+                        #elif( line.startswith( '" #') or line.startswith( ' #')):
+                        linecount = linecount + 1
+                        print( ' linecount: {}, line: "{}"'.format( linecount, line))
+                    elif( line.startswith( '# data')):
+                        linecount = linecount + 1
+                    else:
+                        pass
+                print( 'linecount', linecount)
+                #sys.exit()
+        AvailableColumns = np.array( AvailableColumns)
+        if( debug):
+            print( 'AvailableColumns\n', AvailableColumns)
+            #sys.exit()
+        #print( 'columncount', columncount)
+        #sys.exit()
+        """
+        Testing if all columns can be read. If not, non-readable columns are dropped
+        """
+        for k, f in enumerate( allfiles):
+            #with codecs.open(f,'r','string-escape') as file:
+            #temp=f.read()
+            #print( 'reading \n{}...'.format( f))
+            temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
+            #print( '...Magpy ASCII txt #{} file \n{} read.'.format( k, f))
+            #print( temp.header['DataCompensationX'])
+            data = temp.read()
+            data = data.split( '\n')
+            #self.DataSourceHeader = []
+            if( data[0].endswith(' # MagPy - ASCII')):
+                #linecount = 1
+                #for line in data[linecount::]:
+                mydate = []
+                x = []
+                #print( 'shape of x is: {}'.format( np.shape( x)))
+                #sys.exit()
+                usableind = np.array( [ int( f) for f in AvailableColumns[:,0]])#np.argwhere( [ isinstance( float( f), np.floating) for f in elements[AvailableColumns]] ).flatten()
+                if( debug):
+                    print( 'usableind', usableind)
+                    #sys.exit()
+                for line in data[linecount:linecount+1]:
+                    elements = line.split( ',')
+                    if( debug):
+                        print( 'elements')
+                        for o, el in enumerate( elements):
+                            print( 'element [{}] is: {}'.format( o, el))
+                        #sys.exit()
+                    if( len( elements) > 1):
+                        for o, ind in enumerate( usableind):
+                            if( debug):
+                                print( 'elements[ind] is: {}'.format( elements[ind]))
+                            try:
+                                float( elements[ind])
+                                is_float = True
+                            except:
+                                is_float = False
+                            if( debug):
+                                print( 'elements[ind] is floating: {}'.format( is_float))
+                            if( not is_float):
+                                print( '\nremoving index: {}'.format( ind))
+                                print( 'AvailableColumns before removal', AvailableColumns)
+                                AvailableColumns = np.vstack( ( AvailableColumns[:o,:], AvailableColumns[o+1:,:]))
+                                print( 'AvailableColumns after removal', AvailableColumns)
+        #sys.exit()                                
+                                
+        """
+        Reading data
+        """
+        allmydate = []
+        #allx = [[] for i in range( columncount - 3)]
+        allx = []
+        
+        for k, f in enumerate( allfiles):
+            #with codecs.open(f,'r','string-escape') as file:
+            #temp=f.read()
+            print( 'reading \n{}...'.format( f))
+            temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
+            print( '...Magpy ASCII txt #{} file \n{} read.'.format( k, f))
+            #print( temp.header['DataCompensationX'])
+            data = temp.read()
+            data = data.split( '\n')
+            #self.DataSourceHeader = []
+            if( data[0].endswith(' # MagPy - ASCII')):
+                #linecount = 1
+                #for line in data[linecount::]:
+                mydate = []
+                x = []
+                #print( 'shape of x is: {}'.format( np.shape( x)))
+                #sys.exit()
+                usableind = np.array( [ int( f) for f in AvailableColumns[:,0]])#np.argwhere( [ isinstance( float( f), np.floating) for f in elements[AvailableColumns]] ).flatten()
+                if( debug):
+                    print( 'usableind', usableind)
+                    #sys.exit()
+                for line in data[linecount::]:
+                    elements = line.split( ',')
+                    if( debug):
+                        print( 'elements')
+                        for o, el in enumerate( elements):
+                            print( 'element [{}] is: {}'.format( o, el))
+                        #sys.exit()
+                    if( len( elements) > 1):
+                        stamp = elements[0].split( 'T')
+                        if( debug):
+                            print( 'stamp', stamp)
+                        dates = stamp[0]
+                        date = dates.split( '-')
+                        if( debug):
+                            print( 'dates')
+                            for o, el in enumerate( date):
+                                print( 'date [{}] is: {}'.format( o, el))
+                            #sys.exit()
+                        times = stamp[1]
+                        time = times.split( ':')
+                        if( debug):
+                            print( 'times')
+                            for o, el in enumerate( time):
+                                print( 'time [{}] is: {}'.format( o, el))
+                            #sys.exit()
+                        #time = time.split( '.')[0]
+                        #microsec = time[-1].split( '.')[1]
+                        #doy = elements[2]
+                        #for i in range( columncount - 3):
+                        #    #print( i)
+                        #    #print( 'elements[i + 3]', elements[usableind[i + 3]])
+                        #    x[i].append( float( elements[usableind[i + 3]]))
+                        #    #y.append( float( elements[4]))
+                        #    #z.append( float( elements[5]))
+                        #    #f.append( float( elements[6]))
+                        x.append( [ float( elements[f]) for f in usableind])
+                        #print( 'x', x)
+                        #sys.exit()
+                        datestring = dates + ' ' + times# + ' ' + str( int( float(microsec)* 1000.0))# + ' ' + doy
+                        #print( 'date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)): {}'.format( datestring))
+                        mydate.append( datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S.%f").replace( tzinfo = timezone.utc))
+                        #print( '[-1] is: {}'.format( mydate[-1]))
+                        #sys.exit()
+                    #print( 'NUM2DATE20TIME( mydate[-1]) is: {}'.format( NUM2DATE20TIME( mydate[-1])))
+                    #sys.exit()
+                    #for el in line.split( ''):
+                    #    print( 'el in line is: {}'.format( el))
+                #print( 'self.DataSourceHeader: {}'.format( self.DataSourceHeader))
+                #print( 'ztime' , ztime)
+                #print( 'shape of ztime' , np.shape( ztime))
+                #print( 'x' , x)
+                #print( 'shape of dataarray' , np.shape( dataarray))
+                #sys.exit()
+            #[ allmydate.append( f) for f in mydate]
+            allmydate.extend( mydate)
+            if( debug):
+                print( 'allmydate', allmydate)
+                sys.exit()
+            #print( 'allmydate', allmydate)
+            #sys.exit()
+            #[ allx.append( f) for f in x]
+            #for l, triple in enumerate( np.array( x)):
+            #    #print( 'triple[{}]={}'.format( l, triple))
+            #    #print( 'np.shape( triple)', np.shape( np.atleast_2d( triple)))
+            #    #sys.exit()
+            #    allx.append( triple)
+            allx.extend( x)
+            if( debug):
+                print( 'allx', allx)
+                sys.exit()
+            #[ allx.append( f) for f in g for g in x]
+            if( debug):
+                print( 'np.shape( allx)', np.shape( allx))
+                print( 'np.shape( allx)', np.shape( allmydate))
+                sys.exit()
+        
+        SelectedIndex = []
+        #print( 'SelectIndex')
+        for ind, name in zip( AvailableColumns[:,0], AvailableColumns[:,1]):
+            if( debug):
+                print( 'Ind: {} is: {}'.format( ind, name))
+            if( name[0:name.rfind( '[')] in self.ColList):
+                if( debug):
+                    print( 'found {} index {}'.format( name, ind))
+                    #sys.exit()
+                SelectedIndex.append( int( ind) - 1)
+        SelectedIndex = np.array( SelectedIndex)
+        print( 'SelectedIndex', SelectedIndex)
+        #sys.exit()
+        #if( False):
+        #    print( 'allmydate')
+        #    if( type( allmydate[0]) == datetime):
+        #        print( 'datetime.datetime found')
+        #        sys.exit()
+        #    for el in allmydate:
+        #        print( 'el in allmydate {}'.format( el))
+        #        print( 'type( el)', type( el))
+        #        if( type( el) == datetime):
+        #            print( 'datetime.datetime found')
+        #            sys.exit()
+        #sys.exit()
+        ztime = np.array( NUM2DATE20TIME( allmydate))
+        #print( 'ztime')
+        #for el in ztime:
+        #    print( 'el in ztime', el)
+        #sys.exit()
+        sortind = np.argsort( ztime)
+        ztime = ztime[sortind]
+        if( debug):
+            print( 'allx')
+            for el in np.array( allx)[0:10:,:]:
+                print( 'el in allx: {}'.format( el))
+                #sys.exit()
+        dataarray = np.array( allx)[:, SelectedIndex][sortind, :]
+        
+        #print( 'ztime')
+        #for el in ztime:
+        #    print( 'el in ztime {}'.format( el))
+        #sys.exit()
+        #
+        #print( data)
+        #print( np.shape( ztime))
+        #print( np.shape( dataarray))
+        #sys.exit()
+        #plt.plot( np.diff( ztime), alpha = 0.2)
+        #plt.show()
+        #sys.exit()
+        
+        
+        if( debug):
+            print( 'Magpy ASCII matching read...removing duplicates')
+            #sys.exit()
+        #print( shape( colmp))
+        #print( type( colmp))
+        #sys.exit()
+        
+        colmp = np.hstack( ( np.atleast_2d( ztime).T, dataarray)) # CONCATENATE MAGPY STREAMS
+        #print(' shape( colmp)', shape( colmp))
+        res = date2num( STAMPTODATE( ztime))#.astype( float)
+        #print( 'res')
+        #for el in res:
+        #    print( 'el in res', el)
+        #sys.exit()
+        colmp[:,0] = res
+        bakcolmp = colmp
+        #plt.plot( bakcolmp[:-1,0], np.diff( bakcolmp[:,1:], axis = 0), alpha = 0.2)
+        #plt.show()
+        #sys.exit()
+        print( bakcolmp[:,0])
+        #print( 'shape of bakcolmp', np.shape( bakcolmp))
+        #sys.exit()
+        #mydict = dict( zip( ['time', 'dx', 'dy', 'dz'], bakcolmp))
+        dictlist = ['time']#, 'x', 'y', 'z', 'f']
+        for el in self.ColList:
+            dictlist.append( el)
+        #print( 'dictlist is: {}'.format( dictlist))
+        #sys.exit()
+        colmp = DataStream()
+        array = np.asarray( [ np.zeros( ( np.max( np.shape( bakcolmp)))) for el in colmp.KEYLIST], dtype = object)
+        #print( np.shape( array))
+        #sys.exit()
+        #array[]
+        #plt.plot( ztime, dataarray, alpha = 0.2)
+        #plt.show()
+        #sys.exit()
+        colmp.ndarray = array
+        for dictel, d in zip( dictlist, bakcolmp.T):
+            colmp.ndarray[colmp.KEYLIST.index(dictel)] = np.asarray( d, dtype = object)
+        if( data[0].endswith(' # MagPy - ASCII')):
+            colmp.header['SensorID'] = str( 'UNKNOWN-MagPy-ASCII')#'GFZ'
+        else:
+            colmp.header['SensorID'] = str( 'UNKNOWN')
+        #colmp = colmp._put_column(colmp[:,0], 'time', columnname='Rain',columnunit='mm in 1h')
+        #print( 'colmp', colmp.ndarray[[1,2,3]])
+        #dirvar = colmp.header.items()
+        #print( dir( dirvar))
+        #for el in dirvar:
+        #    print( el)
+        #print('\n\n\n\n')
+        #for el in dir( colmp.header):
+        #    print( el)
+        #sys.exit()
+        if( False):
+            for dictel in dictlist:
+                if( dictel != 'time'):
+                    plt.plot( colmp.ndarray[colmp.KEYLIST.index('time')], colmp.ndarray[colmp.KEYLIST.index(dictel)], alpha = 0.2)
+            plt.show()
+            sys.exit()
+        if( True):
+            if( self.ApplyFlags):
+                #print( '...applying flags')
+                colmp = self.__ApplyFlags__(colmp)
+            if( self.InterMagFilter):
+                #print( '...applying intermagnet specified filter')
+                self.__InterMagnet_filter__(colmp)
+            
+            if( np.any( colmp.ndarray[16] == b'P')): # CHECKING IF GPS-status is bad
+                print( 'BAD GPS-STATUS!...SWITCHING TO SECONDARY TIME BEFORE TRIMMING!')
+                colmp = colmp.use_sectime( swap = True) # SWITCH TIMECOLUMNS SO THAT NTP TIMECOLUMN IS IN COLUMN 0 AND TRIM CAN BE APPLIED PROPERLY
+            #print( 'sstartdate', sstartdate)
+            #print( 'enddate', enddate)
+            #print( 'STAMPTODATE( ztime[0])', STAMPTODATE( ztime[0]))
+            #print( 'STAMPTODATE( ztime[-1])', STAMPTODATE( ztime[-1]))
+            if( debug):
+                print( 'colmp.ndarray[0] before triming', colmp.ndarray[0])
+            temp = colmp.trim( starttime = sstartdate, endtime = enddate) # CUT OUT ONLY TIME OF INTEREST
+            colmp = temp
+            if( debug):
+                print( 'colmp.ndarray[0] after triming', colmp.ndarray[0])
+            del temp
+            #print( sstartdate)
+            #print( enddate)
+            #print( colmp.ndarray[0])
+            #sys.exit()
+            colmp = colmp.removeduplicates()
+            if( debug):
+                print( 'colmp.ndarray[0] after removedduplicates', colmp.ndarray[0])
+            colmp = colmp.sorting()
+            if( debug):
+                print( 'colmp.ndarray[0] after sorting', colmp.ndarray[0])
+            try:
+                self.stationinfo = str( colmp.header['SensorID'])
+            except:
+                self.stationinfo = str( 'UNKNOWN')
+            
+            
+            
+            self.__GetSensName__( colmp)
+            print( 'self.sensname is:\n')
+            for el in self.sensname:
+                print( 'el is:\t{}'.format( el))
+            if( debug):
+                print( 'self.sensname is:\n')
+                for el in self.sensname:
+                    print( 'el is:\t{}'.format( el))
+                #sys.exit()
+            
+            
+            self.__GetTimeInd__(colmp)
+            tI = self.TimeInd
+        self.TimeInd = 0
+        tI = self.TimeInd
+        #self.stationinfo = str( 'WIK-PICOLOG')
+        #self.sensname = str( 'PICOLOG')
+        if( False):
+            self.DataColNames = ['x', 'y', 'z', 'f']
+        else:
+            self.DataColNames = self.ColList
+        #print( self.TimeInd, tI, self.stationinfo, self.sensname, self.DataColNames)
+        #sys.exit()
+        self.__GetDataInd__( colmp, ColList = self.ColList)
+        
+        index_vec = self.DataInd
+        #index_vec = [0,1,2]
+        ColNames = self.DataColNames
+        arraydim = nanmax( shape( index_vec))
+        iterateTime = colmp.ndarray[0].astype( float)
+        #plt.plot( np.diff( iterateTime), alpha = 0.2)
+        #plt.show()
+        #sys.exit()
+        del ztime
+        if( debug):
+            print( 'Got timestamps, datacolumn-names, column indices and arraydim')
+        #sys.exit()
+        #sum_leng = len(iterateTime)
+        #print( 'iterateTime', iterateTime)
+        #sys.exit()
+        try:
+            #xI = vario.KEYLIST.index('dx')
+            #yI = vario.KEYLIST.index('dy')
+            #zI = vario.KEYLIST.index('dz')
+            #index_vec = [vario.KEYLIST.index('x'), vario.KEYLIST.index('y'), vario.KEYLIST.index('z')]#, vario.KEYLIST.index('f')]#, vario.KEYLIST.index('dx'), vario.KEYLIST.index('dy'), vario.KEYLIST.index('dz')]
+            
+            ##################
+            # REARANGE COLUMNS TO MATRIX WITH N x 3 DIMENSION
+            ##################
+            
+            #from magpy.stream import num2date
+            if( debug):
+                print( 'iterateTime is:\n{}'.format( iterateTime))
+            time_vario = iterateTime
+            #print( 'time_vario', time_vario)
+            #sys.exit()  
+            time_vario_zero = NUM2DATE20TIME( num2date( time_vario))
+            if( debug):
+                print( 'time vario zero is:\n{}'.format( time_vario_zero))
+            #sys.exit()
+        except Exception as ex:
+            print( 'Something went wrong with the timestamps')
+            self.MyException(ex)
+        #import matplotlib.pyplot as plt
+        #plt.plot( time_vario_zero, ( colmp.ndarray[index_vec]).T, alpha = 0.2)
+        #plt.show()
+        #sys.exit()
+        try:
+            #time_vario_zero = dump[0]
+            #print time_vario_zero
+            
+            #vario = vario.ndarray[[xI, yI, zI]]
+            vario = colmp.ndarray[index_vec]
+            #varioarray = np.matrix( list( itertools.chain( *vario))).reshape( ( 3, -1)).T
+            arraydim = nanmax( shape( index_vec))
+            if( debug):
+                print( 'numbers of rows in array:\t{}'.format( arraydim))
+                print( 'shape of vario is:\t{}'.format( np.shape( vario)))
+                print( 'index_vec:\t{}'.format( index_vec))
+            varioarray = matrix( list( chain( *vario)))#.reshape( ( arraydim, -1)).T
+            if( debug):
+                print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
+            varioarray = varioarray.reshape( arraydim, -1).T
+            #print( ColNames)
+            #sys.exit()
+            if( debug):
+                print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
+            #sys.exit()
+            ietime, vario = self.__EquiInterpol__( time = time_vario_zero, data = varioarray)
+            """
+            #from magpy.stream import num2date
+            stamp_starttime = NUM2DATE20TIME( num2date(time_vario[0])) # CONVERT TO ZEROTIME VALUES
+            stamp_endtime = NUM2DATE20TIME( num2date(time_vario[-1])) # CONVERT TO ZEROTIME VALUES
+            dt_vario = (stamp_endtime - stamp_starttime)/float(shape(time_vario)[0] - 1)
+            #int_tvario = np.linspace( stamp_starttime, stamp_endtime, len( time_vario))
+            int_tvario = np.arange( stamp_starttime, stamp_endtime + dt_vario, dt_vario)
+            ietime = int_tvario
+            """
+            if( debug):
+                print( 'shape of ietime is:\t{}'.format( np.shape( ietime)))
+                print( 'shape of time_vario_zero is:\t{}'.format( np.shape( time_vario_zero)))
+                print( 'shape of varioarray.T is:\t{}'.format( np.shape( varioarray.T)))
+                print( 'shape of vario is:\t{}'.format( np.shape( vario)))
+            
+        except Exception as ex:
+            self.MyException(ex)
+        vseries = vario
+        vtime = ietime
+        
+        print( 'Reading {}-Data...done\n'.format( colmp.header['SensorID']))
+        #print( 'vseries is\n{}'.format( vseries))
+        #print( 'vtime is\n{}'.format( vtime))
+        
+        gc.collect()
+        del gc.garbage[:]
+        self.data = vseries#* nano
+        self.zerotime = vtime
+        return self.zerotime, self.data
+        #return vtime, vseries#, np.vstack(( aseries, bseries))
+    
+    
     def GetData(self):
         if( self.sensortype == 'MiniSeed'):
             self.zerotime, self.data = self.SeedRead()
@@ -6197,6 +7033,8 @@ class MR:
             self.zerotime, self.data = self.GFZKpRead()
         elif( self.sensortype == 'WICDefDataRead'):
             self.zerotime, self.data = self.WICDefDataRead()
+        elif( self.sensortype == 'mpascii'):
+            self.zerotime, self.data = self.MPascii()
         else:
             print( '\n\n\nsensortype is not valid...stopping')
             sys.exit()
