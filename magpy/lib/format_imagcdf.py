@@ -318,6 +318,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 timedepend = cdfdat.varattsget(elem[1]).get('DEPEND_0')
                 if not multipletimedict == {} and timedepend in timecolumns and not referencetimecol:
                     indexarray = multipletimedict.get(timedepend)
+                    if debug:
+                        print("Timesteps of {}: {}, N(Values): {}".format(timedepend,len(indexarray),len(ar)))
                     newar = np.asarray([np.nan]*arlen)
                     newar[indexarray] = ar
                     array[ind] = newar
