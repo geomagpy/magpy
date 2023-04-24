@@ -1,75 +1,60 @@
 #!/usr/bin/env python
 """
-MagPy - Basic Runtime tests including durations  
+MagPy - Basic flagging tests including durations  
 """
-from __future__ import print_function
+from magpy.stream import *
+import magpy.core.flags as flg
+#import flags as flg
+import datetime
 
-# Define packges to be used (local refers to test environment) 
-# ------------------------------------------------------------
-local = True
-if local:
-    import sys
-    sys.path.insert(1,'/home/leon/Software/magpy/')
+"""
+APPLICTAIONS:
+Test Program for all flagging related tools and methods 
 
-from magpy.stream import *   
-from magpy.database import *   
-import magpy.transfer as tr
-import magpy.absolutes as di
-import magpy.mpplot as mp
-import magpy.opt.emd as emd
-import magpy.opt.cred as cred
+Test all methods:
+- union (combine consectutive and overlapping flagging info)
 
-## READ Source dictionary fron test cfg file or provide by options
+"""
 
-    # ++++++++++++++++++++++++++++++++++++++++++++++++
-    # Read different files and get header and key info
-    # ++++++++++++++++++++++++++++++++++++++++++++++++
-    #   please note that a full test requires about xxx min
 
-SOURCEDICT = {
-                ## GENERAL File Formats
-		#'IMAGCDF': {'source':example1, 'keys': ['x','y','z','f'], 'length': 86400, 'id':'', 'wformat': ['IMAGCDF']},
- 		'GP20S3': {'source':'/home/leon/Cloud/Daten/GP20S3NSS2_012201_0001_0001_2019-07-12.cdf'}
-             }
+def test_union():
+   # issue: flags are stored in database, loading flags directly afterwards is fine, a day later flags have vanished from data database
+   """
+   Approch:
+   - Load data set with overlapping flags
+   - Combine overlaps and keep newest inputs
+   """
+   flaglist = [
+       [datetime.datetime(2022, 5, 3, 2, 28, 11, 710285), datetime.datetime(2022, 5, 4, 1, 9, 39, 790306), 'f', 0,
+        'ok BL', 'GP20S3NSS2_012201_0001', datetime.datetime(2023, 3, 3, 14, 50, 46, 281999)],
+       [datetime.datetime(2022, 5, 3, 2, 33, 29, 734155), datetime.datetime(2022, 5, 4, 0, 4, 18, 822204), 'f', 3,
+        'data missing BL', 'GP20S3NSS2_012201_0001', datetime.datetime(2022, 5, 31, 12, 55, 39, 13425)],
+       [datetime.datetime(2022, 5, 3, 3, 41, 23, 681463), datetime.datetime(2022, 5, 3, 3, 42, 59, 676068), 'f', 3,
+        'vehicle RL', 'GP20S3NSS2_012201_0001', datetime.datetime(2023, 4, 18, 9, 56, 55, 227970)],
+       [datetime.datetime(2022, 5, 3, 3, 41, 38, 680200), datetime.datetime(2022, 5, 3, 3, 41, 43, 659140), 'f', 1,
+        'aof - threshold 5 window 600.0 sec', 'GP20S3NSS2_012201_0001',
+        datetime.datetime(2022, 5, 3, 3, 48, 36, 479796)],
+       [datetime.datetime(2022, 5, 3, 3, 42, 40, 654020), datetime.datetime(2022, 5, 3, 3, 42, 50, 682860), 'f', 1,
+        'aof - threshold 5 window 600.0 sec', 'GP20S3NSS2_012201_0001',
+        datetime.datetime(2022, 5, 3, 3, 48, 36, 479796)]]
+   fl = flg.flags(flaglist)
+   combflaglist = fl.union(debug=True)
+   fl.stats()
+   combflaglist.stats()
+   if len(combflaglist) == 3:
+       return True
+   print("Union test problem - expected result not obtained")
+   return False
+   
 
-ok=True
-if ok:
-    # Tested MagPy Version
-    print ("------------------------------------------------")
-    print ("MagPyVersion: {}".format(magpyversion))
-    resultdict = {}
-    print ("------------------------------------------------")
-    print ("Test conditions:")
-    print ("Reading two different data sets with second and microsecond resolution.")
-    print ("A certain time range with a known amount of data points will be flagged")
-    print ("and flags will be saved to file. This flagfile will be read and amount")
-    print ("of flags will be verified. The outlier method will be checked against an")
-    print ("an expected flag number. Flags will be saved as well and the flagging")
-    print ("information (status) will be checked and modified.")
-    for key in SOURCEDICT:
-        SensorID = False
-        sensorid = ''
-        print ("------------------------------------------------")
-        print ("Running analysis for {}".format(key))
-        print ("------------------------------------------------")
-        checkdict = SOURCEDICT.get(key)
-        stream = read(checkdict['source'],debug=True)
-        foundlen = stream.length()[0]
-        print (foundlen)
-        t1 = datetime.utcnow()
-        print ("Step 1: flagging outliers ...")
-        print (stream._get_key_headers())
-        diffdata = stream.flag_outlier(threshold=4,timerange=timedelta(seconds=60),stdout=True)
-        print (diffdata._get_key_headers())
-        diffdata = diffdata.remove_flagged()
-        t2 = datetime.utcnow()
-        flagtime = (t2-t1)
-        foundflaglen = diffdata.length()[0]
-        print (foundflaglen)
+   
+# test 1
+try:
+    succ = test_union(fl)
+    print("Union test successfully finished")
+except:
+    print("Union test failed")
+    sys.exit(1)
 
-        ind = KEYLIST.index('flag')
-        ts,te = diffdata._find_t_limits()
-        print ("Step 1: flagging time range...")
-        diffdata = diffdata.flag_stream('x', 2, "too be used in any case", ts, ts+timedelta(hours=1))
-        t2 = datetime.utcnow()
+sys.exit()
 
