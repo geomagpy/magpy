@@ -379,7 +379,7 @@ class MR:
         sensortype = 'SingleAbsRead'
         commonColList = ['x', 'y', 'z']
         commonchannels = 'cdf'
-        commonsearchstring = 'GP20S3NS_012201_0001_'
+        searchstring = 'GP20S3NS_012201_0001_'
         DataCont = MR(starttime = starttime, endtime = endtime, 
                       sensortype = sensortype, SrcStr = searchstring, 
                       path = os.path.abspath( pathstring), 
@@ -436,6 +436,7 @@ class MR:
             self.ApplyFlags = False
             self.InterMagFilter = False
             self.DataSourceHeader = []
+            
             for item, value in kwargs.items():
                 if( item == 'starttime'):
                     """
@@ -465,7 +466,15 @@ class MR:
                             if( it == 'data'):
                                 self.data = val
                                 data_set = True
-                        if( data_set):
+                                if( debug):
+                                    print( 'self.data', self.data)
+                                    sys.exit()
+                            elif( it == 'SrcStr'):
+                                self.SearchString = val
+                                if( debug):
+                                    print( 'self.SearchString', self.SearchString)
+                                    #sys.exit()
+                        if( not data_set):
                             print( '\n\n\nMissing "data" keyword and ndarray...stopping')
                             sys.exit()
                     elif( self.sensortype.startswith( 'dB')):
@@ -534,30 +543,36 @@ class MR:
                                     self.SearchString = 'GFZKpRead'
                                 elif( self.sensortype == 'IAGAtxt'):
                                     self.SearchString = ''
-                                for it, val in kwargs.items():
-                                    if( it == 'path'):
-                                        """
-                                        do .....
-                                        
-                                        get common filepath to be investigated
-                                        """
-                                        self.path = val
-                                        if( debug):
-                                            print( 'self.path is: {}'.format( self.path))
-                                    if( it == 'SrcStr'):
-                                        """
-                                        
-                                        
-                                        define specific search string besides self.filetype
-                                        """
-                                        if( self.sensortype != 'picologtxt'):
-                                            self.SearchString = val
+                                #elif( self.sensortype == 'mpstream'):
+                                #    self.SearchString = val
+                                #    if( True):
+                                #        print( 'self.SearchString', self.SearchString)
+                                #        sys.exit()
+                                else:
+                                    for it, val in kwargs.items():
+                                        if( it == 'path'):
+                                            """
+                                            do .....
+                                            
+                                            get common filepath to be investigated
+                                            """
+                                            self.path = val
                                             if( debug):
-                                                print( 'self.SearchString', self.SearchString)
-                                        else: # SEARCH FOR picologtxt files beginning with date as name
-                                            date = self.starttime
-                                            val = str( date.year) + '_' + str( '{:02d}'.format( date.month)) + '_' + str('{:02d}'.format( date.day)) + '_' + str('{:02d}'.format( date.hour)) + str('{:02d}'.format( date.minute)) + str('{:02d}'.format( date.second))
-                                            self.SearchString = val
+                                                print( 'self.path is: {}'.format( self.path))
+                                        if( it == 'SrcStr'):
+                                            """
+                                            
+                                            
+                                            define specific search string besides self.filetype
+                                            """
+                                            if( self.sensortype != 'picologtxt'):
+                                                self.SearchString = val
+                                                if( debug):
+                                                    print( 'self.SearchString', self.SearchString)
+                                            else: # SEARCH FOR picologtxt files beginning with date as name
+                                                date = self.starttime
+                                                val = str( date.year) + '_' + str( '{:02d}'.format( date.month)) + '_' + str('{:02d}'.format( date.day)) + '_' + str('{:02d}'.format( date.hour)) + str('{:02d}'.format( date.minute)) + str('{:02d}'.format( date.second))
+                                                self.SearchString = val
                             except Exception as ex:
                                 #print( 'Sensortype is: {}. Filepath missing...stopping!'.format( self.sensortype))
                                 self.MyException(ex)
@@ -594,6 +609,7 @@ class MR:
                                 except Exception as ex:
                                     #print( 'Sensortype is: {}. Filepath missing...stopping!'.format( self.sensortype))
                                     self.MyException(ex)
+                                
                     if( debug):
                         print( 'self.sensortype is: {}'.format( self.sensortype))
                 if( item == 'channels'):
@@ -4543,6 +4559,120 @@ class MR:
                     #sys.exit()
                     #for el in line.split( ''):
                     #    print( 'el in line is: {}'.format( el))
+            elif( ( data[0].startswith(' # MagPy - ASCII'))): # THL - txt files
+                linecount = 1
+                headercount = -1
+                
+                for line in data[0::]:
+                    if( line.startswith( '20')):
+                        #print( 'index found {}'.format( line.rfind( 'Source of Data') + len( ' Source of Data')))
+                        #sys.exit()
+                        #print( ' Source of Data {}'.format( self.DataSourceHeader[-1]))
+                        linecount = linecount  + 1
+                    else:
+                        headercount = headercount + 1
+                    
+                    if( line.startswith( ' # TITLE:')):
+                        val = ( line[ line.find( ':') + 1::]).strip()
+                        #print( 'found_title "{}"'.format( found_title))
+                        #sys.exit()
+                        self.DataSourceHeader.append( val)
+                    if( line.startswith( '-[],x[nT]')):
+                        cols = line.split(',')
+                        colnames = [ f[0] for f in cols]
+                        #print( 'colnames', colnames)7
+                        coldic = []
+                        for k, cname in enumerate( colnames):
+                            if( cname != '-'):
+                                coldic.append( [ int( k), cname])
+                        if( debug):
+                            print( 'coldic', coldic)
+                        #sys.exit()
+                    if( False): ### DataScaleX, DataScaleY, DataScaleZ, DataSensorOrientation need to be initialized first
+                        if( True):
+                            pass
+                        elif( line.startswith( ' # DataScaleX:')):
+                            val = ( line[ line.find( ':') + 1::]).strip()
+                            #print( 'found_title "{}"'.format( found_title))
+                            #sys.exit()
+                            self.DataScaleX.append( float( val))
+                        elif( line.startswith( ' # DataScaleY:')):
+                            val = ( line[ line.find( ':') + 1::]).strip()
+                            #print( 'found_title "{}"'.format( found_title))
+                            #sys.exit()
+                            self.DataScaleY.append( float( val))
+                        elif( line.startswith( ' # DataScaleZ:')):
+                            val = ( line[ line.find( ':') + 1::]).strip()
+                            #print( 'found_title "{}"'.format( found_title))
+                            #sys.exit()
+                            self.DataScaleZ.append( float( val))
+                        elif( line.startswith( ' # DataSensorOrientation:')):
+                            val = ( line[ line.find( ':') + 1::]).strip()
+                            #print( 'found_title "{}"'.format( found_title))
+                            #sys.exit()
+                            self.DataSensorOrientation.append( float( val))
+                        
+                #self.DataSourceHeader.append( 'WIK-LEMI025')
+                mydate = []
+                #x = [[] for i in range( columncount - 10)]
+                #print( 'shape of x is: {}'.format( np.shape( x)))
+                #sys.exit()
+                coldic = np.array( coldic)
+                #print( 'coldic[:,0]', coldic[:,0].astype( int))
+                #sys.exit()
+                x = []
+                baklinecount = linecount
+                for k, line in enumerate( data[headercount::]):
+                    #print( 'line in data is: {}'.format( line))
+                    elements = line.split( ',')
+                    if( debug):
+                        print( 'elements in line: {}'.format( elements))
+                    usableind = np.argwhere( [len( f) != 0 for f in elements] ).flatten()
+                    if( debug):
+                        print( 'usableind', usableind)
+                    if( len( usableind) > 0):
+                        tobject = elements[0]
+                        #tobject = tobject.split( '-')
+                        #tl = tobject[-1]
+                        #tl = tl.split( 'T')
+                        
+                        #tobject = tobject[:-1:]
+                        #tobject.append( tl[0])
+                        if( debug):
+                            print( 'tobject', tobject)
+                        #sys.exit()
+                        #date = tobject[usableind[0]] + '-' + tobject[usableind[1]] + '-' + tobject[usableind[2]]
+                        #time = tobject[usableind[3]] + ':' + tobject[usableind[4]] + ':' + tobject[usableind[5]]
+                        #time = time.split( '.')[0]
+                        #microsec = elements[usableind[1]].split( '.')[1]
+                        #doy = elements[2]
+                        #for i in range( columncount - 10):
+                            #print( i)
+                            #print( 'elements[i + 3]', elements[usableind[i + 3]])
+                            #x[i].append( [ float( elements[6]), float( elements[7]), float( elements[8])])
+                            #print( 'x[i]', x[i])
+                            #y.append( float( elements[4]))
+                            #z.append( float( elements[5]))
+                            #f.append( float( elements[6]))
+                        sublst = [ float( elements[k]) for k in coldic[:,0].astype( int)]
+                        #print( 'sublst', sublst)
+                        x.append( sublst)
+                        #print( 'x[-1]', x[-1])
+                        #print( 'x', x)
+                        #sys.exit()
+                        #if( debug):
+                        #    print( 'date', date)
+                        #    print( 'time', time)
+                        #datestring = date + ' ' + time
+                        #if( debug):
+                        #    print( 'date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)): {}'.format( datestring))
+                        #sys.exit()
+                        mydate.append( datetime.strptime(tobject, "%Y-%m-%dT%H:%M:%S.%f").replace( tzinfo = timezone.utc))
+                        #print( 'mydate[-1] is: {}'.format( mydate[-1]))
+                    #print( 'NUM2DATE20TIME( mydate[-1]) is: {}'.format( NUM2DATE20TIME( mydate[-1])))
+                    #sys.exit()
+                    #for el in line.split( ''):
+                    #    print( 'el in line is: {}'.format( el))
                 #print( 'self.DataSourceHeader: {}'.format( self.DataSourceHeader))
                 #print( 'ztime' , ztime)
                 #print( 'shape of ztime' , np.shape( ztime))
@@ -4760,6 +4890,10 @@ class MR:
         #plt.plot( time_vario_zero, ( colmp.ndarray[index_vec]).T, alpha = 0.2)
         #plt.show()
         #sys.exit()
+        if( debug):
+            import matplotlib.pyplot as plt
+            plt.plot( time_vario_zero, colmp.ndarray[index_vec].T)
+            plt.show()
         try:
             #time_vario_zero = dump[0]
             #print time_vario_zero
@@ -4781,6 +4915,7 @@ class MR:
             if( debug):
                 print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
             #sys.exit()
+
             ietime, vario = self.__EquiInterpol__( time = time_vario_zero, data = varioarray)
             """
             #from magpy.stream import num2date
@@ -5829,13 +5964,61 @@ class MR:
     def MPStreamRead( self):
         if( debug):
             print( '\n\n\nStarting MPStreamRead...')
+            #sys.exit()
         #startdate = self.starttime
         #enddate = self.endtime
         ##################
         # CONNECT TO DATABASE
         ##################
         vario = self.data
+        colmp = vario
         
+        #temp = DataStream()
+        #print(allfiles)
+        #sys.exit()
+        
+        
+        
+        self.__GetColHeaderInfo__( vario)
+        if( debug):
+            print( 'self.HeaderInfo is:\n')
+            for el in self.HeaderInfo:
+                print( 'el is:\t{}'.format( el))
+            sys.exit()
+        fndheaderinfo = vario.header # backup of temp.header for later use
+        
+        temp = vario  # READING MAGPY STREAMS
+        if( debug):
+            print( '\ntemp.header')
+            print( temp.header)
+            print( '\ntemp.header.keys')
+            for el in temp.header.keys():
+                print( '\tel in temp.header.keys', el)
+            print( '\ntemp.header.values')
+            for el in temp.header.values():
+                print( '\tel in temp.header.values', el)
+            print('\ntemp.header')
+            for el in temp.header:
+                print( '\tel in temp.header', el)
+            sys.exit()
+        #print( self.SearchString[0:self.SearchString.rfind( '_')])
+        try:
+            self.stationinfo = [temp.header['SensorID'], temp.header['DataComments'], temp.header['StationIAGAcode']]
+        except:
+            self.stationinfo = [self.SearchString[0:self.SearchString.index( '_')], self.SearchString[self.SearchString.index( '_'):self.SearchString.rfind( '_')],'']
+        identstr = str( self.stationinfo[0]) + str( self.stationinfo[1]) + str( self.stationinfo[2])
+        if( debug):
+            print( '...{} #{} {} read.'.format( identstr, 1, 'MPStream'))
+        #print(k, temp.ndarray[2])
+        #colmp = mp.appendStreams([colmp, temp]) # CONCATENATE MAGPY STREAMS
+        #print( 'actual colmp length is: {}'.format( colmp.length))
+        #print( 'temp length to be added is: {}'.format( temp.length))
+        colmp = mp.appendStreams((colmp, temp)) # CONCATENATE MAGPY STREAMS
+        #colmp.extend(temp , temp.header, temp.ndarray)
+        if( debug):
+            print( '...{} #{} {} appended.'.format( identstr, 1, 'MPStream'))
+        #sys.exit()
+        colmp.header = fndheaderinfo
         vario = vario.removeduplicates()
         vario = vario.trim( starttime = self.starttime, endtime = self.endtime)
         
@@ -5848,7 +6031,7 @@ class MR:
         #yI = vario.KEYLIST.index('dy')
         #zI = vario.KEYLIST.index('dz')
         #index_vec = [vario.KEYLIST.index('x'), vario.KEYLIST.index('y'), vario.KEYLIST.index('z')]#, vario.KEYLIST.index('f')]#, vario.KEYLIST.index('dx'), vario.KEYLIST.index('dy'), vario.KEYLIST.index('dz')]
-        self.__GetDataInd__( vario)
+        self.__GetDataInd__( vario, ColList = self.ColList)
         index_vec = self.DataInd
         ColNames = self.DataColNames
         """
@@ -5867,12 +6050,20 @@ class MR:
         ##################
         
         #from magpy.stream import num2date
+        """
         time_vario = vario.ndarray[tI]
-        dump = NUM2DATE20TIME( num2date( time_vario))
+        if( debug):
+            print( 'time_vario', time_vario)
+        time_vario_zero = NUM2DATE20TIME( num2date( time_vario))
+        if( debug):
+            print( 'time_vario_zero', time_vario_zero)
+            #sys.exit()
         #time_vario_zero = dump[0]
-        time_vario_zero = dump
-        #print time_vario_zero
+        #time_vario_zero = dump
         
+
+            #sys.exit()
+        """
         #vario = vario.ndarray[[xI, yI, zI]]
         goodind_vec = []
         bakvario = vario
@@ -5885,21 +6076,52 @@ class MR:
         index_vec = goodind_vec
         vario = bakvario.ndarray[index_vec]
         #varioarray = np.matrix( list( itertools.chain( *vario))).reshape( ( 3, -1)).T
+        
+        
         """
+        
+        #"""
+        #Select only columns which are define by ColumnList
+        #"""
+        #dictlist = ['time']#, 'x', 'y', 'z', 'f']
+        #for el in self.ColList:
+        #    dictlist.append( el)
+        #if( debug):
+        #    print( 'dictlist is: {}'.format( dictlist))
+        #    #sys.exit()
+        #colmp = DataStream()
+        #array = np.asarray( [ np.zeros( ( np.max( np.shape( bakcolmp)))) for el in colmp.KEYLIST], dtype = object)
+        #print( np.shape( array))
+        #sys.exit()
+        #array[]
+        #plt.plot( ztime, dataarray, alpha = 0.2)
+        #plt.show()
+        #sys.exit()
+        #colmp.ndarray = array
+        #for dictel, d in zip( dictlist, bakcolmp.T):
+        #    colmp.ndarray[colmp.KEYLIST.index(dictel)] = np.asarray( d, dtype = object)
+        
+        
+        #"""
+        #end
+        #"""
         arraydim = np.nanmax( np.shape( index_vec))
         if( debug):
             print( 'numbers of rows in array:\t{}'.format( arraydim))
             print( 'shape of vario is:\t{}'.format( np.shape( vario)))
             print( 'index_vec:\t{}'.format( index_vec))
-        varioarray = matrix( list( chain( *vario)))#.reshape( ( arraydim, -1)).T
-        if( debug):
-            print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
-        varioarray = varioarray.reshape( arraydim, -1).T
+        #varioarray = matrix( list( chain( *vario)))#.reshape( ( arraydim, -1)).T
+        #if( True):
+        #    print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
+        #varioarray = varioarray.reshape( arraydim, -1).T
+        temp = (matrix( list( chain( vario.ndarray[index_vec])))).reshape( arraydim,-1)
+        varioarray = temp
         if( debug):
             print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
         #from magpy.stream import num2date
-        stamp_starttime = NUM2DATE20TIME( num2date(time_vario[0])) # CONVERT TO ZEROTIME VALUES
-        stamp_endtime = NUM2DATE20TIME( num2date(time_vario[-1])) # CONVERT TO ZEROTIME VALUES
+        
+        stamp_starttime = time_vario_zero[0]#NUM2DATE20TIME( num2date(time_vario[0])) # CONVERT TO ZEROTIME VALUES
+        stamp_endtime = time_vario_zero[-1]#NUM2DATE20TIME( num2date(time_vario[-1])) # CONVERT TO ZEROTIME VALUES
         dt_vario = (stamp_endtime - stamp_starttime)/float(shape(time_vario)[0] - 1)
         int_tvario = np.linspace( stamp_starttime, stamp_endtime, len( time_vario))
         ietime = int_tvario
@@ -5907,7 +6129,10 @@ class MR:
             print( 'shape of ietime is:\t{}'.format( np.shape( ietime)))
             print( 'shape of time_vario_zero is:\t{}'.format( np.shape( time_vario_zero)))
             print( 'shape of varioarray.T is:\t{}'.format( np.shape( varioarray.T)))
-        vario = interp1d( time_vario_zero, varioarray.T, fill_value = 'extrapolate', kind = 'linear')( ietime)
+        try:
+            vario = interp1d( time_vario_zero, varioarray.T, fill_value = 'extrapolate', kind = 'linear')( ietime)
+        except:
+            vario = interp1d( time_vario_zero, varioarray, fill_value = 'extrapolate', kind = 'linear')( ietime)
         if( debug):
             print ( ' len(int_tvario): ', len(int_tvario), ' len(time_vario): ', len(time_vario), 'si is: ', dt_vario)
             print( 'shape of vario is:\t{}'.format( np.shape( vario)))

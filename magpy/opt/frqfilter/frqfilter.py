@@ -39,8 +39,11 @@ class FrqFilter:
     .
     
     Implemented field-augmentation on both axis ... error was present for 
-    augmentation on axis == 0
-    solved??? -- TODO
+    augmentation on axis == 1
+    
+    Implemented Despike for axis == 0 and axis == 1 as well as 
+    __MySlepianApproach__ which now also supports axis == 1
+    
     
     ...
     FrqFilter, V1.4
@@ -798,6 +801,15 @@ class FrqFilter:
                                     print( 'self.t is: {}'.format( self.t))
                     except:
                         raise self.MyException( 'Got no timestamp for dataset...stopping!')
+                if( item == 'axis'):
+                    """
+                    
+                    looking for special dataset
+                    """
+                    self.axis = value
+                    if( self.debug):
+                        print( 'self.axis is: {}'.format( self.axis))
+                        #sys.exit()
         except Exception as ex:
             raise self.MyException( ex)
         try:
@@ -820,9 +832,11 @@ class FrqFilter:
         #print( 'np.shape( self.t)', np.shape( self.t))
         #sys.exit()
         N, M = np.shape( self.data)
-        if( debug):
+        if( self.debug):
             print('shape of self.data is: {}x{}'.format( N, M))
+        
         Data = np.diff( np.diff( self.data, axis = self.axis), axis = self.axis)
+        #print( 'np.shape( Data)', np.shape( Data))
         if( self.axis == 0):
             #Data = self.data.T
             if( debug):
@@ -843,6 +857,8 @@ class FrqFilter:
                 print('self.axis == 1 shape of Data after np.diff is: {}'.format( np.shape( Data)))
             Data = np.vstack( ( Data.T, Data[:,-1])).T
             Data = np.vstack( ( Data[:,0], Data.T)).T
+            #print( 'np.shape( Data)', np.shape( Data))
+            
             chkavgs = np.nanmedian( Data, axis = self.axis)
             chgData = np.copy( self.data)
         else:
@@ -891,8 +907,11 @@ class FrqFilter:
         mygoodind = []
         for d, av, lv in zip( Data, chkavgs.T, lvl.T):
             #changeind.append( np.where( np.logical_or( np.logical_or( np.abs( d - av) > lv, np.isnan( d)), np.isinf( d))))
+            
             if( self.debug):
                 print( 'd is:\t{}\nav is:\t{}\nlv is:\t{}\n'.format( d, av, lv))
+                print( 'np.shape( d)', np.shape( d))
+                
             b = np.isnan( d)
             c = np.isinf( d)
             hind = np.argwhere( b | c).flatten()#[0]#.flatten()
@@ -907,6 +926,7 @@ class FrqFilter:
                 print( 'len of boolyesvec:\t:{}'.format( len( [ f for f in boolyesvec if f == False])))
                 #print( 'Press key to continue...')
                 #sys.stdin.readline()
+                #sys.exit()
             e = np.argwhere( boolnotvec).flatten()
             f = np.argwhere( boolyesvec).flatten()
             #print( 'e is:\n\t{}'.format( e))
@@ -1107,7 +1127,7 @@ class FrqFilter:
             plt.show()
         #self.data = Data
         if( self.axis == 0):
-            self.despdata = chgData.T
+            self.despdata = chgData
             #chkData = chkData.T
         elif( self.axis == 1):
             self.despdata = chgData
@@ -1200,22 +1220,29 @@ class FrqFilter:
             
             if( self.axis == 1):
                 arev = aseries[:, ::-1] # reversed aseries for use in three_aseries
-                three_aseries = hstack(( arev, aseries[:, 1::], arev[:,1::])) # three time long amplitude-series for further processing
+                #print( 'shape of arev', np.shape( arev))
+                #print( 'shape of aseries', np.shape( aseries))
+                three_aseries = hstack(( arev, aseries[:, 1::], arev[:, 1::])) # three time long amplitude-series for further processing
             elif( self.axis == 0):
                 arev = aseries[::-1, :] # reversed aseries for use in three_aseries
-                three_aseries = vstack(( arev, aseries[1::, :], arev[1::, :])) # three time long amplitude-series for further processing                
+                three_aseries = vstack(( arev, aseries[1::, :], arev[1::, :])) # three time long amplitude-series for further processing
+            #print( 'shape of three_aseries', np.shape( three_aseries))
             del arev
             if( self.debug):
                 print( 'sampling interval:{}'.format( dt))
                 print( 'length of three_aseries:{}'.format( max( shape( three_aseries))))
                 print( 'shape of three_aseries is:\t{}'.format( np.shape( three_aseries)))
+                print( 'shape of tseries is:\t{}'.format( np.shape( tseries)))
+                #sys.exit()
             #print( 'length of three_aseries:{}'.format( max( shape( three_aseries))))
-            
+            #!!! FIELD AUGMENTATION NOT WORKING PROPERLY... CHANGE atseries ... ,maybe!!!
             U, V = shape(three_aseries) # dimensions of three_aseries
             minDim, maxDim = [ argmin( [U, V]), argmax( [U, V])]
             three_length = [ U, V][self.axis]
             three_columns = [ U, V][not self.axis]
+            
             atseries = tseries[0] + arange( tseries[0] - tseries[-1] , 2.0*( tseries[-1] - tseries[0]) + dt, dt)
+            #print( 'shape of atseries is:\t{}'.format( np.shape( atseries)))
             #print( 'Dimensions of three_aseries: \n U, V:{},{}'.format( U, V ))
             #print( 'Dimensions of three_aseries: \n minDim, maxDim:{},{}'.format( minDim, maxDim ))
             #print( 'atseries is: {}'.format( atseries))
@@ -1225,13 +1252,23 @@ class FrqFilter:
             if( self.debug):
                 print( 'three_length is: {}'.format( three_length))
                 print( 'three_columns is: {}'.format( three_columns))
-            if( False):
+            if( self.debug):
                 # only for debugging
                 import matplotlib.pyplot as plt 
                 import sys
                 k = 2
-                plt.plot( atseries, (three_aseries.T - nanmean( three_aseries, axis = 1))[:,k], 'r')
-                plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
+                tas = (three_aseries - np.atleast_2d( nanmean( three_aseries, axis = self.axis)).T)
+                aas = (aseries - np.atleast_2d( nanmean( aseries, axis = self.axis)).T)
+                print( 'np.shape( tas)', np.shape( tas))
+                print( 'np.shape( atseries)', np.shape( atseries))
+                print( 'np.shape( tseries)', np.shape( tseries))
+                print( 'np.shape( aseries)', np.shape( aseries))
+                if( self.axis == 0):
+                    plt.plot( atseries, tas[:,k], 'r')
+                    plt.plot( tseries, aas[:,k], 'g')
+                elif( self.axis == 1):
+                    plt.plot( atseries, tas[k,:], 'r')
+                    plt.plot( tseries, aas[k,:], 'g')
                 plt.show()
                 sys.exit()
             
@@ -1374,6 +1411,15 @@ class FrqFilter:
                 #print( 'np.shape( aaseries[ :, trendind])', np.shape( aaseries[ :, trendind]))
             if( self.axis == 1):
                 for k, a in enumerate( (aaseries[ :, trendind].T ).T): #  - aaseries[:,trendind[-1]]
+                    if( debug):
+                        print( 'atseries[trendind]', atseries[trendind])
+                        print( '[avg_int_lvls[k], 0.0]', [avg_int_lvls[k], 0.0])
+                        #print( 'len( atseries)', len( atseries))
+                        #print( 'len( aaseries)', len( aaseries))
+                        import matplotlib.pyplot as plt
+                        plt.plot( atseries)
+                        plt.grid( which = 'both')
+                        plt.show()
                     polynom = polyfit( atseries[trendind], [avg_int_lvls[k], 0.0], 1, rcond = power( 10.0, -40.0))
                     trendfct[k, :] = polyval( polynom, atseries[trendind[0]:trendind[-1] + 1])# + avg_int_lvls[k]
             elif( self.axis == 0):
@@ -1605,7 +1651,7 @@ class FrqFilter:
             #print( '2 * (tseries[-1] - tseries[0]) is: {}'.format( 2.0*( tseries[-1] - tseries[0])))
             #print( 'length of atseries:{}'.format( max( shape( atseries))))
             
-            if( False):
+            if( self.debug):
                 # only for debugging
                 import matplotlib.pyplot as plt 
                 import sys
@@ -1658,7 +1704,7 @@ class FrqFilter:
             
             #aaseries = (aaseries.T - avg_int_lvls).T
             
-            if( False):
+            if( self.debug):
                 # only for debugging
                 import matplotlib.pyplot as plt 
                 import sys
@@ -1713,7 +1759,7 @@ class FrqFilter:
             pow2_length = [ G, H][maxDim]
             pow2_columns = [ G, H][minDim]
             
-            if( False):
+            if( self.debug):
                 # only for debugging
                 import matplotlib
                 matplotlib.use('TkAgg')
@@ -1759,7 +1805,7 @@ class FrqFilter:
             #aaseries = (aaseries.T + avg_int_lvls).T
             
             
-            if( False):
+            if( self.debug):
                 # only for debugging
                 import matplotlib
                 matplotlib.use('TkAgg')
@@ -1919,24 +1965,33 @@ class FrqFilter:
         from scipy.signal.windows import dpss
         
         #fmin = 1.0/ np.max( np.shape( self.data))/ self.dt
+        
         if( self.despike):
             print( 'Despiking data...')
             self.data, changeind = self.DeSpike()
+        
         if( self.debug):
             print( 'shape of self.t is:\t{}'.format( np.shape( self.t)))
+        
         if( self.aug):
             """ if there is some field augmentation applied"""
             #self.augt, self.augdata, self.orgStartInd, self.orgEndInd = self.FIELDAUGMENT( self.t, self.data)
-            self.avg = np.nanmean( self.data, axis = self.axis)
+            self.avg = np.atleast_2d( np.nanmean( self.data, axis = self.axis))
+            if( self.debug):
+                print( 'self.axis', self.axis)
+                print( 'np.shape( self.avg)', np.shape( self.avg))
+                print( 'np.shape( self.data)', np.shape( self.data))
+                #sys.exit()
             if( self.axis == 0):
                 self.FIELDAUGMENT( self.t, self.data - self.avg)
             if( self.axis == 1):
-                self.FIELDAUGMENT( self.t, self.data.T - self.avg)
-                self.augdata = self.augdata.T
+                self.FIELDAUGMENT( self.t, self.data - self.avg.T)
+                #self.augdata = self.augdata.T
             
         else:
             """ if there is no field augmentation applied"""
             self.augt, self.augdata, self.orgStartInd, self.orgEndInd = self.t, self.data, 0, self.shape[self.axis] - 1
+        
         if( self.debug):
             print( 'shape of self.t is:\t{}'.format( np.shape( self.t)))
             print( 'shape of self.augt is:\t{}'.format( np.shape( self.augt)))
@@ -1944,10 +1999,11 @@ class FrqFilter:
             print( 'self.orgStartInd is:\t{}'.format( self.orgStartInd))
             print( 'self.orgEndInd is:\t{}'.format( self.orgEndInd))
         dump = self.augdata
-        if( np.shape( dump)[0] == np.shape( self.data)[1] or np.shape( dump)[1] == np.shape( self.data)[0]):
-            self.augdata = dump.T
-            dump = self.augdata
-        print( 'shape of dump: {}'.format( np.shape( dump)))
+        #if( np.shape( dump)[0] == np.shape( self.data)[1] or np.shape( dump)[1] == np.shape( self.data)[0]):
+        #    self.augdata = dump.T
+        #    dump = self.augdata
+        if( self.debug):
+            print( 'shape of dump: {}'.format( np.shape( dump)))
         """
         
         derive frequency axis cause field-augmentation has to be concerned
@@ -1971,17 +2027,23 @@ class FrqFilter:
                 self.faxis =  np.arange( -self.fnyq, self.fnyq, self.fmin)
                 self.posind = np.argwhere( self.faxis >= self.fmin).flatten()
                 self.negind = np.argwhere( self.faxis <= self.fmin).flatten()
+        
+        
         N, M = np.shape( dump)
-        print( 'Length for dpss: {}'.format( [N, M][self.axis]))
+        if( self.debug):
+            print( 'Length for dpss: {}'.format( [N, M][self.axis]))
+            print( 'N, M', N, M)
         #slep = dpss( [N, M][self.axis], 5, self.NumOfSlep, norm = 2)
         BW = 2.0*self.fmin
         twoNW = int( self.len* self.dt* BW) # from scipy doc(https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.dpss.html): Standardized half bandwidth corresponding to 2*NW = BW/f0 = BW*N*dt where dt is taken as 1
-        print( 'twoNW', twoNW)
+        if( self.debug):
+            print( 'twoNW', twoNW)
         #######
         # Trying to dynamically derive optimal amount of slepian windows according to "When Slepian Meets Fiedler: Putting a Focus on the Graph Spectrum - Van De Ville, Demesmaeker, Preti, 2017 IEEE Paper"
         #######
         if( self.DynNumOfSlep):
-            print( np.shape( self.data))
+            if( self.debug):
+                print( np.shape( self.data))
             #self.__myFFTproc__()
             #print( np.shape( self.fdata))
             #dummy = self.fdata[:, self.posind]#/ np.sqrt( self.fmin)
@@ -2134,7 +2196,8 @@ class FrqFilter:
                     refeigvals = np.real( refeigvals)
                     refeigvals = refeigvals/ np.nansum( refeigvals)
                     refeigvals = refeigvals[poseigind]
-                print( 'positive eigenvalues: {}'.format( eigvals))
+                if( self.debug):
+                    print( 'positive eigenvalues: {}'.format( eigvals))
                 #condition = mymat > bound
                 #print( condition)
                 n = len(eigvals)
@@ -2157,6 +2220,12 @@ class FrqFilter:
             self.NumOfSlep = self.NumOfSlep + 1
         #print( 'self.dt', self.dt)
         #print( 'self.len', self.len)
+        
+        if( self.debug):
+            print( '[N, M]', [N, M])
+            print( 'self.axis', self.axis)
+            print( 'twoNW', twoNW)
+            print( 'self.NumOfSlep', self.NumOfSlep)
         
         slep = dpss( [N, M][self.axis], twoNW, self.NumOfSlep, norm = 'approximate')
         #if( self.axis == 1):
@@ -2246,7 +2315,7 @@ class FrqFilter:
                 self.FIELDAUGMENT( self.t, self.data - self.avg)
             if( self.axis == 1):
                 self.FIELDAUGMENT( self.t, self.data.T - self.avg)
-                self.augdata = self.augdata.T
+                self.augdata = self.augdata
             
         else:
             """ if there is no field augmentation applied"""
@@ -2258,9 +2327,9 @@ class FrqFilter:
             print( 'self.orgStartInd is:\t{}'.format( self.orgStartInd))
             print( 'self.orgEndInd is:\t{}'.format( self.orgEndInd))
         dump = self.augdata
-        if( np.shape( dump)[0] == np.shape( self.data)[1] or np.shape( dump)[1] == np.shape( self.data)[0]):
-            self.augdata = dump.T
-            dump = self.augdata
+        #if( np.shape( dump)[0] == np.shape( self.data)[1] or np.shape( dump)[1] == np.shape( self.data)[0]):
+        #    self.augdata = dump.T
+        #    dump = self.augdata
         if( self.debug):
             print( 'shape of dump: {}'.format( np.shape( dump)))
         """
@@ -3310,6 +3379,7 @@ class FrqFilter:
                             self.__dict__[el] = ipol.interp1d( self.augt, self.__dict__[el], bounds_error=False, kind=self.rplval, fill_value = 'extrapolate')(self.t.T)
                         #print( 'changed shape of {} to {}'.format( varname, np.shape( self.__dict__[el])))
             elif( self.axis == 1):
+                
                 for el in self.__dict__.keys():
                     #print( 'Checking length of {}'.format( el))
                     #####or el.startswith( 'faxis')
@@ -3318,6 +3388,7 @@ class FrqFilter:
                             varname = 'self.' + el
                             if( self.debug):
                                 print( 'changing shape of {} from {}'.format( varname, np.shape( self.__dict__[el])))
+                                print( 'np.shape( self.data)', np.shape( self.data))
                         if( self.__dict__[el].ndim > 1):
                             if( np.argmax( np.shape( self.data)) != np.argmax( np.shape( self.__dict__[el]))):
                                 self.__dict__[el] = self.__dict__[el].T
@@ -3364,55 +3435,6 @@ class FrqFilter:
             #sys.exit()
         #sys.exit()
         #self.__faxis__()
-        if( False):
-            if( self.PeriodAxis):
-                #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                #self.faxis = 1.0/ np.arange( -self.fnyq, self.fnyq + self.fmin, self.fmin)
-                #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                #self.faxis =  np.arange( -self.fnyq, self.fnyq + self.fmin, self.fmin)
-                if( self.debug):
-                    print( 'self.faxis is: {}'.format( self.faxis))
-                a = self.faxis >= 1.0/ self.fnyq
-                b = self.faxis <= 1.0/ self.fmin
-                c = self.faxis <= -1.0/ self.fnyq
-                d = self.faxis >= -1.0/ self.fmin
-                if( self.debug):
-                    print( '\na\t=\t{}\nb\t=\t{}\nc\t=\t{}\nd\t=\t{}'.format( a, b, c, d))
-                    print( '\nshapes: a\t=\t{}\nb\t=\t{}\nc\t=\t{}\nd\t=\t{}'.format( np.shape( a), np.shape( b), np.shape( c), np.shape( d)))
-                if( self.debug):
-                    print( 'shape of augmented timeseries posind: {}'.format( np.shape( self.posind)))
-                #self.posind = np.argwhere( a & b).flatten()#[0]
-                #self.negind = np.argwhere( c & d).flatten()#[0]
-                self.posind = np.argwhere( a & b).flatten()#[0]
-                self.negind = np.argwhere( c & d).flatten()#[0]
-                self.posind = np.argwhere( self.faxis >= 1.0/ self.fnyq).flatten()#[0]
-                self.negind = np.argwhere( self.faxis <= -1.0/ self.fnyq).flatten()#[0]
-                if( self.debug):
-                    print( 'self.faxis, self.posind, self.negind are: {}, {}, {}'.format( self.faxis, self.posind, self.negind))
-            else:
-                #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                #self.faxis =  np.arange( -self.fnyq, self.fnyq + self.fmin, self.fmin)
-                if( self.debug):
-                    print( 'self.faxis is: {}'.format( self.faxis))
-                a = self.faxis >= self.fmin
-                b = self.faxis <= self.fnyq
-                c = self.faxis <= -self.fmin
-                d = self.faxis >= -self.fnyq
-                if( self.debug):
-                    print( '\na\t=\t{}\nb\t=\t{}\nc\t=\t{}\nd\t=\t{}'.format( a, b, c, d))
-                    print( '\nshapes: a\t=\t{}\nb\t=\t{}\nc\t=\t{}\nd\t=\t{}'.format( np.shape( a), np.shape( b), np.shape( c), np.shape( d)))
-                if( self.debug):
-                    print( 'shape of augmented timeseries posind: {}'.format( np.shape( self.posind)))
-                #self.posind = np.argwhere( a & b).flatten()#[0]
-                #self.negind = np.argwhere( c & d).flatten()#[0]
-                self.posind = np.argwhere( a & b).flatten()#[0]
-                self.negind = np.argwhere( c & d).flatten()#[0]
-                if( self.debug):
-                    print( 'shape of original posind: {}'.format( np.shape( self.posind)))
-                if( self.debug):
-                    print( 'self.faxis[self.posind]: {}'.format( self.faxis[self.posind]))
-                if( self.debug):
-                    print( 'self.faxis, self.posind, self.negind are: {}, {}, {}'.format( self.faxis, self.posind, self.negind))
         return
     
     
