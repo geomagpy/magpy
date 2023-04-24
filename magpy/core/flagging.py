@@ -765,93 +765,95 @@ class flags(object):
                 print (" - found flags for components", uniquecomponents)
 
             for comp in uniquecomponents:
-                extendedcomplist = []
-                extlistlenend = 0
-                for unid in uniqueids:
-                    idlist = [el for el in testlist if el[3] == unid]
-                    complist = [el for el in idlist if comp == el[2]]
-                    if debug:
-                        print ("Inputs for component {} and ID {}: {}".format(comp,unid,len(complist)))
-                        print (complist)
-                    extlistlenstart = extlistlenend
-                    for line in complist:
+                complist = [el for el in testlist if comp == el[2] and el[3] in uniqueids]
+                if debug:
+                    print ("  - Inputs for component {} with flagIDs {}: {}".format(comp,uniqueids,len(complist)))
+                idxtmp = 0
+                testcnt = 0
+                while idxtmp < len(complist):
+                    complist = complist[idxtmp:]
+                    extendedcomplist = []
+                    for idx,line in enumerate(complist):
                         tdiff = (line[1]-line[0]).total_seconds()
-                        if tdiff > sr:
+                        if tdiff > sr-(0.05*sr):
                             # add steps
                             firstt = line[0]
                             lastt = line[1]
                             steps = int(np.ceil(tdiff/float(sr)))
-                            for step in range(0,steps):
-                                val0 = firstt+timedelta(seconds=step*sr)
+                            for step in np.arange(steps):
+                                val0 = firstt+timedelta(seconds=int(step)*sr)
                                 extendedcomplist.append([val0,val0,line[2],line[3],line[4],line[5],line[6]])
                             extendedcomplist.append([lastt,lastt,line[2],line[3],line[4],line[5],line[6]])
                         else:
                             extendedcomplist.append(line[:7])
-                    extlistlenend = len(extendedcomplist)
+                        if len(extendedcomplist) > 500000:
+                            idxtmp = idx+1
+                            break
+                        idxtmp = idx+1
                     if debug:
-                        print (" - Individual time stamps in second resolution: {} (appended {} elements in this run)".format(len(extendedcomplist),extlistlenend-extlistlenstart))
-                if overlap:
-                    if debug:
-                        print ("removing overlaps")
-                    # Now sort the extendedlist according to modification date
-                    extendedcomplist.sort(key=lambda x: x[-1], reverse=True)
-                    #print (extendedcomplist[0])
-                    # Now remove all overlapping data
-                    seen = set()
-                    new1list = []
-                    for item in extendedcomplist:
-                        ti = np.round((item[0]-datetime(1900, 1, 1)).total_seconds(),0)
-                        # use a second resolution for identifying identical inputs
-                        if ti not in seen:
-                            new1list.append(item)
-                            seen.add(ti)
-                    extendedcomplist = new1list
-                    if debug:
-                        print (" - After overlap removal - time stamps: {}".format(len(extendedcomplist)))
+                        print ("    -> Individual time stamps: {}".format(len(extendedcomplist)))
+                    if overlap:
+                        if debug:
+                            print ("    -> removing overlaps")
+                        # Now sort the extendedlist according to modification date
+                        extendedcomplist.sort(key=lambda x: x[-1], reverse=True)
+                        # Now remove all overlapping data
+                        seen = set()
+                        new1list = []
+                        for item in extendedcomplist:
+                            ti = np.round((item[0]-datetime(1900, 1, 1)).total_seconds(),0)
+                            # use a second resolution for identifying identical inputs
+                            if ti not in seen:
+                                new1list.append(item)
+                                seen.add(ti)
+                        extendedcomplist = new1list
+                        if debug:
+                            print (" - After overlap removal - time stamps: {}".format(len(extendedcomplist)))
 
-                # now combine all subsequent time steps below sr with identical id to single inputs again
-                extendedcomplist.sort(key=lambda x: x[0])
-                new2list = []
-                startt = None
-                endt = None
-                tmem = None
-                for idx,line in enumerate(extendedcomplist):
-                    idnum0 = line[3]
-                    if idx < len(extendedcomplist)-1:
-                        t0 = line[0]
-                        t1 = extendedcomplist[idx+1][0]
-                        idnum1 = extendedcomplist[idx+1][3]
-                        tdiff = (t1-t0).total_seconds()
-                        if tdiff <= sr and idnum0 == idnum1:
-                            if not tmem:
-                                tmem = t0
-                            endt = None
+                    # now combine all subsequent time steps below sr to single inputs again
+                    extendedcomplist.sort(key=lambda x: x[0])
+                    # Important to consider FlagID in the following, otherwise ok (0,2) flags are joined with remove (1,3) flags
+                    new2list = []
+                    startt = None
+                    endt = None
+                    tmem = None
+                    for idx,line in enumerate(extendedcomplist):
+                        idnum0 = line[3]
+                        if idx < len(extendedcomplist)-1:
+                            t0 = line[0]
+                            t1 = extendedcomplist[idx+1][0]
+                            idnum1 = extendedcomplist[idx+1][3]
+                            tdiff = (t1-t0).total_seconds()
+                            if tdiff <= sr and idnum0 == idnum1:
+                                if not tmem:
+                                    tmem = t0
+                                endt = None
+                            else:
+                                startt = t0
+                                if tmem:
+                                    startt = tmem
+                                endt = t0
                         else:
+                            t0 = line[0]
                             startt = t0
                             if tmem:
                                 startt = tmem
-                            endt = t0
-                    else:
-                        t0 = line[0]
-                        startt = t0
-                        if tmem:
-                            startt = tmem
-                        endt = t0                            
-                    if startt and endt:
-                        # add new line
-                        if not remove:
-                            new2list.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                            newflaglist.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                        else:
-                            if idnum0 == 1 and (endt-startt).total_seconds()/float(sr) >= critamount:
-                                # do not add subsequent automatic flags 
-                                pass
-                            else:
+                            endt = t0                            
+                        if startt and endt:
+                            # add new line
+                            if not remove:
                                 new2list.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
                                 newflaglist.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                        tmem = None
-                if debug:
-                    print (" - After recombination: {}".format(len(new2list)))
+                            else:
+                                if idnum0 == 1 and (endt-startt).total_seconds()/float(sr) >= critamount:
+                                    # do not add subsequent automatic flags 
+                                    pass
+                                else:
+                                    new2list.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
+                                    newflaglist.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
+                            tmem = None
+                    if debug:
+                        print ("    -> After recombination: {}".format(len(new2list)))
 
         return flags(newflaglist)
 
