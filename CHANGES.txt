@@ -2,7 +2,7 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
-####v<1.1.2>, <2023-03-xx> --
+####v<1.1.2>, <2023-04-xx> --
 
 1.1.2 general:
     + temporary files (i.e. unzip) are now deleted after reading
@@ -11,6 +11,7 @@ Installation instructions can be found on the main download page.
 1.1.2 additions:
     + IAF export will calculate K values if not provided
     + improved debug function of ImagCDF import for more detailed error analysis
+    + added a new flagging class to replace old flagging methods (will be fully integrated in 1.2)
 
 1.1.2 fixes:
     + definitive data check has been corrected and updated (full analysis)
