@@ -6955,7 +6955,7 @@ CALLED BY:
                     array[0] = np.asarray(array[0])
                     array[indvar1] = np.asarray(array[indvar1])
                     array[indvar2] = np.asarray(array[indvar2])
-                    kvalstream.ndarray = np.asarray(array)
+                    kvalstream.ndarray = np.asarray(array,dtype=object)
 
                 return kvalstream
 
@@ -7119,7 +7119,7 @@ CALLED BY:
                 array[indx] =  np.asarray([elem[1] for elem in hmlist])
                 array[indy] =  np.asarray([elem[2] for elem in hmlist])
                 array[indz] =  np.asarray([elem[3] for elem in hmlist])
-                meanstream.ndarray = np.asarray(array)
+                meanstream.ndarray = np.asarray(array,dtype=object)
             else:
                 for elem in sorted(hmlist):
                     line = LineStruct()
@@ -13460,7 +13460,7 @@ def convertGeoCoordinate(lon,lat,pro1,pro2):
         x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
         return x2, y2
     except:
-        print ("convertGeoCoordinate: problem (impport pyproj or conversion error)")
+        print ("convertGeoCoordinate: problem (import pyproj or conversion error)")
         return lon, lat
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

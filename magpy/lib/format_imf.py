@@ -448,7 +448,7 @@ def readIAF(filename, headonly=False, **kwargs):
     return stream
 
 
-def writeIAF(datastream, filename, **kwargs):
+def writeIAF(datastr, filename, **kwargs):
     """
     Writing Intermagnet archive format (2.1)
     """
@@ -456,6 +456,8 @@ def writeIAF(datastream, filename, **kwargs):
     kvals = kwargs.get('kvals')
     mode = kwargs.get('mode')
     debug = kwargs.get('debug')
+
+    datastream = datastr.copy()
 
     df=False
     # Check whether data is present at all

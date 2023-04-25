@@ -12,10 +12,12 @@ Installation instructions can be found on the main download page.
     + IAF export will calculate K values if not provided
     + improved debug function of ImagCDF import for more detailed error analysis
     + added a new flagging class to replace old flagging methods (will be fully integrated in 1.2)
+    + IAF export will write README, and in case of one year, DKA files
 
 1.1.2 fixes:
     + definitive data check has been corrected and updated (full analysis)
-    + IAF export will write README, and in case of one year, DKA files
+    + IAF export will not abort in case of meta data issues
+    + IAF export will not modify the original data header for further use
     + ImagCDF import and export now supports F AND temperature columns of different lengths
     + Filtering of HF signals (> 50 Hz) working
 

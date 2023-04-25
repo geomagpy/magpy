@@ -104,6 +104,53 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
             val = False
     return val
 
+def test_adoption(testpath=None, debug=False):
+    if not dipath:
+        return False
+    if not variopath:
+        return False
+    ta = True
+    base = read(os.path.join(testpath,"ex_baseval.txt"))
+    if debug:
+        print ("Reading basevalue data: {}, N={}".format(base.header.get("sensorid"),base.length()[0]))
+    vario = read(os.path.join(testpath,"ex_variomin.cdf"))
+    if debug:
+        print ("Reading variometer data: {}, N={}".format(vario.header.get("sensorid"),vario.length()[0]))
+    bcfunc = vario.baseline(base) # bcfunc is automatically added to the header of vario
+    final = vario.bc()
+    dec = np.round(final.mean("y"),2)
+    if not dec == 5.94:
+        print ("expected declination of 5.94 not found: D={}".format(dec))
+        ta = False
+    else:
+        print ("baseline adoption: declination test fine")
+    # Export test:
+    exportpath = tempfile.gettempdir()
+    if exportpath:
+        print ('Exporting to', exportpath)
+        if debug:
+            print (final.header.get("DataComponents"))
+        t1 = final.write(exportpath,format_type="IAF")
+        if debug:
+            print (final.header.get("DataComponents"))
+        t2 = final.write(exportpath,format_type="IAGA")
+        if debug:
+            print (final.header.get("DataComponents"))
+        finalxyz = final.hdz2xyz()
+
+        # read data again and check differences
+        t3 = read(os.path.join(exportpath,"WIC22NOV.BIN"))
+        s = subtractStreams(finalxyz, t3)
+        th = 0.005 # threshold for differences (difference are to be expected as IAF file is rounded to 0.1 nT whereas finalxyz contains data in float resolution
+        if abs(s.mean("x")) > th or abs(s.mean("y")) > th or abs(s.mean("z")) > th:
+            print ("IAF export contains something wrong or IAGA export modified data")
+            ta = False
+        else:
+            print ("export and content test successfully passed")
+    return ta
+
+
+
 exepath = os.getcwd()
 if not exepath.endswith('test'):
     exepath = os.path.join(exepath,'magpy','test') # travis...
@@ -111,19 +158,28 @@ datadir = 'testdata'
 dipath = os.path.join(exepath,datadir,"di-data")
 variopath = os.path.join(exepath,datadir,"vario1")
 scalarpath = os.path.join(exepath,datadir,"scalar")
+testpath = os.path.join(exepath,datadir,"baseline")
 
 # Using compensation values requires db access
 debug = False
 
+test1 = True
+test2 = True
+
 try:
-    test = test_baseline(dipath=dipath, variopath=variopath, scalarpath=scalarpath,debug=debug)
+    test1 = test_baseline(dipath=dipath, variopath=variopath, scalarpath=scalarpath,debug=debug)
 except:
-    test = False
+    test1 = False
 
-if test:
+try:
+    test2 = test_adoption(testpath=testpath, debug=debug)
+except:
+    test2 = False
+
+test = [test1,test2]
+
+if all(test):
     print ("baseline test successfully finished")
-
-if test:
     sys.exit(0)
 else:
     sys.exit(1)
