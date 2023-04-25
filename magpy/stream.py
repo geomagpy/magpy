@@ -10292,7 +10292,7 @@ CALLED BY:
                     #print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                    ndarray = np.asarray([np.asarray([]) for key in KEYLIST])
+                    ndarray = np.asarray([np.asarray([]) for key in KEYLIST],dtype=object)
 
                 t4 = datetime.utcnow()
                 #print "write - selecting time range needs:", t4-t3
