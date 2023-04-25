@@ -536,9 +536,15 @@ def writeIAF(datastream, filename, **kwargs):
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
                     longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
-    datastream.header['DataAcquisitionLongitude'] = longi
-    datastream.header['DataAcquisitionLatitude'] = lati
-    datastream.header['DataLocationReference'] = 'WGS84, EPSG:4326'
+        if not float(datastream.header.get('DataAcquisitionLatitude', 0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude', '')) > -90:
+            logger.info("Latitude and Longitude apparently not correctly provided - setting to zero")
+            print("Latitude and Longitude need to be provided in degrees")
+            datastream.header['DataAcquisitionLongitude'] = 0.0
+            datastream.header['DataAcquisitionLatitude'] = 0.0
+        else:
+            datastream.header['DataAcquisitionLongitude'] = longi
+            datastream.header['DataAcquisitionLatitude'] = lati
+            datastream.header['DataLocationReference'] = 'WGS84, EPSG:4326'
 
     # Check whether all essential header info is present
     requiredinfo = ['StationIAGAcode','StartDate','DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataElevation', 'DataComponents', 'StationInstitution', 'DataConversion', 'DataQuality', 'SensorType', 'StationK9', 'DataDigitalSampling', 'DataSensorOrientation', 'DataPublicationDate','FormatVersion','Reserved']
@@ -581,7 +587,7 @@ def writeIAF(datastream, filename, **kwargs):
                     value = int(datetime.strftime(num2date(dayar[0][0]),'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
-                        print("Latitude and Longitude need to be provided in degrees")
+                        logger.info("Latitude and Longitude apparently not correctly provided - setting to zero")
                         return False
                     value = int(np.round((90-float(datastream.header.get('DataAcquisitionLatitude',0)))*1000))
                     if value == 0:
