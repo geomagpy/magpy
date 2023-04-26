@@ -2767,6 +2767,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             if export == True:
                 #if filenamebegins == '':
                 #     filenamebegins='youforgottodefineafilename'
+                exportsuccess = True
 
                 if self.plotstream.header.get('DataFormat') == 'MagPyDI':
                     divers = '1.0'
@@ -2779,9 +2780,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         print ("Replacing year with {}".format(year))
                         # use functionlist as kwarg in write method
                         # Please note: Xmagpy will loose all non-numerical columns
-                        print ("Function", self.plotopt.get('function'))
+                        #print ("Function", self.plotopt.get('function'))
 
-                        self.plotstream.write(path,
+                        exportsuccess = self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
                                     dateformat=dateformat,
@@ -2794,7 +2795,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         mode = 'replace'
                     elif fileformat == 'PYCDF':
                         # Open Yes/No message box and to select whether flags should be stored or not
-                        print ("Writing PYCDF data")  # add function here
+                        #print ("Writing PYCDF data")  # add function here
                         if self.plotopt['function']:
                             # Function
                             fdlg = wx.MessageDialog(self, 'Found fit functions - add them to the data file?', 'Export fit functions', wx.YES_NO | wx.ICON_QUESTION)
@@ -2810,7 +2811,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         if cdlg.ShowModal() == wx.ID_YES:
                             compression = 5
                         cdlg.Destroy()
-                        self.plotstream.write(path,
+                        exportsuccess = self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
                                     dateformat=dateformat,
@@ -2820,7 +2821,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                                     format_type=fileformat)
                     elif fileformat == 'IMAGCDF':
                         # Open Yes/No message box and to select whether flags should be stored or not
-                        print ("Writing IMAGCDF data")  # add function here
+                        #print ("Writing IMAGCDF data")  # add function here
                         addflags = False
                         # Test whether flags are present at all
                         if self.flaglist and len(self.flaglist) > 0:
@@ -2828,7 +2829,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                             if fdlg.ShowModal() == wx.ID_YES:
                                 addflags = True
                             fdlg.Destroy()
-                        self.plotstream.write(path,
+                        exportsuccess = self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
                                     dateformat=dateformat,
@@ -2837,18 +2838,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                                     coverage=coverage,
                                     format_type=fileformat)
                     else:
-                        self.plotstream.write(path,
+                        exportsuccess = self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
                                     filenameends=filenameends,
                                     dateformat=dateformat,
                                     mode=mode,
                                     coverage=coverage,
                                     format_type=fileformat)
-
-                    self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
-                    self.changeStatusbar("Data written ... Ready")
+                    if exportsuccess:
+                        self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
+                        self.changeStatusbar("Data written ... Ready")
+                    else:
+                        self.menu_p.rep_page.logMsg("Exporting data failed. Please check required meta data, resolution and coverage for the selected output format")
+                        self.changeStatusbar("Exporting data failed ... Ready")
                 except:
-                    self.menu_p.rep_page.logMsg("Writing failed - Permission?")
+                    self.menu_p.rep_page.logMsg("Writing failed - Permission problem?")
+                    self.changeStatusbar("Exporting data failed ... Ready")
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()
