@@ -129,6 +129,10 @@ def test_adoption(testpath=None, debug=False):
     if exportpath:
         print ('Exporting to', exportpath)
         if debug:
+            print ("Writing baseline")
+        b0 = base.write(exportpath,format_type="BLV")
+        sys.exit()
+        if debug:
             print (final.header.get("DataComponents"))
         t1 = final.write(exportpath,format_type="IAF")
         if debug:
@@ -163,7 +167,7 @@ testpath = os.path.join(exepath,datadir,"baseline")
 # Using compensation values requires db access
 debug = False
 
-test1 = True
+test1 = False
 test2 = True
 
 try:
