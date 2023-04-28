@@ -130,8 +130,7 @@ def test_adoption(testpath=None, debug=False):
         print ('Exporting to', exportpath)
         if debug:
             print ("Writing baseline")
-        b0 = base.write(exportpath,format_type="BLV")
-        sys.exit()
+        b0 = base.write(exportpath,format_type="BLV", deltaF="median")
         if debug:
             print (final.header.get("DataComponents"))
         t1 = final.write(exportpath,format_type="IAF")
@@ -153,8 +152,6 @@ def test_adoption(testpath=None, debug=False):
             print ("export and content test successfully passed")
     return ta
 
-
-
 exepath = os.getcwd()
 if not exepath.endswith('test'):
     exepath = os.path.join(exepath,'magpy','test') # travis...
@@ -167,16 +164,18 @@ testpath = os.path.join(exepath,datadir,"baseline")
 # Using compensation values requires db access
 debug = False
 
-test1 = False
+test1 = True
 test2 = True
 
 try:
     test1 = test_baseline(dipath=dipath, variopath=variopath, scalarpath=scalarpath,debug=debug)
+    pass
 except:
     test1 = False
 
 try:
     test2 = test_adoption(testpath=testpath, debug=debug)
+    pass
 except:
     test2 = False
 

@@ -2357,10 +2357,16 @@ def writeBLV(datastream, filename, **kwargs):
             funclist.append(line)
         return funclist
 
+    lyear = datetime.strftime(num2date(datastream.ndarray[0][-1]), '%Y')
     if not year:
         year = datetime.strftime(datetime.utcnow(),'%Y')
-        t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
-        t2 = date2num(datetime.utcnow())
+        if lyear < year:
+            year = lyear
+            t1 = date2num(datetime.strptime(str(int(year)) + '-01-01', '%Y-%m-%d'))
+            t2 = date2num(datetime.strptime(str(int(year) + 1) + '-01-01', '%Y-%m-%d'))
+        else:
+            t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
+            t2 = date2num(datetime.utcnow())
     else:
         t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
         t2 = date2num(datetime.strptime(str(int(year)+1)+'-01-01','%Y-%m-%d'))
@@ -2461,7 +2467,7 @@ def writeBLV(datastream, filename, **kwargs):
     dummystream.add(row2)
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
-    dummystream.ndarray = np.asarray(array)
+    dummystream.ndarray = np.asarray(array, dtype=object)
 
     # 5. Extract the data for one year and calculate means
     backupabsstream = datastream.copy()
@@ -2552,7 +2558,7 @@ def writeBLV(datastream, filename, **kwargs):
         else:
             yar[idx] = np.asarray(yar[idx])
 
-    yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar))
+    yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar, dtype=object))
     yearstream = yearstream.func2stream(basefunctionlist,mode='addbaseline',keys=keys)
 
     if fbasefunc:
