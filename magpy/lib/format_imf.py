@@ -3047,7 +3047,9 @@ def writeIYFV(datastream,filename, **kwargs):
     meant = mean([tmin,tmax])
     if tmax-tmin < 365*0.9: # 90% of one year
         logger.error(" writeIYFV: Datastream does not cover at least 90% of one year")
-        return False
+        if not kind in ['Q', 'D', 'q', 'd']:
+            kind = 'I'
+        #return False
     # if timerange covers more than one year ??????
     # should be automatically called with coverage='year' and filenamebegins='yearmean',
     # filenameends=Obscode
@@ -3075,13 +3077,14 @@ def writeIYFV(datastream,filename, **kwargs):
     meany = datastream.mean('y',percentage=90)
     meanz = datastream.mean('z',percentage=90)
     if isnan(meanx) or isnan(meany) or isnan(meanz):
-        logger.warning(" writeIYFV: found more then 10% of NaN values - setting minimum requirement to 40% data recovery and change kind to I (incomplete)")
-        meanx = datastream.mean('x',percentage=40)
-        meany = datastream.mean('y',percentage=40)
-        meanz = datastream.mean('z',percentage=40)
-        kind = 'I'
+        logger.warning(" writeIYFV: found more then 10% of NaN values - setting minimum requirement to 10% data recovery and change kind to I (incomplete)")
+        meanx = datastream.mean('x',percentage=10)
+        meany = datastream.mean('y',percentage=10)
+        meanz = datastream.mean('z',percentage=10)
+        if not kind in ['Q', 'D', 'q', 'd']:
+            kind = 'I'
         if isnan(meanx) or isnan(meany) or isnan(meanz):
-            logger.error(" writeIYFV: less then 40% of data - aborting")
+            logger.error(" writeIYFV: less then 10% of data - aborting")
             return False
     meanyear = int(datetime.strftime(num2date(meant),"%Y"))
     # create datalist
