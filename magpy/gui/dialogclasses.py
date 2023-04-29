@@ -669,6 +669,155 @@ class ExportModifyNameDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+class ExportBLVDialog(wx.Dialog):
+    """
+    Helper Dialog for Exporting BLV data
+    """
+    def __init__(self, parent, title, year, streamlist, deltaFsel):
+        super(ExportBLVDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.year = year
+        print ("A")
+        self.streamd = self.get_streamlist_4_diff(streamlist)
+        diffsourcechoices = ["None"]
+        for el in self.streamd:
+            eld = self.streamd[el]
+            diffsourcechoices.append(eld.get("name"))
+        print ("B")
+        self.diffsourcechoices = diffsourcechoices
+        self.diffsource = diffsourcechoices[-1]
+        self.deltaFsel = deltaFsel
+        self.createControls()
+        self.doLayout()
+
+    def get_streamlist_4_diff(self, streamlist):
+        streamdict = {}
+        for idx, elem in enumerate(streamlist):
+            name = elem.header.get('DataID','stream'+str(idx)).strip()
+            if name == 'stream{}'.format(idx):
+                name = elem.header.get('SensorID','stream'+str(idx)).strip()
+            try:
+                name = "{}_{}".format(name,datetime.strftime(elem.start(),"%Y%m%d"))
+            except:
+                pass
+            name = name.replace('-','_')
+            if not name.startswith("BLV"):
+                streamdict[idx] = {"name":name, "struct":elem}
+        return streamdict
+
+    # Widgets
+    def createControls(self):
+        self.yearLabel = wx.StaticText(self, label="Year (BLV typically covers one year):")
+        self.yearTextCtrl = wx.TextCtrl(self, value=str(self.year), size=(160,30))
+        self.diffsourceLabel = wx.StaticText(self, label="Representative delta F source (one-minute):")
+        self.diffsourceComboBox = wx.ComboBox(self, choices=self.diffsourcechoices,
+            style=wx.CB_DROPDOWN, value=self.diffsource,size=(160,-1))
+        self.adoptedscalarLabel = wx.StaticText(self, label="Adopted scalar F difference:")
+        self.adoptedscalarComboBox = wx.ComboBox(self, choices=['default','mean', 'median'],
+            style=wx.CB_DROPDOWN, value=self.deltaFsel,size=(160,-1))
+        self.adoptedscalar2Label = wx.StaticText(self, label="(default will take selected fit of dF column)")
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        elemlist = [(self.yearLabel, noOptions),
+                 (self.yearTextCtrl, expandOption),
+                    emptySpace,
+                    emptySpace,
+                 (self.adoptedscalarLabel, noOptions),
+                 (self.adoptedscalarComboBox, expandOption),
+                 (self.adoptedscalar2Label, noOptions),
+                  emptySpace,
+                  emptySpace,
+                  emptySpace,
+                 (self.diffsourceLabel, noOptions),
+                 (self.diffsourceComboBox, expandOption),
+                    emptySpace,
+                    emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+class ExportIYFVDialog(wx.Dialog):
+    """
+    Helper Dialog for Exporting IYFV data
+    """
+    def __init__(self, parent, title, kind, comment):
+        super(ExportIYFVDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.kind = kind
+        self.comment = comment
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.kindLabel = wx.StaticText(self, label="Kind of yearmean data:", size=(160,-1))
+        self.kindComboBox = wx.ComboBox(self, choices=['A (all)','Q (quiet)', 'D (disturbed)', 'I (incomplete)'],
+            style=wx.CB_DROPDOWN, value=self.kind,size=(160,-1))
+        #self.commentLabel = wx.StaticText(self, label="Optional comment:", size=(160,30))
+        #self.commentTextCtrl = wx.TextCtrl(self, value=self.comment, size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        #(self.commentLabel, noOptions),
+        #(self.commentTextCtrl, expandOption),
+        elemlist = [(self.kindLabel, noOptions),
+                 (self.kindComboBox, expandOption),
+                    emptySpace,
+                    emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
 class DatabaseConnectDialog(wx.Dialog):
     """
     Dialog for Database Menu - Connect MySQL

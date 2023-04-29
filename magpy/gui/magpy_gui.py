@@ -2727,27 +2727,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dateformat = dlg.dateformat
             coverage = dlg.coverage
             mode = dlg.mode
-            """
-            datetyp = dlg.dateComboBox.GetValue()
-            if datetyp == '2000-11-22':
-                dateformat = '%Y-%m-%d'
-            elif datetyp == '20001122':
-                dateformat = '%Y%m%d'
-            else:
-                dateformat = '%b%d%y'
-            """
             path = dlg.selectedTextCtrl.GetValue()
             fileformat = dlg.formatComboBox.GetValue()
-            """
-            coverage = dlg.coverageComboBox.GetValue()
-            if coverage == 'hour':
-                coverage = timedelta(hour=1)
-            elif coverage == 'day':
-                coverage = timedelta(days=1)
-            elif coverage == 'year':
-                coverage = timedelta(year=1)
-            mode = dlg.modeComboBox.GetValue()
-            """
             #print "Stream: ", len(self.stream), len(self.plotstream)
             #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
             #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
@@ -2777,10 +2758,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         #print ("Writing BLV data")  # add function here
                         #print ("Function", self.plotopt['function'])
                         year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
-                        print ("Replacing year with {}".format(year))
+                        print (" BLV export: replacing year with {}".format(year))
                         # use functionlist as kwarg in write method
                         # Please note: Xmagpy will loose all non-numerical columns
-                        #print ("Function", self.plotopt.get('function'))
+                        diff = None
+                        deltaF = None
+                        subdlg = ExportBLVDialog(None, title='Exporting BLV', year=year, streamlist=self.streamlist, deltaFsel="default")
+                        if subdlg.ShowModal() == wx.ID_OK:
+                            print ("Here")
+                            streamd = subdlg.streamd
+                            difftmp = subdlg.diffsourceComboBox.GetValue() # comment not yet supported by bib
+                            print (streamd)
+                            deltaFsel = subdlg.adoptedscalarComboBox.GetValue()
+                            if deltaFsel in ['median','mean']:
+                                deltaF = deltaFsel
+                            year = int(subdlg.yearTextCtrl.GetValue())
+                        print ("DIFF", difftmp)
 
                         exportsuccess = self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
@@ -2788,6 +2781,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                                     dateformat=dateformat,
                                     mode=mode,
                                     year=year,
+                                    deltaF=deltaF,
+                                    diff=diff,
                                     fitfunc = self.plotopt.get('function'),
                                     coverage=coverage,
                                     format_type=fileformat)
@@ -2835,6 +2830,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                                     dateformat=dateformat,
                                     mode=mode,
                                     addflags = addflags,
+                                    coverage=coverage,
+                                    format_type=fileformat)
+                    elif fileformat == 'IYFV':
+                        kind = 'A'
+                        comment = ""
+                        subdlg = ExportIYFVDialog(None, title='Select kind of data', kind=kind, comment=comment)
+                        if subdlg.ShowModal() == wx.ID_OK:
+                            #comment = subdlg.commentTextCtrl.GetValue() # comment not yet supported by bib
+                            kindsel = subdlg.kindComboBox.GetValue()
+                            kind = kindsel[:1]
+                        exportsuccess = self.plotstream.write(path,
+                                    filenamebegins=filenamebegins,
+                                    filenameends=filenameends,
+                                    dateformat=dateformat,
+                                    mode=mode,
+                                    kind=kind,
+                                    comment=comment,
                                     coverage=coverage,
                                     format_type=fileformat)
                     else:
