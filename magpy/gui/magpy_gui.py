@@ -2726,7 +2726,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             :param datastream:
         :return:
         """
-        print ("daily")
         dm = None
         meanh = None
         meanf = None
@@ -2792,11 +2791,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     self.plotstream.header['DataType'] = "{}{}".format('MagPyDI',divers)
                 try:
                     if fileformat == 'BLV':
-                        print ("Writing BLV data")  # add function here
-                        print (np.nanmean(self.plotstream.ndarray[0]))
+                        #print ("Writing BLV data")  # add function here
                         #print ("Function", self.plotopt['function'])
-                        year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
-                        print (" BLV export: replacing year with {}".format(year))
+                        year = num2date(np.nanmean(np.asarray(self.plotstream.ndarray[0],dtype=float64))).year
+                        #print (" BLV export: replacing year with {}".format(year))
                         # use functionlist as kwarg in write method
                         # Please note: Xmagpy will loose all non-numerical columns
                         diff = None
@@ -2809,7 +2807,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                             difftmp = subdlg.diffsourceComboBox.GetValue() # comment not yet supported by bib
                             try:
                                 idx = [ele for ele in streamd if streamd[ele].get("name") == difftmp]
-                                diff, meanH, meanF = self.dailymeans_blv(self.streamlist[idx[0]],debug=True)
+                                diff, meanH, meanF = self.dailymeans_blv(self.streamlist[idx[0]],debug=False)
                             except:
                                 pass
                             deltaFsel = subdlg.adoptedscalarComboBox.GetValue()
