@@ -5,10 +5,11 @@ Installation instructions can be found on the main download page.
 
 1.1.3 general:
     + removed some decrepated issues
+    + added functionality previously only available in backend to xmagpy (BLV and IYFV export)
 
 1.1.3 additions:
-    + added selection flag when exporting IYFV flag (all, quiet, disturbed, incomplete)
-    + added additional selection window for BLV export regarding delta F values and adopted scalar baseline
+    + XMagPy: added selection flag when exporting IYFV flag (all, quiet, disturbed, incomplete)
+    + XMagPy: added additional selection window for BLV export regarding delta F values and adopted scalar baseline
 
 1.1.2 fixes:
     + IYFV files can be exported even if less than 90% of data is available for one year

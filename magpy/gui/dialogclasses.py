@@ -677,15 +677,13 @@ class ExportBLVDialog(wx.Dialog):
         super(ExportBLVDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.year = year
-        print ("A")
         self.streamd = self.get_streamlist_4_diff(streamlist)
         diffsourcechoices = ["None"]
         for el in self.streamd:
             eld = self.streamd[el]
             diffsourcechoices.append(eld.get("name"))
-        print ("B")
         self.diffsourcechoices = diffsourcechoices
-        self.diffsource = diffsourcechoices[-1]
+        self.diffsource = diffsourcechoices[0]
         self.deltaFsel = deltaFsel
         self.createControls()
         self.doLayout()

@@ -2717,6 +2717,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 self.OnInitialPlot(self.plotstream)
 
 
+    def dailymeans_blv(self, datastream,debug=False):
+        """
+        DESCRIPTION
+            Get dailymean values and nnual means for H and F
+            Will return daily mean datastream and annual means for BLV export
+        VARIABLES
+            :param datastream:
+        :return:
+        """
+        print ("daily")
+        dm = None
+        meanh = None
+        meanf = None
+        ds = datastream.copy()
+        if debug:
+            print ("Stream looks like", ds.ndarray)
+        ds = ds.delta_f()
+        comp = ds.header.get("DataComponents")
+        if not comp.startswith("HDZ") and not comp.startswith("hdz"):
+            if debug:
+                print("Converting to HDZ to obtain mean H and F")
+            ds = ds.xyz2hdz()
+        meanh = ds.mean('x')
+        meanf = ds.mean('f')
+        if debug:
+            print ("  Means:", meanh, meanf)
+            print("  Moving delta F column to correct position for BLV scalar diff extraction...")
+            print("  Filtering daily means ...")
+        df = ds._get_column('df')
+        ds = ds._put_column(df, 'f')
+        dm = ds.dailymeans(keys=['x', 'y', 'z', 'f', 'df'])
+        df = dm._get_column('f')
+        dm = dm._put_column(df, 'df')
+        if debug:
+            print ("Done",dm.ndarray)
+        return dm, meanh, meanf
+
     def OnExportData(self, event):
 
         self.changeStatusbar("Writing data ...")
@@ -2755,25 +2792,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     self.plotstream.header['DataType'] = "{}{}".format('MagPyDI',divers)
                 try:
                     if fileformat == 'BLV':
-                        #print ("Writing BLV data")  # add function here
+                        print ("Writing BLV data")  # add function here
+                        print (np.nanmean(self.plotstream.ndarray[0]))
                         #print ("Function", self.plotopt['function'])
                         year = num2date(np.nanmean(self.plotstream.ndarray[0])).year
                         print (" BLV export: replacing year with {}".format(year))
                         # use functionlist as kwarg in write method
                         # Please note: Xmagpy will loose all non-numerical columns
                         diff = None
+                        meanH=None
+                        meanF=None
                         deltaF = None
                         subdlg = ExportBLVDialog(None, title='Exporting BLV', year=year, streamlist=self.streamlist, deltaFsel="default")
                         if subdlg.ShowModal() == wx.ID_OK:
-                            print ("Here")
                             streamd = subdlg.streamd
                             difftmp = subdlg.diffsourceComboBox.GetValue() # comment not yet supported by bib
-                            print (streamd)
+                            try:
+                                idx = [ele for ele in streamd if streamd[ele].get("name") == difftmp]
+                                diff, meanH, meanF = self.dailymeans_blv(self.streamlist[idx[0]],debug=True)
+                            except:
+                                pass
                             deltaFsel = subdlg.adoptedscalarComboBox.GetValue()
                             if deltaFsel in ['median','mean']:
                                 deltaF = deltaFsel
                             year = int(subdlg.yearTextCtrl.GetValue())
-                        print ("DIFF", difftmp)
 
                         exportsuccess = self.plotstream.write(path,
                                     filenamebegins=filenamebegins,
@@ -2783,6 +2825,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                                     year=year,
                                     deltaF=deltaF,
                                     diff=diff,
+                                    meanH=meanH,
+                                    meanF=meanF,
                                     fitfunc = self.plotopt.get('function'),
                                     coverage=coverage,
                                     format_type=fileformat)

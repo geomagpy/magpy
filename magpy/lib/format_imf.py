@@ -2697,6 +2697,15 @@ def writeBLV(datastream, filename, **kwargs):
         if diff:
             #print ("writeBLV: Here", t, diff.length()[0])
             posdf = KEYLIST.index('df')
+            difft = [int(el) for el in diff.ndarray[0]]
+            if int(t) in difft:
+                ind = difft.index(int(t))
+                df = diff.ndarray[posdf][ind]
+                if np.isnan(df):
+                    df = 999.00
+            else:
+                df = 999.00
+            """
             indext = [np.abs(np.asarray(diff.ndarray[0])-t).argmin()]
             if len(indext) > 0:
                 df = diff.ndarray[posdf][indext[0]]
@@ -2704,6 +2713,7 @@ def writeBLV(datastream, filename, **kwargs):
                     df = 999.00
             else:
                 df = 999.00
+            """
         else:
             df = 888.00
         line = '%s %9.2f %9.2f %9.2f %9.2f %7.2f %s\r\n' % (day,x,y,z,f,df,parameter)
