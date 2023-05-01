@@ -4770,7 +4770,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         dlg = AnalysisResampleDialog(None, title='Analysis: resampling parameters', keylst=keys, period=sr)
         if dlg.ShowModal() == wx.ID_OK:
             newperiod = dlg.periodTextCtrl.GetValue()
-            self.plotstream = self.plotstream.resample(keys, period=float(newperiod))
+            self.plotstream = self.plotstream.resample(keys, period=float(newperiod), debugmode=False)
             self.menu_p.rep_page.logMsg('- resampled stream at period {} second'.format(newperiod))
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)

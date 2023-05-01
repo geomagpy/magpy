@@ -8589,7 +8589,8 @@ CALLED BY:
     def resample(self, keys, debugmode=False,**kwargs):
         """
     DEFINITION:
-        Uses Numpy interpolate.interp1d to resample stream to requested period.
+        Uses Numpy interpolate.interp1d to resample stream to requested period. An initial time step is added by extrapolation to maintain the length
+        Please note: an removeduplicate command is issued as well as duplicates will falisfy the identification of nan values
 
         Two methods:
            fast: is only valid if time stamps at which resampling is conducted are part of the
@@ -8646,6 +8647,7 @@ CALLED BY:
             t_min = ceil_dt(t_min,period)
             startperiod, line = self.findtime(t_min)
 
+        # default method is slow - check whether fast is used at all
         if fast:   # To be done if timesteps are at period timesteps
             try:
                 logger.info("resample: Using fast algorithm.")
@@ -8690,8 +8692,11 @@ CALLED BY:
 
         if debugmode:
             print ("General -slow- resampling")
-        # Create a list containing time steps
-        #t_max = num2date(self._get_max('time'))
+        stwithnan = self.copy()
+        # remove duplicate inputs (would lead to wrong selection of validity identification windows)
+        stwithnan = stwithnan.removeduplicates()
+
+        # Create a list (t_list) containing new time steps, separeted by period
         t_list = []
         time = t_min
         while time <= t_max:
@@ -8702,30 +8707,27 @@ CALLED BY:
         # multiplicator is used to check whether nan value is at the corresponding position of the orgdata file - used for not yet completely but sufficiently correct missing value treatment
         if not len(t_list) > 0:
             return DataStream()
-        multiplicator = float(self.length()[0])/float(len(t_list))
-        logger.info("resample a: {},{},{}".format(float(self.length()[0]), float(len(t_list)),startperiod))
+        multiplicator = float(stwithnan.length()[0])/float(len(t_list))
+        diff = int(np.abs(stwithnan.length()[0]-len(t_list)))
+        if diff < np.abs(multiplicator)*10:
+            diff = np.abs(multiplicator)*10
+        if diff > 1000:
+            # arbitrary maximum: if larger than 1000 something went wrong anyway
+            # eventuallly use smaller data sets
+            diff = 1000
+        logger.info("resample a: {},{},{}".format(float(stwithnan.length()[0]), float(len(t_list)),startperiod))
 
-        #print ("Times:", self.ndarray[0][0],self.ndarray[0][-1],t_list[0],t_list[-1])
-        stwithnan = self.copy()
+        if debugmode:
+            print ("Times:", stwithnan.ndarray[0][0],stwithnan.ndarray[0][-1],t_list[0],t_list[-1])
+            print ("Times:", num2date(stwithnan.ndarray[0][0]),num2date(stwithnan.ndarray[0][-1]),num2date(t_list[0]),num2date(t_list[-1]))
+            print("Multiplikator:", multiplicator, stwithnan.length()[0], len(t_list))
+            print("Diff:", diff)
 
-        # What is this good for (leon 17.04.2019)???
-        tmp = self.trim(starttime=736011.58337400458,endtime=736011.59721099539)
-        logger.info("resample test: {}".format(tmp.ndarray))
-
-        #tcol = stwithnan.ndarray[0]
-
+        # res stream with new t_list is used for return
         res_stream = DataStream()
         res_stream.header = self.header
         array=[np.asarray([]) for elem in KEYLIST]
-        if ndtype:
-            array[0] = np.asarray(t_list)
-            res_stream.add(LineStruct())
-        else:
-            for item in t_list:
-                row = LineStruct()
-                row.time = item
-                res_stream.add(row)
-
+        t0 = date2num(num2date(t_list[0]) - timedelta(seconds=period))
         for key in keys:
             if debugmode:
                 print ("Resampling:", key)
@@ -8733,14 +8735,23 @@ CALLED BY:
                 logger.warning("resample: Key %s not supported!" % key)
 
             index = KEYLIST.index(key)
+            if debugmode:
+                t1 = datetime.utcnow()
             try:
-                #print (len(self._get_column(key)), multiplicator)
-                int_data = self.interpol([key],kind='linear')#'cubic')
+                int_data = stwithnan.interpol([key],kind='linear')#'cubic')
                 int_func = int_data[0]['f'+key]
                 int_min = int_data[1]
                 int_max = int_data[2]
-
-                key_list = []
+                # add an initial value
+                t0 = date2num(num2date(t_list[0])-timedelta(seconds=period))
+                v0 = np.nan
+                if len(stwithnan.ndarray[index]) > 2 and not np.isnan(stwithnan.ndarray[index][0]) and not np.isnan(stwithnan.ndarray[index][1]):
+                    ti1 = stwithnan.ndarray[0][0]
+                    ti2 = stwithnan.ndarray[0][1]
+                    v1 = stwithnan.ndarray[index][0]
+                    v2 = stwithnan.ndarray[index][1]
+                    v0 = v2 + (v2-v1)/(ti2-ti1)*(t0-ti2)
+                key_list = [v0]
                 for ind, item in enumerate(t_list):
                     # normalized time range between 0 and 1
                     functime = (item - int_min)/(int_max - int_min)
@@ -8749,6 +8760,10 @@ CALLED BY:
                     #                   orgval = stwithnan.ndarray[index][idx]
                     # reduce the index range as below
                     if ndtype:
+                        # techniques to get a valid value:
+                        # check if nearest value is nan or not
+                        # to obtain the nearest value: extract a sublist
+                        # find time closest to functime in datastream
                         if int(ind*multiplicator) <= len(self.ndarray[index]):
                             #orgval = self.ndarray[index][int(ind*multiplicator)]
                             estimate = False
@@ -8759,22 +8774,21 @@ CALLED BY:
                             if estimate:
                                 orgval = stwithnan.ndarray[index][int(ind*multiplicator+startperiod)] # + offset
                             else:
-                                # Exact solution:
+                                # Exact solution: (well, is not exact as actually the difference in counts should be considered for the search window (leon, 2023-05-01))
+                                # but should be OK for now: change to stv = mv-diff, etv = mv+diff , diff = abs(
                                 mv = int(ind*multiplicator+startperiod)
-                                stv = mv-int(20*multiplicator)
+                                #stv = mv-int(20*multiplicator)
+                                stv = mv-diff
                                 if stv < 0:
                                     stv = 0
-                                etv = mv+int(20*multiplicator)
-                                if etv >= len(self.ndarray[index]):
-                                    etv = len(self.ndarray[index])
+                                #etv = mv+int(20*multiplicator)
+                                etv = mv+diff
+                                if etv >= len(stwithnan.ndarray[index]):
+                                    etv = len(stwithnan.ndarray[index])
                                 subar = stwithnan.ndarray[0][stv:etv]
                                 idx = (np.abs(subar-item)).argmin()
                                 #subar = stwithnan.ndarray[index][stv:etv]
                                 orgval = stwithnan.ndarray[index][stv+idx] # + offset
-                                #if item > 736011.58337400458 and item < 736011.59721099539:
-                                #   print ("Found", item, stv+idx, idx, orgval)
-                                #if np.isnan(orgval):
-                                #    print (stv+idx, stv, etv)
                         else:
                             print("Check Resampling method")
                             orgval = 1.0
@@ -8796,7 +8810,21 @@ CALLED BY:
             except:
                 logger.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
+        t_list.insert(0, t0)
+        if ndtype:
+            array[0] = np.asarray(t_list)
+            res_stream.add(LineStruct())
+        else:
+            for item in t_list:
+                row = LineStruct()
+                row.time = item
+                res_stream.add(row)
+
         res_stream.ndarray = np.asarray(array,dtype=object)
+
+        if debugmode:
+            t2 = datetime.utcnow()
+            print ("Needed ", (t2-t1).total_seconds())
 
         logger.info("resample: Data resampling complete.")
         #return DataStream(res_stream,self.headers)
