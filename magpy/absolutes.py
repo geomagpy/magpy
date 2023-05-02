@@ -2289,7 +2289,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # Add deltaF to resultsstream for all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
     posdf = KEYLIST.index('df')
-    #print resultstream.ndarray
 
     for idx,elem in enumerate(resultstream.ndarray[posF]):
         #print elem
@@ -2313,8 +2312,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     #print "After", resultstream.ndarray[posdf]
     #resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
 
-    #print "outfile"
-    #print resultstream.ndarray
     if not stationid and varioid == scalarid:
         stationid = varioid
 

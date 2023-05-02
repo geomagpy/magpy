@@ -6844,9 +6844,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 # set load di to something useful (seems to be empty now)
 
 
-            #redir=RedirectText(self.menu_p.rep_page.logMsg)
-            #sys.stdout=prev_redir
-
 
     def onDISetParameter(self,event):
         """

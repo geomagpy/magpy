@@ -1144,18 +1144,6 @@ CALLED BY:
             TESTLIST = KEYLIST
 
         keylist = []
-        """
-        for key in FLAGKEYLIST[1:]:
-            try:
-                header = self.header['col-'+key]
-                try:
-                    unit = self.header['unit-col-'+key]
-                except:
-                    unit = None
-                keylist.append(key)
-            except:
-                header = None
-        """
 
         if not len(keylist) > 0:  # e.g. Testing ndarray
             for ind,elem in enumerate(self.ndarray): # use the long way
@@ -1167,11 +1155,11 @@ CALLED BY:
             #for key in FLAGKEYLIST[1:]: # use the long way
             for key in TESTLIST[1:]: # use the long way
                 col = self._get_column(key)
-                if len(col) > 0:
+                if len(col) > 0 and not col[0] in ['-',float(nan),'',None]:
                     #if not len(col) == 1 and not ( # maybe add something to prevent reading empty LineStructs)
                     if len(col) == 1:
-                        if col[0] in ['-',float(nan),'']:
-                            pass
+                        if not col[0] in ['-',float(nan),'']:
+                            keylist.append(key)
                     else:
                         keylist.append(key)
 

@@ -4,7 +4,7 @@ Installation instructions can be found on the main download page.
 ####v<1.1.3>, <2023-xx-xx> --
 
 1.1.3 general:
-    + removed some decrepated issues
+    + removed some deprecated issues
     + added functionality previously only available in backend to xmagpy (BLV and IYFV export)
 
 1.1.3 additions:
@@ -14,6 +14,7 @@ Installation instructions can be found on the main download page.
 1.1.2 fixes:
     + IYFV files can be exported even if less than 90% of data is available for one year
     + IYFV files with less then 90% data are listed with incomplete flag (if not quiet or disturbed days)
+    + resample method: improved recognition of nan values in source data (speed and accuracy)
 
 ####v<1.1.2>, <2023-04-25> --
 
