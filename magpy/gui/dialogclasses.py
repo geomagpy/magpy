@@ -614,7 +614,7 @@ class ExportModifyNameDialog(wx.Dialog):
         self.beginTextCtrl = wx.TextCtrl(self, value=self.filenamebegins, size=(160,30))
         self.endTextCtrl = wx.TextCtrl(self, value=self.filenameends, size=(160,30))
         self.dateformatLabel = wx.StaticText(self, label="Date looks like ...")
-        self.dateTextCtrl = wx.TextCtrl(self, value=self.dateformat, size=(160,30))
+        self.dateTextCtrl = wx.TextCtrl(self, value=self.dateformat, size=(160,-1))
         self.coverageLabel = wx.StaticText(self, label="File covers ...")
         self.coverageComboBox = wx.ComboBox(self, choices=['hour','day','month','year','all'],
             style=wx.CB_DROPDOWN, value=self.coverage,size=(160,-1))
