@@ -1155,7 +1155,7 @@ CALLED BY:
             #for key in FLAGKEYLIST[1:]: # use the long way
             for key in TESTLIST[1:]: # use the long way
                 col = self._get_column(key)
-                if len(col) > 0 and not col[0] in ['-',float(nan),'',None]:
+                if len(col) > 0:
                     #if not len(col) == 1 and not ( # maybe add something to prevent reading empty LineStructs)
                     if len(col) == 1:
                         if not col[0] in ['-',float(nan),'']:
