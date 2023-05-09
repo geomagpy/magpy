@@ -36,16 +36,18 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
         return False
     if not scalarpath:
         return False
-    absresult = di.absoluteAnalysis(dipath,os.path.join(variopath,"*"),os.path.join(scalarpath,"*"),compensation=True,diid='A2_WIC.txt',stationid='WIC',pier='A2', alpha=0.0, deltaF=0.0, debug=debug)
+    compensation = True
+    absresult = di.absoluteAnalysis(dipath,os.path.join(variopath,"*"),os.path.join(scalarpath,"*"),compensation=compensation,diid='A2_WIC.txt',stationid='WIC',pier='A2', alpha=0.0, deltaF=0.0, debug=debug)
     if debug:
         print ("Analyzed DI data", absresult.length()[0])
     vario = read(os.path.join(variopath,"*2022-08-22.cdf"))
     if debug:
         print ("Reading variometer data: {}, N={}".format(vario.header.get("sensorid"),vario.length()[0]))
     #apply compensation    varion
-    vario = vario.compensation()
-    if debug:
-        print ("Applied compensation data: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
+    if compensation:
+        vario = vario.compensation()
+        if debug:
+            print ("Applied compensation data: x={}, y={}, z={}".format(vario.ndarray[1][0],vario.ndarray[2][0],vario.ndarray[3][0]))
     #apply baseline file
     testdict1 = copy.deepcopy(vario.header)
     meanabs = (date2num(absresult._find_t_limits()[1])-date2num(absresult._find_t_limits()[0]))/2 + date2num(absresult._find_t_limits()[0])
@@ -85,7 +87,6 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     except:
         pass
 
-    #print (vario.ndarray)
     #subtract from orgdata
     varioxyz = vario.hdz2xyz()
     absxyz = absresult.idf2xyz()
@@ -128,14 +129,15 @@ def test_adoption(testpath=None, debug=False):
     exportpath = tempfile.gettempdir()
     if exportpath:
         print ('Exporting to', exportpath)
-        if debug:
-            print ("Writing baseline")
+        print ("Writing baseline ...")
         b0 = base.write(exportpath,format_type="BLV", deltaF="median")
         if debug:
             print (final.header.get("DataComponents"))
+        print ("Writing IAF ...")
         t1 = final.write(exportpath,format_type="IAF")
         if debug:
             print (final.header.get("DataComponents"))
+        print ("Writing IAGA ...")
         t2 = final.write(exportpath,format_type="IAGA")
         if debug:
             print (final.header.get("DataComponents"))

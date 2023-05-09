@@ -822,9 +822,9 @@ Extracting passwd information within your data transfer scripts:
         password = mpcred.lc('MyRemoteFTP','passwd')
 
 
-### 2.11 DI measurements, basevalues and baselines
+### 2.11 DI-flux measurements, basevalues and baselines
 
-These procedures require an additional import:
+The first sections will give you a quick overview about the application of methods related to DI-Flux analysis, determination und usage of baseline values (basevalues), and adopted baselines. The theoretical background and details on these application are found in section 2.11.7. These procedures require an additional import:
 
         from magpy import absolutes as di
 
@@ -834,11 +834,11 @@ Please check `example3`, which is an example DI file. You can create these DI fi
 
 #### 2.11.2 Reading DI data
 
-Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field information needs to be provided as well. Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in the MagPy article (citation). A typical analysis looks like:
+Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field information needs to be provided as well. Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in section 2.11.7. A typical analysis looks like:
 
         diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
 
-Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, an analysis can be perfomed as follows. Firstly we copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the filename. For the following commands to work you need to be within the examples directory.
+Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the filename. For the following commands to work you need to be within the examples directory.
 
         $ mkdir /tmp/DI
         $ cp example6a.txt /tmp/DI/2018-08-29_07-16-00_A2_WIC.txt
@@ -965,6 +965,167 @@ The following will create a BLV file:
 
 Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched above.
 
+#### 2.11.7 Details on DI-flux analysis and calculation of basevalues
+
+Basevalues, often also referred to as **(component) baseline values**, are commonly obtained from DI-flux measurements, which are analyzed in combination with an independent fluxgate variometer. 
+Dependent on the DI-flux measurement technique, the variometer orientation and the source of also required scalar data varying analysis procedures have been suggested. In the following we outline the analysis technique of MagPy specifically related to different orientations and measurement techniques.
+The following terms are used throughout the methodological description and MagPy's interfaces. Fluxgate variometers are most commonly oriented either along a magnetic coordinate system, hereinafter denoted as **HEZ** (sometimes HDZ), or a geographic coordinate system **XYZ**. 
+Within the  magnetic coordinate system, the orthogonal fluxgate triple of variometers is oriented in a way, that the north component points towards magnetic north (H component), the east component E towards magnetic east and vertical points down. For geographic orientation Z is identically pointing down, X towards geographic north and Y towards geographic east. For other orientations please refer to the IM technical manual.
+
+##### Theory of DI-analysis and basevalue calculation
+
+For describing the mathematical methodology we apply a similar notation as used within the [IM Technial Manual]. Lets start with the following setup. The variometer used for evaluating the DI-flux measurement is oriented along a magnetic coordinate system (Figure XX). The actually measured components of the variometer are denoted N, E and V  (North, East Vertical close to magnetic coordinate system). Each component consists of the following elements: 
+
+$$N = N_{base} + N_{bias} + N_{var}$$
+
+where $N_{var}$ is the measured variation, $N_{bias}$ contains the fluxgates bias field, and $N_{base}$ the components basevalue.
+Some instruments measure the quais-absolute field variation, which would correspond to 
+
+$$N_{v} = N_{bias} + N_{var}$$
+
+and thus the basevalues $N_{base}$ are typically small. This approach, making use of constant bias fields as provided within the LEMI025 binary data output is used for example at the Conrad Observatory. Another commonly used analysis approach combines bias fields and actual baseline values to  
+
+$$N_{b} = N_{bias} + N_{base}$$
+
+wherefore the hereby used $N_{b}$ are large in comparison to the measured variations $N_{var}$. All components are dependend on time. Bias field and basevalues, however, can be assumed to stay constant throught the DI-flux measurement. Therefore, both approaches outlined above are equally effective. Hereinafter, we always asume variation measurements close to the total field value and for all field measurements within one DI-flux analysis we can describe north and vertical components as follows:
+
+$$N(t_i) = N_{base} + N_{v}(t_i)$$
+
+$$V(t_i) = V_{base} + V_{v}(t_i)$$
+ 
+For the east component in an HEZ oriented instrument bias fields are usually set to zero. Thus $E$ simplifies to $E = E_{base} + E_{var}$. If the instrument is properly aligned along magnetic coordinates is simpliefies further to 
+
+$$E(t_i) = E_{var}(t_i)$$
+
+as $E_{base}$ gets negligible (?? is that true??). The correct geomagnetic field components H, D and Z at time t for a HEZ oriented variometer can thus be calculated using the following formula (see also IM Technical Manual):
+
+$$H(t) =  \sqrt{(N_{base} + N_{v}(t))^2 + E_{var}(t)2}$$
+
+$$D(t) =  D_{base} + arctan(\frac{E_{var}(t)}{N_{base} + N_{v}(t)}$$
+
+$$Z(t) =  V_{base} + V_{v}(t)$$
+
+In turn, basevalues can be determined from the DI-Flux measurement as follows:
+
+$$N_{base} =  \sqrt{(H(t_i))^2 – E_{var}(t_i)2} - N_{v}(t_i)$$
+
+$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)}$$
+
+$$V_{base} =  Z(t_i) – V_{v}(t_i)$$
+
+where $H(t_i)$, $D(t_i)$ and $Z(t_i)$ are determined from the DI-Flux measurement providing declination ($D(t_i)$) and inclination ($I(t_i)$), in combination with an absolute scalar value obtained either on the same pier prior or after the DI-Flux measurement ($F(t_j)$), or from continuous measurements on a different pier.  As variometer measurements and eventually scalar data are obtained on different piers, pier differences also need to be considered. Such pier differences are denoted by $\deltaD_v$, $\deltaI_v$ and $\deltaF_s$.
+ 
+The measurement procedure of the DI-flux technique requires magnetic east-west orientation of the optical axis of the theodolite. This is achieved by turning the theodolite so that the fluxgate reading shows zero (zero field method). Alternatively, small residual readings of the mounted fluxgate probe (E_{res}) can be considered (residual method). 
+
+##### Iterative application in MagPy
+
+MagPy’s DI-flux analysis scheme for HEZ oriented variometers follows almost exactly the DTU scheme (citation , Juergen), using an iterative application. Basically, the analysis makes use of two main blocks. The first block (method calcdec) analyses the horizontal DI flux measurements, the second block (calcinc) analyses the inclicnation related steps of the DI-flux technique. 
+
+The first block determines declination $D(t)$ and $D_{base}$ by considering optional measurements of residuals and pier differences:
+
+$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \deltaD_v$$
+
+If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a zero field technique. Initially, N_{base} is unknown. Therefore, N_{base} will either be set to zero or optionally provided annual mean values will be used as a starting criteria. It should be said that the choice is not really important as the iterative technique will provide suitable estimates already during the next call. A valid input for $H(t)$ is also required to correctly determine collimation data of the horizontal plane.
+
+
+The second block will determine inclination $I(t)$ as well as $H(t) = F(t) cos(I(t))$ and $Z(t) = F(t) sin(I(t))$. It will further determine $H_{base}$ and $Z_{base}$. Of significant importance hereby is a valid evalutation of F for each DI-Flux measurement. 
+
+$$F(t_i) = F_m + (N_v(t_i) – N_m) cos(I) + (V_v(t_i)-V_m) sin(I) + (E_v(t_i)^2-E_m^2) / (2 F_m)$$
+
+where F_m is the mean F value during certain time window, and N_m, V_m, E_m are means of the variation measurement in the same time window. Thus F(t_i) will contain variation corrected F values for each cycle of the DI-flux measurement.
+
+Based on these F values the angular correction related to residuals can be determined
+
+$$I_{res}(t_i) =  arcsin(\frac{E_{res}(t_i)}{F(t_i)}$$
+
+and finally, considering any provided $\delta I$ the DI-flux inclination value.
+
+H(t) and Z(t) are calculated using the resulting inclination by
+
+H(t) = F(t) cos(I)
+Z(t) = F(t) sin(I)
+
+and basevalues are finally obtained using formulas given above.
+
+As both evaluation blocks contain initially unkown parameters, which are however determined by the complementary block, the whole procedure is iteratively conducted until resulting parameters do not change any more in floating point resolution. Firstly, calcdec is conducted and afterwards calcinc. Then the results for $H$ and $H_{basis}$ are feed into calcdec when starting the next cycle. Usually not more than two cycles are necessary for obtaining final DI-flux parameters. Provision off starting parameters (i.e. annual means) is possible, but not necessary. By default, MagPy is running three analysis cycles.
+
+##### Scalar data source
+
+Scalar data is essential for correctly dertermining basevalues. The user has bassically three options to provide such data. Firstly, a scalar estimate can be taken from provided annual means (use option annualmeans=[21300,1700,44000] in method **absoluteAnalysis** (2.11.2), annual means have to be provided in XYZ, in nT). A correct determination of basevalues is not possible this way but at least a rough estimate can be obtained. If only such scalar source is provided then the F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fannual**. 
+If F data is continuously available on a different pier, you should feed that time series into the **absoluteAnalysis** call (or use the add scalar source option in XMagPy). Every MagPy supported data format or source can be used for this purpose. Such independent/external F data, denoted $F_{ext}$, requires however the knowledge of pier differences between the DI-flux pier and the scalar data (F) pier. If $F_{ext}$ is your only data source you need to provide pier differenences ($\delta F_s$) to **absoluteAnalysis** in nT using option deltaF. In XMagPy you have to open „Analysis Parameters“ on the DI panel and set „dideltaF“.  The F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fext**. The provided $\delta F_s$ value will be included into **diresults**, both within the deltaF column and added to the description string Fext. 
+If F data is measured at the same pier as used for the DI-flux measurement, usually either directly before or after the DI-flux series, this data should be added into the DI absolute file structure (see 2.11.1).  Variation data, covering the time range of F measurements and DI-Flux measurements is required to correctly analyse the measurement. If such F data is used **diresults** will contain the input **Fabs**. 
+If $F_{abs}$ and $F_{ext}$ are both available during the analysis, then MagPy will use  $F_{abs}$ (F data from the DI-flux pier) for evaluating the DI-Flux measurement. It will also determine the pier difference 
+
+$$\delta F_s$  = F_{abs} – F_{ext}(uncorr)$$.
+
+This pier difference will be included into diresults within the delta F column. The F-description column in **diresults** will contain **Fabs**.  Any additionally, manually provided delta F value will show up in this column as well (**Fabs_12.5**). For the standard output of the DI-flux analysis any manully provided delta F will have been applied to $F_{ext}(corr)$.  
+
+
+##### Prerequisites for basevalue evaluation:
+
+- DI-flux measurement (optional with residuals, optional scalar data at the same pier)[^1]
+- continuous variometer data (XYZ or HEZ, bias field considered)
+- independent continuous scalar data (optional, from another pier)
+- optional: pier differences dD and dI for variometer pier and dF for scalar pier
+
+[^1]: please note: scalar data within the DI-flux file has to be obtained at the same pier as used for DI-flux measurements.
+
+Lets have a look at a couple of different but suitable combinations of the prerequisites:
+
+*[BV-1]: DI-flux (residual method) on pier A, HEZ oriented variometer (absolute or bias fields considered) on pier B, scalar data from pier C, pier difference of pier A and C is known
+*[BV-2]: DI-flux (zero field) plus scalar data on pier A, HEZ orientted variometer (bias fields added)
+*[BV-3]: DI-flux (zero/residual) plus scalar on pier A, HEZ vario with bias added on pier B, continuous scalar data on pier C
+*[BV-4]: DI-flux (zero/residual) on pier A, HEZ vario without bias, variation only on pier B, continuous scalar on pier C, pier difference between A and C
+
+BV-3 and all other cases, where both scalar data on the DI-flux pier and continuous scalar data are provided, will also calculate the pier difference in F between pier A and pier C. 
+
+General procedure for each basevalue analysis: 
+
+1.1. Reading variometer data from defined source (DB, file, URL)
+1.2. Convert coordinate representation to nT for all axis.
+1.3. If DB only: apply DB flaglist, get and apply all DB header info, apply DB delta values (timediff, offsets)
+1.4. Rotation or compensation option selected: headers bias/compensation fields are applied
+1.5. If DB and rotation: apply alpha and beta rotations from header
+1.6. manually provided offsets and rotation are applied
+1.7. flags are removed
+1.8. interpolate variometerdata using default DataStream.interpol
+2.1. Reading scalar data from defined source
+2.2. If DB: apply flaglist, header and deltas
+2.3. apply option offsets
+2.4. remove flags and interpolate
+3.1. add interpolated values of vario and scalar into DI structure (at corresponding time steps), here manually provided delta F's are considered
+3.2. If DB and not provided manually: extract pier differences for variometer from DB (dD and dI)
+4.1. Start of iterative basevalue calculation procedure (repeated 3 times)
+
+##### HEZ orientation
+
+For this outline we will follow the same notation as used within the technical manual, so independent from fluxgate orientation we will use N,E and V to denote the vector of the fluxgate measurement. A fluxgate system mostly measures variations (i.e. N_var) along one of these axes with a dynamic range below a few 1000 nT. Therefore such systems require a bias field to compensate the earth magnetic field which exceeds the dynamic range (i.e. N_bias). In **HEZ** orientation, the E component does not have a bias field.
+When considering the bias fields, the measured vector by the variometer can be described as follows:
+
+    N_v(t) = N_bias + N_var(t)
+    E_v(t) = E_var(t)
+    V_v(t) = V_bias + V_var(t)
+
+If the fluxgates of the variometer are well calibrated then the NEZ vector deviates by less then a 100 nT from the true field value. The bias fields might also change with time, but can usually be assumed to be stable throughout a measurement.
+MagPy assumes that for variometer measurements, bias fields are already added to the vector.
+
+Iterative scheme:
+4.2. Calcdec (obtain declination and basevalue for D)
+4.2.1 calcdec is feeded with h_start and h_basis which are initially zero
+4.2.1. HC_res(t) = HC(t) + (arcsin(r(t)/sqrt((h_basis+N_v(t))**2 + E_v(t))) - arctan(E_v(t)/(h_basis+N_v(t))))
+4.3. Calcinc (obain inclination, F and basevalues for H and Z)
+4.3.1. run calcinc with an startvalue of inclination
+
+Different combinations of optional data are possible, but scalar data measured either at the same pier or from a distant continuous recording system are necessary.
+
+Calculating the field components H(t),D(t) and Z(t) at a given time considering deviation from an ideal variometer orientation thus results in the following equations:
+
+    H(t) = sqrt(N_v2 + E_v2)
+    D(t) = Mean(HC) + arctan(E_v(t)/(h_basis+N_v(t)))
+    Z(t) = V_v(t)
+
+Independent of HEZ or XYZ orientation we can calculate the 
+MagPy makes use of a non-linear approach (see IM technical manual, page 44). Therefore it is not necessary that the orientation of the variometer instrument exactly corresponds to magnetic or geographic coordinates.
 
 ### 2.12 Database support
 

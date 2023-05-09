@@ -28,6 +28,7 @@ RETURN:
 local = True
 if local:
     import sys
+    sys.path.insert(1,'/Users/leon/Software/magpy/')
     sys.path.insert(1,'/home/leon/Software/magpy/')
 from magpy.stream import *
 import magpy.absolutes as di

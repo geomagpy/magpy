@@ -2776,10 +2776,10 @@ CALLED BY:
                 #required input (see Excel: #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv)
                 # thus i extract the y component, calulate H and then add y again
                 # h_corr is then created in func2stream with the addbaseline option
-                ycomp = bcdata._get_column("y")
-                bcdata = bcdata.xyz2hdz()
+                #ycomp = bcdata._get_column("y")
+                #bcdata = bcdata.xyz2hdz()
                 #print (bcdata.ndarray)
-                bcdata = bcdata._put_column(ycomp,"y")
+                #bcdata = bcdata._put_column(ycomp,"y")
                 bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
                 bcdata.header['col-x'] = 'H'
                 bcdata.header['unit-col-x'] = 'nT'
@@ -2793,9 +2793,9 @@ CALLED BY:
             else:
                 # Default: asume HDZ
                 #print ("BC: Found a list of functions:", funclist)
-                ycomp = bcdata._get_column("y")
-                bcdata = bcdata.xyz2hdz()
-                bcdata = bcdata._put_column(ycomp,"y")
+                #ycomp = bcdata._get_column("y")
+                #bcdata = bcdata.xyz2hdz()
+                #bcdata = bcdata._put_column(ycomp,"y")
                 bcdata = bcdata.func2stream(funclist,mode='addbaseline',keys=keys)
                 bcdata.header['col-x'] = 'H'
                 bcdata.header['unit-col-x'] = 'nT'
@@ -5612,39 +5612,40 @@ CALLED BY:
             print("simplebasevalue2stream: requires ndarray")
             return self
 
-        # Prepare the datastream and put h on xposition
+        if not len(keys) == 3:
+            print ("simplebaseline corr: wrong key length")
+            return self
+        arrayx = np.asarray(list(self.ndarray[KEYLIST.index(keys[0])])).astype(float)
+        arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
+        arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
+
+        # Prepare the datastream and put h on xpositio
         if basecomp in ["HDZ","hdz"]:
-            # stream needs to contain H comp, V comp and original y comp
-            ycomp = self._get_column("y")
-            self = self.xyz2hdz()
-            self = self._put_column(ycomp,"y")
+            print ("simplebaseline: Basevalues are provided as HDZ components")
+        else:
+            print ("simplebaseline: Basevalues are provided as XYZ components")
 
         #1. calculate function value for each data time step
         array = [[] for key in KEYLIST]
         array[0] = self.ndarray[0]
-        # get x array for baseline
-        #indx = KEYLIST.index('x')
         for key in KEYLIST:
             ind = KEYLIST.index(key)
             if key in keys: # new
-                #print keys.index(key)
-                ar = self.ndarray[ind].astype(float)
-                if key == 'y' and basecomp in ["HDZ","hdz"]:
-                    #indx = KEYLIST.index('x')
-                    #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
-                    #print type(self.ndarray[ind]), key, self.ndarray[ind]
-                    array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + basevalue[keys.index(key)]
+                if key == 'x' and basecomp in ["HDZ","hdz"]:
+                    array[ind] = np.sqrt((arrayx + basevalue[keys.index(key)])**2 + arrayy**2)
+                elif key == 'y' and basecomp in ["HDZ","hdz"]:
+                    array[ind] = np.arctan2(arrayy, (arrayx + basevalue[0])) * 180. / np.pi + basevalue[keys.index(key)]
                     self.header['col-y'] = 'd'
                     self.header['unit-col-y'] = 'deg'
                 else:
-                    array[ind] = ar + basevalue[keys.index(key)]
-                    if key == 'x': # remember this for correct y determination
-                        arrayx = array[ind]
-            else: # new
+                    # will also be used if basevalues are not HDZ
+                    array[ind] = self.ndarray[ind].astype(float) + basevalue[keys.index(key)]
+            else:
                 if len(self.ndarray[ind]) > 0:
                     array[ind] = self.ndarray[ind].astype(object)
 
-        self.header['DataComponents'] = 'HDZ'
+        if basecomp in ["HDZ","hdz"]:
+            self.header['DataComponents'] = 'HDZ'
         return DataStream(self,self.header,np.asarray(array, dtype=object))
 
 
@@ -5684,6 +5685,11 @@ CALLED BY:
         totalarray = [[] for key in KEYLIST]
         posstr = KEYLIST.index('str1')
         testx = []
+        basex = np.asarray([])
+
+        arrayx = np.asarray(list(self.ndarray[KEYLIST.index(keys[0])])).astype(float)
+        arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
+        arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
 
         for function in funct:
             #print ("Testing", function)
@@ -5726,6 +5732,20 @@ CALLED BY:
                     if mode == 'add' and validkey:
                         array[ind] = ar + function[0]['f'+fkey](functimearray)
                     elif mode == 'addbaseline' and validkey:
+                        if key == 'x':
+                            basex = function[0]['f'+fkey](functimearray)
+                            array[ind] = np.sqrt((arrayx + basex) ** 2 + arrayy ** 2)
+                            #print ("X", array[ind])
+                        elif key == 'y':
+                            array[ind] = np.arctan2(arrayy, (arrayx + basex)) * 180. / np.pi + function[0]['f'+fkey](functimearray)
+                            #print ("Y", array[ind])
+                            self.header['col-y'] = 'd'
+                            self.header['unit-col-y'] = 'deg'
+                        else:
+                            # will also be used if basevalues are not HDZ
+                            array[ind] = ar + function[0]['f'+fkey](functimearray)
+                            #print ("Z", array[ind])
+                            """
                         #print ("here add base", ar, function[0]['f'+fkey](functimearray))
                         if key == 'y':
                             #indx = KEYLIST.index('x')
@@ -5738,26 +5758,27 @@ CALLED BY:
                             #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
                             # X needs to be converted to arrayh otherwise it only works for y close to zero
                             array[ind] = ar + function[0]['f'+fkey](functimearray)
+                            """
                             if len(array[posstr]) == 0:
                                 #print ("Assigned values to str1: function {}".format(function[1]))
-                                array[posstr] = ['c']*len(ar)
-                            if len(testx) > 0 and not dis_done:
+                                array[posstr] = np.asarray(['c']*len(ar))
+                            if len(basex) > 0 and not dis_done:
                                 # identify change from number to nan
                                 # add discontinuity marker there
                                 #print ("Here", testx)
                                 prevel = np.nan
-                                for idx, el in enumerate(testx):
+                                for idx, el in enumerate(basex):
                                     if not np.isnan(prevel) and np.isnan(el):
                                         array[posstr][idx] = 'd'
                                         #print ("Modified str1 at {}".format(idx))
                                         break
                                     prevel = el
                                 dis_done = True
-                            if key == 'x': # remember this for correct y determination
-                                arrayx = array[ind]
-                                testx = function[0]['f'+fkey](functimearray)
+                            #if key == 'x': # remember this for correct y determination
+                            #    arrayx = array[ind]
+                            #    testx = function[0]['f'+fkey](functimearray)
                             if key == 'dx': # use this column to test if delta values are already provided
-                                testx = function[0]['f'+fkey](functimearray)
+                                basex = function[0]['f'+fkey](functimearray)
                     elif mode in ['sub','subtract'] and validkey:
                         array[ind] = ar - function[0]['f'+fkey](functimearray)
                     elif mode == 'values' and validkey:

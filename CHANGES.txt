@@ -16,6 +16,7 @@ Installation instructions can be found on the main download page.
     + IYFV files with less then 90% data are listed with incomplete flag (if not quiet or disturbed days)
     + resample method: improved recognition of nan values in source data (speed and accuracy)
     + analysis of single DI file now possible
+    + fixed baseline correction method for non-quasi-absolute HEZ variometer data in DI-flux measurements
 
 ####v<1.1.2>, <2023-04-25> --
 
