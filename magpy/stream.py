@@ -5619,7 +5619,6 @@ CALLED BY:
         arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
         arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
 
-        # Prepare the datastream and put h on xpositio
         if basecomp in ["HDZ","hdz"]:
             print ("simplebaseline: Basevalues are provided as HDZ components")
         else:
@@ -5680,7 +5679,7 @@ CALLED BY:
         if isinstance(funclist[0], dict):
             funct = [funclist]
         else:
-            funct = funclist   # TODO: cycle through list
+            funct = funclist
 
         totalarray = [[] for key in KEYLIST]
         posstr = KEYLIST.index('str1')

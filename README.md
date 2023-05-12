@@ -990,6 +990,7 @@ $$N_{b} = N_{bias} + N_{base}$$
 wherefore the hereby used $N_{b}$ are large in comparison to the measured variations $N_{var}$. All components are dependent on time. Bias field and basevalues, however, can be assumed to stay constant throughout the DI-flux measurement. Therefore, both approaches outlined above are equally effective. Hereinafter, we always assume variation measurements close to the total field value and for all field measurements within one DI-flux analysis we can describe north and vertical components as follows:
 
 $$N(t_i) = N_{base} + N_{v}(t_i)$$
+
 $$V(t_i) = V_{base} + V_{v}(t_i)$$
  
 For the east component in an HEZ oriented instrument bias fields are usually set to zero. Thus $E$ simplifies to $E = E_{base} + E_{var}$. If the instrument is properly aligned along magnetic coordinates is simplifies further to 
@@ -998,14 +999,18 @@ $$E(t_i) = E_{var}(t_i)$$
 
 as $E_{base}$ gets negligible (?? is that true??). The correct geomagnetic field components H, D and Z at time t for a HEZ oriented variometer can thus be calculated using the following formula (see also [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf)):
 
-$$H(t) =  \sqrt{(N_{base} + N_{v}(t))^2 + E_{var}(t)2}$$
+$$H(t) =  \sqrt{(N_{base} + N_{v}(t))^2 + E_{var}(t)^2}$$
+
 $$D(t) =  D_{base} + arctan(\frac{E_{var}(t)}{N_{base} + N_{v}(t)}$$
+
 $$Z(t) =  V_{base} + V_{v}(t)$$
 
 In turn, basevalues can be determined from the DI-Flux measurement as follows:
 
 $$N_{base} =  \sqrt{(H(t_i))^2 – E_{var}(t_i)2} - N_{v}(t_i)$$
+
 $$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)}$$
+
 $$V_{base} =  Z(t_i) – V_{v}(t_i)$$
 
 where $H(t_i)$, $D(t_i)$ and $Z(t_i)$ are determined from the DI-Flux measurement providing declination $D(t_i)$ and inclination $I(t_i)$, in combination with an absolute scalar value obtained either on the same pier prior or after the DI-Flux measurement $(F(t_j))$, or from continuous measurements on a different pier.  As variometer measurements and eventually scalar data are obtained on different piers, pier differences also need to be considered. Such pier differences are denoted by $\delta D_v$, $\delta I_v$ and $\delta F_s$.
@@ -1017,7 +1022,7 @@ The measurement procedure of the DI-flux technique requires magnetic east-west o
 MagPy’s DI-flux analysis scheme for HEZ oriented variometers follows almost exactly the DTU scheme (citation , Juergen), using an iterative application. Basically, the analysis makes use of two main blocks. The first block (method *calcdec*) analyses the horizontal DI flux measurements, the second block (*calcinc*) analyses the inclination related steps of the DI-flux technique. 
 The first block determines declination $D(t)$ and $D_{base}$ by considering optional measurements of residuals and pier differences:
 
-$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \deltaD_v$$
+$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \delta D_v$$
 
 If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a zero field technique. Initially, $N_{base}$ is unknown. Therefore, $N_{base}$ will either be set to zero or optionally provided annual mean values will be used as a starting criteria. It should be said that the choice is not really important as the iterative technique will provide suitable estimates already during the next call. A valid input for $H(t)$ is also required to correctly determine collimation data of the horizontal plane.
 The second block will determine inclination $I(t)$ as well as $H(t) = F(t) cos(I(t))$ and $Z(t) = F(t) sin(I(t))$. It will further determine $H_{base}$ and $Z_{base}$. Of significant importance hereby is a valid evaluation of F for each DI-Flux measurement. 
@@ -1033,6 +1038,7 @@ and finally, considering any provided $\delta I$ the DI-flux inclination value.
 H(t) and Z(t) are calculated using the resulting inclination by
 
 $$H(t) = F(t) cos(I)$$
+
 $$Z(t) = F(t) sin(I)$$
 
 and basevalues are finally obtained using formulas given above.
@@ -1052,12 +1058,18 @@ This pier difference will be included into diresults within the delta F column. 
 ##### Using a geographically oriented variometer (XZY)
 
 The above outlined basevalue determination method is rather stable against deviations from ideal variometer orientations. Thus, you can use the very same technique also to evaluate basevalues for XYZ oriented variometers as long as your sites’ declination is small. A rough number would be that angular deviations (declination) of 3 degrees will lead to differences below 0.1 nT in basevalues. The small differences are related to the fact that strictly speaking the above technique is only valid if the variometer is oriented perfectly along the current magnetic coordinate system.
-If you want to evaluate  basevalues for XYZ variometers and obtain the basevalues also in a XYZ representation you need to select …  
+MagPy (since version 1.1.3) also allows for evaluating XYZ variometer data by obtaining basevalues also in a XYZ representation. This technique requires accurate orientation of your variation instrument in geographic coordinates. Provided such precise orientation, the basic formula for obtaining basevalues get linear and simplifies to 
+
+$$X_{base} =  X(t_i) – X_{v}(t_i)$$
+
+$$Y_{base} =  Y(t_i) - Y_{v}(t_i)$$
+
+$$Z_{base} =  Z(t_i) – Z_{v}(t_i)$$
 
 ##### Prerequisites for basevalue evaluation:
 
 - DI-flux measurement (optional with residuals, optional scalar data at the same pier)[^1]
-- continuous variometer data (XYZ or HEZ, bias field considered)
+- continuous variometer data (XYZ or HEZ, before 1.1.3 only quasi-absolute HEZ are supported)
 - independent continuous scalar data (optional, from another pier)
 - optional: pier differences dD and dI for variometer pier and dF for scalar pier
 
@@ -1066,8 +1078,11 @@ If you want to evaluate  basevalues for XYZ variometers and obtain the basevalue
 Lets have a look at a couple of different but suitable combinations of the prerequisites:
 
 *[BV-1]: DI-flux (residual method) on pier A, HEZ oriented variometer (absolute or bias fields considered) on pier B, scalar data from pier C, pier difference of pier A and C is known
+
 *[BV-2]: DI-flux (zero field) plus scalar data on pier A, HEZ orientted variometer (bias fields added)
+
 *[BV-3]: DI-flux (zero/residual) plus scalar on pier A, HEZ vario with bias added on pier B, continuous scalar data on pier C
+
 *[BV-4]: DI-flux (zero/residual) on pier A, HEZ vario without bias, variation only on pier B, continuous scalar on pier C, pier difference between A and C
 
 BV-3 and all other cases, where both scalar data on the DI-flux pier and continuous scalar data are provided, will also calculate the pier difference in F between pier A and pier C. 

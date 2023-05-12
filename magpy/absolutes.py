@@ -538,18 +538,15 @@ class AbsoluteData(object):
         scale_y = scalevalue[1]
         scale_z = scalevalue[2]
 
-        if debugmode:
-            print (" Running declination calc:", xstart, ystart, hstart, hbasis)
-
-        #xstart = 4114.3
-        #ystart = 0.0
         if not hstart:
             hstart = np.sqrt((xstart)**2 + (ystart)**2)
-        #hbasis = 3903.6
         if not hbasis:
             hbasis = hstart
         if not ybasis:
             ybasis = 0.0
+
+        if debugmode:
+            print (" Running declination calc: xstart={},ystart={},hstart={},hbasis={},ybasis={}".format(xstart, ystart, hstart, hbasis, ybasis))
 
         #drop NANs from input stream - positions
         expmire = self._get_column('expectedmire')
@@ -579,23 +576,29 @@ class AbsoluteData(object):
 
         # -- Get mean values for x and y
         # ------------------------------
-        meanx, meany = 0.0,0.0
-        xcol, ycol, tlist = [],[],[]
+        meanx, meany, meanz = 0.0,0.0,0.0
+        xcol, ycol, zcol, tlist = [],[],[],[]
         for idx, elem in enumerate(poslst):
             if idx < 9:
                 if not isnan(elem.varx):
                     xcol.append(elem.varx)
                 if not isnan(elem.vary):
                     ycol.append(elem.vary)
+                if not isnan(elem.varz):
+                    zcol.append(elem.varz)
             tlist.append(elem.time)
         if len(xcol) > 0:
             meanx = np.mean(xcol)
         if len(ycol) > 0:
             meany = np.mean(ycol)
+        if len(zcol) > 0:
+            meanz = np.mean(zcol)
 
         nr_lines = len(poslst)
         dl1,dl2,dl2tmp,variocorr, variohlst = [],[],[],[],[] # temporary lists
 
+        if debugmode:
+            print ("Declination means for xvar and yvar:", meanx, meany)
 
         # -- check, whether inclination and declination values are present:
         # ------------------------------
@@ -632,19 +635,15 @@ class AbsoluteData(object):
             if hstart == 0:
                 rescorr = 0
             else:
-                #print ("Check: ", hbasis, poslst[k].varx, poslst[k].vary)
+                #print ("Check: ", hbasis, poslst[k].varx, ybasis, poslst[k].vary)
                 if not isnan(poslst[k].varx) and not isnan(poslst[k].vary):
-                    rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (scale_y*poslst[k].vary)**2 ) )
-                    if xyzorient:
-                        rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (ybasis+scale_y*poslst[k].vary)**2 ) )
+                    rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (ybasis+scale_y*poslst[k].vary)**2 ) )
                 else:
-                    rescorr = signum*np.arcsin( poslst[k].res / hstart )
+                    rescorr = signum*np.arcsin(poslst[k].res / hstart)
             if xstart+poslst[k].varx == 0 or isnan(poslst[k].varx) or isnan(hbasis):
                 varco = 0.0
             else:
                 varco = np.arctan((ybasis+scale_y*poslst[k].vary)/(hbasis+scale_x*poslst[k].varx))
-                if xyzorient:
-                    varco = np.arctan((ybasis + scale_y * poslst[k].vary) / (xbasis + scale_x * poslst[k].varx))
             variocorr.append(varco)
             # a1 = hc + asin(res1/sqrt[ (hstart+vx)**2 + vy**2 ])*180/Pi - atan( vy/(hstart+vx) )*180/Pi
             #print "TESTVALUE:", poslst[k].hc*np.pi/(180.0)*200/np.pi, rescorr*200/np.pi, varco*200/np.pi, hbasis
@@ -736,11 +735,9 @@ class AbsoluteData(object):
         except:
             resultline.time = poslst[determinationindex].time
         resultline.y = dec
-        if dec_baseval > 270: # for display  TODO: daily means need to consider the vector!!
+        if dec_baseval > 270: # for display
             dec_baseval = dec_baseval-360.
         resultline.dy = dec_baseval
-        #if xzy:
-        #    resultline.dy = ybasis
         resultline.typ = 'idff'
         resultline.var1 = s0d
         resultline.var2 = deH
@@ -753,8 +750,7 @@ class AbsoluteData(object):
         resultline.str2 = poslst[0].di_inst
         resultline.str3 = str(expmire)
 
-        return resultline
-
+        return resultline, meanx, meany
 
     def _h(self, f, inc):
         return f * np.cos(inc*np.pi/(180.0))
@@ -802,7 +798,9 @@ class AbsoluteData(object):
         debugmode = kwargs.get('debugmode')
         annualmeans = kwargs.get('annualmeans')
         usestep = kwargs.get('usestep')
-        xyzorientation = kwargs.get('xyzorientation')
+        decmeanx =  kwargs.get('decmeanx')
+        decmeany =  kwargs.get('decmeany')
+        xyzorient = kwargs.get('xyzorient') # True or False
 
         ang_fac = 1
         if not scalevalue:
@@ -860,29 +858,22 @@ class AbsoluteData(object):
                     dflist.append(elem.f-elem.varf)
             elif len(mflst) == 0 and len(mfvlst) > 0:
                 # F values taken from separate scalar data
-                #print "Fs:", elem.varf
                 if not isnan(elem.varz) and not isnan(elem.vary) and not isnan(elem.varx):
                     variox.append(scale_x*elem.varx)
                     varioy.append(scale_y*elem.vary)
                     varioz.append(scale_z*elem.varz)
                 if not isnan(elem.varf):
                     fvlist.append(elem.varf)
-                    #if foundfirstelem == 0:
-                    #    if iterator == 0:
-                    #        loggerabs.debug("_calcinc: %s : no f in absolute file -- using scalar values from specified scalarpath" % (num2date(self[0].time).replace(tzinfo=None)))
-                    #    foundfirstelem = 1
 
         # ###################################
         # determine average F value
         #     1. check Absolute file - no delta F -> use delta F from abs file
         #     2. check Scalar path
         #     3. check provided annual means
-        #     4. TODO basevalue is calculated at time t0
+        #     4. basevalue is calculated at a specific time defined by determinationindex
         #        -> According to Juerges excel sheet only D is determined at t0
         #        -> I and F are averages within time range of DI meas
-        #     5. TODO The current version is based on the DTU Excel sheet--- it would be necessary to base it on the
-        #             original algorythm as given in Janokowski and Sucksberg, 1996
-        #              expect minor (negligible) differences in I and collimation
+        #     5. The current version is based on the DTU Excel sheet
         # ###################################
 
         nr_lines = len(poslst)
@@ -902,7 +893,6 @@ class AbsoluteData(object):
             meanf = np.mean(fvlist)
             loggerabs.debug("_calcinc: Using F from provided scalar path")
         else:
-            #print "No primary F values contained - using eventually provided annual means instead"
             loggerabs.warning("_calcinc: No F measurements found - using annual means ...")
             meanf = np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1] + annualmeans[2]*annualmeans[2])
             if not meanf == 0:
@@ -930,14 +920,6 @@ class AbsoluteData(object):
             meanvarioy = np.mean(varioy)
             meanvarioz = np.mean(varioz)
 
-        """
-        #Eventually remove the following line
-        xcorr =  self._h(meanf, incstart) * np.cos ( linestruct.y *np.pi/(180.0) ) - meanvariox
-        ycorr =  self._h(meanf, incstart) * np.sin ( linestruct.y *np.pi/(180.0) ) - meanvarioy
-        zcorr =  self._z(meanf, incstart) - meanvarioz
-
-        print xcorr, ycorr, zcorr, np.sqrt(xcorr**2 + ycorr**2 + zcorr**2)
-        """
         if debugmode:
              print ("Getting delta F", np.mean(flist)-np.mean(fvlist),np.mean(dflist))
 
@@ -999,7 +981,7 @@ class AbsoluteData(object):
                 quad = poslst[k].vc + 360.0 - (poslst[k].hc + mirediff)
             #print (" Residual correction", poslst[k].res, rcorri)
             # The signums are essential for the collimation angle calculation
-            # ToDo: check regarding correctness for different location/angles
+            # test_di: also checks regarding correctness for different location/angles
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             #signum1 = np.sign(np.tan(quad*np.pi/180))
             signum1 = np.sign(-np.cos(quad*np.pi/180.0))
@@ -1140,8 +1122,12 @@ class AbsoluteData(object):
         meanf =  mean(selppmval)
         tmpH = self._h(meanf, inc)
         tmpZ = self._z(meanf, inc)
-        #tmpX = tmpH*cos(dec)
-        #tmpY = tmpH*sin(dec)
+        dec = linestruct.y
+        tmpX = self._h(tmpH, dec)
+        tmpY = self._z(tmpH, dec)
+        if xyzorient and debugmode:
+            print ("XYZ technique: dec={}, tmpX={}, tmpY={}".format(dec, tmpX, tmpY))
+            print ("Control (vector sum vs mean F):", np.sqrt(tmpX**2+tmpY**2+tmpZ**2), meanf)
 
         # check for inclination error in file inc
         #   -- the following part may cause problems in case of close to polar positions and locations were X is larger than Y
@@ -1177,20 +1163,37 @@ class AbsoluteData(object):
         #              the final result is not representative for t0
         #              but actually for average time of measurements....
 
+        if not decmeanx:
+            print (" No variationmean for X from calcdec ")
+            decmeanx = mean(xvals)
+        if not decmeany:
+            print (" No variationmean for Y from calcdec ")
+            decmeany = mean(yvals)
+
         # =RUNDEN(WURZEL(K37^2-(MITTELWERT(G15:G18))^2)-MITTELWERT(F15:F18);1)
         # asuming x coressponds to magnetic north direction
         # h2 = (x+hbase)2+y2 -> sqrt(h2-y2) - x = hbase
+        x_adder = 0.0
+        y_adder = 0.0
         if len(xvals) > 0:
             if tmpH**2 - mean(yvals)**2 < 0: # if no scalar data is available
                 h_adder = float('nan')
                 z_adder = float('nan')
+            elif xyzorient:
+                # temX,Y are determined based on F during inc cycle, variationmeans from dec cycle, not perfect but reasonable
+                x_adder = tmpX-decmeanx
+                y_adder = tmpY-decmeany
+                z_adder = tmpZ-mean(zvals)
+                h_adder = x_adder
             else:
                 h_adder = np.sqrt(tmpH**2 - (mean(yvals))**2) - mean(xvals)
                 z_adder = tmpZ-mean(zvals)
             if debugmode:
-                print("offsets", tmpH, mean(yvals), mean(xvals), mean(zvals), h_adder, z_adder, len(yvals))
+                print(" determined offsets:", h_adder, x_adder, y_adder, z_adder, decmeanx, mean(xvals), decmeany, mean(yvals), mean(zvals), xyzorient)
         else:
-            #print "No variometer data - using estimated H and Z"
+            #print ("No variometer data - using estimated H and Z")
+            x_adder = tmpX
+            y_adder = tmpY
             h_adder = tmpH
             z_adder = tmpZ
 
@@ -1200,7 +1203,7 @@ class AbsoluteData(object):
         #print ("Time", determinationindex, scale_x, h_adder, scale_y)
 
         if not np.isnan(poslst[determinationindex].varx) and not np.isnan(h_adder):
-            hstart = np.sqrt((scale_x*poslst[determinationindex].varx + h_adder)**2 + (scale_y*poslst[determinationindex].vary)**2)
+            hstart = np.sqrt((scale_x*poslst[determinationindex].varx + h_adder)**2 + (scale_y*poslst[determinationindex].vary + y_adder)**2)
             xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0) )
             ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0) )
             zstart = scale_z*poslst[determinationindex].varz + z_adder
@@ -1217,11 +1220,11 @@ class AbsoluteData(object):
 
         # Directional base values -- would avoid them
         basex = h_adder
-        #basey = 0.0 # defined in calcdec
+        basey = y_adder
         basez = z_adder
 
         if debugmode:
-            print ("Bases:",basex,basez)
+            print ("Bases:",basex,basey,basez)
         def coordinate(vec):
             #vec = [64.2787283564,3.76836507656,48459.6180931]
             dc = vec[1]*np.pi/(180.)
@@ -1260,7 +1263,8 @@ class AbsoluteData(object):
         linestruct.dx = basex
         if np.isnan(basex):
             linestruct.dy = np.nan
-        #linestruct.dy = basey   # if not used, then the declination value will be returned
+        if xyzorient:
+            linestruct.dy = basey
         linestruct.dz = basez
         linestruct.df = deltaF
         linestruct.typ = 'idff'
@@ -1269,8 +1273,8 @@ class AbsoluteData(object):
         linestruct.var5 = epzi
         linestruct.str4 = str4 # Holds F type
         #print ("Basevalues", basex,linestruct.dy,basez)
-        if debugmode:
-            print ("Fstart", fstart)
+        #if debugmode:
+        #    print ("Fstart", fstart)
 
         return linestruct, hstart, h_adder
         #return linestruct, xstart, ystart
@@ -1367,23 +1371,21 @@ class AbsoluteData(object):
             incstart = 180/np.pi * np.arctan(annualmeans[2] / np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1]))
         else:
             incstart = 0.0
+        ybasis = 0.0
         xyzo = False
         if variometerorientation in ["XYZ","xyz"]:
             if debugmode:
                 print (" calcabsolutes: baseline output (and variometer input) in geographic system XYZ")
+                print (" ------------------------------------------------------------------------------")
             xyzo = True
-
-
-        #print ("-----------------------------------------")
-        #print (self)
-        #print ("-----------------------------------------")
-        #print ("Lines in file:", len(self))
 
         for i in range(0,3):
             # Calculate declination value (use xstart and ystart as boundary conditions
             #print ("STarting with", xstart, ystart)
             #debugmode = True
-            resultline = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,debugmode=debugmode)
+            if debugmode:
+                print ("Running cycle {}: ybasis = {}, hbasis={}".format(i, ybasis,hbasis))
+            resultline, decmeanx, decmeany = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,ybasis=ybasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,xyzorient=xyzo,debugmode=debugmode)
             # Calculate inclination value
             #print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
             if debugmode:
@@ -1403,8 +1405,11 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans,debugmode=debugmode)
+            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans,xyzorient=xyzo,decmeanx=decmeanx,decmeany=decmeany,debugmode=debugmode)
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
+            if xyzo:
+                #print ("XYZ data: using ybasis")
+                ybasis = outline.dy
             if debugmode:
                 print("Calculated I (%f) - iteration step %d" %(outline[1],i))
                 print("All results: " , outline)
@@ -1860,7 +1865,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     # read varios, scalar and all absfiles of one day
     # analyze data for each day and append results to a resultstream
     # XXX possible issues: an absolute measurement which is performed in two day (e.g. across midnight)
-    # TODO Add possibilty to get vario and scalar data from database
 
     resultstream = DataStream()
     for date in sorted(datetimelist):
@@ -1894,8 +1898,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             # Variometer data needs to be available as xyz in nT
             # Get current components
             components = variostr.header.get('DataComponents',[])
-            if debug:
-                print (" - variometer data contains the following components: {}".format(components))
+            #if debug:
+            print (" - variometer data contains the following components: {}".format(components))
             if len(components)>3:
                 if components[:3] == 'HDZ':
                     print ("  Variationdata as HDZ -> converting to XYZ")
@@ -1903,6 +1907,12 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 elif components[:3] == 'IDF':
                     print ("  Variationdata as IDF -> converting to XYZ")
                     variostr = variostr._convertstream('idf2xyz')
+            components2deal = variostr.header.get('DataComponents')
+            if len(components2deal)>=3:
+                variocomps = variostr.header.get('DataComponents')[:3].lower()
+                if variocomps.startswith("xyz") and not variometerorientation.lower()=="xyz":
+                    print ("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
+                    print ("  as variometerorientation is not fixed to xyz.  ")
             # ---------------------------------------
             # 1.2 Transformation to nT vector done
             # ---------------------------------------
@@ -2357,7 +2367,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     # 3.1 Header information
     # --------------------
-    di_version = '1.0'
+    di_version = '1.1'
     resultstream.header['StationID'] = stationid
     resultstream.header['DataPier'] = pier
     resultstream.header['DataFormat'] = 'MagPyDI'
@@ -2372,10 +2382,16 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['unit-col-z'] = 'nT'
     resultstream.header['col-f'] = 'f'
     resultstream.header['unit-col-f'] = 'nT'
-    resultstream.header['col-dx'] = 'H-base'
-    resultstream.header['unit-col-dx'] = 'nT'
-    resultstream.header['col-dy'] = 'D-base'
-    resultstream.header['unit-col-dy'] = 'deg'
+    if variometerorientation in ["XYZ","xzy"]:
+        resultstream.header['col-dx'] = 'X-base'
+        resultstream.header['unit-col-dx'] = 'nT'
+        resultstream.header['col-dy'] = 'Y-base'
+        resultstream.header['unit-col-dy'] = 'nT'
+    else:
+        resultstream.header['col-dx'] = 'H-base'
+        resultstream.header['unit-col-dx'] = 'nT'
+        resultstream.header['col-dy'] = 'D-base'
+        resultstream.header['unit-col-dy'] = 'deg'
     resultstream.header['col-dz'] = 'Z-base'
     resultstream.header['unit-col-dz'] = 'nT'
     resultstream.header['col-df'] = 'dF'
