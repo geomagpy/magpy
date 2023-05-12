@@ -1066,14 +1066,22 @@ $$Y_{base} =  Y(t_i) - Y_{v}(t_i)$$
 
 $$Z_{base} =  Z(t_i) – Z_{v}(t_i)$$
 
-##### Prerequisites for basevalue evaluation:
+By default, MagPy will always create basevalues in HDZ components, even if xyz variation data is provided. If you want basevalues in XYZ components you need to confirm manually that the provided variation data is geographically oriented when calling **absoluteAnalysis**. Use option **variometerorientation=”XYZ”** for this purpose.  
+
+##### Using other variometer orientation
+
+If you want to use variometer data in any other orientation then the two discussed above, it is necessary rotate your data set into one of the supported coordinate systems. Such rotations can be performed using MagPy's **rotate** method. Please note, that is then also necessary to rotate your variometers raw data using the same angular parameters prior to baseline adoption.
+
+##### Prerequisites for basevalue evaluation
 
 - DI-flux measurement (optional with residuals, optional scalar data at the same pier)[^1]
 - continuous variometer data (XYZ or HEZ, before 1.1.3 only quasi-absolute HEZ are supported)
-- independent continuous scalar data (optional, from another pier)
+- optional: independent continuous scalar data from another pier
 - optional: pier differences dD and dI for variometer pier and dF for scalar pier
 
 [^1]: please note: scalar data within the DI-flux file has to be obtained at the same pier as used for DI-flux measurements.
+
+##### Suitable combinations
 
 Lets have a look at a couple of different but suitable combinations of the prerequisites:
 
@@ -1087,23 +1095,23 @@ Lets have a look at a couple of different but suitable combinations of the prere
 
 BV-3 and all other cases, where both scalar data on the DI-flux pier and continuous scalar data are provided, will also calculate the pier difference in F between pier A and pier C. 
 
-General procedure for each basevalue analysis: 
+##### General procedure for the baselineAnalysis method: 
 
-1.1. Reading variometer data from defined source (DB, file, URL)
-1.2. Convert coordinate representation to nT for all axis.
-1.3. If DB only: apply DB flaglist, get and apply all DB header info, apply DB delta values (timediff, offsets)
-1.4. Rotation or compensation option selected: headers bias/compensation fields are applied
-1.5. If DB and rotation: apply alpha and beta rotations from header
-1.6. manually provided offsets and rotation are applied
-1.7. flags are removed
-1.8. interpolate variometerdata using default DataStream.interpol
-2.1. Reading scalar data from defined source
-2.2. If DB: apply flaglist, header and deltas
-2.3. apply option offsets
-2.4. remove flags and interpolate
-3.1. add interpolated values of vario and scalar into DI structure (at corresponding time steps), here manually provided delta F's are considered
-3.2. If DB and not provided manually: extract pier differences for variometer from DB (dD and dI)
-4.1. Start of iterative basevalue calculation procedure (repeated 3 times)
+- Reading variometer data from defined source (DB, file, URL)
+- Convert coordinate representation to nT for all axis.
+- If DB only: apply DB flaglist, get and apply all DB header info, apply DB delta values (timediff, offsets)
+- Rotation or compensation option selected: headers bias/compensation fields are applied
+- If DB and rotation: apply alpha and beta rotations from DB meta info
+- manually provided offsets and rotation are applied
+- flags are removed
+- interpolate variometerdata using default DataStream.interpol
+- Reading scalar data from defined source
+- If DB: apply flaglist, header and deltas
+- apply option offsets
+- remove flags and interpolate
+- add interpolated values of vario and scalar into DI structure (at corresponding time steps), here manually provided delta F's are considered
+- If DB and not provided manually: extract pier differences for variometer from DB (dD and dI)
+- Start of iterative basevalue calculation procedure (repeated 3 times)
 
 ##### Citations
 

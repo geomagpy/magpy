@@ -1164,10 +1164,12 @@ class AbsoluteData(object):
         #              but actually for average time of measurements....
 
         if not decmeanx:
-            print (" No variationmean for X from calcdec ")
+            if debugmode:
+                print (" No variationmean for X from calcdec ")
             decmeanx = mean(xvals)
         if not decmeany:
-            print (" No variationmean for Y from calcdec ")
+            if debugmode:
+                print (" No variationmean for Y from calcdec ")
             decmeany = mean(yvals)
 
         # =RUNDEN(WURZEL(K37^2-(MITTELWERT(G15:G18))^2)-MITTELWERT(F15:F18);1)
@@ -1691,6 +1693,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if not annualmeans:
         #annualmeans=[20000,1200,43000]
         annualmeans=[0.0,0.0,0.0]
+    if not variometerorientation:
+        variometerorientation="HEZ"
     if not abstype:
         abstype = "manual"
     if abstype == 'autodif': # we also check the person given in the file. if this is AutoDIF abstype will be set correctly automatically
@@ -1912,7 +1916,11 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variocomps = variostr.header.get('DataComponents')[:3].lower()
                 if variocomps.startswith("xyz") and not variometerorientation.lower()=="xyz":
                     print ("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
-                    print ("  as variometerorientation is not fixed to xyz.  ")
+                    print ("  as variometerorientation is not manually confirmed to be xyz (see manual) ")
+                elif not variocomps.startswith("xyz") and variometerorientation.lower()=="xyz":
+                    print("  Basevalue output projected in XYZ but variometer data provided in HEZ!")
+                    print("  MagPy does not yet support that yet - switching to HDZ basevalues")
+                    variometerorientation = "HEZ"
             # ---------------------------------------
             # 1.2 Transformation to nT vector done
             # ---------------------------------------

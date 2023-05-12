@@ -980,6 +980,11 @@ class OptionsInitDialog(wx.Dialog):
         self.martasscantimeLabel = wx.StaticText(self, label="Scanning MARTAS [sec]",size=(160,30))
         self.martasscantimeTextCtrl = wx.TextCtrl(self, value=self.options.get('martasscantime','20'),size=(160,30))
 
+        #self.basevalueLabel = wx.StaticText(self, label="Basevalue components",size=(160,30))
+        #self.basevalueRadioBox = wx.RadioBox(self,
+        #    label="",
+        #    choices=self.basevalorientation, majorDimension=2, style=wx.RA_SPECIFY_COLS, size=(160,-1))
+
         self.baselinedirectLabel = wx.StaticText(self, label="Apply baseline",size=(160,30))
         self.baselinedirectCheckBox = wx.CheckBox(self, label="directly", size=(160,30))
         self.baselinedirectCheckBox.SetValue(self.options.get('baselinedirect',False))
@@ -1058,12 +1063,12 @@ class OptionsInitDialog(wx.Dialog):
                   emptySpace,
                   emptySpace,
                  (self.martasscantimeLabel, noOptions),
+                    emptySpace,
                  (self.experimentalLabel, noOptions),
                   emptySpace,
-                  emptySpace,
                  (self.martasscantimeTextCtrl, noOptions),
+                    emptySpace,
                  (self.experimentalCheckBox, noOptions),
-                  emptySpace,
                   emptySpace,
                  (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
