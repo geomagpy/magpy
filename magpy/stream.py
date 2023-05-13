@@ -12352,7 +12352,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # Drop empty columns or columns with empty placeholders
     sa = sa._remove_nancolumns()
     sb = sb._remove_nancolumns()
-    print ("TEST",sa.ndarray)
 
     # Sampling rates
     sampratea = sa.samplingrate()
