@@ -2390,7 +2390,6 @@ def writeBLV(datastream, filename, **kwargs):
     if absinfo:
         parameterlist = getAbsInfo(absinfo)
     if not absinfo or not parameterlist:
-        print ("writeBLV: did not find absinfo or valid parameterlist")
         if not extradays:
             extradays = 15
         if not fitfunc:
@@ -2403,14 +2402,18 @@ def writeBLV(datastream, filename, **kwargs):
             keys = ['dx','dy','dz']#,'df']
         parameterlist = [[t1,t2,extradays,fitfunc,fitdegree,knotstep,keys]]
 
-    # Get functionlist:
-    basefunctionlist =[]
+    # Get functionlist
+    # primarily use the baseline adoption function provided with the stream
+    # override using optionally provided fit parameters
+    basefunctionlist = datastream.header.get('DataFunctionObject')
+    if not basefunctionlist:
+        print ("writeBLV: baseline adoption function contained in data structure")
+        basefunctionlist =[]
     if fitfunc and isinstance(fitfunc, list) and len(fitfunc) > 0:
-        print ("writeBLV: functions directly provided along with write call")
+        print ("writeBLV: baseline adoption function directly provided along with write call")
         basefunctionlist = fitfunc
-
     if len(basefunctionlist) < 1 and not absinfo:
-        print ("writeBLV: no baseline function(s) specified - using default values")
+        print ("writeBLV: no baseline adoption function(s) specified - using default values (spline with 15 days extrapolation)")
 
     logger.info("writeBLV: Extracted baseline parameter: {}".format(parameterlist))
 

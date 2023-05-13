@@ -4420,7 +4420,7 @@ CALLED BY:
             elif fitfunc == 'least-squares':
                 logger.debug('Selected linear least-squares fit')
                 A = np.vstack([nt, np.ones(len(nt))]).T
-                m, c, = np.linalg.lstsq(A, val)[0]
+                m, c, = np.linalg.lstsq(A, val,rcond=None)[0]
                 f_fit = m * x + c
             elif fitfunc == 'none':
                 logger.debug('Selected no fit')
