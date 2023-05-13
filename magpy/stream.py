@@ -1573,7 +1573,7 @@ CALLED BY:
             for idx, elem in enumerate(self.ndarray):
                 if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in NUMKEYLIST:
                     lst = list(self.ndarray[idx])
-                    #print KEYLIST[idx],lst[0]
+                    #print (KEYLIST[idx],lst[0])
                     if lst[1:] == lst[:-1] and np.isnan(float(lst[0])):
                         array[idx] = np.asarray([])
                     else:
@@ -12348,6 +12348,11 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     #print ("SB:", stream_b.length())
     sa = stream_a.copy()
     sb = stream_b.copy()
+
+    # Drop empty columns or columns with empty placeholders
+    sa = sa._remove_nancolumns()
+    sb = sb._remove_nancolumns()
+    print ("TEST",sa.ndarray)
 
     # Sampling rates
     sampratea = sa.samplingrate()

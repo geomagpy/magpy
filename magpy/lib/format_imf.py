@@ -2233,7 +2233,7 @@ def readBLV(filename, headonly=False, **kwargs):
                 else:
                     try:
                         if strval in ['d','D']:
-                            tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray]))
+                            tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray],dtype=object))
                             func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                             func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                             funclist.append(func1)
