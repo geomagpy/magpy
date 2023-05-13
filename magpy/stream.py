@@ -4837,8 +4837,8 @@ CALLED BY:
                 print("Flag_outlier: No data for key %s - skipping" % key)
                 break
 
-            print ("-------------------------")
-            print ("Dealing with key:", key)
+            #print ("-------------------------")
+            #print ("Dealing with key:", key)
 
             st = 0
             et = len(self.ndarray[0])
