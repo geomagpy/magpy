@@ -1573,9 +1573,12 @@ CALLED BY:
             for idx, elem in enumerate(self.ndarray):
                 if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in NUMKEYLIST:
                     lst = list(self.ndarray[idx])
-                    #print (KEYLIST[idx],lst[0])
-                    if lst[1:] == lst[:-1] and np.isnan(float(lst[0])):
-                        array[idx] = np.asarray([])
+                    #print (KEYLIST[idx],lst[0],lst[1], lst.count(lst[0]), len(self.ndarray[0]), len(lst))
+                    if np.isnan(float(lst[0])) and np.isnan(float(lst[-1])):
+                        nanlen = sum(math.isnan(x) for x in lst)
+                        if nanlen == len(lst):
+                            #print ("all floaf(nan), needs time and memory")
+                            array[idx] = np.asarray([])
                     else:
                         array[idx] = self.ndarray[idx]
                 else:
