@@ -1810,14 +1810,14 @@ class StreamFlagSelectionDialog(wx.Dialog):
     def createControls(self):
         # countvariables for specific header blocks
         self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
-        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
+        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,-1))
         self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
         self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
             style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
         self.CommentText = wx.StaticText(self,label="Comment:")
-        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)

@@ -5026,13 +5026,13 @@ CALLED BY:
 
         # get time range of stream:
         st,et = self._find_t_limits()
-        st = date2num(st)
-        et = date2num(et)
+        st = np.round(date2num(st),8)
+        et = np.round(date2num(et),8)
 
         lenfl = len(flaglist)
         logger.info("Flag: Found flaglist of length {}".format(lenfl))
-        flaglist = [line for line in flaglist if date2num(self._testtime(line[1])) >= st]
-        flaglist = [line for line in flaglist if date2num(self._testtime(line[0])) <= et]
+        flaglist = [line for line in flaglist if np.round(date2num(self._testtime(line[1])),8) >= st]
+        flaglist = [line for line in flaglist if np.round(date2num(self._testtime(line[0])),8) <= et]
 
         # Sort flaglist accoring to startdate (used to speed up flagging procedure)
         # BETTER: Sort with input date - otherwise later data might not overwrite earlier...
@@ -5079,8 +5079,8 @@ CALLED BY:
                         print("Flag: 60 percent done")
                     if i == int(lenfl/5.*4.):
                         print("Flag: 80 percent done")
-                fs = date2num(self._testtime(flaglist[i][0]))
-                fe = date2num(self._testtime(flaglist[i][1]))
+                fs = np.round(date2num(self._testtime(flaglist[i][0])),8)
+                fe = np.round(date2num(self._testtime(flaglist[i][1])),8)
                 if st < fs and et < fs and st < fe and et < fe:
                     pass
                 elif  st > fs and et > fs and st > fe and et > fe:
@@ -5421,26 +5421,6 @@ CALLED BY:
             # Set enddate to startdat
             # Hereby flag nearest might be used later
             enddate = startdate
-            """
-            start = date2num(startdate)
-            check_startdate, val = self.findtime(start)
-            if check_startdate == 0:
-                logger.info("flag_stream: No data at given date for flag. Finding nearest data point.")
-                if ndtype:
-                    time = self.ndarray[0]
-                else:
-                    time = self._get_column('time')
-                #print start, len(time)
-                new_endtime, index = find_nearest(time, start)
-                if new_endtime > start:
-                    startdate = num2date(start)
-                    enddate = num2date(new_endtime)
-                else:
-                    startdate = num2date(new_endtime)
-                    enddate = num2date(start)
-            else:
-                enddate = startdate
-            """
         else:
             enddate = self._testtime(enddate)
 
@@ -5466,13 +5446,14 @@ CALLED BY:
 
         pos = FLAGKEYLIST.index(key)
 
+        #debug=True
         if debug:
             print("flag_stream: Flag",startdate, enddate)
 
-        start = date2num(startdate)
-        end = date2num(enddate)
-        mint = np.min(self.ndarray[0])
-        maxt = np.max(self.ndarray[0])
+        start = np.round(date2num(startdate),8)
+        end = np.round(date2num(enddate),8)
+        mint = np.round(np.min(self.ndarray[0]),8)
+        maxt = np.round(np.max(self.ndarray[0]),8)
 
         if start < mint and end < mint:
             st = 0
@@ -5511,6 +5492,8 @@ CALLED BY:
                 sti = 0
 
             ed, le = self.findtime(enddate,startidx=sti,mode='argmax')
+            if debug:
+                print (sti, st, start, end, ed)
 
             if ed == 0:
                 #print("Flag_stream: slowly end",ed)

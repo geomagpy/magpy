@@ -5847,8 +5847,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.flaglist.extend(flaglist)
             self.plotstream = self.plotstream.flag(flaglist)
 
-            #print ("GUI Flaglist", flaglist)
-
+            #print (self.plotstream.ndarray)
             self.ActivateControls(self.plotstream)
             #self.annotate = True
             self.plotopt['annotate'] = True
@@ -5856,37 +5855,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.menu_p.str_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
-
-        """
-        #dlg = StreamFlagSelectionDialog(None, title='Stream: Flag selection ...')
-
-        #prev_redir = sys.stdout
-        #redir=RedirectText(dlg.SelectionTextCtrl)
-        #sys.stdout=redir
-        ###   commands
-        #sys.stdout=prev_redir
-
-        self.changeStatusbar("Opening external data viewer ...")
-        self.plot_p.plt.close()
-        variables = self.keylist
-
-        #p = subprocess.Popen(['ls', '-a'], stdout = subprocess.PIPE)
-        #text = p.stdout.readlines()
-        #text = "".join(text)
-
-        self.plotstream, flaglist = mp.plotFlag(self.plotstream,variables)
-        self.flaglist.extend(flaglist)
-
-        self.changeStatusbar("Updating plot ...")
-        self.menu_p.rep_page.logMsg('- flagged user selection: added {} flags'.format(len(flaglist)))
-        self.ActivateControls(self.plotstream)
-
-        #self.annotate = True
-        self.plotopt['annotate'] = True
-
-        self.menu_p.str_page.annotateCheckBox.SetValue(True)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        """
 
     def onFlagClearButton(self, event):
         """
