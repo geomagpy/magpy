@@ -1072,28 +1072,6 @@ By default, MagPy will always create basevalues in HDZ components, even if xyz v
 
 If you want to use variometer data in any other orientation then the two discussed above, it is necessary rotate your data set into one of the supported coordinate systems. Such rotations can be performed using MagPy's **rotate** method. Please note, that is then also necessary to rotate your variometers raw data using the same angular parameters prior to baseline adoption.
 
-##### Prerequisites for basevalue evaluation
-
-- DI-flux measurement (optional with residuals, optional scalar data at the same pier)[^1]
-- continuous variometer data (XYZ or HEZ, before 1.1.3 only quasi-absolute HEZ are supported)
-- optional: independent continuous scalar data from another pier
-- optional: pier differences dD and dI for variometer pier and dF for scalar pier
-
-[^1]: please note: scalar data within the DI-flux file has to be obtained at the same pier as used for DI-flux measurements.
-
-##### Suitable combinations
-
-Lets have a look at a couple of different but suitable combinations of the prerequisites:
-
-*[BV-1]: DI-flux (residual method) on pier A, HEZ oriented variometer (absolute or bias fields considered) on pier B, scalar data from pier C, pier difference of pier A and C is known
-
-*[BV-2]: DI-flux (zero field) plus scalar data on pier A, HEZ orientted variometer (bias fields added)
-
-*[BV-3]: DI-flux (zero/residual) plus scalar on pier A, HEZ vario with bias added on pier B, continuous scalar data on pier C
-
-*[BV-4]: DI-flux (zero/residual) on pier A, HEZ vario without bias, variation only on pier B, continuous scalar on pier C, pier difference between A and C
-
-BV-3 and all other cases, where both scalar data on the DI-flux pier and continuous scalar data are provided, will also calculate the pier difference in F between pier A and pier C. 
 
 ##### General procedure for the baselineAnalysis method: 
 
