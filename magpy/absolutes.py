@@ -511,6 +511,7 @@ class AbsoluteData(object):
         annualmeans = kwargs.get('annualmeans')
         meantime = kwargs.get('meantime')
         xyzorient = kwargs.get('xyzorient') # True or False
+        residualsign = kwargs.get('residualsign') # Orientation of residual measurement - inline or opposite
 
         ang_fac = 1
         if not deltaD:
@@ -533,6 +534,8 @@ class AbsoluteData(object):
             # If meantime is False, then the calculation will be transformed to t0
             # which is the time of the first measurement (conform with spreedsheet)
             determinationindex = 0
+        if not residualsign and not residualsign in [1,-1]:
+            residualsign = 1
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
@@ -637,9 +640,9 @@ class AbsoluteData(object):
             else:
                 #print ("Check: ", hbasis, poslst[k].varx, ybasis, poslst[k].vary)
                 if not isnan(poslst[k].varx) and not isnan(poslst[k].vary):
-                    rescorr = signum*np.arcsin( poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (ybasis+scale_y*poslst[k].vary)**2 ) )
+                    rescorr = signum*np.arcsin( residualsign*poslst[k].res / np.sqrt( (hbasis+scale_x*poslst[k].varx)**2 + (ybasis+scale_y*poslst[k].vary)**2 ) )
                 else:
-                    rescorr = signum*np.arcsin(poslst[k].res / hstart)
+                    rescorr = signum*np.arcsin( residualsign*poslst[k].res / hstart)
             if xstart+poslst[k].varx == 0 or isnan(poslst[k].varx) or isnan(hbasis):
                 varco = 0.0
             else:
@@ -647,8 +650,16 @@ class AbsoluteData(object):
             variocorr.append(varco)
             # a1 = hc + asin(res1/sqrt[ (hstart+vx)**2 + vy**2 ])*180/Pi - atan( vy/(hstart+vx) )*180/Pi
             #print "TESTVALUE:", poslst[k].hc*np.pi/(180.0)*200/np.pi, rescorr*200/np.pi, varco*200/np.pi, hbasis
-            dl1.append( poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k] )
+            dl1val = poslst[k].hc * np.pi / (180.0) + rescorr - variocorr[k]
+            # make sure that the resulting angle is between 0 and 2*pi
+            if dl1val > 2*np.pi:
+                dl1val -= 2*np.pi
+            elif dl1val < 0:
+                dl1val += 2*np.pi
+            dl1.append(dl1val)
             loggerabs.debug("_calcdec: Horizontal angles: %f, %f, %f" % (poslst[k].hc, rescorr, variocorr[k]))
+            if debugmode:
+                print ("_calcdec: Horizontal angles: %f, %f, %f; dl1: %f" % (poslst[k].hc, rescorr, variocorr[k], dl1[k]))
 
         try:
             if len(dl1) < 8:
@@ -672,12 +683,16 @@ class AbsoluteData(object):
                     pass
             dl2tmp.append(dl2mean)
             loggerabs.debug("_calcdec: Selected Dec: %f" % (dl2mean*180/np.pi))
+            # New ... modify range to be between 0 and pi
+            if dl2mean > 2*np.pi:
+                dl2mean -= 2*np.pi
             if dl2mean < np.pi:
                 dl2mean += np.pi/2
             else:
                 dl2mean -= np.pi/2
             #dl2tmp.append(dl2mean)
             dl2.append(dl2mean)
+        print (dl2)
 
         decmean = np.mean(dl2)*180.0/np.pi - 180.0
 
@@ -707,18 +722,21 @@ class AbsoluteData(object):
                 loggerabs.error('_calcdec: %s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
         #print("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
-        #print ("Hallo", decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD)
+        print ("Hallo", decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD)
 
         # see also IM technical manual (5.0.0), page 45, formula 1c:
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
 
         loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
-        #print ("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
+        if debugmode:
+            print ("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
 
         if not hstart == 0:
             s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
             deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
+            if debugmode:
+                print ("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
             loggerabs.debug("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
             if dl2tmp[0]<dl2tmp[1]:
                 epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]+2*np.pi)/4*hstart
@@ -801,6 +819,7 @@ class AbsoluteData(object):
         decmeanx =  kwargs.get('decmeanx')
         decmeany =  kwargs.get('decmeany')
         xyzorient = kwargs.get('xyzorient') # True or False
+        residualsign = kwargs.get('residualsign') # Orientation of residual measurement - inline or opposite
 
         ang_fac = 1
         if not scalevalue:
@@ -815,6 +834,8 @@ class AbsoluteData(object):
             debugmode = False
         if not usestep:
             usestep = 0
+        if not residualsign and not residualsign in [1,-1]:
+            residualsign = 1
 
         determinationindex = int(linestruct.var5)
 
@@ -972,7 +993,7 @@ class AbsoluteData(object):
             except:
                 ppmval.append(meanf)
             if not ppmval[cnt] == 0:
-                rcorri = np.arcsin(poslst[k].res/ppmval[cnt])
+                rcorri = np.arcsin(residualsign*poslst[k].res/ppmval[cnt])
             else:
                 rcorri = 0.0
             if poslst[k].vc > (poslst[k].hc + mirediff):
@@ -1350,6 +1371,7 @@ class AbsoluteData(object):
         deltaI = kwargs.get('deltaI')
         meantime = kwargs.get('meantime')
         usestep = kwargs.get('usestep')
+        residualsign = kwargs.get('residualsign')
         printresults = kwargs.get('printresults')
         variometerorientation = kwargs.get('variometerorientation')
 
@@ -1373,6 +1395,9 @@ class AbsoluteData(object):
             incstart = 180/np.pi * np.arctan(annualmeans[2] / np.sqrt(annualmeans[0]*annualmeans[0] + annualmeans[1]*annualmeans[1]))
         else:
             incstart = 0.0
+        if not residualsign and not residualsign in [1,-1]:
+            residualsign = 1
+
         ybasis = 0.0
         xyzo = False
         if variometerorientation in ["XYZ","xyz"]:
@@ -1387,7 +1412,7 @@ class AbsoluteData(object):
             #debugmode = True
             if debugmode:
                 print ("Running cycle {}: ybasis = {}, hbasis={}".format(i, ybasis,hbasis))
-            resultline, decmeanx, decmeany = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,ybasis=ybasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,xyzorient=xyzo,debugmode=debugmode)
+            resultline, decmeanx, decmeany = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,ybasis=ybasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,xyzorient=xyzo,residualsign=residualsign,debugmode=debugmode)
             # Calculate inclination value
             #print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
             if debugmode:
@@ -1407,7 +1432,7 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans,xyzorient=xyzo,decmeanx=decmeanx,decmeany=decmeany,debugmode=debugmode)
+            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans,xyzorient=xyzo,decmeanx=decmeanx,decmeany=decmeany,residualsign=residualsign,debugmode=debugmode)
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             if xyzo:
                 #print ("XYZ data: using ybasis")
@@ -1688,6 +1713,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     absstruct = kwargs.get('absstruct')
     debug = kwargs.get('debug')
 
+    debug=True
     if not outputformat:
         outputformat='idf'
     if not annualmeans:
