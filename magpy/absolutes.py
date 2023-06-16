@@ -692,7 +692,6 @@ class AbsoluteData(object):
                 dl2mean -= np.pi/2
             #dl2tmp.append(dl2mean)
             dl2.append(dl2mean)
-        print (dl2)
 
         decmean = np.mean(dl2)*180.0/np.pi - 180.0
 
@@ -722,7 +721,7 @@ class AbsoluteData(object):
                 loggerabs.error('_calcdec: %s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
         #print("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
-        print ("Hallo", decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD)
+        #print ("Hallo", decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD)
 
         # see also IM technical manual (5.0.0), page 45, formula 1c:
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
@@ -1398,6 +1397,8 @@ class AbsoluteData(object):
         if not residualsign and not residualsign in [1,-1]:
             residualsign = 1
 
+        #residualsign = -1
+
         ybasis = 0.0
         xyzo = False
         if variometerorientation in ["XYZ","xyz"]:
@@ -1713,7 +1714,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     absstruct = kwargs.get('absstruct')
     debug = kwargs.get('debug')
 
-    debug=True
+    #debug=True
     if not outputformat:
         outputformat='idf'
     if not annualmeans:
