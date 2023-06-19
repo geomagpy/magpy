@@ -1397,8 +1397,6 @@ class AbsoluteData(object):
         if not residualsign and not residualsign in [1,-1]:
             residualsign = 1
 
-        #residualsign = -1
-
         ybasis = 0.0
         xyzo = False
         if variometerorientation in ["XYZ","xyz"]:
@@ -1712,8 +1710,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     meantime = kwargs.get('meantime')
     movetoarchive = kwargs.get('movetoarchive')
     absstruct = kwargs.get('absstruct')
+    residualsign = kwargs.get('residualsign')
     debug = kwargs.get('debug')
 
+    #residualsign=-1
     #debug=True
     if not outputformat:
         outputformat='idf'
@@ -1739,6 +1739,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         pier=''
     if not diid:
         diid=".txt"
+    if not residualsign:
+        residualsign = 1
 
     varioid = 'Unknown'
     scalarid = 'Unknown'
@@ -2297,7 +2299,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 print (" delta F for continuous scalar data: {}".format(deltaF))
                 print (" delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
 
-                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=debug,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue,variometerorientation=variometerorientation)
+                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=debug,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue,variometerorientation=variometerorientation,residualsign=residualsign)
                 #print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
                 #print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
                 if not deltaF == 0:
