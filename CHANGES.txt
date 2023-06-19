@@ -1,6 +1,15 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
+####v<1.1.4>, <2023-xx-xx> --
+
+1.1.4 general:
+
+1.1.4 additions:
+
+1.1.4 fixes:
+    + circle selection in DI flux fixed (might lead to a 270 deg error)
+
 ####v<1.1.3>, <2023-05-20> --
 
 1.1.3 general:
@@ -14,7 +23,7 @@ Installation instructions can be found on the main download page.
     + added possibility to write XYZ baseline files
     + added description of basevalue determination method into README (section 2.11.7)
 
-1.1.2 fixes:
+1.1.3 fixes:
     + IYFV files can be exported even if less than 90% of data is available for one year
     + IYFV files with less then 90% data are listed with incomplete flag (if not quiet or disturbed days)
     + resample method: improved recognition of nan values in source data (speed and accuracy)
