@@ -6865,14 +6865,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             open dialog to input DI data
         """
 
+        #print (self.dipathlist)
         if isinstance(self.dipathlist, dict):
             dipath = self.options.get('didictionary',{}).get('didatapath','')
         elif isinstance(self.dipathlist, str):
             dipath = self.dipathlist
         else:
             dipath = self.dipathlist[0]
+        dipath = self.last_dir # new: use last dir
         if os.path.isfile(dipath):
             dipath = os.path.split(dipath)[0]
+
 
         self.dilayout = {}
         self.dilayout['scalevalue'] = self.options['scalevalue']
@@ -6906,6 +6909,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         difile.write(text)
         difile.close()
 
+        self.last_dir = savepath
 
     def onClearDIData(self, event):
         self.menu_p.abs_page.dilogTextCtrl.SetValue('')

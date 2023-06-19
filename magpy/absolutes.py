@@ -650,7 +650,8 @@ class AbsoluteData(object):
             variocorr.append(varco)
             # a1 = hc + asin(res1/sqrt[ (hstart+vx)**2 + vy**2 ])*180/Pi - atan( vy/(hstart+vx) )*180/Pi
             #print "TESTVALUE:", poslst[k].hc*np.pi/(180.0)*200/np.pi, rescorr*200/np.pi, varco*200/np.pi, hbasis
-            dl1val = poslst[k].hc * np.pi / (180.0) + rescorr - variocorr[k]
+            dl1val = poslst[k].hc*np.pi/(180.0) + rescorr - variocorr[k]
+            dl1org = dl1val
             # make sure that the resulting angle is between 0 and 2*pi
             if dl1val > 2*np.pi:
                 dl1val -= 2*np.pi
@@ -659,7 +660,7 @@ class AbsoluteData(object):
             dl1.append(dl1val)
             loggerabs.debug("_calcdec: Horizontal angles: %f, %f, %f" % (poslst[k].hc, rescorr, variocorr[k]))
             if debugmode:
-                print ("_calcdec: Horizontal angles: %f, %f, %f; dl1: %f" % (poslst[k].hc, rescorr, variocorr[k], dl1[k]))
+                print ("_calcdec: Horizontal angles: %f, %f, %f; dl1org: %f, dl1: %f" % (poslst[k].hc, rescorr*180.0/np.pi, variocorr[k]*180.0/np.pi, dl1org, dl1[k]))
 
         try:
             if len(dl1) < 8:
@@ -684,12 +685,14 @@ class AbsoluteData(object):
             dl2tmp.append(dl2mean)
             loggerabs.debug("_calcdec: Selected Dec: %f" % (dl2mean*180/np.pi))
             # New ... modify range to be between 0 and pi
+            print ("Before", dl2mean)
             if dl2mean > 2*np.pi:
                 dl2mean -= 2*np.pi
             if dl2mean < np.pi:
                 dl2mean += np.pi/2
             else:
                 dl2mean -= np.pi/2
+            print ("After", dl2mean)
             #dl2tmp.append(dl2mean)
             dl2.append(dl2mean)
 
@@ -727,7 +730,7 @@ class AbsoluteData(object):
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
 
-        loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
+        loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD, ang_fac, hstart))
         if debugmode:
             print ("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex], deltaD, ang_fac, hstart))
 
