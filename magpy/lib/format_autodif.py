@@ -9,8 +9,8 @@ def readAUTODIFABS(file_name: string, headonly: bool = False, **kwargs) -> list:
         raise NotImplementedError
     try:
         abs_list = []
-        scale_flux = kwargs.get('scaleflux', 0.098)
-        scale_angle = kwargs.get('scaleangle', 0.00011)
+        #scale_flux = kwargs.get('scaleflux', 0.098)
+        #scale_angle = kwargs.get('scaleangle', 0.00011)
         temperature = kwargs.get('temperature', float(nan))
         legacy = True
         with open(file_name, 'r', encoding='ascii') as file:
@@ -41,8 +41,8 @@ def readAUTODIFABS(file_name: string, headonly: bool = False, **kwargs) -> list:
                 di_to_add.di_inst = di_inst
                 di_to_add.pier = pier
                 di_to_add.stationid = iaga
-                di_to_add.scaleflux = scale_flux
-                di_to_add.scaleangle = scale_angle
+                #di_to_add.scaleflux = scale_flux
+                #di_to_add.scaleangle = scale_angle
                 abs_list.append(di_to_add)
                 i = i + 13
             else:
