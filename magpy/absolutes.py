@@ -622,7 +622,7 @@ class AbsoluteData(object):
             #print("determinationindex", determinationindex[-1])
             #print ("Time", num2date(poslst[determinationindex].time))
 
-        # -- cylce through declinations measurements:
+        # -- cycling through declinations measurements:
         # ------------------------------
         for k in range(linecount):
             if (poslst[k].hc > poslst[k].vc):
@@ -685,14 +685,12 @@ class AbsoluteData(object):
             dl2tmp.append(dl2mean)
             loggerabs.debug("_calcdec: Selected Dec: %f" % (dl2mean*180/np.pi))
             # New ... modify range to be between 0 and pi
-            print ("Before", dl2mean)
             if dl2mean > 2*np.pi:
                 dl2mean -= 2*np.pi
             if dl2mean < np.pi:
                 dl2mean += np.pi/2
             else:
                 dl2mean -= np.pi/2
-            print ("After", dl2mean)
             #dl2tmp.append(dl2mean)
             dl2.append(dl2mean)
 
@@ -1205,9 +1203,9 @@ class AbsoluteData(object):
                 h_adder = float('nan')
                 z_adder = float('nan')
             elif xyzorient:
-                # temX,Y are determined based on F during inc cycle, variationmeans from dec cycle, not perfect but reasonable
-                x_adder = tmpX-decmeanx
-                y_adder = tmpY-decmeany
+                # temX,Y are determined based on F during inc cycle, variationmeans from dec cycle, not perfect but reasonable - changed for version 1.1.4 to variationcycle of inc as sometimes not reasonable
+                x_adder = tmpX-mean(xvals)
+                y_adder = tmpY-mean(yvals)
                 z_adder = tmpZ-mean(zvals)
                 h_adder = x_adder
             else:

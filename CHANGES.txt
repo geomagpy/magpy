@@ -9,6 +9,7 @@ Installation instructions can be found on the main download page.
 
 1.1.4 fixes:
     + circle selection in DI flux fixed (might lead to a 270 deg error)
+    + variometer correction range for XYZ baselines
 
 ####v<1.1.3>, <2023-05-20> --
 
