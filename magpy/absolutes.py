@@ -619,7 +619,7 @@ class AbsoluteData(object):
             # get the index of postime with least difference to average time
             mindiff = np.abs(postime-avtime)
             determinationindex = np.where(mindiff < np.min(mindiff)+0.000001)[0]
-            #print("determinationindex", determinationindex[-1])
+            #print("determinationindex", determinationindex)
             #print ("Time", num2date(poslst[determinationindex].time))
 
         # -- cycling through declinations measurements:
@@ -727,6 +727,8 @@ class AbsoluteData(object):
         # see also IM technical manual (5.0.0), page 45, formula 1c:
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
+        #declast = self._corrangle(decmean + mirediff + variocorr[-1]*180.0/np.pi + deltaD)
+        decmean = self._corrangle(decmean + mirediff + np.mean(variocorr)*180.0/np.pi + deltaD)
 
         loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD, ang_fac, hstart))
         if debugmode:
@@ -735,6 +737,7 @@ class AbsoluteData(object):
         if not hstart == 0:
             s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
             deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
+            #print ("deH", (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4)
             if debugmode:
                 print ("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
             loggerabs.debug("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
@@ -756,6 +759,9 @@ class AbsoluteData(object):
         if dec_baseval > 270: # for display
             dec_baseval = dec_baseval-360.
         resultline.dy = dec_baseval
+        if xyzorient:
+            resultline.dx = hbasis
+            resultline.dy = ybasis
         resultline.typ = 'idff'
         resultline.var1 = s0d
         resultline.var2 = deH
@@ -768,7 +774,7 @@ class AbsoluteData(object):
         resultline.str2 = poslst[0].di_inst
         resultline.str3 = str(expmire)
 
-        return resultline, meanx, meany
+        return resultline, meanx, meany, decmean
 
     def _h(self, f, inc):
         return f * np.cos(inc*np.pi/(180.0))
@@ -818,6 +824,7 @@ class AbsoluteData(object):
         usestep = kwargs.get('usestep')
         decmeanx =  kwargs.get('decmeanx')
         decmeany =  kwargs.get('decmeany')
+        variocorrold = kwargs.get('variocorrold')
         xyzorient = kwargs.get('xyzorient') # True or False
         residualsign = kwargs.get('residualsign') # Orientation of residual measurement - inline or opposite
 
@@ -838,6 +845,7 @@ class AbsoluteData(object):
             residualsign = 1
 
         determinationindex = int(linestruct.var5)
+        variocorr = []
 
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
@@ -1004,6 +1012,14 @@ class AbsoluteData(object):
             # The signums are essential for the collimation angle calculation
             # test_di: also checks regarding correctness for different location/angles
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if xyzorient and linestruct.dx and linestruct.dy:
+                # if xyz is selected we need to recalculate dec during inclination measurements
+                #print (linestruct.dx, linestruct.dy, poslst[k].vary, poslst[k].varx)
+                if isnan(poslst[k].varx) or isnan(linestruct.dx):
+                    varco = 0.0
+                else:
+                    varco = np.arctan((linestruct.dy+scale_y*poslst[k].vary)/(linestruct.dx+scale_x*poslst[k].varx))
+                variocorr.append(varco)
             #signum1 = np.sign(np.tan(quad*np.pi/180))
             signum1 = np.sign(-np.cos(quad*np.pi/180.0))
             signum2 = np.sign(np.sin(quad*np.pi/180.0))
@@ -1144,8 +1160,16 @@ class AbsoluteData(object):
         tmpH = self._h(meanf, inc)
         tmpZ = self._z(meanf, inc)
         dec = linestruct.y
-        tmpX = self._h(tmpH, dec)
-        tmpY = self._z(tmpH, dec)
+        if xyzorient:
+            # for xyz use the average variocorrected declination value from the hc measurements
+            dec2 = variocorrold
+        else:
+            # for hdz base value and dec are determined at the initial time step
+            dec2 = dec
+            #pass
+        tmpX = self._h(tmpH, dec2)
+        tmpY = self._z(tmpH, dec2)
+
         if xyzorient and debugmode:
             print ("XYZ technique: dec={}, tmpX={}, tmpY={}".format(dec, tmpX, tmpY))
             print ("Control (vector sum vs mean F):", np.sqrt(tmpX**2+tmpY**2+tmpZ**2), meanf)
@@ -1205,7 +1229,7 @@ class AbsoluteData(object):
             elif xyzorient:
                 # temX,Y are determined based on F during inc cycle, variationmeans from dec cycle, not perfect but reasonable - changed for version 1.1.4 to variationcycle of inc as sometimes not reasonable
                 x_adder = tmpX-mean(xvals)
-                y_adder = tmpY-mean(yvals)
+                y_adder = tmpY-decmeany #mean(yvals)
                 z_adder = tmpZ-mean(zvals)
                 h_adder = x_adder
             else:
@@ -1224,11 +1248,10 @@ class AbsoluteData(object):
         # #####      Recalculating field values at time k=0
         # ###################################################
         #print ("Time", determinationindex, scale_x, h_adder, scale_y)
-
         if not np.isnan(poslst[determinationindex].varx) and not np.isnan(h_adder):
             hstart = np.sqrt((scale_x*poslst[determinationindex].varx + h_adder)**2 + (scale_y*poslst[determinationindex].vary + y_adder)**2)
-            xstart = hstart * np.cos ( linestruct.y *np.pi/(180.0) )
-            ystart = hstart * np.sin ( linestruct.y *np.pi/(180.0) )
+            xstart = hstart * np.cos ( dec *np.pi/(180.0) )
+            ystart = hstart * np.sin ( dec *np.pi/(180.0) )
             zstart = scale_z*poslst[determinationindex].varz + z_adder
             fstart = np.sqrt(hstart**2 + zstart**2)
             #print ("Difference:", fstart, self[determinationindex].varf, meanf)
@@ -1237,8 +1260,8 @@ class AbsoluteData(object):
             variotype = 'None'
             hstart = tmpH
             zstart = tmpZ
-            xstart = tmpH * np.cos ( linestruct.y *np.pi/(180.0) )
-            ystart = tmpH * np.sin ( linestruct.y *np.pi/(180.0) )
+            xstart = tmpH * np.cos ( dec *np.pi/(180.0) )
+            ystart = tmpH * np.sin ( dec *np.pi/(180.0) )
             fstart = np.sqrt(hstart**2 + zstart**2)
 
         # Directional base values -- would avoid them
@@ -1287,6 +1310,9 @@ class AbsoluteData(object):
         if np.isnan(basex):
             linestruct.dy = np.nan
         if xyzorient:
+            # in case of xyz use the first inclination measurement as reference. for hdz we follow the DTU approach
+            linestruct.y = dec
+            #linestruct.time = poslst[determinationindex].time
             linestruct.dy = basey
         linestruct.dz = basez
         linestruct.df = deltaF
@@ -1399,6 +1425,7 @@ class AbsoluteData(object):
             residualsign = 1
 
         ybasis = 0.0
+        variocorrold = 0.0
         xyzo = False
         if variometerorientation in ["XYZ","xyz"]:
             if debugmode:
@@ -1412,7 +1439,7 @@ class AbsoluteData(object):
             #debugmode = True
             if debugmode:
                 print ("Running cycle {}: ybasis = {}, hbasis={}".format(i, ybasis,hbasis))
-            resultline, decmeanx, decmeany = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,ybasis=ybasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,xyzorient=xyzo,residualsign=residualsign,debugmode=debugmode)
+            resultline, decmeanx, decmeany, variocorrold = self._calcdec(xstart=xstart,ystart=ystart,hstart=hstart,hbasis=hbasis,ybasis=ybasis,deltaD=deltaD,usestep=usestep,scalevalue=scalevalue,iterator=i,annualmeans=annualmeans,meantime=meantime,xyzorient=xyzo,residualsign=residualsign,debugmode=debugmode)
             # Calculate inclination value
             #print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
             if debugmode:
@@ -1432,7 +1459,7 @@ class AbsoluteData(object):
                     inc = outline.x
             except:
                 inc = incstart
-            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans,xyzorient=xyzo,decmeanx=decmeanx,decmeany=decmeany,residualsign=residualsign,debugmode=debugmode)
+            outline, hstart, hbasis = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans,xyzorient=xyzo,decmeanx=decmeanx,decmeany=decmeany,variocorrold=variocorrold,residualsign=residualsign,debugmode=debugmode)
             #outline, xstart, ystart = self._calcinc(resultline,scalevalue=scalevalue,incstart=inc,deltaI=deltaI,iterator=i,usestep=usestep,annualmeans=annualmeans)
             if xyzo:
                 #print ("XYZ data: using ybasis")

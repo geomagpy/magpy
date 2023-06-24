@@ -148,6 +148,8 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
         optionsdict['dideltaI'] = '0.0'
     if optionsdict.get('blvoutput','') == '':
         optionsdict['blvoutput'] = 'HDZ'
+    if optionsdict.get('fluxgateorientation','') == '':
+        optionsdict['fluxgateorientation'] = 'inline'
     if optionsdict.get('diannualmean','') == '':
         optionsdict['diannualmean'] = ''
     if optionsdict.get('didbadd','') == '':
@@ -179,6 +181,7 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
                                                 'dideltaI' : 0.0,
                                                 'diid' : '',
                                                 'blvoutput' : 'HDZ',
+                                                'fluxgateorientation' : 'inline',
                                                 'dipier' : 'A2',
                                                 'diannualmean' : ''},
                                        'TST': { 'diusedb' : True,
@@ -194,6 +197,7 @@ def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirna
                                                 'dideltaI' : 0.0,
                                                 'diid' : '',
                                                 'blvoutput' : 'XYZ',
+                                                'fluxgateorientation' : 'inline',
                                                 'dipier' : 'A8',
                                                 'diannualmean' : ''}
                                       }
@@ -3095,10 +3099,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             # mqtt communication
             self.options['martasscantime']=dlg.martasscantimeTextCtrl.GetValue()
             # preferred output of baseline values in blv file
-            orient=dlg.basevalueRadioBox.GetStringSelection()
-            if orient == "HDZ":
-                orient = "HEZ"
-            self.options['variometerorientation'] = orient
+            #orient=dlg.basevalueRadioBox.GetStringSelection()
+            #if orient == "HDZ":
+            #    orient = "HEZ"
+            #self.options['variometerorientation'] = orient
 
             saveini(self.options)
 
@@ -6650,6 +6654,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         abstype= 'manual'   # is tested in absoluteAnalysis and not necessary
         azimuth = None
         variometerorientation=None
+        residualsign = 1
         db = None
         magrotation = None
         usedb = False
@@ -6698,6 +6703,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                         if value.lower().startswith("xyz"):
                             #print (" Selected Variometerorientation in xyz")
                             variometerorientation = "XYZ"
+                    elif el == 'fluxgateorientation':
+                        if value.lower().startswith("opp"):
+                            print (" Selected opposite fluxgate orientation for DI flux")
+                            residualsign = -1
+                        else:
+                            residualsign = 1
                     elif el == 'diannualmean':
                         annualmeans = value
                     elif el == 'diazimuth':
@@ -6741,7 +6752,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     print(" Selected basevalue output in xyz components")
                 if azimuth:
                     print ("Using aziumth from options menu: {}".format(azimuth))
-                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,absstruct=True)
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
                     # abstream... aziumth =
                 elif not f_azimuth or np.isnan(f_azimuth) or f_azimuth == 'nan' or f_azimuth == None:
                     print ("no aziumth so far - please define")
@@ -6757,19 +6768,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     dlg.Destroy()
                     if ok:
                         print ("Using given aziumth: {}".format(azimuth))
-                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,absstruct=True)
+                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
                 else:
                     # Please NOte: observer selection does not yet work #  db=self.db
                     print ("Using aziumth values from data sources")
-                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,variometerorientation=variometerorientation,absstruct=True)
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
 
             elif isinstance(self.dipathlist,list):
                 self.changeStatusbar("Processing DI data from file(s) ... please be patient")
                 if azimuth and not azimuth == '':
                     azimuth = float(azimuth)
-                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation,residualsign=residualsign)
                 else:
-                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation,residualsign=residualsign)
             else:
                 print ("Could not identify absolute data")
                 absstream = DataStream()
