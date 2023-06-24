@@ -6,6 +6,7 @@ Installation instructions can be found on the main download page.
 1.1.4 general:
 
 1.1.4 additions:
+    + added option to set fluxgate orientation for DI flux analysis in options (inverts sign)
 
 1.1.4 fixes:
     + circle selection in DI flux fixed (might lead to a 270 deg error)
