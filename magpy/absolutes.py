@@ -582,7 +582,7 @@ class AbsoluteData(object):
         meanx, meany, meanz = 0.0,0.0,0.0
         xcol, ycol, zcol, tlist = [],[],[],[]
         for idx, elem in enumerate(poslst):
-            if idx < 9:
+            if idx < 8:
                 if not isnan(elem.varx):
                     xcol.append(elem.varx)
                 if not isnan(elem.vary):
@@ -602,6 +602,7 @@ class AbsoluteData(object):
 
         if debugmode:
             print ("Declination means for xvar and yvar:", meanx, meany)
+            print (ycol)
 
         # -- check, whether inclination and declination values are present:
         # ------------------------------
@@ -634,6 +635,7 @@ class AbsoluteData(object):
                signum = 1.0
             else:
                signum = -1.0
+            #signum = -1.0 # hungarian sheet - should not be correct - tested with workshop data
 
             if hstart == 0:
                 rescorr = 0
@@ -727,8 +729,8 @@ class AbsoluteData(object):
         # see also IM technical manual (5.0.0), page 45, formula 1c:
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
-        #declast = self._corrangle(decmean + mirediff + variocorr[-1]*180.0/np.pi + deltaD)
-        decmean = self._corrangle(decmean + mirediff + np.mean(variocorr)*180.0/np.pi + deltaD)
+        # dec is used for return (fist value), meandec is used for basevalue at mean of all dec measus
+        meandec = self._corrangle(decmean + mirediff + np.mean(variocorr)*180.0/np.pi + deltaD)
 
         loggerabs.debug("_calcdec:  All (dec: %f, decmean: %f, mirediff: %f, variocorr: %f, delta D: %f and ang_fac: %f, hstart: %f): " % (dec, decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD, ang_fac, hstart))
         if debugmode:
@@ -774,7 +776,7 @@ class AbsoluteData(object):
         resultline.str2 = poslst[0].di_inst
         resultline.str3 = str(expmire)
 
-        return resultline, meanx, meany, decmean
+        return resultline, meanx, meany, meandec
 
     def _h(self, f, inc):
         return f * np.cos(inc*np.pi/(180.0))
@@ -945,6 +947,18 @@ class AbsoluteData(object):
             meanvarioy = 0.0
             meanvarioz = 0.0
         else:
+            """
+            print ("Hungarian sheet - only using F during Inc")
+            if len(variox) >= 16:
+                # Correct variant: select means for measurements during vc
+                meanvariox = np.mean(variox[8:16])
+                meanvarioy = np.mean(varioy[8:16])
+                meanvarioz = np.mean(varioz[8:16])
+                meanf = np.mean(fvlist[8:16])
+                print ("Dont do that - use original way")
+            else:
+            """
+            # Use whatever is there, should never be the case actually
             meanvariox = np.mean(variox)
             meanvarioy = np.mean(varioy)
             meanvarioz = np.mean(varioz)
@@ -988,6 +1002,7 @@ class AbsoluteData(object):
                     ppmtmp = float('nan')
                 else:
                     # correctness the following line requires that meanf is determined in the same time range as meanvario comps
+                    # other sheets only take meanf and variomeans only during the respective cycle - with constant delta F
                     ppmtmp = meanf + (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.) + (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.) + ((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf)
                     #print ("Getting variationcorrected F value for each Hv measurement:", ppmtmp)
                     #print (" consisting of ", meanf, (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.), (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.),((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf))
@@ -1012,14 +1027,6 @@ class AbsoluteData(object):
             # The signums are essential for the collimation angle calculation
             # test_di: also checks regarding correctness for different location/angles
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            if xyzorient and linestruct.dx and linestruct.dy:
-                # if xyz is selected we need to recalculate dec during inclination measurements
-                #print (linestruct.dx, linestruct.dy, poslst[k].vary, poslst[k].varx)
-                if isnan(poslst[k].varx) or isnan(linestruct.dx):
-                    varco = 0.0
-                else:
-                    varco = np.arctan((linestruct.dy+scale_y*poslst[k].vary)/(linestruct.dx+scale_x*poslst[k].varx))
-                variocorr.append(varco)
             #signum1 = np.sign(np.tan(quad*np.pi/180))
             signum1 = np.sign(-np.cos(quad*np.pi/180.0))
             signum2 = np.sign(np.sin(quad*np.pi/180.0))
@@ -1035,8 +1042,8 @@ class AbsoluteData(object):
             else:
                 signum2 = -1.0
                 signum3 = -1.0
-            #print ("INCSTART", incstart)
-            #signum2 = 1.0
+            #signum2 = 1.0 # i.e. hungarian sheet - is this correct?
+
             if incstart < 0: ###### check here
                 signum2 = -1.*signum2
             if cnt in [0,1]:
@@ -1099,6 +1106,7 @@ class AbsoluteData(object):
             cnt += 1
 
         i1list,i1tmp = [],[]
+        #print("Count it", I0list, np.std(I0list))
 
         for k in range(0,7,2):
             if usestep == 1:
@@ -1154,6 +1162,11 @@ class AbsoluteData(object):
 
         if len(ppmval) > 8: # drop value from scale measurement
             selppmval = ppmval[:8]
+        if len(xvals) > 8: # drop value from scale measurement
+            xvals = xvals[:8]
+            yvals = yvals[:8]
+            zvals = zvals[:8]
+
 
         #avcorrf =  mean(ppmval) # definitely not meanf, evetually use ppmval[0] to pick first time step
         meanf =  mean(selppmval)
@@ -1171,7 +1184,7 @@ class AbsoluteData(object):
         tmpY = self._z(tmpH, dec2)
 
         if xyzorient and debugmode:
-            print ("XYZ technique: dec={}, tmpX={}, tmpY={}".format(dec, tmpX, tmpY))
+            print ("XYZ technique: dec(starttime)={}, dec2(average hc)={}, inv(average vc)={}, tmpX={}, tmpY={}, tmpZ={}".format(dec, dec2, inc, tmpX, tmpY, tmpZ))
             print ("Control (vector sum vs mean F):", np.sqrt(tmpX**2+tmpY**2+tmpZ**2), meanf)
 
         # check for inclination error in file inc
@@ -1228,9 +1241,14 @@ class AbsoluteData(object):
                 z_adder = float('nan')
             elif xyzorient:
                 # temX,Y are determined based on F during inc cycle, variationmeans from dec cycle, not perfect but reasonable - changed for version 1.1.4 to variationcycle of inc as sometimes not reasonable
-                x_adder = tmpX-mean(xvals)
+                if debugmode:
+                    print ("Variation correction: varx={}, varz={} (determined from vc); vary={} (determined from hc)".format(np.mean(xvals),np.mean(zvals),decmeany))
+                    print (tmpX,np.mean(xvals))
+                    print (tmpY,decmeany)
+                    print (tmpZ,np.mean(zvals))
+                x_adder = tmpX-np.mean(xvals)
                 y_adder = tmpY-decmeany #mean(yvals)
-                z_adder = tmpZ-mean(zvals)
+                z_adder = tmpZ-np.mean(zvals)
                 h_adder = x_adder
             else:
                 h_adder = np.sqrt(tmpH**2 - (mean(yvals))**2) - mean(xvals)
