@@ -3003,7 +3003,7 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     #fh.close()
     array = [np.asarray(ar) for ar in array]
-    stream = DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
     if not ele.lower().startswith('xyz') and ele.lower()[:3] in ['xyz','hdz','dhz','hez','idf']:
         if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
