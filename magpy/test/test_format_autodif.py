@@ -97,6 +97,6 @@ class TestFormatReaderMK2(unittest.TestCase):
                                         alpha=0.0, deltaF=0.0,  variometerorientation = "XYZ")
 
         for i in range(0,len(absresult.ndarray[0])):
-            self.assertAlmostEqual(absresult.ndarray[12][i],ref_x0[i], delta = 2)
-            self.assertAlmostEqual(absresult.ndarray[13][i], ref_y0[i], delta= 1)
-            self.assertAlmostEqual(absresult.ndarray[14][i], ref_z0[i], delta= 1)
+            self.assertAlmostEqual(absresult.ndarray[12][i],ref_x0[i], delta = 0.12)
+            self.assertAlmostEqual(absresult.ndarray[13][i], ref_y0[i], delta= 0.1)
+            self.assertAlmostEqual(absresult.ndarray[14][i], ref_z0[i], delta= 0.1)
