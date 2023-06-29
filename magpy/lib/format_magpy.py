@@ -905,7 +905,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print("Not implemented")
             pass
 
-        array = np.asarray([np.asarray(el).astype(object) for el in array])
+        array = np.asarray([np.asarray(el,dtype=object) for el in array])
         stream.ndarray = array
 
         if len(stream.ndarray[0]) > 0:
