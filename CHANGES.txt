@@ -1,12 +1,11 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<1.1.4>, <2023-xx-xx> --
-
-1.1.4 general:
+####v<1.1.4>, <2023-07-10> --
 
 1.1.4 additions:
     + added option to set fluxgate orientation for DI flux analysis in options (inverts sign)
+    + test set for AutoDIF measurements
 
 1.1.4 fixes:
     + circle selection in DI flux fixed (might lead to a 270 deg error)
