@@ -1,12 +1,11 @@
 Metadata-Version: 2.1
 Name: geomagpy
-Version: 1.1.2
+Version: 1.1.3
 Summary: Geomagnetic analysis tools.
 Home-page: http://pypi.python.org/pypi/geomagpy/
 Author: R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec, S. Bracke
 Author-email: roman.leonhardt@zamg.ac.at
 License: LICENSE.txt
-Platform: UNKNOWN
 License-File: LICENSE.txt
 
 MagPy
@@ -1754,6 +1753,4 @@ a) Add information for ftp data transfer. This information is encrypted
 
        addcred -t transfer -c zamg -u max -p geheim 
                  -a "ftp://ftp.remote.ac.at" -l 21
-
-
 
