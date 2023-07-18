@@ -40,7 +40,10 @@ def isPYCDF(filename):
     except:
         pass
     try:
-        variables = temp.cdf_info().get('zVariables')
+        try:
+            variables = temp.cdf_info().get('zVariables')  # cdflib < 1.0.0
+        except:
+            variables = temp.cdf_info().zVariables  # cdflib >= 1.0.0
         if not 'Epoch' in variables:
             if not 'time' in variables:
                 return False
@@ -62,8 +65,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     oldtype = kwargs.get('oldtype')
     getfile = True
+    debug = kwargs.get('debug')
+    cdfvers = 0.9
 
-    print ("Reading PYCDF with CDFLIB")
+    if debug:
+        print ("Reading PYCDF with CDFLIB")
     # Check whether header information is already present
     headskip = False
     if stream.header == None:
@@ -93,10 +99,14 @@ def readPYCDF(filename, headonly=False, **kwargs):
             version = float(cdfformat.replace('MagPyCDF',''))
         except:
             version = 1.0
+        if debug:
+            print(" - read pycdf: version done")
 
         if headskip:  # TODO find out why
             for att in cdfdat.globalattsget():
                 value = cdfdat.globalattsget().get(att)
+                if debug:
+                    print(" - read pycdf: value", value)
                 try:
                     if isinstance(list(value), list):
                         if len(value) == 1:
@@ -127,13 +137,22 @@ def readPYCDF(filename, headonly=False, **kwargs):
 
         logger.info('readPYCDF: %s Format: %s ' % (filename, cdfformat))
 
-        #if debug:
-        #print ("Step2", stream.header)
+        if debug:
+            print(" - read pycdf: header done")
 
-        variables = cdfdat.cdf_info().get('zVariables')
+        # Testing for CDFLIB version using try except: version attributes are also changed in different cdflib versions, so this is equally effective
+        try:
+            variables = cdfdat.cdf_info().get('zVariables')  # cdflib < 1.0.0
+            cdfvers = 0.9
+        except:
+            variables = cdfdat.cdf_info().zVariables  # cdflib >= 1.0.0
+            cdfvers = 1.0
         timelength = 0
 
         for key in variables:
+            if debug:
+                print(" - read pycdf: reading key", key)
+
             if key.find('time')>=0 or key == 'Epoch':
                 # Time column identified
                 if not key == 'sectime':
@@ -141,7 +160,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 else:
                     ind = KEYLIST.index('sectime')
                 try:
-                    ttdesc = cdfdat.varinq(key).get('Data_Type_Description')
+                    if cdfvers<1.0:
+                        ttdesc = cdfdat.varinq(key).get('Data_Type_Description')
+                    else:
+                        ttdesc = cdfdat.varinq(key).Data_Type_Description
                     if not ttdesc == 'CDF_TIME_TT2000':
                         print ("WARNING: Time column is not CDF_TIME_TT2000 (found {})".format(ttdesc))
                     col = cdfdat.varget(key)
@@ -156,7 +178,12 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 ind = KEYLIST.index(key)
                 addhead = False
                 timelength = len(array[0])
-                ttdesc = cdfdat.varinq(key).get('Data_Type_Description')
+                if debug:
+                    print(" - read pycdf: reading type of key", key)
+                if cdfvers < 1.0:
+                    ttdesc = cdfdat.varinq(key).get('Data_Type_Description')
+                else:
+                    ttdesc = cdfdat.varinq(key).Data_Type_Description
                 col = cdfdat.varget(key)
 
                 if not len(col) == timelength and len(col) == 1:
@@ -167,21 +194,29 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 else:
                     array[ind] = np.asarray(col)
                     addhead = True
-                #print (cdfdat.varattsget(key))
+                if debug:
+                    print(" - read pycdf: attsget", key)
                 if addhead:
-                    vname = cdfdat.varattsget(key).get('name','')
-                    if not vname:
-                        vname = cdfdat.varattsget(key).get('FIELDNAM','')
-                    vunit = cdfdat.varattsget(key).get('units','')
-                    if not vunit:
-                        vunit = cdfdat.varattsget(key).get('UNITS','')
+                    if cdfvers > 0:
+                        vname = cdfdat.varattsget(key).get('name','')
+                        if not vname:
+                            vname = cdfdat.varattsget(key).get('FIELDNAM','')
+                        vunit = cdfdat.varattsget(key).get('units','')
+                        if not vunit:
+                            vunit = cdfdat.varattsget(key).get('UNITS','')
                     stream.header['col-'+key.lower()] = vname
                     stream.header['unit-col-'+key.lower()] = vunit
 
-        cdfdat.close()
+            if debug:
+                print(" - read pycdf: done")
+
+        if cdfvers < 1.0:
+            cdfdat.close()
         del cdfdat
 
-    #print (stream.header)
+    if debug:
+        print(" - read pycdf: returning")
+
     return DataStream([LineStruct()], stream.header,np.asarray(array,dtype=object))
 
 
@@ -218,6 +253,8 @@ def writePYCDF(datastream, filename, **kwargs):
     skipcompression = kwargs.get('skipcompression')
     compression = kwargs.get('compression')
     version = '1.2'
+    cdfvers = 0.9
+    debug = False
 
     if compression == 0: ## temporary solution until all refs to skipcomression are eliminated
         skipcompression = True

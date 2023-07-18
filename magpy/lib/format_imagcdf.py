@@ -36,6 +36,9 @@ def isIMAGCDF(filename):
         return False
     try:
         form = temp.globalattsget().get('FormatDescription')
+        if isinstance(form, list):
+            #cdflib 1.0.x
+            form = form[0]
         if not form.startswith('INTERMAGNET'):
             return False
     except:
@@ -60,6 +63,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     tllist = []
     referencetimecol = None
     indexarray = np.asarray([])
+    cdfversion=0.9
 
     cdfdat = cdflib.CDF(filename)
 
@@ -83,9 +87,12 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             attname = HEADTRANSLATE[att]
         headers[attname] = value
 
+    formatvers = cdfdat.globalattsget().get('FormatVersion')
+    if isinstance(formatvers, list):
+        formatvers = formatvers[0]
     #Some specials:
     headers['StationIAGAcode'] = headers.get('StationID')
-    headers['DataFormat'] = headers.get('DataFormat') + '; ' + cdfdat.globalattsget().get('FormatVersion')
+    headers['DataFormat'] = headers.get('DataFormat') + '; ' + formatvers
 
     try:
         try:
@@ -106,12 +113,29 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     if debug:
         logger.info("readIMAGCDF: FOUND IMAGCDF file created with version {}".format(headers.get('DataFormat')))
+        print (" - readIMAGCDF: header almost done")
 
-    headers['DataLeapSecondUpdated'] = cdfdat.cdf_info().get('LeapSecondUpdated')
-    if debug:
-        print ("LEAP seconds updated:", cdfdat.cdf_info().get('LeapSecondUpdated'))
     # Get all available Variables - ImagCDF usually uses only zVariables
-    datalist = cdfdat.cdf_info().get('zVariables')
+    try:
+        datalist = cdfdat.cdf_info().get('zVariables')
+        cdfversion = 0.9
+    except:
+        datalist = cdfdat.cdf_info().zVariables
+        cdfversion = 1.0
+    if debug:
+        print (" - cdfversion:",cdfversion)
+    if cdfversion < 1.0:
+        lsu = cdfdat.cdf_info().get('LeapSecondUpdated')
+        if not lsu:
+            lsu = cdfdat.cdf_info().get('LeapSecondUpdate')
+    else:
+        try:
+            lsu = cdfdat.cdf_info().LeapSecondUpdate
+        except:
+            lsu = ""
+    headers['DataLeapSecondUpdated'] = lsu
+    if debug:
+        print ("LEAP seconds updated:", lsu)
 
     #  IAGA code
     if headers.get('SensorID','') == '':
@@ -121,7 +145,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         except:
             pass
 
-
+    if debug:
+        print (" - readIMAGCDF: header done")
     # #########################################################
     # 1. Now getting individual data and check time columns
     # #########################################################
@@ -130,7 +155,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if elem.endswith('Times') and not elem.startswith('Flag'):
             try:
                 #if elem in ['GeomagneticVectorTimes','GeomagneticTimes','GeomagneticScalarTimes']:
-                tl = int(cdfdat.varinq(elem).get('Last_Rec'))+1
+                if cdfversion<1.0:
+                    larec = cdfdat.varinq(elem).get('Last_Rec')
+                else:
+                    larec = cdfdat.varinq(elem).Last_Rec
+                tl = int(larec)+1
                 tllist.append([tl,elem])
             except:
                 pass
@@ -196,6 +225,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     else:
         #"Single time axis found in file"
         newdatalist.append(['time',tllist[0][1]])
+
 
     def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion):
         if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
@@ -274,7 +304,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     index = 0
     for elem in newdatalist:
         if elem[0] == 'time':
-            ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
+            if cdfversion < 1.0:
+                ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
+            else:
+                ttdesc = cdfdat.varinq(elem[1]).Data_Type_Description
             col = cdfdat.varget(elem[1])
             try:
                 # cdflib version (<0.3.19... Problem: cdflib.cdfepoch.getVersion() does not change, although to_datetime is different and unixtime as well)
@@ -382,7 +415,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     try:
         leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
     except:
-        leapsecondlastupdate = ""
+        try:
+            leapsecondlastupdate = cdflib.cdfepoch.LTS[-1]
+            leapsecondlastupdate = datetime(leapsecondlastupdate[0],leapsecondlastupdate[1],leapsecondlastupdate[2])
+        except:
+            leapsecondlastupdate = ""
+    if debug:
+        print ("LastLeapSecond", leapsecondlastupdate)
 
     if not skipcompression:
         try:
@@ -397,7 +436,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         filename = testname
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = read(path_or_url=filename)
+            exst = read(filename)
             datastream = joinStreams(exst,datastream)
             os.remove(filename)
             try:
@@ -405,24 +444,24 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             except:
                 mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
         elif mode == 'replace' or mode == 'append': # replace existing inputs
-            exst = read(path_or_url=filename)
-            datastream = joinStreams(datastream,exst)
+            exst = read(filename)
+            datastream = joinStreams(datastream, exst)
             os.remove(filename)
             try:
-                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+                mycdf = cdflib.cdfwrite.CDF(filename, cdf_spec=main_cdf_spec)
             except:
                 mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
         else: # overwrite mode
             os.remove(filename)
             try:
-                mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+                mycdf = cdflib.cdfwrite.CDF(filename, cdf_spec=main_cdf_spec)
             except:
                 mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
     else:
         try:
-            mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
+            mycdf = cdflib.cdfwrite.CDF(filename, cdf_spec=main_cdf_spec)
         except:
-            mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
+            mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
 
     keylst = datastream._get_key_headers()
     tmpkeylst = ['time']
@@ -483,7 +522,20 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         pubdate = cdflib.cdfepoch.compute_tt2000([dat])
     else:
         pubdate = cdflib.cdfepoch.compute_tt2000([tt(datetime.utcnow())])
+    try:
+        pubdate = float(pubdate)
+    except:
+        pubdate = ""
     globalAttrs['PublicationDate'] = { 0 : pubdate }
+
+    # check for leapseconds
+    try:
+        leapex = globalAttrs.get("LeapSecondUpdated").get(0)
+        if leapsecondlastupdate and leapex in ["","None"]:
+            lslu = datetime.strftime(leapsecondlastupdate,"%Y%m%d")
+            globalAttrs['LeapSecondUpdated'] = {0: lslu}
+    except:
+        pass
 
     if not headers.get('DataSource','')  == '':
         if headers.get('DataSource','') in ['INTERMAGNET', 'WDC']:
@@ -627,7 +679,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             ftest = ftest.get_gaps()
 
         if fsamprate-0.1 < mainsamprate and mainsamprate < fsamprate+0.1:
-            print ("HERE")
+            print ("HERE - usescalartimes = false")
             #Samplingrate of F column and Vector are similar
             useScalarTimes=False
         else:
@@ -639,6 +691,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
     ## writing Global header data
+    print (" Writing ", globalAttrs)
     mycdf.write_globalattrs(globalAttrs)
 
     ttest = DataStream()
@@ -649,7 +702,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         ttest = ttest._drop_nans('t1')
         tsamprate = ttest.samplingrate()
         ttest = ttest.get_gaps()
-        print ("t lenght", ttest.length())
+        #print ("t lenght", ttest.length())
 
         if tsamprate-0.1 < mainsamprate and  mainsamprate < tsamprate+0.1:
             #Samplingrate of t1/t2 column and Vector are similar

@@ -1897,6 +1897,8 @@ CALLED BY:
         """
         Check the date/time input and returns a datetime object if valid:
 
+        IMPORTANT: testtime will convert datetime64 to datetime objects. One might change that in the future
+
         ! Use UTC times !
 
         - accepted are the following inputs:
@@ -1941,6 +1943,11 @@ CALLED BY:
                                         timeobj = num2date(float(time)).replace(tzinfo=None)
                                     except:
                                         raise TypeError
+        elif isinstance(time, datetime64):
+            unix_epoch = np.datetime64(0, 's')
+            one_second = np.timedelta64(1, 's')
+            seconds_since_epoch = (time - unix_epoch) / one_second
+            timeobj = datetime.utcfromtimestamp(seconds_since_epoch)
         elif not isinstance(time, datetime):
             raise TypeError
         else:
@@ -5542,8 +5549,8 @@ CALLED BY:
                     array[flagind][i] = ''.join(flagls)
                     array[commentind][i] = comment
 
-            self.ndarray[flagind] = np.array(array[flagind], dtype=np.object)
-            self.ndarray[commentind] = np.array(array[commentind], dtype=np.object)
+            self.ndarray[flagind] = np.array(array[flagind], dtype=object)
+            self.ndarray[commentind] = np.array(array[commentind], dtype=object)
 
             # up to 0.3.98 the following code was used (~10 times slower)
             # further significant speed up requires some structural changes:

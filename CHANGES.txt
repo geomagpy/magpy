@@ -8,7 +8,7 @@ Installation instructions can be found on the main download page.
 1.1.6 additions:
 
 1.1.6 fixes:
-
+    + updated cdf format libraries to correctly use cdflib > 1.0.0
 
 ####v<1.1.5>, <2023-07-10> --
 
