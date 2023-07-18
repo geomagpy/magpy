@@ -9,6 +9,8 @@ Installation instructions can be found on the main download page.
 
 1.1.6 fixes:
     + updated cdf format libraries to correctly use cdflib > 1.0.0
+    + fixed minor issues in test routines
+    + fixed issues for python 3.1x compatibility
 
 ####v<1.1.5>, <2023-07-10> --
 
