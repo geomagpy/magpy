@@ -13454,7 +13454,7 @@ def LeapTime(t):
     if len(frag) < 6:  # IAGA string has only millisecond resolution:
         frag = frag.ljust(6, '0')
     nofrag_dt = time.strptime(nofrag, "%Y-%m-%dT%H:%M:%S")
-    ts = datetime(*nofrag_dt[:5]+(min(nofrag_dt[5], 59),))
+    ts = datetime(*nofrag_dt[:5]+(min([nofrag_dt[5], 59]),))
     #ts = datetime.fromtimestamp(time.mktime(nofrag_dt))
     dt = ts.replace(microsecond=int(frag))
     return dt
