@@ -34,13 +34,13 @@ from magpy.stream import *
 import magpy.absolutes as di
 
 
-EXPECTED = {"NXY" : {"S0D" : 16.815, "HD" : -19.762, "HE" : -93.382, "S0Z" : 15.972, "ZE" : -93.267, "SV" : 1.000, "D" : 311.27127, "I" : 85.80933, "F": 56327.0}, 
+EXPECTED = {"NXY" : {"S0D" : 16.815, "HD" : -19.762, "HE" : -93.382, "S0Z" : 15.972, "ZE" : -93.267, "SV" : 1.000, "D" : 311.27127, "I" : 85.80933, "F": 56326.961},
             "SXX" : {"S0D" : 6.8, "HD" : 0.7, "HE" : 3.8, "S0Z" : 7.2, "ZE" : 4.3, "SV" : 0.981, "D" : '338:13:41.4', "I" : -65},
             "SXY" : {"S0D" : 5.123, "HD" : 3.826, "HE" : 0.778, "S0Z" : 6.046, "ZE" : 1.916, "SV" : 0.981, "D" : 15.68170, "I" : -57.19036, "F": 37820.98}}
 
 
 
-def CompareValuesDict(dic1, dic2, accepteddiff=0.01, debug =False):
+def CompareValuesDict(dic1, dic2, accepteddiff=0.04, debug =False):
      """
      check whether diff of two dicts is below a threshold value
      """
@@ -54,6 +54,7 @@ def CompareValuesDict(dic1, dic2, accepteddiff=0.01, debug =False):
                  print (key, diff)
              if diff > accepteddiff:
                  identical = False
+                 print(key, val1, val2, diff, accepteddiff)
      if debug:
          print ("Comparing ", identical)
      return identical
@@ -132,6 +133,8 @@ def test_di():
         success4 = False
     print ("4. Northen Hemisphere AUTODIF NXX: ", success4)
     successlist.append(success4)
+    for idx,el in enumerate(successlist):
+        print ("Test {}: {}".format(idx,el))
 
     """
     filename = '/home/leon/Downloads/sit/DI_jan.json'

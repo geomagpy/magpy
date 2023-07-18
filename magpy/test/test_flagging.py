@@ -3,7 +3,7 @@
 MagPy - Basic flagging tests including durations  
 """
 from magpy.stream import *
-import magpy.core.flags as flg
+import magpy.core.flagging as flg
 #import flags as flg
 import datetime
 
@@ -45,12 +45,10 @@ def test_union():
        return True
    print("Union test problem - expected result not obtained")
    return False
-   
 
-   
 # test 1
 try:
-    succ = test_union(fl)
+    succ = test_union()
     print("Union test successfully finished")
 except:
     print("Union test failed")
