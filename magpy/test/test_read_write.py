@@ -10,6 +10,7 @@ local = True
 if local:
     import sys
     sys.path.insert(1,'/home/leon/Software/magpy/')
+    sys.path.insert(1,'/Users/leon/Software/magpy/')
 
 from magpy.stream import *   
 from magpy.database import *   

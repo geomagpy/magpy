@@ -99,7 +99,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             pubdate = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,headers.get('DataPublicationDate'))
         except TypeError:
             pubdate = cdflib.cdfepoch.to_datetime(headers.get('DataPublicationDate'))
-        headers['DataPublicationDate'] = pubdate[0]
+        try:
+            headers['DataPublicationDate'] = DataStream()._testtime(pubdate[0])
+        except:
+            headers['DataPublicationDate'] = pubdate[0]
         #pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
         #headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0])
     except:
@@ -522,10 +525,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         pubdate = cdflib.cdfepoch.compute_tt2000([dat])
     else:
         pubdate = cdflib.cdfepoch.compute_tt2000([tt(datetime.utcnow())])
-    try:
-        pubdate = float(pubdate)
-    except:
-        pubdate = ""
+    if isinstance(pubdate,np.ndarray):
+        pubdate = pubdate.item()
     globalAttrs['PublicationDate'] = { 0 : pubdate }
 
     # check for leapseconds
@@ -679,7 +680,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             ftest = ftest.get_gaps()
 
         if fsamprate-0.1 < mainsamprate and mainsamprate < fsamprate+0.1:
-            print ("HERE - usescalartimes = false")
             #Samplingrate of F column and Vector are similar
             useScalarTimes=False
         else:
@@ -691,7 +691,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
     ## writing Global header data
-    print (" Writing ", globalAttrs)
+    #print (" Writing ", globalAttrs)
     mycdf.write_globalattrs(globalAttrs)
 
     ttest = DataStream()

@@ -12349,7 +12349,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # Sampling rates
     sampratea = sa.samplingrate()
     samprateb = sb.samplingrate()
-    minsamprate = min(sampratea,samprateb)
+    minsamprate = min([sampratea,samprateb])
 
     if ndtype:
         timea = sa.ndarray[0]
