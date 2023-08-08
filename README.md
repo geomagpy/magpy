@@ -69,17 +69,7 @@ Then copy this file to the systems application folder:
 
         sudo cp xmagpy.desktop /usr/share/applications/
 
-
-
-### 1.2 MacOs installation
-
-#### 1.2.1 Install a python3 interpreter
-
-  - we recommend [Miniconda] or [Anaconda]
-  - see e.g. https://docs.continuum.io/anaconda/install for more details
-  - before continuiung, test whether python is working. Open a terminal and run python
-
-#### 1.2.2 Install MagPy within an anaconda environment
+### 1.1.4 Installation within a Conda or other environment
 
 Open a terminal and create a python environment with packages for magpy which supports wxpython:
 
@@ -96,6 +86,19 @@ Install some basic packages required for MagPy:
 and MagPy:
 
         $ pip install geomagpy
+
+
+### 1.2 MacOs installation
+
+#### 1.2.1 Install a python3 interpreter
+
+  - we recommend [Miniconda] or [Anaconda]
+  - see e.g. https://docs.continuum.io/anaconda/install for more details
+  - before continuiung, test whether python is working. Open a terminal and run python
+
+#### 1.2.2 Install MagPy within an anaconda environment
+
+Follow the instructions of 1.1.4.
 
 You can now run XMagPy from the terminal by using the following command
 
@@ -147,24 +150,47 @@ Open Finder and search for your script "xmagpy". Copy it to the desktop. To chan
   - to run XMagPy: use xmagpy from the WinPython command promt.
 
 
+### 1.4 Jupyter Notebook installation and use
 
-### 1.4 Installation instructions for Python 2.7
+Create an appropriate environment
+
+        $ conda create -n jnmagpy notebook scipy numpy matplotlib
+
+Switch into this environment:
+
+        $ conda activate jnmagpy
+
+Install magpy:
+
+        $ pip install geomagpy
+
+Run jupyter notebook:
+
+        $ jupyter notebook
+
+Import magpy and select appropriate backend:
+
+        > from magpy.stream import *
+        > matplotlib.use("tkagg")
+        > %matplotlib inline
+
+### 1.5 Installation instructions for Python 2.7
 
   - has been moved to the appendix 5.1
 
 
-### 1.5 Platform independent container - Docker
+### 1.6 Platform independent container - Docker
 
-#### 1.5.1 Install [Docker] (toolbox) on your operating system
+#### 1.6.1 Install [Docker] (toolbox) on your operating system
      - https://docs.docker.com/engine/installation/
 
-#### 1.5.2 Get the MagPy Image
+#### 1.6.2 Get the MagPy Image
      - open a docker shell
 
             >>> docker pull geomagpy/magpy:latest
             >>> docker run -d --name magpy -p 8000:8000 geomagpy/magpy:latest
 
-#### 1.5.3 Open a browser
+#### 1.6.3 Open a browser
      - open address http://localhost:8000 (or http://"IP of your VM":8000)
      - NEW: first time access might require a token or passwd
 
@@ -182,7 +208,7 @@ Open Finder and search for your script "xmagpy". Copy it to the desktop. To chan
 
 
 
-### 1.6 Install from source
+### 1.7 Install from source
 
 Requirements:
   - Python 2.7, 3.x (recommended is >=3.6)
