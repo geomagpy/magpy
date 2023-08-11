@@ -714,7 +714,6 @@ def readPYBIN(filename, headonly=False, **kwargs):
     else:
         headskip = True
 
-    print ("HERE")
     if debug:
         print ("PYBIN: reading data ...")
 
@@ -907,7 +906,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print("Not implemented")
             pass
 
-        stream.array = np.asarray([np.asarray(el,dtype=object) for el in array],dtype=object)
+        array = [np.asarray(el,dtype=object) for el in array]
 
         if len(stream.ndarray[0]) > 0:
             logger.debug("readPYBIN: Imported bin as ndarray")
@@ -916,8 +915,10 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
     #t2 = datetime.utcnow()
     #print ("Duration:", (t2-t1).total_seconds())
+    stream.header["DataFormat"] = "PYBIN"
 
-    return stream
+    return DataStream([LineStruct()], stream.header, np.asarray(array,dtype=object))
+
 
 
 def writePYSTR(datastream, filename, **kwargs):

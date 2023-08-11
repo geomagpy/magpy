@@ -260,7 +260,7 @@ def readWDC(filename, headonly=False, **kwargs):
     headers['StationIAGAcode'] = code
     headers['StationID'] = code
     headers['SensorID'] = code.upper()+'hou_4_0001'
-    array = np.asarray([np.asarray(el) for el in array])
+    array = np.asarray([np.asarray(el,dtype=object) for el in array],dtype=object)
     if oldformat:
         print ("readWDC: found old WDC format - assuming 20th century")
 

@@ -361,6 +361,8 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     for key in keytypes:
         array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)],dtype=object)
 
+    headers["DataFormat"] = "NOAATXT"
+
     return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
     #return stream

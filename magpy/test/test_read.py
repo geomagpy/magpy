@@ -54,6 +54,7 @@ def walk_dir(directory_path, filename, date, dateformat,excludelist=[]):
 
 def read_test(path,excludelist=[],debug=False):
     faillist = []
+    succlist = []
     l = walk_dir(path,"","","",excludelist=excludelist)
     print ("----------------------------------------------")
     for p in l:
@@ -63,16 +64,19 @@ def read_test(path,excludelist=[],debug=False):
         t2= datetime.utcnow()
         if data.length()[0] > 0:
             print (" -> success for {} in {} seconds".format(data.header.get("DataFormat"), (t2-t1).total_seconds()))
+            succlist.append(data.header.get("DataFormat"))
         else:
             print (" -> !! failed")
             faillist.append(p)
+    print ("----------------------------------------------")
+    print (list(set(succlist)))
     print ("----------------------------------------------")
     print (faillist)
 
 def main(argv):
     version = "1.0.0"
     path = ''
-    exclude = ["WIC.txt","/.",".raw",".py","readme","CALY","example6"]
+    exclude = ["WIC.txt","/.",".raw",".py","readme","CALY","testflags","example6",".BIN",".bin"]
     debug = False
     filelist = []
 
