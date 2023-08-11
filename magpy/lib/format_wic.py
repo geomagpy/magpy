@@ -217,7 +217,6 @@ def readRMRCS(filename, headonly=False, **kwargs):
     getfile = True
 
     debug = kwargs.get('debug')
-    debug = True
     if debug:
         print ("RCS: found data from Richards Perl script")
 
@@ -306,6 +305,7 @@ def readRMRCS(filename, headonly=False, **kwargs):
         headers["SensorSerialNum"] = "20160114"
         headers["SensorRevision"] = "0001"
         headers["SensorModule"] = "RCS"
+        headers["DataFormat"] = "RCS-Perl"
         headers["SensorGroup"] = "environment"
         headers["SensorDataLogger"] = "{}".format(fieldpoint)
     else:

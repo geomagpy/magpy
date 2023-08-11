@@ -53,6 +53,7 @@ def walk_dir(directory_path, filename, date, dateformat,excludelist=[]):
 
 
 def read_test(path,excludelist=[],debug=False):
+    faillist = []
     l = walk_dir(path,"","","",excludelist=excludelist)
     print ("----------------------------------------------")
     for p in l:
@@ -64,6 +65,9 @@ def read_test(path,excludelist=[],debug=False):
             print (" -> success for {} in {} seconds".format(data.header.get("DataFormat"), (t2-t1).total_seconds()))
         else:
             print (" -> !! failed")
+            faillist.append(p)
+    print ("----------------------------------------------")
+    print (faillist)
 
 def main(argv):
     version = "1.0.0"
