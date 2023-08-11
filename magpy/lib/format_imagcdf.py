@@ -198,9 +198,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                         pos = idx
             else:
                 logger.warning("readIMAGCDF: Time columns of different length. Choosing longest as basis")
-                timecol = max(tllist)[1]
+                timecol = tllist[tl.index(max(tl))][1]
             if not timecol:
-                timecol = max(tllist)[1]
+                timecol = tllist[tl.index(max(tl))][1]
             newdatalist.append(['time',timecol])
             if debug:
                 print (" selected primary time column: {}".format(timecol))

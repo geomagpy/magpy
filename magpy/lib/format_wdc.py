@@ -260,11 +260,12 @@ def readWDC(filename, headonly=False, **kwargs):
     headers['StationIAGAcode'] = code
     headers['StationID'] = code
     headers['SensorID'] = code.upper()+'hou_4_0001'
-    array = np.asarray([np.asarray(el,dtype=object) for el in array],dtype=object)
+    array = [np.asarray(el, dtype=object) for el in array]
+
     if oldformat:
         print ("readWDC: found old WDC format - assuming 20th century")
 
-    stream = DataStream([LineStruct()], headers, array)
+    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
     return stream
 
