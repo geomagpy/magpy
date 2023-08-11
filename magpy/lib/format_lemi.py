@@ -203,11 +203,11 @@ def readLEMIHF(filename, headonly=False, **kwargs):
 
     for idx,ar in enumerate(array):
         if len(ar) > 0:
-            array[idx] = np.asarray(array[idx])
+            array[idx] = np.asarray(array[idx],dtype=object)
 
     headers['DataFormat'] = 'Lviv-LEMI-Buffer'
 
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
 
 def readLEMIBIN(filename, headonly=False, **kwargs):
@@ -419,11 +419,11 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
 
     for idx,ar in enumerate(array):
         if len(ar) > 0:
-            array[idx] = np.asarray(array[idx]).astype(object)
+            array[idx] = np.asarray(array[idx],dtype=object)
 
     stream.header['DataFormat'] = 'Lviv-LEMI'
 
-    return DataStream([LineStruct()], stream.header, np.asarray(array))
+    return DataStream([LineStruct()], stream.header, np.asarray(array,dtype=object))
 
 
 
@@ -523,9 +523,9 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     #print "Finished file reading of %s" % filename
     for idx,ar in enumerate(array):
         if len(ar) > 0:
-            array[idx] = np.asarray(array[idx]).astype(object)
+            array[idx] = np.asarray(array[idx],dtype=object)
 
     headers['DataFormat'] = 'Lviv-LEMI-old'
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
