@@ -164,6 +164,10 @@ Install magpy:
 
         $ pip install geomagpy
 
+        or
+
+        $ python -m pip install geomagpy
+
 Run jupyter notebook:
 
         $ jupyter notebook
