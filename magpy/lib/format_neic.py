@@ -27,7 +27,6 @@ def isNEIC(filename):
     except:
         return False
 
-    print ("Found NEIC data")
     return True
 
 
@@ -113,5 +112,5 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     #headers['DataTerms'] = ''
     headers['DataReferences'] = 'http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv'
 
-    return DataStream([LineStruct()], headers, np.asarray(array).astype(object))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 

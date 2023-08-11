@@ -359,9 +359,9 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         keytypes = ['time', 'str1', 'z', 'f', 'var1', 'var2', 'var3', 'var4', 'var5']
 
     for key in keytypes:
-        array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
+        array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)],dtype=object)
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
 
     #return stream
     #return DataStream(stream, headers)

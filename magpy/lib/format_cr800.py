@@ -132,7 +132,10 @@ def readRADON(filename, headonly=False, **kwargs):
         array[tpos] = np.asarray(array[tpos]).astype(object)
         array[varpos] = np.asarray(array[varpos]).astype(object)
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    headers['DataFormat'] = 'CR800RADON'
+    headers['DataSource'] = 'Radon data from the Conrad Observatory'
+
+    return DataStream([LineStruct()], headers, np.asarray(array, dtype=object))
 
 
 def readCR800(filename, headonly=False, **kwargs):
