@@ -309,7 +309,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
                 tester = float('nan')
             else:
                 tester = '-'
-            array[idx] = np.asarray(array[idx]).astype(object)
+            array[idx] = np.asarray(array[idx],dtype=object)
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
@@ -714,8 +714,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
     else:
         headskip = True
 
+    print ("HERE")
     if debug:
-        print ("PYBIN: reading data here")
+        print ("PYBIN: reading data ...")
 
     theday = extractDateFromString(filename)
     try:
@@ -730,6 +731,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
         getfile = True
     logbaddata = False
 
+    #t1 = datetime.utcnow()
     if getfile:
         logger.info("readPYBIN: %s Format: PYBIN" % filename)
         if debug:
@@ -905,13 +907,15 @@ def readPYBIN(filename, headonly=False, **kwargs):
             print("Not implemented")
             pass
 
-        array = np.asarray([np.asarray(el,dtype=object) for el in array])
-        stream.ndarray = array
+        stream.array = np.asarray([np.asarray(el,dtype=object) for el in array],dtype=object)
 
         if len(stream.ndarray[0]) > 0:
             logger.debug("readPYBIN: Imported bin as ndarray")
             stream.container = [LineStruct()]
             # if unequal lengths are found, then usually txt and bin files are loaded together
+
+    #t2 = datetime.utcnow()
+    #print ("Duration:", (t2-t1).total_seconds())
 
     return stream
 
