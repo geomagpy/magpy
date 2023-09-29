@@ -100,9 +100,10 @@ def readIONO(filename, headonly, **kwargs):
     qFile.close()
 
     # Add some Sensor specific header information
+    headers['DataFormat'] = 'IONO'
     headers['SensorDescription'] = 'Ionometer IM806'
     headers['SensorID'] = '{}_{}_0001'.format(headers.get('SensorName','None'),headers.get('SensorSerialNum','12345'))
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array))    
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
  

@@ -220,7 +220,7 @@ def readGDASA1(filename, headonly=False, **kwargs):
     if linestruct:
         return stream
     else:
-        return DataStream([LineStruct()], stream.header, np.asarray(array))
+        return DataStream([LineStruct()], stream.header, np.asarray(array,dtype=object))
 
 
 def readGDASB1(filename, headonly=False, **kwargs):
@@ -296,4 +296,4 @@ def readGDASB1(filename, headonly=False, **kwargs):
         headers = stream.header
         stream =[]
 
-    return DataStream(stream, headers,np.asarray(array))
+    return DataStream(stream, headers,np.asarray(array,dtype=object))

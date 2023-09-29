@@ -1000,7 +1000,7 @@ def readGRAVSG(filename, headonly=False, **kwargs):
             #    continue
             elif line.startswith('[TSF-file]'):
                 contline = line.split()
-                stream.header['DataFormat'] = contline[1]
+                stream.header['DataFormat'] = "GRAVSG{}".format(contline[1])
             elif line.startswith('[TIMEFORMAT]'):
                 contline = line.split()
                 val = contline[1]
@@ -1150,7 +1150,7 @@ def readGRAVSG(filename, headonly=False, **kwargs):
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array))
+    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
 
     fh.close()
     return stream

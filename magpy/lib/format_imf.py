@@ -1873,12 +1873,13 @@ def readIMF(filename, headonly=False, **kwargs):
                         #stream.add(row)
                     except:
                         logging.error('format_imf: problem with dataformat - check block header')
-                        return DataStream([LineStruct()], headers, np.asarray([np.asarray(el) for el in array]))
+                        return DataStream([LineStruct()], headers, np.asarray([np.asarray(el) for el in array],dtype=object))
                 minute = minute + 2
 
     fh.close()
 
-    array = np.asarray([np.asarray(el) for el in array])
+    headers['DataFormat'] = 'IMF'
+    array = np.asarray([np.asarray(el) for el in array],dtype=object)
     stream = [LineStruct()]
     return DataStream(stream, headers, array)
 

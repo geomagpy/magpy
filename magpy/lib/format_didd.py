@@ -148,7 +148,7 @@ def readDIDD(filename, headonly=False, **kwargs):
 
     stream = [LineStruct()]
 
-    return DataStream(stream, headers, np.asarray(array))
+    return DataStream(stream, headers, np.asarray(array,dtype=object))
 
 
 

@@ -229,4 +229,4 @@ def readPOSPMB(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'PMB'
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))

@@ -440,4 +440,4 @@ def readGSM19(filename, headonly=False, **kwargs):
 
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
