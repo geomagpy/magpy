@@ -520,6 +520,18 @@ class FrqFilter:
                             self.despikeperc = value
                             if( not isinstance( self.despikeperc, float)):
                                 raise self.MyException( 'Despikeperc is no float...')
+                            if( self.debug):
+                                print( 'self.despikeperc in __init__ routine: {}'.format( self.despikeperc))
+                                #sys.exit()
+            #print( 'np.shape( self.data)', np.shape( self.data))
+            #sys.exit()
+            #plt.plot( self.data.flatten(), alpha = 0.3, label = 'self.data')
+            #plt.plot( np.gradient( self.data, axis = self.axis).flatten(), alpha = 0.3, label = 'gradient of self.data in self.axis column')
+            #plt.show()
+            #print( 'np.shape( np.gradient( self.data, axis = self.axis))', np.shape( np.gradient( self.data, axis = self.axis)))
+            #print( 'np.shape( np.nanstd( np.gradient( self.data, axis = self.axis), axis = self.axis) )', np.shape( np.nanstd( np.gradient( self.data, axis = self.axis), axis = self.axis) ))
+            #print( 'np.nanstd( np.gradient( self.data, axis = self.axis), axis = self.axis)', np.nanstd( np.gradient( self.data, axis = self.axis), axis = self.axis))
+            #sys.exit()
             self.lvl = 3.0 * np.nanstd( np.gradient( self.data, axis = self.axis), axis = self.axis) 
             self.rplval = 'mean'
             # checking for special DeSpiking procedure parameters
@@ -744,6 +756,7 @@ class FrqFilter:
     
     
     def DeSpike( self, **kwargs):
+        #self.debug = True
         print('\nCalling despiking data...')
         try:
             for item, value in kwargs.items():
@@ -774,10 +787,10 @@ class FrqFilter:
                     else:
                         if( self.despikeperc >= 1.0):
                             raise self.MyException( 'Despikeperc has to be below 1.0...')
-        #except:
-        #    pass
-        #try:
-        #    for item, value in kwargs.items():
+                    if( self.debug):
+                        print( 'self.despikeperc in DeSpike routine: {}'.format( self.despikeperc))
+                        #sys.exit()
+                        
                 if( item == 'data'):
                     """
                     
@@ -815,8 +828,12 @@ class FrqFilter:
         try:
             rplval = self.rplval
             lvl = self.lvl
+            if( self.debug):
+                print( 'lvl got from self.lvl')
         except Exception as ex:
             raise self.MyException( ex)
+        
+        
         #gc.enable()
         ###########################
         # REPLACE SPIKES WITH DEFINED VALUES FOR VALUES ABOVE lvl
@@ -834,20 +851,40 @@ class FrqFilter:
         N, M = np.shape( self.data)
         if( self.debug):
             print('shape of self.data is: {}x{}'.format( N, M))
+            print( 'rplval', rplval)
+            print( 'lvl', lvl)
+            #sys.exit()
         
+                  
         Data = np.diff( np.diff( self.data, axis = self.axis), axis = self.axis)
+        
         #print( 'np.shape( Data)', np.shape( Data))
         if( self.axis == 0):
             #Data = self.data.T
-            if( debug):
+            if( self.debug):
                 print('shape of Data after np.diff is: {}'.format( np.shape( Data)))
-            if( debug):
+            if( self.debug):
                 print('self.axis == 0 shape of Data after np.diff is: {}'.format( np.shape( Data)))
-            Data = np.hstack( ( Data.T, Data[-1,:])).T
-            Data = np.hstack( ( Data[0,:], Data.T)).T
+                print( 'shape of Data[-1,:] {}'.format( np.shape( Data[-1,:])))
+                print( 'shape of Data {}'.format( np.shape( Data)))
+                print( 'np.shape( np.atleast_2d( Data[-1,:])) {}'.format( np.shape( np.atleast_2d( Data[-1,:]))))
+                print( 'np.atleast_2d( Data[-1,:]) {}'.format( np.atleast_2d( Data[-1,:])))
+                print( 'np.atleast_2d( Data[0,:]) {}'.format( np.atleast_2d( Data[0,:])))
+            
+            #Data = np.hstack( ( Data.T, Data[-1,:]))
+            Data = np.vstack( ( Data, np.atleast_2d( Data[-1,:])))
+            if( self.debug):
+                print('shape of Data after np.hstack( ( Data, Data[-1,:])) is: {}'.format( np.shape( Data)))
+            Data = np.vstack( ( np.atleast_2d( Data[0,:]), Data))
+            if( self.debug):
+                print('shape of Data after np.vstack( ( np.atleast_2d( Data[0,:]), Data)) is: {}'.format( np.shape( Data)))
+                #sys.exit()
             chkavgs = np.nanmedian( Data, axis = self.axis)
-            Data = Data.T
-            chgData = np.copy( self.data.T)
+            if( self.debug):
+                print('chkavgs are: {}'.format( chkavgs))
+                #sys.exit()
+            #Data = Data.T
+            chgData = np.copy( self.data)
             #chkData = chkData.T
         elif( self.axis == 1):
             #Data = self.data
@@ -905,41 +942,87 @@ class FrqFilter:
         #########
         changeind = []
         mygoodind = []
-        for d, av, lv in zip( Data, chkavgs.T, lvl.T):
-            #changeind.append( np.where( np.logical_or( np.logical_or( np.abs( d - av) > lv, np.isnan( d)), np.isinf( d))))
-            
-            if( self.debug):
-                print( 'd is:\t{}\nav is:\t{}\nlv is:\t{}\n'.format( d, av, lv))
-                print( 'np.shape( d)', np.shape( d))
+        if( self.axis == 1):
+            for d, av, lv in zip( Data, chkavgs.T, lvl.T):
+                #changeind.append( np.where( np.logical_or( np.logical_or( np.abs( d - av) > lv, np.isnan( d)), np.isinf( d))))
                 
-            b = np.isnan( d)
-            c = np.isinf( d)
-            hind = np.argwhere( b | c).flatten()#[0]#.flatten()
-            d[hind] = av
-            a = np.abs( d - av) > lv
-            boolnotvec = a | b | c
-            boolyesvec = np.invert( a | b | c)
-            if( self.debug and ( np.any( boolnotvec))):
-                print( 'boolnotvec:\t:{}'.format( boolnotvec))
-                print( 'boolyesvec:\t:{}'.format( boolyesvec))
-                print( 'len of boolnotvec:\t:{}'.format( len( [ f for f in boolnotvec if f == True])))
-                print( 'len of boolyesvec:\t:{}'.format( len( [ f for f in boolyesvec if f == False])))
-                #print( 'Press key to continue...')
-                #sys.stdin.readline()
-                #sys.exit()
-            e = np.argwhere( boolnotvec).flatten()
-            f = np.argwhere( boolyesvec).flatten()
-            #print( 'e is:\n\t{}'.format( e))
-            if( self.debug and ( np.any( boolnotvec))):
-                print( '\n\n\nf\t=\t{}'.format( f))
-            percchk = float( len( e))/float( self.len)
-            if( percchk <= self.despikeperc):
-                changeind.append( e)
-                mygoodind.append( f)
-            else:
-                print( 'Exceeding despiking limit of {} percent'.format( self.despikeperc * 100.0))
-                changeind.append( [])
-                mygoodind.append( np.argwhere( np.ones( ( self.len, ), dtype = bool)).flatten())
+                if( self.debug):
+                    print( 'd is:\t{}\nav is:\t{}\nlv is:\t{}\n'.format( d, av, lv))
+                    print( 'np.shape( d)', np.shape( d))
+                    
+                b = np.isnan( d)
+                c = np.isinf( d)
+                hind = np.argwhere( b | c).flatten()#[0]#.flatten()
+                d[hind] = av
+                a = np.abs( d - av) > lv
+                boolnotvec = a | b | c
+                boolyesvec = np.invert( a | b | c)
+                if( self.debug and ( np.any( boolnotvec))):
+                    print( 'boolnotvec:\t:{}'.format( boolnotvec))
+                    print( 'boolyesvec:\t:{}'.format( boolyesvec))
+                    print( 'len of boolnotvec:\t:{}'.format( len( [ f for f in boolnotvec if f == True])))
+                    print( 'len of boolyesvec:\t:{}'.format( len( [ f for f in boolyesvec if f == False])))
+                    #print( 'Press key to continue...')
+                    #sys.stdin.readline()
+                    #sys.exit()
+                e = np.argwhere( boolnotvec).flatten()
+                f = np.argwhere( boolyesvec).flatten()
+                #print( 'e is:\n\t{}'.format( e))
+                if( self.debug and ( np.any( boolnotvec))):
+                    print( '\n\n\nf\t=\t{}'.format( f))
+                percchk = float( len( e))/float( self.len)
+                if( self.debug):
+                    print( 'percchk is {}'.format( percchk))
+                    #sys.exit()
+                if( percchk <= self.despikeperc):
+                    changeind.append( e)
+                    mygoodind.append( f)
+                else:
+                    print( 'Exceeding despiking limit of {} percent'.format( self.despikeperc * 100.0))
+                    changeind.append( [])
+                    mygoodind.append( np.argwhere( np.ones( ( self.len, ), dtype = bool)).flatten())
+        if( self.axis == 0):
+            for d, av, lv in zip( Data.T, chkavgs.T, lvl.T):
+                #changeind.append( np.where( np.logical_or( np.logical_or( np.abs( d - av) > lv, np.isnan( d)), np.isinf( d))))
+                
+                if( self.debug):
+                    print( 'd is:\t{}\nav is:\t{}\nlv is:\t{}\n'.format( d, av, lv))
+                    print( 'np.shape( d)', np.shape( d))
+                    print( 'av', av, 'lv', lv)
+                    #sys.exit()
+                b = np.isnan( d)
+                c = np.isinf( d)
+                hind = np.argwhere( b | c).flatten()#[0]#.flatten()
+                d[hind] = av
+                a = np.abs( d - av) > lv
+                boolnotvec = a | b | c
+                boolyesvec = np.invert( a | b | c)
+                if( self.debug and ( np.any( boolnotvec))):
+                    print( 'boolnotvec:\t:{}'.format( boolnotvec))
+                    print( 'boolyesvec:\t:{}'.format( boolyesvec))
+                    print( 'len of boolnotvec:\t:{}'.format( len( [ f for f in boolnotvec if f == True])))
+                    print( 'len of boolyesvec:\t:{}'.format( len( [ f for f in boolyesvec if f == False])))
+                    #print( 'Press key to continue...')
+                    #sys.stdin.readline()
+                    #sys.exit()
+                e = np.argwhere( boolnotvec).flatten()
+                f = np.argwhere( boolyesvec).flatten()
+                #print( 'e is:\n\t{}'.format( e))
+                if( self.debug and ( np.any( boolnotvec))):
+                    print( '\n\n\nf\t=\t{}'.format( f))
+                percchk = float( len( e))/float( self.len)
+                if( self.debug):
+                    print( 'percchk is {}'.format( percchk))
+                    #sys.exit()
+                    #!!!!! used standard deviation for despiking is too weak when multiple spikes with enormuos magnitude happen. !!!!
+                    #!!!!! try running standard deviation in this case !!!! needs to be implemented as a subroutine ... maybe from aldis_read processes
+                if( percchk <= self.despikeperc):
+                    changeind.append( e)
+                    mygoodind.append( f)
+                else:
+                    print( 'Exceeding despiking limit of {} percent'.format( self.despikeperc * 100.0))
+                    changeind.append( [])
+                    mygoodind.append( np.argwhere( np.ones( ( self.len, ), dtype = bool)).flatten())
             #print( 'changeind is: {}'.format( changeind[-1]))
         #changeind = np.where( np.abs( Data - np.atleast_2d( avgs).T) > np.atleast_2d( lvl).T)
         if( self.debug):
@@ -965,8 +1048,12 @@ class FrqFilter:
                 print( 'len of checklenlist is:\t{}\n'.format( len( checklenlist)))
                 #sys.exit()
                 if( self.debug):
-                    for k, el in enumerate( newchgind):
-                        print( '\nData[{}]\t=\t{}'.format( k, chgData[k, el]))
+                    if( self.axis == 1):
+                        for k, el in enumerate( newchgind):
+                            print( '\nData[{}]\t=\t{}'.format( k, chgData[k, el]))
+                    if( self.axis == 0):
+                        for k, el in enumerate( newchgind):
+                            print( '\nData[{}]\t=\t{}'.format( k, chgData.T[k, el]))                    
                     sys.stdin.readline()
             del a, b, c, e, f, boolnotvec, boolyesvec
             if( self.debug):
@@ -1041,65 +1128,132 @@ class FrqFilter:
                             temp = np.zeros( np.shape( chgData))
                         elif( np.iscomplexobj(chgData)):
                             temp = np.zeros( np.shape( chgData), dtype = complex)
-                        for k, (d, ind, badind) in enumerate( zip( chgData, mygoodind, newchgind)):
-                            #print( 'k is: {}'.format( k))
-                            #print( 'shape of d in Data is: {}'.format( np.shape( d)))
+                        if( self.axis == 1):
                             if( self.debug):
-                                #print( 'np.shape( newchgind[k]) is: {}'.format( np.shape( newchgind[k])))
-                                print( 'np.shape( mygoodind[{}]) is: {}'.format( k, np.shape( ind)))
-                            #if( len( newchgind[k]) > 0):
-                            if( np.nanmax( np.shape( ind)) > 0):
-                                #goodind = [f for f in np.arange( 0, [N, M][self.axis]) if f not in newchgind[k]]
-                                #print( 'average of goodind[{}] is:\n\t{}'.format( k, np.mean( d[ goodind])))
-                                goodind = ind
-                                print( 'for column {} there are {} good indices'.format( k, np.nanmax( np.shape( ind))))
-                            else:
-                                goodind = np.arange( 0, [N, M][self.axis])
-                            #badind = [f for f in np.arange( 0, [N, M][self.axis]) if f not in goodind]
-                            sumbadind.append( badind)
-                            if( self.debug):
-                                print( 'shape of goodind is: {}'.format( np.shape( goodind)))
-                                print( 'shape of d is: {}'.format( np.shape( d)))
-                                print( 'shape of time is: {}'.format( np.shape( time)))
-                                print( 'len( goodind) != [N, M][self.axis]', len( goodind) != [N, M][self.axis])
-                            if( len( goodind) != [N, M][self.axis]):
-                                #if( str( rplval).startswith( 'linear')):
-                                #    pl = np.polyfit( time[ goodind], d[ goodind], 1)
-                                #elif( str( rplval).startswith( 'cubic')):
-                                #    pl = np.polyfit( time[ goodind], d[ goodind], 3)
+                                print( 'self.axis', self.axis)
+                            for k, (d, ind, badind) in enumerate( zip( chgData, mygoodind, newchgind)):
+                                #print( 'k is: {}'.format( k))
+                                #print( 'shape of d in Data is: {}'.format( np.shape( d)))
                                 if( self.debug):
-                                    print( 'shape of time:\t{}'.format( np.shape( time)))
-                                    print( 'shape of goodind:\t{}'.format( np.shape( goodind)))
-                                    print( 'shape of d:\t{}'.format( np.shape( d)))
-                                temp[k,:] = ipol.interp1d( time[ goodind], d[ goodind], bounds_error=False, kind=rplval, fill_value = 'extrapolate')(time)
-                                #dummy = np.polyval( pl, time[badind])
-                                #sortorder = np.argsort( np.hstack( ( time[goodind], time[badind])))
-                                #print( 'sortorder is: {}'.format( sortorder))
-                                #if( True):
-                                #    plt.plot( sortorder)
-                                #    plt.show()
-                                #dummy = np.hstack( ( d[goodind], dummy))[sortorder]
-                                #temp[k, :] = dummy
-                            else:
-                                temp[k, :] = d
-                                #pass
-                            if( np.any( np.isnan( temp[k,:])) and self.debug):
-                                #print( "[{}]-th column has some nan's".format( k, d))
-                                print( 'Colums with nans:\n\n\n')
-                                for n, el in enumerate( temp[k,:]):
-                                    if( np.isnan(el) or np.isinf( el)):
-                                        print( '\n\tel[{}]\t=\t{}'.format( n, el))
-                                        print( '\n\td[{}]\t=\t{}'.format( n, d[n]))
-                                #sys.stdin.readline()
-                                #plt.plot( time, temp[k, :])
-                                #plt.show()
-                                #sys.exit()
-                            if( np.any( np.isnan( temp[k,:]))):
-                                #print( "[{}]-th column has some nan's".format( k, d))
-                                print( 'Colums with nans...\n\n\n')
-                                raise self.MyException( "[{}]-th column has some nan's".format( k, d))
-                            #input("Press Enter to continue...")
-                        chgData = temp
+                                    #print( 'np.shape( newchgind[k]) is: {}'.format( np.shape( newchgind[k])))
+                                    print( 'np.shape( mygoodind[{}]) is: {}'.format( k, np.shape( ind)))
+                                #if( len( newchgind[k]) > 0):
+                                if( np.nanmax( np.shape( ind)) > 0):
+                                    #goodind = [f for f in np.arange( 0, [N, M][self.axis]) if f not in newchgind[k]]
+                                    #print( 'average of goodind[{}] is:\n\t{}'.format( k, np.mean( d[ goodind])))
+                                    goodind = ind
+                                    print( 'for column {} there are {} good indices'.format( k, np.nanmax( np.shape( ind))))
+                                else:
+                                    goodind = np.arange( 0, [N, M][self.axis])
+                                #badind = [f for f in np.arange( 0, [N, M][self.axis]) if f not in goodind]
+                                sumbadind.append( badind)
+                                if( self.debug):
+                                    print( 'shape of goodind is: {}'.format( np.shape( goodind)))
+                                    print( 'shape of d is: {}'.format( np.shape( d)))
+                                    print( 'shape of time is: {}'.format( np.shape( time)))
+                                    print( 'len( goodind) != [N, M][self.axis]', len( goodind) != [N, M][self.axis])
+                                if( len( goodind) != [N, M][self.axis]):
+                                    #if( str( rplval).startswith( 'linear')):
+                                    #    pl = np.polyfit( time[ goodind], d[ goodind], 1)
+                                    #elif( str( rplval).startswith( 'cubic')):
+                                    #    pl = np.polyfit( time[ goodind], d[ goodind], 3)
+                                    if( self.debug):
+                                        print( 'shape of time:\t{}'.format( np.shape( time)))
+                                        print( 'shape of goodind:\t{}'.format( np.shape( goodind)))
+                                        print( 'shape of d:\t{}'.format( np.shape( d)))
+                                    temp[k,:] = ipol.interp1d( time[ goodind], d[ goodind], bounds_error=False, kind=rplval, fill_value = 'extrapolate')(time)
+                                    #dummy = np.polyval( pl, time[badind])
+                                    #sortorder = np.argsort( np.hstack( ( time[goodind], time[badind])))
+                                    #print( 'sortorder is: {}'.format( sortorder))
+                                    #if( True):
+                                    #    plt.plot( sortorder)
+                                    #    plt.show()
+                                    #dummy = np.hstack( ( d[goodind], dummy))[sortorder]
+                                    #temp[k, :] = dummy
+                                else:
+                                    temp[k, :] = d
+                                    #pass
+                                if( np.any( np.isnan( temp[k,:])) and self.debug):
+                                    #print( "[{}]-th column has some nan's".format( k, d))
+                                    print( 'Colums with nans:\n\n\n')
+                                    for n, el in enumerate( temp[k,:]):
+                                        if( np.isnan(el) or np.isinf( el)):
+                                            print( '\n\tel[{}]\t=\t{}'.format( n, el))
+                                            print( '\n\td[{}]\t=\t{}'.format( n, d[n]))
+                                    #sys.stdin.readline()
+                                    #plt.plot( time, temp[k, :])
+                                    #plt.show()
+                                    #sys.exit()
+                                if( np.any( np.isnan( temp[k,:]))):
+                                    #print( "[{}]-th column has some nan's".format( k, d))
+                                    print( 'Colums with nans...\n\n\n')
+                                    raise self.MyException( "[{}]-th column has some nan's".format( k, d))
+                                #input("Press Enter to continue...")
+                            chgData = temp
+                        if( self.axis == 0):
+                            if( self.debug):
+                                print( 'self.axis', self.axis)
+                            for k, (d, ind, badind) in enumerate( zip( chgData.T, mygoodind, newchgind)):
+                                #print( 'k is: {}'.format( k))
+                                #print( 'shape of d in Data is: {}'.format( np.shape( d)))
+                                if( self.debug):
+                                    #print( 'np.shape( newchgind[k]) is: {}'.format( np.shape( newchgind[k])))
+                                    print( 'shape of d in chgData is: {}'.format( np.shape( d)))
+                                    print( 'np.shape( mygoodind[{}]) is: {}'.format( k, np.shape( ind)))
+                                #if( len( newchgind[k]) > 0):
+                                if( np.nanmax( np.shape( ind)) > 0):
+                                    #goodind = [f for f in np.arange( 0, [N, M][self.axis]) if f not in newchgind[k]]
+                                    #print( 'average of goodind[{}] is:\n\t{}'.format( k, np.mean( d[ goodind])))
+                                    goodind = ind
+                                    print( 'for column {} there are {} good indices'.format( k, np.nanmax( np.shape( ind))))
+                                else:
+                                    goodind = np.arange( 0, [N, M][self.axis])
+                                #badind = [f for f in np.arange( 0, [N, M][self.axis]) if f not in goodind]
+                                sumbadind.append( badind)
+                                if( self.debug):
+                                    print( 'shape of goodind is: {}'.format( np.shape( goodind)))
+                                    print( 'shape of d is: {}'.format( np.shape( d)))
+                                    print( 'shape of time is: {}'.format( np.shape( time)))
+                                    print( 'len( goodind) != [N, M][self.axis]', len( goodind) != [N, M][self.axis])
+                                if( len( goodind) != [N, M][self.axis]):
+                                    #if( str( rplval).startswith( 'linear')):
+                                    #    pl = np.polyfit( time[ goodind], d[ goodind], 1)
+                                    #elif( str( rplval).startswith( 'cubic')):
+                                    #    pl = np.polyfit( time[ goodind], d[ goodind], 3)
+                                    if( self.debug):
+                                        print( 'shape of time:\t{}'.format( np.shape( time)))
+                                        print( 'shape of goodind:\t{}'.format( np.shape( goodind)))
+                                        print( 'shape of d:\t{}'.format( np.shape( d)))
+                                    #temp[k,:] = ipol.interp1d( time[ goodind], d[ goodind], bounds_error=False, kind=rplval, fill_value = 'extrapolate')(time)
+                                    temp[:, k] = ipol.interp1d( time[ goodind], d[ goodind], bounds_error=False, kind=rplval, fill_value = 'extrapolate')(time)
+                                    #dummy = np.polyval( pl, time[badind])
+                                    #sortorder = np.argsort( np.hstack( ( time[goodind], time[badind])))
+                                    #print( 'sortorder is: {}'.format( sortorder))
+                                    #if( True):
+                                    #    plt.plot( sortorder)
+                                    #    plt.show()
+                                    #dummy = np.hstack( ( d[goodind], dummy))[sortorder]
+                                    #temp[k, :] = dummy
+                                else:
+                                    temp[:, k] = d
+                                    #pass
+                                if( np.any( np.isnan( temp[:, k])) and self.debug):
+                                    #print( "[{}]-th column has some nan's".format( k, d))
+                                    print( 'Colums with nans:\n\n\n')
+                                    for n, el in enumerate( temp[:, k]):
+                                        if( np.isnan(el) or np.isinf( el)):
+                                            print( '\n\tel[{}]\t=\t{}'.format( n, el))
+                                            print( '\n\td[{}]\t=\t{}'.format( n, d[n]))
+                                    #sys.stdin.readline()
+                                    #plt.plot( time, temp[k, :])
+                                    #plt.show()
+                                    #sys.exit()
+                                if( np.any( np.isnan( temp[:, k]))):
+                                    #print( "[{}]-th column has some nan's".format( k, d))
+                                    print( 'Colums with nans...\n\n\n')
+                                    raise self.MyException( "[{}]-th column has some nan's".format( k, d))
+                                #input("Press Enter to continue...")
+                            chgData = temp
                         
                         
                         
@@ -1122,8 +1276,12 @@ class FrqFilter:
             print('\nNo values to change...continuing\n')
             #pass
         if( self.debug):
-            for el in chgData:
-                plt.plot( self.t, el)
+            if( self.axis == 1):
+                for el in chgData:
+                    plt.plot( self.t, el)
+            elif( self.axis == 0):
+                for el in chgData.T:
+                    plt.plot( self.t, el)
             plt.show()
         #self.data = Data
         if( self.axis == 0):
@@ -1133,7 +1291,8 @@ class FrqFilter:
             self.despdata = chgData
         else:
             raise MyException( 'Error during transposition to original dimensions with axis {}'.format( self.axis))
-        
+        if( self.debug):
+            print( 'shape of despdata is now {}'.format( np.shape( self.despdata)))
         allchgindlen = len( list( chain(*sumbadind)))
         print( '\n\n\n{} datasamples replaced by {} replacement value'.format( allchgindlen, rplval))
         #inloopvarlist = [f[0] for f in list( locals().iteritems())]
@@ -1168,11 +1327,16 @@ class FrqFilter:
         from scipy import polyfit, polyval
         
         
-        
+        if( self.debug):
+            print( 'len( args)', len( args))
+            print( 'args', args)
         if( len( args) == 2):
             
             aseries = args[1]
             tseries = args[0]
+            if( self.debug):
+                print( 'shape of aseries is:\t{}'.format( shape( aseries)))
+                print( 'shape of tseries is:\t{}'.format( shape( tseries)))
             if( aseries.ndim == 1):
                 aseries = atleast_2d( aseries)
             M, N = shape(aseries)
@@ -1241,7 +1405,8 @@ class FrqFilter:
             three_length = [ U, V][self.axis]
             three_columns = [ U, V][not self.axis]
             
-            atseries = tseries[0] + arange( tseries[0] - tseries[-1] , 2.0*( tseries[-1] - tseries[0]) + dt, dt)
+            atseries = tseries[0] + arange( tseries[0] - tseries[-1] , 2.0*( tseries[-1] - tseries[0]), dt)
+            #atseries = tseries[0] + arange( tseries[0] - tseries[-1] , 2.0*( tseries[-1] - tseries[0]) + dt, dt)
             #print( 'shape of atseries is:\t{}'.format( np.shape( atseries)))
             #print( 'Dimensions of three_aseries: \n U, V:{},{}'.format( U, V ))
             #print( 'Dimensions of three_aseries: \n minDim, maxDim:{},{}'.format( minDim, maxDim ))
@@ -1256,21 +1421,25 @@ class FrqFilter:
                 # only for debugging
                 import matplotlib.pyplot as plt 
                 import sys
-                k = 2
-                tas = (three_aseries - np.atleast_2d( nanmean( three_aseries, axis = self.axis)).T)
-                aas = (aseries - np.atleast_2d( nanmean( aseries, axis = self.axis)).T)
+                k = 0
+                if( self.axis == 1):
+                    tas = (three_aseries - np.atleast_2d( nanmean( three_aseries, axis = self.axis)).T)
+                    aas = (aseries - np.atleast_2d( nanmean( aseries, axis = self.axis)).T)
+                elif( self.axis == 0):
+                    tas = (three_aseries - np.atleast_2d( nanmean( three_aseries, axis = self.axis)))
+                    aas = (aseries - np.atleast_2d( nanmean( aseries, axis = self.axis)))
                 print( 'np.shape( tas)', np.shape( tas))
                 print( 'np.shape( atseries)', np.shape( atseries))
                 print( 'np.shape( tseries)', np.shape( tseries))
                 print( 'np.shape( aseries)', np.shape( aseries))
                 if( self.axis == 0):
-                    plt.plot( atseries, tas[:,k], 'r')
+                    plt.plot( atseries, tas[1:,k], 'r')
                     plt.plot( tseries, aas[:,k], 'g')
                 elif( self.axis == 1):
                     plt.plot( atseries, tas[k,:], 'r')
                     plt.plot( tseries, aas[k,:], 'g')
                 plt.show()
-                sys.exit()
+                #sys.exit()
             
             
             if( self.debug):
@@ -1544,21 +1713,21 @@ class FrqFilter:
                 matplotlib.use('TkAgg')
                 import matplotlib.pyplot as plt 
                 import sys
-                k = 2
-                k = 2
+                #k = 2
+                k = 0
                 #plt.plot( atseries, (aaseries.T - nanmean( aaseries[:, orgStartInd: orgEndInd], axis = 1))[:,k], 'r')
                 if( self.axis == 1):
                     plt.plot( atseries, aaseries.T[:,k], 'r')
                     #plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
                     plt.plot( atseries[trendind[0]:trendind[-1] + 1], trendfct[k,:], 'b')
-                    plt.plot( atseries[trendind[0]:trendind[-1] + 1], taper[maxind + 1::]*max( trendfct[k,:]), 'g')
+                    plt.plot( atseries[trendind[0]:trendind[-1]], taper[maxind::]* np.max( trendfct[k,:]), 'g')
                 elif( self.axis == 0):
                     plt.plot( atseries, aaseries.T[k,:], 'r')
                     #plt.plot( tseries, (aseries.T - nanmean( aseries, axis = 1))[:,k], 'g')
                     plt.plot( atseries[trendind[0]:trendind[-1] + 1], trendfct[:,k], 'b')
                     #plt.plot( atseries[trendind[0]:trendind[-1] + 1], taper[maxind + 1::]*max( trendfct[:,k]), 'g')                    
                 plt.show()
-                sys.exit()
+                #sys.exit()
             
             
             #print( 'Dimensions of augmented timeseries: \n G, H:{},{}'.format( G, H ))
@@ -1857,8 +2026,9 @@ class FrqFilter:
             if( self.axis == 0):
                 self.FIELDAUGMENT( self.t, self.data - self.avg)
             if( self.axis == 1):
-                self.FIELDAUGMENT( self.t, self.data.T - self.avg)
-                self.augdata = self.augdata.T
+                #self.FIELDAUGMENT( self.t, self.data.T - self.avg)
+                self.FIELDAUGMENT( self.t, self.data - self.avg)
+                #self.augdata = self.augdata.T
             print( '\n\nField augmentation successfully applied')
         else:
             """ if there is no field augmentation applied"""
@@ -1875,6 +2045,7 @@ class FrqFilter:
         derive frequency axis cause field-augmentation has to be concerned
         
         """
+        
         self.len = np.shape( self.augt)[0]
         self.fnyq = 1.0/ 2.0/ self.dt
         if( self.debug):
@@ -1887,7 +2058,7 @@ class FrqFilter:
         self.fmin = np.min( self.faxis[self.posind])
         if( self.debug):
             print( 'self.fmin is: {}'.format( self.fmin))
-            sys.exit()
+            #sys.exit()
         if( False):
             if( self.PeriodAxis):
                 #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
@@ -1985,7 +2156,8 @@ class FrqFilter:
             if( self.axis == 0):
                 self.FIELDAUGMENT( self.t, self.data - self.avg)
             if( self.axis == 1):
-                self.FIELDAUGMENT( self.t, self.data - self.avg.T)
+                #self.FIELDAUGMENT( self.t, self.data - self.avg.T)
+                self.FIELDAUGMENT( self.t, self.data - self.avg)
                 #self.augdata = self.augdata.T
             
         else:
@@ -2016,31 +2188,22 @@ class FrqFilter:
             print( 'self.len is: {}'.format( self.len))
         self.fmin = 1.0/ float( self.len)/ self.dt
         self.__faxis__()
-        if( False):
-            if( self.PeriodAxis):
-                #self.faxis = 1.0/ np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                self.faxis = 1.0/ np.arange( -self.fnyq, self.fnyq, self.fmin)
-                self.posind = np.argwhere( self.faxis >= 1.0/ self.fnyq).flatten()
-                self.negind = np.argwhere( self.faxis <= -1.0/ self.fnyq).flatten()
-            else:
-                #self.faxis = np.hstack( ( np.arange( -self.fnyq - self.fmin,-self.fmin, self.fmin), np.arange( self.fmin, self.fnyq, self.fmin)))
-                self.faxis =  np.arange( -self.fnyq, self.fnyq, self.fmin)
-                self.posind = np.argwhere( self.faxis >= self.fmin).flatten()
-                self.negind = np.argwhere( self.faxis <= self.fmin).flatten()
         
         
         N, M = np.shape( dump)
+        
         if( self.debug):
             print( 'Length for dpss: {}'.format( [N, M][self.axis]))
             print( 'N, M', N, M)
         #slep = dpss( [N, M][self.axis], 5, self.NumOfSlep, norm = 2)
-        BW = 2.0*self.fmin
-        twoNW = int( self.len* self.dt* BW) # from scipy doc(https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.dpss.html): Standardized half bandwidth corresponding to 2*NW = BW/f0 = BW*N*dt where dt is taken as 1
+        BW = 2.* self.fmin
+        twoNW = float( self.len* self.dt* BW) # from scipy doc(https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.dpss.html): Standardized half bandwidth corresponding to 2*NW = BW/f0 = BW*N*dt where dt is taken as 1
         if( self.debug):
             print( 'twoNW', twoNW)
         #######
         # Trying to dynamically derive optimal amount of slepian windows according to "When Slepian Meets Fiedler: Putting a Focus on the Graph Spectrum - Van De Ville, Demesmaeker, Preti, 2017 IEEE Paper"
         #######
+        
         if( self.DynNumOfSlep):
             if( self.debug):
                 print( np.shape( self.data))
@@ -2314,7 +2477,7 @@ class FrqFilter:
             if( self.axis == 0):
                 self.FIELDAUGMENT( self.t, self.data - self.avg)
             if( self.axis == 1):
-                self.FIELDAUGMENT( self.t, self.data.T - self.avg)
+                self.FIELDAUGMENT( self.t, self.data - self.avg)
                 self.augdata = self.augdata
             
         else:

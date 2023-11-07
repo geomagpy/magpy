@@ -103,7 +103,7 @@ micro = np.power(10.0, -6.0)
 
 class MR:
     """
-    MR (former MULTIREAD), V1.3
+    MR (former MULTIREAD), V1.5
     
     
     Reading is done for:
@@ -113,6 +113,7 @@ class MR:
         LEMI025 variometer data - through geomagpy -- under construction ---
         LEMI036 variometer data - through geomagpy
         Geomagpy DataStream() objects - through geomagpy
+        GFZ-Potsdam ascii text files in IAGA format
     Including a timestamp referred to 
     YYYY-MM-DD-HH-mm-ss 0000-01-01-00-00-00 == 0.0
     called a zerotime and datetime.datetime objects as timestamps
@@ -184,6 +185,9 @@ class MR:
           WICDefDataRead ... Header info is mayby somehow unappropriate for
           data read, cause there is NO sensorname, sensorrevision or sensor-
           serialnummer available in definitive data
+    
+    V1.5:
+        - Added a functionality to read GFZ Furstenfeld-Bruck IAGA ascii files
             
         
     ----------
@@ -211,9 +215,10 @@ class MR:
                 SingleAbsRead
                 dBVario
                 mpstream
-                MiniSeed --- under construction ---
+                MiniSeed
                 picologtxt --- under construction ---
                 WICDefDataRead
+                IAGAtxt --- under construction --- but working partly
         data:
             Geomagpy DataStream() object
             Geomagpy DataStream() object which is will be converted to
@@ -409,6 +414,22 @@ class MR:
         DataCont.stationinfo # gets MiniSeed Stationinfo consisting of
         DataCont.stationinfo = 
             [DataCont.meta.network, DataCont.meta.station, DataCont.channel]
+            
+        
+        
+        ######
+        # Reading FUERSTENFELD BRUCK GFZ IAGA ascii data
+        ######
+        
+        commonColList = ['x', 'y', 'z']
+        commonchannels = '.MAS'
+        sensortype = 'IAGAtxt'
+        DataCont = MR(starttime = starttime, endtime = endtime, 
+            sensortype = sensortype, SrcStr = searchstring, 
+            path = os.path.abspath( otherObsPathstring), 
+            channels = commonchannels, ColList = commonColList, 
+            ApplyFlags = False)
+        zerotime, data, sensPos, mydate = DataCont.GetData()
         
     """
     
@@ -530,7 +551,71 @@ class MR:
                                 if( self.sensortype == 'GradRead'):
                                     self.SearchString = 'GP20S3'
                                 elif( self.sensortype == 'VarioRead'):
-                                    self.SearchString = 'LEMI036'
+                                    #self.SearchString = 'LEMI036'
+                                    for it, val in kwargs.items():
+                                        if( it == 'SrcStr'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.SearchString = val
+                                            if( debug):
+                                                print( 'self.SearchString is: {}'.format( self.SearchString))
+                                        elif( it == 'starttime'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.starttime = val
+                                            if( debug):
+                                                print( 'self.starttime is: {}'.format( self.starttime))
+                                        elif( it == 'endtime'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.endtime = val
+                                            if( debug):
+                                                print( 'self.endtime is: {}'.format( self.endtime))
+                                        elif( it == 'path'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.path = val
+                                            if( debug):
+                                                print( 'self.path is: {}'.format( self.path))
+                                        elif( it == 'channels'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.channels = val
+                                            if( debug):
+                                                print( 'self.channels is: {}'.format( self.channels))
+                                        elif( it == 'ColList'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.ColList = val
+                                            if( debug):
+                                                print( 'self.ColList is: {}'.format( self.ColList))
+                                        elif( it == 'ApplyFlags'):
+                                            """
+                                            do .....
+                                            
+                                            set SearchString to be investigated
+                                            """
+                                            self.ApplyFlags = val
+                                            if( debug):
+                                                print( 'self.ApplyFlags is: {}'.format( self.ApplyFlags))
                                 elif( self.sensortype == 'G823A'):
                                     self.SearchString = 'G823A'
                                 elif( self.sensortype == 'GSM90'):
@@ -542,7 +627,30 @@ class MR:
                                 elif( self.sensortype == 'GFZKpRead'):
                                     self.SearchString = 'GFZKpRead'
                                 elif( self.sensortype == 'IAGAtxt'):
-                                    self.SearchString = ''
+                                    itemtocheck = np.array( list( kwargs.items()))
+                                    for it, val in kwargs.items():
+                                        if( it == 'path'):
+                                            """
+                                            do .....
+                                            
+                                            get common filepath to be investigated
+                                            """
+                                            self.path = val
+                                            if( debug):
+                                                print( 'self.path is: {}'.format( self.path))
+                                        if( it == 'SrcStr'):
+                                            """
+                                            define specific search string besides self.filetype
+                                            """
+                                            self.SearchString = val
+                                            if( True):
+                                                print( 'self.SearchString', self.SearchString)
+                                                
+                                        elif( np.all( itemtocheck[:,0] != 'SrcStr')):
+                                            self.SearchString = ''
+                                            if( True):
+                                                print( 'self.SearchString', self.SearchString)
+                                    #sys.exit()
                                 #elif( self.sensortype == 'mpstream'):
                                 #    self.SearchString = val
                                 #    if( True):
@@ -818,11 +926,22 @@ class MR:
     
     def __LookForFilesMatching__( self):
         
+        
+        #debug = True
+        
         mydirs = []
         myfiles = []
+        if( debug):
+            print( 'Looking for files in folder: "{}"'.format( self.path))
         walkout = walk( self.path)
+        #print( 'walkout', walkout)
+        #sys.exit()
+        #print( 'you are {}'.format( 'here'))
         for root, b, el in walkout:
-            #print( 'a {}\tb {}\tel {}'.format( a, b, el))
+            #print( 'you are {}'.format( 'here'))
+            if( debug):
+                print( 'root {}\tb {}\tel {}'.format( root, b, el))
+            #sys.exit()
             for name in el:
                 #print( 'a {}\tb {}\tel {}'.format( root, b, el))
                 checkvar = join( root, name)
@@ -833,11 +952,12 @@ class MR:
                     mydirs.append( checkvar)
                 elif( isfile( checkvar)):
                     myfiles.append( checkvar)
-        
+        #sys.exit()
         if( debug):
             print( 'List of directories is:')
             for k, el in enumerate( mydirs):
                 print( 'directory[{}] is: {}'.format( k, el))
+            #sys.exit()
         if( debug):
             print( 'List of files is:')
             for k, el in enumerate( myfiles):
@@ -846,19 +966,41 @@ class MR:
         if( debug):
             print( '\n\n\nLength of myfiles is: {}\n\n\n'.format( len( myfiles)))
         gdfiles = []
+        import time as tim
         if( len( myfiles) > 1):
             if( debug):
                 print( '\n\n\nFollowing files found:\n\n\n')
             for name in myfiles:
-                if( debug):
-                    print( 'Checking filename:\n{}: {}\n'.format( name, '*' + self.SearchString + '*'))
-                if( fnmatch( name, '*' + self.SearchString + '*')):
-                    directory,filename = os.path.split( name)
-                    if( filename not in [ os.path.split( f)[1] for f in gdfiles]):
-                        gdfiles.append( name)
+                if( isinstance( self.SearchString, str)):
+                    if( debug):
+                        print( 'Checking filename:\n{}: {}\n'.format( name, '*' + self.SearchString + '*'))
+                    if( fnmatch( name, '*' + self.SearchString + '*')):
+                        directory,filename = os.path.split( name)
+                        if( filename not in [ os.path.split( f)[1] for f in gdfiles]):
+                            gdfiles.append( name)
+                            if( debug):
+                                print( 'Filename:\t{} ...matching\n'.format( name))
+                                sys.exit()
+                if( isinstance( self.SearchString, list)):
+                    for srcstr in self.SearchString[0]:
                         if( debug):
-                            print( 'Filename:\t{} ...matching\n'.format( name))
-                            #sys.exit()
+                            print( 'Checking filename:\n{}: {}\n'.format( name, srcstr))
+                            print( 'name:\n{}'.format( name))
+                            print( "fnmatch( name, '*' + srcstr)", fnmatch( name, '*' + srcstr))                            
+                        
+                        if( fnmatch( name, '*' + srcstr)):
+                            directory,filename = os.path.split( name)
+                            if( debug):
+                                print( 'directory,filename', directory,filename)
+                            if( filename not in [ os.path.split( f)[1] for f in gdfiles]):
+                                gdfiles.append( name)
+                                if( debug):
+                                    print( 'Filename:\t{} ...matching\n'.format( name))
+                                    #sys.exit()   
+                        #tim.sleep(0.01)
+            
+            
+                
         else:
             #print( 'No files for {} found...stopping'.format( self.SearchString))
             self.MyException( 'No files for {} found...stopping'.format( self.SearchString))
@@ -882,12 +1024,13 @@ class MR:
         #sys.exit()
         for k, f in zip( colmp.header.keys(), colmp.header.values()):
             if( debug):
-                print( k, f)
+                print( 'header.key:{}, header.value:{}'.format( k, f))
             if( k.startswith('unit-col') and not k.endswith('time')):
                 colnameind = k.rindex( '-') + 1
                 self.sensname.append( tuple( [k[colnameind:], f]))
         if( debug):
             print( 'self.sensname is:\t{}'.format( self.sensname))
+        #sys.exit()
         return self.sensname
     
     
@@ -915,23 +1058,33 @@ class MR:
     
     
     def __GetTimeInd__(self, colmp):
+        #debug = True
         self.Timeind = 0
         self.missing = False
-        try:
+        if( True):
             tI = colmp.KEYLIST.index('time')
+            if( debug):
+                print( 'tI', tI)
             try:
                 testlen = len( colmp.ndarray[tI])
                 if( debug):
+                    print( 'colmp.ndarray[tI] is:\t{}'.format( colmp.ndarray[tI]))
                     print( 'testlen is:\t{}'.format( testlen))
                 if( testlen < 2):
-                    raise Exception( 'length of timestamps < 2!...')
+                    raise ValueError( 'length of timestamps < 2!...')
                 else:
                     print( 'Primary timestamps are valid')
-            except:
+            except Exception as error:
+                print( 'Exception occored : {}'.format( error))
                 try:
                     tI = colmp.KEYLIST.index('sectime')
+                    if( debug):
+                        print( 'found sectime index: {}'.format( tI))
                     try:
                         testlen = len( colmp.ndarray[tI])
+                        if( debug):
+                            print( 'colmp.ndarray[tI] is:\t{}'.format( colmp.ndarray[tI]))
+                            print( 'testlen is:\t{}'.format( testlen))
                         if( testlen < 2):
                             raise Exception( 'length of timestamps < 2!...stopping')
                         else:
@@ -946,7 +1099,7 @@ class MR:
                     print( 'No valid timestamps. Exception:\n{}'.format( ex))
                     self.missing = True
                     sys.exit()
-        except:
+        else:
             try:
                 tI = colmp.KEYLIST.index('sectime')
                 print( 'Secondary timestamps are valid')
@@ -959,6 +1112,9 @@ class MR:
                     self.missing = True
                     sys.exit()
         self.TimeInd = tI
+        if( debug):
+            print( 'found self.TimeInd: {}'.format( self.TimeInd))
+            print( 'num2date( colmp.ndarray[tI][0]) is:\t{}, num2date( colmp.ndarray[tI][-1]) is:\t{}'.format( num2date( colmp.ndarray[tI][0]), num2date( colmp.ndarray[tI][-1])))
         return
     
     
@@ -1290,6 +1446,7 @@ class MR:
     
     
     def SeedRead( self):
+        #debug = False
         from fnmatch import filter as flt
         if( debug):
             print( '\n\n\nStarting SeedRead...')
@@ -1459,6 +1616,11 @@ class MR:
                     print( 'element[{}] is: {}'.format( n, e))
         #colst = colst.slice(starttime =  UTCDateTime(colst[0].stats.starttime), endtime =  UTCDateTime(colst[0].stats.starttime + timedelta(seconds=cutoffset/colst[0].stats.sampling_rate)))
         #colst = colst.slice(starttime =  UTCDateTime(colst[0].stats.starttime), endtime =  UTCDateTime(colst[0].stats.starttime + timedelta(seconds=cutoffset/colst[0].stats.sampling_rate)))
+        
+        
+        #debug = True
+        
+        
         print( 'day start: {}'.format( datetime.strptime( self.starttime.isoformat(), "%Y-%m-%dT%H:%M:%S")))
         print( 'day end: {}'.format( datetime.strptime( self.endtime.isoformat(), "%Y-%m-%dT%H:%M:%S")))
         starto = UTCDateTime( self.starttime)
@@ -3213,6 +3375,7 @@ class MR:
     
     
     def VarioRead( self):
+        #debug = True
         if( debug):
             print( '\n\n\nStarting VarioRead...')
         #startdate = datetime.strptime("2018-02-07", "%Y-%m-%d")
@@ -3261,6 +3424,8 @@ class MR:
         #from itertools import chain
         colmp = DataStream()
         
+        if( debug):
+            print( 'self.filetype', self.filetype)
         fileending = '.' + self.filetype
         ########################
         # READ Vario
@@ -3277,6 +3442,9 @@ class MR:
         
         
         sensname = 'LEMI036_1_0002_'
+        if( debug):
+            print( 'self.SearchString', self.SearchString)
+        #sys.exit()
         if( len( self.SearchString) < len( sensname) and fnmatch( sensname, '*' + self.SearchString + '*')):
             #pass
             if( debug):
@@ -3388,15 +3556,39 @@ class MR:
                 except:
                     pass
             #sys.exit()
-            #colmp = mp.appendStreams([colmp, temp]) # CONCATENATE MAGPY STREAMS
+            if( debug):
+                print( 'temp', temp)
+                print( 'temp.ndarray[0]', temp.ndarray[0])
+                print( 'len( temp.ndarray[0])', len( temp.ndarray[0]))
+                #print( 'num2date( temp.ndarray[0])', num2date( temp.ndarray[0]))
+                print( 'temp.ndarray[1]', temp.ndarray[1])
+                self.__GetTimeInd__( temp)
+                self.__GetDataInd__( temp, ColList = self.ColList)
+                index_vec = self.DataInd
+                print( 'Found index_vec: {}'.format( index_vec))
+                vario = temp.ndarray[index_vec]
+                varioarray = matrix( list( chain( *vario)))
+                arraydim = len( index_vec)
+                varioarray = varioarray.reshape( arraydim, -1).T
+                print( 'varioarray', varioarray)
+                for xyz in varioarray:
+                    print( 'xyz', xyz)
+                    #for x, y, z in xyz:
+                    #    print( 'x ,y, z', x, y, z)
+                sys.exit()
+            if( debug):
+                print( 'Vario matching read...removing duplicates')
+            temp = temp.removeduplicates()
+            if( debug):
+                print( 'Vario matching read...removing duplicates done')
             colmp = mp.appendStreams((colmp, temp)) # CONCATENATE MAGPY STREAMS
             #colmp.extend(temp , temp.header, temp.ndarray)
             for ol in temp.header.items():
                 colmp.header[ol[0]] = ol[1]  # adding header info from temp to colmp for later self.sensname variable read
             print( '...Vario #{} file {} appended.'.format( k, f))
-        if( debug):
-            print( 'Vario matching read...removing duplicates')
+
             #sys.exit()
+        
         #print( 'colmp', colmp.ndarray[[1,2,3]])
         #dirvar = colmp.header.items()
         #print( dir( dirvar))
@@ -3419,12 +3611,14 @@ class MR:
         temp = colmp.trim(starttime = sstartdate, endtime = enddate) # CUT OUT ONLY TIME OF INTEREST
         colmp = temp
         del temp
+        
         #print( sstartdate)
         #print( enddate)
         #print( colmp.ndarray[0])
         #sys.exit()
         colmp = colmp.removeduplicates()
         colmp = colmp.sorting()
+        
         self.stationinfo = str( colmp.header['SensorID'])
         
         
@@ -3581,7 +3775,11 @@ class MR:
             if( debug):
                 print( 'shape of varioarray is:\t{}'.format( np.shape( varioarray)))
             #sys.exit()
+            
             ietime, vario = self.__EquiInterpol__( time = time_vario_zero, data = varioarray)
+            
+            #print( 'vario', vario)
+            #sys.exit()
             """
             #from magpy.stream import num2date
             stamp_starttime = NUM2DATE20TIME( num2date(time_vario[0])) # CONVERT TO ZEROTIME VALUES
@@ -4089,6 +4287,7 @@ class MR:
     --- under construction ---
     """
     def IAGAtxtRead( self):
+        #debug = True
         if( debug):
             print( '\n\n\nStarting IAGAtxtRead...')
         #startdate = datetime.strptime("2018-02-07", "%Y-%m-%d")
@@ -4129,12 +4328,14 @@ class MR:
         #sys.exit()
         fileending = self.filetype
         print( 'fileending', fileending)
+        
         #########################
         # READ picologtxt
         #########################
         
         if( debug):
-            print( 'self.SearchString', self.SearchString)
+            print( 'self.SearchString "{}"'.format( self.SearchString))
+        #sys.exit()
         sensname = '2016'
         if( len( self.SearchString) < len( sensname) and fnmatch( sensname, '*' + self.SearchString + '*')):
             sensname = self.SearchString
@@ -4158,14 +4359,26 @@ class MR:
                 print( 'sensname is: {}'.format( sensname))
             #sys.exit()
         if( debug):
-            print( 'self.SearchString', self.SearchString)
+            print( 'self.SearchString "{}"'.format( self.SearchString))
         #sys.exit()
         #for d in days:
         #    print( 'd', d)
         #    daystring = datetime.strftime( d, '%Y%m%d')
         #    print( 'daystring', daystring)
         #sys.exit()
-        channelvario = [[sensname + datetime.strftime( f, '%Y%m%d') + fileending for f in days]] # appending days datainfo to searchlist
+        sensNameCond = ( sensname.startswith( 'JAN')) | ( sensname.startswith( 'FEB')) | ( sensname.startswith( 'MAR')) | ( sensname.startswith( 'APR')) | ( sensname.startswith( 'MAY')) | ( sensname.startswith( 'JUN')) | ( sensname.startswith( 'JUL')) | ( sensname.startswith( 'AUG')) | ( sensname.startswith( 'SEP')) | ( sensname.startswith( 'OKT')) | ( sensname.startswith( 'NOV')) | ( sensname.startswith( 'DEC'))
+        if( sensNameCond):
+            channelvario = []
+            for day in days:
+                dayIsoStr = datetime.strftime( day, '%b').upper() + datetime.strftime( day, '%d') + datetime.strftime( day, '%Y')[-2:] + fileending
+                print( 'dayIsoStr', dayIsoStr)
+                channelvario.append( [dayIsoStr])
+            #print( "[sensname + datetime.strftime( f, '%m%d%Y') + fileending for f in days]", [datetime.strftime( f, '%m%d%Y') + fileending for f in days])
+            self.SearchString = channelvario
+            #sys.exit()
+            #channelvario = [[sensname + datetime.strftime( f, '%m%d%Y') + fileending for f in days]] # appending days datainfo to searchlist
+        else:
+            channelvario = [[sensname + datetime.strftime( f, '%Y%m%d') + fileending for f in days]] # appending days datainfo to searchlist
         
         #sys.exit()
         #channels = ['LEMI036_1_0002_' + liststart + '.bin': 'LEMI036_1_0002_' + listend + '.bin']
@@ -4260,25 +4473,32 @@ class MR:
         """
         Checking how many data columns are needed
         """
-        
+        datestringIndex = []
+        datestring = []
+        datestringLineCount = 0
         for k, f in enumerate( allfiles):
             columncount = 0
             #with codecs.open(f,'r','string-escape') as file:
             #temp=f.read()
             print( 'reading \n{}...'.format( f))
-            temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
-            print( '...IAGA-2002 txt #{} file \n{} read.'.format( k, f))
+            try:
+                temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
+                print( '...IAGA-2002 txt #{} file \n{} read.'.format( k, f))
             
-            #print( temp.header['DataCompensationX'])
-            data = temp.read()
+                #print( temp.header['DataCompensationX'])
+                data = temp.read()
+            except:
+                temp = open(f, encoding="unicode_escape")  # READING picologtxt ascii files
+                data = temp.read()
             bakdata = data
             data = data.split( '\n')
-            if( debug):
+            if( False):
                 print( 'data')
                 print( data)
                 print( 'shape of data', np.shape(data))
                 #sys.exit()
             #self.DataSourceHeader = []
+            #sys.exit()
             if( data[0].endswith('IAGA-2002                                    |')):
                 linecount = 1
                 for line in data[1::]:
@@ -4354,10 +4574,40 @@ class MR:
                         #self.DataSource = line[ line.rfind( 'Data Type') + len( ' Data Type'):-1]
                         #print( 'string found {}'.format( self.DataSource))
                         linecount = linecount  + 1
+                    elif( line.startswith( ' # ')):
+                        linecount = linecount  + 1
                     elif( line.startswith( 'DATE')):
-                        for el in line[:-1].split( ' '):
+                        colnames = []
+                        #for el in line[:-1].split( ' '):
+                        for el in line[:-1].split():
                             if( len( el) != 0):
                                 columncount = columncount + 1
+                            colnames.append( el)
+                            #colnames = [ g[0] for g in cols]
+                            if( debug):
+                                print( 'colnames', colnames)
+                        coldic = []
+                        for l, cname in enumerate( colnames):
+                            if( cname != '-'):
+                                #if( ( cname == 'time') | ( cname == 'TIME')| ( cname == 'DOY')):
+                                #    coldic.append( [ int( 0), cname])
+                                #else:
+                                if( debug):
+                                    print( 'cname', cname)
+                                if( ( cname != 'time') & ( cname != 'TIME') & ( cname != 'DOY') & ( cname != 'DATE')):
+                                    #print( 'Did this')
+                                    coldic.append( [ int( l), cname[len( cname) - 1:]])
+                                elif( ( cname == 'time') | ( cname == 'TIME')):
+                                    #print( 'Did that')
+                                    coldic.append( [ int( l), cname])
+                            if( debug):
+                                print( 'coldic', coldic)
+                        #sys.exit()
+                        if( debug):
+                            print( 'coldic', coldic)
+                        #sys.exit()
+                        coldic = np.array( coldic)
+             
                         #print( 'assuming {} columns will be found'.format( columncount))
             elif( ( data[0].startswith('20')) | ( data[0].endswith('1 65')) | ( data[0].endswith('1 60')) | ( data[0].endswith('1 80'))):
                 linecount = 1
@@ -4370,9 +4620,75 @@ class MR:
                         if( len( el) != 0):
                             columncount = columncount + 1
                     print( 'assuming {} columns will be found'.format( columncount))
+            elif( data[0].startswith('%hh %mm %ss X Y Z')):
+                line = data[0]
+                linecount = 1
+                self.DataSourceHeader.append( 'Source of Data: UNKNOWN')
+                print( ' Source of Data {}'.format( self.DataSourceHeader[-1]))
+                self.DataSourceHeader.append( 'Station Name: UNKNOWN')
+                print( ' Station Name {}'.format( self.DataSourceHeader[-1]))
+                self.DataSourceHeader.append( 'IAGA Code: UNKNOWN')
+                print( ' IAGA Code {}'.format( self.DataSourceHeader[-1]))
+                self.DataSourceHeader.append( 'Geodetic Latitude: UNKNOWN')
+                print( ' Geodetic Latitude {}'.format( self.DataSourceHeader[-1]))
+                self.DataSourceHeader.append( 'Geodetic Longitude: UNKNOWN')
+                print( ' Geodetic Longitude {}'.format( self.DataSourceHeader[-1]))
+                self.DataSourceHeader.append( 'Elevation: UNKNOWN')
+                print( ' Elevation {}'.format( self.DataSourceHeader[-1]))
+                for el in line[:-1].split( ' '):
+                    if( len( el) != 0):
+                        columncount = columncount + 1
+                    if( debug):
+                        print( 'columncount', columncount)
                 #sys.exit()
-        
-        #print( 'columncount', columncount)
+            elif( data[0].rfind( '.MAS') > 0): # Fuerstenfeld-Bruck-Obs data
+                #line = data[0]
+                linecount = 0
+                import time as tim
+                for o, line in enumerate( data[0::]):
+                    if( line.rfind( '.MAS') > 0):
+                        if( False):
+                            print( 'line', line)
+                        datestring.append( line[ line.rfind( '.MAS') - 8: line.rfind( '.MAS')])
+                        if( debug):
+                            print( 'datestring', datestring)
+                            tim.sleep( 1)
+                        StationFileNameAbbr = line[ line.rfind( datestring[-1]) - 2: line.rfind( datestring[-1])]
+                        if( debug):
+                            print( 'StationFileNameAbbr', StationFileNameAbbr)
+                            #sys.exit()
+                        datestringIndex.append( datestringLineCount)
+                    if( not line.startswith( StationFileNameAbbr)):
+                        #print( 'index found {}'.format( line.rfind( 'Source of Data') + len( ' Source of Data')))
+                        #print( 'line', line)
+                        #sys.exit()
+                        self.DataSourceHeader.append( line)
+                        if( debug):
+                            print( ' {}'.format( self.DataSourceHeader[-1]))
+                        linecount = linecount + 1
+                        
+                        if( line.startswith( 'ST')):
+                            for el in line[:-1].split( ' '):
+                                if( len( el) != 0):
+                                    columncount = columncount + 1
+                                if( debug):
+                                    print( 'columncount', columncount)
+                            linecount = linecount - 1
+                    if( line.startswith( StationFileNameAbbr)): # save the linecount where the datestring have to change when multiple files are read
+                        datestringLineCount = datestringLineCount + 1
+            
+                #print( 'columncount', columncount)
+                #sys.exit()
+                datestringIndex.append( 999999999)
+                lstdatestring = ( datetime.strptime( datestring[-1], '%Y%m%d') + timedelta( days = 1)).strftime( '%Y%m%d')
+                if( debug):
+                    print( 'lstdatestring', lstdatestring)
+                datestring.append( lstdatestring)
+                datestringLineCount = datestringLineCount + 999999999
+                if( debug):
+                    print( 'datestringIndex', datestringIndex)
+                    print( 'datestring', datestring)
+                    print( 'datestringLineCount', datestringLineCount)
         #sys.exit()
         """
         Reading data
@@ -4380,14 +4696,22 @@ class MR:
         allmydate = []
         #allx = [[] for i in range( columncount - 3)]
         allx = []
+        o = 0 # Index to check if another datestring has to be used when multiple files are read
+        bakl = 0
         for k, f in enumerate( allfiles):
             #with codecs.open(f,'r','string-escape') as file:
             #temp=f.read()
             print( 'reading \n{}...'.format( f))
-            temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
-            print( '...IAGA-2002 txt #{} file \n{} read.'.format( k, f))
-            #print( temp.header['DataCompensationX'])
-            data = temp.read()
+            try:
+                temp = open(f)#, encoding="ascii", errors="surrogateescape")  # READING picologtxt ascii files
+                print( '...IAGA-2002 txt #{} file \n{} read.'.format( k, f))
+            
+                #print( temp.header['DataCompensationX'])
+                data = temp.read()
+            except:
+                temp = open(f, encoding="unicode_escape")  # READING picologtxt ascii files
+                print( '...IAGA-2002 txt #{} file \n{} with unicode_escape encoding read.'.format( k, f))
+                data = temp.read()
             data = data.split( '\n')
             #self.DataSourceHeader = []
             if( data[0].endswith('IAGA-2002                                    |')):
@@ -4473,29 +4797,30 @@ class MR:
                         print( 'assuming {} columns will be found'.format( columncount))
                         linecount = linecount  + 1
                 mydate = []
-                x = [[] for i in range( columncount - 3)]
+                #x = [[] for i in range( columncount - 3)]
+                x = []
                 #print( 'shape of x is: {}'.format( np.shape( x)))
                 #sys.exit()
                 
                 for line in data[linecount::]:
                     elements = line.split( ' ')
-                    usableind = np.argwhere( [len( f) != 0 for f in elements] ).flatten()
-                    #print( 'usableind', usableind)
+                    usableind = np.argwhere( np.array( [len( g) != 0 for g in elements]) ).flatten()
+                    
                     if( len( usableind) > 0):
                         date = elements[usableind[0]]
                         time = elements[usableind[1]]
                         time = time.split( '.')[0]
                         microsec = elements[usableind[1]].split( '.')[1]
                         doy = elements[2]
-                        for i in range( columncount - 3):
-                            #print( i)
-                            #print( 'elements[i + 3]', elements[usableind[i + 3]])
-                            x[i].append( float( elements[usableind[i + 3]]))
-                            #y.append( float( elements[4]))
-                            #z.append( float( elements[5]))
-                            #f.append( float( elements[6]))
-                        #print( 'x', x)
+                        if( False):
+                            print( 'usableind', usableind)
+                            print( 'elements', elements)
+                            #print( 'elements[usableind]', elements[usableind])
                         #sys.exit()
+                        x.append( [ float( elements[i]) for i in usableind[3:].astype( int)])
+                        if( False):
+                            print( 'x', x)
+                        #input()
                         datestring = date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)) + ' ' + doy
                         #print( 'date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)): {}'.format( datestring))
                         mydate.append( datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S %f %j"))
@@ -4513,6 +4838,14 @@ class MR:
             elif( ( data[0].startswith('20')) | ( data[0].endswith('1 65')) | ( data[0].endswith('1 60')) | ( data[0].endswith('80'))): # WIK - txt files
                 linecount = 1
                 self.DataSourceHeader.append( 'WIK-LEMI025')
+                coldic = []
+                for l, cname in enumerate( ['time', '-m', '-d', '-h', '-M', '-s', 'x', 'y', 'z']):
+                    if( not cname.startswith( '-')):
+                        coldic.append( [ int( l), cname])
+                if( debug):
+                    print( 'coldic', coldic)
+                coldic = np.array( coldic)
+                #sys.exit()
                 for line in data[0::]:
                     if( line.startswith( '20')):
                         #print( 'index found {}'.format( line.rfind( 'Source of Data') + len( ' Source of Data')))
@@ -4525,11 +4858,11 @@ class MR:
                 #sys.exit()
                 x = []
                 baklinecount = linecount
-                for k, line in enumerate( data[0::]):
+                for l, line in enumerate( data[0::]):
                     #print( 'line in data is: {}'.format( line))
                     elements = line.split( ' ')
                     #print( 'elements in line: {}'.format( elements))
-                    usableind = np.argwhere( [len( f) != 0 for f in elements] ).flatten()
+                    usableind = np.argwhere( [len( g) != 0 for g in elements] ).flatten()
                     #print( 'usableind', usableind)
                     if( len( usableind) > 0):
                         date = elements[usableind[0]] + '-' + elements[usableind[1]] + '-' + elements[usableind[2]]
@@ -4579,12 +4912,12 @@ class MR:
                         self.DataSourceHeader.append( val)
                     if( line.startswith( '-[],x[nT]')):
                         cols = line.split(',')
-                        colnames = [ f[0] for f in cols]
+                        colnames = [ g[0] for g in cols]
                         #print( 'colnames', colnames)7
                         coldic = []
-                        for k, cname in enumerate( colnames):
+                        for l, cname in enumerate( colnames):
                             if( cname != '-'):
-                                coldic.append( [ int( k), cname])
+                                coldic.append( [ int( l), cname])
                         if( debug):
                             print( 'coldic', coldic)
                         #sys.exit()
@@ -4622,12 +4955,12 @@ class MR:
                 #sys.exit()
                 x = []
                 baklinecount = linecount
-                for k, line in enumerate( data[headercount::]):
+                for l, line in enumerate( data[headercount::]):
                     #print( 'line in data is: {}'.format( line))
                     elements = line.split( ',')
                     if( debug):
                         print( 'elements in line: {}'.format( elements))
-                    usableind = np.argwhere( [len( f) != 0 for f in elements] ).flatten()
+                    usableind = np.argwhere( [len( g) != 0 for g in elements] ).flatten()
                     if( debug):
                         print( 'usableind', usableind)
                     if( len( usableind) > 0):
@@ -4654,7 +4987,7 @@ class MR:
                             #y.append( float( elements[4]))
                             #z.append( float( elements[5]))
                             #f.append( float( elements[6]))
-                        sublst = [ float( elements[k]) for k in coldic[:,0].astype( int)]
+                        sublst = [ float( elements[i]) for i in coldic[:,0].astype( int)]
                         #print( 'sublst', sublst)
                         x.append( sublst)
                         #print( 'x[-1]', x[-1])
@@ -4679,13 +5012,245 @@ class MR:
                 #print( 'x' , x)
                 #print( 'shape of dataarray' , np.shape( dataarray))
                 #sys.exit()
-            [ allmydate.append( f) for f in mydate]
-            #[ allx.append( f) for f in x]
-            for l, triple in enumerate( np.array( x)):
-                #print( 'triple[{}]={}'.format( l, triple))
-                #print( 'np.shape( triple)', np.shape( np.atleast_2d( triple)))
+            elif( data[0].startswith('%hh %mm %ss X Y Z')):
+                #linecount = 1
+                
+                for line in data[0:linecount]:
+                    cols = line.split(' ')
+                    if( debug):
+                        print( 'cols', cols)
+                    colnames = [ g[0] for g in cols]
+                    if( debug):
+                        print( 'colnames', colnames)
+                    coldic = []
+                    for l, cname in enumerate( colnames):
+                        if( not cname.startswith( '%')):
+                            coldic.append( [ int( l), cname])
+                    if( debug):
+                        print( 'coldic', coldic)
+                    #sys.exit()
+                
+                #self.DataSourceHeader.append( 'WIK-LEMI025')
+                mydate = []
+                #x = [[] for i in range( columncount - 10)]
+                #print( 'shape of x is: {}'.format( np.shape( x)))
                 #sys.exit()
-                allx.append( triple)
+                coldic = np.array( coldic)
+                #print( 'coldic[:,0]', coldic[:,0].astype( int))
+                #sys.exit()
+                x = []
+                baklinecount = linecount
+                for l, line in enumerate( data[baklinecount::]):
+                    #print( 'line in data is: {}'.format( line))
+                    elements = line.split( ' ')
+                    if( debug):
+                        print( 'elements in line: {}'.format( elements))
+                    usableind = np.argwhere( [len( g) != 0 for g in elements] ).flatten()
+                    if( debug):
+                        print( 'usableind', usableind)
+                    #sys.exit()
+                    if( len( usableind) > 0):
+                        #tobject = elements[0]
+                        #tobject = tobject.split( '-')
+                        #tl = tobject[-1]
+                        #tl = tl.split( 'T')
+                        daystring = f[f.rfind( '/') + 1:]
+                        daystring = daystring[:daystring.rfind( '.')]
+                        daystring = daystring[:-2] + '20' + daystring[-2:]
+                        #print( 'daystring', daystring)
+                        #print( 'daystring', daystring, 'elements[usableind[0]]', elements[usableind[0]], 'elements[usableind[1]]', elements[usableind[1]], 'elements[usableind[2]]',elements[usableind[2]])
+                        tstring = daystring + str( '{:0>2}{:0>2}{:0>2}'.format( elements[usableind[0]], elements[usableind[1]], elements[usableind[2]]))
+                        #print( 'tstring', tstring)
+                        #tobject = datetime.strptime( tstring, '%b%d%Y%H%M%S') 
+                        #tobject.append( tl[0])
+                        #if( debug):
+                        #    print( 'tobject', tobject)
+                        #sys.exit()
+                        #date = tobject[usableind[0]] + '-' + tobject[usableind[1]] + '-' + tobject[usableind[2]]
+                        #time = tobject[usableind[3]] + ':' + tobject[usableind[4]] + ':' + tobject[usableind[5]]
+                        #time = time.split( '.')[0]
+                        #microsec = elements[usableind[1]].split( '.')[1]
+                        #doy = elements[2]
+                        #for i in range( columncount - 10):
+                            #print( i)
+                            #print( 'elements[i + 3]', elements[usableind[i + 3]])
+                            #x[i].append( [ float( elements[6]), float( elements[7]), float( elements[8])])
+                            #print( 'x[i]', x[i])
+                            #y.append( float( elements[4]))
+                            #z.append( float( elements[5]))
+                            #f.append( float( elements[6]))
+                        sublst = [ float( elements[i]) for i in coldic[:,0].astype( int)]
+                        if( debug):
+                            print( 'sublst', sublst)
+                        x.append( sublst)
+                        #print( 'x[-1]', x[-1])
+                        #print( 'x', x)
+                        #sys.exit()
+                        #if( debug):
+                        #    print( 'date', date)
+                        #    print( 'time', time)
+                        #datestring = date + ' ' + time
+                        #if( debug):
+                        #    print( 'date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)): {}'.format( datestring))
+                        #sys.exit()
+                        mydate.append( datetime.strptime(tstring, '%b%d%Y%H%M%S').replace( tzinfo = timezone.utc))
+                        #print( 'mydate[-1] is: {}'.format( mydate[-1]))
+                    #print( 'NUM2DATE20TIME( mydate[-1]) is: {}'.format( NUM2DATE20TIME( mydate[-1])))
+                    #sys.exit()
+                    #for el in line.split( ''):
+                    #    print( 'el in line is: {}'.format( el))
+                #print( 'self.DataSourceHeader: {}'.format( self.DataSourceHeader))
+                #print( 'ztime' , ztime)
+                #print( 'shape of ztime' , np.shape( ztime))
+                #print( 'x' , x)
+                #print( 'shape of dataarray' , np.shape( dataarray))
+                #sys.exit()
+            elif( data[0].rfind( '.MAS') > 0): # Fuerstenfeld-Bruck-Obs data
+                
+                #print( 'linecount', linecount)
+                #mydate = datetime.strptime( datestring, '%Y%m%d')
+                #print( 'mydate', mydate)
+                #sys.exit()
+                line = data[linecount - 1]
+                if( debug):
+                    print( 'line', line)
+                    #sys.exit()
+                """
+                Manually determine the locations of blankspaces for later 
+                separation of the data ( negative signs maybe cause disfunction 
+                of correction separation of data columns when using split()))
+                """
+                splitindex = [g for g, v in enumerate(line) if v == ' ']
+                splitindex.insert(0, 0)
+                splitindex.append( len( line))
+                #print( 'splitindex', splitindex)
+                #sys.exit()
+                cols = line.split(' ')
+                if( debug):
+                    print( 'cols', cols)
+                colnames = [ g[0] for g in cols]
+                if( debug):
+                    print( 'colnames', colnames)
+                coldic = []
+                for l, cname in enumerate( colnames):
+                    if( ( ( not cname.startswith( 'S')))): # ( not cname.startswith( 'h')) &
+                        if( not cname.startswith( 'h')):
+                            coldic.append( [ int( l), cname])
+                        else:
+                            coldic.append( [ int( l), 'time'])
+                if( debug):
+                    print( 'coldic', coldic)
+                
+                #sys.exit()
+                
+                #self.DataSourceHeader.append( 'WIK-LEMI025')
+                mydate = []
+                #x = [[] for i in range( columncount - 10)]
+                #print( 'shape of x is: {}'.format( np.shape( x)))
+                #sys.exit()
+                #coldic = np.array( coldic)
+                if( debug):
+                    print( 'coldic[:,1].astype( str)', coldic[:,1].astype( str))
+                    #sys.exit()
+                #print( 'coldic[:,0]', coldic[:,0].astype( int))
+                #sys.exit()
+                x = []
+                baklinecount = linecount
+                if( False):
+                    print( 'data[baklinecount::]', data[baklinecount::])
+                for l, line in enumerate( data[baklinecount::]):
+                    #print( 'line in data is: {}'.format( line))
+                    elements = [ line[spia: spie] for spia, spie in zip( splitindex[0:], splitindex[1:])]#line.split( ' ')
+                    if( debug):
+                        print( 'line: {}'.format( line))
+                        print( 'elements in line: {}'.format( elements))
+                    #sys.exit()
+                    usableind = np.argwhere( [len( g) != 0 for g in elements] ).flatten()
+                    if( False):
+                        print( 'usableind', usableind)
+                    #sys.exit()
+                    if( debug):
+                        print( 'datestring', datestring)
+                        print( 'datestringIndex[o + 1]', datestringIndex[o + 1])
+                    #sys.exit()
+                    if( len( usableind) > 0):
+                        tobject = elements[usableind[1]].strip( ' ')
+                        if( debug):
+                            print( 'tobject', tobject)
+                        #sys.exit()
+                        #tobject = tobject.split( '-')
+                        #tl = tobject[-1]
+                        #tl = tl.split( 'T')
+                        if( l + bakl >= datestringIndex[o + 1]):
+                            o = o + 1
+                        timeobject = datetime.strptime( datestring[o] + 'T' + tobject, '%Y%m%dT%H:%M:%S')
+                        if( debug):
+                            print( 'timeobject', timeobject)
+                            print( 'l', l, 'o', o, 'datestring[o]', datestring[o], 'datestringIndex[o]', datestringIndex[o])
+                        
+                        #sys.exit()
+                        #print( 'daystring', daystring, 'elements[usableind[0]]', elements[usableind[0]], 'elements[usableind[1]]', elements[usableind[1]], 'elements[usableind[2]]',elements[usableind[2]])
+                        #tstring = daystring + str( '{:0>2}{:0>2}{:0>2}'.format( elements[usableind[0]], elements[usableind[1]], elements[usableind[2]]))
+                        #print( 'tstring', tstring)
+                        #tobject = datetime.strptime( tstring, '%b%d%Y%H%M%S') 
+                        #tobject.append( tl[0])
+                        #if( debug):
+                        #    print( 'tobject', tobject)
+                        #sys.exit()
+                        #date = tobject[usableind[0]] + '-' + tobject[usableind[1]] + '-' + tobject[usableind[2]]
+                        #time = tobject[usableind[3]] + ':' + tobject[usableind[4]] + ':' + tobject[usableind[5]]
+                        #time = time.split( '.')[0]
+                        #microsec = elements[usableind[1]].split( '.')[1]
+                        #doy = elements[2]
+                        #for i in range( columncount - 10):
+                            #print( i)
+                            #print( 'elements[i + 3]', elements[usableind[i + 3]])
+                            #x[i].append( [ float( elements[6]), float( elements[7]), float( elements[8])])
+                            #print( 'x[i]', x[i])
+                            #y.append( float( elements[4]))
+                            #z.append( float( elements[5]))
+                            #f.append( float( elements[6]))
+                        #for i in usableind:
+                        #    print( 'elements[i]', elements[i])
+                        #sys.exit()
+                        #sublst = [ float( elements[i]) for i in usableind[2:]]
+                        sublst = [ float( elements[i]) for i in coldic[1:,0].astype( int)]
+                        #sublst = np.array( sublst, dtype = float)
+                        
+                        if( False):
+                            print( 'sublst', sublst)
+                        x.append( sublst)
+                        if( False):
+                            print( 'x[-1]', x[-1])
+                            print( 'x', x)
+                            #sys.exit()
+                        #if( debug):
+                        #    print( 'date', date)
+                        #    print( 'time', time)
+                        #datestring = date + ' ' + time
+                        #if( debug):
+                        #    print( 'date + ' ' + time + ' ' + str( int( float(microsec)* 1000.0)): {}'.format( datestring))
+                        #sys.exit()
+                        mydate.append( timeobject.replace( tzinfo = timezone.utc))
+                        if( debug):
+                            print( 'mydate[-1]', mydate[-1])
+                            #sys.exit()
+                bakl = l
+                #sys.exit()
+                #input()
+                                
+            #[ allmydate.append( f) for f in mydate]
+            coldic = np.array( coldic)
+            allmydate.extend( mydate)
+            #[ allx.append( f) for f in x]
+            if( False):
+                for l, triple in enumerate( np.array( x)):
+                    #print( 'triple[{}]={}'.format( l, triple))
+                    #print( 'np.shape( triple)', np.shape( np.atleast_2d( triple)))
+                    #sys.exit()
+                    allx.append( triple)
+            else:
+                allx.extend( x)
             
             #[ allx.append( f) for f in g for g in x]
             if( debug):
@@ -4704,13 +5269,23 @@ class MR:
         #            sys.exit()
         #sys.exit()
         ztime = np.array( NUM2DATE20TIME( allmydate))
-        #print( 'ztime')
-        #for el in ztime:
-        #    print( 'el in ztime', el)
-        #sys.exit()
+        if( False):
+            print( 'ztime')
+            for el in ztime:
+                print( 'el in ztime', el)
+            #sys.exit()
+        if( debug):
+            print( 'length of ztime: {}'.format( len( ztime)))
+            print( 'shape of ztime: {}'.format( np.shape( allx)))
         sortind = np.argsort( ztime)
+        if( debug):
+            print( 'sortind: {}'.format( sortind))
+            print( 'length of sortind: {}'.format( len( sortind)))
         ztime = ztime[sortind]
-        dataarray = np.array( allx)[sortind, :]
+        try:
+            dataarray = np.array( allx)[sortind, :]
+        except:
+            dataarray = ( np.array( allx)[:, sortind]).T
         #print( 'ztime')
         #for el in ztime:
         #    print( 'el in ztime {}'.format( el))
@@ -4718,7 +5293,6 @@ class MR:
         #
         #print( data)
         #print( np.shape( ztime))
-        #print( np.shape( dataarray))
         #sys.exit()
         #plt.plot( np.diff( ztime), alpha = 0.2)
         #plt.show()
@@ -4731,7 +5305,9 @@ class MR:
         #print( shape( colmp))
         #print( type( colmp))
         #sys.exit()
-        
+        if( debug):
+            print( 'shape of dataarray', np.shape( dataarray))
+            #sys.exit()
         colmp = np.hstack( ( np.atleast_2d( ztime).T, dataarray)) # CONCATENATE MAGPY STREAMS
         #print(' shape( colmp)', shape( colmp))
         res = date2num( STAMPTODATE( ztime))#.astype( float)
@@ -4741,11 +5317,17 @@ class MR:
         #sys.exit()
         colmp[:,0] = res
         bakcolmp = colmp
+        #import matplotlib.pyplot as plt
         #plt.plot( bakcolmp[:-1,0], np.diff( bakcolmp[:,1:], axis = 0), alpha = 0.2)
         #plt.show()
         #sys.exit()
-        print( bakcolmp[:,0])
-        print( 'shape of bakcolmp', np.shape( bakcolmp))
+        if( debug):
+            print( 'bakcolmp[:,0]', bakcolmp[:,0])
+            print( 'bakcolmp[:,1]', bakcolmp[:,1])
+            print( 'bakcolmp[:,2]', bakcolmp[:,2])
+            print( 'bakcolmp[:,3]', bakcolmp[:,3])
+            print( 'shape of bakcolmp', np.shape( bakcolmp))
+        
         #sys.exit()
         #mydict = dict( zip( ['time', 'dx', 'dy', 'dz'], bakcolmp))
         dictlist = ['time']#, 'x', 'y', 'z', 'f']
@@ -4754,36 +5336,122 @@ class MR:
         #print( 'dictlist is: {}'.format( dictlist))
         #sys.exit()
         colmp = DataStream()
-        array = np.asarray( [ np.zeros( ( np.max( np.shape( bakcolmp)))) for el in colmp.KEYLIST], dtype = object)
-        #print( np.shape( array))
-        #sys.exit()
-        #array[]
-        #plt.plot( ztime, dataarray, alpha = 0.2)
-        #plt.show()
-        #sys.exit()
+        array = np.zeros( ( np.max( np.shape( bakcolmp)), len( colmp.KEYLIST))).astype( object).T
+        if( debug):
+            print( 'shape of array: {}'.format( np.shape( array)))
+        if( False):
+            #array = np.asarray( [ np.zeros( ( np.max( np.shape( bakcolmp)))) for el in colmp.KEYLIST], dtype = object)
+            #array = np.zeros( ( np.max( np.shape( bakcolmp)), len( colmp.KEYLIST))).astype( object).T
+            if( debug):
+                print( 'np.shape( array)', np.shape( array))
+            for colname in dictlist:
+                if( debug):
+                    print( 'colname', colname)
+                ind = colmp.KEYLIST.index( colname)
+                if( debug):
+                    print( 'ind', ind)
+                array[ind, :] = bakcolmp[:, ind]
+                if( debug):
+                    print( 'bakcolmp[:, ind]', bakcolmp[:, ind])
+                    print( 'array[ind, :]', array[ind, :])
+            #array = np.asarray( bakcolmp, dtype = object).T
+            if( debug):
+                print( 'array', array)
+                print( 'np.shape( array)', np.shape( array))
+                #sys.exit()
+            #array[]
+            #plt.plot( ztime, dataarray, alpha = 0.2)
+            #plt.show()
+            #sys.exit()
+            colmp.ndarray = array
+            colmp = colmp.trim( starttime = sstartdate, endtime = enddate)
+            if( True):
+                print( 'colmp.ndarray[0]', colmp.ndarray[0])
+                print( 'colmp.ndarray[1]', colmp.ndarray[1])
+                print( 'colmp.ndarray[2]', colmp.ndarray[2])
+                print( 'colmp.ndarray[3]', colmp.ndarray[3])
+                print( 'shape of colmp', np.shape( colmp.ndarray[ [0,1,2,3]]))
+            
+            sys.exit()
         colmp.ndarray = array
+        """
+        selecting only columns specified in by self.ColList by comparison with header info
+        """
         for dictel, d in zip( dictlist, bakcolmp.T):
-            colmp.ndarray[colmp.KEYLIST.index(dictel)] = np.asarray( d, dtype = object)
+            #if( dictel != 'time'):
+            #    dictel = self.SearchString + dictel
+            if( debug):
+                print( 'dictel', dictel)
+                print( 'coldic[:,1].astype( str)', coldic[:,1].astype( str))
+                print( 'dictel.upper()', dictel.upper())
+            #cond = np.array( [ ( f.endswith( dictel)) | ( f.endswith( dictel.upper())) for f in coldic[:,1].astype( str)])
+            cond = np.array( [ ( dictel == f) | ( dictel.upper() == f) for f in coldic[:,1].astype( str)])
+            if( debug):
+                print( 'cond', cond)
+            #sys.exit()
+            selind = np.argwhere( cond).flatten()
+            if( debug):
+                print( 'selind', selind)
+            #sys.exit()
+            if( len( selind) != 0):
+                #print( 'dictel.upper()', dictel.upper())
+                #if( dictel != 'time'):
+                #    dictel = dictel[ dictel.rfind( self.SearchString) + len( dictel) - 1:].lower()
+                if( debug):
+                    print( 'org dictel', dictel)
+                
+                #cond = dictel.upper() == coldic[:,1].astype( str)
+                #cond = np.array( [ ( f.endswith( dictel)) | ( f.endswith( dictel.upper())) for f in coldic[:,1].astype( str)])
+                #selind = np.argwhere( cond).flatten()
+                if( debug):
+                    print( 'cond', cond)
+                    print( 'selind', selind)
+                    print( 'shape of bakcolmp', np.shape( bakcolmp))
+                    print( 'bakcolmp[ :,selind]', bakcolmp[ :,selind])
+                #sys.exit()
+                if( debug):                
+                    print( 'selind', selind)
+                    print( 'bakcolmp[ :,selind]', bakcolmp[ :,selind])
+                if( ( dictel != 'time') & ( dictel.lower() != 'time')):
+                    colmp.ndarray[colmp.KEYLIST.index(dictel)] = np.asarray( ( bakcolmp[ :,selind]).flatten(), dtype = object)
+                if( ( dictel == 'time') | ( dictel.lower() == 'time')):
+                    colmp.ndarray[colmp.KEYLIST.index(dictel)] = np.asarray( ( bakcolmp[ :,selind]).flatten(), dtype = object)
+                if( debug):
+                    print( 'colmp.ndarray[colmp.KEYLIST.index({})]: {}'.format( dictel, colmp.ndarray[colmp.KEYLIST.index(dictel)]))
+        #sys.exit()
+        
         if( data[0].endswith('IAGA-2002                                    |')):
             colmp.header['SensorID'] = self.DataSourceHeader[2]#'GFZ'
+        elif( self.DataSourceHeader[0].rfind('DateiName   :,FR') > 0):
+            colmp.header['SensorID'] = str( 'GFZ-FUR')#'GFZ'
+            colmp.header['unit-col'] = self.DataSourceHeader[2].replace(',', '').split()[3].replace( ':','') + ' and ' + self.DataSourceHeader[3].replace(',', '').split()[3].replace( ':','')#'GFZ'
         else:
             colmp.header['SensorID'] = str( 'UNKNOWN')
         #colmp = colmp._put_column(colmp[:,0], 'time', columnname='Rain',columnunit='mm in 1h')
         #print( 'colmp', colmp.ndarray[[1,2,3]])
-        #dirvar = colmp.header.items()
-        #print( dir( dirvar))
-        #for el in dirvar:
-        #    print( el)
-        #print('\n\n\n\n')
-        #for el in dir( colmp.header):
-        #    print( el)
-        #sys.exit()
-        if( False):
+        if( debug):
+            print( "colmp.header['SensorID']", colmp.header['SensorID'])
+            dirvar = colmp.header.items()
+            print( 'dir( dirvar)', dir( dirvar))
+            for el in dirvar:
+                print( 'el in dirvar', el)
+            print('\n\n\n\n')
+            for el in dir( colmp.header):
+                print( 'el in colmp.header', el)
+                if( el.startswith( 'items')):
+                    for bl in el:
+                        print( 'bl in items', bl)
+            #sys.exit()
+        if( debug):
+            import matplotlib.pyplot as plt
             for dictel in dictlist:
                 if( dictel != 'time'):
-                    plt.plot( colmp.ndarray[colmp.KEYLIST.index('time')], colmp.ndarray[colmp.KEYLIST.index(dictel)], alpha = 0.2)
+                    plt.plot( num2date( colmp.ndarray[colmp.KEYLIST.index('time')]), colmp.ndarray[colmp.KEYLIST.index(dictel)], alpha = 0.2, label = dictel)
+                    #plt.plot( colmp.ndarray[colmp.KEYLIST.index(dictel)], alpha = 0.2, label = dictel)
+                    #plt.plot( colmp.ndarray[colmp.KEYLIST.index('time')], alpha = 0.2, label = dictel)
+            plt.legend( loc = 'best')        
             plt.show()
-            sys.exit()
+            #sys.exit()
         if( True):
             if( self.ApplyFlags):
                 #print( '...applying flags')
@@ -4791,20 +5459,29 @@ class MR:
             if( self.InterMagFilter):
                 #print( '...applying intermagnet specified filter')
                 self.__InterMagnet_filter__(colmp)
-            
+            if( debug):
+                print( "np.any( colmp.ndarray[16] == b'P')", np.any( colmp.ndarray[16] == b'P'))
             if( np.any( colmp.ndarray[16] == b'P')): # CHECKING IF GPS-status is bad
                 print( 'BAD GPS-STATUS!...SWITCHING TO SECONDARY TIME BEFORE TRIMMING!')
                 colmp = colmp.use_sectime( swap = True) # SWITCH TIMECOLUMNS SO THAT NTP TIMECOLUMN IS IN COLUMN 0 AND TRIM CAN BE APPLIED PROPERLY
-            #print( 'sstartdate', sstartdate)
-            #print( 'enddate', enddate)
-            #print( 'STAMPTODATE( ztime[0])', STAMPTODATE( ztime[0]))
-            #print( 'STAMPTODATE( ztime[-1])', STAMPTODATE( ztime[-1]))
             if( debug):
-                print( 'colmp.ndarray[0] before triming', colmp.ndarray[0])
+                print( 'sstartdate', sstartdate)
+                print( 'enddate', enddate)
+                print( 'STAMPTODATE( ztime[0])', STAMPTODATE( ztime[0]))
+                print( 'STAMPTODATE( ztime[-1])', STAMPTODATE( ztime[-1]))
+                print( "num2date( colmp.ndarray[colmp.KEYLIST.index('time')][0])", num2date( colmp.ndarray[colmp.KEYLIST.index('time')][0]))
+                print( "num2date( colmp.ndarray[colmp.KEYLIST.index('time')][-1])", num2date( colmp.ndarray[colmp.KEYLIST.index('time')][-1]))
+            if( debug):
+                print( 'colmp.ndarray[0] before triming', colmp.ndarray[colmp.KEYLIST.index('time')])
+                print( 'length colmp.ndarray[0] before triming', len( colmp.ndarray[colmp.KEYLIST.index('time')]))
+                print( 'starttime = ', sstartdate, 'endtime = ', enddate)
+            #temp = colmp.trim( starttime = sstartdate, endtime = enddate) # CUT OUT ONLY TIME OF INTEREST
             temp = colmp.trim( starttime = sstartdate, endtime = enddate) # CUT OUT ONLY TIME OF INTEREST
             colmp = temp
             if( debug):
-                print( 'colmp.ndarray[0] after triming', colmp.ndarray[0])
+                print( 'colmp.ndarray[0] after triming', colmp.ndarray[colmp.KEYLIST.index('time')])
+                print( 'length colmp.ndarray[0] before triming', len( colmp.ndarray[colmp.KEYLIST.index('time')]))
+                #sys.exit()
             del temp
             #print( sstartdate)
             #print( enddate)
@@ -4824,7 +5501,8 @@ class MR:
             
             
             self.__GetSensName__( colmp)
-            print( 'self.sensname is:\n')
+            if( debug):
+                print( 'self.sensname is:\n')
             for el in self.sensname:
                 print( 'el is:\t{}'.format( el))
             if( debug):
@@ -4891,9 +5569,14 @@ class MR:
         #plt.show()
         #sys.exit()
         if( debug):
+            print( 'colmp.ndarray[index_vec]', colmp.ndarray[index_vec])
             import matplotlib.pyplot as plt
-            plt.plot( time_vario_zero, colmp.ndarray[index_vec].T)
+            for d, bibinfo in zip( colmp.ndarray[index_vec], self.DataColNames):
+                print( 'd in colmp.ndarray[index_vec]', d)
+                plt.plot( time_vario_zero, np.array( d, dtype = float) - np.nanmedian( np.array( d, dtype = float)), alpha = 0.2, label = bibinfo)
+            plt.legend( loc = 'best')
             plt.show()
+            #sys.exit()
         try:
             #time_vario_zero = dump[0]
             #print time_vario_zero
@@ -4937,7 +5620,8 @@ class MR:
         vseries = vario
         vtime = ietime
         
-        print( 'Reading {}-Data...done\n'.format( colmp.header['SensorID']))
+        if( debug):
+            print( 'Reading {}-Data...done\n'.format( colmp.header['SensorID']))
         #print( 'vseries is\n{}'.format( vseries))
         #print( 'vtime is\n{}'.format( vtime))
         
@@ -5962,6 +6646,7 @@ class MR:
     
     
     def MPStreamRead( self):
+        #debug = True
         if( debug):
             print( '\n\n\nStarting MPStreamRead...')
             #sys.exit()
@@ -5973,6 +6658,14 @@ class MR:
         vario = self.data
         colmp = vario
         
+        if( False):
+            import matplotlib.pyplot as plt
+            vario = np.array( [ f.astype( float) for f in vario.ndarray[ [1,2,3]] ])
+            for d in vario:
+                plt.plot( d, alpha = 0.3)
+            plt.grid(which = 'both')
+            plt.show()
+            sys.exit()
         #temp = DataStream()
         #print(allfiles)
         #sys.exit()
@@ -5984,11 +6677,12 @@ class MR:
             print( 'self.HeaderInfo is:\n')
             for el in self.HeaderInfo:
                 print( 'el is:\t{}'.format( el))
-            sys.exit()
+            #sys.exit()
         fndheaderinfo = vario.header # backup of temp.header for later use
         
         temp = vario  # READING MAGPY STREAMS
         if( debug):
+            print( '\nself.starttime: {}\tself.endtime: {}'.format( self.starttime, self.endtime))
             print( '\ntemp.header')
             print( temp.header)
             print( '\ntemp.header.keys')
@@ -6000,7 +6694,7 @@ class MR:
             print('\ntemp.header')
             for el in temp.header:
                 print( '\tel in temp.header', el)
-            sys.exit()
+            #sys.exit()
         #print( self.SearchString[0:self.SearchString.rfind( '_')])
         try:
             self.stationinfo = [temp.header['SensorID'], temp.header['DataComments'], temp.header['StationIAGAcode']]
@@ -6009,6 +6703,7 @@ class MR:
         identstr = str( self.stationinfo[0]) + str( self.stationinfo[1]) + str( self.stationinfo[2])
         if( debug):
             print( '...{} #{} {} read.'.format( identstr, 1, 'MPStream'))
+            #sys.exit()
         #print(k, temp.ndarray[2])
         #colmp = mp.appendStreams([colmp, temp]) # CONCATENATE MAGPY STREAMS
         #print( 'actual colmp length is: {}'.format( colmp.length))
@@ -6020,8 +6715,38 @@ class MR:
         #sys.exit()
         colmp.header = fndheaderinfo
         vario = vario.removeduplicates()
+        if( False):
+            import matplotlib.pyplot as plt
+            vario = np.array( [ f.astype( float) for f in vario.ndarray[ [1,2,3]] ])
+            for d in vario:
+                plt.plot( d, alpha = 0.3)
+            plt.grid(which = 'both')
+            plt.show()
+            sys.exit()
+        if( debug):
+            print( 'self.starttime', self.starttime)
+            print( 'self.endtime', self.endtime)
+            #sys.exit()
+        if( debug):
+            self.__GetTimeInd__(vario)
+            dummy = vario.ndarray[self.TimeInd]
+            print( 'first found date: num2date( vario.ndarray[self.TimeInd][0])', num2date( vario.ndarray[self.TimeInd][0]))
+            print( 'last found date: num2date( vario.ndarray[self.TimeInd][-1])', num2date( vario.ndarray[self.TimeInd][-1]))
+            #print( 'vario.ndarray[self.__GetTimeInd__(vario)]', vario.ndarray[self.__GetTimeInd__(vario)])
+        #sys.exit()
         vario = vario.trim( starttime = self.starttime, endtime = self.endtime)
         
+        
+        
+        
+        if( False):
+            import matplotlib.pyplot as plt
+            vario = np.array( [ f.astype( float) for f in vario.ndarray[ [1,2,3]]])
+            for d in vario:
+                plt.plot( d, alpha = 0.3)
+            plt.grid(which = 'both')
+            plt.show()
+            sys.exit()
         ##################
         # IDENTIFY CORRECT COLUMNS
         ##################
@@ -6052,6 +6777,16 @@ class MR:
         #from magpy.stream import num2date
         """
         time_vario = vario.ndarray[tI]
+        if( debug):
+            print( '\nnum2date( time_vario[0]): {}\t num2date( time_vario[-1]): {}'.format( num2date( time_vario[0]), num2date( time_vario[-1])))
+        if( False):
+            import matplotlib.pyplot as plt
+            vario = np.array( [ f.astype( float) for f in vario.ndarray[ [1,2,3]]])
+            for d in vario:
+                plt.plot( num2date( time_vario), d, alpha = 0.3)
+            plt.grid(which = 'both')
+            plt.show()
+            sys.exit()
         if( debug):
             print( 'time_vario', time_vario)
         time_vario_zero = NUM2DATE20TIME( num2date( time_vario))
@@ -6741,7 +7476,7 @@ class MR:
         """
         Checking how many data columns are needed
         """
-        
+    
         for k, f in enumerate( allfiles):
             columncount = 0
             #with codecs.open(f,'r','string-escape') as file:
