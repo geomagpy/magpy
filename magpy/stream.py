@@ -1994,6 +1994,9 @@ CALLED BY:
             newst = [LineStruct()]
         else:
             newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
+        if debug:
+            tend = datetime.utcnow()
+            print("_drop_nans needed", (tend - tstart).total_seconds())
 
         return DataStream(newst,self.header,np.asarray(array,dtype=object))
 
