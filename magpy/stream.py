@@ -1956,7 +1956,7 @@ CALLED BY:
         return timeobj
 
 
-    def _drop_nans(self, key):
+    def _drop_nans(self, key, debug=False):
         """
     DEFINITION:
         Helper to drop all lines when NaNs or INFs are found within the selected key
@@ -1971,22 +1971,25 @@ CALLED BY:
         used for plotting and fitting of data
 
         """
-        array = [np.asarray([]) for elem in KEYLIST]
-        if len(self.ndarray[0]) > 0 and key in NUMKEYLIST:
+        # Method only works with numerical columns and the time column
+        searchlist = ['time']
+        searchlist.extend(NUMKEYLIST)
+        if debug:
+            tstart = datetime.utcnow()
+
+        if len(self.ndarray[0]) > 0 and key in searchlist:
+            # get the indicies with NaN's and then use numpy delete
+            array = [np.asarray([]) for elem in KEYLIST]
             ind = KEYLIST.index(key)
-            #indicieslst = [i for i,el in enumerate(self.ndarray[ind].astype(float)) if np.isnan(el) or np.isinf(el)]
-            ar = np.asarray(self.ndarray[ind]).astype(float)
+            # indicieslst = [i for i,el in enumerate(self.ndarray[ind].astype(float)) if np.isnan(el) or np.isinf(el)]
+            col = np.asarray(self.ndarray[ind]).astype(float)
             indicieslst = []
-            for i,el in enumerate(ar):
+            for i, el in enumerate(col):
                 if np.isnan(el) or np.isinf(el):
                     indicieslst.append(i)
-            searchlist = ['time']
-            searchlist.extend(NUMKEYLIST)
-            for index,tkey in enumerate(searchlist):
-                if len(self.ndarray[index])>0:   # Time column !!! -> index+1
+            for index, tkey in enumerate(KEYLIST):
+                if len(self.ndarray[index]) > 0 and len(self.ndarray[index]) == len(col):
                     array[index] = np.delete(self.ndarray[index], indicieslst)
-                #elif len(self.ndarray[index+1])>0:
-                #    array[index+1] = self.ndarray[index+1]
 
             newst = [LineStruct()]
         else:
