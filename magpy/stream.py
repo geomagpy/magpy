@@ -10072,6 +10072,8 @@ CALLED BY:
         - keys:         (list) Keys to write to file.
         - mode:         (str) Mode for handling existing files/data in files.
                         Options: append, overwrite, replace, skip
+        - subdirectory: (str) can be Y, or Ym or Yj. default is none. Will create
+                         subdirectories with year (Y) plus month (m) or day-of-year (j)
         [- period:      (str) Supports hour, day, month, year, all - default day.]
         [--> Where is this?]
         - wformat:      (str) outputformat.
@@ -10154,6 +10156,7 @@ CALLED BY:
         dateformat = kwargs.get('dateformat')
         coverage = kwargs.get('coverage')
         mode = kwargs.get('mode')
+        subdirectory = kwargs.get('subdirectory')
         #period = kwargs.get('period')          # TODO
         #offsets = kwargs.get('offsets')        # retired? TODO
         keys = kwargs.get('keys')
@@ -10203,6 +10206,9 @@ CALLED BY:
         if not mode:
             mode= 'overwrite'
 
+        if not subdirectory:
+            subdirectory = ''
+
         if len(self) < 1 and len(self.ndarray[0]) < 1:
             logger.error('write: Stream is empty!')
             raise Exception("Can't write an empty stream to file!")
@@ -10244,6 +10250,8 @@ CALLED BY:
             monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
             endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
             while starttime < lasttime:
+                diryear = starttime.year
+                dirmonth = starttime.month
                 if ndtype:
                     lst = []
                     ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
@@ -10255,7 +10263,12 @@ CALLED BY:
                 # remove any eventually existing null byte
                 filename = filename.replace('\x00','')
                 if len(lst) > 0 or len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
+                    writepath = os.path.join(filepath, filename)
+                    if subdirectory == 'Y':
+                        writepath = os.path.join(filepath, diryear, filename)
+                    elif subdirectory == 'Ym':
+                        writepath = os.path.join(filepath, diryear, dirmonth, filename)
+                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -10272,6 +10285,7 @@ CALLED BY:
             yearstr = str(cyear) + '-01-01T00:00:00'
             endtime = datetime.strptime(yearstr,'%Y-%m-%dT%H:%M:%S')
             while starttime < lasttime:
+                diryear = starttime.year
                 ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
                 newst = DataStream([LineStruct()],self.header,ndarray)
                 if not dateformat == 'None':
@@ -10283,7 +10297,10 @@ CALLED BY:
                 filename = filename.replace('\x00','')
 
                 if len(ndarray[0]) > 0:
-                    success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
+                    writepath = os.path.join(filepath, filename)
+                    if subdirectory == 'Y':
+                        writepath = os.path.join(filepath, diryear, filename)
+                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
                 # get next endtime
                 starttime = endtime
                 cyear = cyear + 1
