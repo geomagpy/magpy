@@ -7,6 +7,7 @@ Installation instructions can be found on the main download page.
 1.1.7 general:
 
 1.1.7 additions:
+    + drop_nans method extended to time column
 
 1.1.7 fixes:
     + format libraries: corrected object in array declaration - files are readable again with scipy > 1.10
