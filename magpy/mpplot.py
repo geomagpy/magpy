@@ -515,10 +515,26 @@ def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
 
             # If limits are specified, use these:
             if specialdict:
+                data_dict['ymin'] = np.min(y) - ypadding
+                data_dict['ymax'] = np.max(y) + ypadding
                 if key in specialdict[i]:
                     specialparams = specialdict[i][key]
-                    data_dict['ymin'] = specialparams[0] - ypadding
-                    data_dict['ymax'] = specialparams[1] + ypadding
+                    try:
+                        if DataStream()._is_number(specialparams[0]):
+                            lowlev = specialparams[0]
+                        else:
+                            lowlev = np.min(y)
+                    except:
+                        lowlev = np.min(y)
+                    try:
+                        if DataStream()._is_number(specialparams[1]):
+                            highlev = specialparams[1]
+                        else:
+                            highlev = np.max(y)
+                    except:
+                        highlev = np.max(y)
+                    data_dict['ymin'] = lowlev - ypadding
+                    data_dict['ymax'] = highlev + ypadding
                 else:
                     if not (np.min(y) == np.max(y)):
                         data_dict['ymin'] = np.min(y) - ypadding
