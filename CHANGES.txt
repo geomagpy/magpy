@@ -8,6 +8,8 @@ Installation instructions can be found on the main download page.
 
 1.1.7 additions:
     + drop_nans method extended to time column
+    + better y axis range options for plotting routine
+    + added subdirectory option to stream.write (automatically create year, month or doy subdirectories)
 
 1.1.7 fixes:
     + format libraries: corrected object in array declaration - files are readable again with scipy > 1.10

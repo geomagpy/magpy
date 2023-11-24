@@ -430,7 +430,7 @@ For specific methods related to e.g. a stream object "data":
 
 Note that this requires the existence of a "data" object, which is obtained e.g. by data = read(...). The help text can also be shown by directly calling the *DataStream* object method using:
 
-        help(DataStream.fit)
+        help(DataStream().fit)
 
 
 #### 2.3.2 MagPy's logging system
@@ -475,10 +475,15 @@ Select specific keys to plot:
 
         mp.plot(data,variables=['x','y','z'])
 
-Defining a plot title and specific colors (see `help(mp.plot)` for list and all options):
+Defining a plot title and specific colors:
 
         mp.plot(data,variables=['x','y'],plottitle="Test plot",
                 colorlist=['g', 'c'])
+
+Reefining the y-axis range for the y colum between 0 and automatic maximum value (see `help(mp.plot)` for list and all options):
+
+        mp.plot(data,variables=['x','y'],plottitle="Test plot",
+                colorlist=['g', 'c'], specialdict = {'y':[0,]})
 
 #### 2.4.3 Data from multiple streams
 
@@ -486,6 +491,7 @@ Various datasets from multiple data streams will be plotted above one another. P
 
         mp.plotStreams([data1,data2],[['x','y','z'],['f']])
 
+Please note that the gui is also using the plotstreams method and all options have to be provided as list.
 
 ### 2.5 Flagging data
 
