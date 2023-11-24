@@ -10041,10 +10041,16 @@ CALLED BY:
 
         if not format_type:
             format_type = 'PYCDF'
-        if not dateformat:
-            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
         if not coverage:
             coverage = 'day' #timedelta(days=1)
+        if not dateformat:
+            dateformat = '%Y-%m-%d' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+            if coverage == "hour":
+                dateformat = '%Y-%m-%dT%H'  # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+            elif coverage == "month":
+                dateformat = '%Y-%m' # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
+            elif coverage == "year":
+                dateformat = '%Y'  # or %Y-%m-%dT%H or %Y-%m or %Y or %Y
         if not filenamebegins:
             filenamebegins = ''
         if not filenameends and not filenameends == '':
@@ -10067,7 +10073,7 @@ CALLED BY:
         - filepath:     (str) Providing path/filename for saving.
       Kwargs:
         - coverage:     (str/timedelta) day files or hour or month or year or all - default day.
-                        'month','year','all',etc., otherwise timedelta object
+                        other options are 'month','year','all','hour'
         - dateformat:   (str) outformat of date in filename (e.g. "%Y-%m-%d" -> "2011-11-22".
         - filenamebegins:       (str) providing the begin of savename (e.g. "WIK_").
         - filenameends:         (str) providing the end of savename (e.g. ".min").
@@ -10080,9 +10086,6 @@ CALLED BY:
                         Options: append, overwrite, replace, skip
         - subdirectory: (str) can be Y, or Ym or Yj. default is none. Will create
                          subdirectories with year (Y) plus month (m) or day-of-year (j)
-        [- period:      (str) Supports hour, day, month, year, all - default day.]
-        [--> Where is this?]
-        - wformat:      (str) outputformat.
 
     SPECIFIC FORMAT INSTRUCTIONS:
         format_type='IAGA'
@@ -10271,9 +10274,9 @@ CALLED BY:
                 if len(lst) > 0 or len(ndarray[0]) > 0:
                     writepath = os.path.join(filepath, filename)
                     if subdirectory == 'Y':
-                        writepath = os.path.join(filepath, diryear, filename)
+                        writepath = os.path.join(filepath, str(diryear), filename)
                     elif subdirectory == 'Ym':
-                        writepath = os.path.join(filepath, diryear, dirmonth, filename)
+                        writepath = os.path.join(filepath, str(diryear), str(dirmonth).zfill(2), filename)
                     success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
                 starttime = endtime
                 # get next endtime
@@ -10305,7 +10308,7 @@ CALLED BY:
                 if len(ndarray[0]) > 0:
                     writepath = os.path.join(filepath, filename)
                     if subdirectory == 'Y':
-                        writepath = os.path.join(filepath, diryear, filename)
+                        writepath = os.path.join(filepath, str(diryear), filename)
                     success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
                 # get next endtime
                 starttime = endtime
@@ -10322,26 +10325,17 @@ CALLED BY:
             maxidx = -1
             endtime = starttime + cov
             while starttime < lasttime:
-                #lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                #newst = DataStream(lst,self.header)
+                diryear = starttime.year
+                dirmonth = starttime.month
+                dirdoy = starttime.strftime('%j')
                 t3 = datetime.utcnow()
-                #print "write - writing day:", t3
 
                 if ndtype:
                     lst = []
                     # non-destructive
-                    #print "write: start and end", starttime, endtime
-                    #print "write", dailystream.length()
-                    #ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
-                    #print starttime, endtime, coverage
-                    #print "Maxidx", maxidx
                     ndarray=dailystream._select_timerange(starttime=starttime, endtime=endtime, maxidx=maxidx)
-                    #print "write", len(ndarray), len(ndarray[0])
                     if len(ndarray[0]) > 0:
-                        #maxidx = len(ndarray[0])*2 ## That does not work for few seconds of first day and full coverage of all other days
                         dailystream.ndarray = np.asarray([array[(len(ndarray[0])-1):] for array in dailystream.ndarray],dtype=object)
-                        #print dailystream.length()
-                    #print len(ndarray), len(ndarray[0]), len(ndarray[1]), len(ndarray[3])
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
                     ndarray = np.asarray([np.asarray([]) for key in KEYLIST],dtype=object)
@@ -10357,14 +10351,22 @@ CALLED BY:
                 if format_type == 'IMF':
                     filename = filename.upper()
 
+                writepath = os.path.join(filepath,filename)
+                if subdirectory == 'Y':
+                    writepath = os.path.join(filepath, str(diryear), filename)
+                elif subdirectory == 'Ym':
+                    writepath = os.path.join(filepath, str(diryear), str(dirmonth).zfill(2), filename)
+                elif subdirectory == 'Yj':
+                    writepath = os.path.join(filepath, str(diryear), str(dirdoy).zfill(3), filename)
+
                 if debug:
-                    print ("Writing data:", os.path.join(filepath,filename))
+                    print ("Writing data:", writepath)
 
                 if len(lst) > 0 or ndtype:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         logger.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,headonly=headonly,kind=kind,debug=debug)
+                        success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,headonly=headonly,kind=kind,debug=debug)
                 starttime = endtime
                 endtime = endtime + cov
 

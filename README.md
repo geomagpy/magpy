@@ -331,6 +331,10 @@ To create an [INTERMAGNET] CDF (ImagCDF) file:
 
 The filename will be created automatically according to the defined format. By default, daily files are created and the date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends` is missing, `.txt` is used as default.
 
+To get an overview about possible write options use:
+
+        help(DataStream().write)
+
 #### 2.2.3 Other possibilities for reading files
 
 To read all local files ending with .min within a directory (creates a single stream of all data):
