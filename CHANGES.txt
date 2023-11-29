@@ -10,6 +10,7 @@ Installation instructions can be found on the main download page.
     + drop_nans method extended to time column
     + better y axis range options for plotting routine
     + added subdirectory option to stream.write (automatically create year, month or doy subdirectories)
+    + improved WDC reader to obtain DST index directly from Kyoto webservice
 
 1.1.7 fixes:
     + format libraries: corrected object in array declaration - files are readable again with scipy > 1.10

@@ -23,11 +23,11 @@ def isWDC(filename):
     except:
         return False
     try:
-        if not temp[10:12] == "  " : # Minute format
-            if not temp[27:34] == '       ': # Hour format
+        if not temp[10:12] in ["  ","RR"] : # Hour format
+            if not temp[27:34] == '       ': # Minute format
                 return False
-        if not len(temp.strip()) == 120: # Minute format
-            if not len(temp) in [401,402]: # Hour format, strip is important to remove eventual \r\n sequences or \n
+        if not len(temp.strip()) == 120: # Hour format
+            if not len(temp) in [401,402]: # Minute format, strip is important to remove eventual \r\n sequences or \n
                 return False
     except:
         return False
@@ -58,7 +58,6 @@ def readWDC(filename, headonly=False, **kwargs):
     else:
         headers = stream.header
 
-
     # read file and split text into channels
     li,ld,lh,lx,ly,lz,lf,lt = [],[],[],[],[],[],[],[]
     array = [[] for key in KEYLIST]
@@ -72,6 +71,7 @@ def readWDC(filename, headonly=False, **kwargs):
     oldformat = False
     kind = '' # To store Q, D in all data format (Quiet, Disturbed)
     for line in fh:
+        #print (line)
         if line.isspace():
             # blank line
             pass
@@ -97,12 +97,8 @@ def readWDC(filename, headonly=False, **kwargs):
                 cent = '19'
                 # eventually use kind to load only quiet days/disturbed days from old WDC data
             year = str(cent)+ar # use test for old format with quiet and disturbed days
-            #year = line[14:16]+ar # use test for old format with quiet and disturbed days
-            #if int(year) < 1000: #old format
-            #    year= '19'+ar
-            #print co
             day = str(int(day)).zfill(2)
-            #print code, year, mo, day, co
+            #print (code, year, mo, day, co)
             cf= lambda s,p: [ s[i:i+p] for i in range(0,len(s),p) ]
             dailymean = line[116:120]
             base = line[16:20]
@@ -171,6 +167,15 @@ def readWDC(filename, headonly=False, **kwargs):
                         array[find].append(f)
                         headers['col-f'] = 'f'
                         headers['unit-col-f'] = 'nT'
+                    if co == '*':
+                        if not elem == "9999":
+                            dst = float(elem)
+                        else:
+                            dst = float(NaN)
+                        complist[3] = co
+                        array[KEYLIST.index('var1')].append(dst)
+                        headers['col-var1'] = "DST"
+                        headers['unit-col-var1'] = 'nT'
                 except:
                     pass
         elif len(line) in [401,402]: # minute file
@@ -249,7 +254,7 @@ def readWDC(filename, headonly=False, **kwargs):
             lasttimestr = timestr
 
         else:
-            print("Can not open WDC format")
+            print(" WDC read - skipping line {}".format(line))
             pass
         itest += 1
     fh.close()
