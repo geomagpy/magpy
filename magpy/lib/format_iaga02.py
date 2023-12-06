@@ -485,7 +485,7 @@ def writeIAGA(datastream, filename, **kwargs):
     if not header.get('DataIntervalType','') == '':
         intervaltype = header.get('DataIntervalType',' ')
     else:
-        sr = datastream.samplingrate()
+        sr = datastream.samplingrate().strip(' sec')
         filteradd = ''
         if sr in [1,'1','1.0']:
             interval = '1-second'
