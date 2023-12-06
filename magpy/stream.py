@@ -8717,7 +8717,7 @@ CALLED BY:
         multiplicator = float(stwithnan.length()[0])/float(len(t_list))
         diff = int(np.abs(stwithnan.length()[0]-len(t_list)))
         if diff < np.abs(multiplicator)*10:
-            diff = np.abs(multiplicator)*10
+            diff = int(np.abs(multiplicator)*10)
         if diff > 1000:
             # arbitrary maximum: if larger than 1000 something went wrong anyway
             # eventuallly use smaller data sets
@@ -8785,11 +8785,11 @@ CALLED BY:
                                 # but should be OK for now: change to stv = mv-diff, etv = mv+diff , diff = abs(
                                 mv = int(ind*multiplicator+startperiod)
                                 #stv = mv-int(20*multiplicator)
-                                stv = mv-diff
+                                stv = int(mv-diff)
                                 if stv < 0:
                                     stv = 0
                                 #etv = mv+int(20*multiplicator)
-                                etv = mv+diff
+                                etv = int(mv+diff)
                                 if etv >= len(stwithnan.ndarray[index]):
                                     etv = len(stwithnan.ndarray[index])
                                 subar = stwithnan.ndarray[0][stv:etv]
