@@ -88,6 +88,7 @@ magpy/lib/format_gdas.py
 magpy/lib/format_gfz.py
 magpy/lib/format_gfztmp.py
 magpy/lib/format_gsm19.py
+magpy/lib/format_hapijson.py
 magpy/lib/format_iaga02.py
 magpy/lib/format_imagcdf.py
 magpy/lib/format_imf.py

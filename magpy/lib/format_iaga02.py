@@ -358,7 +358,7 @@ def writeIAGA(datastream, filename, **kwargs):
     """
     mode = kwargs.get('mode')
     useg = kwargs.get('useg')
-
+    window = ''
     returnstring = False
     def OpenFile(filename, mode='w'):
         if sys.version_info >= (3,0,0):
