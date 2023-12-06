@@ -20,7 +20,7 @@ Installation instructions can be found on the main download page.
     + added subdirectory option to stream.write (automatically create year, month or doy subdirectories)
     + improved WDC reader to obtain DST index directly from Kyoto webservice
 
-1.1.7 fixes:
+1.1.7 important fixes:
     + format libraries: corrected object in array declaration - files are readable again with scipy > 1.10
 
 ####v<1.1.6>, <2023-07-19> --
