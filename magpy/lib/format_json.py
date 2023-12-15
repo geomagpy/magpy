@@ -87,8 +87,8 @@ def readJSON(filename, headonly=False, **kwargs):
             header['unit-col-'+keydict[i]] = ''
                 
     for idx, elem in enumerate(array):
-        array[idx] = np.asarray(array[idx])
+        array[idx] = np.asarray(array[idx], dtype=object)
 
-    stream = DataStream([],header,np.asarray(array))
+    stream = DataStream([],header,np.asarray(array, dtype=object))
 
     return stream

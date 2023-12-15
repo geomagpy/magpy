@@ -26,7 +26,7 @@ def isGFZINDEXJSON(filename):
             # Found other json - use separate filter
             return False
     except:
-        pass
+        return False
     return True
 
 def readGFZINDEXJSON(filename, headonly=False, **kwargs):
