@@ -2441,6 +2441,9 @@ def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
             # --> If dates to be confined, set value types:
             _confinex(ax, tmax, tmin, timeunit)
 
+            # CONFIGURACIÓN DE LAS ETIQUETAS DEL EJE X:
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+
         if i < n_subplots-1:
             setp(ax.get_xticklabels(), visible=False)
         else:
