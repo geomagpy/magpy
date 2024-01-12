@@ -3,6 +3,11 @@ MagPy
 MagPy input/output filters
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
+
+CSV import filter:
+
+please make sure to adapt the header of the CSV file
+
 """
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -81,8 +86,11 @@ def readCSV(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     debug = kwargs.get('debug')
 
+    if debug:
+        print(
+            "CSV import: Header needs to look like DT_datetime,N_ping[ms],S_comment")
+
     getfile = True
-    
     theday = extractDateFromString(filename)
     try:
         if starttime:
@@ -107,7 +115,8 @@ def readCSV(filename, headonly=False, **kwargs):
                 dt = check_date(row[0])
                 if row[0].startswith('#'):
                     # split, remove spaces
-                    print ("Found comment")
+                    if debug:
+                        print ("CSV import: Found comment")
                     line = ",".join(row)
                     lin = line.replace('#','').replace(' ','').replace('\t','').strip()
                     li = lin.split(':')
@@ -116,14 +125,15 @@ def readCSV(filename, headonly=False, **kwargs):
                     except:
                         pass
                 elif dt:
-                    #print ("Found data line")
                     data = [date2num(dt.replace(tzinfo=None))]
                     dat = [el for idx,el in enumerate(row) if idx > 0]
                     data.extend(dat)
                     fulldata.append(data)
                 else:
-                    #print ("Found header")
+                    if debug:
+                        print ("CSV import: Found header")
                     header.append(row)
+
         # Convert header
         #  use only first line
         #  assign each index to a specific key of DATASTREAM
@@ -136,8 +146,11 @@ def readCSV(filename, headonly=False, **kwargs):
         for idx,el in enumerate(head):
             headel = el.split('_')
             typus = headel[0]
-            elementunit = headel[1].replace("]",'').split("[")
-            if typus in ['time','Epoch','DT']:
+            if len(headel) > 1:
+                elementunit = headel[1].replace("]",'').split("[")
+            else:
+                print ("CSV import: Make sure that your header follows the CSV header convention of MagPy")
+            if typus.upper() in ['TIME','EPOCH','DT','DATETIME']:
                 typus = 'time'
                 assign[idx] = 'time'
             else:
@@ -147,13 +160,14 @@ def readCSV(filename, headonly=False, **kwargs):
                     comments['col-{}'.format(numkeys[numN])] = elementunit[0]
                     comments['unit-col-{}'.format(numkeys[numN])] = elementunit[1]
                     numN += 1
-                if typus == 'S':
+                elif typus == 'S':
                     assign[idx] = strkeys[strN]
                     comments['col-{}'.format(strkeys[strN])] = elementunit[0]
                     strN += 1
-        
+                else:
+                    assign[idx] = numkeys[numN]
+
         # Convert data
-        #print (fulldata)
         numpy_array = np.array(fulldata)
         transp = numpy_array.T
         transpose_list = transp.tolist()
@@ -167,8 +181,6 @@ def readCSV(filename, headonly=False, **kwargs):
         array = np.asarray([np.asarray(el).astype(object) for el in array], dtype=object)
 
         return DataStream(header=comments,ndarray=array)
-
-
 
 def writeCSV(datastream, filename, kind='simple',returnstring = False,**kwargs):
     """
