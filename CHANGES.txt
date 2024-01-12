@@ -8,6 +8,7 @@ Installation instructions can be found on the main download page.
     - speed issues
 
 1.1.8 additions:
+    - csv import more flexible regarding header
 
 1.1.8 fixes:
     - resample method - indexing
