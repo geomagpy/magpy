@@ -22,7 +22,7 @@ def isGFZINDEXJSON(filename):
     except:
         return False
     try:
-        if not j.get("metadata").get("source") == 'GFZ Potsdam':
+        if not j.get("meta").get("source") == 'GFZ Potsdam':
             # Found other json - use separate filter
             return False
     except:
