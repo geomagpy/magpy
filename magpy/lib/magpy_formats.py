@@ -28,6 +28,7 @@ DEPENDENCIES:
                 .format_noaa
                 .format_latex
                 .format_wik
+                -format_tsf
                 .format_wic
                 .format_sfs
                 .format_bdv
@@ -59,6 +60,7 @@ from magpy.lib.format_qspin import *
 #from magpy.lib.format_env05 import *
 from magpy.lib.format_cr800 import *
 from magpy.lib.format_iono import *
+from magpy.lib.format_tsf import *
 
 # IMPORT GENERAL PURPOSE FORMATS:
 from magpy.lib.format_iaga02 import *
@@ -169,6 +171,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "LNM"): # Conrad Observatory LaserNiederschlagsMonitor - LNM Telegram 5 files
         if (isLNM(filename)):
+            return True
+    elif (format_type == "TSF"):  # Data from the iGrav and SG gravity system
+        if (isTSF(filename)):
             return True
     elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
         if (isGRAVSG(filename)):
@@ -369,6 +374,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
     #    return readENV05(filename, headonly, **kwargs)
     elif (format_type == "USBLOG"):
         return readUSBLOG(filename, headonly, **kwargs)
+    elif (format_type == "TSF"):
+        return readTSF(filename, headonly, **kwargs)
     elif (format_type == "GRAVSG"):
         return readGRAVSG(filename, headonly, **kwargs)
     elif (format_type == "IWT"):
