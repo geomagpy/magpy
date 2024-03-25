@@ -11,6 +11,7 @@ Installation instructions can be found on the main download page.
     - csv import more flexible regarding header
 
 1.1.8 fixes:
+    - json format library supports GFZ index data and DSCVR, conflict solved
     - resample method - indexing
     - format iaga write method failed if DataSamplingRate could not be interpreted
 

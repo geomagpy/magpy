@@ -409,6 +409,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'LNM':['r', 'Thies Laser-Disdrometer'],
                 'IWT':['r', 'IWT Tiltmeter data'],
                 'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
+                'TSF':['r', 'iGrav and GWR TSF data - new'],
                 'GRAVSG':['r', 'GWR TSF data'],
                 'CR800':['r', 'CR800 datalogger'],
                 'IONO':['r', 'IM806 Ionometer'],
