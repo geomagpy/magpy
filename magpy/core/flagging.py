@@ -280,9 +280,10 @@ class flags(object):
         """
         DESCRIPTION
             add data into a flaglist
-            please note: join is destructive. The original flaglist will be extended
+            please note: join is non-destructive.
         """
-        flaglist = self.flaglist
+        fl = self.copy()
+        flaglist = fl.flaglist
 
         # Get dimensions of flags
         if type(newflaglst) == list:
@@ -396,7 +397,7 @@ class flags(object):
                     if not selectedflags and selflags:
                         selectedflags = selflags
                     else:
-                        selectedflags.join(selflags)
+                        selectedflags += selflags
                 newdict[sensorid] = selectedflags
         #newflag.flaglist = newflag.d2l(flagdict)
         newdict["flagversion"] = flagdict.get("flagversion")
