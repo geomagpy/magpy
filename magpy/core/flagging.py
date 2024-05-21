@@ -33,6 +33,11 @@ class flags(object):
 
         Some methods support a options dictionary
 
+    VERSIONS:
+        0.4 : traditional flagging version as supported by magpy
+        1.0 : extended flagging version
+        2.0 : including flagging labels
+
     APPLICTAION:
         Initiate flags with >>> flag = flags().
 
@@ -61,6 +66,7 @@ class flags(object):
     - flag.d2l():                   creates flaglist from flagdict
     - flag.convert2version(...):    transforms to a specific version
     ? flag.convert2magpy(...):      transforms to a specific magpyversion
+    - flag.fprint(sensorid):        create a formated output
 
     - load(self, options):  # load function supports import of old versions
 
@@ -328,12 +334,14 @@ class flags(object):
             Difference to modify with option select:
             modify select only get data with exact match
 
-        EXAMPLE:
-            newflaglist = flaglist.get({'comment':'lightning'})
+        EXAMPLES:
+            vehicle_flags = flaglist.extract({'sensorid' : 'LEMI036_2_0001', 'comment':'vehicle'})
+            lightning_flags = flaglist.extract({'comment':'lightning'})
         """
         flagdict = cp.deepcopy(self.flagdict)
         newdict = {}
         sensorlist = []
+        selectedflags = []
         def get_selection(sensorlist,searchdict):
             newlist = []
             comments = searchdict.get("comment",[])
@@ -382,27 +390,29 @@ class flags(object):
 
             return newlist
 
-        if "sensorid" in searchdict:
-            sensorlist = flagdict.get(searchdict.get("sensorid"))
-        if sensorlist:
-            selectedflags = get_selection(sensorlist,searchdict)
-            sensorid = searchdict.get("sensorid")
-            newdict[sensorid] = selectedflags
-        else:
-            selectedflags=[]
-            for sensorid in flagdict:
-                sensorlist = flagdict.get(sensorid)
-                if isinstance(sensorlist,list):
-                    selflags = get_selection(sensorlist,searchdict)
-                    if not selectedflags and selflags:
+        selectedflags=[]
+        for sensorid in flagdict:
+                validsensorid = sensorid
+                if "sensorid" in searchdict:
+                    validsensorid = searchdict.get("sensorid")
+                if not sensorid == "flagversion" and sensorid == validsensorid:
+                    sensorlist = flagdict.get(sensorid)
+                    #print("Flags for sensor", len(sensorlist))
+                    if isinstance(sensorlist,list):
+                        selflags = get_selection(sensorlist,searchdict)
+                        #print (selflags, selectedflags)
+                        # why did I use this separation ?? does not work for examples
+                        #if not selectedflags and selflags:
+                        #    selectedflags = selflags
+                        #else:
+                        #    selectedflags += selflags
                         selectedflags = selflags
-                    else:
-                        selectedflags += selflags
-                newdict[sensorid] = selectedflags
-        #newflag.flaglist = newflag.d2l(flagdict)
+                    #print(selflags)
+                    newdict[sensorid] = selectedflags
+                    #print (sensorid, len(selectedflags))
         newdict["flagversion"] = flagdict.get("flagversion")
-
-        return flags([],newdict)
+        flist = self.d2l(newdict)
+        return flags(flist,newdict)
 
     def add(self, sensorid, keys, flagnumber, comment, startdate, enddate=None,debug=False):
         """
@@ -857,6 +867,57 @@ class flags(object):
                         print ("    -> After recombination: {}".format(len(new2list)))
 
         return flags(newflaglist)
+
+    def fprint(self, sensorid, type='date', debug=True):
+        nfl = self.flagdict.get(sensorid)
+        # combine list with components
+        mdic = {}
+        if not len(nfl) > 0:
+            return mdic
+        lwc = [l[:2] + l[3:] for l in nfl]
+        res = []
+        [res.append(x) for x in lwc if x not in res]
+        nl = []
+        for ind, el in enumerate(res):
+            comps = []
+            dic = {}
+            for line in nfl:
+                l = line[:2] + line[3:]
+                if el == l:
+                    comps.append(line[2])
+            dic['components'] = comps
+            dic['start'] = el[0]
+            dic['end'] = el[1]
+            dic['flag'] = el[2]
+            dic['description'] = el[3]
+            mdic[ind] = dic
+
+        startdaylist = []
+        for el in mdic:
+            ld = mdic.get(el)
+            startday = ld.get('start').date()
+            endday = ld.get('end').date()
+            if type == 'date':
+                if startday == endday:
+                    if not startday in startdaylist:
+                        startdaylist.append(startday)
+                        print("{} :  {}-{};  {}  (flag: {}, components: {})".format(startday, ld.get('start').time(),
+                                                                                    ld.get('end').time(),
+                                                                                    ld.get('description'),
+                                                                                    ld.get('flag'),
+                                                                                    ",".join(ld.get('components'))))
+                    else:
+                        print("           :  {}-{};  {}  (flag: {}, components: {})".format(ld.get('start').time(),
+                                                                                            ld.get('end').time(),
+                                                                                            ld.get('description'),
+                                                                                            ld.get('flag'), ",".join(
+                                ld.get('components'))))
+                else:
+                    print("{} - {};  {}  (flag: {}, components: {})".format(ld.get('start'), ld.get('end'),
+                                                                            ld.get('description'), ld.get('flag'),
+                                                                            ",".join(ld.get('components'))))
+            else:
+                print(ld)
 
     def save(self, path=None, destination="file",overwrite=False):
         """
