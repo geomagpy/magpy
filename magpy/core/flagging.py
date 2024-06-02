@@ -914,8 +914,12 @@ class flags(object):
                                 ld.get('components'))))
                 else:
                     print("{} - {};  {}  (flag: {}, components: {})".format(ld.get('start'), ld.get('end'),
-                                                                            ld.get('description'), ld.get('flag'),
-                                                                            ",".join(ld.get('components'))))
+                                                                                ld.get('description'), ld.get('flag'),
+                                                                                ",".join(ld.get('components'))))
+            elif type == 'onlydate':
+                if not startday in startdaylist:
+                    startdaylist.append(startday)
+                    print("{}".format(startday))
             else:
                 print(ld)
 
