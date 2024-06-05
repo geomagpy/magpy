@@ -4036,6 +4036,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     if checkchoice == 'quick':
                         # use already existing data
                         monthlist = [rmonth]
+                        oldsecdata = secdata.copy()
                     else:
                         # read data for each month
                         monthlist = range(1,13)
