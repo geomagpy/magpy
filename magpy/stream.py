@@ -2268,8 +2268,8 @@ CALLED BY:
 
         if len(self.ndarray[0]) > 0:
             ndtype = True
-            starttime = np.min(self.ndarray[0])
-            endtime = np.max(self.ndarray[0])
+            starttime = date2num(np.min(self.ndarray[0]))
+            endtime = date2num(np.max(self.ndarray[0]))
         else:
             starttime = self[0].time
             endtime = self[-1].time
@@ -2874,19 +2874,6 @@ CALLED BY:
                 pass
             else:
                 pass
-            #eventually use other information like absolute path, and function parameter
-            #for key in self.header:
-            #    if key.startswith('DataAbs'):
-            #        print key, self.header[key]
-
-            # drop all lines with nan values in either x or y and if x=0 add some 0.00001 because of arctan(y/x)
-            #print len(self.ndarray[0])
-            #for elem in self.ndarray[1]:
-            #    if np.isnan(elem) or elem == 0.0:
-            #        print "Found", elem
-            #self = self._drop_nans('x')
-            #self = self._drop_nans('y')
-            #print len(self.ndarray[0])
 
             bcdata = baseline_adoption(bcdata,func,keys,basecomp,pierdata)
 
@@ -5668,7 +5655,7 @@ CALLED BY:
             # get x array for baseline
             #indx = KEYLIST.index('x')
             #arrayx = self.ndarray[indx].astype(float)
-            functimearray = (self.ndarray[0].astype(float)-function[1])/(function[2]-function[1])
+            functimearray = (date2num(self.ndarray[0]).astype(float)-function[1])/(function[2]-function[1])
             for key in KEYLIST:
                 validkey = False
                 ind = KEYLIST.index(key)
