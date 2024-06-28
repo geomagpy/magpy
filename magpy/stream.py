@@ -918,63 +918,20 @@ CALLED BY:
         array = [[] for key in KEYLIST]
         self.container.extend(datlst)
         self.header = header
-        # Some initial check if any data set except timecolumn is contained
-        datalength = len(ndarray)
-
-        #t1 = datetime.utcnow()
-        if pyvers and pyvers == 2:
-                ch1 = '-'.encode('utf-8') # not working with py3
-                ch2 = ''.encode('utf-8')
-        else:
-                ch1 = '-'
-                ch2 = ''
-
-        try:
-            test = []
-
-            for col in ndarray:
-                col = np.array(list(col))
-                #print (np.array(list(col)).dtype)
-                if col.dtype in ['float64','float32','int32','int64']:
-                    try:
-                        x = np.asarray(col)[~np.isnan(col)]
-                    except: # fallback 1 -> should not needed any more
-                        #print ("Fallback1")
-                        x = np.asarray([elem for elem in col if not np.isnan(elem)])
-                else:
-                    #y = np.asarray(col)[col!='-']
-                    #x = np.asarray(y)[y!='']
-                    y = np.asarray(col)[col!=ch1]
-                    x = np.asarray(y)[y!=ch2]
-                test.append(x)
-            test = np.asarray(test,dtype=object)
-        except:
-            # print ("Fallback -- pretty slowly")
-            #print ("Fallback2")
-            test = [[elem for elem in col if not elem in [ch1,ch2]] for col in ndarray]
-        #t2 = datetime.utcnow()
-        #print (t2-t1)
-
-        emptycnt = [len(el) for el in test if len(el) > 0]
 
         if self.ndarray.size == 0:
             self.ndarray = ndarray
-        elif len(emptycnt) == 1:
-            print("Tyring to extend with empty data set")
-            #self.ndarray = np.asarray((list(self.ndarray)).extend(list(ndarray)))
         else:
             for idx,elem in enumerate(self.ndarray):
                 if len(ndarray[idx]) > 0:
                     if len(self.ndarray[idx]) > 0 and len(self.ndarray[0]) > 0:
                         array[idx] = np.append(self.ndarray[idx], ndarray[idx]).astype(object)
-                        #array[idx] = np.append(self.ndarray[idx], ndarray[idx],1).astype(object)
                     elif len(self.ndarray[0]) > 0: # only time axis present so far but no data within this elem
                         fill = ['-']
                         key = KEYLIST[idx]
-                        if key in NUMKEYLIST or key=='sectime':
+                        if key in NUMKEYLIST:
                             fill = [float('nan')]
                         nullvals = np.asarray(fill * len(self.ndarray[0]))
-                        #array[idx] = np.append(nullvals, ndarray[idx],1).astype(object)
                         array[idx] = np.append(nullvals, ndarray[idx]).astype(object)
                     else:
                         array[idx] = ndarray[idx].astype(object)

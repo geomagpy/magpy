@@ -168,9 +168,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         print ("WARNING: Time column is not CDF_TIME_TT2000 (found {})".format(ttdesc))
                     col = cdfdat.varget(key)
                     try:
-                        array[ind] = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                        array[ind] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col)
                     except TypeError:
-                        array[ind] = date2num(cdflib.cdfepoch.to_datetime(col))
+                        array[ind] = cdflib.cdfepoch.to_datetime(col)
                     #array[ind] = date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(col)]))
                 except:
                     array[ind] = np.asarray([])
