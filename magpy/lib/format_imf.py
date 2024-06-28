@@ -45,25 +45,6 @@ def isIMF(filename):
     return True
 
 
-def isIMAGCDF(filename):
-    """
-    Checks whether a file is ImagCDF format.
-    """
-    try:
-        temp = cdf.CDF(filename)
-    except:
-        return False
-    try:
-        form = temp.attrs['FormatDescription']
-        if not form[0].startswith('INTERMAGNET'):
-            return False
-    except:
-        return False
-
-    logger.debug("isIMAGCDF: Found INTERMAGNET CDF data")
-    return True
-
-
 def isIAF(filename):
     """
     Checks whether a file is BIN IAF INTERMAGNET Archive format.
@@ -203,16 +184,20 @@ def readIAF(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     resolution = kwargs.get('resolution')
+    timestamp = kwargs.get('timestamp')
     debug = kwargs.get('debug')
 
     getfile = True
     gethead = True
+    dttest = False
 
     if debug:
         logger.info("Found IAF file ...")
 
     if not resolution:
         resolution = u'minutes'
+    if timestamp == 'datetime':
+        dttest = True
     stream = DataStream()
     # Check whether header infromation is already present
 
@@ -414,14 +399,13 @@ def readIAF(filename, headonly=False, **kwargs):
         ta = []
         val = starttime
         for ind, elem in enumerate(arlist[0]):
-            ta.append(date2num(val))
+            ta.append(val)
             val = val+timedelta(seconds=sr)
         array[0] = np.asarray(ta)
         for idx,ar in enumerate(arlist):
             pos = KEYLIST.index(keylist[idx])
             if not np.isnan(np.asarray(ar)).all():
                 array[pos] = np.asarray(ar)
-
         return np.asarray(array,dtype=object)
 
     if resolution in ['day','days','Day','Days','DAY','DAYS']:
@@ -470,7 +454,7 @@ def writeIAF(datastr, filename, **kwargs):
         logger.error("writeIAF: Minute data needs to be provided")
         return False
     # check whether data covers one month
-    tdiff = int(np.round(datastream.ndarray[0][-1]-datastream.ndarray[0][0]))
+    tdiff = np.round((datastream.ndarray[0][-1]-datastream.ndarray[0][0]).days)
     if not tdiff >= 28:
         logger.error("writeIAF: Data needs to cover one month")
         return False
@@ -552,7 +536,7 @@ def writeIAF(datastr, filename, **kwargs):
     requiredinfo = ['StationIAGAcode','StartDate','DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataElevation', 'DataComponents', 'StationInstitution', 'DataConversion', 'DataQuality', 'SensorType', 'StationK9', 'DataDigitalSampling', 'DataSensorOrientation', 'DataPublicationDate','FormatVersion','Reserved']
 
     # cycle through data - day by day
-    t0 = int(datastream.ndarray[0][1])
+    t0 = int(date2num(datastream.ndarray[0][1]))
     output = b''
     kstr=[]
 

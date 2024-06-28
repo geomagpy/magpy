@@ -6403,13 +6403,13 @@ CALLED BY:
         self = self.removeduplicates()
 
         if len(self.ndarray[0]) > 0:
-            timecol = self.ndarray[0].astype(float)
+            timecol = self.ndarray[0].astype(datetime64)
         else:
             timecol= self._get_column('time')
 
         # New way:
         if len(timecol) > 1:
-            diffs = np.asarray(timecol[1:]-timecol[:-1])
+            diffs = (np.asarray(timecol[1:]-timecol[:-1])/1000000.).astype(float64) # in seconds
             diffs = diffs[~np.isnan(diffs)]
             me = np.median(diffs)
             st = np.std(diffs)
@@ -6417,49 +6417,6 @@ CALLED BY:
             return np.median(diffs)
         else:
             return 0.0
-
-        """
-        timedifflist = [[0,0]]
-        timediff = 0
-        if len(timecol) <= 1000:
-            testrange = len(timecol)
-        else:
-            testrange = 1000
-
-        print "Get_sampling_rate", np.asarray(timecol[1:]-timecol[:-1])
-        print "Get_sampling_rate", np.median(np.asarray(timecol[1:]-timecol[:-1]))*3600.*24.
-
-
-        for idx, val in enumerate(timecol[:testrange]):
-            if idx > 1 and not isnan(val):
-                timediff = np.round((val-timeprev),7)
-                found = 0
-                for tel in timedifflist:
-                    if tel[1] == timediff:
-                        tel[0] = tel[0]+1
-                        found = 1
-                if found == 0:
-                    timedifflist.append([1,timediff])
-            timeprev = val
-
-        #print self
-        if not len(timedifflist) == 0:
-            timedifflist.sort(key=lambda x: int(x[0]))
-            # get the most often found timediff
-            domtd = timedifflist[-1][1]
-        else:
-            logger.error("get_sampling_period: unkown problem - returning 0")
-            domtd = 0
-
-        if not domtd == 0:
-            return domtd
-        else:
-            try:
-                return timedifflist[-2][1]
-            except:
-                logger.error("get_sampling_period: could not identify dominant sampling rate")
-                return 0
-        """
 
     def samplingrate(self, **kwargs):
         """
