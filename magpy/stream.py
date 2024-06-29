@@ -41,7 +41,6 @@ def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_log,
     """Basic setup function to create a standard logging config. Default output
     is to file in /tmp/dir."""
 
-
     logfile=os.path.join(logfilepath,'magpy.log')
     # Check file permission/existance
     if not os.path.isfile(logfile):
@@ -90,6 +89,9 @@ logger.info("Initiating MagPy...")
 from magpy.version import __version__
 logger.info("MagPy version "+str(__version__))
 magpyversion = __version__
+
+# import default methods
+from magpy.core import methods
 
 # Standard packages
 # -----------------
@@ -1834,6 +1836,8 @@ CALLED BY:
             float(s)
             return True
         except ValueError:
+            return False
+        except:
             return False
 
 
@@ -9437,28 +9441,29 @@ CALLED BY:
 
         if starttime and endtime:
             if self._testtime(starttime) > self._testtime(endtime):
-                logger.error('Trim: Starttime (%s) is larger than endtime (%s).' % (starttime,endtime))
                 raise ValueError("Starttime is larger than endtime.")
 
-        logger.info('Trim: Started from %s to %s' % (starttime,endtime))
+        newstream = self.copy()
+        newarray = list(newstream.ndarray)
 
-        ndtype = False
-        if self.ndarray[0].size > 0:
-            ndtype = True
-            self.container = [LineStruct()]
-
-        #-ndarrray---------------------------------------
-        if not newway:
-            newarray = list(self.ndarray) # Converting array to list - better for append and  other item function (because its not type sensitive)
+        # test if time column is numerical or datetime
+        numeric = False
+        if len(newarray[0]) > 0:
+            if self._is_number(newarray[0][0]):
+                numeric = True
         else:
-            newstream = self.copy()
-            newarray = list(newstream.ndarray)
+            return self
+
         if starttime:
             starttime = self._testtime(starttime)
+            if numeric:
+                starttime = date2num(starttime)
             if newarray[0].size > 0:   # time column present
-                idx = (np.abs(newarray[0].astype(float)-date2num(starttime))).argmin()
+                idx = np.abs(newarray[0]-starttime).argmin()
+                print ("Hello", np.abs(newarray[0]-starttime).argmin())
+                print (newarray[0]-starttime)
                 # Trim should start at point >= starttime, so check:
-                if newarray[0][idx] < date2num(starttime):
+                if newarray[0][idx] < starttime:
                     idx += 1
                 for i in range(len(newarray)):
                     if len(newarray[i]) >= idx:
@@ -9466,13 +9471,14 @@ CALLED BY:
 
         if endtime:
             endtime = self._testtime(endtime)
+            if numeric:
+                endtime = date2num(endtime)
             if newarray[0].size > 0:   # time column present
-                idx = 1 + (np.abs(newarray[0].astype(float)-date2num(endtime))).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
-                #idx = 1+ (np.abs(self.ndarray[0]-date2num(endtime))).argmin() # get the nearest index to endtime
+                idx = 1 + (np.abs(newarray[0]-endtime)).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
                 if idx >= len(newarray[0]): ## prevent too large idx values
                     idx = len(newarray[0]) - 1
                 while True:
-                    if not float(newarray[0][idx]) < date2num(endtime) and idx != 0: # Make sure that last value is smaller than endtime
+                    if not newarray[0][idx] < endtime and idx != 0: # Make sure that last value is smaller than endtime
                         idx -= 1
                     else:
                         break
@@ -9483,63 +9489,8 @@ CALLED BY:
                     if length >= idx:
                         newarray[i] = newarray[i][:idx+1]
         newarray = np.asarray(newarray,dtype=object)
-        #-ndarrray---------------------------------------
 
-
-        #--------------------------------------------------
-        if newway and not ndtype:
-        # Non-destructive trimming of stream
-            trimmedstream = DataStream()
-            trimmedstream.header = self.header
-            starttime = self._testtime(starttime)
-            endtime = self._testtime(endtime)
-            stval = 0
-            for idx, elem in enumerate(self):
-                newline = LineStruct()
-                if not isnan(elem.time):
-                    if elem.time >= date2num(starttime) and elem.time < date2num(endtime):
-                        newline.time = elem.time
-                        for key in KEYLIST:
-                            exec('newline.'+key+' = elem.'+key)
-                        trimmedstream.add(newline)
-
-            return trimmedstream
-        #--------------------------------------------------
-
-        if not ndtype:
-            stream = DataStream()
-
-            if starttime:
-                # check starttime input
-                starttime = self._testtime(starttime)
-                stval = 0
-                for idx, elem in enumerate(self):
-                    if not isnan(elem.time):
-                        if num2date(elem.time).replace(tzinfo=None) > starttime.replace(tzinfo=None):
-                            #stval = idx-1 # changed because of latex output
-                            stval = idx
-                            break
-                if stval < 0:
-                    stval = 0
-                self.container = self.container[stval:]
-
-            # remove data prior to endtime input
-            if endtime:
-                # check endtime input
-                endtime = self._testtime(endtime)
-                edval = len(self)
-                for idx, elem in enumerate(self):
-                    if not isnan(elem.time):
-                        if num2date(elem.time).replace(tzinfo=None) > endtime.replace(tzinfo=None):
-                            edval = idx
-                            #edval = idx-1
-                            break
-                self.container = self.container[:edval]
-
-        if ndtype:
-            return DataStream(self.container,self.header,newarray)
-        else:
-            return DataStream(self.container,self.header,self.ndarray)
+        return DataStream([],self.header,newarray)
 
 
     def use_sectime(self, swap=False):
@@ -12240,32 +12191,20 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         print("subtractStreams: No common keys found - aborting")
         return DataStream()
 
-    ndtype = False
     if len(stream_a.ndarray[0]) > 0:
-        # Using ndarray and eventually convert stream_b to ndarray as well
-        ndtype = True
-        newway = True
-        if not len(stream_b.ndarray[0]) > 0:
-            stream_b = stream_b.linestruct2ndarray()
+        pass
     elif len(stream_b.ndarray[0]) > 0:
-        ndtype = True
-        stream_a = stream_a.linestruct2ndarray()
+        pass
     else:
-        try:
-            assert len(stream_a) > 0
-        except:
-            logger.error('subtractStreams: stream_a empty - aborting subtraction.')
-            return stream_a
+        logger.error('subtractStreams: stream_a empty - aborting subtraction.')
+        return stream_a
 
     logger.info('subtractStreams: Start subtracting streams.')
 
     headera = stream_a.header
     headerb = stream_b.header
 
-
     # non-destructive
-    #print ("SA:", stream_a.length())
-    #print ("SB:", stream_b.length())
     sa = stream_a.copy()
     sb = stream_b.copy()
 
@@ -12278,79 +12217,49 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     samprateb = sb.samplingrate()
     minsamprate = min([sampratea,samprateb])
 
-    if ndtype:
-        timea = sa.ndarray[0]
-        timea = timea.astype(float)
-    else:
-        timea = sa._get_column('time')
-
+    timea = sa.ndarray[0]
     # truncate b to time range of a
     try:
-        sb = sb.trim(starttime=num2date(np.min(timea)).replace(tzinfo=None), endtime=num2date(np.max(timea)).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
-        #sb = sb.trim(starttime=num2date(np.min(timea)).replace(tzinfo=None), endtime=num2date(np.max(timea)).replace(tzinfo=None),newway=True)
+        print(np.min(timea).replace(tzinfo=None))
+        sb = sb.trim(starttime=np.min(timea).replace(tzinfo=None), endtime=np.max(timea).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
     except:
         print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-
-    if ndtype:
-        timeb = sb.ndarray[0]
-    else:
-        timeb = sb._get_column('time')
-
+    timeb = sb.ndarray[0]
     # truncate a to range of b
     try:
-        sa = sa.trim(starttime=num2date(np.min(timeb.astype(float))).replace(tzinfo=None), endtime=num2date(np.max(timeb.astype(float))).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
-        #sa = sa.trim(starttime=num2date(np.min(timeb.astype(float))).replace(tzinfo=None), endtime=num2date(np.max(timeb.astype(float))).replace(tzinfo=None),newway=True)
+        sa = sa.trim(starttime=np.min(timeb).replace(tzinfo=None), endtime=np.max(timeb).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
     except:
         print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-
-    if ndtype:
-        timea = sa.ndarray[0]
-        timea = timea.astype(float)
-    else:
-        timea = sa._get_column('time')
+    timea = sa.ndarray[0]
 
     # testing overlapp
-    if not len(sb) > 0:
+    if not sb.length()[0] > 0:
         print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
 
+    print ("Cutting done")
     timea = maskNAN(timea)
     timeb = maskNAN(timeb)
 
-    #print "subtractStreams: timea", timea
-    #print "subtractStreams: timeb", timeb
     # Check for the following cases:
     # 1- No overlap of a and b
     # 2- a high resolution and b low resolution (tested)
     # 3- a low resolution and b high resolution (tested)
     # 4- a shorter and fully covered by b (tested)
     # 5- b shorter and fully covered by a
-
-    if ndtype:
-            logger.info('subtractStreams: Running ndtype subtraction')
+    ok = True
+    if ok:
             # Assuming similar time steps
-            #t1s = datetime.utcnow()
             # Get indicies of stream_b of which times are present in stream_a
             array = [[] for key in KEYLIST]
-            """
-            try: # TODO Find a better solution here! Roman 2017
-                # The try clause is not correct as searchsorted just finds
-                # positions independet of agreement (works well if data is similar)
-                idxB = np.argsort(timeb)
-                sortedB = timeb[idxB]
-                idxA = np.searchsorted(sortedB, timea)
-                #print timea, timeb,len(idxA), len(idxB)
-                indtib = idxB[idxA]
-                print ("solution1")
-            except:
-                indtib = np.nonzero(np.in1d(timeb, timea))[0]
-                print ("solution2")
-            """
+            # other way (combine both columsn) and get unique
+            arr = np.unique(np.concatenate((timeb, timea)))
+            print (len(arr), len(timea), len(timeb))
             indtib = np.nonzero(np.in1d(timeb, timea))[0]
             #print timeb[pos]
-            #print ("Here", timea)
+            print ("Here", len(indtib))
             # If equal elements occur in time columns
             if len(indtib) > int(0.5*len(timeb)):
                 logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
