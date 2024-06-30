@@ -12224,7 +12224,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     minsamprate = min([sampratea,samprateb])
 
     timea = sa.ndarray[0]
-    print (len(timea))
     # truncate b to time range of a
     try:
         print(np.min(timea).replace(tzinfo=None))
@@ -12233,15 +12232,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
     timeb = sb.ndarray[0]
-    print (len(timeb),np.min(timeb),np.max(timeb))
-    print ("Before",sa.length()[0])
     # truncate a to range of b
     try:
         sa = sa.trim(starttime=np.min(timeb).replace(tzinfo=None), endtime=np.max(timeb).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
     except:
         print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-    print ("After", sa.length()[0])
     timea = sa.ndarray[0]
 
     # testing overlapp
@@ -12249,12 +12245,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
 
-    timea = timea[~np.is(timea)]
-    timeb = timeb[~np.isnull(timeb)]
-    print ("After", sa.length()[0])
+    # mask empty slots (for time columns only empty inputs are masked) - very fast
+    timea = maskNAN(timea)
+    timeb = maskNAN(timeb)
 
     # Check for the following cases:
-    # 1- No overlap of a and b
+    # 1- No overlap of a and b (Done)
     # 2- a high resolution and b low resolution (tested)
     # 3- a low resolution and b high resolution (tested)
     # 4- a shorter and fully covered by b (tested)
@@ -12266,37 +12262,23 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             array = [[] for key in KEYLIST]
             # other way (combine both columsn) and get unique
             arr = np.unique(np.concatenate((timeb, timea)))
-            print (len(arr), len(timea), len(timeb))
-            indtib = np.nonzero(np.in1d(timeb, timea))[0]
-            #print timeb[pos]
-            print ("Here", len(indtib))
-            # If equal elements occur in time columns
-            if len(indtib) > int(0.5*len(timeb)):
+            #if len(arr) == len(timea) and len(arr) == len(timeb):
+            #    # identical stream
+            # If elements in combined a,b array are only slightly different from b columns - 40 percent
+            if len(arr) < int(len(timeb)*1.4):
                 logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
-                # get tb times for all matching indicies
-                tb = np.asarray([timeb[ind] for ind in indtib])
-                # Get indicies of stream_a of which times are present in matching tbs
-                try:
-                    idxA = np.argsort(timea)
-                    sortedA = timea[idxA]
-                    idxB = np.searchsorted(sortedA, tb)
-                    #
-                    indtia = idxA[idxB]
-                except:
-                    indtia = np.nonzero(np.in1d(tb, timea))[0]
-                #print ("subtractStreams", len(timea),len(timeb),idxA,idxB, indtia, indtib)
-                #print (np.nonzero(np.in1d(timea,tb))[0])
-                #idxB = np.argsort(tb)
-                #sortedB = tb[idxB]
-                #idxA = np.searchsorted(sortedB, timea)
-                #indtia = idxB[idxA]
+                # get common timesteps
+                common = np.array(sorted(list(set(timea).intersection(timeb))))
+                numtimea = date2num(timea)
+                numtimeb = date2num(timeb)
+                numcommon = date2num(common)
+                indtia = np.where(np.in1d(numtimea, numcommon))[0]
+                indtib = np.where(np.in1d(numtimeb, numcommon))[0]
                 if len(indtia) == len(indtib):
                     nanind = []
                     for key in keys:
                         foundnan = False
                         keyind = KEYLIST.index(key)
-                        #print key, keyind, len(sa.ndarray[keyind]), len(sb.ndarray[keyind])
-                        #print indtia, indtib,len(indtia), len(indtib)
                         if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
                             for ind in indtia:
                                 try:
@@ -12309,7 +12291,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             if isnan(diff).any():
                                 foundnan = True
                             if foundnan:
-                                nankeys = [ind for ind,el in enumerate(diff) if isnan(el)]
+                                nankeys = [ind for ind,el in enumerate(diff) if np.isnan(el)]
                                 nanind.extend(nankeys)
                             array[keyind] = diff
                     nanind = np.unique(np.asarray(nanind))
@@ -12327,20 +12309,20 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     print("- otherwise you might wait endless")
                 # interpolate b
                 function = sb.interpol(keys)
-                #print function, len(function), keys, sa.ndarray, sb.ndarray
+                numtimea = date2num(timea)
+                numtimeb = date2num(timeb)
                 # Get a list of indicies for which timeb values are
                 #   in the vicintiy of a (within half of samplingrate)
-                indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
+                indtia = [idx for idx, el in enumerate(numtimea) if np.min(np.abs(numtimeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
                 # limit time range to valued covered by the interpolation function
                 #print len(indtia), len(timeb), np.asarray(indtia)
-                indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]
+                indtia = [elem for elem in indtia if function[1] < numtimea[elem] < function[2]]
                 #t2temp = datetime.utcnow()
                 #print "Timediff %s" % str(t2temp-t1temp)
                 #print len(indtia), len(timeb), np.asarray(indtia)
                 #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
                 if len(function) > 0:
                     nanind = []
-                    sa.ndarray[0] = sa.ndarray[0].astype(float)
                     for key in keys:
                         foundnan = False
                         keyind = KEYLIST.index(key)
@@ -12358,10 +12340,10 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
                             #print "VALB", np.asarray(valb)
                             diff = np.asarray(vala) - np.asarray(valb)
-                            if isnan(diff).any():
+                            if np.isnan(diff).any():
                                 foundnan = True
                             if foundnan:
-                                nankeys = [ind for ind,el in enumerate(diff) if isnan(el)]
+                                nankeys = [ind for ind,el in enumerate(diff) if np.isnan(el)]
                                 nanind.extend(nankeys)
                             array[keyind] = diff
                     nanind = np.unique(np.asarray(nanind))
@@ -12371,10 +12353,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             if len(elem) > 0:
                                 array[ind] = np.delete(np.asarray(elem), nanind)
                     array = np.asarray(array,dtype=object)
-
-            #t2e = datetime.utcnow()
-            #print "Total Timediff %s" % str(t2e-t1s)
-            #print array, len(array), len(array[0])
 
             for key in keys:
                 try:

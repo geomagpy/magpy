@@ -6,10 +6,13 @@ methods contain all methods which do not fit to a magpy specific class
 the following methods are contained:
 - is_number(variable)    :    returns True if variable is float or int
 - testtime(variable)     :    returns datetime object if variable can be converted to it
+- mask_nan(array)        :    returns an array without nan or empty elements
 
 """
-from magpy.stream import * # os, num2date
-
+#from magpy.stream import * # os, num2date
+import numpy as np
+from datetime import datetime
+from matplotlib.dates import num2date, date2num
 
 def is_number(s):
     """
@@ -88,6 +91,53 @@ def testtime(time):
 
         return timeobj
 
+def maskNAN(column):
+    """
+    Tests for NAN values in column and usually masks them
+    """
+
+    numeric = False
+    datetype = False
+    if len(column) > 0:
+        if is_number(column[0]):
+            numeric = True
+        elif isinstance(column[0], (datetime,np.datetime64)):
+            datetype = True
+    else:
+        return column
+
+    if numeric:
+        try: # Test for the presence of nan values to it
+            column = np.asarray(column).astype(float)
+            val = np.mean(column)
+            if np.isnan(val): # found at least one nan value
+                for el in column:
+                    if not np.isnan(el): # at least on number is present - use masked_array
+                        num_found = True
+                if num_found:
+                    mcolumn = np.ma.masked_invalid(column)
+                    column = mcolumn
+                else:
+                    numdat = False
+                    return []
+        except:
+            return []
+    elif datetype:
+        try:
+            indicies = np.argwhere(column=="")
+            mask = np.zeros(len(column),dtype=bool)
+            if indicies.size > 0:
+                mask[indicies[0]] = True
+                column = column[~mask]
+        except:
+            pass
+    else:
+        try:
+            column = np.ma.masked_where(column=="",column)
+        except:
+            pass
+
+    return column
 
 
 if __name__ == '__main__':
@@ -106,6 +156,9 @@ if __name__ == '__main__':
     testdate = "1971-11-22T11:20:00"
     teststring = "xxx"
     testnumber = 123.123
+    testarray1 = np.array([1.23,23.45,np.nan,2.45])
+    testarray2 = np.array([datetime(2024,11,22,5),datetime(2024,11,22,6),"",datetime(2024,11,22,9)])
+    testarray3 = np.array([datetime(2024,11,22,5),datetime(2024,11,22,6),datetime(2024,11,22,9),datetime(2024,11,22,11)])
     try:
         var1 = is_number(teststring)
         var2 = is_number(testnumber)
@@ -118,6 +171,13 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['testdate'] = str(excep)
         print(datetime.utcnow(), "--- ERROR testdate.")
+
+    try:
+        ar1 = maskNAN(testarray1)
+        ar2 = maskNAN(testarray2)
+    except Exception as excep:
+        errors['mask_nan'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR maskNAN.")
     print()
     print("----------------------------------------------------------")
     if errors == {}:
@@ -126,39 +186,7 @@ if __name__ == '__main__':
         print(len(errors), "errors were found in the following functions:")
         print(str(errors.keys()))
         print()
-        print("Would you like to print the exceptions thrown?")
-        excep_answer = raw_input("(Y/n) > ")
-        if excep_answer.lower() == 'y':
-            i = 0
-            for item in errors:
-                print(errors.keys()[i] + " error string:")
-                print("    " + errors[errors.keys()[i]])
-                i += 1
+        print("Exceptions thrown:")
+        for item in errors:
+            print ("{} : errormessage = {}".format(item, errors.get(item)))
 
-def maskNAN(column):
-    """
-    Tests for NAN values in column and usually masks them
-    """
-
-    try: # Test for the presence of nan values
-        column = np.asarray(column).astype(float)
-        val = np.mean(column)
-        numdat = True
-        if isnan(val): # found at least one nan value
-            for el in column:
-                if not isnan(el): # at least on number is present - use masked_array
-                    num_found = True
-            if num_found:
-                mcolumn = np.ma.masked_invalid(column)
-                numdat = True
-                column = mcolumn
-            else:
-                numdat = False
-                logger.warning("NAN warning: only nan in column")
-                return []
-    except:
-        numdat = False
-        #logger.warning("Here: NAN warning: only nan in column")
-        return []
-
-    return column
