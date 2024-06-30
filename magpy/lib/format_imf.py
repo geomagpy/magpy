@@ -1880,7 +1880,7 @@ def writeIMF(datastream, filename, **kwargs):
 
     success = False
     # 1. check whether datastream corresponds to minute file
-    if not 0.9 < datastream.get_sampling_period()*60*24 < 1.1:
+    if not 60*0.9 < datastream.get_sampling_period() < 60*1.1:
         logger.error("writeIMF: Data needs to be minute data for Intermagnet - filter it accordingly")
         return False
 

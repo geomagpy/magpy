@@ -6119,8 +6119,11 @@ CALLED BY:
         # Better use get_sampling period as samplingrate is rounded
         #spr = self.get_sampling_period()
         #newsps = newsp*3600.0*24.0
+        print (self.get_sampling_period())
         newsps = self.samplingrate()
+        print (newsps)
         newsp = newsps/3600.0/24.0
+        print (newsps)
 
         if not accuracy:
             accuracy = 0.9/(3600.0*24.0) # one second relative to day
@@ -6134,49 +6137,38 @@ CALLED BY:
         stream = self.copy()
         prevtime = 0
 
-        ndtype = False
         if len(stream.ndarray[0]) > 0:
             maxtime = stream.ndarray[0][-1]
             mintime = stream.ndarray[0][0]
             length = len(stream.ndarray[0])
             sourcetime = stream.ndarray[0]
-            ndtype = True
-        else:
-            mintime = self[0].time
-            maxtime = self[-1].time
 
         if debug:
             print("Time range:", mintime, maxtime)
             print("Length, samp_per and accuracy:", self.length()[0], newsps, accuracy)
 
         shift = 0
-        if ndtype:
-            # Get time diff and expected count
-            timediff = maxtime - mintime
-            expN = int(round(timediff/newsp))+1
+        # Get time diff and expected count
+        timediff = (maxtime - mintime).days
+        expN = int(round(timediff/newsp))+1
+        if debug:
+            print("Expected length vs actual length:", expN, length)
+        if expN == len(sourcetime):
+            # Found the expected amount of time steps - no gaps
+            logger.info("get_gaps: No gaps found - Returning")
+            return stream
+        else:
+            diff = (sourcetime[1:] - sourcetime[:-1])
+            diff = np.array([el.days for el in diff])
+            print (diff[:5])
+            num_fills = np.round(diff / newsp) - 1
+            getdiffids = np.where(diff > newsp+accuracy)[0]
+            logger.info("get_gaps: Found gaps - Filling nans to them")
             if debug:
-                print("Expected length vs actual length:", expN, length)
-            if expN == len(sourcetime):
-                # Found the expected amount of time steps - no gaps
-                logger.info("get_gaps: No gaps found - Returning")
-                return stream
-            else:
-                # correct way (will be used by default) - does not use any accuracy value
-                #projtime = np.linspace(mintime, maxtime, num=expN, endpoint=True)
-                #print("proj:", projtime, len(projtime))
-                # find values or projtime, which are not in sourcetime
-                #dif = setdiff1d(projtime,sourcetime, assume_unique=True)
-                #print (dif, len(dif))
-                #print (len(dif),len(sourcetime),len(projtime))
-                diff = sourcetime[1:] - sourcetime[:-1]
-                num_fills = np.round(diff / newsp) - 1
-                getdiffids = np.where(diff > newsp+accuracy)[0]
-                logger.info("get_gaps: Found gaps - Filling nans to them")
-                if debug:
                     print ("Here", diff, num_fills, newsp, getdiffids)
-                missingt = []
-                # Get critical differences and number of missing steps
-                for i in getdiffids:
+            missingt = []
+            # Get critical differences and number of missing steps
+            for i in getdiffids:
                     #print (i,  sourcetime[i-1], sourcetime[i], sourcetime[i+1])
                     nf = num_fills[i]
                     # if nf is larger than zero then get append the missing time steps to missingt list
@@ -6184,13 +6176,13 @@ CALLED BY:
                         for n in range(int(nf)): # add n+1 * samplingrate for each missing value
                             missingt.append(sourcetime[i]+(n+1)*newsp)
 
-                print ("Filling {} gaps".format(len(missingt)))
+            print ("Filling {} gaps".format(len(missingt)))
 
-                # Cycle through stream and append nans to each column for missing time steps
-                nans = [np.nan] * len(missingt)
-                empts = [''] * len(missingt)
-                gaps = [0.0] * len(missingt)
-                for idx,elem in enumerate(stream.ndarray):
+            # Cycle through stream and append nans to each column for missing time steps
+            nans = [np.nan] * len(missingt)
+            empts = [''] * len(missingt)
+            gaps = [0.0] * len(missingt)
+            for idx,elem in enumerate(stream.ndarray):
                     if idx == 0:
                         # append missingt list to array element
                         elem = list(elem)
@@ -6210,26 +6202,6 @@ CALLED BY:
                         elem = [1.0]*lenelem
                         elem.extend(gaps)
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
-            return stream.sorting()
-
-        else:
-            stream = DataStream()
-            for elem in self:
-                if abs((prevtime+newsp) - elem.time) > accuracy and not prevtime == 0:
-                    currtime = num2date(prevtime)+timedelta(seconds=newsps)
-                    while currtime <= num2date(elem.time):
-                        newline = LineStruct()
-                        exec('newline.'+gapvariable+' = 1.0')
-                        newline.time = date2num(currtime)
-                        stream.add(newline)
-                        currtime += timedelta(seconds=newsps)
-                else:
-                    exec('elem.'+gapvariable+' = 0.0')
-                    if key in KEYLIST:
-                        if isnan(eval('elem.'+key)):
-                            exec('elem.'+gapvariable+' = 1.0')
-                    stream.add(elem)
-                prevtime = elem.time
 
         logger.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
         if debugmode:
@@ -6391,7 +6363,7 @@ CALLED BY:
         if not self.length()[0] > 1:
             return 0.0
 
-        sr = self.get_sampling_period()*24*3600
+        sr = self.get_sampling_period()
         unit = ' sec'
 
         val = sr
@@ -6428,19 +6400,6 @@ CALLED BY:
                     break
         else:
             val = np.round(sr,1)
-        """
-        if np.round(sr*10.,0) == 0:
-            val = np.round(sr,2)
-            #unit = ' Hz'
-        elif np.round(sr,0) == 0:
-            if 0.09 < sr < 0.11:
-                val = np.round(sr,digits)
-            else:
-                val = np.round(sr,2)
-                #unit = ' Hz'
-        else:
-            val = np.round(sr,0)
-        """
         if notrounded:
             val = sr
 
