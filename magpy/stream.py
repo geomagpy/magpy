@@ -6119,18 +6119,15 @@ CALLED BY:
         # Better use get_sampling period as samplingrate is rounded
         #spr = self.get_sampling_period()
         #newsps = newsp*3600.0*24.0
-        print (self.get_sampling_period())
         newsps = self.samplingrate()
-        print (newsps)
         newsp = newsps/3600.0/24.0
-        print (newsps)
 
         if not accuracy:
-            accuracy = 0.9/(3600.0*24.0) # one second relative to day
-            accuracy = 0.05*newsp # 5 percent of samplingrate
+            #accuracy = 0.9/(3600.0*24.0) # one second relative to day
+            accuracy = 0.05*newsps # 5 percent of samplingrate
 
         if newsps < 0.9 and not accuracy:
-            accuracy = (newsps-(newsps*0.1))/(3600.0*24.0)
+            accuracy = (newsps-(newsps*0.1))
 
         logger.info('--- Starting filling gaps with NANs at %s ' % (str(datetime.now())))
 
@@ -6145,27 +6142,26 @@ CALLED BY:
 
         if debug:
             print("Time range:", mintime, maxtime)
-            print("Length, samp_per and accuracy:", self.length()[0], newsps, accuracy)
+            print("Length, samp_per, samp_per(d) and accuracy:", self.length()[0], newsps, newsp, accuracy)
 
         shift = 0
         # Get time diff and expected count
-        timediff = (maxtime - mintime).days
-        expN = int(round(timediff/newsp))+1
+        timediff = (maxtime - mintime).total_seconds()
+        expN = int(round(timediff/newsps))+1
         if debug:
-            print("Expected length vs actual length:", expN, length)
+            print("get_gaps: Expected length vs actual length:", expN, length)
         if expN == len(sourcetime):
             # Found the expected amount of time steps - no gaps
             logger.info("get_gaps: No gaps found - Returning")
             return stream
         else:
             diff = (sourcetime[1:] - sourcetime[:-1])
-            diff = np.array([el.days for el in diff])
-            print (diff[:5])
-            num_fills = np.round(diff / newsp) - 1
-            getdiffids = np.where(diff > newsp+accuracy)[0]
+            diff = np.array([el.total_seconds() for el in diff])
+            num_fills = np.round(diff / newsps) - 1
+            getdiffids = np.where(diff > newsps+accuracy)[0]
             logger.info("get_gaps: Found gaps - Filling nans to them")
             if debug:
-                    print ("Here", diff, num_fills, newsp, getdiffids)
+                    print ("get_gaps:", diff, num_fills, newsps, getdiffids)
             missingt = []
             # Get critical differences and number of missing steps
             for i in getdiffids:
@@ -6174,9 +6170,11 @@ CALLED BY:
                     # if nf is larger than zero then get append the missing time steps to missingt list
                     if nf > 0:
                         for n in range(int(nf)): # add n+1 * samplingrate for each missing value
-                            missingt.append(sourcetime[i]+(n+1)*newsp)
+                            missingt.append(sourcetime[i]+timedelta(seconds=(n+1)*newsps))
 
-            print ("Filling {} gaps".format(len(missingt)))
+            logger.info("Filling {} gaps".format(len(missingt)))
+            if debug:
+                print ("Filling {} gaps".format(len(missingt)))
 
             # Cycle through stream and append nans to each column for missing time steps
             nans = [np.nan] * len(missingt)
@@ -6204,8 +6202,6 @@ CALLED BY:
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
 
         logger.info('--- Filling gaps finished at %s ' % (str(datetime.now())))
-        if debugmode:
-            print("Ending:", stream[0].time, stream[-1].time)
 
         return stream.sorting()
 
@@ -12153,7 +12149,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     keys = list(set(keys)&set(keysb))
 
     if not len(keys) > 0:
-        print("subtractStreams: No common keys found - aborting")
+        logger.error("subtractStreams: No common keys found - aborting")
         return DataStream()
 
     if len(stream_a.ndarray[0]) > 0:
@@ -12185,23 +12181,28 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     timea = sa.ndarray[0]
     # truncate b to time range of a
     try:
-        print(np.min(timea).replace(tzinfo=None))
         sb = sb.trim(starttime=np.min(timea).replace(tzinfo=None), endtime=np.max(timea).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
     except:
-        print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
+        logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
+        if debug:
+            print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
     timeb = sb.ndarray[0]
     # truncate a to range of b
     try:
         sa = sa.trim(starttime=np.min(timeb).replace(tzinfo=None), endtime=np.max(timeb).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
     except:
-        print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
+        logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
+        if debug:
+            print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
     timea = sa.ndarray[0]
 
     # testing overlapp
     if not sb.length()[0] > 0:
-        print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
+        logger.error("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
+        if debug:
+            print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
 
     # mask empty slots (for time columns only empty inputs are masked) - very fast
@@ -12327,194 +12328,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             except:
                 pass
 
-            #subtractedstream = DataStream([LineStruct()],sa.header,np.asarray(array))
-            #for key in keys:
-            #    subtractedstream = subtractedstream._drop_nans(key)
-
             return DataStream([LineStruct()],sa.header,np.asarray(array,dtype=object))
-
-
-    if np.min(timeb) < np.min(timea):
-        stime = np.min(timea)
-    else:
-        stime = np.min(timeb)
-    if np.max(timeb) > np.max(timea):
-        etime = np.max(timea)
-    else:
-        etime = np.max(timeb)
-    # if stream_b is longer than stream_a use one step after and one step before e and stime
-    if etime < np.max(timeb):
-        for idx, ttt in enumerate(timeb):
-            if ttt > etime:
-                try: # use slightly larger time range for interpolation
-                    etimeb = timeb[idx+1]
-                except:
-                    etimeb = timeb[idx]
-                break
-    else:
-        etimeb = etime
-
-    if stime > np.min(timeb):
-        for idx, ttt in enumerate(timeb):
-            if ttt > stime:
-                stimeb = timeb[idx-1]
-                break
-    else:
-        stimeb = stime
-
-    if (etime <= stime):
-        logger.error('subtractStreams: Streams are not overlapping!')
-        return stream_a
-
-
-    # ----------------------------------------------
-    # --------- if loop for new technique ----------
-    # ----------------------------------------------
-    # changes from 23 May 2014 by leon
-    # modification to keep original streams unbiased
-    # need to check all subsequent functions !!!
-    if newway == True:
-        subtractedstream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
-        sa = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
-        sb = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
-        samplingrate_b = sb.get_sampling_period()
-
-        logger.info('subtractStreams (newway): Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
-
-        # Interpolate stream_b
-        # --------------------
-        function = sb.interpol(keys)
-        taprev = 0
-
-        # Check for the following cases:
-        # 1- No overlap of a and b
-        # 2- a shorter and fully covered by b
-        ## Better and probably faster way: recalc b at timesteps of a
-        ## subtract a-b
-        if not ndtype:
-            print("Running for LineStruct")
-            for idx,elem in enumerate(sa):
-                tb, itmp = find_nearest(timeb,elem.time)
-                index = timeblst.index(tb)
-
-                # get index of tb
-                #tib = list(timeb)
-                #index = tib.index(tb)
-
-                #print tb-elem.time
-
-                # --------------------------------------------------------------------
-                # test whether data points are present within a sampling rate distance
-                # and whether the timestep is within the interpolation range
-                # --------------------------------------------------------------------
-                if abs(tb-elem.time) < samplingrate_b  and function[1]<=elem.time<=function[2]:
-                    newline = LineStruct()
-                    for key in keys:
-                        newline.time = elem.time
-                        #valstreama = eval('elem.'+key)
-                        valstreama = getattr(elem,key)
-                        try:
-                            valstreamb = float(function[0]['f'+key]((elem.time-function[1])/(function[2]-function[1])))
-                            #realvalb = eval('stream_b[index].'+key)
-                            realvalb = getattr(stream_b[index],key)
-                            #if isnan(realvalb):
-                            #    print "Found"
-                            if isnan(valstreama) or isnan(realvalb):
-                                newval = 'NAN'
-                            else:
-                                newval = valstreama - valstreamb
-                        except:
-                            newval = 'NAN'
-                        setattr(newline, key, float(newval))
-                        #exec('newline.'+key+' = float(newval)')
-                    subtractedstream.add(newline)
-
-        # Finally get gaps from stream_b and remove these gaps from the subtracted stream for all keys
-        # TODO
-
-        # XXX Take care: New header info replaces header information of stream a and b
-        for key in keys:
-            try:
-                subtractedstream.header['col-'+key] = 'delta '+key
-            except:
-                pass
-            try:
-                subtractedstream.header['unit-col-'+key] = sa.header['unit-col-'+key]
-            except:
-                pass
-        try:
-            subtractedstream.header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
-        except:
-            pass
-
-        return subtractedstream
-
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # XXX If not newway:
-    # Traditional version is used which replaces stream_a with the subtracted info
-    # TODO test the stablilty of newway and make it default
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    # Take only the time range of the shorter stream
-    # Important for baselines: extend the absfile to start and endtime of the stream to be corrected
-    stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None), endtime=num2date(etime).replace(tzinfo=None))
-    stream_b = stream_b.trim(starttime=num2date(stimeb).replace(tzinfo=None), endtime=num2date(etimeb).replace(tzinfo=None))
-
-    samplingrate_b = stream_b.get_sampling_period()
-
-    logger.info('subtractStreams: Time range from %s to %s' % (num2date(stime).replace(tzinfo=None),num2date(etime).replace(tzinfo=None)))
-
-    # Interpolate stream_b
-    function = stream_b.interpol(keys)
-    taprev = 0
-    for elem in stream_a:
-        ta = elem.time
-        if ta >= function[1]: # in records of different resolution the first element might be older then the function start
-            functime = (ta-function[1])/(function[2]-function[1])
-            # Do the subtraction if there is is an element within stream b within twice the sampling rate distance
-            # If not wite NaN to the diffs
-            tb, itmp = find_nearest(timeb,ta)
-            #Test whether a time_b event exists in the vicinity of ta and whether tb is within the time_b range otherwise interpolation fails
-            if ta-samplingrate_b < tb < ta+samplingrate_b and timeb[0]<ta<timeb[-1] :
-                for key in keys:
-                    if not key in KEYLIST[1:16]:
-                        logger.error("subtractStreams: Column key %s not valid!" % key)
-                    fkey = 'f'+key
-                    try:
-                        if fkey in function[0] and not isnan(eval('stream_b[itmp].' + key)):
-                            newval = function[0][fkey](functime)
-                            exec('elem.'+key+' -= float(newval)')
-                        else:
-                            setattr(elem, key, float(NaN))
-                            #exec('elem.'+key+' = float(NaN)')
-                    except:
-                        logger.warning("subtractStreams: Check why exception was thrown.")
-                        setattr(elem, key, float(NaN))
-                        #exec('elem.'+key+' = float(NaN)')
-            else:
-                for key in keys:
-                    if not key in KEYLIST[1:16]:
-                        logger.error("subtractStreams: Column key %s not valid!" % key)
-                    fkey = 'f'+key
-                    if fkey in function[0]:
-                        setattr(elem, key, float(NaN))
-                        #exec('elem.'+key+' = float(NaN)')
-        else: # put NaNs in cloumn if no interpolated values in b exist
-            for key in keys:
-                if not key in KEYLIST[1:16]:
-                    logger.error("subtractStreams: Column key %s not valid!" % key)
-                fkey = 'f'+key
-                if fkey in function[0]:
-                    setattr(elem, key, float(NaN))
-                    #exec('elem.'+key+' = float(NaN)')
-
-    try:
-        headera['SensorID'] = headera['SensorID']+'-'+headerb['SensorID']
-    except:
-        pass
-    logger.info('subtractStreams: Stream-subtraction finished.')
-
-    return DataStream(stream_a, headera)
 
 
 def stackStreams(streamlist, **kwargs): # TODO
