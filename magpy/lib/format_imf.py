@@ -690,7 +690,7 @@ def writeIAF(datastr, filename, **kwargs):
         head_bin = struct.pack(packcode,*head)
         # add minute values
         packcode += '1440l' # fh.read(64)
-        xvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[1]])
+        xvals = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in dayar[1]])
         xvals = np.asarray(xvals*10).astype(int)
         head.extend(xvals)
         if not len(xvals) == 1440:
@@ -698,17 +698,17 @@ def writeIAF(datastr, filename, **kwargs):
             logger.error("writeIAF: for {}".format(datetime.strftime(num2date(dayar[0][0]),'%Y%j')))
             logger.error("writeIAF: expected 1440 records, found {} records".format(len(xvals)))
         packcode += '1440l' # fh.read(64)
-        yvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[2]])
+        yvals = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in dayar[2]])
         yvals = np.asarray(yvals*10).astype(int)
         head.extend(yvals)
         packcode += '1440l' # fh.read(64)
-        zvals = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in dayar[3]])
+        zvals = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in dayar[3]])
         zvals = np.asarray(zvals*10).astype(int)
         head.extend(zvals)
         packcode += '1440l' # fh.read(64)
         if df:
             #print ([elem for elem in dayar[dfpos]])
-            dfvals = np.asarray([np.round(elem*10.,0) if not isnan(elem) else 999999 for elem in dayar[dfpos]])
+            dfvals = np.asarray([np.round(elem*10.,0) if not np.isnan(elem) else 999999 for elem in dayar[dfpos]])
             #print ("dfmin",dfvals)
             #dfvals = np.asarray(dfvals*10.).astype(int)
             dfvals = dfvals.astype(int)
@@ -718,23 +718,23 @@ def writeIAF(datastr, filename, **kwargs):
 
         # add hourly means
         packcode += '24l'
-        xhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[1]])
+        xhou = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in temp.ndarray[1]])
         xhou = np.asarray(xhou*10).astype(int)
         head.extend(xhou)
         if not len(xhou) == 24:
             logger.error("writeIAF: Found inconsistency in hourly data set: expected 24, found {} records".format(len(xhou)))
             logger.error("writeIAF: Error in day {}".format(datetime.strftime(num2date(dayar[0][0]),'%Y%j')))
         packcode += '24l'
-        yhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[2]])
+        yhou = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in temp.ndarray[2]])
         yhou = np.asarray(yhou*10).astype(int)
         head.extend(yhou)
         packcode += '24l'
-        zhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[3]])
+        zhou = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in temp.ndarray[3]])
         zhou = np.asarray(zhou*10).astype(int)
         head.extend(zhou)
         packcode += '24l'
         if df:
-            dfhou = np.asarray([np.round(elem,1) if not isnan(elem) else 99999.9 for elem in temp.ndarray[dfpos]])
+            dfhou = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in temp.ndarray[dfpos]])
             dfhou = np.asarray(dfhou*10).astype(int)
         else:
             dfhou = np.asarray([888888]*24).astype(int)
@@ -2018,19 +2018,19 @@ def writeIMF(datastream, filename, **kwargs):
                     else: # even
                         dataline = '9999999 9999999 9999999 999999'
                     j = j+1
-        if not isnan(elemx):
+        if not np.isnan(elemx):
             x = comp_encode(header['unit-col-x'],elemx)
         else:
             x = 999999
-        if not isnan(elemy):
+        if not np.isnan(elemy):
             y =comp_encode(header['unit-col-y'],elemy)
         else:
             y = 999999
-        if not isnan(elemz):
+        if not np.isnan(elemz):
             z = comp_encode(header['unit-col-z'],elemz)
         else:
             z = 999999
-        if not isnan(elemf):
+        if not np.isnan(elemf):
             f = comp_encode(header['unit-col-f'],elemf)
         else:
             f = 999999
@@ -3074,14 +3074,14 @@ def writeIYFV(datastream,filename, **kwargs):
     meanx = datastream.mean('x',percentage=90)
     meany = datastream.mean('y',percentage=90)
     meanz = datastream.mean('z',percentage=90)
-    if isnan(meanx) or isnan(meany) or isnan(meanz):
+    if np.isnan(meanx) or np.isnan(meany) or np.isnan(meanz):
         logger.warning(" writeIYFV: found more then 10% of NaN values - setting minimum requirement to 10% data recovery and change kind to I (incomplete)")
         meanx = datastream.mean('x',percentage=10)
         meany = datastream.mean('y',percentage=10)
         meanz = datastream.mean('z',percentage=10)
         if not kind in ['Q', 'D', 'q', 'd']:
             kind = 'I'
-        if isnan(meanx) or isnan(meany) or isnan(meanz):
+        if np.isnan(meanx) or np.isnan(meany) or np.isnan(meanz):
             logger.error(" writeIYFV: less then 10% of data - aborting")
             return False
     meanyear = int(datetime.strftime(num2date(meant),"%Y"))

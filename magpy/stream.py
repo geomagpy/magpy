@@ -91,7 +91,7 @@ logger.info("MagPy version "+str(__version__))
 magpyversion = __version__
 
 # import default methods
-from magpy.core import methods
+from magpy.core.methods import *
 
 # Standard packages
 # -----------------
@@ -1846,7 +1846,15 @@ CALLED BY:
         normalizes the given column to range [0:1]
         """
         normcol = []
-        column = column.astype(float)
+        timeconv = False
+        # test column contents
+        if isinstance(column[0], (float,int,float64)):
+            column = column.astype(float)
+        elif isinstance(column[0], (datetime,datetime64)):
+            column = date2num(column)
+            timeconv = True
+        else:
+            print ("stream._normalize: column does not contain numbers")
         maxval = np.max(column)
         minval = np.min(column)
         for elem in column:
@@ -9460,8 +9468,6 @@ CALLED BY:
                 starttime = date2num(starttime)
             if newarray[0].size > 0:   # time column present
                 idx = np.abs(newarray[0]-starttime).argmin()
-                print ("Hello", np.abs(newarray[0]-starttime).argmin())
-                print (newarray[0]-starttime)
                 # Trim should start at point >= starttime, so check:
                 if newarray[0][idx] < starttime:
                     idx += 1
@@ -12218,6 +12224,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     minsamprate = min([sampratea,samprateb])
 
     timea = sa.ndarray[0]
+    print (len(timea))
     # truncate b to time range of a
     try:
         print(np.min(timea).replace(tzinfo=None))
@@ -12226,12 +12233,15 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
     timeb = sb.ndarray[0]
+    print (len(timeb),np.min(timeb),np.max(timeb))
+    print ("Before",sa.length()[0])
     # truncate a to range of b
     try:
         sa = sa.trim(starttime=np.min(timeb).replace(tzinfo=None), endtime=np.max(timeb).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
     except:
         print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
+    print ("After", sa.length()[0])
     timea = sa.ndarray[0]
 
     # testing overlapp
@@ -12239,9 +12249,9 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
 
-    print ("Cutting done")
-    timea = maskNAN(timea)
-    timeb = maskNAN(timeb)
+    timea = timea[~np.is(timea)]
+    timeb = timeb[~np.isnull(timeb)]
+    print ("After", sa.length()[0])
 
     # Check for the following cases:
     # 1- No overlap of a and b
@@ -13174,33 +13184,6 @@ def find_nearest(array, value):
     return array[idx], idx
 
 
-def maskNAN(column):
-    """
-    Tests for NAN values in column and usually masks them
-    """
-
-    try: # Test for the presence of nan values
-        column = np.asarray(column).astype(float)
-        val = np.mean(column)
-        numdat = True
-        if isnan(val): # found at least one nan value
-            for el in column:
-                if not isnan(el): # at least on number is present - use masked_array
-                    num_found = True
-            if num_found:
-                mcolumn = np.ma.masked_invalid(column)
-                numdat = True
-                column = mcolumn
-            else:
-                numdat = False
-                logger.warning("NAN warning: only nan in column")
-                return []
-    except:
-        numdat = False
-        #logger.warning("Here: NAN warning: only nan in column")
-        return []
-
-    return column
 
 
 def nan_helper(y):
