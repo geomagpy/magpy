@@ -859,12 +859,9 @@ CALLED BY:
         APPLICATION:
            for non-destructive methods
         """
-        #print self.container
-        #assert isinstance(self.container, (list, tuple))
-        stream = copy.deepcopy(self)
-        """
+
         co = DataStream()
-        #co.header = self.header
+        co.container = [LineStruct()]
         newheader = {}
         for el in self.header:
             newheader[el] = self.header[el]
@@ -876,23 +873,8 @@ CALLED BY:
                 for val in self.ndarray[ind]: ## This is necessary to really copy the content
                     liste.append(val)
                 array[ind] = np.asarray(liste)
-            co.container = [LineStruct()]
-        else:
-            for el in self:
-                li = LineStruct()
-                for key in KEYLIST:
-                    if key == 'time':
-                        li.time = el.time
-                    else:
-                        #exec('li.'+key+' = el.'+key)
-                        elkey = getattr(el,key)
-                        setattr(li, key, elkey)
-                co.add(li)
 
         return DataStream(co.container,newheader,np.asarray(array, dtype=object))
-        """
-
-        return stream
 
 
     def __str__(self):
@@ -6360,8 +6342,16 @@ CALLED BY:
         if not self.length()[0] > 1:
             return 0.0
 
-        sr = self.get_sampling_period()
-        print (sr)
+        sr = None
+        if self.header.get("DataSamplingRate",""):
+            src = self.header.get("DataSamplingRate")
+            if is_number(src):
+                sr = src
+            else:
+                sr = float(self.header.get("DataSamplingRate").strip(" sec"))
+        if not sr:
+            sr = self.get_sampling_period()
+            logger.info("sampling rate: Calculated sampling rate {}".format(sr))
         unit = ' sec'
 
         val = sr
@@ -6401,7 +6391,7 @@ CALLED BY:
         if notrounded:
             val = sr
 
-        self.header['DataSamplingRate'] = str(val) + unit
+        self.header['DataSamplingRate'] = float("{0:.3f}".format(val))
 
         return val
 
@@ -10994,7 +10984,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                 except:
                     stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
                     logger.warning("read: File {} could not be read. Skipping ...".format(filename))
-                if (len(stp) > 0 and not np.isnan(stp[0].time)) or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
+                if len(stp) > 0 or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
                     st.extend(stp.container,stp.header,stp.ndarray)
 
             #del stp
@@ -11036,6 +11026,7 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         st = st.trim(endtime=endtime)
 
     ### Define some general header information TODO - This is done already in some format libs - clean up
+    st = st.removeduplicates()
     st.header['DataSamplingRate'] = float("{0:.2f}".format(st.samplingrate()))
 
     return st
@@ -12145,7 +12136,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     getmeans = kwargs.get('getmeans')
     debug = kwargs.get('debug')
 
-    ts = datetime.utcnow()
     if not keys:
         keys = stream_a._get_key_headers(numerical=True)
     keysb = stream_b._get_key_headers(numerical=True)
@@ -12180,12 +12170,9 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     sampratea = sa.samplingrate()
     samprateb = sb.samplingrate()
     minsamprate = min([sampratea,samprateb])
-    te = datetime.utcnow()
-    print("prep", (te - ts).total_seconds())
 
     timea = sa.ndarray[0]
     # truncate b to time range of a
-    ts = datetime.utcnow()
     try:
         sb = sb.trim(starttime=np.min(timea).replace(tzinfo=None), endtime=np.max(timea).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
     except:
@@ -12210,17 +12197,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         if debug:
             print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
-    te = datetime.utcnow()
-    print("trim",(te - ts).total_seconds())
 
     # mask empty slots (for time columns only empty inputs are masked) - very fast
-    ts = datetime.utcnow()
     numtimea = date2num(timea)
     numtimeb = date2num(timeb)
     numtimea = maskNAN(numtimea)
     numtimeb = maskNAN(numtimeb)
-    te = datetime.utcnow()
-    print("numconversion", (te - ts).total_seconds())
 
     # Check for the following cases:
     # 1- No overlap of a and b (Done)
@@ -12241,27 +12223,17 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             if len(arr) < int(len(timeb)*1.4):
                 logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
                 # get common timesteps
-                ts = datetime.utcnow()
                 numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
-                #numtimea = date2num(timea)
-                #numtimeb = date2num(timeb)
-                #numcommon = date2num(common)
                 indtia = np.where(np.in1d(numtimea, numcommon))[0]
                 indtib = np.where(np.in1d(numtimeb, numcommon))[0]
-                te = datetime.utcnow()
-                print((te - ts).total_seconds())
 
                 if len(indtia) == len(indtib):
+                    ts = datetime.utcnow()
                     nanind = []
                     for key in keys:
                         foundnan = False
                         keyind = KEYLIST.index(key)
                         if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
-                            for ind in indtia:
-                                try:
-                                    tmp = sa.ndarray[keyind][ind]
-                                except:
-                                    print(ind, keyind, len(indtia), len(sa.ndarray[keyind]))
                             vala = [sa.ndarray[keyind][ind] for ind in indtia]
                             valb = [sb.ndarray[keyind][ind] for ind in indtib]
                             diff = np.asarray(vala).astype(float) - np.asarray(valb).astype(float)
@@ -12278,6 +12250,9 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             if len(elem) > 0:
                                 array[ind] = np.delete(np.asarray(elem), nanind)
                     array = np.asarray(array,dtype=object)
+                    te = datetime.utcnow()
+                    if debug:
+                        print((te - ts).total_seconds())
             else:
                 if debug:
                     print("Did not find identical timesteps - linearily interpolating stream b")
