@@ -93,24 +93,25 @@ magpyversion = __version__
 # import default methods
 from magpy.core.methods import *
 
+import csv
+import pickle
+import types
+import struct
+import re
+import time, string, os, shutil
+import copy as cp
+import fnmatch
+import json
+import dateutil.parser as dparser
+from tempfile import NamedTemporaryFile
+import warnings
+from glob import glob, iglob, has_magic
+from itertools import groupby
+from operator import itemgetter
+
 # Standard packages
 # -----------------
 try:
-    import csv
-    import pickle
-    import types
-    import struct
-    import re
-    import time, string, os, shutil
-    #import locale
-    import copy as cp
-    import fnmatch
-    import json
-    import dateutil.parser as dparser
-    from tempfile import NamedTemporaryFile
-    import warnings
-    from glob import glob, iglob, has_magic
-    from itertools import groupby
     import operator # used for stereoplot legend
     from operator import itemgetter
     # The following packages are not identically available for python3

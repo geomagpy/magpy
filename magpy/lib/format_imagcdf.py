@@ -206,7 +206,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 print (" selected primary time column: {}".format(timecol))
             datnumar = []
             for na in namelst:
-                datnumar.append(date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(na))])))
+                datnumar.append(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(na))]))
             multipletimedict = {}
             for idx,na in enumerate(datnumar):
                 refnumar = datnumar[pos]
@@ -314,11 +314,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             col = cdfdat.varget(elem[1])
             try:
                 # cdflib version (<0.3.19... Problem: cdflib.cdfepoch.getVersion() does not change, although to_datetime is different and unixtime as well)
-                ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                ar = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col)
                 cdfvers = 18
             except TypeError:
                 # cdflib version (>=0.3.19)
-                ar = date2num(cdflib.cdfepoch.to_datetime(col))
+                ar = cdflib.cdfepoch.to_datetime(col)
                 cdfvers = 19
             except:
                 # if second value is 60 (tt_2000 leapsecond timestamp) cdfepoch.unixtime fails
@@ -328,9 +328,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 index = seccol.argmax()
                 col = np.delete(col,index)
                 try:
-                    ar = date2num(cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col))
+                    ar = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col)
                 except TypeError:
-                    ar = date2num(cdflib.cdfepoch.to_datetime(col))
+                    ar = cdflib.cdfepoch.to_datetime(col)
                 delrow = True
             arlen= len(ar)
             arraylist.append(ar)

@@ -171,7 +171,6 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         array[ind] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col)
                     except TypeError:
                         array[ind] = cdflib.cdfepoch.to_datetime(col)
-                    #array[ind] = date2num(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(col)]))
                 except:
                     array[ind] = np.asarray([])
             else:
