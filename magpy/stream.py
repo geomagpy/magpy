@@ -12144,6 +12144,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     getmeans = kwargs.get('getmeans')
     debug = kwargs.get('debug')
 
+    ts = datetime.utcnow()
     if not keys:
         keys = stream_a._get_key_headers(numerical=True)
     keysb = stream_b._get_key_headers(numerical=True)
@@ -12178,6 +12179,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     sampratea = sa.samplingrate()
     samprateb = sb.samplingrate()
     minsamprate = min([sampratea,samprateb])
+    te = datetime.utcnow()
+    print("prep", (te - ts).total_seconds())
 
     timea = sa.ndarray[0]
     # truncate b to time range of a
@@ -12216,7 +12219,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     numtimea = maskNAN(numtimea)
     numtimeb = maskNAN(numtimeb)
     te = datetime.utcnow()
-    print((te - ts).total_seconds())
+    print("trim", (te - ts).total_seconds())
 
     # Check for the following cases:
     # 1- No overlap of a and b (Done)
