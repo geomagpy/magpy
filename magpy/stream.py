@@ -861,6 +861,8 @@ CALLED BY:
         """
         #print self.container
         #assert isinstance(self.container, (list, tuple))
+        stream = copy.deepcopy(self)
+        """
         co = DataStream()
         #co.header = self.header
         newheader = {}
@@ -888,6 +890,9 @@ CALLED BY:
                 co.add(li)
 
         return DataStream(co.container,newheader,np.asarray(array, dtype=object))
+        """
+
+        return stream
 
 
     def __str__(self):
@@ -897,19 +902,16 @@ CALLED BY:
         return str(self.container)
 
     def __getitem__(self, var):
-        try:
-            if var in NUMKEYLIST:
-                return self.ndarray[self.KEYLIST.index(var)].astype(np.float64)
-            else:
-                return self.ndarray[self.KEYLIST.index(var)]
-        except:
-            return self.container.__getitem__(var)
+        if var in NUMKEYLIST:
+            return self.ndarray[self.KEYLIST.index(var)].astype(np.float64)
+        else:
+            return self.ndarray[self.KEYLIST.index(var)]
 
     def __setitem__(self, var, value):
         self.ndarray[self.KEYLIST.index(var)] = value
 
     def __len__(self):
-        return len(self.container)
+        return len(self.ndarray[0])
 
     def clear_header(self):
         """
@@ -12210,7 +12212,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
     te = datetime.utcnow()
-    print((te - ts).total_seconds())
+    print("trim",(te - ts).total_seconds())
 
     # mask empty slots (for time columns only empty inputs are masked) - very fast
     ts = datetime.utcnow()
@@ -12219,7 +12221,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     numtimea = maskNAN(numtimea)
     numtimeb = maskNAN(numtimeb)
     te = datetime.utcnow()
-    print("trim", (te - ts).total_seconds())
+    print("numconversion", (te - ts).total_seconds())
 
     # Check for the following cases:
     # 1- No overlap of a and b (Done)
