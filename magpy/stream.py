@@ -12180,6 +12180,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     timea = sa.ndarray[0]
     # truncate b to time range of a
+    ts = datetime.utcnow()
     try:
         sb = sb.trim(starttime=np.min(timea).replace(tzinfo=None), endtime=np.max(timea).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
     except:
@@ -12204,10 +12205,17 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         if debug:
             print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
+    te = datetime.utcnow()
+    print((te - ts).total_seconds())
 
     # mask empty slots (for time columns only empty inputs are masked) - very fast
-    timea = maskNAN(timea)
-    timeb = maskNAN(timeb)
+    ts = datetime.utcnow()
+    numtimea = date2num(timea)
+    numtimeb = date2num(timeb)
+    numtimea = maskNAN(numtimea)
+    numtimeb = maskNAN(numtimeb)
+    te = datetime.utcnow()
+    print((te - ts).total_seconds())
 
     # Check for the following cases:
     # 1- No overlap of a and b (Done)
@@ -12221,19 +12229,23 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             # Get indicies of stream_b of which times are present in stream_a
             array = [[] for key in KEYLIST]
             # other way (combine both columsn) and get unique
-            arr = np.unique(np.concatenate((timeb, timea)))
+            arr = np.unique(np.concatenate((numtimeb, numtimea)))
             #if len(arr) == len(timea) and len(arr) == len(timeb):
             #    # identical stream
             # If elements in combined a,b array are only slightly different from b columns - 40 percent
             if len(arr) < int(len(timeb)*1.4):
                 logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
                 # get common timesteps
-                common = np.array(sorted(list(set(timea).intersection(timeb))))
-                numtimea = date2num(timea)
-                numtimeb = date2num(timeb)
-                numcommon = date2num(common)
+                ts = datetime.utcnow()
+                numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
+                #numtimea = date2num(timea)
+                #numtimeb = date2num(timeb)
+                #numcommon = date2num(common)
                 indtia = np.where(np.in1d(numtimea, numcommon))[0]
                 indtib = np.where(np.in1d(numtimeb, numcommon))[0]
+                te = datetime.utcnow()
+                print((te - ts).total_seconds())
+
                 if len(indtia) == len(indtib):
                     nanind = []
                     for key in keys:
