@@ -265,7 +265,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                 # Build two-dimensional array
                 timestring = row[0]+'T'+row[1]
                 #t = '2012-06-30T23:59:60.209215'
-                array[0].append( date2num(LeapTime(timestring)) )
+                array[0].append( LeapTime(timestring) )
 
                 if float(row[3]) >= NOT_REPORTED:
                     row[3] = np.nan
@@ -347,7 +347,6 @@ def readIAGA(filename, headonly=False, **kwargs):
         array[idx] = np.asarray(array[idx])
 
     stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
-    sr = stream.samplingrate()
 
     return stream
 
@@ -652,9 +651,9 @@ def writeIAGA(datastream, filename, **kwargs):
                 timeval = datastream.ndarray[0][i]
             row = ''
             try:
-                row = datetime.strftime(num2date(timeval).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                row = datetime.strftime(timeval.replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
                 row = row[:-3]
-                doi = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%j")
+                doi = datetime.strftime(timeval.replace(tzinfo=None), "%j")
                 row += ' %s' % str(doi)
             except:
                 row = ''
