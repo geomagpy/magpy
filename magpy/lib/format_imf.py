@@ -419,6 +419,7 @@ def readIAF(filename, headonly=False, **kwargs):
         ndarray = data2array([k],['var1'],min(datelist)+timedelta(minutes=90),sr=10800)
         headers['DataSamplingRate'] = '10800 sec'
         headers['DataFormat'] = 'MagPyK'
+        headers['col-var1'] = "k"
     else:
         logger.debug("Key and minimum: {} {}".format(keystr, min(datelist)))
         ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
