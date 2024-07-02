@@ -208,7 +208,7 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                 row.str1 = status
                 row.time = date2num(date)
                 array[indstr1].append(status)
-                array[indtime].append(date2num(date))
+                array[indtime].append(date)
                 if cleandata == True:
                     if status == 0: # indicates good data
                         usedata = True
