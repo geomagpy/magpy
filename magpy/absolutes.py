@@ -400,13 +400,13 @@ class AbsoluteData(object):
             return False
 
         # 2. Get time column
-        timea = np.asarray(datastream._get_column('time'))
+        timea = datastream.ndarray[0].astype(datetime64)
 
         # 3. Get time column of DI data
-        timeb = np.asarray([el.time for el in self])
+        timeb = np.asarray([num2date(el.time) for el in self]).astype(datetime64)
         # 4. search
         # corrected in version 0.9.9
-        indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs(timea-float(el)))/((samprate/24./3600.)*2) <= 1.]
+        indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs((timea-el)/1000000.).astype(float64))/((samprate)*2) <= 1.]
         if not len(indtia) == len(timeb):
             print ("_check_coverage: timesteps of scalar data are off by more than twice the sampling rate from DI measurements")
             return False
@@ -2413,11 +2413,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     # cleanup resultsstream:
     # replace all 999999.99 and -inf with NaN
+    print ("Finished nearly", resultstream)
+
     resultstream = resultstream.linestruct2ndarray()
     for idx, elem in enumerate(resultstream.ndarray):
         if KEYLIST[idx] in NUMKEYLIST:
             resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
             resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
+
+    print ("Finished nearly", resultstream.ndarray)
 
     # Add deltaF to resultsstream for all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
@@ -2442,8 +2446,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 array[idx] = deltaF
                 resultstream.ndarray[posdf] = np.asarray(array)
 
-    #print "After", resultstream.ndarray[posdf]
-    #resultstream = resultstream.hdz2xyz(keys=['dx','dy','dz'])
 
     if not stationid and varioid == scalarid:
         stationid = varioid
@@ -2538,7 +2540,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     login = passwdtyp[1].split('//')[1]
                     dst = os.path.join(archivepath,fname)
                     fh = NamedTemporaryFile(suffix=suffix,delete=False)
-                    print("Fi: ", fi)
+                    if debug:
+                        print("Fi: ", fi)
                     fh.write(urllib2.urlopen(fi).read())
                     fh.close()
                     shutil.move(fh.name,dst)
@@ -2547,13 +2550,15 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     resultstream = resultstream.sorting()
 
-    #print "Finished", resultstream, resultstream.ndarray
+    print ("Finished", resultstream.ndarray)
 
     # Apply correct format to resultsstream
     array = [[] for el in KEYLIST]
     for idx,el in enumerate(resultstream.ndarray):
         if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
             array[idx] = np.asarray(el).astype(float)
+        elif 'time' in KEYLIST[idx]:
+            array[idx] = np.asarray(el).astype(datetime64)
         else:
             array[idx] = np.asarray(el)
     resultstream.ndarray = np.asarray(array,dtype=object)

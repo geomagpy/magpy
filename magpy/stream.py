@@ -1268,39 +1268,11 @@ CALLED BY:
         if not key in KEYLIST:
             raise ValueError("Column key not valid")
 
-        # Speeded up this technique:
-
-
         ind = KEYLIST.index(key)
 
         if len(self.ndarray[0]) > 0:
-            try:
-                col = self[key]
-            except:
-                col = self.ndarray[ind]
+            col = self.ndarray[ind]
             return col
-
-        # Check for initialization value
-        #testval = self[0][ind]
-        # if testval == KEYINITDICT[key] or isnan(testval):
-        #    return np.asarray([])
-        try:
-            col = np.asarray([row[ind] for row in self])
-            #get the first ten elements and test whether nan is there -- why ??
-            """
-            try: # in case of string....
-                novalfound = True
-                for ele in col[:10]:
-                    if not isnan(ele):
-                        novalfound = False
-                if novalfound:
-                    return np.asarray([])
-            except:
-                return col
-            """
-            return col
-        except:
-            return np.asarray([])
 
 
     def _put_column(self, column, key, **kwargs):
@@ -6308,11 +6280,10 @@ CALLED BY:
 
         # For proper applictation - duplicates are removed
         self = self.removeduplicates()
+        timecol=[]
 
         if len(self.ndarray[0]) > 0:
             timecol = self.ndarray[0].astype(datetime64)
-        else:
-            timecol= self._get_column('time')
 
         # New way:
         if len(timecol) > 1:
@@ -7208,6 +7179,7 @@ CALLED BY:
         """
     DEFINITION:
         Converts linestruct data to ndarray.
+        Requires get_column and get_key_headers on a linestruct
     RETURNS:
         - self with ndarray filled
     EXAMPLE:
@@ -7251,6 +7223,8 @@ CALLED BY:
     PARAMETERS:
     Variables:
         - key:          (KEYLIST) element of Keylist like 'x' .
+                        if key contains "time" then an average numerical time is returned
+                        use num2date(value) to convert to datetime
     Kwargs:
         - percentage:   (int) Define required percentage of non-nan values, if not
                                met that nan will be returned. Default is 95 (%)
@@ -7278,13 +7252,9 @@ CALLED BY:
             percentage = 95
         if not std:
             std = False
+        timecol = False
 
-        ndtype = False
-        if len(self.ndarray[0])>0:
-            ndtype = True
-        elif len(self) > 0:
-            pass
-        else:
+        if not len(self.ndarray[0])>0:
             logger.error('mean: empty stream - aborting')
             if std:
                 return float("NaN"), float("NaN")
@@ -7300,22 +7270,29 @@ CALLED BY:
         if not key in KEYLIST[:16]:
             logger.error("mean: Column key not valid!")
 
-        if ndtype:
-            ind = KEYLIST.index(key)
-            length = len(self.ndarray[0])
-            self.ndarray[ind] = np.asarray(self.ndarray[ind])
+        ind = KEYLIST.index(key)
+        length = len(self.ndarray[0])
+        self.ndarray[ind] = np.asarray(self.ndarray[ind])
+        if key in NUMKEYLIST:
             ar = self.ndarray[ind].astype(float)
             ar = ar[~np.isnan(ar)]
+        elif key.find('time') > -1:
+            ar = date2num(self.ndarray[ind]).astype(float)
+            timecol = True
         else:
-            ar = [getattr(elem,key) for elem in self if not isnan(getattr(elem,key))]
-            length = float(len(self))
+            if std:
+                return float("NaN"), float("NaN")
+            else:
+                return float("NaN")
+
         div = float(len(ar))/length*100.0
 
         if div >= percentage:
+            res = eval('np.' + meanfunction + '(ar)')
             if std:
-                return eval('np.'+meanfunction+'(ar)'), np.std(ar)
+                return res, np.std(ar)
             else:
-                return eval('np.'+meanfunction+'(ar)')
+                return res
         else:
             logger.info('mean: Too many nans in column {}, exceeding {} percent'.format(key,percentage))
             if std:
@@ -8133,8 +8110,7 @@ CALLED BY:
         logger.info('Remove: Started from %s to %s' % (starttime,endtime))
 
         cutstream = DataStream()
-        cutstream.header = self.header
-        cutstream.ndarray = self.ndarray
+        cutstream = self.copy()
         starttime = self._testtime(starttime)
         endtime = self._testtime(endtime)
         stval = 0
