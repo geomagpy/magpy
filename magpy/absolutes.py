@@ -2413,15 +2413,26 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     # cleanup resultsstream:
     # replace all 999999.99 and -inf with NaN
-    print ("Finished nearly", resultstream)
+    #print ("Finished nearly", resultstream.container)
 
-    resultstream = resultstream.linestruct2ndarray()
+    rest = np.asarray([list(el) for el in resultstream.container])
+    rest = rest.T
+    array = [np.asarray([]) for elem in KEYLIST]
+    for i,el in enumerate(rest):
+        if i < len(KEYLIST)-1:
+            if i == 0:
+                array[i] = num2date(el.astype(float64))
+            elif KEYLIST[i+1] in NUMKEYLIST:
+                array[i] = el.astype(float64)
+            else:
+                array[i] = el
+    array = np.asarray(array, dtype=object)
+    resultstream = DataStream([LineStruct()], resultstream.header, array)
+
     for idx, elem in enumerate(resultstream.ndarray):
         if KEYLIST[idx] in NUMKEYLIST:
             resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
             resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
-
-    print ("Finished nearly", resultstream.ndarray)
 
     # Add deltaF to resultsstream for all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
@@ -2550,12 +2561,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 
     resultstream = resultstream.sorting()
 
-    print ("Finished", resultstream.ndarray)
-
     # Apply correct format to resultsstream
     array = [[] for el in KEYLIST]
     for idx,el in enumerate(resultstream.ndarray):
-        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
+        if KEYLIST[idx] in NUMKEYLIST:
             array[idx] = np.asarray(el).astype(float)
         elif 'time' in KEYLIST[idx]:
             array[idx] = np.asarray(el).astype(datetime64)

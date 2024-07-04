@@ -811,6 +811,7 @@ CALLED BY:
             self.container.key = np.append(self.container.key, columnstructure.key, 1)
 
     def add(self, datlst):
+        # used by absolutAnalysis
         #try:
         assert isinstance(self.container, (list, tuple))
         self.container.append(datlst)
@@ -1271,8 +1272,18 @@ CALLED BY:
         ind = KEYLIST.index(key)
 
         if len(self.ndarray[0]) > 0:
-            col = self.ndarray[ind]
+            try:
+                col = self[key]
+            except:
+                col = self.ndarray[ind]
             return col
+
+        # Check for initialization value
+        try:
+            col = np.asarray([row[ind] for row in self])
+            return col
+        except:
+            return np.asarray([])
 
 
     def _put_column(self, column, key, **kwargs):
