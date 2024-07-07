@@ -9386,6 +9386,18 @@ CALLED BY:
                 raise ValueError("Starttime is larger than endtime.")
 
         newstream = self.copy()
+        t1 = datetime.utcnow()
+        new = True
+        if new:
+            timea = newstream.ndarray[0].astype(datetime64)
+            if starttime:
+                starttime = np.datetime64(self._testtime(starttime))
+                ts = np.argwhere(timea>=starttime)
+            if endtime:
+                endtime = np.datetime64(self._testtime(endtime))
+                te = np.argwhere(timea < endtime)
+        t2 = datetime.utcnow()
+
         newarray = list(newstream.ndarray)
 
         # test if time column is numerical or datetime
