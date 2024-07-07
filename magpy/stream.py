@@ -9385,64 +9385,28 @@ CALLED BY:
             if self._testtime(starttime) > self._testtime(endtime):
                 raise ValueError("Starttime is larger than endtime.")
 
-        newstream = self.copy()
-        t1 = datetime.utcnow()
-        new = True
-        if new:
-            timea = newstream.ndarray[0].astype(datetime64)
-            if starttime:
-                starttime = np.datetime64(self._testtime(starttime))
-                ts = np.argwhere(timea>=starttime)
-            if endtime:
-                endtime = np.datetime64(self._testtime(endtime))
-                te = np.argwhere(timea < endtime)
-        t2 = datetime.utcnow()
-
-        newarray = list(newstream.ndarray)
-
-        # test if time column is numerical or datetime
-        numeric = False
-        if len(newarray[0]) > 0:
-            if self._is_number(newarray[0][0]):
-                numeric = True
-        else:
-            return self
-
+        timea = newstream.ndarray[0].astype(datetime64)
         if starttime:
-            starttime = self._testtime(starttime)
-            if numeric:
-                starttime = date2num(starttime)
-            if newarray[0].size > 0:   # time column present
-                idx = np.abs(newarray[0]-starttime).argmin()
-                # Trim should start at point >= starttime, so check:
-                if newarray[0][idx] < starttime:
-                    idx += 1
-                for i in range(len(newarray)):
-                    if len(newarray[i]) >= idx:
-                        newarray[i] =  newarray[i][idx:]
-
+            starttime = np.datetime64(self._testtime(starttime))
         if endtime:
-            endtime = self._testtime(endtime)
-            if numeric:
-                endtime = date2num(endtime)
-            if newarray[0].size > 0:   # time column present
-                idx = 1 + (np.abs(newarray[0]-endtime)).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
-                if idx >= len(newarray[0]): ## prevent too large idx values
-                    idx = len(newarray[0]) - 1
-                while True:
-                    if not newarray[0][idx] < endtime and idx != 0: # Make sure that last value is smaller than endtime
-                        idx -= 1
-                    else:
-                        break
+            endtime = np.datetime64(self._testtime(endtime))
+        if starttime and endtime:
+            vind = np.nonzero((timea >= starttime) & (timea < endtime))
+        elif starttime:
+            vind = np.nonzero(timea >= starttime)
+        elif starttime:
+            vind = np.nonzero(timea < endtime)
+        if vind and len(vind) > 0 and len(vind[0]) > 0:
+            newar = [[] for el in KEYLIST]
+            for id, ar in enumerate(vario1.ndarray):
+                if len(ar) > 0:
+                    newar[id] = ar[list(vind[0])]
+            newar = [np.asarray(el) for el in newar]
+            res = DataStream([], vario1.header, np.asarray(newar, dtype=object))
+        else:
+            res = vario1.copy()
 
-                #self.ndarray = list(self.ndarray)
-                for i in range(len(newarray)):
-                    length = len(newarray[i])
-                    if length >= idx:
-                        newarray[i] = newarray[i][:idx+1]
-        newarray = np.asarray(newarray,dtype=object)
-
-        return DataStream([],self.header,newarray)
+        return res
 
 
     def use_sectime(self, swap=False):
