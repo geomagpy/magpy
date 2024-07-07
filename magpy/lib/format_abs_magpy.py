@@ -39,7 +39,7 @@ def isMAGPYNEWABS(filename):
 
 
 
-@deprecate()
+#@deprecate() # replace deprecate method by standrad library method i.e. warnings.deprecated
 # this format isn't supported by AUTODIF MK3 anymore
 def isAUTODIFRAW(filename):
     """
