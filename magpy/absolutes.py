@@ -557,6 +557,9 @@ class AbsoluteData(object):
         expmire = np.mean([elem for elem in expmire if not isnan(elem)])
         poslst = [elem for elem in self if not isnan(elem.hc) and not isnan(elem.vc)]
 
+        if debugmode:
+            print (" Expected Mire: expmire={}".format(expmire))
+
         try:
             if len(poslst) < 1:
                 loggerabs.warning("_calcdec: could not identify measurement positions - aborting")
@@ -569,11 +572,18 @@ class AbsoluteData(object):
         miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
         # relative mire position of theo is either miremean +90 or -90
         # if sheet is exactly used then it would be easy... however sensor down first measurements have not frequently be used...
+        if debugmode:
+            print (" Meanmire: miremean={}".format(miremean))
+
         if poslst[1].mu-5 < (miremean-90.0) < poslst[1].mu+5:
             mireval = miremean-90.0
         else:
             mireval = miremean+90.0
+        if debugmode:
+            print (" Corrected Meanmire: mireval={}".format(mireval))
         mirediff = self._corrangle(expmire - mireval)
+        if debugmode:
+            print (" Mirediff by corrangle(expmire-mireval: mirediff={}".format(mirediff))
 
         loggerabs.debug("_calcdec: Miren: %f, %f, %f" % (expmire, poslst[1].mu, miremean))
 
