@@ -2283,9 +2283,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 abstype = 'autodif'
 
             if azimuth:
-                stream[0].expectedmire = azimuth
+                for i in range(len(stream.container)):
+                    stream[i].expectedmire = azimuth
 
-            print("Analyzing %s measurement from %s" % (abstype,datetime.strftime(date,"%Y-%m-%d")))
+            print("Analyzing {} measurement from {} with given azimuth {}".format(abstype,datetime.strftime(date,"%Y-%m-%d"),stream[0].expectedmire))
             # if usestep not given and AutoDIF measurement found
             #print ("Identified pier in file:", stream[0])
             try:
