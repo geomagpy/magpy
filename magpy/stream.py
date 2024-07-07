@@ -12154,29 +12154,31 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     sb = sb._remove_nancolumns()
 
     # Sampling rates
-    sampratea = sa.samplingrate()
-    samprateb = sb.samplingrate()
+    sampratea = float(sa.samplingrate())
+    samprateb = float(sb.samplingrate())
     minsamprate = min([sampratea,samprateb])
 
-    timea = sa.ndarray[0]
+    timea = sa.ndarray[0].astype(datetime64)
     # truncate b to time range of a
     try:
-        sb = sb.trim(starttime=np.min(timea).replace(tzinfo=None), endtime=np.max(timea).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
+        sb = sb.trim(starttime=np.min(timea), endtime=np.max(timea)+np.timedelta64(int(samprateb*1000), 'ms'),newway=True)
     except:
         logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         if debug:
             print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-    timeb = sb.ndarray[0]
+    timeb = sb.ndarray[0].astype(datetime64)
     # truncate a to range of b
     try:
-        sa = sa.trim(starttime=np.min(timeb).replace(tzinfo=None), endtime=np.max(timeb).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
+        sa = sa.trim(starttime=np.min(timeb), endtime=np.max(timeb)+np.timedelta64(int(sampratea*1000), 'ms'),newway=True)
     except:
         logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         if debug:
             print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-    timea = sa.ndarray[0]
+    timea = sa.ndarray[0].astype(datetime64)
+    test = timea.astype(float64)
+    print (test)
 
     # testing overlapp
     if not sb.length()[0] > 0:
