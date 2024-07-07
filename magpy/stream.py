@@ -9382,29 +9382,29 @@ CALLED BY:
         """
 
         if starttime and endtime:
-            if self._testtime(starttime) > self._testtime(endtime):
+            if testtime(starttime) > testtime(endtime):
                 raise ValueError("Starttime is larger than endtime.")
 
-        timea = newstream.ndarray[0].astype(datetime64)
+        timea = self.ndarray[0].astype(datetime64)
         if starttime:
-            starttime = np.datetime64(self._testtime(starttime))
+            starttime = np.datetime64(testtime(starttime))
         if endtime:
-            endtime = np.datetime64(self._testtime(endtime))
+            endtime = np.datetime64(testtime(endtime))
         if starttime and endtime:
             vind = np.nonzero((timea >= starttime) & (timea < endtime))
         elif starttime:
             vind = np.nonzero(timea >= starttime)
-        elif starttime:
+        elif endtime:
             vind = np.nonzero(timea < endtime)
         if vind and len(vind) > 0 and len(vind[0]) > 0:
             newar = [[] for el in KEYLIST]
-            for id, ar in enumerate(vario1.ndarray):
+            for id, ar in enumerate(self.ndarray):
                 if len(ar) > 0:
                     newar[id] = ar[list(vind[0])]
             newar = [np.asarray(el) for el in newar]
-            res = DataStream([], vario1.header, np.asarray(newar, dtype=object))
+            res = DataStream([], self.header, np.asarray(newar, dtype=object))
         else:
-            res = vario1.copy()
+            res = self.copy()
 
         return res
 

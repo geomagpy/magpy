@@ -1964,7 +1964,9 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print("Starting analysis for ", date)
         print("------------------------------------------------------")
         # a) Read variodata
-        try:
+        #try:
+        ok =True
+        if ok:
             valalpha = ''
             valbeta = ''
             if not isinstance(variodata, list):
@@ -1980,6 +1982,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             else:
                 variomod = checkURL(variodata, date)
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
+        try:
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
             # ---------------------------------------
             # 1.1 Variometer data read done

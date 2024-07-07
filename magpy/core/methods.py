@@ -79,7 +79,7 @@ def testtime(time):
                                         timeobj = num2date(float(time)).replace(tzinfo=None)
                                     except:
                                         raise TypeError
-        elif isinstance(time, datetime64):
+        elif isinstance(time, np.datetime64):
             unix_epoch = np.datetime64(0, 's')
             one_second = np.timedelta64(1, 's')
             seconds_since_epoch = (time - unix_epoch) / one_second
