@@ -12153,8 +12153,6 @@ def subtractStreams(stream_a, stream_b, **kwargs):
             print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
     timea = sa.ndarray[0].astype(datetime64)
-    test = timea.astype(float64)
-    print (test)
 
     # testing overlapp
     if not sb.length()[0] > 0:
@@ -12164,8 +12162,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         return stream_a
 
     # mask empty slots (for time columns only empty inputs are masked) - very fast
-    numtimea = date2num(timea)
-    numtimeb = date2num(timeb)
+    numtimea = timea.astype(float64)
+    numtimeb = timeb.astype(float64)
     numtimea = maskNAN(numtimea)
     numtimeb = maskNAN(numtimeb)
 
@@ -12189,8 +12187,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
                 # get common timesteps
                 numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
-                indtia = np.where(np.in1d(numtimea, numcommon))[0]
-                indtib = np.where(np.in1d(numtimeb, numcommon))[0]
+                indtia = numtimea.searchsorted(numcommon)
+                indtib = numtimeb.searchsorted(numcommon)
 
                 if len(indtia) == len(indtib):
                     ts = datetime.utcnow()
@@ -12199,9 +12197,10 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                         foundnan = False
                         keyind = KEYLIST.index(key)
                         if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
-                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
-                            valb = [sb.ndarray[keyind][ind] for ind in indtib]
-                            diff = np.asarray(vala).astype(float) - np.asarray(valb).astype(float)
+                            diff = np.asarray(sa.ndarray[keyind])[indtia].astype(float) - np.asarray(sb.ndarray[keyind])[indtib].astype(float)
+                            #vala = [sa.ndarray[keyind][ind] for ind in indtia]
+                            #valb = [sb.ndarray[keyind][ind] for ind in indtib]
+                            #diff = np.asarray(vala).astype(float) - np.asarray(valb).astype(float)
                             if isnan(diff).any():
                                 foundnan = True
                             if foundnan:
@@ -12209,7 +12208,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                                 nanind.extend(nankeys)
                             array[keyind] = diff
                     nanind = np.unique(np.asarray(nanind))
-                    array[0] = np.asarray([sa.ndarray[0][ind] for ind in indtia],dtype=object)
+                    array[0] = np.asarray(np.asarray(sa.ndarray[0])[indtia],dtype=object)
                     if foundnan:
                         for ind,elem in enumerate(array):
                             if len(elem) > 0:
@@ -12226,18 +12225,22 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                     print("- otherwise you might wait endless")
                 # interpolate b
                 function = sb.interpol(keys)
-                numtimea = date2num(timea)
-                numtimeb = date2num(timeb)
+                # determine numerical times rounded to sampling rates
+                numtimeafull = sa.ndarray[0].astype('datetime64[s]').astype(float64)/minsamprate
+                numtimea = np.round(numtimeafull,0)
+                numtimeb = np.round(sb.ndarray[0].astype('datetime64[s]').astype(float64)/minsamprate,0)
+                # now get the common indicies
+                numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
+                indtia = numtimea.searchsorted(numcommon)
+                #indtib = numtimeb.searchsorted(numcommon)
+                funcstart = (np.datetime64(num2date(function[1]), 's').astype(float64)/minsamprate)
+                funcend =  (np.datetime64(num2date(function[2]), 's').astype(float64)/minsamprate)
+
                 # Get a list of indicies for which timeb values are
                 #   in the vicintiy of a (within half of samplingrate)
-                indtia = [idx for idx, el in enumerate(numtimea) if np.min(np.abs(numtimeb-el))/(minsamprate/24./3600.)*2 <= 1.]  # This selcetion requires most of the time
                 # limit time range to valued covered by the interpolation function
-                #print len(indtia), len(timeb), np.asarray(indtia)
-                indtia = [elem for elem in indtia if function[1] < numtimea[elem] < function[2]]
-                #t2temp = datetime.utcnow()
-                #print "Timediff %s" % str(t2temp-t1temp)
-                #print len(indtia), len(timeb), np.asarray(indtia)
-                #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
+                indtia = [elem for elem in indtia if funcstart < numtimeafull[elem] < funcend]
+
                 if len(function) > 0:
                     nanind = []
                     for key in keys:
@@ -12248,14 +12251,12 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                         if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0 and key in NUMKEYLIST: # and key in function:
                             #check lengths of sa.ndarray and last value of indtia
                             indtia = list(np.asarray(indtia)[np.asarray(indtia)<len(sa.ndarray[0])])
-                            #print keyind, len(indtia), len(sa.ndarray[keyind]), indtia[0], indtia[-1]
                             # Convert array to float just in case
                             sa.ndarray[keyind] = sa.ndarray[keyind].astype(float)
-                            #print sa.ndarray[4][indtia[-2]]
+                            # interpol still working with date2num
+                            dnsa = date2num(sa.ndarray[0])
                             vala = [sa.ndarray[keyind][ind] for ind in indtia]
-                            #print "VALA", np.asarray(vala)
-                            valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
-                            #print "VALB", np.asarray(valb)
+                            valb = [float(function[0]['f'+key]((dnsa[ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
                             diff = np.asarray(vala) - np.asarray(valb)
                             if np.isnan(diff).any():
                                 foundnan = True
