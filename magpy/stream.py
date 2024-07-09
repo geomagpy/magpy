@@ -12094,6 +12094,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     '''
 
+    t1 = datetime.utcnow()
     keys = kwargs.get('keys')
     newway = kwargs.get('newway')
     getmeans = kwargs.get('getmeans')
@@ -12135,6 +12136,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     minsamprate = min([sampratea,samprateb])
 
     timea = sa.ndarray[0].astype(datetime64)
+    t2 = datetime.utcnow()
     # truncate b to time range of a
     try:
         sb = sb.trim(starttime=np.min(timea), endtime=np.max(timea)+np.timedelta64(int(samprateb*1000), 'ms'),newway=True)
@@ -12154,6 +12156,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         return stream_a
     timea = sa.ndarray[0].astype(datetime64)
 
+    t3 = datetime.utcnow()
     # testing overlapp
     if not sb.length()[0] > 0:
         logger.error("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
@@ -12166,6 +12169,8 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     numtimeb = timeb.astype(float64)
     numtimea = maskNAN(numtimea)
     numtimeb = maskNAN(numtimeb)
+
+    t4 = datetime.utcnow()
 
     # Check for the following cases:
     # 1- No overlap of a and b (Done)
@@ -12190,8 +12195,9 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 indtia = numtimea.searchsorted(numcommon)
                 indtib = numtimeb.searchsorted(numcommon)
 
+                t5 = datetime.utcnow()
+
                 if len(indtia) == len(indtib):
-                    ts = datetime.utcnow()
                     nanind = []
                     for key in keys:
                         foundnan = False
@@ -12207,6 +12213,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                                 nankeys = [ind for ind,el in enumerate(diff) if np.isnan(el)]
                                 nanind.extend(nankeys)
                             array[keyind] = diff
+                    t6 = datetime.utcnow()
                     nanind = np.unique(np.asarray(nanind))
                     array[0] = np.asarray(np.asarray(sa.ndarray[0])[indtia],dtype=object)
                     if foundnan:
@@ -12214,9 +12221,14 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             if len(elem) > 0:
                                 array[ind] = np.delete(np.asarray(elem), nanind)
                     array = np.asarray(array,dtype=object)
-                    te = datetime.utcnow()
+                    t7 = datetime.utcnow()
                     if debug:
-                        print((te - ts).total_seconds())
+                        print("prep", (t2 - t1).total_seconds())
+                        print("trim", (t3 - t2).total_seconds())
+                        print("numtimes", (t4 - t3).total_seconds())
+                        print("indicies", (t5 - t4).total_seconds())
+                        print("times", (t6 - t5).total_seconds())
+                        print("select vals", (t7 - t6).total_seconds())
             else:
                 if debug:
                     print("Did not find identical timesteps - linearily interpolating stream b")

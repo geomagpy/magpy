@@ -1991,8 +1991,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             # Variometer data needs to be available as xyz in nT
             # Get current components
             components = variostr.header.get('DataComponents',[])
-            #if debug:
-            print (" - variometer data contains the following components: {}".format(components))
+            if debug:
+                print (" - variometer data contains the following components: {}".format(components))
             if len(components)>3:
                 if components[:3] == 'HDZ':
                     print ("  Variationdata as HDZ -> converting to XYZ")
