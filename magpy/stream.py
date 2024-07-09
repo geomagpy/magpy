@@ -872,8 +872,8 @@ CALLED BY:
             for ind, key in enumerate(KEYLIST):
                 #array[ind] = np.asarray([val for val in self.ndarray[ind]])
                 array[ind] = np.copy(self.ndarray[ind])
-                print ("New", array[ind])
-                print ("Original", self.ndarray[ind])
+                #print ("New", array[ind])
+                #print ("Original", self.ndarray[ind])
 
         return DataStream(co.container,newheader,np.asarray(array, dtype=object))
 
@@ -4297,7 +4297,6 @@ CALLED BY:
         sv = 0
         ev = 0
         for key in keys:
-            print (key)
             tmpst = fitstream._drop_nans(key)
             #print ("Length", tmpst.length())
             if ndtype:
@@ -4326,7 +4325,6 @@ CALLED BY:
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
             x = arange(np.min(nt),np.max(nt),sp)
-            #print len(x)
             if len(val)<=1:
                 logger.warning('Fit: No valid data for key {}'.format(key))
                 break
@@ -4344,10 +4342,6 @@ CALLED BY:
                     print ("Checking", key, len(val), val, sp, knotstep, len(knots))
                     raise ValueError("Value error in fit function - not enough data or invalid numbers")
                     return
-                #print nt, val, len(knots), knots
-                #ti = interpolate.interp1d(nt, val, kind='cubic')
-                #print "X", x, np.min(nt),np.max(nt),sp
-                #print "TI", ti
                 f_fit = interpolate.splev(x,ti)
             elif fitfunc == 'poly':
                 logger.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
@@ -6292,7 +6286,7 @@ CALLED BY:
 
     def get_sampling_period(self):
         """
-        returns the dominant sampling frequency in unit ! days !
+        returns the dominant sampling period in seconds
 
         for time savings, this function only tests the first 1000 elements
         """
@@ -6302,7 +6296,10 @@ CALLED BY:
         timecol=[]
 
         if len(self.ndarray[0]) > 0:
-            timecol = self.ndarray[0].astype(datetime64)
+            if not isinstance(self.ndarray[0][0], (datetime,datetime64)):
+                timecol = np.array(num2date(self.ndarray[0]), dtype='datetime64')
+            else:
+                timecol = np.array(self.ndarray[0], dtype='datetime64')
 
         # New way:
         if len(timecol) > 1:
@@ -12105,7 +12102,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
 
     '''
 
-    t1 = datetime.utcnow()
+    #t1 = datetime.utcnow()
     keys = kwargs.get('keys')
     newway = kwargs.get('newway')
     getmeans = kwargs.get('getmeans')
@@ -12136,7 +12133,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # non-destructive
     sa = stream_a.copy()
     sb = stream_b.copy()
-    t2 = datetime.utcnow()
+    #t2 = datetime.utcnow()
 
     # Drop empty columns or columns with empty placeholders
     sa = sa._remove_nancolumns()
@@ -12165,7 +12162,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
         if debug:
             print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-    t3 = datetime.utcnow()
+    #t3 = datetime.utcnow()
     timea = sa.ndarray[0].astype(datetime64)
     timeb = sb.ndarray[0].astype(datetime64)
 
@@ -12182,7 +12179,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     numtimea = maskNAN(numtimea)
     numtimeb = maskNAN(numtimeb)
 
-    t4 = datetime.utcnow()
+    #t4 = datetime.utcnow()
 
     # Check for the following cases:
     # 1- No overlap of a and b (Done)
@@ -12206,8 +12203,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                 numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
                 indtia = numtimea.searchsorted(numcommon)
                 indtib = numtimeb.searchsorted(numcommon)
-
-                t5 = datetime.utcnow()
+                #t5 = datetime.utcnow()
 
                 if len(indtia) == len(indtib):
                     nanind = []
@@ -12225,7 +12221,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                                 nankeys = [ind for ind,el in enumerate(diff) if np.isnan(el)]
                                 nanind.extend(nankeys)
                             array[keyind] = diff
-                    t6 = datetime.utcnow()
+                    #t6 = datetime.utcnow()
                     nanind = np.unique(np.asarray(nanind))
                     array[0] = np.asarray(np.asarray(sa.ndarray[0])[indtia],dtype=object)
                     if foundnan:
@@ -12233,14 +12229,14 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                             if len(elem) > 0:
                                 array[ind] = np.delete(np.asarray(elem), nanind)
                     array = np.asarray(array,dtype=object)
-                    t7 = datetime.utcnow()
-                    if debug:
-                        print("prep", (t2 - t1).total_seconds())
-                        print("trim", (t3 - t2).total_seconds())
-                        print("numtimes", (t4 - t3).total_seconds())
-                        print("indicies", (t5 - t4).total_seconds())
-                        print("times", (t6 - t5).total_seconds())
-                        print("select vals", (t7 - t6).total_seconds())
+                    #t7 = datetime.utcnow()
+                    #if debug:
+                    #    print("prep", (t2 - t1).total_seconds())
+                    #    print("trim", (t3 - t2).total_seconds())
+                    #    print("numtimes", (t4 - t3).total_seconds())
+                    #    print("indicies", (t5 - t4).total_seconds())
+                    #    print("times", (t6 - t5).total_seconds())
+                    #    print("select vals", (t7 - t6).total_seconds())
             else:
                 if debug:
                     print("Did not find identical timesteps - linearily interpolating stream b")
