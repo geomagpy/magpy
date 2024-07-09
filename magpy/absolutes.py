@@ -1937,9 +1937,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         print("absoluteAnalysis: No matching dates found - aborting")
         return
 
-    def checkURL(url, starttime):
+    def checkURL(url, starttime,debug=False):
         if "://" in url:
-            print (url)
+            if debug:
+                print (url)
             ind = url.find('starttime')
             if ind < 0:
                 st = datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ")
@@ -1980,7 +1981,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 import magpy.database as dbase
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
-                variomod = checkURL(variodata, date)
+                variomod = checkURL(variodata, date, debug=debug)
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
         try:
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
