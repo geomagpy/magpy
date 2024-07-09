@@ -9385,11 +9385,43 @@ CALLED BY:
             if testtime(starttime) > testtime(endtime):
                 raise ValueError("Starttime is larger than endtime.")
 
-        timea = self.ndarray[0].astype(datetime64)
+        newarray = list(self.ndarray)
+        t1 = datetime.utcnow()
+        timea = self.ndarray[0].astype(datetime64).astype(float64)
+        t2 = datetime.utcnow()
         if starttime:
-            starttime = np.datetime64(testtime(starttime))
+            starttime = np.datetime64(testtime(starttime)).astype(float64)
+            if newarray[0].size > 0:   # time column present
+                idx = (np.abs(timea-starttime)).argmin()
+                t3 = datetime.utcnow()
+                # Trim should start at point >= starttime, so check:
+                if timea[idx] < starttime:
+                    idx += 1
+                for i in range(len(newarray)):
+                    if len(newarray[i]) >= idx:
+                        newarray[i] =  newarray[i][idx:]
+                print ((t2-t1).total_seconds())
+                print ((t3-t2).total_seconds())
+
         if endtime:
-            endtime = np.datetime64(testtime(endtime))
+            endtime = np.datetime64(testtime(endtime)).astype(float64)
+            if newarray[0].size > 0:  # time column present
+                idx = 1 + (np.abs(timea - endtime)).argmin()
+                if idx >= len(timea):  ## prevent too large idx values
+                    idx = len(timea) - 1
+                while True:
+                    if not timea[idx] < endtime and idx != 0:  # Make sure that last value is smaller than endtime
+                        idx -= 1
+                    else:
+                        break
+                for i in range(len(newarray)):
+                    length = len(newarray[i])
+                    if length >= idx:
+                        newarray[i] = newarray[i][:idx + 1]
+
+        res = DataStream([], self.header, np.asarray(newarray, dtype=object))
+
+        """
         if starttime and endtime:
             vind = np.nonzero((timea >= starttime) & (timea < endtime))
         elif starttime:
@@ -9405,6 +9437,7 @@ CALLED BY:
             res = DataStream([], self.header, np.asarray(newar, dtype=object))
         else:
             res = self.copy()
+        """
 
         return res
 
