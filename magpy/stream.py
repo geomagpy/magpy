@@ -866,14 +866,14 @@ CALLED BY:
         newheader = {}
         for el in self.header:
             newheader[el] = self.header[el]
-
         array = [[] for el in KEYLIST]
+
         if len(self.ndarray[0])> 0:
             for ind, key in enumerate(KEYLIST):
-                liste = []
-                for val in self.ndarray[ind]: ## This is necessary to really copy the content
-                    liste.append(val)
-                array[ind] = np.asarray(liste)
+                #array[ind] = np.asarray([val for val in self.ndarray[ind]])
+                array[ind] = np.copy(self.ndarray[ind])
+                print ("New", array[ind])
+                print ("Original", self.ndarray[ind])
 
         return DataStream(co.container,newheader,np.asarray(array, dtype=object))
 
@@ -1040,8 +1040,12 @@ CALLED BY:
         """
 
         if len(self.ndarray[0]) > 0:
-            t_start = np.min(self.ndarray[0]).replace(tzinfo=None)
-            t_end = np.max(self.ndarray[0]).replace(tzinfo=None)
+            if isinstance(self.ndarray[0][0], (datetime,datetime64)):
+                t_start = np.min(self.ndarray[0]).replace(tzinfo=None)
+                t_end = np.max(self.ndarray[0]).replace(tzinfo=None)
+            else:
+                t_start = num2date(self.ndarray[0][0]).replace(tzinfo=None)
+                t_end = num2date(self.ndarray[0][-1]).replace(tzinfo=None)
         else:
             try: # old type
                 t_start = num2date(self[0].time).replace(tzinfo=None)
@@ -2402,12 +2406,14 @@ CALLED BY:
         #keys = ['dx','dy','dz']
 
         try:
-            print ("Adopting baseline between: {a} and {b} using {c}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0]))),c=fitfunc))
+            if debug:
+                print ("Adopting baseline between: {a} and {b} using {c}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0]))),c=fitfunc))
             #print (keys, fitfunc, fitdegree, knotstep)
             logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
             #print ("Baseline", bas.length(), keys)
             #for elem in bas.ndarray:
-            #    print elem
+            if debug:
+                print (" - running Fit with Fitfunc {}, fitdegree {} and knotstep {}".format(fitfunc,fitdegree,knotstep))
             func = bas.fit(keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
         except:
             print ("Baseline: Error when determining fit - Enough data point to satisfy fit complexity?")
@@ -2812,7 +2818,9 @@ CALLED BY:
                 #print("BC", num2date(float(parameter[0])))
                 #print("BC", num2date(float(parameter[1])))
                 if not funckeys == ['df']:
-                    #print ("baseline parameters", parameter)
+                    if debug:
+                        print ("baseline parameters", parameter)
+                        print ("absdata", absstream.ndarray)
                     func = bcdata.baseline(absstream, startabs=float64(parameter[0]), endabs=float64(parameter[1]), extradays=int(float(parameter[2])), fitfunc=parameter[3], fitdegree=int(float(parameter[4])), knotstep=float(parameter[5]), keys=funckeys, debug=debug)
                     if 'dx' in funckeys:
                         func[0]['fx'] = func[0]['fdx']
@@ -4282,7 +4290,6 @@ CALLED BY:
             ndtype=True
 
         #tok = True
-
         fitstream = self.copy()
         if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing
             fitstream = fitstream.trim(starttime=starttime, endtime=endtime)
@@ -4290,6 +4297,7 @@ CALLED BY:
         sv = 0
         ev = 0
         for key in keys:
+            print (key)
             tmpst = fitstream._drop_nans(key)
             #print ("Length", tmpst.length())
             if ndtype:
@@ -4302,7 +4310,7 @@ CALLED BY:
                 continue
 
             nt,sv,ev = fitstream._normalize(t)
-            sp = fitstream.get_sampling_period()
+            sp = fitstream.get_sampling_period()/3600./24. # use days because of date2num
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256
             if not key in KEYLIST[1:16]:
@@ -9386,6 +9394,9 @@ CALLED BY:
                 raise ValueError("Starttime is larger than endtime.")
 
         timea = np.array(self.ndarray[0])
+        if len(timea)>0 and not isinstance(timea[0], (datetime,datetime64)):
+            # still necessary for absolutes in magpy cdf structures
+            timea = np.array([num2date(el).replace(tzinfo=None) for el in self.ndarray[0]])
         if starttime:
             starttime = testtime(starttime)
         if endtime:
@@ -12125,6 +12136,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     # non-destructive
     sa = stream_a.copy()
     sb = stream_b.copy()
+    t2 = datetime.utcnow()
 
     # Drop empty columns or columns with empty placeholders
     sa = sa._remove_nancolumns()
@@ -12135,28 +12147,28 @@ def subtractStreams(stream_a, stream_b, **kwargs):
     samprateb = float(sb.samplingrate())
     minsamprate = min([sampratea,samprateb])
 
-    timea = sa.ndarray[0].astype(datetime64)
-    t2 = datetime.utcnow()
+    startat,endat = sa._find_t_limits()
     # truncate b to time range of a
     try:
-        sb = sb.trim(starttime=np.min(timea), endtime=np.max(timea)+np.timedelta64(int(samprateb*1000), 'ms'),newway=True)
+        sb = sb.trim(starttime=np.datetime64(startat), endtime=np.datetime64(endat)+np.timedelta64(int(samprateb*1000), 'ms'))
     except:
         logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         if debug:
             print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-    timeb = sb.ndarray[0].astype(datetime64)
+    startbt,endbt = sb._find_t_limits()
     # truncate a to range of b
     try:
-        sa = sa.trim(starttime=np.min(timeb), endtime=np.max(timeb)+np.timedelta64(int(sampratea*1000), 'ms'),newway=True)
+        sa = sa.trim(starttime=np.datetime64(startbt), endtime=np.datetime64(endbt)+np.timedelta64(int(sampratea*1000), 'ms'),newway=True)
     except:
         logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         if debug:
             print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
-    timea = sa.ndarray[0].astype(datetime64)
-
     t3 = datetime.utcnow()
+    timea = sa.ndarray[0].astype(datetime64)
+    timeb = sb.ndarray[0].astype(datetime64)
+
     # testing overlapp
     if not sb.length()[0] > 0:
         logger.error("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
