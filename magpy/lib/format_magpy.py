@@ -992,13 +992,13 @@ def writePYSTR(datastream, filename, **kwargs):
                     if KEYLIST[idx].find('time') >= 0:
                         # check whether floats are present - secondary time column 
                         # might be filled with string '-' placeholder
-                        if not datastream._is_number(el[i]):
-                            el[i] = np.nan
-                        #print el[i]
-                        if not np.isnan(float(el[i])):   ## if secondary time steps are empty
-                            row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        if isinstance(el[0],datetime):
+                            row.append(
+                                datetime.strftime(el[i].replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f"))
+                        elif isinstance(el[0],datetime64):
+                            row.append(np.datetime_as_string(el[i], unit='us'))
                         else:
-                            row.append(float(el[i]))
+                            row.append = np.nan
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
@@ -1148,6 +1148,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
         # Sort out columns only containing nan's
         try:
+            # that can be done much more elegant
             test = [elem for elem in col if not isnan(elem)]
             if not len(test) > 0:
                 col = np.asarray([])
@@ -1162,16 +1163,17 @@ def writePYCDF(datastream, filename, **kwargs):
                 key = 'Epoch'
                 try:
                     mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
-                    mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)]))
+                    #mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([elem.replace(tzinfo=None) for elem in col]))
+                    mycdf[key] = cdf.lib.v_datetime_to_tt2000(col)
                 except:
-                    mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)])
+                    mycdf[key] = np.asarray([elem.replace(tzinfo=None) for elem in col])
             elif key == 'sectime':
                 try: #col = np.asarray([np.nan if el is '-' else el for el in col])
                     try:
                         mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
-                        mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)]))
+                        mycdf[key] = cdf.lib.v_datetime_to_tt2000(col)
                     except:
-                        mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)])
+                        mycdf[key] = np.asarray([elem.replace(tzinfo=None) for elem in col])
                 except:
                     pass
         elif len(col) > 0:

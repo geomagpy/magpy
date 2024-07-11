@@ -1040,9 +1040,12 @@ CALLED BY:
         """
 
         if len(self.ndarray[0]) > 0:
-            if isinstance(self.ndarray[0][0], (datetime,datetime64)):
+            if isinstance(self.ndarray[0][0], datetime):
                 t_start = np.min(self.ndarray[0]).replace(tzinfo=None)
                 t_end = np.max(self.ndarray[0]).replace(tzinfo=None)
+            elif isinstance(self.ndarray[0][0], datetime64):
+                t_start = np.min(self.ndarray[0])
+                t_end = np.max(self.ndarray[0])
             else:
                 t_start = num2date(self.ndarray[0][0]).replace(tzinfo=None)
                 t_end = num2date(self.ndarray[0][-1]).replace(tzinfo=None)
@@ -10001,7 +10004,7 @@ CALLED BY:
 
         ndtype = False
         if len(self.ndarray[0]) > 0:
-            self.ndarray[0] = self.ndarray[0].astype(float)
+            #self.ndarray[0] = self.ndarray[0].astype(float)
             # remove all data from array where time is not numeric
             #1. get indicies of nonnumerics in ndarray[0]
             nonnumlist = np.asarray([idx for idx,elem in enumerate(self.ndarray[0]) if np.isnan(elem)])
@@ -10012,11 +10015,14 @@ CALLED BY:
                 for idx, elem in enumerate(self.ndarray):
                     self.ndarray[idx] = np.delete(self.ndarray[idx],nonnumlist)
 
+            starttime, lasttime = self._find_t_limits()
+            """
             starttime = datetime.strptime(datetime.strftime(num2date(float(self.ndarray[0][0])).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
             try:
                 lasttime = num2date(float(self.ndarray[0][-1])).replace(tzinfo=None)
             except:
                 lasttime = num2date(float(self.ndarray[0][-2])).replace(tzinfo=None)
+            """
             ndtype = True
         else:
             starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
