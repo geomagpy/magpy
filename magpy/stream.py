@@ -3717,15 +3717,13 @@ CALLED BY:
                                  leave blank for standard filters as it will be automatically selected
             - noresample:       (bool) if True the data set is resampled at filter_width positions
             - missingdata:      (string) define how to deal with missing data
-                                          'conservative' (default): no filtering
+                                          'conservative' (default): no filling
                                           'interpolate': interpolate if less than 10% are missing
                                           'mean': use mean if less than 10% are missing'
             - conservative:     (bool) if True than no interpolation is performed
             - autofill:         (list) of keys: provide a keylist for which nan values are linearly interpolated before filtering - use with care, might be useful if you have low resolution parameters asociated with main values like (humidity etc)
             - resampleoffset:   (timedelta) if provided the offset will be added to resamples starttime
-            - resamplemode:     (string) if 'fast' then fast resampling is used
             - testplot:         (bool) provides a plot of unfiltered and filtered data for each key if true
-            - dontfillgaps:     (bool) if true, get_gaps will not be conducted - much faster but requires the absence of data gaps (including time step)
 
         RETURNS:
             - self:             (DataStream) containing the filtered signal within the selected columns
@@ -3759,17 +3757,11 @@ CALLED BY:
         filter_type = kwargs.get('filter_type')
         filter_width = kwargs.get('filter_width')
         resample_period = kwargs.get('resample_period')
-        filter_offset = kwargs.get('filter_offset')
         noresample = kwargs.get('noresample')
-        resamplemode = kwargs.get('resamplemode')
-        resamplestart = kwargs.get('resamplestart')
         resampleoffset = kwargs.get('resampleoffset')
         testplot = kwargs.get('testplot')
         autofill = kwargs.get('autofill')
-        dontfillgaps = kwargs.get('dontfillgaps')
-        fillgaps = kwargs.get('fillgaps')
         debugmode = kwargs.get('debug')
-        conservative =  kwargs.get('conservative')
         missingdata =  kwargs.get('missingdata')
 
         if debugmode:
@@ -3803,20 +3795,10 @@ CALLED BY:
             if not isinstance(autofill, (list, tuple)):
                 print("Autofill need to be a keylist")
                 return
-        if not resamplemode:
-            resamplefast = False
-        else:
-            if resamplemode == 'fast':
-                resamplefast = True
-            else:
-                resamplefast = False
         if not debugmode:
             debugmode = None
         if not filter_type:
             filter_type = 'gaussian'
-        if resamplestart:
-            print("##############  Warning ##############")
-            print("option RESAMPLESTART is not used any more. Switch to resampleoffset for modifying time steps")
         if not missingdata:
             missingdata = 'conservative'
 
@@ -3844,12 +3826,6 @@ CALLED BY:
 
         # non-destructive
         fstream = self.copy()
-
-        #if not dontfillgaps:   ### changed--- now using dont fill gaps as default
-        if fillgaps:
-            fstream = fstream.get_gaps()
-            if debugmode:
-                print("length after getting gaps:", len(fstream))
 
         window_period = filter_width.total_seconds()
         si = timedelta(seconds=fstream.get_sampling_period())
@@ -3916,7 +3892,9 @@ CALLED BY:
             # missingdata not yet working
             if missingdata in ['interpolate','mean']:
                 print (window_period,sampling_period)
+                print ("Before",v)
                 v = missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
+                print ("After", v)
 
             if key in autofill:
                 logger.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
