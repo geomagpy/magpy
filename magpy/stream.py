@@ -17,7 +17,6 @@ import os
 import sys
 import tempfile
 
-
 # ----------------------------------------------------------------------------
 # Part 1: Import routines for packages
 # ----------------------------------------------------------------------------
@@ -108,84 +107,51 @@ import warnings
 from glob import glob, iglob, has_magic
 from itertools import groupby
 from operator import itemgetter
+import operator  # used for stereoplot legend
 
-# Standard packages
-# -----------------
-try:
-    import operator # used for stereoplot legend
-    from operator import itemgetter
-    # The following packages are not identically available for python3
-    try:                # python2
-        import copy_reg as copyreg
-    except ImportError: # python3
-        import copyreg as copyreg
-    # Python 2 and 3: alternative 4
-    try:
-        from urllib.parse import urlparse, urlencode
-        from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
-        from urllib.error import HTTPError
-    except ImportError:
-        from urlparse import urlparse
-        from urllib import urlencode
-        from urllib2 import urlopen, Request, HTTPError, ProxyHandler, install_opener, build_opener
-    """
-    try:                # python2
-        import urllib2
-    except ImportError: # python3
-        import urllib.request
-    """
-    try:                # python2
-        import thread
-    except ImportError: # python3
-        import _thread
-    try:                # python2
-        from StringIO import StringIO
-        pyvers = 2
-    except ImportError: # python 3
-        from io import StringIO
-        pyvers = 3
-    import ssl
-    ssl._create_default_https_context = ssl._create_unverified_context
-except ImportError as e:
-    logpygen += "CRITICAL MagPy initiation ImportError: standard packages.\n"
-    badimports.append(e)
+import copyreg as copyreg
+from urllib.parse import urlparse, urlencode
+from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
+from urllib.error import HTTPError
+import _thread
+from io import StringIO
+import ssl
+import numpy as np
+import scipy as sp
+from scipy import interpolate
+from scipy import stats
+from scipy import signal
+from scipy.interpolate import UnivariateSpline
+from scipy.ndimage import filters
+import scipy.optimize as op
+import math
+import matplotlib
 
-# operating system
+ssl._create_default_https_context = ssl._create_unverified_context
+pyvers = 3
+PLATFORM = sys.platform
+gui_env = ['WXAgg', 'TKAgg', 'GTKAgg', 'Agg'] # remove WXAgg and add this activation to GUI
+maversion = matplotlib.__version__.replace('svn', '')
 try:
-    PLATFORM = sys.platform
-    logger.info("Running on platform: {}".format(PLATFORM))
+    maversion = map(int, maversion.replace("rc", "").split("."))
+    matplotlibversion = list(maversion)
 except:
-    PLATFORM = 'unkown'
+    maversion = maversion.strip("rc")
+    matplotlibversion = maversion
+logger.info("Loaded Matplotlib - Version %s" % str(matplotlibversion))
 
 # Matplotlib
 # ----------
 try:
-    import matplotlib
-    gui_env = ['WXAgg','TKAgg','GTKAgg','Agg']
-
-    try:
         if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
             logger.info("No terminal connected - assuming cron job and using Agg for matplotlib")
             #gui_env = ['WXAgg','TKAgg','Agg','GTKAgg','Qt4Agg']
             matplotlib.use('Agg') # For using cron
-    except:
+except:
         logger.warning("Problems with identfying cron job - windows system?")
         pass
-except ImportError as e:
-    logpygen += "CRITICAL MagPy initiation ImportError: problem with matplotlib.\n"
-    badimports.append(e)
 
-try:
-    version = matplotlib.__version__.replace('svn', '')
-    try:
-        version = map(int, version.replace("rc","").split("."))
-        MATPLOTLIB_VERSION = list(version)
-    except:
-        version = version.strip("rc")
-        MATPLOTLIB_VERSION = version
-    logger.info("Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION))
-
-    for gui in gui_env:
+for gui in gui_env:
         try:
             logger.info("Testing backend {}".format(gui))
             try:  # will be important from matplotlib3.3 onwards
@@ -196,110 +162,24 @@ try:
             break
         except:
             continue
-    logger.info("Using backend: {}".format(matplotlib.get_backend()))
+logger.info("Using backend: {}".format(matplotlib.get_backend()))
 
-    from matplotlib.colors import Normalize
-    from matplotlib.widgets import RectangleSelector, RadioButtons
-    #from matplotlib.colorbar import ColorbarBase
-    from matplotlib import mlab
-    from matplotlib.dates import date2num, num2date
-    import matplotlib.cm as cm
-    from pylab import *
-    from datetime import datetime, timedelta
-except ImportError as e:
-    logpygen += "CRITICAL MagPy initiation ImportError with matplotlib package. Please install to proceed.\n"
-    logpygen += " ... if installed please check the permissions on .matplotlib in your homedirectory.\n"
-    badimports.append(e)
 
-# Numpy & SciPy
-# -------------
-try:
-    logger.info("Loading Numpy and SciPy...")
-    import numpy as np
-    import scipy as sp
-    from scipy import interpolate
-    from scipy import stats
-    from scipy import signal
-    from scipy.interpolate import UnivariateSpline
-    from scipy.ndimage import filters
-    import scipy.optimize as op
-    import math
-except ImportError as e:
-    logpygen += "CRITICAL MagPy initiation ImportError: Python numpy-scipy required - please install to proceed.\n"
-    badimports.append(e)
+from matplotlib.colors import Normalize
+from matplotlib.widgets import RectangleSelector, RadioButtons
+from matplotlib import mlab
+from matplotlib.dates import date2num, num2date
+import matplotlib.cm as cm
+from pylab import *
+from datetime import datetime, timedelta
+
 
 # NetCDF
 # ------
 try:
-    #print("Loading Netcdf4 support ...")
     from netCDF4 import Dataset
 except ImportError as e:
-    #logpygen += "MagPy initiation ImportError: NetCDF not available.\n"
-    #logpygen += "... if you want to use NetCDF format support please install a current version.\n"
-    #badimports.append(e)
     pass
-
-# NASACDF - SpacePy
-# -----------------
-def findpath(name, path):
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            return root
-try:
-    logger.info("Loading SpacePy package cdf support ...")
-    try:
-        # check for windows
-        nasacdfdir = findpath('libcdf.dll','C:\CDF_Distribution') ## new path since nasaCDF3.6
-        if not nasacdfdir:
-            nasacdfdir = findpath('libcdf.dll','C:\CDF Distribution')
-        if nasacdfdir:
-            os.environ["CDF_LIB"] =str(nasacdfdir)
-            logger.info("Using CDF lib in %s" % nasacdfdir)
-            try:
-                import spacepy.pycdf as cdf
-                logger.info("... success")
-            except KeyError as e:
-                # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
-                badimports.append(e)
-            except:
-                logger.info("... Could not import spacepy")
-                pass
-        else:
-            # create exception and try linux
-            x=1/0
-    except:
-        os.putenv("CDF_LIB", "/usr/local/cdf/lib")
-        logger.info("using CDF lib in /usr/local/cdf")
-        ### If files (with tt_2000) have been generated with an outdated leapsecondtable
-        ### an exception will occur - to prevent that:
-        ### 1. make sure to use a actual leapsecond table - update cdf regularly
-        ### 2. temporarly set cdf_validate environment variable to no
-        # This is how option 2 is included TODO -- add this to initialization options
-        # as an update of cdf is the way to go and not just deactivating the error message
-        os.putenv("CDF_VALIDATE", "no")
-        logger.info("... deactivating cdf validation")
-        try:
-            import spacepy.pycdf as cdf
-            logger.info("... success")
-        except KeyError as e:
-            # Probably running at boot time - spacepy HOMEDRIVE cannot be detected
-            badimports.append(e)
-        except:
-            logger.info("... Could not import spacepy")
-            pass
-except ImportError as e:
-    logpygen += "MagPy initiation ImportError: NASA cdf not available.\n"
-    logpygen += "... if you want to use NASA CDF format support please install a current version.\n"
-    badimports.append(e)
-
-if logpygen == '':
-    logpygen = "OK"
-else:
-    logger.info(logpygen)
-    logger.info("Missing packages:")
-    for item in badimports:
-        logger.info(item)
-    logger.info("Moving on anyway...")
 
 ### Some Python3/2 compatibility code
 ### taken from http://www.rfk.id.au/blog/entry/preparing-pyenchant-for-python-3/
@@ -885,9 +765,10 @@ CALLED BY:
         return str(self.container)
 
     def __getitem__(self, var):
+        print ("getitem", var)
         if var in NUMKEYLIST:
             return self.ndarray[self.KEYLIST.index(var)].astype(np.float64)
-        else:
+        elif var in KEYLIST:
             return self.ndarray[self.KEYLIST.index(var)]
 
     def __setitem__(self, var, value):
@@ -9384,7 +9265,7 @@ CALLED BY:
         - stream:       (DataStream object) Trimmed stream
 
     EXAMPLE:
-        >>> data = data.trim(starttime, endtime)
+        >>> data = data.trim(starttime=starttime, endtime=endtime)
 
     APPLICATION:
         """
@@ -9415,7 +9296,7 @@ CALLED BY:
             newar = [np.asarray(el) for el in newar]
             res = DataStream([], self.header, np.asarray(newar, dtype=object))
         else:
-            res = self.copy()
+            res = DataStream()
 
         return res
 
@@ -10915,7 +10796,6 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         for filename in iglob(pathname):
             getfile = True
             theday = extractDateFromString(filename)
-            #print (" Extracted date:", theday) # Doesnt work for IAF files
             try:
                 if starttime:
                     if not theday[-1] >= datetime.date(st._testtime(starttime)):
@@ -11017,6 +10897,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     """
     debug = kwargs.get('debug')
 
+    print("checking")
     stream = DataStream([],{})
     format_type = None
     foundapproptiate = False
@@ -11028,14 +10909,11 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
                 print("_read: Testing format: {} ...".format(format_type))
             if debug:
                 logger.info("_read: Testing format: {} ...".format(format_type))
-            #try:
-            #    readsucc = isFormat(filename, format_type)
-            #except:
-            #    readsucc = False
             if isFormat(filename, format_type):
                 if debug:
                     logger.info("      -- found: {}".format(format_type))
                     print ("      -- found: {}".format(format_type))
+                print (format_type)
                 foundapproptiate = True
                 break
         if not foundapproptiate:
@@ -11056,16 +10934,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
             logger.error(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
             raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
 
-    """
-    try:
-        # search readFormat for given entry point
-        readFormat = load_entry_point(format_ep.dist.key,
-            'obspy.plugin.waveform.%s' % (format_ep.name), 'readFormat')
-    except ImportError:
-        msg = "Format \"%s\" is not supported. Supported types: %s"
-        raise TypeError(msg % (format_ep.name,
-                               ', '.join(WAVEFORM_ENTRY_POINTS)))
-    """
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
 
     return stream

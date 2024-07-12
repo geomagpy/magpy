@@ -1,0 +1,2 @@
+from magpy.stream import *
+

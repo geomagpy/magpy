@@ -392,15 +392,20 @@ class AbsoluteData(object):
             check whether variometer/scalar data is available for each time step
             of DI data (within 2* samplingrate diff)
         """
+        print ("Starting check coverage")
         # 1. Drop all data without value
         for key in keys:
+            print (key)
             datastream = datastream._drop_nans(key)
         samprate = datastream.samplingrate()
+        print ("HERE1")
         if not datastream.length()[0] > 1:
             return False
+        print ("HERE2")
 
         # 2. Get time column
         timea = datastream.ndarray[0].astype(datetime64)
+        print ("HERE3")
 
         # 3. Get time column of DI data
         timeb = np.asarray([num2date(el.time) for el in self]).astype(datetime64)
@@ -1985,6 +1990,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
         try:
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
+            if debug:
+                print(" covering: {} ".format(variostr._find_t_limits()))
             # ---------------------------------------
             # 1.1 Variometer data read done
             # ---------------------------------------
@@ -2166,6 +2173,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             else:
                 pass
             print("Length of Scalardata {}: {}".format(scalardbtest[-1],scalarstr.length()[0]))
+            if debug:
+                print(" covering: {}, {}".format(scalarstr._find_t_limits(), scalarstr.samplingrate()))
             print (scalarstr.header.get('SensorID') , scalarstr.header.get('DataID'))
             # ---------------------------------------
             # 2.1 scalar data loaded
