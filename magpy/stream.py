@@ -764,7 +764,6 @@ CALLED BY:
         return str(self.container)
 
     def __getitem__(self, var):
-        print ("getitem", var)
         if var in NUMKEYLIST:
             return self.ndarray[self.KEYLIST.index(var)].astype(np.float64)
         elif var in KEYLIST:
@@ -3769,10 +3768,12 @@ CALLED BY:
         autofill = kwargs.get('autofill')
         dontfillgaps = kwargs.get('dontfillgaps')
         fillgaps = kwargs.get('fillgaps')
-        debugmode = kwargs.get('debugmode')
+        debugmode = kwargs.get('debug')
         conservative =  kwargs.get('conservative')
         missingdata =  kwargs.get('missingdata')
 
+        if debugmode:
+            print ("Running filter...")
         sr = self.samplingrate()
 
         if not keys:
@@ -3819,14 +3820,15 @@ CALLED BY:
         if not missingdata:
             missingdata = 'conservative'
 
-        ndtype = False
+        if debugmode:
+            print ("filter: selected the following parameters: filter_type={}, filter_width={}, resample_period={}".format(filter_type,filter_width,resample_period))
 
         # ########################
         # Basic validity checks and window size definitions
         # ########################
         if not filter_type in filterlist:
-            logger.error("smooth: Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman', etc")
-            logger.debug("smooth: You entered non-existing filter type -  %s  - " % filter_type)
+            logger.error("filter: Window is none of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman', etc")
+            logger.debug("filter: You entered non-existing filter type -  %s  - " % filter_type)
             return self
 
         logger.info("filter: Filtering with {} window".format(filter_type))
@@ -3840,14 +3842,17 @@ CALLED BY:
         if debugmode:
             print("Starting length:", self.length())
 
+        # non-destructive
+        fstream = self.copy()
+
         #if not dontfillgaps:   ### changed--- now using dont fill gaps as default
         if fillgaps:
-            self = self.get_gaps()
+            fstream = fstream.get_gaps()
             if debugmode:
-                print("length after getting gaps:", len(self))
+                print("length after getting gaps:", len(fstream))
 
         window_period = filter_width.total_seconds()
-        si = timedelta(seconds=self.get_sampling_period()*24*3600)
+        si = timedelta(seconds=fstream.get_sampling_period())
         # default - rounding to 0.01 second for LF signals
         sampling_period = si.days*24*3600 + si.seconds + np.round(si.microseconds/1000000.0,2)
         if sampling_period < 0.02:
@@ -3868,11 +3873,11 @@ CALLED BY:
             if window_len % 2 == 0:
                 window_len = window_len +1
             std = 0.83255461*window_len/(2*np.pi)
-            trangetmp = self._det_trange(window_period)*24*3600
+            trangetmp = fstream._det_trange(window_period)*24*3600
             if trangetmp < 1:
                 trange = np.round(trangetmp,3)
             else:
-                trange = timedelta(seconds=(self._det_trange(window_period)*24*3600)).seconds
+                trange = timedelta(seconds=(fstream._det_trange(window_period)*24*3600)).seconds
             if debugmode:
                 print("Window character: ", window_len, std, trange)
         else:
@@ -3882,18 +3887,15 @@ CALLED BY:
             trange = window_period/2
 
         if sampling_period >= window_period:
-            logger.warning("Filter: Sampling period is equal or larger then projected filter window - returning.")
+            logger.warning("Filter: Sampling period is equal or larger then projected filter window - returning unmodified stream.")
             return self
 
         # ########################
         # Reading data of each selected column in stream
         # ########################
 
-        if len(self.ndarray[0])>0:
-            t = self.ndarray[0]
-            ndtype = True
-        else:
-            t = self._get_column('time')
+        if len(fstream.ndarray[0])>0:
+            t = fstream.ndarray[0]
 
         if debugmode:
             print("Length time column:", len(t))
@@ -3906,10 +3908,8 @@ CALLED BY:
             if not key in KEYLIST:
                 logger.error("Column key %s not valid." % key)
             keyindex = KEYLIST.index(key)
-            if len(self.ndarray[keyindex])>0:
-                v = self.ndarray[keyindex]
-            else:
-                v = self._get_column(key)
+            if len(fstream.ndarray[keyindex])>0:
+                v = fstream.ndarray[keyindex]
 
             # INTERMAGNET 90 percent rule: interpolate missing values if less than 10 percent are missing
             #if not conservative or missingdata in ['interpolate','mean']:
@@ -3974,16 +3974,12 @@ CALLED BY:
                     ax1.plot(t, res, 'r.-', linewidth=2, label = filter_type)
                     plt.show()
 
-                if ndtype:
-                    self.ndarray[keyindex] = res
-                else:
-                    self._put_column(res,key)
+                fstream.ndarray[keyindex] = res
 
         if resample:
             if debugmode:
-                print("Resampling: ", keys)
-            self = self.resample(keys,period=resample_period,fast=resamplefast,offset=resampleoffset)
-            self.header['DataSamplingRate'] = str(resample_period) + ' sec'
+                print("Resampling: ", keys, resample_period)
+            fstream = fstream.resample(keys,period=resample_period,fast=resamplefast,offset=resampleoffset)
 
         # ########################
         # Update header information
@@ -3991,9 +3987,9 @@ CALLED BY:
         passband = filter_width.total_seconds()
         #print ("passband", 1/passband)
         #self.header['DataSamplingFilter'] = filter_type + ' - ' + str(trange) + ' sec'
-        self.header['DataSamplingFilter'] = filter_type + ' - ' + str(1.0/float(passband)) + ' Hz'
+        fstream.header['DataSamplingFilter'] = filter_type + ' - ' + str(1.0/float(passband)) + ' Hz'
 
-        return self
+        return fstream
 
 
 
@@ -6089,7 +6085,6 @@ CALLED BY:
         """
 
         # For proper applictation - duplicates are removed
-        self = self.removeduplicates()
         timecol=[]
 
         if len(self.ndarray[0]) > 0:
@@ -8242,14 +8237,12 @@ CALLED BY:
         if not period:
             period = 60.
 
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            ndtype = True
+        if not len(self.ndarray[0]) > 0:
+            return self
 
         sp = self.samplingrate()
 
         logger.info("resample: Resampling stream of sampling period %s to period %s." % (sp,period))
-
         logger.info("resample: Resampling keys %s " % (','.join(keys)))
 
         # Determine the minimum time
@@ -8267,61 +8260,16 @@ CALLED BY:
             t_min = ceil_dt(t_min,period)
             startperiod, line = self.findtime(t_min)
 
-        # default method is slow - check whether fast is used at all
-        if fast:   # To be done if timesteps are at period timesteps
-            try:
-                logger.info("resample: Using fast algorithm.")
-                si = timedelta(seconds=sp)
-                sampling_period = si.seconds
-
-                if period <= sampling_period:
-                    logger.warning("resample: Resampling period must be larger or equal than original sampling period.")
-                    return self
-
-                if debugmode:
-                    print ("Trying fast algorythm")
-                    print ("Projected period and Sampling period:", period, sampling_period)
-                if not line == [] or ndtype: # or (ndtype and not line == []):
-                    xx = int(np.round(period/sampling_period))
-                    if ndtype:
-                        newstream = DataStream([LineStruct()],{},np.asarray([]))
-                        newstream.header = self.header
-                        lst = []
-                        for ind,elem in enumerate(self.ndarray):
-                            if debugmode:
-                                print ("dealing with column", ind, elem)
-                            if len(elem) > 0:
-                                lst.append(np.asarray(elem[startperiod::xx]))
-                            else:
-                                lst.append(np.asarray([]))
-                        newstream.ndarray = np.asarray(lst)
-                    else:
-                        newstream = DataStream([],{},np.asarray([[] for el in KEYLIST]))
-                        newstream.header = self.header
-                        for line in self[startperiod::xx]:
-                            newstream.add(line)
-                    newstream.header['DataSamplingRate'] = str(period) + ' sec'
-                    return newstream
-                logger.warning("resample: Fast resampling failed - switching to slow mode")
-            except:
-                logger.warning("resample: Fast resampling failed - switching to slow mode")
-                pass
-
-        # This is done if timesteps are not at period intervals
-        # -----------------------------------------------------
-
-        if debugmode:
-            print ("General -slow- resampling")
+        # new way: get the indicies of resample timesteps
         stwithnan = self.copy()
         # remove duplicate inputs (would lead to wrong selection of validity identification windows)
         stwithnan = stwithnan.removeduplicates()
 
+        # This is done if timesteps are not at period intervals
+        # -----------------------------------------------------
+
         # Create a list (t_list) containing new time steps, separeted by period
-        t_list = []
-        time = t_min
-        while time <= t_max:
-           t_list.append(date2num(time))
-           time = time + timedelta(seconds=period)
+        t_list = list(np.arange(t_min, t_max, timedelta(seconds=period)).astype(datetime))
 
         # Compare length of new time list with old timelist
         # multiplicator is used to check whether nan value is at the corresponding position of the orgdata file - used for not yet completely but sufficiently correct missing value treatment
@@ -8344,10 +8292,8 @@ CALLED BY:
             print("Diff:", diff)
 
         # res stream with new t_list is used for return
-        res_stream = DataStream()
-        res_stream.header = self.header
         array=[np.asarray([]) for elem in KEYLIST]
-        t0 = date2num(num2date(t_list[0]) - timedelta(seconds=period))
+        t0 = t_list[0] - timedelta(seconds=period)
         for key in keys:
             if debugmode:
                 print ("Resampling:", key)
@@ -8363,57 +8309,38 @@ CALLED BY:
                 int_min = int_data[1]
                 int_max = int_data[2]
                 # add an initial value
-                t0 = date2num(num2date(t_list[0])-timedelta(seconds=period))
+                t0 = t_list[0]-timedelta(seconds=period)
                 v0 = np.nan
                 if len(stwithnan.ndarray[index]) > 2 and not np.isnan(stwithnan.ndarray[index][0]) and not np.isnan(stwithnan.ndarray[index][1]):
                     ti1 = stwithnan.ndarray[0][0]
                     ti2 = stwithnan.ndarray[0][1]
                     v1 = stwithnan.ndarray[index][0]
                     v2 = stwithnan.ndarray[index][1]
-                    v0 = v2 + (v2-v1)/(ti2-ti1)*(t0-ti2)
+                    v0 = v2 + (v2-v1)/((ti2-ti1).total_seconds())*((t0-ti2).total_seconds())
                 key_list = [v0]
                 for ind, item in enumerate(t_list):
                     # normalized time range between 0 and 1
-                    functime = (item - int_min)/(int_max - int_min)
-                    # check whether original value is np.nan (as interpol method does not account for that)
-                    # exact but slowly: idx = np.abs(tcol-item).argmin()
-                    #                   orgval = stwithnan.ndarray[index][idx]
-                    # reduce the index range as below
-                    if ndtype:
-                        # techniques to get a valid value:
-                        # check if nearest value is nan or not
-                        # to obtain the nearest value: extract a sublist
-                        # find time closest to functime in datastream
-                        if int(ind*multiplicator) <= len(self.ndarray[index]):
-                            #orgval = self.ndarray[index][int(ind*multiplicator)]
-                            estimate = False
-                            # Please note: here a two techniques (exact and estimate)
-                            # Speeddiff (example data set (500000 data points)
-                            # Exact:    7.55 sec (including one minute filter)
-                            # Estimate: 7.15 sec
-                            if estimate:
-                                orgval = stwithnan.ndarray[index][int(ind*multiplicator+startperiod)] # + offset
-                            else:
-                                # Exact solution: (well, is not exact as actually the difference in counts should be considered for the search window (leon, 2023-05-01))
-                                # but should be OK for now: change to stv = mv-diff, etv = mv+diff , diff = abs(
-                                mv = int(ind*multiplicator+startperiod)
-                                #stv = mv-int(20*multiplicator)
-                                stv = int(mv-diff)
-                                if stv < 0:
-                                    stv = 0
-                                #etv = mv+int(20*multiplicator)
-                                etv = int(mv+diff)
-                                if etv >= len(stwithnan.ndarray[index]):
-                                    etv = len(stwithnan.ndarray[index])
-                                subar = stwithnan.ndarray[0][stv:etv]
-                                idx = (np.abs(subar-item)).argmin()
-                                #subar = stwithnan.ndarray[index][stv:etv]
-                                orgval = stwithnan.ndarray[index][stv+idx] # + offset
-                        else:
-                            print("Check Resampling method")
-                            orgval = 1.0
+                    #print (item, int_min, int_max)
+                    functime = (date2num(item) - int_min)/(int_max - int_min)
+                    if int(ind*multiplicator) <= len(self.ndarray[index]):
+                        # Exact solution: (well, is not exact as actually the difference in counts should be considered for the search window (leon, 2023-05-01))
+                        # but should be OK for now: change to stv = mv-diff, etv = mv+diff , diff = abs(
+                        mv = int(ind*multiplicator+startperiod)
+                        #stv = mv-int(20*multiplicator)
+                        stv = int(mv-diff)
+                        if stv < 0:
+                            stv = 0
+                        #etv = mv+int(20*multiplicator)
+                        etv = int(mv+diff)
+                        if etv >= len(stwithnan.ndarray[index]):
+                            etv = len(stwithnan.ndarray[index])
+                        subar = stwithnan.ndarray[0][stv:etv]
+                        idx = (np.abs(subar-item)).argmin()
+                        #subar = stwithnan.ndarray[index][stv:etv]
+                        orgval = stwithnan.ndarray[index][stv+idx] # + offset
                     else:
-                        orgval = getattr(stwithnan[int(ind*multiplicator+startperiod)],key)
+                        print("Check Resampling method")
+                        orgval = 1.0
                     tempval = np.nan
                     # Not a safe fix, but appears to cover decimal leftover problems
                     # (e.g. functime = 1.0000000014, which raises an error)
@@ -8423,24 +8350,12 @@ CALLED BY:
                         tempval = int_func(functime)
                     key_list.append(float(tempval))
 
-                if ndtype:
-                    array[index] = np.asarray(key_list)
-                else:
-                    res_stream._put_column(key_list,key)
+                array[index] = np.asarray(key_list)
             except:
                 logger.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
         t_list.insert(0, t0)
-        if ndtype:
-            array[0] = np.asarray(t_list)
-            res_stream.add(LineStruct())
-        else:
-            for item in t_list:
-                row = LineStruct()
-                row.time = item
-                res_stream.add(row)
-
-        res_stream.ndarray = np.asarray(array,dtype=object)
+        array[0] = np.asarray(t_list)
 
         if debugmode:
             t2 = datetime.utcnow()
@@ -8448,8 +8363,8 @@ CALLED BY:
 
         logger.info("resample: Data resampling complete.")
         #return DataStream(res_stream,self.headers)
-        res_stream.header['DataSamplingRate'] = str(period) + ' sec'
-        return res_stream
+        stwithnan.header['DataSamplingRate'] = period
+        return DataStream([LineStruct()],stwithnan.header,np.asarray(array,dtype=object))
 
 
     def rotation(self,**kwargs):
