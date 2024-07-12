@@ -46,6 +46,7 @@ from __future__ import division
 
 
 from magpy.stream import *
+from magpy.core.methods import *
 from magpy.database import *
 from magpy.transfer import *
 
@@ -1915,10 +1916,17 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         stream = dat.getAbsDIStruct()
                         datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
                 else:
+                    tail = tail.replace(stationid,"")
+                    tail = tail.replace(pier,"")
+                    print (tail, stationid)
+                    # the following line is just a warning supressor - id stationid is provided then everything is fine
+                    #tail = tail.replace("_A16_WIC","")
                     date = dparser.parse(tail,fuzzy=True)
                     datelist.append(datetime.strftime(date,"%Y-%m-%d"))
             except:
                 try:
+                    tail = tail.replace(stationid,"")
+                    tail = tail.replace(pier,"")
                     date = dparser.parse(tail[:19],fuzzy=True)
                     datelist.append(datetime.strftime(date,"%Y-%m-%d"))
                 except:
@@ -1932,11 +1940,10 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     if debug:
         print ("Datetime list of data to deal with:", datetimelist)
 
-    empty = DataStream()
     if starttime:
-        datetimelist = [elem for elem in datetimelist if elem.date() >= empty._testtime(starttime).date()]
+        datetimelist = [elem for elem in datetimelist if elem.date() >= testtime(starttime).date()]
     if endtime:
-        datetimelist = [elem for elem in datetimelist if elem.date() <= empty._testtime(endtime).date()]
+        datetimelist = [elem for elem in datetimelist if elem.date() <= testtime(endtime).date()]
 
     if not len(datetimelist) > 0:
         print("absoluteAnalysis: No matching dates found - aborting")
@@ -1987,6 +1994,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 variomod = checkURL(variodata, date, debug=debug)
+                print (variomod)
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
         try:
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))

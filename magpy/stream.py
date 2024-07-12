@@ -452,7 +452,7 @@ class DataStream(object):
     - stream._det_trange(self, period):
     - stream._is_number(self, s):
     - stream._normalize(self, column):
-    - stream._testtime(self, time):
+    - stream._testtime(self, time):  # moved to methods
     - stream._drop_nans(self, key):
     - stream.aic_calc(self, key, **kwargs):
     - stream.baseline(self, absolutestream, **kwargs):
@@ -568,7 +568,6 @@ class DataStream(object):
     - self._convertstream(self, coordinate, **kwargs) -- Convert coordinates of x,y,z columns in stream
     - self._det_trange(self, period) -- starting with coefficients above 1%
     - self._find_t_limits(self) -- return times of first and last stream data points
-    - self._testtime(time) -- returns datetime object
     - self._get_min(key) -- returns float
     - self._get_max(key) -- returns float
     - self._normalize(column) -- returns list,float,float -- normalizes selected column to range 0,1
@@ -870,7 +869,7 @@ CALLED BY:
         #except ImportError:
         #    print("Import error")
 
-        st = date2num(self._testtime(time))
+        st = date2num(testtime(time))
         if len(self.ndarray[0]) > 0:
             if startidx and endidx:
                 ticol = self.ndarray[0][startidx:endidx]
@@ -1716,70 +1715,6 @@ CALLED BY:
 
         return normcol, minval, maxval
 
-
-    def _testtime(self, time):
-        """
-        Check the date/time input and returns a datetime object if valid:
-
-        IMPORTANT: testtime will convert datetime64 to datetime objects. One might change that in the future
-
-        ! Use UTC times !
-
-        - accepted are the following inputs:
-        1) absolute time: as provided by date2num
-        2) strings: 2011-11-22 or 2011-11-22T11:11:00
-        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-
-        """
-
-        if isinstance(time, float) or isinstance(time, int):
-            try:
-                timeobj = num2date(time).replace(tzinfo=None)
-            except:
-                raise TypeError
-        elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
-            try:
-                timeobj = datetime.strptime(time,"%Y-%m-%d")
-            except:
-                try:
-                    timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
-                except:
-                    try:
-                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
-                    except:
-                        try:
-                            timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S.%f")
-                        except:
-                            try:
-                                timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
-                            except:
-                                try:
-                                    # Not happy with that but necessary to deal
-                                    # with old 1000000 micro second bug
-                                    timearray = time.split('.')
-                                    if timearray[1] == '1000000':
-                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-                                    else:
-                                        # This would be wrong but leads always to a TypeError
-                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
-                                except:
-                                    try:
-                                        timeobj = num2date(float(time)).replace(tzinfo=None)
-                                    except:
-                                        raise TypeError
-        elif isinstance(time, datetime64):
-            unix_epoch = np.datetime64(0, 's')
-            one_second = np.timedelta64(1, 's')
-            seconds_since_epoch = (time - unix_epoch) / one_second
-            timeobj = datetime.utcfromtimestamp(seconds_since_epoch)
-        elif not isinstance(time, datetime):
-            raise TypeError
-        else:
-            timeobj = time
-
-        return timeobj
-
-
     def _drop_nans(self, key, debug=False):
         """
     DEFINITION:
@@ -1872,7 +1807,7 @@ CALLED BY:
         startindices = []
         endindices = []
         if starttime:
-            starttime = self._testtime(starttime)
+            starttime = testtime(starttime)
             if self.ndarray[0].size > 0:   # time column present
                 if maxidx > 0:
                     idx = (np.abs(self.ndarray[0][:maxidx]-date2num(starttime))).argmin()
@@ -1883,7 +1818,7 @@ CALLED BY:
                     idx += 1
                 startindices = list(range(0,idx))
         if endtime:
-            endtime = self._testtime(endtime)
+            endtime = testtime(endtime)
             if self.ndarray[0].size > 0:   # time column present
                 #print "select timerange", maxidx
                 if maxidx > 0: # truncate the ndarray
@@ -2142,11 +2077,11 @@ CALLED BY:
 
         fixstart,fixend = False,False
         if startabs:
-            startabs = date2num(self._testtime(startabs))
+            startabs = date2num(testtime(startabs))
             orgstartabs = startabs
             fixstart = True
         if endabs:
-            endabs = date2num(self._testtime(endabs))
+            endabs = date2num(testtime(endabs))
             orgendabs = endabs
             fixend = True
 
@@ -4853,8 +4788,8 @@ CALLED BY:
 
         lenfl = len(flaglist)
         logger.info("Flag: Found flaglist of length {}".format(lenfl))
-        flaglist = [line for line in flaglist if np.round(date2num(self._testtime(line[1])),8) >= st]
-        flaglist = [line for line in flaglist if np.round(date2num(self._testtime(line[0])),8) <= et]
+        flaglist = [line for line in flaglist if np.round(date2num(testtime(line[1])),8) >= st]
+        flaglist = [line for line in flaglist if np.round(date2num(testtime(line[0])),8) <= et]
 
         # Sort flaglist accoring to startdate (used to speed up flagging procedure)
         # BETTER: Sort with input date - otherwise later data might not overwrite earlier...
@@ -4901,8 +4836,8 @@ CALLED BY:
                         print("Flag: 60 percent done")
                     if i == int(lenfl/5.*4.):
                         print("Flag: 80 percent done")
-                fs = np.round(date2num(self._testtime(flaglist[i][0])),8)
-                fe = np.round(date2num(self._testtime(flaglist[i][1])),8)
+                fs = np.round(date2num(testtime(flaglist[i][0])),8)
+                fe = np.round(date2num(testtime(flaglist[i][1])),8)
                 if st < fs and et < fs and st < fe and et < fe:
                     pass
                 elif  st > fs and et > fs and st > fe and et > fe:
@@ -5117,19 +5052,19 @@ CALLED BY:
 
         if mode in ['select','replace'] or (mode=='delete' and value):
             if starttime:
-                starttime = self._testtime(starttime)
+                starttime = testtime(starttime)
                 flaglist = [elem for elem in flaglist if elem[1] > starttime]
             if endtime:
-                endtime = self._testtime(endtime)
+                endtime = testtime(endtime)
                 flaglist = [elem for elem in flaglist if elem[0] < endtime]
         elif mode == 'delete' and not value:
             print ("Only deleting")
             flaglist1, flaglist2 = [],[]
             if starttime:
-                starttime = self._testtime(starttime)
+                starttime = testtime(starttime)
                 flaglist1 = [elem for elem in flaglist if elem[1] < starttime]
             if endtime:
-                endtime = self._testtime(endtime)
+                endtime = testtime(endtime)
                 flaglist2 = [elem for elem in flaglist if elem[0] > endtime]
             flaglist1.extend(flaglist2)
             flaglist = flaglist1
@@ -5177,9 +5112,9 @@ CALLED BY:
             newflaglist = stream.flaglistadd(oldflaglist,sensorid, keys, flagnumber, comment, startdate, enddate)
         """
         # convert start and end to correct format
-        st = self._testtime(startdate)
+        st = testtime(startdate)
         if enddate:
-            et = self._testtime(enddate)
+            et = testtime(enddate)
         else:
             et = st
         now = datetime.utcnow()
@@ -5237,14 +5172,14 @@ CALLED BY:
         elif not len(self) > 0:
             return DataStream()
 
-        startdate = self._testtime(startdate)
+        startdate = testtime(startdate)
 
         if not enddate:
             # Set enddate to startdat
             # Hereby flag nearest might be used later
             enddate = startdate
         else:
-            enddate = self._testtime(enddate)
+            enddate = testtime(enddate)
 
         ### ######## IF STARTDATE == ENDDATE
         ### MODIFYED TO STARTDATE-Samplingrate/3, ENDDATE + Samplingrate/3
@@ -7681,14 +7616,14 @@ CALLED BY:
         stidx = 0
         edidx = len(tcol)
         if starttime:
-            st = date2num(self._testtime(starttime))
+            st = date2num(testtime(starttime))
             # get index number of first element >= starttime in timecol
             stidxlst = np.where(tcol >= st)[0]
             if not len(stidxlst) > 0:
                 return self   ## stream ends before starttime
             stidx = stidxlst[0]
         if endtime:
-            ed = date2num(self._testtime(endtime))
+            ed = date2num(testtime(endtime))
             # get index number of last element <= endtime in timecol
             edidxlst = np.where(tcol <= ed)[0]
             if not len(edidxlst) > 0:
@@ -8003,7 +7938,7 @@ CALLED BY:
         """
 
         if starttime and endtime:
-            if self._testtime(starttime) > self._testtime(endtime):
+            if testtime(starttime) > testtime(endtime):
                 logger.error('Trim: Starttime (%s) is larger than endtime (%s).' % (starttime,endtime))
                 raise ValueError("Starttime is larger than endtime.")
 
@@ -8011,8 +7946,8 @@ CALLED BY:
 
         cutstream = DataStream()
         cutstream = self.copy()
-        starttime = self._testtime(starttime)
-        endtime = self._testtime(endtime)
+        starttime = testtime(starttime)
+        endtime = testtime(endtime)
         stval = 0
 
         if len(cutstream.ndarray[0]) > 0:
@@ -9408,14 +9343,14 @@ CALLED BY:
         datelist = []
         try:
             # Check whether provided thedate is a date with time
-            datelist = [self._testtime(thedate)]
+            datelist = [testtime(thedate)]
             print("Variometercorrection: using correction to single provided datetime", datelist[0])
         except:
             try:
                 # Check whether provided thedate is only time
                 tmpdatelst = [datetime.date(num2date(elem)) for elem in timecol]
                 tmpdatelst = list(set(tmpdatelst))
-                dummydatedt = self._testtime('2016-11-22T'+thedate)
+                dummydatedt = testtime('2016-11-22T'+thedate)
                 datelist = [datetime.combine(elem, datetime.time(dummydatedt)) for elem in tmpdatelst]
             except:
                 print("Variometercorrection: Could not interpret the provided date/time - aborting - used dateformat should be either 12:00:00 or 2016-11-22 12:00:00 - provided:", thedate)
@@ -10798,10 +10733,10 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
             theday = extractDateFromString(filename)
             try:
                 if starttime:
-                    if not theday[-1] >= datetime.date(st._testtime(starttime)):
+                    if not theday[-1] >= datetime.date(testtime(starttime)):
                         getfile = False
                 if endtime:
-                    if not theday[0] <= datetime.date(st._testtime(endtime)):
+                    if not theday[0] <= datetime.date(testtime(endtime)):
                         getfile = False
             except:
                 # Date format not recognised. Read all files
@@ -10897,7 +10832,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     """
     debug = kwargs.get('debug')
 
-    print("checking")
     stream = DataStream([],{})
     format_type = None
     foundapproptiate = False
@@ -10913,7 +10847,6 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
                 if debug:
                     logger.info("      -- found: {}".format(format_type))
                     print ("      -- found: {}".format(format_type))
-                print (format_type)
                 foundapproptiate = True
                 break
         if not foundapproptiate:
@@ -12502,7 +12435,7 @@ def array2stream(listofarrays, keystring,starttime=None,sr=None):
                 return
             else:
                 #fill time column
-                val = st._testtime(starttime)
+                val = testtime(starttime)
                 for ind, elem in enumerate(listofarrays[0]):
                     #emptyline = [None for elem in KEYLIST[:5]]
                     #emptyline[0] = date2num(val)
