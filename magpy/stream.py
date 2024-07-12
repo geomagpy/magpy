@@ -3710,7 +3710,7 @@ CALLED BY:
             - filter_type:      (string) name of the window. One of
                                 'flat','barthann','bartlett','blackman','blackmanharris','bohman',
                                 'boxcar','cosine','flattop','hamming','hann','nuttall',
-                                'parzen','triang','gaussian','wiener','spline','butterworth'
+                                'parzen','triang','gaussian','wiener','butterworth'
                                 See http://docs.scipy.org/doc/scipy/reference/signal.html
             - filter_width:     (timedelta) window width of the filter
             - resample_period:  (int) resampling interval in seconds (e.g. 1 for one second data)
@@ -3745,7 +3745,7 @@ CALLED BY:
         # ########################
         filterlist = ['flat','barthann','bartlett','blackman','blackmanharris','bohman',
                 'boxcar','cosine','flattop','hamming','hann','nuttall','parzen','triang',
-                'gaussian','wiener','spline','butterworth']
+                'gaussian','wiener','butterworth']
 
         # To be added
         #kaiser(M, beta[, sym])         Return a Kaiser window.
@@ -3923,8 +3923,6 @@ CALLED BY:
                     nyf = 0.5/dt
                     b, a = signal.butter(4, 1.5/nyf)
                     res = signal.filtfilt(b, a, v)
-                elif filter_type == 'spline':
-                    res = UnivariateSpline(t, v, s=240)
                 elif filter_type == 'flat':
                     w=np.ones(int(window_len),'d')
                     s = np.ma.masked_invalid(s)
