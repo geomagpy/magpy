@@ -139,6 +139,51 @@ def maskNAN(column):
 
     return column
 
+    def missingvalue(v,window_len=60,threshold=0.9,fill='mean',fillvalue=99999):
+        """
+        DESCRIPTION
+            Fills missing values (np.nan) either with means, interpolated values
+            or a given fillvalue.
+            This method is used self.filter (interpolate and/or mean)
+            and can be used to replace np.nan values by typical IM plasecholders
+        PARAMETER:
+            v: 			   (np.array) single column of ndarray
+            window_len:    (int) length of window to check threshold
+            threshold: 	   (float) minimum percentage of available data e.g. 0.9 - 90 precent
+            fill: 	       (string) 'mean', 'interpolation' or 'value'
+            fillvalue: 	   (float) if fill by value then this value will be used
+        RETURNS:
+            ndarray - single column
+        """
+        if fill in ['mean','interpolate','interpolation']:
+            try:
+                v_rest = np.array([])
+                v = v.astype(float)
+                n_split = len(v)/float(window_len)
+                if not n_split == int(n_split):
+                    el = int(int(n_split)*window_len)
+                    v_rest = v[el:]
+                    v = v[:el]
+                spli = np.split(v,int(len(v)/window_len))
+                if len(v_rest) > 0:
+                    spli.append(v_rest)
+                newar = np.array([])
+                for idx,ar in enumerate(spli):
+                    nans, x = nan_helper(ar)
+                    if len(ar[~nans]) >= threshold*len(ar):
+                        if fill == 'mean':
+                            ar[nans]= np.nanmean(ar)
+                        else:
+                            ar[nans]= interp(x(nans), x(~nans), ar[~nans])
+                    newar = np.concatenate((newar,ar))
+                v = newar
+            except:
+                print ("Filter: could not split stream in equal parts for interpolation - switching to conservative mode")
+        else:
+            naninds = np.argwhere(np.isnan(v))
+            v[naninds]= fillvalue
+
+        return v
 
 if __name__ == '__main__':
 

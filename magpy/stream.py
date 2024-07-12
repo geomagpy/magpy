@@ -2778,67 +2778,44 @@ CALLED BY:
             this value is added as well
         PARAMETERS:
          Kwargs:
-            - offset:     (array) containing three elements [xoffset,yoffset,zoffset],
-            - skipdelta   (bool)  id selecetd then an existing delta f is not accounted for
+            - skipdelta   (bool)  if selecetd then an existing delta f is not accounted for
         RETURNS:
-            - DataStream with f and, if given, offset corrected xyz values
+            - DataStream with f
 
         EXAMPLES:
             >>> fstream = stream.calc_f()
-            >>> fstream = stream.calc_f(offset=[20000,0,43000])
         """
 
         # Take care: if there is only 0.1 nT accuracy then there will be a similar noise in the deltaF signal
 
-        offset = kwargs.get('offset')
         skipdelta = kwargs.get('skipdelta')
 
-        if not offset:
-            offset = [0,0,0]
-        else:
-            if not len(offset) == 3:
-                logger.error('calc_f: offset with wrong dimension given - needs to contain a three dim array like [a,b,c] - returning stream without changes')
-                return self
-
-        ndtype = False
-        try:
-            if len(self.ndarray[0]) > 0:
-                ndtype = True
-            elif len(self) > 1:
-                ndtype = False
-            else:
-                logger.error('calc_f: empty stream - aborting')
-                return self
-        except:
-            logger.error('calc_f: inapropriate data provided - aborting')
+        if len(self.ndarray[0]) > 0:
             return self
 
-        logger.info('calc_f: --- Calculating f started at %s ' % str(datetime.now()))
+        fstream = self.copy()
 
-        if ndtype:
+        if len(self.ndarray[0]) > 0:
             inddf = KEYLIST.index('df')
             indf = KEYLIST.index('f')
             indx = KEYLIST.index('x')
             indy = KEYLIST.index('y')
             indz = KEYLIST.index('z')
-            if len(self.ndarray[inddf]) > 0 and not skipdelta:
-                df = self.ndarray[inddf].astype(float)
+            if len(fstream.ndarray[inddf]) > 0 and not skipdelta:
+                df = fstream.ndarray[inddf].astype(float)
             else:
-                df = np.asarray([0.0]*len(self.ndarray[indx]))
-            x2 = ((self.ndarray[indx]+offset[0])**2).astype(float)
-            y2 = ((self.ndarray[indy]+offset[1])**2).astype(float)
-            z2 = ((self.ndarray[indz]+offset[2])**2).astype(float)
-            self.ndarray[indf] = np.sqrt(x2+y2+z2) + df
-        else:
-            for elem in self:
-                elem.f = np.sqrt((elem.x+offset[0])**2+(elem.y+offset[1])**2+(elem.z+offset[2])**2)
+                df = np.asarray([0.0]*len(fstream.ndarray[indx]))
+            x2 = ((fstream.ndarray[indx])**2).astype(float)
+            y2 = ((fstream.ndarray[indy])**2).astype(float)
+            z2 = ((fstream.ndarray[indz])**2).astype(float)
+            fstream.ndarray[indf] = np.sqrt(x2+y2+z2) + df
 
-        self.header['col-f'] = 'f'
-        self.header['unit-col-f'] = 'nT'
+        fstream.header['col-f'] = 'f'
+        fstream.header['unit-col-f'] = 'nT'
 
-        logger.info('calc_f: --- Calculating f finished at %s ' % str(datetime.now()))
+        logger.info('calc_f: --- Calculating f finished at {}'.format(str(datetime.now())))
 
-        return self
+        return fstream
 
 
     def compensation(self, **kwargs):
@@ -3940,12 +3917,12 @@ CALLED BY:
                 fill = 'mean'
                 try:
                     if missingdata == 'interpolate':
-                        fill = missingdate
+                        fill = missingdata
                     else:
                         fill = 'mean'
                 except:
                     fill = 'mean'
-                v = self.missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
+                v = missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
 
             if key in autofill:
                 logger.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
@@ -7136,43 +7113,6 @@ CALLED BY:
             else:
                 return float("NaN")
 
-    def missingvalue(self,v,window_len,threshold=0.9,fill='mean'):
-        """
-        DESCRIPTION
-            fills missing values either with means or interpolated values
-        PARAMETER:
-            v: 			(np.array) single column of ndarray
-            window_len: 	(int) length of window to check threshold
-            threshold: 	        (float) minimum percentage of available data e.g. 0.9 - 90 precent
-            fill: 	        (string) 'mean' or 'interpolation'
-        RETURNS:
-            ndarray - single column
-        """
-        try:
-            v_rest = np.array([])
-            v = v.astype(float)
-            n_split = len(v)/float(window_len)
-            if not n_split == int(n_split):
-                el = int(int(n_split)*window_len)
-                v_rest = v[el:]
-                v = v[:el]
-            spli = np.split(v,int(len(v)/window_len))
-            if len(v_rest) > 0:
-                spli.append(v_rest)
-            newar = np.array([])
-            for idx,ar in enumerate(spli):
-                nans, x = nan_helper(ar)
-                if len(ar[~nans]) >= threshold*len(ar):
-                    if fill == 'mean':
-                        ar[nans]= np.nanmean(ar)
-                    else:
-                        ar[nans]= interp(x(nans), x(~nans), ar[~nans])
-                newar = np.concatenate((newar,ar))
-            v = newar
-        except:
-            print ("Filter: could not split stream in equal parts for interpolation - switching to conservative mode")
-
-        return v
 
     def MODWT_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
                 window=5):
