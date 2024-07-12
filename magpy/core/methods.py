@@ -174,7 +174,7 @@ def missingvalue(v,window_len=60,threshold=0.9,fill='mean',fillvalue=99999):
                         if fill == 'mean':
                             ar[nans]= np.nanmean(ar)
                         else:
-                            ar[nans]= interp(x(nans), x(~nans), ar[~nans])
+                            ar[nans]= np.interp(x(nans), x(~nans), ar[~nans])
                     newar = np.concatenate((newar,ar))
                 v = newar
             except:

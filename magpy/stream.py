@@ -3815,7 +3815,6 @@ CALLED BY:
 
         logger.info("filter: Filtering with {} window".format(filter_type))
 
-
         #print self.length()[0]
         if not self.length()[0] > 1:
             logger.error("Filter: stream needs to contain data - returning.")
@@ -3891,16 +3890,13 @@ CALLED BY:
             #if not conservative or missingdata in ['interpolate','mean']:
             # missingdata not yet working
             if missingdata in ['interpolate','mean']:
-                print (window_period,sampling_period)
-                print ("Before",v)
                 v = missingvalue(v,window_len=np.round(window_period/sampling_period),fill=missingdata) # using ratio here and not _len
-                print ("After", v)
 
             if key in autofill:
                 logger.warning("Filter: key %s has been selected for linear interpolation before filtering." % key)
                 logger.warning("Filter: I guess you know what you are doing...")
                 nans, x= nan_helper(v)
-                v[nans]= interp(x(nans), x(~nans), v[~nans])
+                v[nans]= np.interp(x(nans), x(~nans), v[~nans])
 
             # Make sure that we are dealing with numbers
             v = np.array(list(map(float, v)))
@@ -3914,18 +3910,12 @@ CALLED BY:
                 print("Treating k:", key, v.size)
 
             if v.size >= window_len:
-                #print ("Check:", v, len(v), window_len)
                 s=np.r_[v[int(window_len)-1:0:-1],v,v[-1:-int(window_len):-1]]
-                print ("S",s)
 
                 if filter_type == 'gaussian':
                     w = signal.gaussian(window_len, std=std)
-                    #try:
-                    sma = np.ma.masked_invalid(s)
-                    y=np.ma.convolve(w/w.sum(),sma,mode='valid')
-                    #y=np.convolve(w/w.sum(),s,mode='valid')
+                    y=np.convolve(w/w.sum(),s,mode='valid')
                     res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
-                    print("Y", y)
                 elif filter_type == 'wiener':
                     res = signal.wiener(v, int(window_len), noise=0.5)
                 elif filter_type == 'butterworth':
@@ -3950,7 +3940,6 @@ CALLED BY:
                     ax1.plot(t, v, 'b.-', linewidth=2, label = 'raw data')
                     ax1.plot(t, res, 'r.-', linewidth=2, label = filter_type)
                     plt.show()
-                print (len(res), res)
                 fstream.ndarray[keyindex] = res
 
         if resample:
@@ -3967,37 +3956,6 @@ CALLED BY:
         fstream.header['DataSamplingFilter'] = filter_type + ' - ' + str(1.0/float(passband)) + ' Hz'
 
         return fstream
-
-
-
-    def nfilter(self, **kwargs):
-        """
-    DEFINITION:
-        Code for simple application, filtering function.
-        Returns stream with filtered data with sampling period of
-        filter_width.
-
-    PARAMETERS:
-    Variables:
-        - variable:     (type) Description.
-    Kwargs:
-        - filter_type:  (str) Options: gaussian, linear or special. Default = gaussian.
-        - filter_width: (timedelta object) Default = timedelta(minutes=1)
-        - filter_offset:        (timedelta object) Default=0
-        - gauss_win:    (int) Default = 1.86506 (corresponds to +/-45 sec in case of min or 45 min in case of hour).
-        - fmi_initial_data:     (DataStream containing dH values (dx)) Default=[].
-
-    RETURNS:
-        - stream:       (DataStream object) Stream containing filtered data.
-
-    EXAMPLE:
-        >>> stream_filtered = stream.filter(filter_width=timedelta(minutes=3))
-
-    APPLICATION:
-
-        """
-
-        return self.filter(**kwargs)
 
 
     def fit(self, keys, **kwargs):
@@ -5834,9 +5792,7 @@ CALLED BY:
         >>> stream_with_gaps_filled = stream_with_gaps.get_gaps(key='f')
 
     APPLICATION:
-        used by nfilter() for correct filtering
     CHANGES:
-        Last updated and tested with nfilter function by leon 2014-07-22
         """
 
         accuracy = kwargs.get('accuracy')
@@ -6461,11 +6417,11 @@ CALLED BY:
             return DataStream()
         if sr <= 0.9:
             print("Data appears to be below 1 second resolution - filtering to seconds first")
-            stream = stream.nfilter(filter_width=timedelta(seconds=1))
+            stream = stream.filter(filter_width=timedelta(seconds=1))
             sr = stream.samplingrate()
         if 0.9 < sr < 55:
             print("Data appears to be below 1 minute resolution - filtering to minutes")
-            stream = stream.nfilter(filter_width=timedelta(minutes=1))
+            stream = stream.filter(filter_width=timedelta(minutes=1))
         else:
             pass
             # get_gaps - put nans to missing data
