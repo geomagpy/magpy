@@ -1736,28 +1736,29 @@ CALLED BY:
         if debug:
             tstart = datetime.utcnow()
 
-        if len(self.ndarray[0]) > 0 and key in searchlist:
+        array = [np.asarray([]) for elem in KEYLIST]
+        if len(self) > 0 and key in searchlist:
             # get the indicies with NaN's and then use numpy delete
-            array = [np.asarray([]) for elem in KEYLIST]
             ind = KEYLIST.index(key)
-            # indicieslst = [i for i,el in enumerate(self.ndarray[ind].astype(float)) if np.isnan(el) or np.isinf(el)]
-            col = np.asarray(self.ndarray[ind]).astype(float)
-            indicieslst = []
-            for i, el in enumerate(col):
-                if np.isnan(el) or np.isinf(el):
-                    indicieslst.append(i)
-            for index, tkey in enumerate(KEYLIST):
-                if len(self.ndarray[index]) > 0 and len(self.ndarray[index]) == len(col):
-                    array[index] = np.delete(self.ndarray[index], indicieslst)
-
-            newst = [LineStruct()]
-        else:
-            newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
+            col = np.asarray(self.ndarray[ind])
+            if len(col) > 0:
+                if not key == 'time':
+                    col = col.astype(float)
+                indicieslst = np.argwhere(np.isnan(col))
+                for index, tkey in enumerate(KEYLIST):
+                    if len(self.ndarray[index]) > 0 and len(self.ndarray[index]) == len(col):
+                        array[index] = np.delete(self.ndarray[index], indicieslst)
+                if debug:
+                    print ("_drop_nans: found {} nan values".format(len(indicieslst)))
+            else:
+                array[ind] = np.asarray([])
+        #else:
+        #    newst = [elem for elem in self if not isnan(eval('elem.'+key)) and not isinf(eval('elem.'+key))]
         if debug:
             tend = datetime.utcnow()
             print("_drop_nans needed", (tend - tstart).total_seconds())
 
-        return DataStream(newst,self.header,np.asarray(array,dtype=object))
+        return DataStream([LineStruct()],self.header,np.asarray(array,dtype=object))
 
 
     def _select_keys(self, keys):

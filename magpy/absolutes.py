@@ -393,20 +393,15 @@ class AbsoluteData(object):
             check whether variometer/scalar data is available for each time step
             of DI data (within 2* samplingrate diff)
         """
-        print ("Starting check coverage")
         # 1. Drop all data without value
         for key in keys:
-            print (key)
             datastream = datastream._drop_nans(key)
         samprate = datastream.samplingrate()
-        print ("HERE1")
         if not datastream.length()[0] > 1:
             return False
-        print ("HERE2")
 
         # 2. Get time column
         timea = datastream.ndarray[0].astype(datetime64)
-        print ("HERE3")
 
         # 3. Get time column of DI data
         timeb = np.asarray([num2date(el.time) for el in self]).astype(datetime64)
@@ -1916,15 +1911,14 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                         stream = dat.getAbsDIStruct()
                         datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
                 else:
+                    # Drop pier and stationid from filename to simplify parser
                     tail = tail.replace(stationid,"")
                     tail = tail.replace(pier,"")
-                    print (tail, stationid)
-                    # the following line is just a warning supressor - id stationid is provided then everything is fine
-                    #tail = tail.replace("_A16_WIC","")
                     date = dparser.parse(tail,fuzzy=True)
                     datelist.append(datetime.strftime(date,"%Y-%m-%d"))
             except:
                 try:
+                    # Drop pier and stationid from filename to simplify parser
                     tail = tail.replace(stationid,"")
                     tail = tail.replace(pier,"")
                     date = dparser.parse(tail[:19],fuzzy=True)
@@ -1994,7 +1988,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
                 variomod = checkURL(variodata, date, debug=debug)
-                print (variomod)
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
         try:
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
