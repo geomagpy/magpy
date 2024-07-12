@@ -3913,15 +3913,9 @@ CALLED BY:
 
             # INTERMAGNET 90 percent rule: interpolate missing values if less than 10 percent are missing
             #if not conservative or missingdata in ['interpolate','mean']:
+            # missingdata not yet working
             if missingdata in ['interpolate','mean']:
-                fill = 'mean'
-                try:
-                    if missingdata == 'interpolate':
-                        fill = missingdata
-                    else:
-                        fill = 'mean'
-                except:
-                    fill = 'mean'
+                print (window_period,sampling_period)
                 v = missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
 
             if key in autofill:
@@ -3944,11 +3938,16 @@ CALLED BY:
             if v.size >= window_len:
                 #print ("Check:", v, len(v), window_len)
                 s=np.r_[v[int(window_len)-1:0:-1],v,v[-1:-int(window_len):-1]]
+                print ("S",s)
 
                 if filter_type == 'gaussian':
                     w = signal.gaussian(window_len, std=std)
-                    y=np.convolve(w/w.sum(),s,mode='valid')
+                    #try:
+                    sma = np.ma.masked_invalid(s)
+                    y=np.ma.convolve(w/w.sum(),sma,mode='valid')
+                    #y=np.convolve(w/w.sum(),s,mode='valid')
                     res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
+                    print("Y", y)
                 elif filter_type == 'wiener':
                     res = signal.wiener(v, int(window_len), noise=0.5)
                 elif filter_type == 'butterworth':
@@ -3973,7 +3972,7 @@ CALLED BY:
                     ax1.plot(t, v, 'b.-', linewidth=2, label = 'raw data')
                     ax1.plot(t, res, 'r.-', linewidth=2, label = filter_type)
                     plt.show()
-
+                print (len(res), res)
                 fstream.ndarray[keyindex] = res
 
         if resample:
