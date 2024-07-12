@@ -3893,7 +3893,7 @@ CALLED BY:
             if missingdata in ['interpolate','mean']:
                 print (window_period,sampling_period)
                 print ("Before",v)
-                v = missingvalue(v,np.round(window_period/sampling_period),fill=fill) # using ratio here and not _len
+                v = missingvalue(v,window_len=np.round(window_period/sampling_period),fill=missingdata) # using ratio here and not _len
                 print ("After", v)
 
             if key in autofill:
@@ -3956,7 +3956,7 @@ CALLED BY:
         if resample:
             if debugmode:
                 print("Resampling: ", keys, resample_period)
-            fstream = fstream.resample(keys,period=resample_period,fast=resamplefast,offset=resampleoffset)
+            fstream = fstream.resample(keys,period=resample_period,offset=resampleoffset)
 
         # ########################
         # Update header information
@@ -8194,7 +8194,6 @@ CALLED BY:
         - keys:         (list) keys to be resampled.
     Kwargs:
         - period:       (float) sampling period in seconds, e.g. 5s (0.2 Hz).
-        - fast:         (bool) use fast approximation
         - startperiod:  (integer) starttime in sec (e.g. 60 each minute, 900 each quarter hour
         - offset:       (integer) starttime in sec (e.g. 60 each minute, 900 each quarter hour
 
@@ -8208,7 +8207,6 @@ CALLED BY:
         """
 
         period = kwargs.get('period')
-        fast = kwargs.get('fast')
         offset = kwargs.get('offset')
 
         if not period:
@@ -12551,26 +12549,6 @@ def denormalize(column, startvalue, endvalue):
 def find_nearest(array, value):
     idx = (np.abs(array-value)).argmin()
     return array[idx], idx
-
-
-
-
-def nan_helper(y):
-    """Helper to handle indices and logical indices of NaNs. Taken from eat (http://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array)
-
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-         to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    """
-    y = np.asarray(y).astype(float)
-    return np.isnan(y), lambda z: z.nonzero()[0]
 
 
 def nearestPow2(x):
