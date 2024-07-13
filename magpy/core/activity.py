@@ -422,7 +422,7 @@ if __name__ == '__main__':
             k = K_fmi(minstream, debug=False)
             te = datetime.utcnow()
             successes['K_fmi'] = (
-                "Version: {}, K_fmi: {}".format(magpyversion, sr, (te - ts).total_seconds()))
+                "Version: {}, K_fmi: {}".format(magpyversion, (te - ts).total_seconds()))
         except Exception as excep:
             errors['K_fmi'] = str(excep)
             print(datetime.utcnow(), "--- ERROR determining K_fmi.")
