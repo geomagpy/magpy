@@ -5701,6 +5701,7 @@ CALLED BY:
             This method is called by the K_fmi_index method of the core.activity modul.
         RETURNS
             datalist      :  containing shifting lists of 3-day length with time, x and y
+                          :  please note: x and y are returned in 0.1 nT resolution
             samplingrate  :  in seconds
             k9_limit      : if contained within the data header, else 0
         VERSION
@@ -5759,7 +5760,7 @@ CALLED BY:
             l = r[-1] + 1440 - r[0]
             if l == 4320:
                 ar = range(r[0], r[-1] + 1440)
-                partlist = [t[ar], x[ar], y[ar]]
+                partlist = [t[ar], x[ar]*10, y[ar]*10]
                 fulllist.append(partlist)
 
         return fulllist, sr, k9_limit
