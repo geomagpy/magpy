@@ -5697,7 +5697,7 @@ CALLED BY:
             Extracts x and y lists from datastream, which are directly usabale for K fmi algorythm.
             Please make sure to provide an appropriate datastream. Eventually use hdz2xyz conversion.
             Required sampling resolution is one-minute. If HF data is provided this data is filtered to
-            one-minute with the missingdata=interpolate option.
+            one-minute without any missingdata option.
             This method is called by the K_fmi_index method of the core.activity modul.
         OPTIONS:
             missing_data  :  define a value to replace np.nans as used by MagPy
@@ -5735,7 +5735,7 @@ CALLED BY:
                 print("Filtering ...")
             datastream = datastream.get_gaps()
             datastream = datastream.filter(filter_type='gaussian', filter_width=timedelta(seconds=120),
-                                           missingdata='interpolate', resample_period=60.0)
+                                           resample_period=60.0)
             sr = datastream.samplingrate()
             amount = len(datastream)
             if debug:
