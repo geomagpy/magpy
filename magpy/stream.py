@@ -5691,6 +5691,80 @@ CALLED BY:
             return False
         return True
 
+    def get_fmi_array(self, debug=False):
+        """
+        DESCRIPTION
+            Extracts x and y lists from datastream, which are directly usabale for K fmi algorythm.
+            Please make sure to provide an appropriate datastream. Eventually use hdz2xyz conversion.
+            Required sampling resolution is one-minute. If HF data is provided this data is filtered to
+            one-minute with the missingdata=interpolate option.
+            This method is called by the K_fmi_index method of the core.activity modul.
+        RETURNS
+            datalist      :  containing shifting lists of 3-day length with time, x and y
+            samplingrate  :  in seconds
+            k9_limit      : if contained within the data header, else 0
+        VERSION
+            part of MagPy2.0.0 onwards
+        APPLICTAION
+            l, s, k = get_fmi_array(teststream, debug=True)
+        """
+        datastream = self.copy()
+        sr = datastream.samplingrate()
+        amount = len(datastream)
+        effectivelength = amount * sr / 60.
+        if debug:
+            print("Found data of length {} with a sampling rate of {} sec".format(amount, sr))
+        if not effectivelength >= 4319.9:
+            print("datastream is too short - need three full days")
+            return [[[], [], []]], 0, 0
+        # check for x and y
+        if not len(datastream.ndarray[1]) > 0:
+            print("apparently no x data - aborting")
+            return [[[], [], []]], 0, 0
+        if not len(datastream.ndarray[2]) > 0:
+            print("apparently no y data - aborting")
+            return [[[], [], []]], 0, 0
+        if sr > 60.1:
+            # sampling rate needs to be minutes at least
+            return [[[], []]], 0, 0
+        elif sr < 59.9:
+            if debug:
+                print("Filtering ...")
+            datastream = datatream.get_gaps()
+            datastream = datastream.filter(filter_type='gaussian', filter_width=timedelta(seconds=120),
+                                           missingdata='interpolate', resample_period=60.0)
+            sr = datastream.samplingrate()
+            amount = len(datastream)
+            if debug:
+                print(" after filtering: Data of length {} with a sampling rate of {} sec".format(amount, sr))
+        datastream = datastream.get_gaps()
+        k9_limit = datastream.header.get('K9_limit', 0)
+        # get first beginning of day from array
+        t = datastream.ndarray[0]
+        x = datastream.ndarray[1]
+        y = datastream.ndarray[2]
+        dayt = np.asarray([el.date() for el in t])
+        u, indices, count = np.unique(dayt, return_index=True, return_counts=True)
+        # get indicies for all count == 1440
+        validcounts = np.argwhere(count == 1440)
+        validindices = np.ndarray.flatten(indices[validcounts])
+
+        # extrect indiceranges from validindices
+        def shifting_windows(thelist, size):
+            return [thelist[x:x + size] for x in range(len(thelist) - size + 1)]
+
+        indranges = shifting_windows(validindices, 3)
+        fulllist = []
+        for r in indranges:
+            l = r[-1] + 1440 - r[0]
+            print(r, l)
+            if l == 4320:
+                ar = range(r[0], r[-1] + 1440)
+                partlist = [t[ar], x[ar], y[ar]]
+                fulllist.append(partlist)
+
+        return fulllist, sr, k9_limit
+
     def GetKeyName(self,key):
         """
         DESCRIPTION
