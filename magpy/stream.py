@@ -5769,8 +5769,8 @@ CALLED BY:
                 xr = x[ar]*10
                 yr = y[ar]*10
                 if missing_data:
-                    xr = missingvalue(xr,fill='value',fillvalue=missing_value)
-                    yr = missingvalue(yr, fill='value', fillvalue=missing_value)
+                    xr = missingvalue(xr,fill='value',fillvalue=missing_data)
+                    yr = missingvalue(yr, fill='value', fillvalue=missing_data)
                 partlist = [tr, xr, yr]
                 fulllist.append(partlist)
 
