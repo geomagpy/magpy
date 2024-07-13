@@ -5730,7 +5730,7 @@ CALLED BY:
         elif sr < 59.9:
             if debug:
                 print("Filtering ...")
-            datastream = datatream.get_gaps()
+            datastream = datastream.get_gaps()
             datastream = datastream.filter(filter_type='gaussian', filter_width=timedelta(seconds=120),
                                            missingdata='interpolate', resample_period=60.0)
             sr = datastream.samplingrate()
@@ -5757,7 +5757,6 @@ CALLED BY:
         fulllist = []
         for r in indranges:
             l = r[-1] + 1440 - r[0]
-            print(r, l)
             if l == 4320:
                 ar = range(r[0], r[-1] + 1440)
                 partlist = [t[ar], x[ar], y[ar]]
