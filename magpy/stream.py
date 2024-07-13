@@ -5691,7 +5691,7 @@ CALLED BY:
             return False
         return True
 
-    def get_fmi_array(self, debug=False):
+    def get_fmi_array(self, missing_data=None, debug=False):
         """
         DESCRIPTION
             Extracts x and y lists from datastream, which are directly usabale for K fmi algorythm.
@@ -5699,6 +5699,8 @@ CALLED BY:
             Required sampling resolution is one-minute. If HF data is provided this data is filtered to
             one-minute with the missingdata=interpolate option.
             This method is called by the K_fmi_index method of the core.activity modul.
+        OPTIONS:
+            missing_data  :  define a value to replace np.nans as used by MagPy
         RETURNS
             datalist      :  containing shifting lists of 3-day length with time, x and y
                           :  please note: x and y are returned in 0.1 nT resolution
@@ -5744,6 +5746,9 @@ CALLED BY:
         t = datastream.ndarray[0]
         x = datastream.ndarray[1]
         y = datastream.ndarray[2]
+        if missing_data:
+            if debug:
+                print ("Replacing missing data with {}".format(missing_data))
         dayt = np.asarray([el.date() for el in t])
         u, indices, count = np.unique(dayt, return_index=True, return_counts=True)
         # get indicies for all count == 1440
@@ -5760,7 +5765,13 @@ CALLED BY:
             l = r[-1] + 1440 - r[0]
             if l == 4320:
                 ar = range(r[0], r[-1] + 1440)
-                partlist = [t[ar], x[ar]*10, y[ar]*10]
+                tr = t[ar]
+                xr = x[ar]*10
+                yr = y[ar]*10
+                if missing_data:
+                    xr = missingvalue(xr,fill='value',fillvalue=missing_value)
+                    yr = missingvalue(yr, fill='value', fillvalue=missing_value)
+                partlist = [tr, xr, yr]
                 fulllist.append(partlist)
 
         return fulllist, sr, k9_limit
