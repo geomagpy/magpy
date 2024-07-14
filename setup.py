@@ -5,22 +5,9 @@ except ImportError:
 import sys
 exec(open('magpy/version.py').read())
 
-if sys.version_info < (3,5):
-        install_requires=[
-            "matplotlib < 3.0.0",
-            "numpy >= 1.5.0",
-            "scipy <= 1.2.1",
-            "paho-mqtt >= 1.2.0",
-            "pymysql <= 0.9.3",
-            "ffnet >= 0.8.0",
-            "spacepy <= 0.1.8",
-            "pexpect >= 3.1.0",
-            "kiwisolver <= 1.0.1",
-            ]
-else:
-        install_requires=[
+install_requires=[
             "matplotlib > 2.0.2",
-            "numpy >= 1.5.0",
+            "numpy >= 1.13.0",
             "scipy >= 0.8.6",
             "paho-mqtt >= 1.2.0",
             "pymysql >= 0.6.0",

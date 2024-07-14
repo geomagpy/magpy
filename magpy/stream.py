@@ -5766,8 +5766,8 @@ CALLED BY:
             if l == 4320:
                 ar = range(r[0], r[-1] + 1440)
                 tr = t[ar]
-                xr = x[ar]*10
-                yr = y[ar]*10
+                xr = x[ar].astype(float64)*10
+                yr = y[ar].astype(float64)*10
                 if missing_data:
                     xr = missingvalue(xr,fill='value',fillvalue=missing_data)
                     yr = missingvalue(yr, fill='value', fillvalue=missing_data)
@@ -8605,7 +8605,7 @@ CALLED BY:
         scipy.signal.lfilter)
 
     RETURNS:
-        - self:         (DataStream) The smoothed signal
+        - self:         (DataStream) The smoothed signal - destructive
 
     EXAMPLE:
         >>> nice_data = bad_data.smooth(['x','y','z'])
@@ -8631,20 +8631,15 @@ CALLED BY:
 
         window_len = int(window_len)
 
-        ndtype = False
-        if len(self.ndarray[0])>0:
-            ndtype = True
+        if not len(self.ndarray[0])>0:
+            return self
 
         logger.info('smooth: Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
 
         for key in keys:
             if key in NUMKEYLIST:
-
-                if ndtype:
-                    ind = KEYLIST.index(key)
-                    x = self.ndarray[ind]
-                else:
-                    x = self._get_column(key)
+                ind = KEYLIST.index(key)
+                x = self.ndarray[ind]
                 x = maskNAN(x)
 
                 if x.ndim != 1:
@@ -8667,10 +8662,7 @@ CALLED BY:
 
                 y=np.convolve(w/w.sum(),s,mode='valid')
 
-                if ndtype:
-                    self.ndarray[ind] = np.asarray(y[(int(window_len/2)):(len(x)+int(window_len/2))])
-                else:
-                    self._put_column(y[(int(window_len/2)):(len(x)+int(window_len/2))],key)
+                self.ndarray[ind] = np.asarray(y[(int(window_len/2)):(len(x)+int(window_len/2))])
             else:
                 logger.error("Column key %s not valid." % key)
 
@@ -9690,14 +9682,14 @@ CALLED BY:
 
         ndtype = False
         if len(self.ndarray[0]) > 0:
-            #self.ndarray[0] = self.ndarray[0].astype(float)
-            # remove all data from array where time is not numeric
+            # remove all data from array where time is not valid
             #1. get indicies of nonnumerics in ndarray[0]
-            nonnumlist = np.asarray([idx for idx,elem in enumerate(self.ndarray[0]) if np.isnan(elem)])
+            nonnumlist = np.nonzero(np.isnat(self.ndarray[0].astype(datetime64)))
+            #1. get indicies of nonnumerics in ndarray[0]
+            #nonnumlist = np.asarray([idx for idx,elem in enumerate(self.ndarray[0]) if np.isnan(elem)])
             #2. delete them
             if len(nonnumlist) > 0:
                 print("write: Found NaNs in time column - deleting them", nonnumlist)
-                print(self.ndarray[0])
                 for idx, elem in enumerate(self.ndarray):
                     self.ndarray[idx] = np.delete(self.ndarray[idx],nonnumlist)
 

@@ -125,7 +125,7 @@ def readCSV(filename, headonly=False, **kwargs):
                     except:
                         pass
                 elif dt:
-                    data = [date2num(dt.replace(tzinfo=None))]
+                    data = [dt.replace(tzinfo=None)]
                     dat = [el for idx,el in enumerate(row) if idx > 0]
                     data.extend(dat)
                     fulldata.append(data)
@@ -268,7 +268,7 @@ def writeCSV(datastream, filename, kind='simple',returnstring = False,**kwargs):
             for idx,el in enumerate(datastream.ndarray):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
-                        row.append((num2date(float(el[i]))).replace(tzinfo=None).isoformat()+'Z')
+                        row.append((el[i]).replace(tzinfo=None).isoformat()+'Z')
                         #row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters

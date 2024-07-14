@@ -1,5 +1,9 @@
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
 import copy
+from scipy.stats import norm
+from scipy.interpolate import UnivariateSpline
 
 class k_fmi(object):
     """
@@ -382,6 +386,388 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
 
     return DataStream([], header, np.asarray(array, dtype=object))
 
+try:
+    import emd
+    emdpackage = True
+
+    class decompose(object):
+        """
+        DESCRIPTION
+            Class to decompse any given signal into frequency bands using a emperical mode decomposition, The frequency bands
+            are analyzed using a Hilbert_Huang transform.
+        REQUIREMENTS
+            emd package for emperical mode decomposition
+        APPLICATION
+
+        """
+
+        def __init__(self, sample_frequ=1 / 60., max_imfs=16, imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6,
+                     ensemble_noise=1):
+            self.sample_frequ = sample_frequ
+            self.max_imfs = max_imfs
+            self.nensembles = nensembles
+            self.nprocesses = nprocesses
+            self.ensemble_noise = ensemble_noise
+
+        def normalize_component(self, comp):
+            comp = comp - np.nanmean(comp)
+            return comp
+
+        def emd_sift(self, comp, sift_type='mask', debug=False):
+            if sift_type == 'mask':
+                imf = emd.sift.mask_sift(comp, max_imfs=self.max_imfs)
+            elif sift_type == 'ensemble':
+                imf = emd.sift.ensemble_sift(comp, max_imfs=self.max_imfs, nensembles=24, nprocesses=6, ensemble_noise=1,
+                                             imf_opts=imf_opts)
+            else:
+                imf = emd.sift.sift(comp, max_imfs=16, imf_opts=imf_opts)
+            if debug:
+                emd.plotting.plot_imfs(imf)
+            IP, IF, IA = emd.spectra.frequency_transform(imf, self.sample_frequ, 'nht')
+            return imf, IP, IF, IA
+
+        def frequency_anaylsis(self, IF, debug=False):
+            # Frequency and Periods
+            imf_stats_dict = {}
+            p_dict = {}
+            f_dict = {}
+            for i in range(shape(IF)[1]):
+                mu, std = norm.fit(IF[:, i])
+                x = np.linspace(0, 0.0001)
+                p = norm.pdf(x, mu, std)
+                if debug:
+                    print(
+                        "Peakperiod of IMF-{}: {:.1f} hours ( {:.1f} days or {:.1f} minutes )".format(i + 1, 1 / mu / 3600,
+                                                                                                      1 / mu / 86400,
+                                                                                                      1 / mu / 60))
+                p_dict[i] = 1 / mu
+                f_dict[i] = mu
+            imf_stats_dict["period"] = p_dict
+            imf_stats_dict["frequency"] = f_dict
+            return imf_stats_dict
+
+
+    class quietday(object):
+        """
+        DESCRIPTION
+            class to determine a mainly frequency dependend quiet day curve for activity estimates
+        REQUIREMENTS
+            emd package for emperical mode decomposition
+        """
+
+        def __init__(self, sample_frequ=1 / 60., max_imfs=16, imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6,
+                     ensemble_noise=1):
+            self.sample_frequ = sample_frequ
+            self.max_imfs = max_imfs
+            self.nensembles = nensembles
+            self.nprocesses = nprocesses
+            self.ensemble_noise = ensemble_noise
+
+        def disturbed_regions(self, comp, IA, IF, f=1.5, n_imf=5, debug=False):
+            # Getting doistrubed data based on amplitude exceeding threshold on IMF 1 (~8h Period)
+            dimf = IA[:, n_imf]
+
+            Q1 = np.nanquantile(dimf, 0.25)
+            Q3 = np.nanquantile(dimf, 0.75)
+            IQR = Q3 - Q1
+            # define an upper limit, for which amplitudes exceeding this limit are definitly indicating disturbed data
+            ul = Q3 + f * IQR
+            if debug:
+                print(Q1, Q3, IQR, ul)
+
+            mu, std = norm.fit(IF[:, n_imf])
+            x = np.linspace(0, 0.0001)
+            p = norm.pdf(x, mu, std)
+            if debug:
+                print("Peakperiod: {} hours".format(1 / mu / 3600))
+
+            # gap analysis - get good and bad indicies - create bad windows array
+            exceedinginds = np.argwhere(dimf > ul)
+            disturbed_minutes = len(exceedinginds)
+            peakperiod_min = 1 / mu / 60
+            if debug:
+                print("Disturbed minutes:", disturbed_minutes)
+            disturbed_regions = []
+            for i, el in enumerate(exceedinginds):
+                el = list(el)
+                if i > 0:
+                    diff = el[0] - exceedinginds[i - 1][0]
+                    if diff == 1:
+                        win.extend(el)
+                    else:
+                        disturbed_regions.append(win)
+                        win = el
+                else:
+                    win = el
+            if debug:
+                print("Amount of disturbed regions", len(disturbed_regions))
+            # Extend the size of each region by periods width before and after to be sure that beginning and end of disturbance is grapped
+            extender = int(peakperiod_min)
+            if debug:
+                print(extender)
+            ndisturbed_regions = []
+            win_stats = []
+            for el in disturbed_regions:
+                start = el[0] - extender
+                end = el[-1] + extender
+                if start < 0:
+                    start = 0
+                if end > len(comp) - 1:
+                    end = len(comp) - 1
+                win = list(range(start, end + 1))
+                win_stats.append(len(win))
+                ndisturbed_regions.append(win)
+            # List the average, maximal and mininmal lengths of disturbed ranges
+            if debug:
+                print("Window minimal length (hours)", min(win_stats) / 60)
+                print("Window maximal length (hours)", max(win_stats) / 60)
+                print("Window average length (hours)", mean(win_stats) / 60)
+            # Combine eventually overlapping regions later with cycle
+            return ndisturbed_regions
+
+        def create_mask(self, comp, ndisturbed_regions, IP, n_imf=8):
+            C = emd.cycles.Cycles(IP[:, n_imf])
+            l = C.metrics['is_good']
+            good = []
+            for ii, el in enumerate(l):
+                if el:
+                    good.append(ii)
+            cycles_to_plot = good
+            # get a mask for all bad data and also a array for plotting shaded boxes with bad data
+            fullmask = np.full(len(comp), True)
+            for ii in range(len(cycles_to_plot)):
+                currinds = C.get_inds_of_cycle(cycles_to_plot[ii])
+                truearray = np.full(len(currinds), False)
+                np.put(fullmask, currinds, truearray)
+
+            for currinds in ndisturbed_regions:
+                falsearray = np.full(len(currinds), True)
+                np.put(fullmask, currinds, falsearray)
+            return fullmask
+
+        def waveform(self, imf, IP, IA, imf_stats, fullmask, debug=False):
+            # cycle waveform  - use mask from disturbed indicies and only use last 27 days (and next 27 days in one year)
+            # go from cycle to cycle
+            all_cycles = emd.cycles.get_cycle_vector(IP, return_good=False)
+
+            p_dict = imf_stats.get("period")
+            len_imf = shape(IP)[1]  # ranging from 1 tp len_imf
+            if len_imf <= 6:
+                return
+
+            disturbed_mask = IA[:, 8] > .05
+            gapadoption = 'linear'
+
+            # go through all cycle below minute frequ 11
+            max_range_cycle = 11
+            if len_imf < 11:
+                max_range_cycle = len_imf
+            cycle_range = 13  # i.e. 27 days 13 + 1 + 13
+            waveformdict = {}
+            orgwaveformdict = {}
+            for n_imf in range(6, max_range_cycle):
+                if debug:
+                    print("Analyzing average cycle for IMF-{}".format(n_imf + 1))
+                mean_imf = np.zeros(len(imf[:, n_imf])) * np.nan
+                Ci = emd.cycles.Cycles(IP[:, n_imf])
+                n_cycles = all_cycles[:, n_imf].max()
+                if debug:
+                    print(" - N of cycles", n_cycles)
+                if n_imf > 8:
+                    cycle_range = int(cycle_range / 2)
+                for n, cycle in enumerate(Ci):
+                    cycledict = {}
+                    # print ("    running cycle", n)
+                    newmask = [el for el in disturbed_mask]
+                    currinds = Ci.get_inds_of_cycle(n)
+                    # print (inds)
+                    # eventually reduce the cycle range for keep 27 days above IMF-9
+                    upper_limit = n + cycle_range
+                    lower_limit = n - cycle_range
+                    first_valid = 99999999
+                    last_valid = 0
+                    if lower_limit >= 0:
+                        # get last index of
+                        inds = Ci.get_inds_of_cycle(lower_limit)
+                        if inds.any() and len(inds) > 0:
+                            first_valid = inds[0]
+                    else:
+                        inds = Ci.get_inds_of_cycle(0)
+                        if inds.any() and len(inds) > 0:
+                            first_valid = inds[0]
+                    if upper_limit > 0 and upper_limit < n_cycles:
+                        inds = Ci.get_inds_of_cycle(upper_limit)
+                        if inds.any() and len(inds) > 0:
+                            last_valid = inds[-1]
+                    else:
+                        inds = Ci.get_inds_of_cycle(n_cycles)
+                        if inds.any() and len(inds) > 0:
+                            last_valid = inds[-1]
+                    # print ("    First and last valid",first_valid, last_valid)
+                    if not last_valid == 0 and not first_valid == 99999999:
+                        newmask = np.array(
+                            [False if i < first_valid or i >= last_valid else el for i, el in enumerate(newmask)])
+                    else:
+                        newmask = newmaskprev
+                    newmaskprev = newmask
+                    cycles_tobeused = emd.cycles.get_cycle_vector(IP, return_good=True, mask=newmask)
+                    period = p_dict.get(n_imf) / 60
+                    win_len = int(2 * period)
+                    # print (period)
+                    waveform = np.zeros((win_len, cycles_tobeused.max())) * np.nan
+                    for ii in range(1, cycles_tobeused.max() + 1):
+                        inds = cycles_tobeused[:, n_imf] == ii
+                        waveform[:np.sum(inds), ii - 1] = imf[inds, n_imf]
+                    # print (len(waveform), currinds[0],currinds[-1])
+                    np.put(mean_imf, currinds, np.nanmedian(waveform, axis=1))
+                    # print (mean_imf)
+                    if n == 0 and debug:
+                        plt.title('Linear avg. waveform')
+                        plt.plot(np.nanmean(waveform, axis=1))
+                        plt.xticks(np.arange(5) * 400, [])
+                        plt.grid(True)
+                # fit meadin_imf with spline:
+                amount = len(mean_imf)
+                t = np.linspace(0, amount, amount)
+                # Asign zero weigths to nan values
+                w = np.isnan(mean_imf)
+                mean_imf[w] = 0.
+                spl = UnivariateSpline(t, mean_imf, w=~w)
+                orgwaveformdict[n_imf] = mean_imf
+                waveformdict[n_imf] = spl(t)
+
+            for n_imf in range(11, len_imf):
+                if debug:
+                    print("Interpolating gaps for IMF-{}".format(n_imf + 1))
+                # remove disturbed regions
+                ma = np.ma.masked_array(data=imf[:, n_imf], mask=fullmask)
+                ma_filled = ma.filled(np.nan)
+                if gapadoption == 'linear':
+                    # linear interpolation
+                    nans, x = nan_helper(ma_filled)
+                    ma_filled[nans] = np.interp(x(nans), x(~nans), ma_filled[~nans])
+                    waveformdict[n_imf] = ma_filled
+                else:
+                    # interpolate nan values using cubic spline or line?
+                    amount = len(ma_filled)
+                    t = np.linspace(0, amount, amount)
+                    # Asign zero weigths to nan values
+                    w = np.isnan(ma_filled)
+                    ma_filled[w] = 0.
+                    spl = UnivariateSpline(t, ma_filled, w=~w)
+                    waveformdict[n_imf] = spl(t)
+            return waveformdict
+
+        def weight_func(self, fullmask, w=720):
+            # w is windowlength in minutes, default 720 minutes == 12h
+            double = fullmask.astype(int) * 2
+            weightfunc = np.convolve((double), np.ones(w), 'same') / w
+            weightfunc[weightfunc > 1] = 1
+            return weightfunc
+
+        def joint_bl(self, comp, emd_baseline, median_baseline, weightfunc):
+            min = range(0, len(comp))
+            joint_baseline = np.zeros(len(comp)) * np.nan
+            for i in min:
+                vals = [emd_baseline[i], median_baseline[i]]
+                weights = np.array([1 - weightfunc[i], weightfunc[i]])
+                joint_baseline[i] = np.average(vals, weights=weights)
+            return joint_baseline
+
+
+    def emd_decompose(onedarray, sift_type='mask', sample_frequ=1 / 60., max_imfs=16, imf_opts={'sd_thresh': 0.1},
+                      nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
+        """
+        DESCRIPTION
+            Decompose any given signal into ferquency bands
+        """
+        dc = decompose(sample_frequ=sample_frequ, max_imfs=max_imfs, imf_opts=imf_opts, nensembles=nensembles,
+                       nprocesses=nprocesses, ensemble_noise=ensemble_noise)
+        comp = dc.normalize_component(onedarray)
+        imf, IP, IF, IA = dc.emd_sift(comp, sift_type=sift_type, debug=debug)
+        stats = dc.frequency_anaylsis(IF, debug=debug)
+        return comp, imf, IP, IF, IA, stats
+
+
+    def qdbase(datastream, components=['x'], baseline_type='emd', sift_type='mask', sample_frequ=1 / 60., max_imfs=16,
+               imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
+        """
+        DESCRIPTION
+            Feed at least 1 month of one-miute data into this function.
+            Three different types of quiet day baselines can be obtained
+            emd : baseline based on emperical mode decomposition corresponding to a low pass approximately above 3h
+            median : baseline based on average cycle and and its frequency dependend median waveform
+            joint : baseline combination of emd and median. emd is used in for time ranges assumed to be undisturbed.
+                    Disturbed regions (geomag storms etc) are masked and filled median baseline is used there.
+                    A weighting function is used for smooth emd - median -emd conversions
+        PARAMETERS
+            datastream
+            components
+            baseline_type
+            sift_type='mask'
+            sample_frequ=1/60.
+            max_imfs=16
+            imf_opts={'sd_thresh': 0.1}
+            nensembles=24
+            nprocesses=6
+            ensemble_noise=1
+        RETURNS
+            a datastream with quiet day baselines for all selected components
+        APPLICATION
+            bs = qdbase(teststream, components=['x'], baseline_type='joint')
+
+        """
+        emd_baseline = None
+        median_baseline = None
+        # step1 - use minute data
+        sr = datastream.samplingrate()
+        if not sr <= 60.3:
+            return
+        elif sr < 59.7:
+            datastream = datastream.filter()
+        header = copy.deepcopy(datastream.header)
+        t = datastream.ndarray[0]
+        array = [np.asarray([]) for el in KEYLIST]
+        # step2 - test datastream vailidity
+        qd = quietday()
+        # step3 - extract components
+        for c in components:
+            compindex = KEYLIST.index(c)
+            comp = datastream._get_column(c)
+            cmean = np.nanmean(comp)
+            if debug:
+                print("Amount of data:", len(comp))
+            ncomp, imf, IP, IF, IA, stats = emd_decompose(comp, sift_type=sift_type, sample_frequ=sample_frequ,
+                                                          max_imfs=max_imfs, imf_opts=imf_opts, nensembles=nensembles,
+                                                          nprocesses=nprocesses, ensemble_noise=ensemble_noise)
+            emd_baseline = imf[:, 6]
+            for i in range(7, shape(IP)[1]):
+                emd_baseline += imf[:, i]
+            if baseline_type in ['median', 'joint']:
+                ndisturbed_regions = qd.disturbed_regions(ncomp, IA, IF)
+                mask = qd.create_mask(ncomp, ndisturbed_regions, IP)
+                waveform = qd.waveform(imf, IP, IA, stats, fullmask=mask, debug=debug)
+                median_baseline = waveform.get(6)
+                for i in range(7, shape(IP)[1]):
+                    median_baseline += waveform.get(i)
+                if baseline_type in ['joint']:
+                    weightfunc = qd.weight_func(fullmask=mask)
+                    baseline = qd.joint_bl(ncomp, emd_baseline, median_baseline, weightfunc)
+                else:
+                    baseline = median_baseline
+            else:
+                baseline = emd_baseline
+            array[compindex] = baseline + cmean
+
+        array[0] = t
+        header['SensorID'] = "BL{}-{}".format(baseline_type, datastream.header.get('SensorID'))
+
+        return DataStream([], header, np.asarray(array, dtype=object))
+except:
+    print (" - install the emd package to use quiet day baseline estimates")
+    emdpackage = False
+    pass
+
 if __name__ == '__main__':
 
     print()
@@ -397,15 +783,15 @@ if __name__ == '__main__':
     # Creating a test data set of second resolution and 6 day length
     c = 4000 # 4000 nan values are filled at random places to get some significant data gaps
     array = [[] for el in KEYLIST]
-    x = np.random.uniform(20950, 21000, size=(144, 1))
+    x = np.random.uniform(20950, 21000, size=(288, 1))
     x = np.tile(x, (1, 60*60)).flatten()
     x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
     array[1] = x
-    y = np.random.uniform(1950, 2000, size=(144, 1))
+    y = np.random.uniform(1950, 2000, size=(288, 1))
     y = np.tile(y, (1, 60*60)).flatten()
     y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
     array[2] = y
-    z = np.random.uniform(44300, 44400, size=(144, 1))
+    z = np.random.uniform(44300, 44400, size=(288, 1))
     z = np.tile(z, (1, 60*60)).flatten()
     array[3] = z
     array[0] = np.asarray([datetime(2022,11,21)+timedelta(seconds=i) for i in range(0,len(z))])
@@ -426,6 +812,17 @@ if __name__ == '__main__':
         except Exception as excep:
             errors['K_fmi'] = str(excep)
             print(datetime.utcnow(), "--- ERROR determining K_fmi.")
+        if emdpackage:
+            try:
+                ts = datetime.utcnow()
+                minstream = teststream.filter(missingdata='interploate')
+                bs = qdbase(minstream, components=['z'], baseline_type='')
+                te = datetime.utcnow()
+                successes['qdbaseline'] = (
+                    "Version: {}, qdbaseline: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['qdbaseline'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR determining quiet day baseline")
 
         break
 
