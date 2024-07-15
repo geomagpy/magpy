@@ -414,6 +414,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
     header['DataSamplingRate'] = 10800
     header['StationK9'] = K9_limit
     header['DataSamplingFilter'] = 'FMI K determination'
+    header['col-var1'] = 'K'
 
     return DataStream([], header, np.asarray(array, dtype=object))
 

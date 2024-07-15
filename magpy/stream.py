@@ -1880,15 +1880,19 @@ CALLED BY:
         #Clear the projected results column
         array = []
         aic2ind = KEYLIST.index(aic2key)
-        self = self._clear_column(aic2key)
+        if len(self.ndarray[aic2ind]) > 0:
+            print ("aic_calc: cannot use the projected column {} for data storage as this contains data already".format(aic2key))
+            return self
         if len(self.ndarray[0]) > 0.:
             self.ndarray[aic2ind] = np.empty((len(self.ndarray[0],)))
             self.ndarray[aic2ind][:] = np.NAN
         # get sampling interval for normalization - need seconds data to test that
-        sp = self.get_sampling_period()*24*60
+        sp = self.samplingrate()
         # corrcet approach
         iprev = 0
         iend = 0
+
+        # change the following approach completely - extract ranges based on indices
 
         while iend < len(t)-1:
             istart = iprev
