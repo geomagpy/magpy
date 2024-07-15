@@ -157,8 +157,14 @@ def readCSV(filename, headonly=False, **kwargs):
                 #print (typus, elementunit)
                 if typus == 'N':
                     assign[idx] = numkeys[numN]
-                    comments['col-{}'.format(numkeys[numN])] = elementunit[0]
-                    comments['unit-col-{}'.format(numkeys[numN])] = elementunit[1]
+                    try:
+                        comments['col-{}'.format(numkeys[numN])] = elementunit[0]
+                    except:
+                        comments['col-{}'.format(numkeys[numN])] = numkeys[numN]
+                    try:
+                        comments['unit-col-{}'.format(numkeys[numN])] = elementunit[1]
+                    except:
+                        pass
                     numN += 1
                 elif typus == 'S':
                     assign[idx] = strkeys[strN]

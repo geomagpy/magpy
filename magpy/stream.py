@@ -835,7 +835,7 @@ CALLED BY:
                 newelem = np.delete(elem, duplicateindicies)
                 array[idx] = newelem
 
-        return DataStream(self, self.header, np.asarray(array,dtype=object))
+        return DataStream(header=self.header, ndarray=np.asarray(array,dtype=object))
 
 
     def start(self, dateformt=None):
@@ -1078,7 +1078,7 @@ CALLED BY:
         else:
             self.ndarray = self.ndarray
 
-        return DataStream(liste, self.header, self.ndarray)
+        return DataStream(header=self.header, ndarray=self.ndarray)
 
     # ------------------------------------------------------------------------
     # B. Internal Methods: Line & column functions
@@ -1397,7 +1397,7 @@ CALLED BY:
                     array[idx] = self.ndarray[idx]
         else:
             pass
-        return DataStream(self,self.header,np.asarray(array,dtype=object))
+        return DataStream(header=self.header,ndarray=np.asarray(array,dtype=object))
 
 
     # ------------------------------------------------------------------------

@@ -17,94 +17,175 @@ Typical usage of the basic MagPy package for reading and visualising data looks 
 
 Below you will find a quick guide to usage of the basic MagPy package. For instructions on *xmagpy* please refer to the document "[An introduction to XMagPy]" in the docs. You can also subscribe to our information channel at [Telegram] for further information on updates and current issues.
 
-## 1. INSTALLATION
 
-Pleas note that with the publication of MagPy 1.0 the recommended python enironment is >= 3.6. The following installation instructions will assume such an environment. Particularly if you are using Python2.7 please go to the end of this sections for help.
+### Contents
 
-This section is currently updated and will be ready with the publication of MagPy 1.0.
+1. Installation and requirements
+2. Quick guide with often used commands
+3. Reading and writing, data typs
+4. Figures
+5. Timeseries methods
+6. Annotating data and flagging
+7. DI-flux measurements, basevalues and baselines
+8. Geomagnetic activity analysis
+9. Database support
+10. Additional tools and applications
 
-### 1.1 Linux installation (Ubuntu,Debian)
+## 1. INSTALLATION AND REQUIREMENTS
 
-#### 1.1.1 Complete Install
+In the following you will find a quick summary on how to install MagPy2.x on various different operating systems.
+If you are looking for instructions on how to install the graphical version "XMagPy" versions 2.x please consult
+the appropriate manual. Some general instructions for XMagPy are listed in section 1.x.
 
-Tested for Ubuntu 18.04 and Debian Stretch (full installation with all optional packages). Please note that installation requires python 3.x and the python3-pip package (usually already available, if not use "sudo apt-get install python3-pip").
+We highly recommend installing MagPy in appropriate python environments (Python>=3.7). Within
+the following instructions we will show examples specifically for anaconda/miniconda
+python environments.
 
-        $ sudo pip3 install geomagpy    #Will install MagPy and all dependencies
+### 1.1 Prerequisites
 
-The graphical user interface xmagpy additionally requires WX. Use either
+MagPy requires Python3.7 or newer. MagPy makes use of a number of packages of which the following are 
+essential for its basic functionality: 
+numpy
+scipy
+matplotlib
 
-        $ sudo apt-get install python3-wxgtk4.0
-or
-        $ sudo pip3 install wxpython
+Optional but recommended python packages are:
+cdflib : support of ImagCDF, the INTERMAGNET one-second format, and internal MagPy CDF archives)
+jupyter-notebook : coding
+pandas : timeseries manipulation (flagging and activity analysis)
+pymysql : mysql/mariaDB data base support
+paho-mqtt : realtime data access of MARTAS
+pysubpub :  realtime data access of MARTAS
+emd : empirical mode decomposition for Sq (solar quiet) analysis and flagging
+sklearn : AI flagging support and geomagnetic activity forcasts
 
 
-You can now run XMagPy  by using the following command
+### 1.2 Linux installation (Ubuntu,Debian like systems)
 
-        $ xmagpy
+In the following we assume a basic knowledge of linux systems and installations. 
+You need a working version of anaconda or miniconda.
 
-#### 1.1.2 Updates
+  - we recommend [Miniconda] or [Anaconda]
+  - see e.g. https://docs.continuum.io/anaconda/install for more details
+  - before continuing, test whether python is working. Open a terminal and run python
 
-To upgrade to the most recent version (replace x.x.x with the current version number):
+Now open a terminal and create a python environment with packages for magpy which supports jupyter-notebook and includes essential packages:
 
-        $ sudo pip3 install geomagpy==x.x.x
-
-Please do not use the -U option if not recommended for the new upgrade.
-
-#### 1.1.3 Creating a desktop link
-
-In order to create a desktop link on linux systems please refer to instruction too be found your distribution. For Ubunutu and other Debian systems such links are created as follows:
-
-Firstly create a file "xmagpy.desktop" which contains:
-
-        [Desktop Entry]
-        Type=Application
-        Name=XMagPy
-        GenericName=GeoMagPy User Interface
-        Exec=xmagpy
-        Icon=/usr/local/lib/python3.7/dist-packages/magpy/gui/magpy128.xpm
-        Terminal=false
-        Categories=Application;Development;
-
-Then copy this file to the systems application folder:
-
-        sudo cp xmagpy.desktop /usr/share/applications/
-
-### 1.1.4 Installation within a Conda or other environment
-
-Open a terminal and create a python environment with packages for magpy which supports wxpython:
-
-        $ conda create -n magpy wxpython
+        (base)$ conda create -n jnmagpy scipy numpy matplotlib notebook
 
 Switch into this environment:
 
-        $ conda activate magpy
+        (base)$ conda activate jnmagpy
 
-Install some basic packages required for MagPy:
+Install some basic packages packages for full MagPy support:
 
-        $ conda install numpy matplotlib scipy
+        (jnmagpy)$ conda install pymysql
 
-and MagPy:
+and finally MagPy:
 
-        $ pip install geomagpy
+        (jnmagpy)$ pip install geomagpy
+
+Now you can run python in the terminal and import the magpy package:
+
+        (jnmagpy)$: python
+        >>> from magpy.stream import *
+        >>> data = read("path_to_supported_data")
+
+To upgrade to the most recent version (replace x.x.x with the current version number):
+
+        $ pip install geomagpy==x.x.x
+
+Running magpy within jupyter-notebook. First switch to a path were you want to store your notebooks:
+
+        (jnmagpy)$: cd ~/MyNotenooks
+ 
+and then start jupyter-notebook
+
+        (jnmagpy)$: juypter-notebook
+
+This will open a browser window. Please follow the jn instruction here
+
+To use MagPy import and select an appropriate backend:
+
+        > from magpy.stream import *
+        > matplotlib.use("tkagg")
+        > %matplotlib inline
 
 
-### 1.2 MacOs installation
+### 1.3 MacOs installation
 
-#### 1.2.1 Install a python3 interpreter
+Please also use a python environment for MacOs usage
 
   - we recommend [Miniconda] or [Anaconda]
   - see e.g. https://docs.continuum.io/anaconda/install for more details
   - before continuiung, test whether python is working. Open a terminal and run python
 
-#### 1.2.2 Install MagPy within an anaconda environment
+Follow the instructions of 1.2.
 
-Follow the instructions of 1.1.4.
+
+### 1.4 Windows installation
+
+#### 1.4.1 Install MagPy for Windows
+
+  - get the [MagPy Windows installer] here (under Downloads):
+        https://cobs.geosphere.at
+  - download and execute magpy-x.x.x.exe
+  - all required packages are included in the installer
+
+#### 1.4.2 Post-installation information
+
+  - MagPy will have a sub-folder in the Start menu. Here you will find three items:
+
+        * command -> opens a DOS shell within the Python environment e.g. for updates
+        * python  -> opens a python shell ready for MagPy
+        * xmagpy  -> opens the MagPy graphical user interface
+
+#### 1.4.3 Update an existing MagPy installation on Windows
+
+  - right-click on subfolder "command" in the start menu
+  - select "run as administrator"
+  - issue the following command "pip install -U geomagpy"
+    (you can also specify the version e.g. pip install geomagpy==0.x.x)
+
+
+### 1.5 Installing XMagPy on Linux/MacOs
+
+XMagPy is making use of wxpython. Basically we are mainly testing the linux version 
+of this application and try to keep up with support for other operating systems. We highly recommend
+to follow the instructions below.
+
+#### 1.5.1 XMagPy prerequisites on Linux
+
+WX support requires the following package.
+
+        $ sudo apt-get install python3-wxgtk4.0
+
+In order to get a suitable python environment for wxpython you then need to create a new one based on wxpython
+
+        (base)$ conda create -n wxmagpy wxpython
+
+Then install the essential packages:
+
+        (base)$ conda activate wxmagpy
+
+        (wxmagpy)$ conda install numpy scipy matplotlib
+
+Continue with the optional packages as shown in 1.2
+Finally you can run the graphical user interface as follows:
+
+        (wxmagpy)$ xmagpy
+
+#### 1.5.2 Creating a desktop link for Linux
+
+#### 1.5.3 XMagPy on MacOs
+
+Follow the instructions of 1.5.1.
 
 You can now run XMagPy from the terminal by using the following command
 
         $ xmagpyw
 
-#### 1.2.3 Creating a desktop link
+#### 1.5.4 Creating a desktop link for MacOs
 
 To execute a python program within a specific environment it is recommended to create a small startupscript i.e. named xmagpy:
 
@@ -115,72 +196,6 @@ To execute a python program within a specific environment it is recommended to c
 
 Make it executable e.g. by chmod 755 xmagpy.
 Open Finder and search for your script "xmagpy". Copy it to the desktop. To change the icon, click on the xmagpy link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder).
-
-
-### 1.3 Windows installation - WinPython Package
-
-#### 1.3.1 Install MagPy for Windows
-
-  - get the [MagPy Windows installer] here (under Downloads):
-        https://cobs.zamg.ac.at
-  - download and execute magpy-x.x.x.exe
-  - all required packages are included in the installer
-
-#### 1.3.2 Post-installation information
-
-  - MagPy will have a sub-folder in the Start menu. Here you will find three items:
-
-        * command -> opens a DOS shell within the Python environment e.g. for updates
-        * python  -> opens a python shell ready for MagPy
-        * xmagpy  -> opens the MagPy graphical user interface
-
-#### 1.3.3 Update an existing MagPy installation on Windows
-
-  - right-click on subfolder "command" in the start menu
-  - select "run as administrator"
-  - issue the following command "pip install -U geomagpy"
-    (you can also specify the version e.g. pip install geomagpy==0.x.x)
-
-#### 1.3.4 Installation with user priviledges only
-
-  - Download a most recent version of WinPython3.x
-  - Unpack in your home directory
-  - Go to the WinPython Folder and run WinPython command prompt
-  - issue the same commands as for MacOS installation
-  - to run XMagPy: use xmagpy from the WinPython command promt.
-
-
-### 1.4 Jupyter Notebook installation and use
-
-Create an appropriate environment
-
-        $ conda create -n jnmagpy notebook scipy numpy matplotlib
-
-Switch into this environment:
-
-        $ conda activate jnmagpy
-
-Install magpy:
-
-        $ pip install geomagpy
-
-        or
-
-        $ python -m pip install geomagpy
-
-Run jupyter notebook:
-
-        $ jupyter notebook
-
-Import magpy and select appropriate backend:
-
-        > from magpy.stream import *
-        > matplotlib.use("tkagg")
-        > %matplotlib inline
-
-### 1.5 Installation instructions for Python 2.7
-
-  - has been moved to the appendix 5.1
 
 
 ### 1.6 Platform independent container - Docker
@@ -211,29 +226,6 @@ Import magpy and select appropriate backend:
             >>> mp.plot(data)
 
 
-
-### 1.7 Install from source
-
-Requirements:
-  - Python 2.7, 3.x (recommended is >=3.6)
-
-Recommended:
-  - Python packages:
-    * wxpython (for python2.7 it needs to be 3.x or older)
-    * NasaCDF (python 2.7 only)
-    * SpacePy (python 2.7 only)
-
-  - Other useful Software:
-    * pyproj (for geographic coordinate systems)
-    * MySQL (database features)
-    * Webserver (e.g. Apache2, PHP)
-
-        git clone git://github.com/GeomagPy/MagPy.git
-        cd magpy*
-        sudo python setup.py install
-
-
-
 ## 2. A quick guide to MagPy
 
 written by R. Leonhardt, R. Bailey (April 2017)
@@ -255,8 +247,59 @@ Start python. Import all stream methods and classes using:
 
 Please note that this import will shadow any already existing `read` method.
 
+## To be moved elsewhere
 
-### 2.2 Reading and writing data
+
+### 2.3 Getting help on options and usage
+
+#### 2.3.1 Python's help function
+
+Information on individual methods and options can be obtained as follows:
+
+For basic functions:
+
+        help(read)
+
+For specific methods related to e.g. a stream object "data":
+
+        help(data.fit)
+
+Note that this requires the existence of a "data" object, which is obtained e.g. by data = read(...). The help text can also be shown by directly calling the *DataStream* object method using:
+
+        help(DataStream().fit)
+
+
+
+#### 2.3.2 MagPy's logging system
+
+MagPy automatically logs many function options and runtime information, which can be useful for debugging purposes. This log is saved by default in the temporary file directory of your operating system, e.g. for Linux this would be `/tmp/magpy.log`. The log is formatted as follows with the date, module and function in use and the message leve (INFO/WARNING/ERROR):
+
+        2017-04-22 09:50:11,308 INFO - magpy.stream - Initiating MagPy...
+
+Messages on the WARNING and ERROR level will automatically be printed to shell. Messages for more detailed debugging are written at the DEBUG level and will not be printed to the log unless an additional handler for printing DEBUG is added.
+
+Custom loggers can be defined by creating a logger object after importing MagPy and adding handlers (with formatting):
+
+        from magpy.stream import *
+        import logging
+
+        logger = logging.getLogger()
+        hdlr = logging.FileHandler('testlog.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        hdlr.setFormatter(formatter)
+        logger.addHandler(hdlr)
+
+The logger can also be configured to print to shell (stdout, without formatting):
+
+        import sys
+        logger = logging.getLogger()
+        stdoutlog = logging.StreamHandler(sys.stdout)
+        logger.addHandler(stdoutlog)
+
+
+
+
+## 3. Reading and writing data
 
 MagPy supports the following data formats and thus conversions between them:
    - WDC: 	World Data Centre format
@@ -298,7 +341,7 @@ Several example data sets are provided within the MagPy package:
    - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1
    - `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1
 
-#### 2.2.1 Reading
+### 3.1 Reading
 
 For a file in the same directory:
 
@@ -317,7 +360,7 @@ Pathnames are related to your operating system. In this guide we will assume a L
         print(data._get_key_headers() )
 
 
-#### 2.2.2 Writing
+### 3.2 Writing
 
 After loading data from a file, we can save the data in the standard IAGA02 and IMAGCDF formats with the following commands.
 
@@ -335,7 +378,7 @@ To get an overview about possible write options use:
 
         help(DataStream().write)
 
-#### 2.2.3 Other possibilities for reading files
+### 3.3 Other possibilities for reading files
 
 To read all local files ending with .min within a directory (creates a single stream of all data):
 
@@ -366,11 +409,11 @@ Reading data from the INTERMAGNET Webservice:
         data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
 
 
-#### 2.2.4 Format-specific options
+### 3.4 Format-specific options
 
 Some file formats contain multiple data sources and when writing certain archive formats, additional information will bve save in separate files. Below you will find descriptions for such format-specific pecularities.
 
-##### IAF format
+#### IAF format
 
 The IAF (INTERMAGNET archive format) contains 1-minute data along with filtered 1-hour data and daily averages. Typically components X,Y,Z and delta F (G) values are provided. Beside the geomagnetic components, the K indicies (3 hour resolution) are also contained within  the IAF structure.
 When reading IAF data, by default only the 1-minute data is loaded. If you want to access other resolutions data or K values you can use the following "resolution" options (hour, day, k) while reading (please note: XMagPy only allows for reading minute data):
@@ -383,13 +426,13 @@ When writing IAF data, you need to provide 1-minute geomagnetic data covering at
 
 Additionally a README.IMO file will be created and filled with existing meta information. If at least on year of 1-minute data is written, then also a DKA file will be created containing K values separatly. Please checkout INTERMAGNET format specifications for further details on DKA, README and IAF formats.   
 
-##### IMF format
+#### IMF format
 
 The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI (for Edinbourgh). To change that use the "gin" option.
 
         data.write('/path/to/export/IMF/', gin="GOL")
 
-##### IMAGCDF format
+#### IMAGCDF format
 
 The IMAGCDF format can contain several data sets from different instruments represented by different time columns. Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower resolution.
 MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and "missing values" will be represented as NaN.
@@ -407,69 +450,23 @@ MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy
 
 Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous" to display graphs of low resolution data sets.  
 
-#### 2.2.5 Selecting timerange
+### 3.5 Selecting timerange
 
 The stream can be trimmed to a specific time interval after reading by applying the trim method, e.g. for a specific month:
 
         data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
 
-### 2.3 Getting help on options and usage
-
-#### 2.3.1 Python's help function
-
-Information on individual methods and options can be obtained as follows:
-
-For basic functions:
-
-        help(read)
-
-For specific methods related to e.g. a stream object "data":
-
-        help(data.fit)
-
-Note that this requires the existence of a "data" object, which is obtained e.g. by data = read(...). The help text can also be shown by directly calling the *DataStream* object method using:
-
-        help(DataStream().fit)
-
-
-#### 2.3.2 MagPy's logging system
-
-MagPy automatically logs many function options and runtime information, which can be useful for debugging purposes. This log is saved by default in the temporary file directory of your operating system, e.g. for Linux this would be `/tmp/magpy.log`. The log is formatted as follows with the date, module and function in use and the message leve (INFO/WARNING/ERROR):
-
-        2017-04-22 09:50:11,308 INFO - magpy.stream - Initiating MagPy...
-
-Messages on the WARNING and ERROR level will automatically be printed to shell. Messages for more detailed debugging are written at the DEBUG level and will not be printed to the log unless an additional handler for printing DEBUG is added.
-
-Custom loggers can be defined by creating a logger object after importing MagPy and adding handlers (with formatting):
-
-        from magpy.stream import *
-        import logging
-
-        logger = logging.getLogger()
-        hdlr = logging.FileHandler('testlog.log')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        hdlr.setFormatter(formatter)
-        logger.addHandler(hdlr)
-
-The logger can also be configured to print to shell (stdout, without formatting):
-
-        import sys
-        logger = logging.getLogger()
-        stdoutlog = logging.StreamHandler(sys.stdout)
-        logger.addHandler(stdoutlog)
-
-
-### 2.4 Plotting
+## 4. Figures
 
 You will find some example plots at the [Conrad Observatory](http://www.conrad-observatory.at).
 
-#### 2.4.1 Quick (and not dirty)
+### 4.1 A quick timersies plot
 
         import magpy.mpplot as mp
         mp.plot(data)
 
-#### 2.4.2 Some options
+## 4.2 Some options
 
 Select specific keys to plot:
 
@@ -485,7 +482,7 @@ Reefining the y-axis range for the y colum between 0 and automatic maximum value
         mp.plot(data,variables=['x','y'],plottitle="Test plot",
                 colorlist=['g', 'c'], specialdict = {'y':[0,]})
 
-#### 2.4.3 Data from multiple streams
+## 4.3 Data from multiple streams
 
 Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
 
@@ -493,88 +490,10 @@ Various datasets from multiple data streams will be plotted above one another. P
 
 Please note that the gui is also using the plotstreams method and all options have to be provided as list.
 
-### 2.5 Flagging data
 
-The flagging procedure allows the observer to mark specific data points or ranges. Falgs are useful for labelling data spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a type number. The flagtype number ranges between 0 and 4:
+## 5. Timeseries methods
 
-  - 0:  normal data with comment (e.g. "Hello World")
-  - 1:  data marked by automated analysis (e.g. spike)
-  - 2:  data marked by observer as valid geomagnetic signature (e.g. storm onset, pulsation). Such data cannot be marked invalid by automated procedures
-  - 3:  data marked by observer as invalid (e.g. lightning, magnetic disturbance)
-  - 4:  merged data (e.g. data inserted from another source/instrument as defined in the comment)   
-
-Flags can be stored along with the data set (requires CDF format output) or separately in a binary archive. These flags can then be applied to the raw data again, ascertaining perfect reproducibility.
-
-
-#### 2.5.1 Mark data spikes
-
-Load a data record with data spikes:
-
-        datawithspikes = read(example1)
-
-Mark all spikes using the automated function `flag_outlier` with default options:
-
-        flaggeddata = datawithspikes.flag_outlier(timerange=timedelta(minutes=1),threshold=3)
-
-Show flagged data in a plot:
-
-        mp.plot(flaggeddata,['f'],annotate=True)
-
-
-#### 2.5.2 Flag time range
-
-Flag a certain time range:
-
-        flaglist = flaggeddata.flag_range(keys=['f'], starttime='2012-08-02T04:33:40',
-                                          endtime='2012-08-02T04:44:10',
-                                          flagnum=3, text="iron metal near sensor")
-
-Apply these flags to the data:
-
-        flaggeddata = flaggeddata.flag(flaglist)
-
-Show flagged data in a plot:
-
-        mp.plot(flaggeddata,['f'],annotate=True)
-
-
-#### 2.5.3 Save flagged data
-
-To save the data together with the list of flags to a CDF file:
-
-        flaggeddata.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
-
-To check for correct save procedure, read and plot the new file:
-
-        newdata = read("/tmp/MyFlaggedExample_*")
-        mp.plot(newdata,annotate=True, plottitle='Reloaded flagged CDF data')
-
-
-#### 2.5.4 Save flags separately
-
-To save the list of flags seperately from the data in a pickled binary file:
-
-        fullflaglist = flaggeddata.extractflags()
-        saveflags(fullflaglist,"/tmp/MyFlagList.pkl"))
-
-These flags can be loaded in and then reapplied to the data set:
-
-        data = read(example1)
-        flaglist = loadflags("/tmp/MyFlagList.pkl")
-        data = data.flag(flaglist)
-        mp.plot(data,annotate=True, plottitle='Raw data with flags from file')
-
-#### 2.5.5 Drop flagged data
-
-For some analyses it is necessary to use "clean" data, which can be produced by dropping data flagged as invalid (e.g. spikes). By default, the following method removes all data marked with flagtype numbers 1 and 3.
-
-        cleandata = flaggeddata.remove_flagged()
-        mp.plot(cleandata, ['f'], plottitle='Flagged data dropped')
-
-
-### 2.6 Basic methods
-
-#### 2.6.1 Filtering
+### 5.1 Filtering
 
 MagPy's `filter` uses the settings recommended by [IAGA]/[INTERMAGNET]. Ckeck `help(data.filter)` for further options and definitions of filter types and pass bands.
 
@@ -591,20 +510,20 @@ Get sampling rate and filtered data after filtering (please note that all filter
         print("Sampling rate after [sec]:", filtereddata.samplingrate())
         print("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
 
-#### 2.6.2 Coordinate transformation
+### 5.2 Coordinate transformation
 
 Assuming vector data in columns [x,y,z] you can freely convert between xyz, hdz, and idf coordinates:
 
         cleandata = cleandata.xyz2hdz()
 
-#### 2.6.3 Calculate delta F
+### 5.3 Calculate delta F
 
 If the data file contains xyz (hdz, idf) data and an independently measured f value, you can calculate delta F between the two instruments using the following:
 
         cleandata = cleandata.delta_f()
         mp.plot(cleandata,plottitle='delta F')
 
-#### 2.6.4 Calculate Means
+### 5.4 Calculate Means
 
 Mean values for certain data columns can be obtained using the `mean` method. The mean will only be calculated for data with the percentage of valid data (in contrast to missing data) points not falling below the value given by the percentage option (default 95). If too much data is missing, then no mean is calulated and the function returns NaN.
 
@@ -614,26 +533,26 @@ The median can be calculated by defining the `meanfunction` option:
 
         print(cleandata.mean('df', meanfunction='median'))
 
-#### 2.6.5 Applying offsets
+### 5.5 Applying offsets
 
 Constant offsets can be added to individual columns using the `offset` method with a dictionary defining the MagPy stream column keys and the offset to be applied (datetime.timedelta object for time column, float for all others):
 
         offsetdata = cleandata.offset({'time':timedelta(seconds=0.19),'f':1.24})
 
-#### 2.6.6 Scaling data
+### 5.6 Scaling data
 
 Individual columns can also be multiplied by values provided in a dictionary:
 
         multdata = cleandata.multiply({'x':-1})
 
-#### 2.6.7 Fit functions
+### 5.7 Fit functions
 
 MagPy offers the possibility to fit functions to data using either polynomial functions or cubic splines (default):
 
         func = cleandata.fit(keys=['x','y','z'],knotstep=0.1)
         mp.plot(cleandata,variables=['x','y','z'],function=func)
 
-#### 2.6.8 Derivatives
+### 5.8 Derivatives
 
 Time derivatives, which are useful to identify outliers and sharp changes, are calculated as follows:
 
@@ -641,33 +560,412 @@ Time derivatives, which are useful to identify outliers and sharp changes, are c
         mp.plot(diffdata,variables=['dx','dy','dz'])
 
 
-#### 2.6.9 All methods at a glance
+### 5.9 Merging streams
+
+Merging data comprises combining two streams into one new stream. This includes adding a new column from another stream, filling gaps with data from another stream or replacing data from one column with data from another stream. The following example sketches the typical usage:
+
+        print("Data columns in data2:", data2._get_key_headers())
+        newstream = mergeStreams(data2,kvals,keys=['var1'])
+        print("Data columns after merging:", data2._get_key_headers())
+        mp.plot(newstream, ['x','y','z','var1'],symbollist=['-','-','-','z'])
+
+If column `var1` does not existing in data2 (as above), then this column is added. If column `var1` had already existed, then missing data would be inserted from stream `kvals`. In order to replace any existing data, use option `mode='replace'`.
+
+### 5.10 Differences between streams
+
+Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtractStreams` is provided for this analysis:
+
+        diff = subtractStreams(data1,data2,keys=['f'])
+
+
+### 5.11 All methods at a glance
 
 For a summary of all supported methods, see the section **List of all MagPy methods** below.
 
+## 6. Annotating data and flagging
 
-### 2.7 Geomagnetic analysis
+Data flagging is handled by an additional package.
 
-#### 2.7.1 Determination of K indices
+The flagging procedure allows the observer to mark specific data points or ranges. Falgs are useful for labelling data spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a type number. The flagtype number ranges between 0 and 4:
 
-MagPy supports the FMI method for determination of K indices. Please consult the MagPy publication for details on this method and application.
+  - 0:  normal data with comment (e.g. "Hello World")
+  - 1:  data marked by automated analysis (e.g. spike)
+  - 2:  data marked by observer as valid geomagnetic signature (e.g. storm onset, pulsation). Such data cannot be marked invalid by automated procedures
+  - 3:  data marked by observer as invalid (e.g. lightning, magnetic disturbance)
+  - 4:  merged data (e.g. data inserted from another source/instrument as defined in the comment)   
+
+Flags can be stored along with the data set (requires CDF format output) or separately in a binary archive. These flags can then be applied to the raw data again, ascertaining perfect reproducibility.
+
+
+### 6.1 Mark data spikes
+
+Load a data record with data spikes:
+
+        datawithspikes = read(example1)
+
+Mark all spikes using the automated function `flag_outlier` with default options:
+
+        flaggeddata = datawithspikes.flag_outlier(timerange=timedelta(minutes=1),threshold=3)
+
+Show flagged data in a plot:
+
+        mp.plot(flaggeddata,['f'],annotate=True)
+
+
+### 6.2 Flag time range
+
+Flag a certain time range:
+
+        flaglist = flaggeddata.flag_range(keys=['f'], starttime='2012-08-02T04:33:40',
+                                          endtime='2012-08-02T04:44:10',
+                                          flagnum=3, text="iron metal near sensor")
+
+Apply these flags to the data:
+
+        flaggeddata = flaggeddata.flag(flaglist)
+
+Show flagged data in a plot:
+
+        mp.plot(flaggeddata,['f'],annotate=True)
+
+
+### 6.3 Save flagged data
+
+To save the data together with the list of flags to a CDF file:
+
+        flaggeddata.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
+
+To check for correct save procedure, read and plot the new file:
+
+        newdata = read("/tmp/MyFlaggedExample_*")
+        mp.plot(newdata,annotate=True, plottitle='Reloaded flagged CDF data')
+
+
+### 6.4 Save flags separately
+
+To save the list of flags seperately from the data in a pickled binary file:
+
+        fullflaglist = flaggeddata.extractflags()
+        saveflags(fullflaglist,"/tmp/MyFlagList.pkl"))
+
+These flags can be loaded in and then reapplied to the data set:
+
+        data = read(example1)
+        flaglist = loadflags("/tmp/MyFlagList.pkl")
+        data = data.flag(flaglist)
+        mp.plot(data,annotate=True, plottitle='Raw data with flags from file')
+
+### 6.5 Drop flagged data
+
+For some analyses it is necessary to use "clean" data, which can be produced by dropping data flagged as invalid (e.g. spikes). By default, the following method removes all data marked with flagtype numbers 1 and 3.
+
+        cleandata = flaggeddata.remove_flagged()
+        mp.plot(cleandata, ['f'], plottitle='Flagged data dropped')
+
+
+## 7. DI-flux measurements, basevalues and baselines
+
+The first sections will give you a quick overview about the application of methods related to DI-Flux analysis, determination und usage of baseline values (basevalues), and adopted baselines. The theoretical background and details on these application are found in section 2.11.7. These procedures require an additional import:
+
+        from magpy import absolutes as di
+
+### 7.1 Data structure of DI measurements
+
+Please check `example3`, which is an example DI file. You can create these DI files by using the input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, please contact the Observatory staff. Also supported are DI-files from the AUTODIF.
+
+### 7.2 Reading DI data
+
+Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field information needs to be provided as well. Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in section 2.11.7. A typical analysis looks like:
+
+        diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
+
+Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the filename. For the following commands to work you need to be within the examples directory.
+
+        $ mkdir /tmp/DI
+        $ cp example6a.txt /tmp/DI/2018-08-29_07-16-00_A2_WIC.txt
+        $ cp example5.sec /tmp/DI/
+
+The we start python and import necessary packages
+
+        >>>from magpy import absolutes as di
+        >>>import magpy.mpplot as mp
+        >>>from magpy.stream import read
+
+Finally we issue the analysis command.
+
+        >>>diresult = di.absoluteAnalysis('/tmp/DI/2018-08-29_07-16-00_A2_WIC.txt','/tmp/DI/*.sec','/tmp/DI/*.sec')
+
+
+Calling this method will provide terminal output as follows and a stream object `diresult` which can be used for further analyses.
+
+        >>>...
+        >>>Analyzing manual measurement from 2015-03-25
+        >>>Vector at: 2015-03-25 08:18:00+00:00
+        >>>Declination: 3:53:46, Inclination: 64:17:17, H: 21027.2, Z: 43667.9, F: 48466.7
+        >>>Collimation and Offset:
+        >>>Declination:    S0: -3.081, delta H: -6.492, epsilon Z: -61.730
+        >>>Inclination:    S0: -1.531, epsilon Z: -60.307
+        >>>Scalevalue: 1.009 deg/unit
+        >>>Fext with delta F of 0.0 nT
+        >>>Delta D: 0.0, delta I: 0.0
+
+Fext indicates that F values have been used from a separate file and not provided along with DI data. Delta values for F, D, and I have not been provided either. `diresult` is a stream object containing average D, I and F values, the collimation angles, scale factors and the base values for the selected variometer, beside some additional meta information provided in the data input form.
+
+
+### 7.3 Reading BLV files
+
+Basevalues:
+
+        blvdata = read('/path/myfile.blv')
+        mp.plot(blvdata, symbollist=['o','o','o'])
+
+Adopted baseline:
+
+        bldata = read('/path/myfile.blv',mode='adopted')
+        mp.plot(bldata)
+
+### 7.4 Basevalues and baselines
+
+Basevalues as obtained in (2.11.2) or (2.11.3) are stored in a normal data stream object, therefore all analysis methods outlined above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example4`, you will find some more DI analysis results. To plot these basevalues we can use the following plot command, where we specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H and Z, +/- 0.05 deg for D.
+
+        basevalues = read(example3)
+        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5])
+
+Fitting a baseline can be easily accomplished with the `fit` method. First we test a linear fit to the data by fitting a polynomial function with degree 1.
+
+        func = basevalues.fit(['dx','dy','dz'],fitfunc='poly', fitdegree=1)
+        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
+
+We then fit a spline function using 3 knotsteps over the timerange (the knotstep option is always related to the given timerange).
+
+        func = basevalues.fit(['dx','dy','dz'],fitfunc='spline', knotstep=0.33)
+        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
+
+Hint: a good estimate on the necessary fit complexity can be obtained by looking at delta F values. If delta F is mostly constant, then the baseline should also not be very complex.
+
+
+### 7.5 Applying baselines
+
+
+The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. The basic building block of the baseline method is the fit function as discussed above. Lets first load raw vectorial geomagnetic data, the absevalues of which are contained in above example:
+
+        rawdata = read(example5)
+
+Now we can apply the basevalue information and the spline function as tested above:
+
+        func = rawdata.baseline(basevalues, extradays=0, fitfunc='spline',
+                                knotstep=0.33,startabs='2015-09-01',endabs='2016-01-22')
+
+The `baseline` method will determine and return a fit function between the two given timeranges based on the provided basevalue data `blvdata`. The option `extradays` allows for adding days before and after start/endtime for which the baseline function will be extrapolated. This option is useful for providing quasi-definitive data. When applying this method, a number of new meta-information attributes will be added, containing basevalues and all functional parameters to describe the baseline. Thus, the stream object still contains uncorrected raw data, but all baseline correction information is now contained within its meta data. To apply baseline correction you can use the `bc` method:
+
+        corrdata = rawdata.bc()
+
+
+Pease note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
+
+
+If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and combine the resulting baseline functions to  a list:
+
+        stream = read(mydata,starttime='2016-01-01',endtime='2016-03-01')
+        basevalues = read(mybasevalues)
+        adoptedbasefunc = []
+        adoptedbasefunc.append(stream.baseline(basevalues, extradays=0, fitfunc='poly', fitdegree=1,startabs='2016-01-01',endabs='2016-02-01')
+        adoptedbasefunc.append(stream.baseline(basevalues, extradays=0, fitfunc='spline', knotstep=0.33,startabs='2016-01-02',endabs='2016-01-03')
+
+        corr = stream.bc()
+
+The combined baseline can be plotted accordingly. Extend the function parameters with each additional segment.
+
+        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=adoptedbasefunc)
+
+Adding a baseline for scalar data, which is determined from the delta F values provided within the basevalue data stream:
+
+        scalarbasefunc = []
+        scalarbasefunc.append(basevalues.baseline(basevalues, keys=['df'], extradays=0, fitfunc='poly', fitdegree=1,startabs='2016-01-01',endabs='2016-03-01'))
+        plotfunc = adoptedbasefunc
+        plotfunc.extend(scalarbasefunc)
+        mp.plot(basevalues, variables=['dx','dy','dz','df'], symbollist=['o','o','o','o'], padding=[5,0.05,5,5], function=plotfunc)
+
+Getting dailymeans and correction for scalar baseline can be acomplished by:
+
+        meanstream = stream.dailymeans()
+        meanstream = meanstream.func2stream(scalarbasefunc,mode='sub',keys=['f'],fkeys=['df'])
+        meanstream = meanstream.delta_f()
+
+Please note that here the function originally determined from the deltaF (df) values of the basevalue data needs to be applied to the F column (f) from the data stream. Before saving we will also extract the baseline parameters from the meta information, which is automatically generated by the `baseline` method.
+
+        absinfo = stream.header.get('DataAbsInfo','')
+        fabsinfo = basevalues.header.get('DataAbsInfo','')
+
+
+### 7.6 Saving basevalue and baseline information
+
+The following will create a BLV file:
+
+        basevalues.write('/my/path', coverage='all', format_type='BLV', diff=meanstream, year='2016', absinfo=absinfo, deltaF=fabsinfo)
+
+Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched above.
+
+ ### 7.7 Details on DI-flux analysis and calculation of basevalues
+
+Basevalues, often also referred to as **(component) baseline values**, are commonly obtained from DI-flux measurements, which are analyzed in combination with an independent fluxgate variometer. 
+Dependent on the DI-flux measurement technique, the variometer orientation and the source of also required scalar data varying analysis procedures have been suggested. In the following we outline the analysis technique of MagPy specifically related to different orientations and measurement techniques.
+The following terms are used throughout the methodological description and MagPy's interfaces. Fluxgate variometers are most commonly oriented either along a magnetic coordinate system, hereinafter denoted as **HEZ** (sometimes HDZ), or a geographic coordinate system **XYZ**. 
+Within the  magnetic coordinate system, the orthogonal fluxgate triple of variometers is oriented in a way, that the north component points towards magnetic north (H component), the east component E towards magnetic east and vertical points down. For geographic orientation Z is identically pointing down, X towards geographic north and Y towards geographic east. For other orientations please refer to the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf).
+
+#### 7.7.1 Theory of DI-analysis and basevalue calculation
+
+For describing the mathematical methodology we apply a similar notation as used within the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf). Lets start with the following setup. The variometer used for evaluating the DI-flux measurement is oriented along a magnetic coordinate system (Figure XX). The actually measured components of the variometer are denoted N, E and V (North, East Vertical close to magnetic coordinate system). Each component consists of the following elements: 
+
+$$N = N_{base} + N_{bias} + N_{var}$$
+
+where $N_{var}$ is the measured variation, $N_{bias}$ contains the fluxgates bias field, and $N_{base}$ the components basevalue.
+Some instruments measure the quasi-absolute field variation, which would correspond to 
+
+$$N_{v} = N_{bias} + N_{var}$$
+
+and thus the basevalues $N_{base}$ are typically small. This approach, making use of constant bias fields as provided within the LEMI025 binary data output is used for example at the Conrad Observatory. Another commonly used analysis approach combines bias fields and actual baseline values to  
+
+$$N_{b} = N_{bias} + N_{base}$$
+
+wherefore the hereby used $N_{b}$ are large in comparison to the measured variations $N_{var}$. All components are dependent on time. Bias field and basevalues, however, can be assumed to stay constant throughout the DI-flux measurement. Therefore, both approaches outlined above are equally effective. Hereinafter, we always assume variation measurements close to the total field value and for all field measurements within one DI-flux analysis we can describe north and vertical components as follows:
+
+$$N(t_i) = N_{base} + N_{v}(t_i)$$
+
+$$V(t_i) = V_{base} + V_{v}(t_i)$$
+ 
+For the east component in an HEZ oriented instrument bias fields are usually set to zero. Thus $E$ simplifies to $E = E_{base} + E_{var}$. If the instrument is properly aligned along magnetic coordinates is simplifies further to 
+
+$$E(t_i) = E_{var}(t_i)$$
+
+as $E_{base}$ gets negligible (?? is that true??). The correct geomagnetic field components H, D and Z at time t for a HEZ oriented variometer can thus be calculated using the following formula (see also [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf)):
+
+$$H(t) =  \sqrt{(N_{base} + N_{v}(t))^2 + E_{var}(t)^2}$$
+
+$$D(t) =  D_{base} + arctan(\frac{E_{var}(t)}{N_{base} + N_{v}(t)}$$
+
+$$Z(t) =  V_{base} + V_{v}(t)$$
+
+In turn, basevalues can be determined from the DI-Flux measurement as follows:
+
+$$N_{base} =  \sqrt{(H(t_i))^2 – E_{var}(t_i)2} - N_{v}(t_i)$$
+
+$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)}$$
+
+$$V_{base} =  Z(t_i) – V_{v}(t_i)$$
+
+where $H(t_i)$, $D(t_i)$ and $Z(t_i)$ are determined from the DI-Flux measurement providing declination $D(t_i)$ and inclination $I(t_i)$, in combination with an absolute scalar value obtained either on the same pier prior or after the DI-Flux measurement $(F(t_j))$, or from continuous measurements on a different pier.  As variometer measurements and eventually scalar data are obtained on different piers, pier differences also need to be considered. Such pier differences are denoted by $\delta D_v$, $\delta I_v$ and $\delta F_s$.
+ 
+The measurement procedure of the DI-flux technique requires magnetic east-west orientation of the optical axis of the theodolite. This is achieved by turning the theodolite so that the fluxgate reading shows zero (zero field method). Alternatively, small residual readings of the mounted fluxgate probe $(E_{res})$ can be considered (residual method). 
+
+#### 7.7.2 Iterative application in MagPy
+
+MagPy’s DI-flux analysis scheme for HEZ oriented variometers follows almost exactly the DTU scheme (citation , Juergen), using an iterative application. Basically, the analysis makes use of two main blocks. The first block (method *calcdec*) analyses the horizontal DI flux measurements, the second block (*calcinc*) analyses the inclination related steps of the DI-flux technique. 
+The first block determines declination $D(t)$ and $D_{base}$ by considering optional measurements of residuals and pier differences:
+
+$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \delta D_v$$
+
+If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a zero field technique. Initially, $N_{base}$ is unknown. Therefore, $N_{base}$ will either be set to zero or optionally provided annual mean values will be used as a starting criteria. It should be said that the choice is not really important as the iterative technique will provide suitable estimates already during the next call. A valid input for $H(t)$ is also required to correctly determine collimation data of the horizontal plane.
+The second block will determine inclination $I(t)$ as well as $H(t) = F(t) cos(I(t))$ and $Z(t) = F(t) sin(I(t))$. It will further determine $H_{base}$ and $Z_{base}$. Of significant importance hereby is a valid evaluation of F for each DI-Flux measurement. 
+
+$$F(t_i) = F_m + (N_v(t_i) – N_m) cos(I) + (V_v(t_i)-V_m) sin(I) + (E_v(t_i)^2-E_m^2) / (2 F_m)$$
+
+where $F_m$ is the mean F value during certain time window, and $N_m$, $V_m$, $E_m$ are means of the variation measurement in the same time window. Thus $F(t_i)$ will contain variation corrected F values for each cycle of the DI-flux measurement.
+Based on these F values the angular correction related to residuals can be determined
+
+$$I_{res}(t_i) =  arcsin(\frac{E_{res}(t_i)}{F(t_i)}$$
+
+and finally, considering any provided $\delta I$ the DI-flux inclination value.
+H(t) and Z(t) are calculated using the resulting inclination by
+
+$$H(t) = F(t) cos(I)$$
+
+$$Z(t) = F(t) sin(I)$$
+
+and basevalues are finally obtained using formulas given above.
+As both evaluation blocks contain initially unkown parameters, which are however determined by the complementary block, the whole procedure is iteratively conducted until resulting parameters do not change any more in floating point resolution. Firstly, calcdec is conducted and afterwards calcinc. Then the results for $H$ and $H_{basis}$ are feed into calcdec when starting the next cycle. Usually not more than two cycles are necessary for obtaining final DI-flux parameters. Provision off starting parameters (i.e. annual means) is possible, but not necessary. By default, MagPy is running three analysis cycles.
+
+#### 7.7.3 Scalar data source
+
+Scalar data is essential for correctly determining basevalues. The user has basically three options to provide such data. Firstly, a scalar estimate can be taken from provided annual means (use option annualmeans=[21300,1700,44000] in method **absoluteAnalysis** (2.11.2), annual means have to be provided in XYZ, in nT). A correct determination of basevalues is not possible this way but at least a rough estimate can be obtained. If only such scalar source is provided then the F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fannual**. 
+If F data is continuously available on a different pier, you should feed that time series into the **absoluteAnalysis** call (or use the add scalar source option in XMagPy). Every MagPy supported data format or source can be used for this purpose. Such independent/external F data, denoted $F_{ext}$, requires however the knowledge of pier differences between the DI-flux pier and the scalar data (F) pier. If $F_{ext}$ is your only data source you need to provide pier differences $\delta F_s$ to **absoluteAnalysis** in nT using option deltaF. In XMagPy you have to open „Analysis Parameters“ on the DI panel and set „dideltaF“.  The F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fext**. The provided $\delta F_s$ value will be included into **diresults**, both within the deltaF column and added to the description string **Fext**. 
+If F data is measured at the same pier as used for the DI-flux measurement, usually either directly before or after the DI-flux series, this data should be added into the DI absolute file structure (see 2.11.1).  Variation data, covering the time range of F measurements and DI-Flux measurements is required to correctly analyze the measurement. If such F data is used **diresults** will contain the input **Fabs**. 
+If $F_{abs}$ and $F_{ext}$ are both available during the analysis, then MagPy will use  $F_{abs}$ (F data from the DI-flux pier) for evaluating the DI-Flux measurement. It will also determine the pier difference 
+
+$$\delta F_s  = F_{abs} – F_{ext}(uncorr)$$.
+
+This pier difference will be included into diresults within the delta F column. The F-description column in **diresults** will contain **Fabs**.  Any additionally, manually provided delta F value will show up in this column as well (**Fabs_12.5**). For the standard output of the DI-flux analysis any manually provided delta F will have been applied to $F_{ext}(corr)$.  
+
+#### 7.7.4 Using a geographically oriented variometer (XZY)
+
+The above outlined basevalue determination method is rather stable against deviations from ideal variometer orientations. Thus, you can use the very same technique also to evaluate basevalues for XYZ oriented variometers as long as your sites’ declination is small. A rough number would be that angular deviations (declination) of 3 degrees will lead to differences below 0.1 nT in basevalues. The small differences are related to the fact that strictly speaking the above technique is only valid if the variometer is oriented perfectly along the current magnetic coordinate system.
+MagPy (since version 1.1.3) also allows for evaluating XYZ variometer data by obtaining basevalues also in a XYZ representation. This technique requires accurate orientation of your variation instrument in geographic coordinates. Provided such precise orientation, the basic formula for obtaining basevalues get linear and simplifies to 
+
+$$X_{base} =  X(t_i) – X_{v}(t_i)$$
+
+$$Y_{base} =  Y(t_i) - Y_{v}(t_i)$$
+
+$$Z_{base} =  Z(t_i) – Z_{v}(t_i)$$
+
+By default, MagPy will always create basevalues in HDZ components, even if xyz variation data is provided. If you want basevalues in XYZ components you need to confirm manually that the provided variation data is geographically oriented when calling **absoluteAnalysis**. Use option **variometerorientation=”XYZ”** for this purpose.  
+
+#### 7.7.5 Using other variometer orientation
+
+If you want to use variometer data in any other orientation then the two discussed above, it is necessary rotate your data set into one of the supported coordinate systems. Such rotations can be performed using MagPy's **rotate** method. Please note, that is then also necessary to rotate your variometers raw data using the same angular parameters prior to baseline adoption.
+
+
+### 7.8 Summary - General procedure for the baselineAnalysis method: 
+
+- Reading variometer data from defined source (DB, file, URL)
+- Convert coordinate representation to nT for all axis.
+- If DB only: apply DB flaglist, get and apply all DB header info, apply DB delta values (timediff, offsets)
+- Rotation or compensation option selected: headers bias/compensation fields are applied
+- If DB and rotation: apply alpha and beta rotations from DB meta info
+- manually provided offsets and rotation are applied
+- flags are removed
+- interpolate variometerdata using default DataStream.interpol
+- Reading scalar data from defined source
+- If DB: apply flaglist, header and deltas
+- apply option offsets
+- remove flags and interpolate
+- add interpolated values of vario and scalar into DI structure (at corresponding time steps), here manually provided delta F's are considered
+- If DB and not provided manually: extract pier differences for variometer from DB (dD and dI)
+- Start of iterative basevalue calculation procedure (repeated 3 times)
+
+## 8. Geomagnetic activity
+
+Please import activity related functionality to enable the methods shown below:
+
+        (jnmagpy)$ from magpy.core import activity as act
+
+### 8.1 Determination of K indices
+
+MagPy supports the FMI method for determination of K indices. This method is derived from the 
+original C code  K_index.h by Lasse Hakkinen, Finnish Meteorological Institute.  
+Details on the procedure can be found here: citation
+We strongly recommend to supply minute data to this routine. Lower resolution data will throw an error
+message. Higher resolution data will be filtered using IAGA recommendations. The supplied data set needs to cover 
+at least three subsequent days of data. The first and last day of the sequence will not be analyzed.
+
+The datas et need to contain X,Y and Z components of which X and Y are analyzed. You can use
+MagPy's timeseries methods to transform your data sets accordingly if needed. 
 
 A month of one minute data is provided in `example2`, which corresponds to an [INTERMAGNET] IAF archive file. Reading a file in this format will load one minute data by default. Accessing hourly data and other information is described below.
 
         data2 = read(example2)
-        kvals = data2.k_fmi()
+
+        kvals = act.K_fmi(data2)
+
+The output of the K_fmi method is a DataStream object which contains timesteps and K values associated with the 'var1' key. 
 
 The determination of K values will take some time as the filtering window is dynamically adjusted. In order to plot the original data (H component) and K values together, we now use the multiple stream plotting method `plotStreams`. Here you need to provide a list of streams and an array containing variables for each stream. The additional options determine the appearance of the plot (limits, bar chart):
 
-        mp.plotStreams([data2,kvals],[['x'],['var1']],
-                       specialdict = [{},{'var1':[0,9]}],
-                       symbollist=['-','z'],
-                       bartrange=0.06)
+        p = tsplot([data2,kvals],keys=[['x','y'],['var1']], labelx=-0.08, symbols=[["-"],["k"]], title="K value plot", symbolcolor=[[0.5, 0.5, 0.5]], patch=patch, showpatch=[True,False], grid=True,height=2)
 
-`'z'` in `symbollist` refers to the second subplot (K), which should be plotted as bars rather than the standard line (`'-'`).
+`'k'` in `symbollist` refers to the second subplot (K), which will then be plotted as bars rather than the standard line (`'-'`).
 
 
-#### 2.7.2 Automated geomagnetic storm detection
+### 8.2 Automated geomagnetic storm detection
 
 Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike Information Criterion (AIC) as outlined in detail in Bailey and Leonhardt (2016). A basic example of usage to find an SSC using a Discrete Wavelet Transform (DWT) is shown below:
 
@@ -690,12 +988,96 @@ The method `seekStorm` will return two variables: `detection` is True if any det
         print("Possible SSCs detected:", ssc_list)
 
 
-#### 2.7.3 Sq analysis
+#### 8.3 Sq analysis
 
-Methods are currently in preparation.
+Identifying solar quiet variations is a challenging subject of geomagnetic data analysis. The basic objective 
+is finding/identifying a variation curve of geomagnetic data which is unaffected by active solar regions. Thus such
+solar quiet curve can be subtracted from actually measured data to unambiguously identify solar activity influences
+on the geomagnetic field. Such solar quiet curve is often also referred to a 'baseline'. Please be careful not to 
+mix it with the observatory baseline as outlined in chapter 7. In the following we will use the term "sq-variation". 
+Before discussing the actual methods currently provided by MagPy it is worthwhile to look briefly at some
+influences on the geomagnetic records and there effective time ranges  in order to understand the complexitiy of separating such sq-variation curve.
+
+The following sources and variations should affect the baseline/variation:
+- long term secular variation and jerks (earth internal field)
+- solar cycle variations (sun cycle)
+- yearly/seasonal variations (position of current system, relative distance, angle)
+- neutral atmospheric variation - should also be seasonal) 
+- 27 day solar rotation cycle (recurrance of solar activity)
+- daily variation (ionospheric current systems)
+- lunar cycle with 12.4 hours
+- solar activity (cme - days)
+- solar activity (flare,spe - less than hours)
+- pulsations (typically, less then hours)
+- artifical/technical disturbances (mostly less than seconds to minutes):
+
+Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define the sq variation. This is a general 
+feature of many sq-variation separation techniques and also forms the basis of our approach. For frequency separation we are decomposing the original signal
+into "frequency" bands using an empirical mode decomposition technique. Each decomposition step, "sift" is removing complexitity from the original data curve.
+In order to get comparable amount of sifts with similar frequency contents for different data selections we are using solely time windows of 263000 minutes, corresponding to half a year of geomagnetic data.
+This time range is good enough to cover essential periods affecting sq-variation evolution below seasonal effects. Additionally it is quickly applicable.
+
+Dealing with a test data set in one-minute resolution from the Conrad Observatory. Data characteristics are outline in Fig. 1 (show horizontal component, show prominent marks, and highlight a few zoom-ins with specific data segments shown throughtout the manuscript).
+Now we apply emperical-mode-decomposition on this data set. Figure 2 show a decomposition results with all 16-18 sifts, and the sum of all. The sum
+of all sifts corresponds exactly to the original signal, which is an important aspekt of the EMD, which will be show later. In a next step we are 
+specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to analyse distribuations of 
+instantenous frequencies, amplitudes and phases of each sift. Results for IMF-6 and IMF-9 are shown in Fig. 3. IMF-6 is hereby marking a period of about 3h
+just above the range which we are using for the general baseline approximation. IMF-9 contains the prominant diurnal magnetic signal which is nicely visible on the Amplitude weighted plot of the Hilbert-Huang-Transform.
+
+(Actually this was the state for ongoing feature detection before I read Veronikas work)
+
+The problem of this purly frequency based baseline separation is, that during disturbed time of the geomagnetic field also longer periods of the geomagnetic field are affected with large amplitudes. A CME for example will affect the geomagnetic field for hours to days and thus is not adequately considered using this baseline technique as periodicities clearly affected by such disturbed time ranges are contained
+within the baseline approximation. For this work we are primarly interested in auto-detecting signoificant features of the geomagnetic field of natural and artificial origin. CME effects and an optimal description of onset, amplitude and duration certainly belong to these features. Therefore
+the "quiet" reference baseline, containing untested features should not be biased by features which we are interested in.  
+
+To deal with such effects two approaches are known so far, the SuperMag method and the Haberle method. Describe them...
+
+We are following a slightly different technical approach. In principle we are using two characteristics of IMF's in order to identify clearly disturbed time ranges, for which a standard baseline approxiumaion as shown above is not precise.
+Firstly we are examing the amplitude variation of an IMF with periods just above the baseline period range. Hereby we asume that larger amplitudes are 
+connected to disturbances predominantly to disturbaces related to solar effects, but still well above the period range of artificial disturbing sources. This is a perfectly valid asupmtion as shown in Fig. 4 (original signal with flags of CME from the CME database
+and cyclisitity of IMF-8). Using a statistical standard procedure, we asume the time ranges (plus-minus a period range) of any IMF-6 data exceeding the inner-quartile range by a factor of 1.5 as being disturbed. This approach can be applied to any data set independent from location.
+Secondly, we analyze the cyclicity of the diurnal signal, whch is obviuosly the most prominent period, and also might be affected by solar effects on the ionospheric current system. For this 
+purpose we are analyzing the phase singal of IMF-9, whether the phase is strictly increasing, whether the phase covers a full 2Pi range and ...
+Cycles not satisfying these criteria are termed "bad" cycles and are also removed from the baseline approcimation.
+In summary, these two methods will lead to gaps within the baseline approximation as shown in Fig 5.
+
+Approximating the baseline for non-quiet periods:
+
+Running a cycle analysis for all periodic IMF curves between IMF-7 and IMF 12. Calculate the median cycle of 27 cycle window (13 cycles before and 13 cycles after the current). 27 cycle window is chosen on basis the solar recurrence period on the daily signal. In order to fill remaining gaps and smooth Überganäng between individual median cycles, the median cycle IMF is fitted by a cubic spline function with
+knots at each data point and using zero weights for non-existing data. The result of these steps are shown in Fig. 6. In order to get a mean data for IMF above 12 we simply use a linear interpolation of the gaps, as the average(max) gap length is significantly below the cycle frequency.
+
+A median baseline is then obtained by summing up the median IMF's 7-12 and the interpolated IMF's 13-16. Fig. 7 shows a comparison of original data, EMD baseline amd median baseline. 
+Analysis of quiet day fits. 
+
+Is the median baseline really the better choice? For relatively undisturbed data choose the EMD baseline for disturbed regions we choose the median baseline.
+
+Create a weighting array to calculate mean using a linear daily adoption
+Joint EMD and median baseline.
 
 
-#### 2.7.4 Validity check of data
+
+
+
+
+
+Challange:
+1. compose a geomagnetic data set by source definitions like in gravity (impossible as many sources and interactions are unkown)
+2. separate sources ... - monthly means and above describe secular variation
+                        - below is already affected by solar activity
+                        - 
+Test analysis: take hourly data of every year (H) and decompose. Recompose certain frequency groups any analyze year2year differences, shifts etc
+
+
+Approach for gap filling:
+a. identify gaps
+
+- asign gaps to daily cycles
+- analyse cycles and create 24h average cycle curves for imf7-11 (<6days period), plus linear trends for imf12-max (i.e. using interpolate)
+- averages are calculated by up to 27 preceeding and 27 subsequent cycles, just use what is existing
+- go through baseline data and replace any missing sgement with appropriate mean
+
+
+#### 9.4 Validity check of data
 
 A common and important application used in the geomagnetism community is a general validity check of geomagnetic data to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. Please note: this is currently under development and will be extended in the near future. A 'one-click' test method will be included in xmagpy in the future, checking:
 
@@ -721,24 +1103,6 @@ For analysis of the spectral content of data, MagPy provides two basic plotting 
         mp.plotSpectrogram(data,['f'])
 
 
-### 2.8 Handling multiple streams
-
-#### 2.8.1 Merging streams
-
-Merging data comprises combining two streams into one new stream. This includes adding a new column from another stream, filling gaps with data from another stream or replacing data from one column with data from another stream. The following example sketches the typical usage:
-
-        print("Data columns in data2:", data2._get_key_headers())
-        newstream = mergeStreams(data2,kvals,keys=['var1'])
-        print("Data columns after merging:", data2._get_key_headers())
-        mp.plot(newstream, ['x','y','z','var1'],symbollist=['-','-','-','z'])
-
-If column `var1` does not existing in data2 (as above), then this column is added. If column `var1` had already existed, then missing data would be inserted from stream `kvals`. In order to replace any existing data, use option `mode='replace'`.
-
-#### 2.8.2 Differences between streams
-
-Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtractStreams` is provided for this analysis:
-
-        diff = subtractStreams(data1,data2,keys=['f'])
 
 
 ### 2.9 The art of meta-information
@@ -861,275 +1225,6 @@ Extracting passwd information within your data transfer scripts:
         user = mpcred.lc('MyRemoteFTP', 'user')
         password = mpcred.lc('MyRemoteFTP','passwd')
 
-
-### 2.11 DI-flux measurements, basevalues and baselines
-
-The first sections will give you a quick overview about the application of methods related to DI-Flux analysis, determination und usage of baseline values (basevalues), and adopted baselines. The theoretical background and details on these application are found in section 2.11.7. These procedures require an additional import:
-
-        from magpy import absolutes as di
-
-#### 2.11.1 Data structure of DI measurements
-
-Please check `example3`, which is an example DI file. You can create these DI files by using the input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, please contact the Observatory staff. Also supported are DI-files from the AUTODIF.
-
-#### 2.11.2 Reading DI data
-
-Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field information needs to be provided as well. Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in section 2.11.7. A typical analysis looks like:
-
-        diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
-
-Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the filename. For the following commands to work you need to be within the examples directory.
-
-        $ mkdir /tmp/DI
-        $ cp example6a.txt /tmp/DI/2018-08-29_07-16-00_A2_WIC.txt
-        $ cp example5.sec /tmp/DI/
-
-The we start python and import necessary packages
-
-        >>>from magpy import absolutes as di
-        >>>import magpy.mpplot as mp
-        >>>from magpy.stream import read
-
-Finally we issue the analysis command.
-
-        >>>diresult = di.absoluteAnalysis('/tmp/DI/2018-08-29_07-16-00_A2_WIC.txt','/tmp/DI/*.sec','/tmp/DI/*.sec')
-
-
-Calling this method will provide terminal output as follows and a stream object `diresult` which can be used for further analyses.
-
-        >>>...
-        >>>Analyzing manual measurement from 2015-03-25
-        >>>Vector at: 2015-03-25 08:18:00+00:00
-        >>>Declination: 3:53:46, Inclination: 64:17:17, H: 21027.2, Z: 43667.9, F: 48466.7
-        >>>Collimation and Offset:
-        >>>Declination:    S0: -3.081, delta H: -6.492, epsilon Z: -61.730
-        >>>Inclination:    S0: -1.531, epsilon Z: -60.307
-        >>>Scalevalue: 1.009 deg/unit
-        >>>Fext with delta F of 0.0 nT
-        >>>Delta D: 0.0, delta I: 0.0
-
-Fext indicates that F values have been used from a separate file and not provided along with DI data. Delta values for F, D, and I have not been provided either. `diresult` is a stream object containing average D, I and F values, the collimation angles, scale factors and the base values for the selected variometer, beside some additional meta information provided in the data input form.
-
-
-#### 2.11.3 Reading BLV files
-
-Basevalues:
-
-        blvdata = read('/path/myfile.blv')
-        mp.plot(blvdata, symbollist=['o','o','o'])
-
-Adopted baseline:
-
-        bldata = read('/path/myfile.blv',mode='adopted')
-        mp.plot(bldata)
-
-#### 2.11.4 Basevalues and baselines
-
-Basevalues as obtained in (2.11.2) or (2.11.3) are stored in a normal data stream object, therefore all analysis methods outlined above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example4`, you will find some more DI analysis results. To plot these basevalues we can use the following plot command, where we specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H and Z, +/- 0.05 deg for D.
-
-        basevalues = read(example3)
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5])
-
-Fitting a baseline can be easily accomplished with the `fit` method. First we test a linear fit to the data by fitting a polynomial function with degree 1.
-
-        func = basevalues.fit(['dx','dy','dz'],fitfunc='poly', fitdegree=1)
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
-
-We then fit a spline function using 3 knotsteps over the timerange (the knotstep option is always related to the given timerange).
-
-        func = basevalues.fit(['dx','dy','dz'],fitfunc='spline', knotstep=0.33)
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
-
-Hint: a good estimate on the necessary fit complexity can be obtained by looking at delta F values. If delta F is mostly constant, then the baseline should also not be very complex.
-
-
-#### 2.11.5 Applying baselines
-
-
-The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. The basic building block of the baseline method is the fit function as discussed above. Lets first load raw vectorial geomagnetic data, the absevalues of which are contained in above example:
-
-        rawdata = read(example5)
-
-Now we can apply the basevalue information and the spline function as tested above:
-
-        func = rawdata.baseline(basevalues, extradays=0, fitfunc='spline',
-                                knotstep=0.33,startabs='2015-09-01',endabs='2016-01-22')
-
-The `baseline` method will determine and return a fit function between the two given timeranges based on the provided basevalue data `blvdata`. The option `extradays` allows for adding days before and after start/endtime for which the baseline function will be extrapolated. This option is useful for providing quasi-definitive data. When applying this method, a number of new meta-information attributes will be added, containing basevalues and all functional parameters to describe the baseline. Thus, the stream object still contains uncorrected raw data, but all baseline correction information is now contained within its meta data. To apply baseline correction you can use the `bc` method:
-
-        corrdata = rawdata.bc()
-
-
-Pease note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
-
-
-If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and combine the resulting baseline functions to  a list:
-
-        stream = read(mydata,starttime='2016-01-01',endtime='2016-03-01')
-        basevalues = read(mybasevalues)
-        adoptedbasefunc = []
-        adoptedbasefunc.append(stream.baseline(basevalues, extradays=0, fitfunc='poly', fitdegree=1,startabs='2016-01-01',endabs='2016-02-01')
-        adoptedbasefunc.append(stream.baseline(basevalues, extradays=0, fitfunc='spline', knotstep=0.33,startabs='2016-01-02',endabs='2016-01-03')
-
-        corr = stream.bc()
-
-The combined baseline can be plotted accordingly. Extend the function parameters with each additional segment.
-
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=adoptedbasefunc)
-
-Adding a baseline for scalar data, which is determined from the delta F values provided within the basevalue data stream:
-
-        scalarbasefunc = []
-        scalarbasefunc.append(basevalues.baseline(basevalues, keys=['df'], extradays=0, fitfunc='poly', fitdegree=1,startabs='2016-01-01',endabs='2016-03-01'))
-        plotfunc = adoptedbasefunc
-        plotfunc.extend(scalarbasefunc)
-        mp.plot(basevalues, variables=['dx','dy','dz','df'], symbollist=['o','o','o','o'], padding=[5,0.05,5,5], function=plotfunc)
-
-Getting dailymeans and correction for scalar baseline can be acomplished by:
-
-        meanstream = stream.dailymeans()
-        meanstream = meanstream.func2stream(scalarbasefunc,mode='sub',keys=['f'],fkeys=['df'])
-        meanstream = meanstream.delta_f()
-
-Please note that here the function originally determined from the deltaF (df) values of the basevalue data needs to be applied to the F column (f) from the data stream. Before saving we will also extract the baseline parameters from the meta information, which is automatically generated by the `baseline` method.
-
-        absinfo = stream.header.get('DataAbsInfo','')
-        fabsinfo = basevalues.header.get('DataAbsInfo','')
-
-
-#### 2.11.6 Saving basevalue and baseline information
-
-The following will create a BLV file:
-
-        basevalues.write('/my/path', coverage='all', format_type='BLV', diff=meanstream, year='2016', absinfo=absinfo, deltaF=fabsinfo)
-
-Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched above.
-
- #### 2.11.7 Details on DI-flux analysis and calculation of basevalues
-
-Basevalues, often also referred to as **(component) baseline values**, are commonly obtained from DI-flux measurements, which are analyzed in combination with an independent fluxgate variometer. 
-Dependent on the DI-flux measurement technique, the variometer orientation and the source of also required scalar data varying analysis procedures have been suggested. In the following we outline the analysis technique of MagPy specifically related to different orientations and measurement techniques.
-The following terms are used throughout the methodological description and MagPy's interfaces. Fluxgate variometers are most commonly oriented either along a magnetic coordinate system, hereinafter denoted as **HEZ** (sometimes HDZ), or a geographic coordinate system **XYZ**. 
-Within the  magnetic coordinate system, the orthogonal fluxgate triple of variometers is oriented in a way, that the north component points towards magnetic north (H component), the east component E towards magnetic east and vertical points down. For geographic orientation Z is identically pointing down, X towards geographic north and Y towards geographic east. For other orientations please refer to the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf).
-
-##### Theory of DI-analysis and basevalue calculation
-
-For describing the mathematical methodology we apply a similar notation as used within the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf). Lets start with the following setup. The variometer used for evaluating the DI-flux measurement is oriented along a magnetic coordinate system (Figure XX). The actually measured components of the variometer are denoted N, E and V (North, East Vertical close to magnetic coordinate system). Each component consists of the following elements: 
-
-$$N = N_{base} + N_{bias} + N_{var}$$
-
-where $N_{var}$ is the measured variation, $N_{bias}$ contains the fluxgates bias field, and $N_{base}$ the components basevalue.
-Some instruments measure the quasi-absolute field variation, which would correspond to 
-
-$$N_{v} = N_{bias} + N_{var}$$
-
-and thus the basevalues $N_{base}$ are typically small. This approach, making use of constant bias fields as provided within the LEMI025 binary data output is used for example at the Conrad Observatory. Another commonly used analysis approach combines bias fields and actual baseline values to  
-
-$$N_{b} = N_{bias} + N_{base}$$
-
-wherefore the hereby used $N_{b}$ are large in comparison to the measured variations $N_{var}$. All components are dependent on time. Bias field and basevalues, however, can be assumed to stay constant throughout the DI-flux measurement. Therefore, both approaches outlined above are equally effective. Hereinafter, we always assume variation measurements close to the total field value and for all field measurements within one DI-flux analysis we can describe north and vertical components as follows:
-
-$$N(t_i) = N_{base} + N_{v}(t_i)$$
-
-$$V(t_i) = V_{base} + V_{v}(t_i)$$
- 
-For the east component in an HEZ oriented instrument bias fields are usually set to zero. Thus $E$ simplifies to $E = E_{base} + E_{var}$. If the instrument is properly aligned along magnetic coordinates is simplifies further to 
-
-$$E(t_i) = E_{var}(t_i)$$
-
-as $E_{base}$ gets negligible (?? is that true??). The correct geomagnetic field components H, D and Z at time t for a HEZ oriented variometer can thus be calculated using the following formula (see also [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf)):
-
-$$H(t) =  \sqrt{(N_{base} + N_{v}(t))^2 + E_{var}(t)^2}$$
-
-$$D(t) =  D_{base} + arctan(\frac{E_{var}(t)}{N_{base} + N_{v}(t)}$$
-
-$$Z(t) =  V_{base} + V_{v}(t)$$
-
-In turn, basevalues can be determined from the DI-Flux measurement as follows:
-
-$$N_{base} =  \sqrt{(H(t_i))^2 – E_{var}(t_i)2} - N_{v}(t_i)$$
-
-$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)}$$
-
-$$V_{base} =  Z(t_i) – V_{v}(t_i)$$
-
-where $H(t_i)$, $D(t_i)$ and $Z(t_i)$ are determined from the DI-Flux measurement providing declination $D(t_i)$ and inclination $I(t_i)$, in combination with an absolute scalar value obtained either on the same pier prior or after the DI-Flux measurement $(F(t_j))$, or from continuous measurements on a different pier.  As variometer measurements and eventually scalar data are obtained on different piers, pier differences also need to be considered. Such pier differences are denoted by $\delta D_v$, $\delta I_v$ and $\delta F_s$.
- 
-The measurement procedure of the DI-flux technique requires magnetic east-west orientation of the optical axis of the theodolite. This is achieved by turning the theodolite so that the fluxgate reading shows zero (zero field method). Alternatively, small residual readings of the mounted fluxgate probe $(E_{res})$ can be considered (residual method). 
-
-##### Iterative application in MagPy
-
-MagPy’s DI-flux analysis scheme for HEZ oriented variometers follows almost exactly the DTU scheme (citation , Juergen), using an iterative application. Basically, the analysis makes use of two main blocks. The first block (method *calcdec*) analyses the horizontal DI flux measurements, the second block (*calcinc*) analyses the inclination related steps of the DI-flux technique. 
-The first block determines declination $D(t)$ and $D_{base}$ by considering optional measurements of residuals and pier differences:
-
-$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \delta D_v$$
-
-If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a zero field technique. Initially, $N_{base}$ is unknown. Therefore, $N_{base}$ will either be set to zero or optionally provided annual mean values will be used as a starting criteria. It should be said that the choice is not really important as the iterative technique will provide suitable estimates already during the next call. A valid input for $H(t)$ is also required to correctly determine collimation data of the horizontal plane.
-The second block will determine inclination $I(t)$ as well as $H(t) = F(t) cos(I(t))$ and $Z(t) = F(t) sin(I(t))$. It will further determine $H_{base}$ and $Z_{base}$. Of significant importance hereby is a valid evaluation of F for each DI-Flux measurement. 
-
-$$F(t_i) = F_m + (N_v(t_i) – N_m) cos(I) + (V_v(t_i)-V_m) sin(I) + (E_v(t_i)^2-E_m^2) / (2 F_m)$$
-
-where $F_m$ is the mean F value during certain time window, and $N_m$, $V_m$, $E_m$ are means of the variation measurement in the same time window. Thus $F(t_i)$ will contain variation corrected F values for each cycle of the DI-flux measurement.
-Based on these F values the angular correction related to residuals can be determined
-
-$$I_{res}(t_i) =  arcsin(\frac{E_{res}(t_i)}{F(t_i)}$$
-
-and finally, considering any provided $\delta I$ the DI-flux inclination value.
-H(t) and Z(t) are calculated using the resulting inclination by
-
-$$H(t) = F(t) cos(I)$$
-
-$$Z(t) = F(t) sin(I)$$
-
-and basevalues are finally obtained using formulas given above.
-As both evaluation blocks contain initially unkown parameters, which are however determined by the complementary block, the whole procedure is iteratively conducted until resulting parameters do not change any more in floating point resolution. Firstly, calcdec is conducted and afterwards calcinc. Then the results for $H$ and $H_{basis}$ are feed into calcdec when starting the next cycle. Usually not more than two cycles are necessary for obtaining final DI-flux parameters. Provision off starting parameters (i.e. annual means) is possible, but not necessary. By default, MagPy is running three analysis cycles.
-
-##### Scalar data source
-
-Scalar data is essential for correctly determining basevalues. The user has basically three options to provide such data. Firstly, a scalar estimate can be taken from provided annual means (use option annualmeans=[21300,1700,44000] in method **absoluteAnalysis** (2.11.2), annual means have to be provided in XYZ, in nT). A correct determination of basevalues is not possible this way but at least a rough estimate can be obtained. If only such scalar source is provided then the F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fannual**. 
-If F data is continuously available on a different pier, you should feed that time series into the **absoluteAnalysis** call (or use the add scalar source option in XMagPy). Every MagPy supported data format or source can be used for this purpose. Such independent/external F data, denoted $F_{ext}$, requires however the knowledge of pier differences between the DI-flux pier and the scalar data (F) pier. If $F_{ext}$ is your only data source you need to provide pier differences $\delta F_s$ to **absoluteAnalysis** in nT using option deltaF. In XMagPy you have to open „Analysis Parameters“ on the DI panel and set „dideltaF“.  The F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fext**. The provided $\delta F_s$ value will be included into **diresults**, both within the deltaF column and added to the description string **Fext**. 
-If F data is measured at the same pier as used for the DI-flux measurement, usually either directly before or after the DI-flux series, this data should be added into the DI absolute file structure (see 2.11.1).  Variation data, covering the time range of F measurements and DI-Flux measurements is required to correctly analyze the measurement. If such F data is used **diresults** will contain the input **Fabs**. 
-If $F_{abs}$ and $F_{ext}$ are both available during the analysis, then MagPy will use  $F_{abs}$ (F data from the DI-flux pier) for evaluating the DI-Flux measurement. It will also determine the pier difference 
-
-$$\delta F_s  = F_{abs} – F_{ext}(uncorr)$$.
-
-This pier difference will be included into diresults within the delta F column. The F-description column in **diresults** will contain **Fabs**.  Any additionally, manually provided delta F value will show up in this column as well (**Fabs_12.5**). For the standard output of the DI-flux analysis any manually provided delta F will have been applied to $F_{ext}(corr)$.  
-
-##### Using a geographically oriented variometer (XZY)
-
-The above outlined basevalue determination method is rather stable against deviations from ideal variometer orientations. Thus, you can use the very same technique also to evaluate basevalues for XYZ oriented variometers as long as your sites’ declination is small. A rough number would be that angular deviations (declination) of 3 degrees will lead to differences below 0.1 nT in basevalues. The small differences are related to the fact that strictly speaking the above technique is only valid if the variometer is oriented perfectly along the current magnetic coordinate system.
-MagPy (since version 1.1.3) also allows for evaluating XYZ variometer data by obtaining basevalues also in a XYZ representation. This technique requires accurate orientation of your variation instrument in geographic coordinates. Provided such precise orientation, the basic formula for obtaining basevalues get linear and simplifies to 
-
-$$X_{base} =  X(t_i) – X_{v}(t_i)$$
-
-$$Y_{base} =  Y(t_i) - Y_{v}(t_i)$$
-
-$$Z_{base} =  Z(t_i) – Z_{v}(t_i)$$
-
-By default, MagPy will always create basevalues in HDZ components, even if xyz variation data is provided. If you want basevalues in XYZ components you need to confirm manually that the provided variation data is geographically oriented when calling **absoluteAnalysis**. Use option **variometerorientation=”XYZ”** for this purpose.  
-
-##### Using other variometer orientation
-
-If you want to use variometer data in any other orientation then the two discussed above, it is necessary rotate your data set into one of the supported coordinate systems. Such rotations can be performed using MagPy's **rotate** method. Please note, that is then also necessary to rotate your variometers raw data using the same angular parameters prior to baseline adoption.
-
-
-##### General procedure for the baselineAnalysis method: 
-
-- Reading variometer data from defined source (DB, file, URL)
-- Convert coordinate representation to nT for all axis.
-- If DB only: apply DB flaglist, get and apply all DB header info, apply DB delta values (timediff, offsets)
-- Rotation or compensation option selected: headers bias/compensation fields are applied
-- If DB and rotation: apply alpha and beta rotations from DB meta info
-- manually provided offsets and rotation are applied
-- flags are removed
-- interpolate variometerdata using default DataStream.interpol
-- Reading scalar data from defined source
-- If DB: apply flaglist, header and deltas
-- apply option offsets
-- remove flags and interpolate
-- add interpolated values of vario and scalar into DI structure (at corresponding time steps), here manually provided delta F's are considered
-- If DB and not provided manually: extract pier differences for variometer from DB (dD and dI)
-- Start of iterative basevalue calculation procedure (repeated 3 times)
 
 ##### Citations
 

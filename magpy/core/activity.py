@@ -301,9 +301,40 @@ class k_fmi(object):
 def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=999999, test=False, debug=False):
     """
     DESCRIPTION:
-        see kfmi class
-    VARIABLES:
-        K9_limit in nT !
+        determination of K values based on the FMI method. This class is derived from the original C code
+        K_index.h by Lasse  Hakkinen, Finnish Meteorological Institute. Please note: the original method
+        fills data gaps based on mean values if gaps are smaller than a given maximum gap length. To replicate
+        that behavior,
+        Details on the procedure can be found
+        here: citation
+    PARAMETERS:
+        datastream  : a magpy data stream containing geomagnetic x and y
+                    components. Field values need to be provided in nT.
+                    The FMI method requires three full days to analyse the
+                    middle day. The given datastream will be tested and
+                    eventually cut into fitting pieces for the analysis.
+                    Furthermore, the method will be applied on one-minute
+                    data. Thus, the datastream will eventually be filtered
+                    using standard IAGA recommendations if high resolution
+                    data is provided.
+        K9_limit    : K=9 limit for the particular observatory in nT.
+                      If contained within the datastream structure
+                    this data will be used automatically. Providing a manual
+                    value will override the value contained in the datastream.
+        longitude   : longitude of the observatory whose K indices are to be
+                    computed. If contained within the datastream structure
+                    this data will be used automatically. Providing a manual
+                    value will override the value contained in the datastream.
+                    The longitude is used to determine the time of local
+                    midnight.
+        missing_data : Marker for missing data point (e.g. 999999).
+    RETURNS:
+        datastream  : a datastream containig the 8 K-indicies for each given day
+                    asocitaed with key 'var1'
+    REQUIREMENTS:
+       feed data for at least three days into the scheme, only the middle day will be analyzed
+    APPLICATION:
+        kvals = K_fmi(datastream, K9_limit=500, longitude=20.0, missing_data=999999)
     """
     fulldataarray = [[[], [], []]]
 
@@ -689,7 +720,7 @@ try:
         return comp, imf, IP, IF, IA, stats
 
 
-    def qdbase(datastream, components=['x'], baseline_type='emd', sift_type='mask', sample_frequ=1 / 60., max_imfs=16,
+    def sqbase(datastream, components=['x'], baseline_type='emd', sift_type='mask', sample_frequ=1 / 60., max_imfs=16,
                imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
         """
         DESCRIPTION
@@ -714,7 +745,7 @@ try:
         RETURNS
             a datastream with quiet day baselines for all selected components
         APPLICATION
-            bs = qdbase(teststream, components=['x'], baseline_type='joint')
+            sqvariation = sqbase(teststream, components=['x'], baseline_type='joint')
 
         """
         emd_baseline = None
