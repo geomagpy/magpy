@@ -107,7 +107,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
         734928.0416666666,2013-03-01T01:00:00.000000,14061.940719529965,6.8539941994665305,11.869002442573095
 
     """
-    stream = DataStream([],{})
+    stream = DataStream()
 
     array = [[] for key in KEYLIST]
 
@@ -198,7 +198,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
     if headers.get('SensorID','') == '':
         headers['SensorID'] = 'unknown_12345_0001'
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 
@@ -252,10 +252,10 @@ def readPYSTR(filename, headonly=False, **kwargs):
                 for idx, key in enumerate(KEYLIST):
                     if key.find('time') >= 0:
                         try:
-                            ti = date2num(datetime.strptime(elem[idx],"%Y-%m-%d-%H:%M:%S.%f"))
+                            ti = datetime.strptime(elem[idx],"%Y-%m-%d-%H:%M:%S.%f")
                         except:
                             try:
-                                ti = date2num(datetime.strptime(elem[idx],"%Y-%m-%dT%H:%M:%S.%f"))
+                                ti = datetime.strptime(elem[idx],"%Y-%m-%dT%H:%M:%S.%f")
                             except:
                                 ti = elem[idx]
                                 pass
@@ -290,7 +290,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def readPYBIN(filename, headonly=False, **kwargs):
@@ -478,7 +478,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
                     if not oldtype:
-                        array[0].append(date2num(stream._testtime(time)))
+                        array[0].append(stream._testtime(time))
                         # check elemlist and keylist
                         for idx, elem in enumerate(keylist):
                             try:
@@ -491,7 +491,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                                 else:
                                     try:
                                         sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                        array[index].append(date2num(stream._testtime(sectime)))
+                                        array[index].append(stream._testtime(sectime))
                                     except:
                                         pass
                             except:
@@ -499,7 +499,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
                                     try:
                                         sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
                                         index = KEYLIST.index('sectime')
-                                        array[index].append(date2num(stream._testtime(sectime)))
+                                        array[index].append(stream._testtime(sectime))
                                     except:
                                         pass
                     else:
@@ -534,7 +534,7 @@ def readPYBIN(filename, headonly=False, **kwargs):
     #print ("Duration:", (t2-t1).total_seconds())
     stream.header["DataFormat"] = "PYBIN"
 
-    return DataStream([LineStruct()], stream.header, np.asarray(array,dtype=object))
+    return DataStream(header=stream.header, ndarray=np.asarray(array,dtype=object))
 
 
 
@@ -718,8 +718,8 @@ def writePYASCII(datastream, filename, **kwargs):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
                         #print el[i]
-                        row.append(float(el[i]))
-                        row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        row.append(date2num(el[i]))
+                        row.append(datetime.strftime(el[i].replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
@@ -729,20 +729,6 @@ def writePYASCII(datastream, filename, **kwargs):
                                 pass
                         row.append(el[i])
             wtr.writerow(row)
-    else:
-        for elem in datastream:
-            row = []
-            for key in keylst:
-                if key.find('time') >= 0:
-                    row.append(elem.time)
-                    try:
-                        row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                    except:
-                        row.append( float('nan') )
-                        pass
-                else:
-                    row.append(eval('elem.'+key))
-            wtr.writerow( row )
 
     if returnstring:
         return myFile

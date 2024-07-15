@@ -92,13 +92,18 @@ magpyversion = __version__
 # import default methods
 from magpy.core.methods import *
 
+# verified packages of magpy main
+import numpy as np
+import copy # used only in core.activity for deepcopy of header
+import copyreg as copyreg
+
+# not yet verified
 import csv
 import pickle
 import types
 import struct
 import re
 import time, string, os, shutil
-import copy as cp
 import fnmatch
 import json
 import dateutil.parser as dparser
@@ -109,14 +114,12 @@ from itertools import groupby
 from operator import itemgetter
 import operator  # used for stereoplot legend
 
-import copyreg as copyreg
 from urllib.parse import urlparse, urlencode
 from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
 from urllib.error import HTTPError
 import _thread
 from io import StringIO
 import ssl
-import numpy as np
 import scipy as sp
 from scipy import interpolate
 from scipy import stats
@@ -1757,23 +1760,17 @@ CALLED BY:
         """
         ndarray = [[] for key in KEYLIST]
 
-        # Use a different technique
-        # copy all data to array and then delete everything below and above
-
-        #t1 = datetime.utcnow()
-
-        #ndarray = self.ndarray
         startindices = []
         endindices = []
         if starttime:
             starttime = testtime(starttime)
             if self.ndarray[0].size > 0:   # time column present
                 if maxidx > 0:
-                    idx = (np.abs(self.ndarray[0][:maxidx]-date2num(starttime))).argmin()
+                    idx = (np.abs(self.ndarray[0][:maxidx]-starttime)).argmin()
                 else:
-                    idx = (np.abs(self.ndarray[0]-date2num(starttime))).argmin()
+                    idx = (np.abs(self.ndarray[0]-starttime)).argmin()
                 # Trim should start at point >= starttime, so check:
-                if self.ndarray[0][idx] < date2num(starttime):
+                if self.ndarray[0][idx] < starttime:
                     idx += 1
                 startindices = list(range(0,idx))
         if endtime:
@@ -1783,13 +1780,13 @@ CALLED BY:
                 if maxidx > 0: # truncate the ndarray
                     #print maxidx
                     #tr = self.ndarray[0][:maxidx].astype(float)
-                    idx = 1 + (np.abs(self.ndarray[0][:maxidx].astype(float)-date2num(endtime))).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
+                    idx = 1 + (np.abs(self.ndarray[0][:maxidx]-endtime)).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
                 else:
-                    idx = 1 + (np.abs(self.ndarray[0].astype(float)-date2num(endtime))).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
+                    idx = 1 + (np.abs(self.ndarray[0]-endtime)).argmin() # get the nearest index to endtime and add 1 (to get lenghts correctly)
                 if idx >= len(self.ndarray[0]): ## prevent too large idx values
                     idx = len(self.ndarray[0]) # - 1
                 try: # using try so that this test is passed in case of idx == len(self.ndarray)
-                    endnum = date2num(endtime)
+                    endnum = endtime
                     #print ("Value now", idx, self.ndarray[0][idx], date2num(endtime))
                     if self.ndarray[0][idx] > endnum and self.ndarray[0][idx-1] < endnum:
                         # case 1: value at idx is larger, value at idx-1 is smaller -> use idx
@@ -1800,21 +1797,11 @@ CALLED BY:
                     elif not self.ndarray[0][idx] <= endnum:
                         # case 3: value at idx-1 equals endnum -> use idx-1
                         idx -= 1
-                    #print ("Value now b", idx, self.ndarray[0][idx], date2num(endtime))
-                    #if not self.ndarray[0][idx] <= date2num(endtime):
-                    #    # Make sure that last value is either identical to endtime (if existing or one index larger)
-                    #    # This is important as from this index on, data is removed
-                    #    idx -= 1
-                    #    print ("Value now", idx, self.ndarray[0][idx], date2num(endtime))
-                    #    print ("Value now", idx, self.ndarray[0][idx+1], date2num(endtime))
                 except:
                     pass
                 endindices = list(range(idx,len(self.ndarray[0])))
 
         indices = startindices + endindices
-
-        #t2 = datetime.utcnow()
-        #print "_select_timerange - getting t range needed:", t2-t1
 
         if len(startindices) > 0:
             st = startindices[-1]+1
@@ -4587,38 +4574,6 @@ CALLED BY:
         else:
             newlist = []
 
-        #newlist = self.flaglistclean(newlist)
-
-        """
-        # requires a sorted list
-        if len(flaglist)>0:
-          # Different keys are not regarded for here (until 0.4.6)
-          # 1. Extract all flag for individual keys first
-          for key in keys:
-            templist = [l for l in flaglist if l[2] == key]
-            fllist = sorted(templist, key=lambda x: x[0])
-            #flaglist = sorted(flaglist, key=lambda x: x[0])
-            # Startvalue of endtime is firsttime
-            etprev = fllist[0][1]
-            prevline = fllist[0]
-            for line in fllist:
-                st = line[0]
-                et = line[1]
-                diff1 = (et-etprev)       # end time diff between current flag and last flag
-                diff2 = (st-etprev)       # diff between current start and last end
-                srunc = srday+0.01*srday  # sampling rate with uncertainty
-                if diff1 < srunc or diff2 < srunc:
-                    # subsequent time step found -> changing et in line
-                    prevline[1] = et
-                else:
-                    newlist.append([num2date(prevline[0]).replace(tzinfo=None),num2date(prevline[1]).replace(tzinfo=None),prevline[2],prevline[3],prevline[4],sensorid,cdate])
-                    prevline = line
-                etprev = et
-            #save current content of prevline with new et
-            newlist.append([num2date(prevline[0]).replace(tzinfo=None),num2date(prevline[1]).replace(tzinfo=None),prevline[2],prevline[3],prevline[4],sensorid,cdate])
-        else:
-            newlist = []
-        """
 
         if returnflaglist:
             return newlist
@@ -4717,99 +4672,6 @@ CALLED BY:
 
         return self
 
-    def flagliststats(self,flaglist, intensive=False, output='stdout'):
-        """
-        DESCRIPTION:
-            Provides some information on flag statistics
-        PARAMETER:
-            flaglist   (list) flaglist to be investigated
-        APPLICTAION:
-            flaglist = db2flaglist(db,'all')
-            self.flagliststats(flaglist)
-        """
-        amountlist = []
-        outputt = '##########################################\n'
-        outputt += '           Flaglist statistics            \n'
-        outputt += '##########################################\n'
-        outputt += '\n'
-        outputt += 'A) Total contents: {}\n'.format(len(flaglist))
-        outputt += '\n'
-        outputt += 'B) Content for each ID:\n'
-        #print (flaglist[0], len(flaglist[0]))
-        if len(flaglist[0]) > 6:
-            ids = [el[5] for el in flaglist]
-            uniquenames = list(set(ids))
-        for name in uniquenames:
-            amount = len([el[0] for el in flaglist if el[5] == name])
-            amountlist.append([name,amount])
-            if intensive:
-                flagli = [el for el in flaglist if el[5] == name]
-                index = [el[3] for el in flagli]
-                uniqueindicies = list(set(index))
-                reasons = [el[4] for el in flagli]
-                uniquereasons = list(set(reasons))
-                intensiveinfo = []
-                for reason in uniquereasons:
-                    num = len([el for el in flagli if reason == el[4]])
-                    intensiveinfo.append([reason,num])
-                intensiveinfo = sorted(intensiveinfo,key=lambda x: x[1])
-                intensiveinfo = ["{} : {}\n".format(e[0],e[1]) for e in intensiveinfo]
-                amountlist[-1].append(intensiveinfo)
-        amountlist = sorted(amountlist,key=lambda x: x[1])
-        for el in amountlist:
-            outputt += "Dataset: {} \t Amount: {}\n".format(el[0],el[1])
-            if intensive:
-                for ele in el[2]:
-                    outputt += "   {}".format(ele)
-        if output=='stdout':
-            print (outputt)
-        return outputt
-
-    def flaglistclean(self,flaglist,progress=False):
-        """
-        DESCRIPTION:
-            identify and remove duplicates from flaglist, only the latest inputs are used
-            start, endtime and key are used to identfy duplicates
-        PARAMETER:
-            flaglist   (list) flaglist to be investigated
-        APPLICTAION:
-            stream = DataStream()
-            flaglist = db2flaglist(db,'all')
-            flaglistwithoutduplicates = stream.flaglistclean(flaglist)
-        """
-        # first step - remove all duplicates
-        testflaglist = ['____'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
-        uniques,indi = np.unique(testflaglist,return_index=True)
-        flaglist = [flaglist[idx] for idx in indi]
-
-        # second step - remove all inputs without components
-        flaglist = [elem for elem in flaglist if not elem[2] == '']
-
-        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
-        ## (use only last input)
-        indicies = []
-        for ti, line in enumerate(flaglist):
-            if progress and ti/1000. == np.round(ti/1000.):
-                print ("Current state: {} percent".format(ti/len(flaglist)*100))
-            if len(line) > 5:
-                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2] and elem[5] == line[5]]
-            else:
-                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2]]
-            if len(inds) > 1:
-                # get inputs dates for all duplicates and select the latest
-                dates = [[flaglist[dupind][-1], dupind] for dupind in inds]
-                indicies.append(sorted(dates)[-1][1])
-            else:
-                index = inds[-1]
-                indicies.append(index)
-
-        uniqueidx = (list(set(indicies)))
-        print ("flaglistclean: found {} unique inputs".format(len(uniqueidx)))
-        uniqueidx.sort()
-        flaglist = [flaglist[idx] for idx in uniqueidx]
-
-        return flaglist
-
 
     def stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None):
         """
@@ -4892,79 +4754,6 @@ CALLED BY:
                     else:
                         res.append([st,st,key,flagnumber,comment,sensorid,now])
         return res
-
-
-    def flaglistmod(self, mode='select', flaglist=[], parameter='key', value=None, newvalue=None, starttime=None, endtime=None):
-        """
-        DEFINITION:
-            Select/Replace/Delete information in flaglist
-            parameters are key, flagnumber, comment, startdate, enddate=None
-            mode delete: if only starttime and endtime are provided then all data inbetween is removed,
-                         if parameter and value are provided this data is removed, eventuall
-                         only between start and endtime
-        APPLICTAION
-
-        """
-        num = 0
-        # convert start and end to correct format
-        if parameter == 'key':
-            num = 2
-        elif parameter == 'flagnumber':
-            num = 3
-        elif parameter == 'comment':
-            num = 4
-        elif parameter == 'sensorid':
-            num = 5
-
-        if mode in ['select','replace'] or (mode=='delete' and value):
-            if starttime:
-                starttime = testtime(starttime)
-                flaglist = [elem for elem in flaglist if elem[1] > starttime]
-            if endtime:
-                endtime = testtime(endtime)
-                flaglist = [elem for elem in flaglist if elem[0] < endtime]
-        elif mode == 'delete' and not value:
-            print ("Only deleting")
-            flaglist1, flaglist2 = [],[]
-            if starttime:
-                starttime = testtime(starttime)
-                flaglist1 = [elem for elem in flaglist if elem[1] < starttime]
-            if endtime:
-                endtime = testtime(endtime)
-                flaglist2 = [elem for elem in flaglist if elem[0] > endtime]
-            flaglist1.extend(flaglist2)
-            flaglist = flaglist1
-
-        if mode == 'select':
-            if num>0 and value:
-                if num == 4:
-                    flaglist = [elem for elem in flaglist if elem[num].find(value) > 0]
-                elif num == 3:
-                    flaglist = [elem for elem in flaglist if elem[num] == int(value)]
-                else:
-                    flaglist = [elem for elem in flaglist if elem[num] == value]
-        elif mode == 'replace':
-            if num>0 and value:
-                for idx, elem in enumerate(flaglist):
-                    if num == 4:
-                        if elem[num].find(value) >= 0:
-                            flaglist[idx][num] = newvalue
-                    elif num == 3:
-                        if elem[num] == int(value):
-                            flaglist[idx][num] = int(newvalue)
-                    else:
-                        if elem[num] == value:
-                            flaglist[idx][num] = newvalue
-        elif mode == 'delete':
-            if num>0 and value:
-                if num == 4:
-                    flaglist = [elem for elem in flaglist if elem[num].find(value) < 0]
-                elif num == 3:
-                    flaglist = [elem for elem in flaglist if not elem[num] == int(value)]
-                else:
-                    flaglist = [elem for elem in flaglist if not elem[num] == value]
-
-        return flaglist
 
 
     def flaglistadd(self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None):
@@ -5853,10 +5642,7 @@ CALLED BY:
             return self
 
         # Better use get_sampling period as samplingrate is rounded
-        #spr = self.get_sampling_period()
-        #newsps = newsp*3600.0*24.0
         newsps = self.samplingrate()
-        newsp = newsps/3600.0/24.0
 
         if not accuracy:
             #accuracy = 0.9/(3600.0*24.0) # one second relative to day
@@ -5871,14 +5657,13 @@ CALLED BY:
         prevtime = 0
 
         if len(stream.ndarray[0]) > 0:
-            maxtime = stream.ndarray[0][-1]
-            mintime = stream.ndarray[0][0]
+            mintime,maxtime = stream._find_t_limits()
             length = len(stream.ndarray[0])
             sourcetime = stream.ndarray[0]
 
         if debug:
             print("Time range:", mintime, maxtime)
-            print("Length, samp_per, samp_per(d) and accuracy:", self.length()[0], newsps, newsp, accuracy)
+            print("Length, samp_per, and accuracy:", self.length()[0], newsps, accuracy)
 
         shift = 0
         # Get time diff and expected count
@@ -6687,190 +6472,6 @@ CALLED BY:
         return sel
 
 
-    def obspyspectrogram(self, data, samp_rate, per_lap=0.9, wlen=None, log=False,
-                    outfile=None, fmt=None, axes=None, dbscale=False,
-                    mult=8.0, cmap=None, zorder=None, title=None, show=True,
-                    sphinx=False, clip=[0.0, 1.0]):
-
-        #TODO: Discuss with Ramon which kind of window should be used (cos^2(2*pi (t/T)))
-        """
-        Function taken from ObsPy
-        Computes and plots spectrogram of the input data.
-        :param data: Input data
-        :type samp_rate: float
-        :param samp_rate: Samplerate in Hz
-        :type per_lap: float
-        :param per_lap: Percentage of overlap of sliding window, ranging from 0
-            to 1. High overlaps take a long time to compute.
-        :type wlen: int or float
-        :param wlen: Window length for fft in seconds. If this parameter is too
-            small, the calculation will take forever.
-        :type log: bool
-        :param log: Logarithmic frequency axis if True, linear frequency axis
-            otherwise.
-        :type outfile: String
-        :param outfile: String for the filename of output file, if None
-            interactive plotting is activated.
-        :type fmt: String
-        :param fmt: Format of image to save
-        :type axes: :class:`matplotlib.axes.Axes`
-        :param axes: Plot into given axes, this deactivates the fmt and
-            outfile option.
-        :type dbscale: bool
-        :param dbscale: If True 10 * log10 of color values is taken, if False the
-            sqrt is taken.
-        :type mult: float
-        :param mult: Pad zeros to lengh mult * wlen. This will make the spectrogram
-            smoother. Available for matplotlib > 0.99.0.
-        :type cmap: :class:`matplotlib.colors.Colormap`
-        :param cmap: Specify a custom colormap instance
-        :type zorder: float
-        :param zorder: Specify the zorder of the plot. Only of importance if other
-            plots in the same axes are executed.
-        :type title: String
-        :param title: Set the plot title
-        :type show: bool
-        :param show: Do not call `plt.show()` at end of routine. That way, further
-            modifications can be done to the figure before showing it.
-        :type sphinx: bool
-        :param sphinx: Internal flag used for API doc generation, default False
-        :type clip: [float, float]
-        :param clip: adjust colormap to clip at lower and/or upper end. The given
-            percentages of the amplitude range (linear or logarithmic depending
-            on option `dbscale`) are clipped.
-        """
-
-        # enforce float for samp_rate
-        samp_rate = float(samp_rate)
-
-        # set wlen from samp_rate if not specified otherwise
-        if not wlen:
-            wlen = samp_rate / 100.
-
-        npts = len(data)
-
-        # nfft needs to be an integer, otherwise a deprecation will be raised
-        #XXX add condition for too many windows => calculation takes for ever
-        nfft = int(nearestPow2(wlen * samp_rate))
-
-        if nfft > npts:
-            nfft = int(nearestPow2(npts / 8.0))
-
-        if mult != None:
-            mult = int(nearestPow2(mult))
-            mult = mult * nfft
-
-        nlap = int(nfft * float(per_lap))
-
-        data = data - data.mean()
-        end = npts / samp_rate
-
-        # Here we call not plt.specgram as this already produces a plot
-        # matplotlib.mlab.specgram should be faster as it computes only the
-        # arrays
-        # XXX mlab.specgram uses fft, would be better and faster use rfft
-
-        if MATPLOTLIB_VERSION >= [0, 99, 0]:
-            specgram, freq, time = mlab.specgram(data, Fs=samp_rate, NFFT=nfft,
-                                                  pad_to=mult, noverlap=nlap)
-        else:
-            specgram, freq, time = mlab.specgram(data, Fs=samp_rate,
-                                                    NFFT=nfft, noverlap=nlap)
-
-        # db scale and remove zero/offset for amplitude
-        if dbscale:
-            specgram = 10 * np.log10(specgram[1:, :])
-        else:
-            specgram = np.sqrt(specgram[1:, :])
-
-        freq = freq[1:]
-
-        vmin, vmax = clip
-
-        if vmin < 0 or vmax > 1 or vmin >= vmax:
-            msg = "Invalid parameters for clip option."
-            raise ValueError(msg)
-
-        _range = float(specgram.max() - specgram.min())
-        vmin = specgram.min() + vmin * _range
-        vmax = specgram.min() + vmax * _range
-        norm = Normalize(vmin, vmax, clip=True)
-
-        if not axes:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        else:
-            ax = axes
-
-        # calculate half bin width
-        halfbin_time = (time[1] - time[0]) / 2.0
-        halfbin_freq = (freq[1] - freq[0]) / 2.0
-
-        if log:
-            # pcolor expects one bin more at the right end
-            freq = np.concatenate((freq, [freq[-1] + 2 * halfbin_freq]))
-            time = np.concatenate((time, [time[-1] + 2 * halfbin_time]))
-            # center bin
-            time -= halfbin_time
-            freq -= halfbin_freq
-            # pcolormesh issue was fixed in matplotlib r5716 (2008-07-07)
-            # inbetween tags 0.98.2 and 0.98.3
-            # see:
-            #  - http://matplotlib.svn.sourceforge.net/viewvc/...
-            #    matplotlib?revision=5716&view=revision
-            #  - http://matplotlib.sourceforge.net/_static/CHANGELOG
-
-            if MATPLOTLIB_VERSION >= [0, 98, 3]:
-                # Log scaling for frequency values (y-axis)
-                ax.set_yscale('log')
-                # Plot times
-                ax.pcolormesh(time, freq, specgram, cmap=cmap, zorder=zorder,
-                              norm=norm)
-            else:
-                X, Y = np.meshgrid(time, freq)
-                ax.pcolor(X, Y, specgram, cmap=cmap, zorder=zorder, norm=norm)
-                ax.semilogy()
-        else:
-            # this method is much much faster!
-            specgram = np.flipud(specgram)
-            # center bin
-            extent = (time[0] - halfbin_time, time[-1] + halfbin_time,
-                      freq[0] - halfbin_freq, freq[-1] + halfbin_freq)
-            ax.imshow(specgram, interpolation="nearest", extent=extent,
-                      cmap=cmap, zorder=zorder)
-
-        # set correct way of axis, whitespace before and after with window
-        # length
-        ax.axis('tight')
-        ax.set_xlim(0, end)
-        ax.grid(False)
-
-        if axes:
-            return ax
-
-        ax.set_xlabel('Time [s]')
-        ax.set_ylabel('Frequency [Hz]')
-        if title:
-            ax.set_title(title)
-
-        if not sphinx:
-            # ignoring all NumPy warnings during plot
-            temp = np.geterr()
-            np.seterr(all='ignore')
-            plt.draw()
-            np.seterr(**temp)
-
-        if outfile:
-            if fmt:
-                fig.savefig(outfile, format=fmt)
-            else:
-                fig.savefig(outfile)
-        elif show:
-            plt.show()
-        else:
-            return fig
-
-
     def offset(self, offsets, **kwargs):
         """
     DEFINITION:
@@ -7006,154 +6607,10 @@ CALLED BY:
                 bgcolor='white')
         """
 
-        import magpy.mpplot as mp
+        import magpy.core.plot as mp
         if keys == None:
             keys = []
-        mp.plot(self, variables=keys, **kwargs)
-
-
-    def powerspectrum(self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs):
-        """
-    DEFINITION:
-        Calculating the power spectrum
-        following the numpy fft example
-
-    PARAMETERS:
-    Variables:
-        - key:          (str) Key to analyse
-    Kwargs:
-        - axes:         (?) ?
-        - debugmode:    (bool) Variable to show steps
-        - fmt:          (str) Format of outfile, e.g. "png"
-        - outfile:      (str) Filename to save plot to
-        - title:        (str) Title to display on plot
-        - marks:        (dict) add some text to the plot
-        - returndata:   (bool) return freq and asd
-        - freqlevel:    (float) print noise level at that frequency
-
-    RETURNS:
-        - plot:         (matplotlib plot) A plot of the powerspectrum
-
-    EXAMPLE:
-        >>> data_stream.powerspectrum('x')
-
-    APPLICATION:
-        >>> from magpy.stream import read
-        1. Requires DataStream object:
-        >>> data_path = '/usr/lib/python2.7/magpy/examples/*'
-        >>> data = read(path_or_url=data_path,
-                        starttime='2013-06-10 00:00:00',
-                        endtime='2013-06-11 00:00:00')
-        2. Call for data stream:
-        >>> data.powerspectrum('f',
-                        title='PSD of f', marks={'day':0.000011574},
-                        outfile='ps.png')
-        """
-        if debugmode:
-            print("Start powerspectrum at %s" % datetime.utcnow())
-
-        noshow = kwargs.get('noshow')
-        returndata = kwargs.get('returndata')
-        marks = kwargs.get('marks')
-        freqlevel = kwargs.get('freqlevel')
-
-        if noshow:
-            show = False
-        else:
-            show = True
-
-        dt = self.get_sampling_period()*24*3600
-
-        if not len(self) > 0:
-            logger.error("Powerspectrum: Stream of zero length -- aborting")
-            raise Exception("Can't analyse stream of zero length!")
-
-        t = np.asarray(self._get_column('time'))
-        val = np.asarray(self._get_column(key))
-        mint = np.min(t)
-        tnew, valnew = [],[]
-
-        nfft = int(nearestPow2(len(t)))
-        #print "NFFT:", nfft
-
-        if nfft > len(t):
-            nfft = int(nearestPow2(len(t) / 2.0))
-
-        #print "NFFT now:", nfft
-
-        for idx, elem in enumerate(val):
-            if not isnan(elem):
-                tnew.append((t[idx]-mint)*24*3600)
-                valnew.append(elem)
-
-        tnew = np.asarray(tnew)
-        valnew = np.asarray(valnew)
-
-        if debugmode:
-            print("Extracted data for powerspectrum at %s" % datetime.utcnow())
-
-        #freq = np.fft.fftfreq(tnew.shape[-1],dt)
-        #freq = freq[range(len(tnew)/2)] # one side frequency range
-        #freq = freq[1:]
-        #print "Maximum frequency:", max(freq)
-        #s = np.fft.fft(valnew)
-        #s = s[range(len(valnew)/2)] # one side data range
-        #s = s[1:]
-        #ps = np.real(s*np.conjugate(s))
-
-        if not axes:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        else:
-            ax = axes
-
-        psdm = mlab.psd(valnew, nfft, 1/dt)
-        asdm = np.sqrt(psdm[0])
-        freqm = psdm[1]
-
-        ax.loglog(freqm, asdm,'b-')
-
-        #print "Maximum frequency:", max(freqm)
-
-        if freqlevel:
-            val, idx = find_nearest(freqm, freqlevel)
-            print("Maximum Noise Level at %s Hz: %s" % (val,asdm[idx]))
-
-        if not marks:
-            pass
-        else:
-            for elem in marks:
-                ax.annotate(elem, xy=(marks[elem],min(asdm)),
-                                xytext=(marks[elem],max(asdm)-(max(asdm)-min(asdm))*0.3),
-                                bbox=dict(boxstyle="round", fc="0.95", alpha=0.6),
-                                arrowprops=dict(arrowstyle="->",
-                                shrinkA=0, shrinkB=1,
-                                connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-
-        try:
-            unit = self.header['unit-col-'+key]
-        except:
-            unit = 'unit'
-
-        ax.set_xlabel('Frequency [Hz]')
-        ax.set_ylabel(('Amplitude spectral density [%s/sqrt(Hz)]') % unit)
-        if title:
-            ax.set_title(title)
-
-        if debugmode:
-            print("Finished powerspectrum at %s" % datetime.utcnow())
-
-        if outfile:
-            if fmt:
-                fig.savefig(outfile, format=fmt)
-            else:
-                fig.savefig(outfile)
-        elif returndata:
-            return freqm, asdm
-        elif show:
-            plt.show()
-        else:
-            return fig
+        mp.tsplot(self, variables=keys, **kwargs)
 
 
     def randomdrop(self,percentage=None,fixed_indicies=None):
@@ -8018,39 +7475,6 @@ CALLED BY:
         return self
 
 
-    def spectrogram(self, keys, per_lap=0.9, wlen=None, log=False,
-                    outfile=None, fmt=None, axes=None, dbscale=False,
-                    mult=8.0, cmap=None, zorder=None, title=None, show=True,
-                    sphinx=False, clip=[0.0, 1.0], **kwargs):
-        """
-        Creates a spectrogram plot of selected keys.
-        Parameter description at function obspyspectrogram
-
-        keywords:
-        samp_rate_multiplicator: to change the frequency relative to one day (default value is Hz - 24*3600)
-        samp_rate_multiplicator : sampling rate give as days -> multiplied by x to create Hz, etc: default 24, which means 1/3600 Hz
-        """
-        samp_rate_multiplicator = kwargs.get('samp_rate_multiplicator')
-
-        if not samp_rate_multiplicator:
-            samp_rate_multiplicator = 24*3600
-
-        t = self._get_column('time')
-
-        if not len(t) > 0:
-            logger.error('Spectrogram: stream of zero length -- aborting')
-            return
-
-        for key in keys:
-            val = self._get_column(key)
-            val = maskNAN(val)
-            dt = self.get_sampling_period()*(samp_rate_multiplicator)
-            Fs = float(1.0/dt)
-            self.obspyspectrogram(val,Fs, per_lap=per_lap, wlen=wlen, log=log,
-                    outfile=outfile, fmt=fmt, axes=axes, dbscale=dbscale,
-                    mult=mult, cmap=cmap, zorder=zorder, title=title, show=show,
-                    sphinx=sphinx, clip=clip)
-
     def steadyrise(self, key, timewindow, **kwargs):
         """
         DEFINITION:
@@ -8144,251 +7568,6 @@ CALLED BY:
             return []
 
         return np.asarray(rescol)
-
-    def stereoplot(self, **kwargs):
-        """
-            DEFINITION:
-                plots a dec and inc values in stereographic projection
-                will abort if no idff typ is provided
-                full circles denote positive inclinations, open negative
-
-            PARAMETERS:
-            variable:
-                - stream                (DataStream) a magpy datastream object
-            kwargs:
-                - focus:                (string) defines the plot area - can be either:
-                                            all - -90 to 90 deg inc, 360 deg dec (default)
-                                            q1 - first quadrant
-                                            q2 - first quadrant
-                                            q3 - first quadrant
-                                            q4 - first quadrant
-                                            data - focus on data (if angular spread is less then 10 deg
-                - groups                (KEY) - key of keylist which defines color of points
-                                             (e.g. ('str2') in absolutes to select
-                                             different colors for different instruments
-                - legend                (bool) - draws legend only if groups is given - default True
-                - legendposition    (string) - draws the legend at chosen position (e.g. "upper right", "lower center") - default is "lower left"
-                - labellimit        (integer)- maximum length of label in legend
-                - noshow:               (bool) don't call show at the end, just returns figure handle
-                - outfile:              (string) to save the figure, if path is not existing it will be created
-                - gridcolor:    (string) Define grid color e.g. '0.5' greyscale, 'r' red, etc
-                - savedpi:              (integer) resolution
-                - figure:               (bool) True for GUI
-
-            REQUIRES:
-                - package operator for color selection
-
-            RETURNS:
-                - plot
-
-            ToDo:
-                - add alpha 95 calc
-
-            EXAMPLE:
-                >>> stream.stereoplot(focus='data',groups='str2')
-
-            """
-        focus = kwargs.get('focus')
-        groups = kwargs.get('groups')
-        bgcolor  = kwargs.get('bgcolor')
-        colorlist = kwargs.get('colorlist')
-        outfile = kwargs.get('outfile')
-        savedpi = kwargs.get('savedpi')
-        gridinccolor = kwargs.get('gridinccolor')
-        griddeccolor = kwargs.get('griddeccolor')
-        noshow = kwargs.get('noshow')
-        legend = kwargs.get('legend')
-        legendposition = kwargs.get('legendposition')
-        labellimit = kwargs.get('labellimit')
-        figure = kwargs.get('figure')
-
-        if not colorlist:
-            colorlist = ['b','r','g','c','m','y','k']
-        if not bgcolor:
-            bgcolor = '#d5de9c'
-        if not griddeccolor:
-            griddeccolor = '#316931'
-        if not gridinccolor:
-            gridinccolor = '#316931'
-        if not savedpi:
-            savedpi = 80
-        if not focus:
-            focus = 'all'
-        if not legend:
-            legend = 'True'
-        if not labellimit:
-            labellimit = 11
-        if not legendposition:
-            legendposition = "lower left"
-
-        if not self[0].typ == 'idff':
-            logger.error('Stereoplot: you need to provide idf data')
-            return
-
-        inc = self._get_column('x')
-        dec = self._get_column('y')
-
-        col = ['']
-        if groups:
-            sel = self._get_column(groups)
-            col = list(set(list(sel)))
-            if len(col) > 7:
-                col = col[:7]
-
-        if not len(dec) == len(inc):
-            logger.error('Stereoplot: check you data file - unequal inc and dec data?')
-            return
-
-        if not figure:
-            fig = plt.figure()
-        else:
-            fig = figure
-        ax = plt.gca()
-        ax.cla() # clear things for fresh plot
-        ax.set_aspect('equal')
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        # Define koordinates:
-        basic1=plt.Circle((0,0),90,color=bgcolor,fill=True)
-        basic1a=plt.Circle((0,0),90,color=gridinccolor,fill=False)
-        basic2=plt.Circle((0,0),30,color=gridinccolor,fill=False,linestyle='dotted')
-        basic3=plt.Circle((0,0),60,color=gridinccolor,fill=False,linestyle='dotted')
-        basic4=plt.Line2D([0,0],[-90,90],color=griddeccolor,linestyle='dashed')
-        basic5=plt.Line2D([-90,90],[0,0],color=griddeccolor,linestyle='dashed')
-        fig.gca().add_artist(basic1)
-        fig.gca().add_artist(basic1a)
-        fig.gca().add_artist(basic2)
-        fig.gca().add_artist(basic3)
-        fig.gca().add_artist(basic4)
-        fig.gca().add_artist(basic5)
-
-        for j in range(len(col)):
-            color = colorlist[j]
-
-            xpos,ypos,xneg,yneg,xabs,y = [],[],[],[],[],[]
-            for i,el in enumerate(inc):
-                if groups:
-                    if sel[i] == col[j]:
-                        coinc = 90-np.abs(el)
-                        sindec = np.sin(np.pi/180*dec[i])
-                        cosdec = np.cos(np.pi/180*dec[i])
-                        xabs.append(coinc*sindec)
-                        y.append(coinc*cosdec)
-                        if el < 0:
-                            xneg.append(coinc*sindec)
-                            yneg.append(coinc*cosdec)
-                        else:
-                            xpos.append(coinc*sindec)
-                            ypos.append(coinc*cosdec)
-                else:
-                    coinc = 90-np.abs(el)
-                    sindec = np.sin(np.pi/180*dec[i])
-                    cosdec = np.cos(np.pi/180*dec[i])
-                    xabs.append(coinc*sindec)
-                    y.append(coinc*cosdec)
-                    if el < 0:
-                        xneg.append(coinc*sindec)
-                        yneg.append(coinc*cosdec)
-                    else:
-                        xpos.append(coinc*sindec)
-                        ypos.append(coinc*cosdec)
-
-
-            xmax = np.ceil(max(xabs))
-            xmin = np.floor(min(xabs))
-            xdif = xmax-xmin
-            ymax = np.ceil(max(y))
-            ymin = np.floor(min(y))
-            ydif = ymax-ymin
-            maxdif = max([xdif,ydif])
-            mindec = np.floor(min(dec))
-            maxdec = np.ceil(max(dec))
-            mininc = np.floor(min(np.abs(inc)))
-            maxinc = np.ceil(max(np.abs(inc)))
-
-            if focus == 'data' and maxdif <= 10:
-                # decs
-                startdec = mindec
-                decline,inclst = [],[]
-                startinc = mininc
-                incline = []
-                while startdec <= maxdec:
-                    xl = 90*np.sin(np.pi/180*startdec)
-                    yl = 90*np.cos(np.pi/180*startdec)
-                    decline.append([xl,yl,startdec])
-                    startdec = startdec+1
-                while startinc <= maxinc:
-                    inclst.append(90-np.abs(startinc))
-                    startinc = startinc+1
-
-            if focus == 'all':
-                ax.set_xlim((-90,90))
-                ax.set_ylim((-90,90))
-            if focus == 'q1':
-                ax.set_xlim((0,90))
-                ax.set_ylim((0,90))
-            if focus == 'q2':
-                ax.set_xlim((-90,0))
-                ax.set_ylim((0,90))
-            if focus == 'q3':
-                ax.set_xlim((-90,0))
-                ax.set_ylim((-90,0))
-            if focus == 'q4':
-                ax.set_xlim((0,90))
-                ax.set_ylim((-90,0))
-            if focus == 'data':
-                ax.set_xlim((xmin,xmax))
-                ax.set_ylim((ymin,ymax))
-                #ax.annotate('Test', xy=(1.2, 25.2))
-            ax.plot(xpos,ypos,'o',color=color, label=col[j][:labellimit])
-            ax.plot(xneg,yneg,'o',color='white')
-            ax.annotate('60', xy=(0, 30))
-            ax.annotate('30', xy=(0, 60))
-            ax.annotate('0', xy=(0, 90))
-            ax.annotate('90', xy=(90, 0))
-            ax.annotate('180', xy=(0, -90))
-            ax.annotate('270', xy=(-90, 0))
-
-        if focus == 'data' and maxdif <= 10:
-            for elem in decline:
-                pline = plt.Line2D([0,elem[0]],[0,elem[1]],color=griddeccolor,linestyle='dotted')
-                xa = elem[0]/elem[1]*((ymax - ymin)/2+ymin)
-                ya = (ymax - ymin)/2 + ymin
-                annotext = "D:%i" % int(elem[2])
-                ax.annotate(annotext, xy=(xa,ya))
-                fig.gca().add_artist(pline)
-            for elem in inclst:
-                pcirc = plt.Circle((0,0),elem,color=gridinccolor,fill=False,linestyle='dotted')
-                xa = (xmax-xmin)/2 + xmin
-                ya = sqrt((elem*elem)-(xa*xa))
-                annotext = "I:%i" % int(90-elem)
-                ax.annotate(annotext, xy=(xa,ya))
-                fig.gca().add_artist(pcirc)
-
-        if groups and legend:
-            handles, labels = ax.get_legend_handles_labels()
-            hl = sorted(zip(handles, labels),key=operator.itemgetter(1))
-            handles2, labels2 = zip(*hl)
-            ax.legend(handles2, labels2, loc=legendposition)
-
-        # 5. SAVE TO FILE (or show)
-        if figure:
-            return ax
-        if outfile:
-            path = os.path.split(outfile)[0]
-            if not path == '':
-                if not os.path.exists(path):
-                    os.makedirs(path)
-            if fmt:
-                fig.savefig(outfile, format=fmt, dpi=savedpi)
-            else:
-                fig.savefig(outfile, dpi=savedpi)
-        elif noshow:
-            return fig
-        else:
-            plt.show()
 
 
     def trim(self, starttime=None, endtime=None, newway=False):
@@ -8644,75 +7823,6 @@ CALLED BY:
                     variovalsatabstime = getfuncvals(variofunc,num2date(abstime))
                     diffs= np.asarray(refvals)-np.asarray(variovalsatabstime)
 
-                """
-                    if key == 'y':
-                        #refy = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functime)
-                        pass
-                    elif key in ['x','z']:
-                        pass
-                    else:
-                        pass
-                #refvals = funcattime(variofunc,date)
-                # 5. Get variofunc data for selected date and each usedabsdata
-                #for abstime in usedabsdata.ndarray[0]:
-                #    if variost
-                #absst, abset = usedabsdata._find_t_limits()
-                """
-                """
-                    if key == 'y':
-                        #indx = KEYLIST.index('x')
-                        #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
-                        #print type(self.ndarray[ind]), key, self.ndarray[ind]
-                        array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+key](functimearray)
-                        self.header['col-y'] = 'd'
-                        self.header['unit-col-y'] = 'deg'
-                    else:
-                        print("func2stream", function, function[0], function[0]['f'+key],functimearray)
-                        array[ind] = ar + function[0]['f'+key](functimearray)
-                        if key == 'x': # remember this for correct y determination
-                            arrayx = array[ind]
-                """
-
-        """
-        for date in datelist:
-            newvallists=[]
-            for elem in absstream:
-                # if elem.time == date:
-                    # if value existis in function:
-                        # calnewvalues and append to lists
-            # calc means from lists
-            # append means to new stream
-
-
-            # 4 Test whether variostream covers the timerange between the abstream value(s) and the datetime
-            if function[1] <= elem.time <= function[2] and function[1] <= newdate <= function[2]:
-                valatorgtime = (elem.time-function[1])/(function[2]-function[1])
-                valatnewtime = (newdate-function[1])/(function[2]-function[1])
-                elem.time = newdate
-                for key in funckeys:
-                    if not key in KEYLIST[1:15]:
-                        raise ValueError, "Column key not valid"
-                    fkey = 'f'+key
-                    if fkey in function[0]:
-                        try:
-                            orgval = float(function[0][fkey](valatorgtime))
-                            newval = float(function[0][fkey](valatnewtime))
-                            diff = orgval - newval
-                        except:
-                            logger.error("variometercorrection: error in assigning new values")
-                            return
-                        exec('elem.'+key+' = elem.'+key+' - diff')
-                    else:
-                        pass
-            else:
-                logger.warning("variometercorrection: Variometer stream does not cover the projected time range")
-                pass
-
-        # 5 Convert absresult - xyzf to idff
-        absstream = absstream._convertstream('xyz2idf')
-
-        return absstream
-        """
 
     def _write_format(self, format_type, filenamebegins, filenameends, coverage, dateformat,year):
         """
