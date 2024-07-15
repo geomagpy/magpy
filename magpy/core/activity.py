@@ -847,7 +847,7 @@ if __name__ == '__main__':
             try:
                 ts = datetime.utcnow()
                 minstream = teststream.filter(missingdata='interploate')
-                bs = qdbase(minstream, components=['z'], baseline_type='')
+                bs = sqbase(minstream, components=['z'], baseline_type='')
                 te = datetime.utcnow()
                 successes['qdbaseline'] = (
                     "Version: {}, qdbaseline: {}".format(magpyversion, (te - ts).total_seconds()))
