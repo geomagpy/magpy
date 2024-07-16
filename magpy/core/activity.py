@@ -367,6 +367,8 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
             X_data = np.tile(x, (1, 1 * 60)).flatten()
             y = np.random.uniform(29500, 30000, size=(36, 1))
             Y_data = np.tile(y, (1, 2 * 60)).flatten()
+            times = np.asarray([datetime(2022,11,21)+timedelta(minutes=i) for i in range(0,len(X_data))])
+            datastream = DataStream()
             kfmi = k_fmi(step_size=60, K9_limit=500, longitude=longitude, missing_data=missing_data)
 
         # Step 0: Fill gaps with means
