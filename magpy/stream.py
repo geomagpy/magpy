@@ -1864,6 +1864,7 @@ CALLED BY:
         stream = mergeStreams(stream,stream_new,key='comment')
         """
         timerange = kwargs.get('timerange')
+        delete = kwargs.get('delete')
         aic2key = kwargs.get('aic2key')
         aicmin2key = kwargs.get('aicmin2key')
         aicminstack = kwargs.get('aicminstack')
@@ -1881,8 +1882,12 @@ CALLED BY:
         array = []
         aic2ind = KEYLIST.index(aic2key)
         if len(self.ndarray[aic2ind]) > 0:
-            print ("aic_calc: cannot use the projected column {} for data storage as this contains data already".format(aic2key))
-            return self
+            if delete:
+                print ("aic_calc: removing contents from column {} for storage of aic data".format(aic2key))
+                self.ndarray[aic2ind] = np.asarray([])
+            else:
+                print ("aic_calc: cannot use the projected column {} for data storage as this contains data already".format(aic2key))
+                return self
         if len(self.ndarray[0]) > 0.:
             self.ndarray[aic2ind] = np.empty((len(self.ndarray[0],)))
             self.ndarray[aic2ind][:] = np.NAN
@@ -1893,10 +1898,14 @@ CALLED BY:
         iend = 0
 
         # change the following approach completely - extract ranges based on indices
+        # based on time range and sampling rate determine window length in indies
+        n_inds = int(timerange.total_seconds()/sp)
+        print (n_inds, timerange.total_seconds(), sp)
+
 
         while iend < len(t)-1:
             istart = iprev
-            ta, iend = find_nearest(np.asarray(t), date2num(num2date(t[istart]).replace(tzinfo=None) + timerange))
+            iend = istart+n_inds
             if iend == istart:
                  iend += 60 # approx for minute files and 1 hour timedelta (used when no data available in time range) should be valid for any other time range as well
             else:
@@ -1906,10 +1915,9 @@ CALLED BY:
                     if idx > 1 and idx < len(currsequence):
                         # CALCULATE AIC
                         aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normalize to sampling rate and timerange
+                        #print ("Lenghts", len(aicval), len(range(istart,iend)))
                         if len(self.ndarray[0]) > 0:
                             self.ndarray[aic2ind][idx+istart] = aicval
-                        else:
-                            exec('self[idx+istart].'+ aic2key +' = aicval')
                         if not isnan(aicval):
                             aicarray.append(aicval)
                         # store start value - aic: is a measure for the significance of information change
@@ -1919,6 +1927,7 @@ CALLED BY:
                 maxaic = np.max(aicarray)
                 # determine the relative amplitude as well
                 cnt = 0
+                """
                 for idx, el in enumerate(currsequence):
                     if idx > 1 and idx < len(currsequence):
                         # TODO: this does not yet work with ndarrays
@@ -1934,6 +1943,7 @@ CALLED BY:
                             cnt = cnt+1
                         except:
                             msg = "number of counts does not fit usually because of nans"
+                """
             iprev = iend
 
         self.header['col-var2'] = 'aic'
@@ -3164,19 +3174,12 @@ CALLED BY:
 
         stream = self.copy()
 
-        ndtype = False
         if len(stream.ndarray[0]) > 0:
-            t = stream.ndarray[0].astype(float)
-            ndtype = True
-        else:
-            t = stream._get_column('time')
+            t = stream.ndarray[0]
 
         for i, key in enumerate(keys):
-            if ndtype:
-                ind = KEYLIST.index(key)
-                val = stream.ndarray[ind].astype(float)
-            else:
-                val = stream._get_column(key)
+            ind = KEYLIST.index(key)
+            val = stream.ndarray[ind].astype(float64)
             dval = np.gradient(np.asarray(val))
             stream._put_column(dval, put2keys[i])
             stream.header['col-'+put2keys[i]] = r"d%s vs dt" % (key)
@@ -6351,7 +6354,7 @@ CALLED BY:
         # (cAn, cDn), ..., (cA2, cD2), (cA1, cD1)
         coeffs = pywt.swt(data, wavelet, level)
         acoeffs, dcoeffs = [], []
-        for i in xrange(level):
+        for i in range(level):
             (a, d) = coeffs[i]
             acoeffs.append(a)
             dcoeffs.append(d)
@@ -6366,13 +6369,13 @@ CALLED BY:
 
             # Take the values in the middle of the window (not exact but changes are
             # not extreme over standard 5s window)
-            array[t_ind].append(self.ndarray[t_ind][i+window/2])
+            array[t_ind].append(self.ndarray[t_ind][int(i+window/2)])
             data_cut = data[i:i+window]
             array[x_ind].append(sum(data_cut)/float(window))
 
             a_cut = acoeffs[0][i:i+window]
             array[dx_ind].append(sum(a_cut)/float(window))
-            for j in xrange(level):
+            for j in range(level):
                 d_cut = dcoeffs[-(j+1)][i:i+window]
                 if j <= 5:
                     key = 'var'+str(j+1)
@@ -6405,7 +6408,7 @@ CALLED BY:
 
         # Plot stream:
         if plot == True:
-            date = datetime.strftime(num2date(self.ndarray[0][0]),'%Y-%m-%d')
+            date = datetime.strftime(self.ndarray[0][0],'%Y-%m-%d')
             logger.info('MODWT_calc: Plotting data...')
             if outfile:
                 MODWT_stream.plot(['x','var1','var2','var3'],
@@ -6418,7 +6421,7 @@ CALLED BY:
         for key in KEYLIST:
             array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
 
-        return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+        return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
     def multiply(self, factors, square=False):

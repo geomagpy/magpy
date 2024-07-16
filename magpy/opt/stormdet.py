@@ -176,7 +176,7 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
 
     #day = datetime.strftime(num2date(magdata[10].time),'%Y-%m-%d')
     t_ind = KEYLIST.index('time')
-    day = datetime.strftime(num2date(magdata.ndarray[t_ind][10]),'%Y-%m-%d')
+    day = datetime.strftime(magdata.ndarray[t_ind][10],'%Y-%m-%d')
 
     a, p = variables[0], variables[1]
 
@@ -188,7 +188,7 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
         AIC_dkey = 'var3'
         trange = 30
 
-        magdata = magdata.aic_calc('x',timerange=timedelta(minutes=trange),aic2key=AIC_key)
+        magdata = magdata.aic_calc('x',timerange=timedelta(minutes=trange),aic2key=AIC_key, delete=True)
         magdata = magdata.differentiate(keys=[AIC_key],put2keys=[AIC_dkey])
 
         minlen = variables[2]
@@ -377,10 +377,10 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
         if dv_max >= 25.:
 
             #logger.info("checkACE: Found a possible detection...")
-            t_lo = num2date(t_max) - timedelta(minutes=(timestep+20))
-            t_hi = num2date(t_max) + timedelta(minutes=(lastcompare+20))
-            dACE_lo = dACE.trim(starttime=t_lo, endtime=num2date(t_max), newway=True)
-            dACE_hi = dACE.trim(starttime=num2date(t_max), endtime=t_hi, newway=True)
+            t_lo = t_max - timedelta(minutes=(timestep+20))
+            t_hi = t_max + timedelta(minutes=(lastcompare+20))
+            dACE_lo = dACE.trim(starttime=t_lo, endtime=t_max)
+            dACE_hi = dACE.trim(starttime=t_max, endtime=t_hi)
 
             std_lo = dACE_lo.mean('var4')
             std_hi = dACE_hi.mean('var4')
@@ -427,8 +427,8 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
             probf = (v_prob + dv_prob + stlo_prob + sthi_prob)/total_weight
 
             if verbose == True:
-                print(num2date(t_max), v_max, dv_max, std_lo, std_hi)
-                print(num2date(t_max), v_prob, dv_prob, stlo_prob, sthi_prob, '=', probf)
+                print(t_max, v_max, dv_max, std_lo, std_hi)
+                print(t_max, v_prob, dv_prob, stlo_prob, sthi_prob, '=', probf)
 
             # Detection is likely a storm if total probability is >= 70.
             #if probf >= 70.:
@@ -436,15 +436,15 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
             if ACE_5m != None:
                 t_5m = ACE_5m._get_column('time')
                 t_val, idx = find_nearest(t_5m,t_max)
-                start, end = (num2date(t_val),
-                        num2date(t_val)+timedelta(minutes=10))
+                start, end = (t_val,
+                        t_val+timedelta(minutes=10))
                 # TODO: Figure out why this function still decimates ACE_5m
-                ACE_flux = ACE_5m.trim(starttime=start,endtime=end, newway=True)
+                ACE_flux = ACE_5m.trim(starttime=start,endtime=end)
                 flux_val = ACE_flux.mean(key_e,percentage=20)
                 if isnan(flux_val):
                     # First try larger area:
                     ACE_flux = ACE_5m.trim(starttime=start-timedelta(minutes=10),
-                        endtime=(end+timedelta(minutes=20)), newway=True)
+                        endtime=(end+timedelta(minutes=20)))
                     flux_val = ACE_flux.mean(key_e,percentage=20)
                     if isnan(flux_val):
                         #logger.warning("checkACE: Proton Flux is nan!", flux_val)
@@ -481,7 +481,7 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
 
             acedict = {}
             # CALCULATE ESTIMATED ARRIVAL TIME
-            satssctime = num2date(t_max).replace(tzinfo=None)
+            satssctime = t_max
             #a_arr = -0.0000706504807969411
             #b_arr = 0.0622525912
             #arr_est = a_arr * v_max + b_arr # original
@@ -509,8 +509,8 @@ def checkACE(ACE_1m,ACE_5m=None,acevars={'1m':'var2','5m':'var1'},timestep=20,la
     # Until boundary effects can be mitigated, this should deal with potentially incorrect detections:
     # TODO: take this out at some point
     if detection:
-        if ((num2date(ACE_1m.ndarray[t_ind][-1]).replace(tzinfo=None) - ace_ssc[0]['satssctime']).seconds < (timestep/2.)*60. or
-                (ace_ssc[0]['satssctime'] - num2date(ACE_1m.ndarray[t_ind][0]).replace(tzinfo=None)).seconds < (timestep/2.)*60.):
+        if ((ACE_1m.ndarray[t_ind][-1] - ace_ssc[0]['satssctime']).seconds < (timestep/2.)*60. or
+                (ace_ssc[0]['satssctime'] - ACE_1m.ndarray[t_ind][0]).seconds < (timestep/2.)*60.):
             detection, ace_ssc = False, []
 
     if verbose == True:
@@ -605,7 +605,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
         if var >= a and possdet == False:
             #timepin = row.time
             timepin = t_ar[i]
-            ssc_init = num2date(timepin).replace(tzinfo=None)
+            ssc_init = timepin
             #x1 = row.x
             x1 = x_ar[i]
             if verbose:
@@ -614,7 +614,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
         #elif var < a and possdet == True:  # old version. WARNING: Replacement may be buggy.
         elif possdet == True:
             #duration = (num2date(row.time) - num2date(timepin)).seconds
-            test_duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
+            test_duration = (t_ar[i] - timepin).seconds
 
             # CRITERION #2: Length of time that variable exceeds a must > p
             # *************************************************************
@@ -622,15 +622,15 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
                 # Find full duration:
                 ssc_ends = np.where(var_ar[i:] < a)[0]
                 if len(ssc_ends) == 0: # not by the end of this time range
-                    duration = (num2date(t_ar[-1]) - num2date(timepin)).seconds
+                    duration = (t_ar[-1] - timepin).seconds
                 else:
                     i += ssc_ends[0]
-                    duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
+                    duration = (t_ar[i] - timepin).seconds
                 #x2 = row.x
                 x2 = x_ar[i]
                 d_amp = x2 - x1
                 if verbose:
-                    print("x2:", x2, num2date(t_ar[i]))
+                    print("x2:", x2, t_ar[i])
                     print("Possible detection with duration %s at %s with %s nT." % (duration, ssc_init, d_amp))
 
                 # CRITERION #3: Variation in H must exceed a certain value
@@ -692,7 +692,7 @@ def findSSC(var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=
 
             elif var < a:
                 if verbose:
-                    short_duration = (num2date(t_ar[i]) - num2date(timepin)).seconds
+                    short_duration = (t_ar[i] - timepin).seconds
                     print("Peak fell below threshold. Duration was {:.0f} s".format(short_duration))
                 possdet = False
             else:
@@ -765,9 +765,10 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                 useACE=ACE_detection, ACE_results=ACE_results)
     '''
 
-    trange = 5.0 # in minutes
+    trange = timedelta(minutes=5.0) # in minutes
 
     stream = stream._drop_nans(aic_dkey)
+    print (len(stream))
 
     maxfound = True
     detection = False
@@ -803,12 +804,11 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
             #remaininglst = [elem for elem in stream if elem.time < mtime - trange/60.0/24.0
                 #or elem.time > mtime + trange/60.0/24.0]
             remaininglst = stream.copy()
-            nst = stream.trim(starttime=mtime-trange/60.0/24.0, endtime=mtime+trange/60.0/24.0,
-                        newway=True)
+            nst = stream.trim(starttime=mtime-trange, endtime=mtime+trange)
             #plot_new(nst, ['x','var2','var3'])
             for i in range(len(remaininglst.ndarray[t_ind])-1,-1,-1):
-                if (remaininglst.ndarray[t_ind][i] > mtime - trange/60.0/24.0
-                        and remaininglst.ndarray[t_ind][i] < mtime + trange/60.0/24.0):
+                if (remaininglst.ndarray[t_ind][i] > mtime - trange
+                        and remaininglst.ndarray[t_ind][i] < mtime + trange):
                     for j in range(0, len(KEYLIST)):
                         if len(remaininglst.ndarray[j]) > 0:
                             remaininglst.ndarray[j] = np.delete(remaininglst.ndarray[j], i, 0)
@@ -817,12 +817,12 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
             daicmin, tmin = nst._get_min(aic_dkey, returntime=True)
             daicmax, tmax = nst._get_max(aic_dkey, returntime=True)
             if verbose == True:
-                print("AIC time min:", num2date(tmin))
-                print("AIC time max:", num2date(tmax))
+                print("AIC time min:", tmin)
+                print("AIC time max:", tmax)
 
             if tmin > tmax:     # Wrong minimum. Fix!
                 while True:
-                    nst = nst.trim(endtime=(tmin-1./(24.*60.*60.)))
+                    nst = nst.trim(endtime=(tmin-timedelta(seconds=1)))
                     if len(nst) == 0:
                         # Program is trying to correct a max/min pair at a discontinuity. Doesn't work!
                         # TODO: How to fix this?
@@ -834,8 +834,8 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                     daicmax, tmax = nst._get_max(aic_dkey, returntime=True)
                     if verbose == True:
                         print("False minimum. Finding a new one...")
-                        print("AIC time min:", num2date(tmin))
-                        print("AIC time max:", num2date(tmax))
+                        print("AIC time min:", tmin)
+                        print("AIC time max:", tmax)
                     if tmax > tmin:
                         break
 
@@ -847,7 +847,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
             xmin = nst.ndarray[x_ind][idx]
             elevatedrange = nst.extract(aic_dkey,onsetval,'>')
             #ssc_init = num2date(linemin.time).replace(tzinfo=None)
-            ssc_init = num2date(nst.ndarray[t_ind][idx]).replace(tzinfo=None)
+            ssc_init = nst.ndarray[t_ind][idx]
 
             # CRITERION #2: Elevated range must be longer than minlen
             # *******************************************************
@@ -855,14 +855,14 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                 #d_amp = elevatedrange[-1].x - xmin
                 d_amp = elevatedrange.ndarray[x_ind][-1] - xmin
                 #duration = (num2date(elevatedrange[-1].time).replace(tzinfo=None)-ssc_init).seconds
-                duration = (num2date(elevatedrange.ndarray[t_ind][-1]).replace(tzinfo=None)-ssc_init).seconds
+                duration = (elevatedrange.ndarray[t_ind][-1]-ssc_init).total_seconds()
 
                 if verbose == True:
                     print("Low value:", lowval)
                     print("Onset value:", onsetval)
                     print("Length of onset array:", len(nst))
                     print("Amplitude:", d_amp)
-                    print("Max and time:", maxval, num2date(tmin))
+                    print("Max and time:", maxval, tmin)
                     print("Length of elevated range:", len(elevatedrange.ndarray))
                     print("Time of SSC:", ssc_init)
 
@@ -883,29 +883,6 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                                 dh_prob, dh_weight, satprob_weight, estt_weight, verbose=verbose)
                             if det == True:
                                 break
-                            '''
-                            ssc_ACE = ACE_ssc['satssctime']
-                            v_arr = ACE_ssc['vwind']
-                            t_arr = ssc_ACE + timedelta(minutes=((a_varr*v_arr + b_varr)*60*24))
-                            t_arr_low = t_arr - timedelta(minutes=ace_window)
-                            t_arr_high = t_arr + timedelta(minutes=ace_window)
-                            if verbose == True:
-                                print "Arrival time low:", (t_arr_low)
-                                print "Arrival time high:", (t_arr_high)
-                            if (ssc_init > (t_arr_low) and
-                                ssc_init < (t_arr_high)): #and
-                                #detection == False):
-                                if verbose == True:
-                                    print "Storm onset =", num2date(elevatedrange[0].time), d_amp
-                                detection = True
-                                SSC_dict = {}
-                                SSC_dict['ssctime'] = ssc_init
-                                SSC_dict['amp'] = d_amp
-                                SSC_dict['duration'] = duration
-                                SSC_dict['probf'] = (probf + ACE_ssc['probf'])/2.
-                                ssc_list.append(SSC_dict)
-                                break
-                            '''
                     elif useACE == True and ACE_results == []:
                         detection, det = False, False
                         if verbose == True:
@@ -914,7 +891,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
                     elif useACE == False:
                         detection, det = True, True
                         if verbose == True:
-                            print("Storm onset =", num2date(elevatedrange[t_ind][0]), d_amp)
+                            print("Storm onset =", elevatedrange.ndarray[t_ind][0], d_amp)
                         detection = True
                         final_probf = dh_prob
                         if verbose == True:
@@ -932,7 +909,7 @@ def findSSC_AIC(stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=Fa
             else:
                 if verbose == True:
                     print("Outlier -- no storm onset")
-            stream = DataStream(remaininglst,{})
+            stream = remaininglst
         else:
             maxfound = False
 

@@ -206,7 +206,7 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                 date = datetime(int(dataelem[0]),int(dataelem[1]),int(dataelem[2]),int(dataelem[3][:2]),int(dataelem[3][2:]))
                 status = int(dataelem[6])
                 row.str1 = status
-                row.time = date2num(date)
+                #row.time = date2num(date)
                 array[indstr1].append(status)
                 array[indtime].append(date)
                 if cleandata == True:
@@ -363,7 +363,5 @@ def readNOAAACE(filename, headonly=False, **kwargs):
 
     headers["DataFormat"] = "NOAATXT"
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
-    #return stream
-    #return DataStream(stream, headers)
