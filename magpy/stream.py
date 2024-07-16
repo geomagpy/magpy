@@ -6263,7 +6263,7 @@ CALLED BY:
                 return float("NaN")
 
 
-    def MODWT_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
+    def modwt_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
                 window=5):
         """
     DEFINITION:

@@ -212,7 +212,7 @@ def seekStorm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variables
     # MODWT - MAXIMAL OVERLAP DISCRETE WAVELET TRANSFORM
     # --------------------------------------------------
     elif method == 'MODWT': # using D2 or D3 detail
-        MODWT = magdata.MODWT_calc(level=1, wavelet='haar')
+        MODWT = magdata.modwt_calc(level=1, wavelet='haar')
         var_key = 'var1'
         detection, ssc_list = findSSC(MODWT, var_key, a, p, useACE=useACE, ACE_results=ACE_results, verbose=verbose)
         if plot_vars == True:
