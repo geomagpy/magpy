@@ -990,7 +990,7 @@ The method `seekStorm` will return two variables: `detection` is True if any det
 
 #### 8.3 Sq analysis
 
-Identifying solar quiet variations is a challenging subject of geomagnetic data analysis. The basic objective 
+Identifying solar quiet (Sq) variations is a challenging subject of geomagnetic data analysis. The basic objective 
 is finding/identifying a variation curve of geomagnetic data which is unaffected by active solar regions. Thus such
 solar quiet curve can be subtracted from actually measured data to unambiguously identify solar activity influences
 on the geomagnetic field. Such solar quiet curve is often also referred to a 'baseline'. Please be careful not to 
@@ -1003,7 +1003,7 @@ The following sources and variations should affect the baseline/variation:
 - solar cycle variations (sun cycle)
 - yearly/seasonal variations (position of current system, relative distance, angle)
 - neutral atmospheric variation - should also be seasonal) 
-- 27 day solar rotation cycle (recurrance of solar activity)
+- 27 day solar rotation cycle (recurrence of solar activity)
 - daily variation (ionospheric current systems)
 - lunar cycle with 12.4 hours
 - solar activity (cme - days)
@@ -1011,70 +1011,120 @@ The following sources and variations should affect the baseline/variation:
 - pulsations (typically, less then hours)
 - artifical/technical disturbances (mostly less than seconds to minutes):
 
-Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define the sq variation. This is a general 
+Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define the Sq variation. This is a general 
 feature of many sq-variation separation techniques and also forms the basis of our approach. For frequency separation we are decomposing the original signal
-into "frequency" bands using an empirical mode decomposition technique. Each decomposition step, "sift" is removing complexitity from the original data curve.
-In order to get comparable amount of sifts with similar frequency contents for different data selections we are using solely time windows of 263000 minutes, corresponding to half a year of geomagnetic data.
-This time range is good enough to cover essential periods affecting sq-variation evolution below seasonal effects. Additionally it is quickly applicable.
+into "frequency" bands using an empirical mode decomposition technique (EMD). For this purpose we are using the python package [emd] (https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is non-stationary, highly dynamic, and contains
+non-sinusoidal contributions. In comparison to other Fourier-transform based decomposition techniques, which basically determine a set of sinusoidal basis functions, EMD is perfectly suited for such data sets and isolates a small number of temporally adaptive basis functions and derive dynamics in frequency and amplitude directly from them.
+These adaptive basis functions are called Intrinsic Mode Functions (IMF's).
 
-Dealing with a test data set in one-minute resolution from the Conrad Observatory. Data characteristics are outline in Fig. 1 (show horizontal component, show prominent marks, and highlight a few zoom-ins with specific data segments shown throughtout the manuscript).
-Now we apply emperical-mode-decomposition on this data set. Figure 2 show a decomposition results with all 16-18 sifts, and the sum of all. The sum
-of all sifts corresponds exactly to the original signal, which is an important aspekt of the EMD, which will be show later. In a next step we are 
-specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to analyse distribuations of 
-instantenous frequencies, amplitudes and phases of each sift. Results for IMF-6 and IMF-9 are shown in Fig. 3. IMF-6 is hereby marking a period of about 3h
-just above the range which we are using for the general baseline approximation. IMF-9 contains the prominant diurnal magnetic signal which is nicely visible on the Amplitude weighted plot of the Hilbert-Huang-Transform.
+In sections 8.3.1 we show how our Sq technique is working in detail. If you are interested its simple, single-command application then move to section 8.3.2. Please note that you need to feed at least 6 days of one-minute data to this method. Ideally you would choose much longer time ranges. In th efollowing examples we are analyzing
+three months of one-minute data.
 
-(Actually this was the state for ongoing feature detection before I read Veronikas work)
+>![IMPORTANT]
+> 
+> Method requires one-minute data, at least 6 days, preferably 3 months to cover a number of solar rotation cycles
 
-The problem of this purly frequency based baseline separation is, that during disturbed time of the geomagnetic field also longer periods of the geomagnetic field are affected with large amplitudes. A CME for example will affect the geomagnetic field for hours to days and thus is not adequately considered using this baseline technique as periodicities clearly affected by such disturbed time ranges are contained
-within the baseline approximation. For this work we are primarly interested in auto-detecting signoificant features of the geomagnetic field of natural and artificial origin. CME effects and an optimal description of onset, amplitude and duration certainly belong to these features. Therefore
-the "quiet" reference baseline, containing untested features should not be biased by features which we are interested in.  
+#### 8.3.1 Combining empirical mode decomposition, cyclicity and disturbance analysis for Sq determination
 
-To deal with such effects two approaches are known so far, the SuperMag method and the Haberle method. Describe them...
+##### Empirical mode decomposition
 
-We are following a slightly different technical approach. In principle we are using two characteristics of IMF's in order to identify clearly disturbed time ranges, for which a standard baseline approxiumaion as shown above is not precise.
-Firstly we are examing the amplitude variation of an IMF with periods just above the baseline period range. Hereby we asume that larger amplitudes are 
-connected to disturbances predominantly to disturbaces related to solar effects, but still well above the period range of artificial disturbing sources. This is a perfectly valid asupmtion as shown in Fig. 4 (original signal with flags of CME from the CME database
-and cyclisitity of IMF-8). Using a statistical standard procedure, we asume the time ranges (plus-minus a period range) of any IMF-6 data exceeding the inner-quartile range by a factor of 1.5 as being disturbed. This approach can be applied to any data set independent from location.
-Secondly, we analyze the cyclicity of the diurnal signal, whch is obviuosly the most prominent period, and also might be affected by solar effects on the ionospheric current system. For this 
-purpose we are analyzing the phase singal of IMF-9, whether the phase is strictly increasing, whether the phase covers a full 2Pi range and ...
-Cycles not satisfying these criteria are termed "bad" cycles and are also removed from the baseline approcimation.
-In summary, these two methods will lead to gaps within the baseline approximation as shown in Fig 5.
+The emd python package is used to determine IMF's from any given input signal. For the following example we are analyzing 3 months of definitive h data containing
+various different disturbances from weak geomagnetic storms. Each decomposition step, "sift" is removing complexity from the original data curve. 
+The original data is show in the upper diagram of Figure ![EMD](./doc/sqbase-emd.png). Altogether 16 sifts were found containing decreasing complex signal contributions. 
+Summing up all these IMF curves will exactly reconstruct the original data, another important feature of EMD.  
+In order to get comparable amount of sifts with similar frequency contents for different data selections you will need to supply 131500 minutes, corresponding to 3 months of geomagnetic data.
+This time range is good enough to cover essential periods affecting Sq-variation evolution below seasonal effects. Additionally it is quickly applicable. If you supply less data, the maximum amounts of sifts will be lower.
+Nevertheless, individual low-order sifts will contain similar frequency contributions. 
 
-Approximating the baseline for non-quiet periods:
+##### Frequency and amplitude characteristics
 
-Running a cycle analysis for all periodic IMF curves between IMF-7 and IMF 12. Calculate the median cycle of 27 cycle window (13 cycles before and 13 cycles after the current). 27 cycle window is chosen on basis the solar recurrence period on the daily signal. In order to fill remaining gaps and smooth Überganäng between individual median cycles, the median cycle IMF is fitted by a cubic spline function with
-knots at each data point and using zero weights for non-existing data. The result of these steps are shown in Fig. 6. In order to get a mean data for IMF above 12 we simply use a linear interpolation of the gaps, as the average(max) gap length is significantly below the cycle frequency.
+In a next step we are 
+specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to analyse distributions of 
+instantenous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in Figure ![IMF-6 characteristics](./doc/sqbase-imf6-characteristics.png). IMF-6 is hereby marking a period of about 3h,
+a range which is often used for the general baseline approximation (i.e. for K values).Its amplitude variation indicates a few time ranges containing "disturbed" data characterized by larger amplitude. The dashed line 
+is related to the upper inner-quartile limit with a standard factor of 1.5 (i.e. Q3+f*IQR).
 
-A median baseline is then obtained by summing up the median IMF's 7-12 and the interpolated IMF's 13-16. Fig. 7 shows a comparison of original data, EMD baseline amd median baseline. 
-Analysis of quiet day fits. 
+If you are interested in determination of Sq baselines based on a frequency related filtering you can stop here already. Recombining all IMF from IMF-6 onwards will correspond to
+such frequency based filtering and provide a baseline very similar/almost identical to one used for K-value extraction.
 
-Is the median baseline really the better choice? For relatively undisturbed data choose the EMD baseline for disturbed regions we choose the median baseline.
+Full application of this technique in MagPy is as follows:
 
-Create a weighting array to calculate mean using a linear daily adoption
-Joint EMD and median baseline.
+        from magpy.core import activity as act
+        data = read("path-to-one-minute-data")
+        sqcurce = act.sqbase(data, components=['x','y'], baseline_type='imf')
+
+##### Cyclicity based Sq variation
+
+For this approach we assume that any Sq signal is fully contained within the periodic oscillations that are present in our IMF's.
+In order to analyze these oszillations we fwollow the approach which is described [here](https://emd.readthedocs.io/en/stable/emd_tutorials/03_cycle_ananlysis/index.html) in detail. 
+For each IMF we are eaxminmg cyclicity and distinguish between good and bad cycles. A good cycle is charcterized by 
+
+a) A strictly positively increasing phase, 
+b) A phase starting within phase_step of zero ie the lowest value of IP must be less than phase_step
+c) A phase ending within phase_step of 2pi the highest value of IP must be between 2pi and 2pi-phase_step
+d) A set of 4 unique control points (ascending zero, peak, descending zero & trough)
+
+An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![IMF-9 cyclicity](./doc/sqbase-imf9-cycles.png) 
+Cycles not satisfying above criteria are termed "bad" cycles and are masked from the Sq approximation.
+
+Starting with IMF-6 (period 3h) we are then determining a median of the average linear waveforms of identified "good" cycles, by 
+running a gliding window of +/- 13 cycles across the investigated timeseries. In order to fill remaining gaps and smooth transitions between individual median cycles, the median cycle IMF is fitted by a cubic spline function with
+knots at each data point and using zero weights for non-existing data. The 13-cycle range is related to the dominating diurnal period, for which waveforms
+of -13 days + current day + 13 days = 27 days are considered. 27 days correspond to the solar rotation period, containing recurrent solar effects. 
+Median IMF-10 and IMF-11 curves are calculated for 13 cycles (covering 27 days for IMF-10). 
+For IMF's above 12 (period exceeding 8 days) we are using a simply linear fit of available data, as the average approximated length is significantly below the cycle frequency.
+
+We obtain a running median waveform considering oszialltion of the individual IMF's from IMF-6 onwards. Hereby we also excluded HF signal contributions by limiting to 
+IMF-6 and larger. The Sq baseline will be a sum of individual median oszillations signals identified within the decomposed signal. Unlike the frequency technique above, 
+this method will likely better estimate Sq variations during disturbed periods affecting hours/days. During quiet periods, however, a frequency related method
+is likely superior as such methods will remove any non-solar driven multi-day variation (i.e neutral atmosphere, see day2day variability in Haberle et al).
+
+Full application of the median Sq technique in MagPy is as follows:
+
+        from magpy.core import activity as act
+        data = read("path-to-one-minute-data")
+        sqcurce = act.sqbase(data, components=['x','y'], baseline_type='median')
 
 
+##### Considering solar disturbances affecting low frequencies
+
+The problem of purly frequency based baseline separation is, that during disturbed time of the geomagnetic field 
+also longer periods of the geomagnetic field are affected with large amplitudes. A CME for example will affect the 
+geomagnetic field for hours to days and thus is not adequately considered using a simple frequency based Sq determination technique.
+Low-frequency "periodicities" clearly affected by disturbed time ranges will still be contained and assumed to represent Sq variations.
+
+For a many applications we are primarily interested in detecting significant features of the geomagnetic field of natural and artificial origin. 
+CME effects and an optimal description of onset, amplitude and duration certainly belong to these features. Therefore
+the "solar quiet" reference baseline, containing untested features should not be biased by features which we are interested in.  
+
+To deal with such effects two approaches are used so far, at least to our knowledge, the method of [SuperMag](), which is not easily reproducible, and the [Haberle]()) method. 
+Please consider the publication of Veronika Haberele as this approach, comprises the reasoning behind the technique described here, although 
+application, theory and methods of MagPy are different.
+
+In principle we are using two characteristics of IMF's in order to identify clearly disturbed time ranges, for which a standard baseline approximation as shown above is not precise.
+Firstly we are examining the amplitude variation of an IMF with periods just above the lower Sq period range. Hereby we assume that larger amplitudes are 
+connected to disturbances related to solar effects, but still well above the period range of eventually undetected artificial disturbing sources. This is a perfectly valid 
+assumption as shown in Fig. 4 (original signal with flags of CME from the CME database).
+Based on a statistical standard procedure, we assume time ranges 
+(plus-minus a period range) of any IMF-6 amplitude variation data exceeding the upper limit of the inner-quartile range by IQR*1.5 as being disturbed. This approach can be applied 
+to any data set independent from location.
+
+Secondly, we analyze the cyclicity of the diurnal signal, which is obviously the most prominent period, and also might be affected by solar effects on the ionospheric current system. For this 
+purpose we are analyzing the phase signal of IMF-9 as shown above. Cycles not satisfying above mentioned criteria are termed "bad" cycles and are also removed from the frequency related Sq approximation.
+In combination, these two methods will lead to an identification of time ranges for which a simple frequency based
+Sq determination technique does presumably not hold. A joint Sq baseline will assume that the median baseline will represent Sq variations better during such disturbed periods. 
+
+Thus, the joint procedure will determine gaps as described above. in a next step a weighting function will be determined with linear transitions between EMD Sq and median Sq curves. 
+The weighting function for the median Sq curve is shown in Figure ![Joint Sq curve](./doc/sqbase-joint.png). The weighting function of the EMD Sq baseline corresponds to the inverse. 
+The window length for the gradual shift from EMD to Median curve is arbitrarily chosen to 12 hours and can be changed by options. 
+All three Sq curve approximations are shown in th lower plot.
 
 
+Full application of the joint Sq technique in MagPy works as follows:
 
-
-
-Challange:
-1. compose a geomagnetic data set by source definitions like in gravity (impossible as many sources and interactions are unkown)
-2. separate sources ... - monthly means and above describe secular variation
-                        - below is already affected by solar activity
-                        - 
-Test analysis: take hourly data of every year (H) and decompose. Recompose certain frequency groups any analyze year2year differences, shifts etc
-
-
-Approach for gap filling:
-a. identify gaps
-
-- asign gaps to daily cycles
-- analyse cycles and create 24h average cycle curves for imf7-11 (<6days period), plus linear trends for imf12-max (i.e. using interpolate)
-- averages are calculated by up to 27 preceeding and 27 subsequent cycles, just use what is existing
-- go through baseline data and replace any missing sgement with appropriate mean
+        from magpy.core import activity as act
+        data = read("path-to-one-minute-data")
+        sqcurce = act.sqbase(data, components=['x','y'], baseline_type='joint')
 
 
 #### 9.4 Validity check of data
