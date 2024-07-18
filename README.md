@@ -970,23 +970,23 @@ The determination of K values will take some time as the filtering window is dyn
 Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike Information Criterion (AIC) as outlined in detail in Bailey and Leonhardt (2016). A basic example of usage to find an SSC using a Discrete Wavelet Transform (DWT) is shown below:
 
         from magpy.stream import read
-        from magpy.opt.stormdet import seekStorm
+        from magpy.core import activity as act
         stormdata = read("LEMI025_2015-03-17.cdf")      # 1s variometer data
-        stormdata = stormdata.xyz2hdz()
         stormdata = stormdata.smooth('x', window_len=25)
-        detection, ssc_list = seekStorm(stormdata, method="MODWT")
-        print("Possible SSCs detected:", ssc_list)
+        detection, ssc_dict = act.seek_storm(stormdata, method="MODWT")
+        print("Possible SSCs detected:", ssc_dict)
 
-The method `seekStorm` will return two variables: `detection` is True if any detection was made, while `ssc_list` is a list of dictionaries containing data on each detection. Note that this method alone can return a long list of possible SSCs (most incorrectly detected), particularly during active storm times. It is most useful when additional restrictions based on satellite solar wind data apply (currently only optimised for ACE data, e.g. from the NOAA website):
+The method `seek_storm` will return two variables: `detection` is True if any detection was made, while `ssc_list` is a flagging type dictionary containing data on each detection. Note that this method alone can return a long list of possible SSCs (most incorrectly detected), particularly during active storm times. It is most useful when additional restrictions based on satellite solar wind data apply (currently only optimised for ACE data, e.g. from the NOAA website):
 
         satdata_ace_1m = read('20150317_ace_swepam_1m.txt')
         satdata_ace_5m = read('20150317_ace_epam_5m.txt')
-        detection, ssc_list, sat_cme_list = seekStorm(stormdata,
+        detection, ssc_dict = act.seek_storm(stormdata,
                     satdata_1m=satdata_ace_1m, satdata_5m=satdata_ace_5m,
                     method='MODWT', returnsat=True)
-        print("Possible CMEs detected:", sat_cme_list)
-        print("Possible SSCs detected:", ssc_list)
+        print("Possible CMEs detected:", ssc_dict.select_flags(parameter='sensorid', values=['ACE'])
+        print("Possible SSCs detected:", ssc_dict.select_flags(parameter='sensorid', values=['LEMI'])
 
+Details on this method are published in Bailey and Leonhardt (2014).
 
 #### 8.3 Sq analysis
 
