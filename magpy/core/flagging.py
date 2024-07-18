@@ -96,7 +96,7 @@ class flags(object):
             self.flaglist = self.d2l(flagdict)
 
 
-        self.FLAGKEYS = ['starttime',         # datetime
+        self.FLAGKEYS10 = ['starttime',         # datetime
                     'endtime',           # datetime
                     'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys
                     'id',                # integer number
@@ -104,6 +104,25 @@ class flags(object):
                     'sensorid',          # text without special characters (utf-8)
                     'modificationtime',  # datetime
                     'flagversion']       # string like 1.0
+
+        self.FLAGKEYS20 = [
+                    'flagid',            # integer - unique number
+                    'sensorid',          # SensorId of Sensor on which flagging was conducted
+                    'starttime',         # datetime
+                    'endtime',           # datetime
+                    'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
+                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+                    'labelid',           # string with number i.e. '001'
+                    'label',             # name asociated with labelid i.e. lightning
+                    'comment',           # text without special characters (utf-8)
+                    'group',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'probabilities',     # measure of probabilities - list
+                    'stationid',         # stationid of flag
+                    'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
+                    'operator',          # text with name/shortcut of flagging person i.e. RL
+                    'color',             # None or string with color code to override flagid, will override automatic choice by flagtype
+                    'modificationtime',  # datetime
+                    'flagversion']       # string like 2.0
 
         self.FLAGID = {'0.4' : { 0: 'normal data',
                             1: 'automatically flagged for removal',
@@ -117,6 +136,12 @@ class flags(object):
                             3: 'observer decision: keep data',
                             4: 'observer decision: remove data',
                             5: 'special flag: define in comment'
+                          },
+                  '2.0' : { 0: 'normal data', # the higher the number the more important
+                            1: 'automatically flagged for removal',
+                            2: 'automatically flagged to keep',
+                            3: 'observer decision: remove data',
+                            4: 'observer decision: keep data'
                           }
                   }
 
@@ -135,6 +160,24 @@ class flags(object):
                             '055':['train'],
                             '090':['spike'],
                           }
+
+        self.FLAGLABEL = { '000':'normal',
+                           '001': 'lightning strike',
+                           '002': 'spike',
+                           '012': 'pulsation pc 2',
+                           '013': 'pulsation pc 3',
+                           '014': 'pulsation pc 4',
+                           '015': 'pulsation pc 5',
+                           '016': 'pulsation pi 2',
+                           '020': 'ssc geomagnetic storm',
+                           '021': 'geomagnetic storm',
+                           '022': 'crochete',
+                           '030': 'earthquake',
+                           '050': 'vehicle passing above',
+                           '051': 'nearby disturbing source',
+                           '052': 'train',
+                           '090': 'unknown disturbance'
+                           }
 
     def __str__(self):
         return str(self.flaglist)

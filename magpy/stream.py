@@ -944,7 +944,7 @@ CALLED BY:
                 if len(elem) > 0 and ind < len(TESTLIST):
                     if not TESTLIST[ind] == 'time':
                         keylist.append(TESTLIST[ind])
-
+        """
         if not len(keylist) > 0:  # e.g. header col-? does not contain any info
             #for key in FLAGKEYLIST[1:]: # use the long way
             for key in TESTLIST[1:]: # use the long way
@@ -956,7 +956,7 @@ CALLED BY:
                             keylist.append(key)
                     else:
                         keylist.append(key)
-
+        """
         if limit and len(keylist) > limit:
             keylist = keylist[:limit]
 
