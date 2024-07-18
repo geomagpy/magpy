@@ -209,5 +209,5 @@ def readACECDF(filename, headonly=False, **kwargs):
         cdf_file.close()
         del cdf_file
 
-    return DataStream([LineStruct()], stream.header,np.asarray(array))
+    return DataStream(header=stream.header,ndarray=np.asarray(array, dtype=object))
 

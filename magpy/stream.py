@@ -1893,14 +1893,13 @@ CALLED BY:
             self.ndarray[aic2ind][:] = np.NAN
         # get sampling interval for normalization - need seconds data to test that
         sp = self.samplingrate()
-        # corrcet approach
+        # correct approach
         iprev = 0
         iend = 0
 
         # change the following approach completely - extract ranges based on indices
         # based on time range and sampling rate determine window length in indies
         n_inds = int(timerange.total_seconds()/sp)
-        print (n_inds, timerange.total_seconds(), sp)
 
 
         while iend < len(t)-1:
@@ -1927,23 +1926,6 @@ CALLED BY:
                 maxaic = np.max(aicarray)
                 # determine the relative amplitude as well
                 cnt = 0
-                """
-                for idx, el in enumerate(currsequence):
-                    if idx > 1 and idx < len(currsequence):
-                        # TODO: this does not yet work with ndarrays
-                        try:
-                            if aicminstack:
-                                if not eval('isnan(self[idx+istart].'+aicmin2key+')'):
-                                    exec('self[idx+istart].'+ aicmin2key +' += (-aicarray[cnt] + maxaic)')
-                                else:
-                                    exec('self[idx+istart].'+ aicmin2key +' = (-aicarray[cnt] + maxaic)')
-                            else:
-                                exec('self[idx+istart].'+ aicmin2key +' = (-aicarray[cnt] + maxaic)')
-                                exec('self[idx+istart].'+ aicmin2key +' = maxaic')
-                            cnt = cnt+1
-                        except:
-                            msg = "number of counts does not fit usually because of nans"
-                """
             iprev = iend
 
         self.header['col-var2'] = 'aic'
@@ -6706,7 +6688,6 @@ CALLED BY:
 
         logger.info('Remove: Started from %s to %s' % (starttime,endtime))
 
-        cutstream = DataStream()
         cutstream = self.copy()
         starttime = testtime(starttime)
         endtime = testtime(endtime)
@@ -6714,25 +6695,16 @@ CALLED BY:
 
         if len(cutstream.ndarray[0]) > 0:
             timearray = self.ndarray[0]
-            st = (np.abs(timearray.astype(float)-date2num(starttime))).argmin() - 1
-            ed = (np.abs(timearray.astype(float)-date2num(endtime))).argmin() + 1
-            if starttime < num2date(cutstream.ndarray[0][0]):
+            st = (np.abs(timearray-starttime)).argmin() - 1
+            ed = (np.abs(timearray-endtime)).argmin() + 1
+            if starttime < cutstream.ndarray[0][0]:
                 st = 0
-            if endtime > num2date(cutstream.ndarray[0][-1]):
+            if endtime > cutstream.ndarray[0][-1]:
                 ed = len(cutstream.ndarray[0])
             dropind = [i for i in range(st,ed)]
             for index,key in enumerate(KEYLIST):
                 if len(cutstream.ndarray[index])>0:
                     cutstream.ndarray[index] = np.delete(cutstream.ndarray[index], dropind)
-        else:
-            for idx, elem in enumerate(self):
-                newline = LineStruct()
-                if not isnan(elem.time):
-                    newline.time = elem.time
-                    if elem.time <= date2num(starttime) or elem.time > date2num(endtime):
-                        for key in KEYLIST:
-                            exec('newline.'+key+' = elem.'+key)
-                    cutstream.add(newline)
 
         return cutstream
 
