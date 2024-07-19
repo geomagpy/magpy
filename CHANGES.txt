@@ -5,10 +5,10 @@ Installation instructions can be found on the main download page.
 
 2.0.0 general:
     - considerable changes to internal data structure
-    - reorganization of methods and classe
+    - reorganization of methods and classes
     - cleanup of code, deletion of unused and defunct code fragments
     - removed python 2.x support, cleanup of import and dependencies
-    - changed many method with main focus on speed and memory efficency
+    - changed many method with main focus on speed and memory efficiency
     - completely new plotting routines
     - README completely reorganized, updated and partly rewritten
     - jupyter-notebook examples for backend functionality
