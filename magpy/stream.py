@@ -5853,7 +5853,7 @@ CALLED BY:
         else:
             return 0.0
 
-    def samplingrate(self, **kwargs):
+    def samplingrate(self, digits=None, notrounded=False, recalculate=False):
         """
         DEFINITION:
             returns a rounded value of the sampling rate
@@ -5861,8 +5861,6 @@ CALLED BY:
             and updates the header information
         """
         # XXX include that in the stream reading process....
-        digits = kwargs.get('digits')
-        notrounded = kwargs.get('notrounded')
 
         if not digits:
             digits = 1
@@ -5877,7 +5875,7 @@ CALLED BY:
                 sr = src
             else:
                 sr = float(self.header.get("DataSamplingRate").strip(" sec"))
-        if not sr:
+        if not sr or recalculate:
             sr = self.get_sampling_period()
             logger.info("sampling rate: Calculated sampling rate {}".format(sr))
         unit = ' sec'
@@ -7158,9 +7156,8 @@ CALLED BY:
             print ("Needed ", (t2-t1).total_seconds())
 
         logger.info("resample: Data resampling complete.")
-        #return DataStream(res_stream,self.headers)
         stwithnan.header['DataSamplingRate'] = period
-        return DataStream([LineStruct()],stwithnan.header,np.asarray(array,dtype=object))
+        return DataStream(header=stwithnan.header,ndarray=np.asarray(array,dtype=object))
 
 
     def rotation(self,**kwargs):
