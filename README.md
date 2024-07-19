@@ -986,7 +986,7 @@ The method `seek_storm` will return two variables: `detection` is True if any de
         print("Possible CMEs detected:", ssc_dict.select_flags(parameter='sensorid', values=['ACE'])
         print("Possible SSCs detected:", ssc_dict.select_flags(parameter='sensorid', values=['LEMI'])
 
-Details on this method are published in Bailey and Leonhardt (2014).
+Details on this method are published in [Bailey and Leonhardt (2016)](https://earth-planets-space.springeropen.com/articles/10.1186/s40623-016-0477-2).
 
 #### 8.3 Sq analysis
 
@@ -1056,12 +1056,12 @@ Full application of this technique in MagPy is as follows:
 ##### Cyclicity based Sq variation
 
 For this approach we assume that any Sq signal is fully contained within the periodic oscillations that are present in our IMF's.
-In order to analyze these oszillations we fwollow the approach which is described [here](https://emd.readthedocs.io/en/stable/emd_tutorials/03_cycle_ananlysis/index.html) in detail. 
-For each IMF we are eaxminmg cyclicity and distinguish between good and bad cycles. A good cycle is charcterized by 
+In order to analyze these oscillations we follow the approach which is described [here](https://emd.readthedocs.io/en/stable/emd_tutorials/03_cycle_ananlysis/index.html) in detail. 
+For each IMF we are examining cyclicity and distinguish between good and bad cycles. A good cycle is charcterized by 
 
 a) A strictly positively increasing phase, 
-b) A phase starting within phase_step of zero ie the lowest value of IP must be less than phase_step
-c) A phase ending within phase_step of 2pi the highest value of IP must be between 2pi and 2pi-phase_step
+b) A phase starting within phase_step of zero i.e. the lowest value of the instantenous phase (IP) must be less than phase_step
+c) A phase ending within phase_step of 2Pi the highest value of IP must be between 2Pi and 2pi-phase_step
 d) A set of 4 unique control points (ascending zero, peak, descending zero & trough)
 
 An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![IMF-9 cyclicity](./doc/sqbase-imf9-cycles.png) 
@@ -1074,10 +1074,14 @@ of -13 days + current day + 13 days = 27 days are considered. 27 days correspond
 Median IMF-10 and IMF-11 curves are calculated for 13 cycles (covering 27 days for IMF-10). 
 For IMF's above 12 (period exceeding 8 days) we are using a simply linear fit of available data, as the average approximated length is significantly below the cycle frequency.
 
-We obtain a running median waveform considering oszialltion of the individual IMF's from IMF-6 onwards. Hereby we also excluded HF signal contributions by limiting to 
-IMF-6 and larger. The Sq baseline will be a sum of individual median oszillations signals identified within the decomposed signal. Unlike the frequency technique above, 
+We obtain a running median waveform considering oscillation of the individual IMF's from IMF-6 onwards. Hereby we also excluded HF signal contributions by limiting to 
+IMF-6 and larger. The Sq baseline will be a sum of individual median oscillations signals identified within the decomposed signal. Unlike the frequency technique above, 
 this method will likely better estimate Sq variations during disturbed periods affecting hours/days. During quiet periods, however, a frequency related method
 is likely superior as such methods will remove any non-solar driven multi-day variation (i.e neutral atmosphere, see day2day variability in Haberle et al).
+
+>![IMPORTANT]
+> 
+> Correct application of the cyclicity analysis requires at least 1 month of one-minute data
 
 Full application of the median Sq technique in MagPy is as follows:
 

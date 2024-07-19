@@ -1910,23 +1910,26 @@ if __name__ == '__main__':
     print("or functions with errors will be listed.")
     print("----------------------------------------------------------")
     print()
-
+    import scipy
     # Creating a test data set of second resolution and 6 day length
-    c = 4000 # 4000 nan values are filled at random places to get some significant data gaps
+    c = 2000  # 4000 nan values are filled at random places to get some significant data gaps
     array = [[] for el in KEYLIST]
-    x = np.random.uniform(20950, 21000, size=(288, 1))
-    x = np.tile(x, (1, 60*60)).flatten()
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=122800)
+    b = np.random.uniform(20950, 21050, size=138400)
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
     x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
-    array[1] = x
-    y = np.random.uniform(1950, 2000, size=(288, 1))
-    y = np.tile(y, (1, 60*60)).flatten()
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=122800)
+    b = np.random.uniform(1900, 2050, size=138400)
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
     y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
-    array[2] = y
-    z = np.random.uniform(44300, 44400, size=(288, 1))
-    z = np.tile(z, (1, 60*60)).flatten()
-    array[3] = z
-    array[0] = np.asarray([datetime(2022,11,21)+timedelta(seconds=i) for i in range(0,len(z))])
-    teststream = DataStream([],{'SensorID':'Test_0001_0001'},np.asarray(array, dtype=object))
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=261200)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
 
     errors = {}
     successes = {}
@@ -1940,24 +1943,14 @@ if __name__ == '__main__':
             te = datetime.utcnow()
             successes['K_fmi'] = (
                 "Version: {}, K_fmi: {}".format(magpyversion, (te - ts).total_seconds()))
+            print ('Mean K', k.mean('var1'))
         except Exception as excep:
             errors['K_fmi'] = str(excep)
             print(datetime.utcnow(), "--- ERROR determining K_fmi.")
-
-        try:
-            ts = datetime.utcnow()
-            k = seek_storm(teststream, satdata_1m=None, satdata_5m=None, verbose=False, method='AIC')
-            te = datetime.utcnow()
-            successes['seek_storm'] = (
-                "Version: {}, seek_storm: {}".format(magpyversion, (te - ts).total_seconds()))
-        except Exception as excep:
-            errors['seek_storm'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with seek_storm.")
-
         if emdpackage:
             try:
                 ts = datetime.utcnow()
-                minstream = teststream.filter(missingdata='interploate')
+                minstream = teststream.filter()
                 bs = sqbase(minstream, components=['z'], baseline_type='')
                 te = datetime.utcnow()
                 successes['qdbaseline'] = (
@@ -1965,6 +1958,17 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['qdbaseline'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR determining quiet day baseline")
+        try:
+            ts = datetime.utcnow()
+            teststream = teststream.filter(missingdata='interpolate', noresample=True)
+            k = seek_storm(teststream.trim(starttime='2022-11-22',endtime='2022-11-23'), satdata_1m=None, satdata_5m=None, verbose=False, method='AIC')
+            te = datetime.utcnow()
+            successes['seek_storm'] = (
+                "Version: {}, seek_storm: {}".format(magpyversion, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors['seek_storm'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR with seek_storm.")
+
 
         break
 
