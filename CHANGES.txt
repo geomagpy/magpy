@@ -1,6 +1,68 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
+####v<2.0.0>, <2024-xx-xx> --
+
+2.0.0 general:
+    - considerable changes to internal data structure
+    - reorganization of methods and classe
+    - cleanup of code, deletion of unused and defunct code fragments
+    - removed python 2.x support, cleanup of import and dependencies
+    - changed many method with main focus on speed and memory efficency
+    - completely new plotting routines
+    - README completely reorganized, updated and partly rewritten
+    - jupyter-notebook examples for backend functionality
+
+    Please note: despite the removal of py2.x support, MagPy2.x is fully
+    compatible with all datastructures and DB contents created with MagPy1.x
+    and MagPy0.x.
+
+2.0.0 important removals/modifications affecting definitive data production:
+    - internal K_fmi code was replaced by the generally used routine as provided
+      by IAGA
+
+2.0.0 new packages:
+    plotting:
+        - the original plotting methods were replaced by completely new methods
+        - more memory efficient and much faster
+        - more flexibility with layout by configuration dictionaries
+        - modern look
+    flagging of signals and annotations:
+        - all flagging and labelling functions are reorganized in an own class
+        - flagging dictionary structure allows more input and definitions
+        - support of any previous flagging data
+        - memory efficient annotations in plots
+        - improved automatic flagging routines
+        - flagging analysis independent of data streams
+        - AI supported flagging routines for disturbance source identification
+          (included shortly before publication)
+    geomagnetic activity:
+        - several new classes to analyze geomagnetic activity
+        - K_index routine (FMI method) now based on original code
+        - stormdetector based on ACE-L1 and geomagnetic data outputs a flagging structure
+        - new Sq variation and baseline determination methods
+        - AI supported Sq and activity prediction (included shortly before publication)
+
+2.0.0 removed items:
+     - opt.emd replaced by official python emd package
+     - opt.stormdet is now part of the activity package
+     - mpplot removed and replaced by core.plot
+     - tranfer and database moved to core
+     - deleted old MARTAS related items (collector, acquisition)
+
+2.0.0 XMagPy - graphical user interface:
+     - to be done
+
+2.0.0 mostly unseen things:
+    - test routines for all methods and classes
+    - better code documentation
+    - standard naming and structural conventions
+    - pythonic recoding
+
+That was a hugh amount of work. If you like the changes and eventually even profit from
+it for your work, we are happy. In any case we are much interested in your opinion and
+comments. Donations in form of free drinks to any of the developers, either because of gratitude or
+compassion, are highly welcome. Best wishes, Roman
 
 ####v<1.1.8>, <2024-xx-xx> --
 
