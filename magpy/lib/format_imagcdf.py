@@ -15,6 +15,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 from magpy.stream import *
+from magpy.core.methods import testtime
 
 import cdflib
 
@@ -100,7 +101,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         except TypeError:
             pubdate = cdflib.cdfepoch.to_datetime(headers.get('DataPublicationDate'))
         try:
-            headers['DataPublicationDate'] = DataStream()._testtime(pubdate[0])
+            headers['DataPublicationDate'] = testtime(pubdate[0])
         except:
             headers['DataPublicationDate'] = pubdate[0]
         #pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
@@ -109,7 +110,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if debug:
             print ("imagcdf warning: Publication date is not provided as tt_2000")
         try:
-            pubdate = DataStream()._testtime(headers.get('DataPublicationDate'))
+            pubdate = testtime(headers.get('DataPublicationDate'))
             headers['DataPublicationDate'] = pubdate
         except:
             pass
@@ -521,7 +522,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             globalAttrs['FlagRulesetType'] = { 0 : 'Conrad'}
 
     if not headers.get('DataPublicationDate','') == '':
-        dat = tt(datastream._testtime(headers.get('DataPublicationDate','')))
+        dat = tt(testtime(headers.get('DataPublicationDate','')))
         pubdate = cdflib.cdfepoch.compute_tt2000([dat])
     else:
         pubdate = cdflib.cdfepoch.compute_tt2000([tt(datetime.utcnow())])

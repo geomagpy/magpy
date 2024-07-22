@@ -381,7 +381,7 @@ class DataStream(object):
     get_fmi_array(self, missing_data=None, debug=False)   -- helper method for K_fmi determination
     get_gaps(self, **kwargs)   -- determines gaps in time axis and fills them with NaN
     get_sampling_period(self)   -- sampling perid in seconds (full resolution)
-    samplingrate(self, **kwargs)   -- sampling period in seconds (rounded)
+    hdz2xyz(self):
     - stream.integrate(self, **kwargs):
     - stream.interpol(self, keys, **kwargs):
     mean(self, key, **kwargs):
@@ -393,6 +393,7 @@ class DataStream(object):
     - stream.remove_flagged(self, **kwargs):
     - stream.resample(self, keys, **kwargs):
     rotation(self,**kwargs):
+    samplingrate(self, **kwargs)   -- sampling period in seconds (rounded)
     - stream.scale_correction(self, keys, scales, **kwargs):
     smooth(self, keys, **kwargs):
     - stream.steadyrise(self, key, timewindow, **kwargs):
@@ -400,7 +401,6 @@ class DataStream(object):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
     trim(self, starttime=None, endtime=None, newway=False):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
-    xyz2hdz(self):
     - stream.write(self, filepath, **kwargs):
 
     Available methods for a list of two DataStreams:
@@ -1721,6 +1721,8 @@ CALLED BY:
         endindices = []
         if starttime:
             starttime = testtime(starttime)
+            if isinstance(self.ndarray[0][0],(float,float64)):  # in case array comes from an baseline structure
+                starttime = date2num(starttime)
             if self.ndarray[0].size > 0:   # time column present
                 if maxidx > 0:
                     idx = (np.abs(self.ndarray[0][:maxidx]-starttime)).argmin()
@@ -1732,6 +1734,8 @@ CALLED BY:
                 startindices = list(range(0,idx))
         if endtime:
             endtime = testtime(endtime)
+            if isinstance(self.ndarray[0][0],(float,float64)):
+                endtime = date2num(endtime)
             if self.ndarray[0].size > 0:   # time column present
                 #print "select timerange", maxidx
                 if maxidx > 0: # truncate the ndarray
@@ -8724,7 +8728,7 @@ class LineStruct(object):
 # read/write functions
 # ##################
 
-def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
+def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headonly=False, **kwargs):
     """
     DEFINITION:
         The read functions tries to open the selected files. Calls on
@@ -8760,20 +8764,23 @@ def read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
                         under path_or_url.
 
     EXAMPLE:
-        >>> stream = read('/srv/archive/WIC/LEMI025/LEMI025_2014-05-05.bin')
+        stream = read('/srv/archive/WIC/LEMI025/LEMI025_2014-05-05.bin')
         OR
-        >>> stream = read('http://www.swpc.noaa.gov/ftpdir/lists/ace/20140507_ace_sis_5m.txt')
+        stream = read('http://www.swpc.noaa.gov/ftpdir/lists/ace/20140507_ace_sis_5m.txt')
 
     APPLICATION:
     """
 
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
     debugmode = kwargs.get('debugmode')
     disableproxy = kwargs.get('disableproxy')
     skipsorting = kwargs.get('skipsorting')
     keylist = kwargs.get('keylist') # for PYBIN
     debug = kwargs.get('debug')
+
+    if starttime:
+        starttime = testtime(starttime)
+    if endtime:
+        endtime = testtime(endtime)
 
     if disableproxy:
         proxy_handler = ProxyHandler( {} )
