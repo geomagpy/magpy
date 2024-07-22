@@ -417,8 +417,8 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
         if return_sq:
             sqt = times[kfmi.pointsinday:2 * kfmi.pointsinday]
             sq_k_t.extend(sqt)
-            sq_k_x.extend(X_harm)
-            sq_k_y.extend(Y_harm)
+            sq_k_x.extend(X_harm/10.)
+            sq_k_y.extend(Y_harm/10.)
 
     if not return_sq:
         array[0] = np.asarray(tresult)
