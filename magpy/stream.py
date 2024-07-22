@@ -2669,7 +2669,7 @@ CALLED BY:
 
         return flaglist
 
-    def calc_f(self, **kwargs):
+    def calc_f(self, skipdelta = False):
         """
         DEFINITION:
             Calculates the f form  x^2+y^2+z^2. If delta F is present, then by default
@@ -2681,12 +2681,10 @@ CALLED BY:
             - DataStream with f
 
         EXAMPLES:
-            >>> fstream = stream.calc_f()
+            fstream = stream.calc_f()
         """
 
         # Take care: if there is only 0.1 nT accuracy then there will be a similar noise in the deltaF signal
-
-        skipdelta = kwargs.get('skipdelta')
 
         if len(self.ndarray[0]) > 0:
             return self
@@ -2716,7 +2714,7 @@ CALLED BY:
         return fstream
 
 
-    def compensation(self, **kwargs):
+    def compensation(self, skipdelta = False):
         """
         DEFINITION:
             Method for magnetic variometer data:
@@ -2739,10 +2737,8 @@ CALLED BY:
             - original dataStream if no compensation values are found
 
         EXAMPLES:
-            >>> compstream = stream.compensation()
+            compstream = stream.compensation()
         """
-
-        skipdelta = kwargs.get('skipdelta')
 
         if not self.length()[0] > 0:
             return self
@@ -3093,7 +3089,7 @@ CALLED BY:
         - stream:       (DataStream) Differentiated data stream, x values in dx, etc..
 
     EXAMPLE:
-        >>> stream = stream.differentiate(keys=['f'],put2keys=['df'])
+        stream = stream.differentiate(keys=['f'],put2keys=['df'])
 
     APPLICATION:
         """
@@ -3166,7 +3162,7 @@ CALLED BY:
                         ... will have to be changed if higher details are required.
 
     EXAMPLE:
-        >>> DWT_stream = stream.DWT_calc(plot=True)
+        DWT_stream = stream.dwt_calc(plot=True)
 
     APPLICATION:
         # Storm detection using detail 3 (D3 = var3):
