@@ -46,9 +46,7 @@ logger.info("Using backend: {}".format(matplotlib.get_backend()))
 #from matplotlib import mlab
 from matplotlib.dates import date2num, num2date
 import matplotlib.cm as cm
-
 import matplotlib.pyplot as plt
-
 import matplotlib.patches as patches
 
 edgecolor = [0.8, 0.8, 0.8]
@@ -123,7 +121,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     amount = len(data)
     # check for available keys - do that only for the primary dataset if not provided
     if keys:
-        keysdepth = len(np.array(keys).shape)
+        keysdepth = len(np.array(keys, dtype=object).shape)
         if keysdepth == 1 and amount == 1:
             keys = [keys]
     if keys and keys[0][0] == 'dummy':
@@ -242,18 +240,26 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 plt.ylim(mincomp, maxcomp)
 
             # Plot patches - for flagging etc
-            if patch and isinstance(patch, dict) and showpatch[idx]:
-                for line in patch:
-                    l = patch.get(line)
+            if isinstance(patch, list):
+                try:
+                    pat = patch[idx][i]
+                except:
+                    pat = {}
+            else:
+                pat = patch
+            if pat and isinstance(pat, dict) and showpatch[idx]:
+                for line in pat:
+                    l = pat.get(line)
                     winmin = date2num(l.get('start'))
                     winmax = date2num(l.get('end'))
                     edgecolor = l.get('color')
-                    if l.get('flag', 0) == 1:
-                        edgecolor = 'r'
-                    elif l.get('flag', 0) == 2:
-                        edgecolor = 'g'
-                    elif l.get('flag', 0) > 2:
-                        edgecolor = 'y'
+                    if not edgecolor:
+                        if l.get('flagtype', 0) in [1, 3]:
+                            edgecolor = 'r'
+                        elif l.get('flagtype', 0) in [2, 4]:
+                            edgecolor = 'g'
+                        elif l.get('flagtype', 0) == 0:
+                            edgecolor = 'y'
                     rect = patches.Rectangle((winmin, mincomp), winmax - winmin, maxcomp - mincomp, edgecolor=edgecolor,
                                              facecolor=edgecolor, alpha=0.2)
                     plt.gca().add_patch(rect)

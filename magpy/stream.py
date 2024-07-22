@@ -391,7 +391,7 @@ class DataStream(object):
     - stream.findtime(self,time):
     - stream._find_t_limits(self):
     - stream._print_key_headers(self):
-    - stream._get_key_headers(self,**kwargs):
+    _get_key_headers(self,**kwargs):
     - stream.sorting(self):
     - stream._get_line(self, key, value):
     - stream._remove_lines(self, key, value):
@@ -404,8 +404,8 @@ class DataStream(object):
     - stream._aic(self, signal, k, debugmode=None):
     - stream._get_k(self, **kwargs):
     - stream._get_k_float(self, value, **kwargs):
-    - stream._get_max(self, key, returntime=False):
-    - stream._get_min(self, key, returntime=False):
+    _get_max(self, key, returntime=False):
+    _get_min(self, key, returntime=False):
     - stream._gf(self, t, tau):
     - stream._hf(self, p, x):
     - stream._residual_func(self, func, y):
@@ -414,48 +414,51 @@ class DataStream(object):
     - stream._det_trange(self, period):
     - stream._is_number(self, s):
     - stream._normalize(self, column):
-    - stream._testtime(self, time):  # moved to methods
     - stream._drop_nans(self, key):
-    - stream.aic_calc(self, key, **kwargs):
+    _select_timerange(self, start, end)
+    aic_calc(self, key, **kwargs)   -- returns stream (with !var2! filled with aic values), helper for storm detection
     - stream.baseline(self, absolutestream, **kwargs):
+    bc(self, ??, **kwargs)   -- applies baseline correction based on header information
     - stream.bindetector(self,key,text=None,**kwargs):
-    - stream.calc_f(self, **kwargs):
+    calc_f(self, **kwargs):
+    compensation(self,**kwargs)    -- applies compensation field values from header to x,y,z
     - stream.cut(self,length,kind=0,order=0):
     - stream.dailymeans(self):
     - stream.date_offset(self, offset):
     - stream.delta_f(self, **kwargs):
     - stream.dict2stream(self,dictkey='DataBaseValues')
-    - stream.differentiate(self, **kwargs):
+    differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
     - stream.extract(self, key, value, compare=None, debugmode=None):
+    extract_headerlist(self, element, parameter=1, year=None)   -- extracts value from headerlist
     - stream.extrapolate(self, start, end):
-    - stream.filter(self, **kwargs):
+    filter(self, **kwargs)    -- returns filtered stream (changes sampling_period)
     - stream.fit(self, keys, **kwargs):
     - stream.flag_outlier(self, **kwargs):
     - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
     - stream.func2stream(self,function,**kwargs):
     - stream.func_add(self,function,**kwargs):
     - stream.func_subtract(self,function,**kwargs):
-    - stream.get_gaps(self, **kwargs):
-    - stream.get_sampling_period(self):
-    - stream.samplingrate(self, **kwargs):
+    get_fmi_array(self, missing_data=None, debug=False)   -- helper method for K_fmi determination
+    get_gaps(self, **kwargs)   -- determines gaps in time axis and fills them with NaN
+    get_sampling_period(self)   -- sampling perid in seconds (full resolution)
+    samplingrate(self, **kwargs)   -- sampling period in seconds (rounded)
     - stream.integrate(self, **kwargs):
     - stream.interpol(self, keys, **kwargs):
-    - stream.k_fmi(self, **kwargs):
-    - stream.mean(self, key, **kwargs):
+    mean(self, key, **kwargs):
     - stream.multiply(self, factors):
-    - stream.offset(self, offsets):
+    offset(self, offsets):
     - stream.randomdrop(self, percentage=None, fixed_indicies=None):
-    - stream.remove(self, starttime=starttime, endtime=endtime):
+    remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
     - stream.resample(self, keys, **kwargs):
-    - stream.rotation(self,**kwargs):
+    rotation(self,**kwargs):
     - stream.scale_correction(self, keys, scales, **kwargs):
-    - stream.smooth(self, keys, **kwargs):
+    smooth(self, keys, **kwargs):
     - stream.steadyrise(self, key, timewindow, **kwargs):
     - stream.stream2dict(self,dictkey='DataBaseValues')
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
-    - stream.trim(self, starttime=None, endtime=None, newway=False):
+    trim(self, starttime=None, endtime=None, newway=False):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
     - stream.write(self, filepath, **kwargs):
 
@@ -3537,6 +3540,30 @@ CALLED BY:
 
         return DataStream([LineStruct()], stream.header,np.asarray(array))
 
+    def extract_headerlist(self, element, parameter=1, year=None):
+        """
+        DESCRIPTION
+            extract values from specific time-list header information
+            i.e. alpha and beta values
+            Each haders list structure is transferred into a list
+            2022_3.23_1.23,2023_21.43_12.2 -> [[2022,2023],[3.23,21.43],[1.23,12.2]]
+        OPTIONS
+            element (header element) : the header element containing the list type
+            parameter          (int) : defines the column from which the value is taken
+            year               (int) : if provided, data of this year is takes, else man(year) is chosen
+        APPLICATION
+            alpha = magdata.extract_headerlist('DataRotationAlpha')
+        """
+        content = self.header.get(element)
+        # content = self.header.get(key)
+        contlist = content.split(',')
+        vals = [el.split('_') for el in contlist]
+        l = np.asarray(vals).T.astype(float64)
+        if year:
+            ind = np.argwhere(l == year)
+        else:
+            ind = np.argmax(l)
+        return l[parameter][ind]
 
     def extrapolate(self, start, end):
         """
