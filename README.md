@@ -1012,7 +1012,7 @@ The following sources and variations should affect the baseline/variation:
 
 Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define the Sq variation. This is a general 
 feature of many sq-variation separation techniques and also forms the basis of our approach. For frequency separation we are decomposing the original signal
-into "frequency" bands using an empirical mode decomposition technique (EMD). For this purpose we are using the python package [emd] (https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is non-stationary, highly dynamic, and contains
+into "frequency" bands using an empirical mode decomposition technique (EMD). For this purpose we are using the python package [emd](https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is non-stationary, highly dynamic, and contains
 non-sinusoidal contributions. In comparison to other Fourier-transform based decomposition techniques, which basically determine a set of sinusoidal basis functions, EMD is perfectly suited for such data sets and isolates a small number of temporally adaptive basis functions and derive dynamics in frequency and amplitude directly from them.
 These adaptive basis functions are called Intrinsic Mode Functions (IMF's).
 
@@ -1041,7 +1041,7 @@ storm-times. Details in 8.3.2
 
 The emd python package is used to determine IMF's from any given input signal. For the following example we are analyzing 3 months of definitive h data containing
 various different disturbances from weak geomagnetic storms. Each decomposition step, "sift" is removing complexity from the original data curve. 
-The original data is show in the upper diagram of Figure ![EMD](./magpy/doc/sqbase-emd.png). Altogether 16 sifts were found containing decreasing complex signal contributions. 
+The original data is show in the upper diagram of Figure ![8.1.](./magpy/doc/sqbase-emd.png "Emperical mode decomposition") Altogether 16 sifts were found containing decreasing complex signal contributions. 
 Summing up all these IMF curves will exactly reconstruct the original data, another important feature of EMD.  
 In order to get comparable amount of sifts with similar frequency contents for different data selections you will need to supply 131500 minutes, corresponding to 3 months of geomagnetic data.
 This time range is good enough to cover essential periods affecting Sq-variation evolution below seasonal effects. Additionally it is quickly applicable. If you supply less data, the maximum amounts of sifts will be lower.
@@ -1051,7 +1051,7 @@ Nevertheless, individual low-order sifts will contain similar frequency contribu
 
 In a next step we are 
 specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to analyse distributions of 
-instantenous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in Figure ![IMF-6 characteristics](./magpy/doc/sqbase-imf6-characteristics.png). IMF-6 is hereby marking a period of about 3h,
+instantaneous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in Figure ![8.2.](./magpy/doc/sqbase-imf6-characteristics.png "Characteristics of IMF-6 with 3h periodicity") IMF-6 is hereby marking a period of about 3h,
 a range which is often used for the general baseline approximation (i.e. for K values).Its amplitude variation indicates a few time ranges containing "disturbed" data characterized by larger amplitude. The dashed line 
 is related to the upper inner-quartile limit with a standard factor of 1.5 (i.e. Q3+f*IQR).
 
@@ -1075,7 +1075,7 @@ b) A phase starting within phase_step of zero i.e. the lowest value of the insta
 c) A phase ending within phase_step of 2Pi the highest value of IP must be between 2Pi and 2pi-phase_step
 d) A set of 4 unique control points (ascending zero, peak, descending zero & trough)
 
-An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![IMF-9 cyclicity](./magpy/doc/sqbase-imf9-cycles.png) 
+An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![8.3.](./magpy/doc/sqbase-imf9-cycles.png) 
 Cycles not satisfying above criteria are termed "bad" cycles and are masked from the Sq approximation.
 
 Starting with IMF-6 (period 3h) we are then determining a median of the average linear waveforms of identified "good" cycles, by 
@@ -1111,7 +1111,7 @@ For a many applications we are primarily interested in detecting significant fea
 CME effects and an optimal description of onset, amplitude and duration certainly belong to these features. Therefore
 the "solar quiet" reference baseline, containing untested features should not be biased by features which we are interested in.  
 
-To deal with such effects two approaches are used so far, at least to our knowledge, the method of [SuperMag](), which is not easily reproducible, and the [Haberle]()) method. 
+To deal with such effects two approaches are used so far, at least to our knowledge, the method of [SuperMag](), which is not easily reproducible, and the [Haberle]() method. 
 Please consider the publication of Veronika Haberele as this approach, comprises the reasoning behind the technique described here, although 
 application, theory and methods of MagPy are different.
 
@@ -1129,7 +1129,7 @@ In combination, these two methods will lead to an identification of time ranges 
 Sq determination technique does presumably not hold. A joint Sq baseline will assume that the median baseline will represent Sq variations better during such disturbed periods. 
 
 Thus, the joint procedure will determine gaps as described above. in a next step a weighting function will be determined with linear transitions between EMD Sq and median Sq curves. 
-The weighting function for the median Sq curve is shown in Figure ![Joint Sq curve](./magpy/doc/sqbase-joint.png). The weighting function of the EMD Sq baseline corresponds to the inverse. 
+The weighting function for the median Sq curve is shown in Figure ![8.4.](./magpy/doc/sqbase-joint.png) The weighting function of the EMD Sq baseline corresponds to the inverse. 
 The window length for the gradual shift from EMD to Median curve is arbitrarily chosen to 12 hours and can be changed by options. 
 All three Sq curve approximations are shown in th lower plot.
 
