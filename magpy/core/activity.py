@@ -5,7 +5,6 @@ from magpy.core.methods import find_nearest
 import copy
 from scipy.stats import norm
 from scipy.interpolate import UnivariateSpline
-import scipy.stats
 
 class k_fmi(object):
     """
@@ -431,14 +430,14 @@ try:
 
         """
 
-        def __init__(self, sample_frequ=1 / 60., max_imfs=16, imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6,
+        def __init__(self, sample_frequ=1 / 60., max_imfs=16, imf_opts=None, nensembles=24, nprocesses=6,
                      ensemble_noise=1):
             self.sample_frequ = sample_frequ
             self.max_imfs = max_imfs
             self.nensembles = nensembles
             self.nprocesses = nprocesses
             self.ensemble_noise = ensemble_noise
-            self.imf_opts = imf_opts
+            self.imf_opts = imf_opts if imf_opts else {'sd_thresh': 0.1}
 
         def normalize_component(self, comp):
             comp = comp - np.nanmean(comp)
@@ -486,13 +485,15 @@ try:
             emd package for emperical mode decomposition
         """
 
-        def __init__(self, sample_frequ=1 / 60., max_imfs=16, imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6,
+        def __init__(self, sample_frequ=1 / 60., max_imfs=16, imf_opts=None, nensembles=24, nprocesses=6,
                      ensemble_noise=1):
             self.sample_frequ = sample_frequ
             self.max_imfs = max_imfs
             self.nensembles = nensembles
             self.nprocesses = nprocesses
             self.ensemble_noise = ensemble_noise
+            self.imf_opts = imf_opts if imf_opts else {'sd_thresh': 0.1}
+
 
         def disturbed_regions(self, comp, IA, IF, f=1.5, n_imf=5, debug=False):
             # Getting doistrubed data based on amplitude exceeding threshold on IMF 1 (~8h Period)
@@ -707,12 +708,14 @@ try:
             return joint_baseline
 
 
-    def emd_decompose(onedarray, sift_type='mask', sample_frequ=1 / 60., max_imfs=16, imf_opts={'sd_thresh': 0.1},
+    def emd_decompose(onedarray, sift_type='mask', sample_frequ=1 / 60., max_imfs=16, imf_opts=None,
                       nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
         """
         DESCRIPTION
             Decompose any given signal into ferquency bands
         """
+        imf_opts = imf_opts if imf_opts else {'sd_thresh': 0.1}
+
         dc = decompose(sample_frequ=sample_frequ, max_imfs=max_imfs, imf_opts=imf_opts, nensembles=nensembles,
                        nprocesses=nprocesses, ensemble_noise=ensemble_noise)
         comp = dc.normalize_component(onedarray)
@@ -721,8 +724,8 @@ try:
         return comp, imf, IP, IF, IA, stats
 
 
-    def sqbase(datastream, components=['x'], baseline_type='emd', sift_type='mask', sample_frequ=1 / 60., max_imfs=16,
-               imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
+    def sqbase(datastream, components=None, baseline_type='emd', sift_type='mask', sample_frequ=1 / 60., max_imfs=16,
+               imf_opts=None, nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
         """
         DESCRIPTION
             Feed at least 1 month of one-minute data into this function.
@@ -749,6 +752,8 @@ try:
             sqvariation = sqbase(teststream, components=['x'], baseline_type='joint')
 
         """
+        components = components if components else ['x']
+        imf_opts = imf_opts if imf_opts else {'sd_thresh': 0.1}
         emd_baseline = None
         median_baseline = None
         # step1 - use minute data
@@ -830,10 +835,10 @@ class stormdet(object):
     #       findSSC_AIC()                                               #
     # ********************************************************************
 
-    def checkACE(self, ACE_1m, ACE_5m=None, acevars={'1m': 'var2', '5m': 'var1'}, timestep=20, lastcompare=20,
-                 vwind_bracket=[380., 450.], vwind_weight=1., dvwind_bracket=[40., 80.], dvwind_weight=1.,
-                 stdlo_bracket=[15., 7.5], stdlo_weight=1., stdhi_bracket=[0.5, 2.], stdhi_weight=1.,
-                 pflux_bracket=[10000., 50000.], pflux_weight=4., verbose=False):
+    def checkACE(self, ACE_1m, ACE_5m=None, acevars=None, timestep=20, lastcompare=20,
+                 vwind_bracket=None, vwind_weight=1., dvwind_bracket=None, dvwind_weight=1.,
+                 stdlo_bracket=None, stdlo_weight=1., stdhi_bracket=None, stdhi_weight=1.,
+                 pflux_bracket=None, pflux_weight=4., verbose=False):
         '''
         DEFINITION:
             This function picks out rough timings of behaviour in ACE measurements that
@@ -891,6 +896,13 @@ class stormdet(object):
         EXAMPLE:
             ACE_det, ACE_ssc_list = checkACE(ACE_1m, ACE_5m=ACE_5m, verbose=True)
         '''
+
+        acevars = acevars if acevars else {'1m': 'var2', '5m': 'var1'}
+        vwind_bracket = vwind_bracket if vwind_bracket else [380., 450.]
+        dvwind_bracket = dvwind_bracket if dvwind_bracket else [40., 80.]
+        stdlo_bracket = stdlo_bracket if stdlo_bracket else [15., 7.5]
+        stdhi_bracket = stdhi_bracket if stdhi_bracket else [0.5, 2.]
+        pflux_bracket = pflux_bracket if pflux_bracket else [10000., 50000.]
 
         # CHECK DATA:
         # -----------
@@ -1125,7 +1137,7 @@ class stormdet(object):
 
         return detection, ace_ssc
 
-    def findSSC(self, var_stream, var_key, a, p, useACE=False, ACE_results=[], dh_bracket=[5., 10.],
+    def findSSC(self, var_stream, var_key, a, p, useACE=False, ACE_results=None, dh_bracket=None,
                 satprob_weight=1., dh_weight=1., estt_weight=2., verbose=False, ):
         '''
         DEFINITION:
@@ -1176,6 +1188,8 @@ class stormdet(object):
             detection, ssc_list = findSSC(DWT, var_key, a, p, useACE=useACE,
                     ACE_results=ACE_results, verbose=verbose)
         '''
+        ACE_results = ACE_results if ACE_results else []
+        dh_bracket = dh_bracket if dh_bracket else [5., 10.]
 
         # CHECK DATA:
         # -----------
@@ -1318,8 +1332,8 @@ class stormdet(object):
 
         return detection, SSC_list
 
-    def findSSC_AIC(self, stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=False, ACE_results=[],
-                    satprob_weight=1., dh_bracket=[5., 10.], dh_weight=1., estt_weight=2., verbose=False):
+    def findSSC_AIC(self, stream, aic_key, aic_dkey, mlowval, monsetval, minlen, useACE=False, ACE_results=None,
+                    satprob_weight=1., dh_bracket=None, dh_weight=1., estt_weight=2., verbose=False):
         '''
         DEFINITION:
             This function picks out peaks in AIC analysis data that signify a
@@ -1375,6 +1389,8 @@ class stormdet(object):
             detection, ssc_list = findSSC_AIC(magdata, AIC_key, AIC_dkey, a_aic, b_aic, minlen,
                     useACE=ACE_detection, ACE_results=ACE_results)
         '''
+        ACE_results = ACE_results if ACE_results else []
+        dh_bracket = dh_bracket if dh_bracket else [5., 10.]
 
         trange = timedelta(minutes=5.0)  # in minutes
 
@@ -1670,8 +1686,8 @@ class stormdet(object):
             mu = 0.
             sigma = 10.
             base = 50.
-            factor = (100. - base) / scipy.stats.norm.pdf(0, mu, sigma)
-            estt_prob = base + scipy.stats.norm.pdf(diff, mu, sigma) * factor
+            factor = (100. - base) / norm.pdf(0, mu, sigma)
+            estt_prob = base + norm.pdf(diff, mu, sigma) * factor
             # if diff <= 10.: # minutes
             #    estt_prob = 100.
             # elif 10. < diff <= 20.:
