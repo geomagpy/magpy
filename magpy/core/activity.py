@@ -299,7 +299,7 @@ class k_fmi(object):
         return tr
 
 
-def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=999999, test=False, debug=False):
+def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=999999, return_sq=False, test=False, debug=False):
     """
     DESCRIPTION:
         determination of K values based on the FMI method. This class is derived from the original C code
@@ -329,6 +329,8 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
                     The longitude is used to determine the time of local
                     midnight.
         missing_data : Marker for missing data point (e.g. 999999).
+        return_sq    : instead of K values the Sq curve (harmonic fit will be
+                     returned.
     RETURNS:
         datastream  : a datastream containig the 8 K-indicies for each given day
                     asocitaed with key 'var1'
@@ -344,6 +346,9 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
 
     tresult = []
     kresult = []
+    sq_k_t = []
+    sq_k_x = []
+    sq_k_y = []
     array = [np.array([]) for el in KEYLIST]
     for threedayarray in fulldataarray:
         times = threedayarray[0]
@@ -409,17 +414,38 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
 
         tresult.extend(T_table)
         kresult.extend(K_table)
+        if return_sq:
+            sqt = times[kfmi.pointsinday:2 * kfmi.pointsinday]
+            sq_k_t.extend(sqt)
+            sq_k_x.extend(X_harm)
+            sq_k_y.extend(Y_harm)
 
-    array[0] = np.asarray(tresult)
-    ind = KEYLIST.index('var1')
-    array[ind] = np.asarray(kresult)
-    header = copy.deepcopy(datastream.header)
-    header['DataSamplingRate'] = 10800
-    header['StationK9'] = K9_limit
-    header['DataSamplingFilter'] = 'FMI K determination'
-    header['col-var1'] = 'K'
+    if not return_sq:
+        array[0] = np.asarray(tresult)
+        ind = KEYLIST.index('var1')
+        array[ind] = np.asarray(kresult)
+        header = copy.deepcopy(datastream.header)
+        header['DataSamplingRate'] = 10800
+        header['StationK9'] = K9_limit
+        header['DataSamplingFilter'] = 'FMI K determination'
+        header['col-var1'] = 'K'
+    else:
+        array[0] = np.asarray(sq_k_t)
+        ind = KEYLIST.index('x')
+        array[ind] = np.asarray(sq_k_x)
+        ind = KEYLIST.index('y')
+        array[ind] = np.asarray(sq_k_y)
+        header = {}
+        header['DataSamplingRate'] = 3600
+        header['StationK9'] = K9_limit
+        header['DataSamplingFilter'] = 'Harmonic Fit - FMI K determination'
+        header['col-x'] = 'X'
+        header['col-y'] = 'Y'
+        header['unit-col-x'] = 'nT'
+        header['unit-col-y'] = 'nT'
 
     return DataStream([], header, np.asarray(array, dtype=object))
+
 
 try:
     import emd
