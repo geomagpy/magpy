@@ -260,7 +260,7 @@ class k_fmi(object):
     def GetTimes(self, Time_array):
         # Not part of the original collection
         tr = []
-        for hour3 in range(8, 16):
+        for hour3 in range(0, 8):
             MiddlePoint = self.pointsinday + (180 * (60 * hour3 + 30)) // self.step_size
             tr.append(Time_array[MiddlePoint])
         return tr

@@ -973,14 +973,9 @@ CALLED BY:
         """
         Sorting data according to time (maybe generalize that to some key)
         """
-        try: # old LineStruct part
-            liste = sorted(self.container, key=lambda tmp: tmp.time)
-        except:
-            pass
 
         if len(self.ndarray[0]) > 0:
             self.ndarray, keylst = self.dropempty()
-            #self.ndarray = self.ndarray[:, np.argsort(self.ndarray[0])] # does not work if some rows have a different length)
             ind =  np.argsort(self.ndarray[0])
             for i,el in enumerate(self.ndarray):
                 if len(el) == len(ind):
