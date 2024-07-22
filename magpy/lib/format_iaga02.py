@@ -16,6 +16,56 @@ from magpy.stream import *
 MISSING_DATA = 99999
 NOT_REPORTED = 88888
 
+def convertGeoCoordinate(lon,lat,pro1,pro2):
+    """
+    DESCRIPTION:
+       converts longitude latitude using the provided epsg codes
+    PARAMETER:
+       lon	(float) longitude
+       lat	(float) latitude
+       pro1	(string) epsg code for source ('epsg:32909')
+       pro2	(string) epsg code for output ('epsg:4326')
+    RETURNS:
+       lon, lat	(floats) longitude,latitude
+    APLLICATION:
+
+    USED BY:
+       writeIMAGCDF,
+    """
+    try:
+        from pyproj import Proj, transform
+        try:
+            p1 = Proj(pro1)
+        except:
+            p1 = Proj(init=pro1)
+        x1 = float(lon)
+        y1 = float(lat)
+        # projection 2: WGS 84
+        try:
+            p2 = Proj(pro2)
+        except:
+            p2 = Proj(init=pro2)
+        # transform this point to projection 2 coordinates.
+        x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
+        return x2, y2
+    except:
+        print ("convertGeoCoordinate: problem (import pyproj or conversion error)")
+        return lon, lat
+
+def LeapTime(t):
+    """
+    converts strings to datetime, considering leap seconds
+    """
+    nofrag, frag = t.split('.')
+    if len(frag) < 6:  # IAGA string has only millisecond resolution:
+        frag = frag.ljust(6, '0')
+    nofrag_dt = time.strptime(nofrag, "%Y-%m-%dT%H:%M:%S")
+    ts = datetime(*nofrag_dt[:5]+(min([nofrag_dt[5], 59]),))
+    #ts = datetime.fromtimestamp(time.mktime(nofrag_dt))
+    dt = ts.replace(microsecond=int(frag))
+    return dt
+
+
 def isIAGA(filename):
     """
     Checks whether a file is ASCII IAGA 2002 format.

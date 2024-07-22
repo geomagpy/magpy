@@ -5,13 +5,15 @@ methods contain all methods which do not fit to a magpy specific class
 
 the following methods are contained:
 - is_number(variable)    :    returns True if variable is float or int
+- ceil_dt(datetime,seconds):  will round datetime towards the next time step defined by seconds
 - testtime(variable)     :    returns datetime object if variable can be converted to it
 - mask_nan(array)        :    returns an array without nan or empty elements
+- missingvalue()         :    will replace nan vaules in array with means, interpolation or given fill values
 
 """
 #from magpy.stream import * # os, num2date
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from matplotlib.dates import num2date, date2num
 
 def is_number(s):
@@ -29,67 +31,42 @@ def is_number(s):
     except:
         return False
 
-def testtime(time):
-        """
-        Check the date/time input and returns a datetime object if valid:
 
-        IMPORTANT: testtime will convert datetime64 to datetime objects. One might change that in the future
+def ceil_dt(dt,seconds):
+    """
+    DESCRIPTION:
+        Function to round time to the next time step as given by its seconds
+        minute: 60 sec
+        quater hour: 900 sec
+        hour:   3600 sec
+    PARAMETER:
+        dt: (datetime object)
+        seconds: (integer)
+    USAGE:
+        >>>print ceil_dt(datetime(2014,01,01,14,12,04),60)
+        >>>2014-01-01 14:13:00
+        >>>print ceil_dt(datetime(2014,01,01,14,12,04),3600)
+        >>>2014-01-01 15:00:00
+        >>>print ceil_dt(datetime(2014,01,01,14,7,0),60)
+        >>>2014-01-01 14:07:00
+    """
+    #how many secs have passed this hour
+    nsecs = dt.minute*60+dt.second+dt.microsecond*1e-6
+    if nsecs % seconds:
+        delta = (nsecs//seconds)*seconds+seconds-nsecs
+        return dt + timedelta(seconds=delta)
+    else:
+        return dt
 
-        ! Use UTC times !
 
-        - accepted are the following inputs:
-        1) absolute time: as provided by date2num
-        2) strings: 2011-11-22 or 2011-11-22T11:11:00
-        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+def find_nearest(array,value):
+    """
+    Find the nearest element within an array
+    """
+    array = np.ma.masked_invalid(array)
+    idx = (np.abs(array-value)).argmin()
+    return array[idx], idx
 
-        """
-
-        if isinstance(time, float) or isinstance(time, int):
-            try:
-                timeobj = num2date(time).replace(tzinfo=None)
-            except:
-                raise TypeError
-        elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
-            try:
-                timeobj = datetime.strptime(time,"%Y-%m-%d")
-            except:
-                try:
-                    timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
-                except:
-                    try:
-                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
-                    except:
-                        try:
-                            timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S.%f")
-                        except:
-                            try:
-                                timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
-                            except:
-                                try:
-                                    # Not happy with that but necessary to deal
-                                    # with old 1000000 micro second bug
-                                    timearray = time.split('.')
-                                    if timearray[1] == '1000000':
-                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-                                    else:
-                                        # This would be wrong but leads always to a TypeError
-                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
-                                except:
-                                    try:
-                                        timeobj = num2date(float(time)).replace(tzinfo=None)
-                                    except:
-                                        raise TypeError
-        elif isinstance(time, np.datetime64):
-            unix_epoch = np.datetime64(0, 's')
-            one_second = np.timedelta64(1, 's')
-            seconds_since_epoch = (time - unix_epoch) / one_second
-            timeobj = datetime.utcfromtimestamp(seconds_since_epoch)
-        elif not isinstance(time, datetime):
-            raise TypeError
-        else:
-            timeobj = time
-
-        return timeobj
 
 def maskNAN(column):
     """
@@ -203,6 +180,155 @@ def nan_helper(y):
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 
+def nearestPow2(x):
+    """
+    Function taken from ObsPy
+    Find power of two nearest to x
+    >>> nearestPow2(3)
+    2.0
+    >>> nearestPow2(15)
+    16.0
+    :type x: Float
+    :param x: Number
+    :rtype: Int
+    :return: Nearest power of 2 to x
+    """
+
+    a = pow(2, ceil(np.log2(x)))
+    b = pow(2, floor(np.log2(x)))
+    if abs(a - x) < abs(b - x):
+        return a
+    else:
+        return b
+
+
+def testtime(time):
+        """
+        Check the date/time input and returns a datetime object if valid:
+
+        IMPORTANT: testtime will convert datetime64 to datetime objects. One might change that in the future
+
+        ! Use UTC times !
+
+        - accepted are the following inputs:
+        1) absolute time: as provided by date2num
+        2) strings: 2011-11-22 or 2011-11-22T11:11:00
+        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+
+        """
+
+        if isinstance(time, float) or isinstance(time, int):
+            try:
+                timeobj = num2date(time).replace(tzinfo=None)
+            except:
+                raise TypeError
+        elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
+            try:
+                timeobj = datetime.strptime(time,"%Y-%m-%d")
+            except:
+                try:
+                    timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
+                except:
+                    try:
+                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
+                    except:
+                        try:
+                            timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S.%f")
+                        except:
+                            try:
+                                timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
+                            except:
+                                try:
+                                    # Not happy with that but necessary to deal
+                                    # with old 1000000 micro second bug
+                                    timearray = time.split('.')
+                                    if timearray[1] == '1000000':
+                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+                                    else:
+                                        # This would be wrong but leads always to a TypeError
+                                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
+                                except:
+                                    try:
+                                        timeobj = num2date(float(time)).replace(tzinfo=None)
+                                    except:
+                                        raise TypeError
+        elif isinstance(time, np.datetime64):
+            unix_epoch = np.datetime64(0, 's')
+            one_second = np.timedelta64(1, 's')
+            seconds_since_epoch = (time - unix_epoch) / one_second
+            timeobj = datetime.utcfromtimestamp(seconds_since_epoch)
+        elif not isinstance(time, datetime):
+            raise TypeError
+        else:
+            timeobj = time
+
+        return timeobj
+
+
+def test_timestring(time):
+    """
+    Check the date/time input and returns a datetime object if valid:
+
+    ! Use UTC times !
+
+    - accepted are the following inputs:
+    1) absolute time: as provided by date2num
+    2) strings: 2011-11-22 or 2011-11-22T11:11:00
+    3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
+    """
+
+    timeformats = ["%Y-%m-%d",
+                   "%Y-%m-%dT%H:%M:%S",
+                   "%Y-%m-%d %H:%M:%S.%f",
+                   "%Y-%m-%dT%H:%M:%S.%f",
+                   "%Y-%m-%d %H:%M:%S",
+                   "%Y-%m-%dT%H:%M:%SZ"
+                   ]
+
+    basestring = (str, bytes)
+
+    if isinstance(time, float) or isinstance(time, int):
+        try:
+            timeobj = num2date(time).replace(tzinfo=None)
+        except:
+            raise TypeError
+    elif isinstance(time, basestring): # test for str only in Python 3 should be basestring for 2.x
+        for i, tf in enumerate(timeformats):
+            try:
+                timeobj = datetime.strptime(time,tf)
+                break
+            except:
+                pass
+    elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
+        for i, tf in enumerate(timeformats):
+            try:
+                timeobj = datetime.strptime(time,tf)
+                break
+            except:
+                j = i+1
+                pass
+        if j == len(timeformats):     # Loop found no matching format
+            try:
+                # Necessary to deal with old 1000000 micro second bug
+                timearray = time.split('.')
+                print(timearray)
+                if len(timearray) > 1:
+                    if timearray[1] == '1000000':
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
+                    else:
+                        # This would be wrong but leads always to a TypeError
+                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
+            except:
+                raise TypeError
+    elif not isinstance(time, datetime):
+        raise TypeError
+    else:
+        timeobj = time
+
+    return timeobj
+
+
+
 if __name__ == '__main__':
 
     print()
@@ -222,6 +348,7 @@ if __name__ == '__main__':
     testarray1 = np.array([1.23,23.45,np.nan,2.45])
     testarray2 = np.array([datetime(2024,11,22,5),datetime(2024,11,22,6),"",datetime(2024,11,22,9)])
     testarray3 = np.array([datetime(2024,11,22,5),datetime(2024,11,22,6),datetime(2024,11,22,9),datetime(2024,11,22,11)])
+    v = np.array([1, 2, 3, 4, 5, np.nan, 7, 8, 9, 10, 11, 12, 13, 14])
     try:
         var1 = is_number(teststring)
         var2 = is_number(testnumber)
@@ -231,10 +358,32 @@ if __name__ == '__main__':
 
     try:
         var1 = testtime(testdate)
+        print (var1)
+        var2 = ceil_dt(var1,3600)
+        print ("Rounded to hour by ceil_dt", var2)
     except Exception as excep:
         errors['testdate'] = str(excep)
         print(datetime.utcnow(), "--- ERROR testdate.")
 
+    try:
+        for fill in ['mean','interpolate','value']:
+            mv = missingvalue(v,window_len=10,fill=fill, fillvalue=99)
+            print ("filling option {}: {}".format(fill,mv))
+    except Exception as excep:
+        errors['missingvalue'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR with missingvalue.")
+
+    try:
+        a,b = find_nearest(v,10.3)
+        print (a,b)
+    except Exception as excep:
+        errors['find_nearest'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR with find_nearest.")
+    try:
+        a = test_timestring(testdate)
+    except Exception as excep:
+        errors['test_timestring'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR with test_timestring.")
     try:
         ar1 = maskNAN(testarray1)
         ar2 = maskNAN(testarray2)

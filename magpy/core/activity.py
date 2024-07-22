@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
+from magpy.core.methods import find_nearest
 import copy
 from scipy.stats import norm
 from scipy.interpolate import UnivariateSpline

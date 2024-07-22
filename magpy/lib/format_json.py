@@ -9,8 +9,8 @@ import json
 from matplotlib.dates import date2num
 import numpy as np
 
-from magpy.stream import KEYLIST, DataStream, loggerlib, testTimeString
-
+from magpy.stream import KEYLIST, DataStream, loggerlib
+from magpy.core.methods import test_timestring
 
 def isJSON(filename):
     """
@@ -78,7 +78,7 @@ def readJSON(filename, headonly=False, **kwargs):
                     print("CAUTION! Out of available keys for data. {} will not be contained in stream.".format(key))
                     
             if 'time' in key:
-                data = [date2num(testTimeString(str(x[i]))) for x in dataset[1:]]
+                data = [date2num(test_timetring(str(x[i]))) for x in dataset[1:]]
             else:
 
                 data = [np.nan if x[i] is None else float(x[i]) for x in dataset[1:]]

@@ -222,8 +222,6 @@ KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':f
                 'str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf',
                 'sectime':float('nan')}
 FLAGKEYLIST = KEYLIST[:16]
-# KEYLIST[:8] # only primary values with time
-# KEYLIST[1:8] # only primary values without time
 
 # Formats supported by MagPy read function:
 PYMAG_SUPPORTED_FORMATS = {
@@ -290,66 +288,6 @@ PYMAG_SUPPORTED_FORMATS = {
                 #'SFGSM':['r', 'San Fernando GSM90'],
                 'UNKOWN':['-','Unknown']
                         }
-"""
-PYMAG_SUPPORTED_FORMATS = {
-                'IAGA':'rw',         # IAGA 2002 text format
-                'WDC':'rw',          # World Data Centre format
-                'IMF':'rw',          # Intermagnet Format
-                'IAF':'rw',          # Intermagnet archive Format
-                'IMAGCDF',      # Intermagnet CDF Format
-                'BLV',          # Baseline format Intermagnet
-                'IYFV',         # Yearly mean format Intermagnet
-                'DKA',          # K value format Intermagnet
-                'DIDD',         # Output format from DIDD
-                'GSM19',        # Output format from GSM19 magnetometer
-                'GFZINDEXJSON', # JSON structure for indicies (i.e. Kp) at GFZ webservice
-                'COVJSON',      # Coverage JavaScript Object Notation
-                'JSON',         # JavaScript Object Notation
-                'LEMIHF',       # LEMI text format data
-                'LEMIBIN',      # Current LEMI binary data format at WIC
-                'LEMIBIN1',     # Deprecated LEMI binary format at WIC
-                'OPT',          # Optical hourly data from WIK
-                'PMAG1',        # Deprecated ELSEC from WIK
-                'PMAG2',        # Current ELSEC from WIK
-                'GDASA1',       # ?
-                'GDASB1',       # ?
-                'RMRCS',        # RCS data output from Richards perl scripts
-                'RCS',        # RCS data output from Richards perl scripts
-                'METEO',        # RCS data output in METEO files
-                'NEIC',        # WGET data from USGS - NEIC
-                'LNM',          # LaserNiederschlagsMonitor files
-                'IWT',          # Tiltmeter data files at cobs
-                'LIPPGRAV',     # Lippmann Tiltmeter data files at cobs
-                'CR800',        # Data from the CR800 datalogger
-                'IONO',         # Data from IM806 Ionometer
-                'RADON',        # ?
-                'USBLOG',       # ?
-                'SERSIN',       # ?
-                'SERMUL',       # ?
-                'PYSTR',        # MagPy full ascii
-                'AUTODIF',      # AutoDIF ouput data
-                'AUTODIF_FREAD',# Special format for AutoDIF read-in
-                'PYCDF',        # MagPy CDF variant
-                'PYBIN',        # MagPy own format
-                'PYASCII',      # MagPy basic ASCII
-                'POS1TXT',      # POS-1 text format output data
-                'POS1',         # POS-1 binary output at WIC
-                'PMB',          # POS pmb output
-                'QSPIN',        # QSpin output
-                'PYNC',         # MagPy NetCDF variant (too be developed)
-                'DTU1',         # ASCII Data from the DTU's FGE systems
-                'SFDMI',        # ?
-                'SFGSM',        # ?
-                'BDV1',         # ?
-                'GFZKP',        # GeoForschungsZentrum KP-Index format
-                'NOAAACE',      # NOAA ACE satellite data format
-                'PREDSTORM'     # PREDSTORM space weather prediction data format
-                'CSV',     # comma-separated CSV data with isoformat date in first column
-                'LATEX',        # LateX data
-                'CS',           # ?
-                'UNKOWN'        # 'Unknown'?
-                        }
-"""
 
 # ----------------------------------------------------------------------------
 #  Part 3: Example files for easy access and tests
@@ -378,9 +316,9 @@ class DataStream(object):
     key in keys: see KEYLIST
 
     A note on headers:
-    ALWAYS INITIATE STREAM WITH >>> stream = DataStream([],{}).
+    ALWAYS INITIATE STREAM WITH >>> stream = DataStream(ndarray=np.array([]),header={}).
 
-    All available methods:
+    All available methods of the DataStream class:
     ----------------------------
 
     - stream.ext(self, columnstructure): # new version of extend function for column operations
@@ -460,7 +398,21 @@ class DataStream(object):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
     trim(self, starttime=None, endtime=None, newway=False):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
+    xyz2hdz(self):
     - stream.write(self, filepath, **kwargs):
+
+    Available methods for a list of two DataStreams:
+    * stream need to cover the same time range
+    ----------------------------
+    diff()*:    -- (old subtract) difference of two streams, create flagdict showing ranges only existing in a or b
+
+
+    Available methods for a list of multiple DataStreams:
+    ----------------------------
+    merge()*:    -- merge contents from different streams, eventually fill gaps with data of subsequent streams
+    join():   -- join all contents from provided streams including length extension
+
+
 
 
     Application methods:
@@ -6973,7 +6925,7 @@ CALLED BY:
                             row.flag = '-----------------'
                         if row.comment == '-':
                             row.comment = ''
-                        if isNumber(row.flag): # if somehow the flag has been transfered to a number - create a string again
+                        if is_number(row.flag): # if somehow the flag has been transfered to a number - create a string again
                             num = str(int(row.flag))[:-1]
                             row.flag = num+'-'
                         if not md-whisker < eval('elem.'+key) < md+whisker:
@@ -8765,140 +8717,9 @@ class LineStruct(object):
         return self
 
 
-# Unused classes
-"""
-class ColStruct(object):
-    def __init__(self,length, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
-        #""
-        Not used so far. Maybe useful for
-        Speed optimization:
-        Change the whole thing to column operations
-
-        - at the end of flag is important to be recognized as string
-        for column initialization use a length parameter and "lenght*[float('nan')]" or "lenght*['-']"to initialize nan-values
-        #""
-        self.length = length
-        self.time = length*[time]
-        self.x = length*[x]
-        self.y = length*[y]
-        self.z = length*[z]
-        self.f = length*[f]
-        self.dx = length*[dx]
-        self.dy = length*[dy]
-        self.dz = length*[dz]
-        self.df = length*[df]
-        self.t1 = length*[t1]
-        self.t2 = length*[t2]
-        self.var1 = length*[var1]
-        self.var2 = length*[var2]
-        self.var3 = length*[var3]
-        self.var4 = length*[var4]
-        self.var5 = length*[var5]
-        self.str1 = length*[str1]
-        self.str2 = length*[str2]
-        self.str3 = length*[str3]
-        self.str4 = length*[str4]
-        self.flag = length*[flag]
-        self.comment = length*[comment]
-        self.typ = length*[typ]
-        self.sectime = length*[sectime]
-
-    def __repr__(self):
-        return repr((self.time, self.x, self.y, self.z, self.f, self.dx, self.dy, self.dz, self.df, self.t1, self.t2, self.var1, self.var2, self.var3, self.var4, self.var5, self.str1, self.str2, self.str3, self.str4, self.flag, self.comment, self.typ, self.sectime))
-
-"""
-
 # -------------------
 #  Global functions of the stream file
 # -------------------
-
-
-def coordinatetransform(u,v,w,kind):
-    """
-    DESCRIPTION:
-        Transforms given values and returns [d,i,h,x,y,z,f] if successful, False if not.
-        Parameter "kind" defines the type of provided values
-    APPLICATION:
-        list = coordinatetransform(meanx,meany,meanz,'xyz')
-    """
-
-    if not kind in ['xyz','hdz','dhz','idf']:
-        return [0]*7
-    if kind == 'xyz':
-        h = np.sqrt(u**2 + v**2)
-        i = (180.)/np.pi * np.arctan2(w, h)
-        d = (180.)/np.pi * np.arctan2(v, u)
-        f = np.sqrt(u**2+v**2+w**2)
-        return [d,i,h,u,v,w,f]
-    elif kind == 'hdz':
-        dc = v*np.pi/(180.)
-        xtmp = u /np.sqrt((np.tan(dc))**2 + 1)
-        y = np.sqrt(u**2 - xtmp**2)
-        x = xtmp
-        f = np.sqrt(x**2+y**2+w**2)
-        i = (180.)/np.pi * np.arctan2(w, u)
-        return [v,i,u,x,y,w,f]
-    elif kind == 'dhz':
-        dc = u*np.pi/(180.)
-        xtmp = v /np.sqrt((np.tan(dc))**2 + 1)
-        y = np.sqrt(v**2 - xtmp**2)
-        x = xtmp
-        f = np.sqrt(h**2+w**2)
-        i = (180.)/np.pi * np.arctan2(w, v)
-        return [u,i,v,x,y,w,f]
-    return [0]*7
-
-def isNumber(s):
-    """
-    Test whether s is a number
-    """
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-
-def find_nearest(array,value):
-    """
-    Find the nearest element within an array
-    """
-
-    # Eventually faster solution (minimal)
-    #idx = np.searchsorted(array, value, side="left")
-    #if math.fabs(value - array[idx-1]) < math.fabs(value - array[idx]):
-    #    return array[idx-1], idx-1
-    #else:
-    #    return array[idx], idx
-
-    idx = (np.abs(array-value)).argmin()
-    return array[idx], idx
-
-
-def ceil_dt(dt,seconds):
-    """
-    DESCRIPTION:
-        Function to round time to the next time step as given by its seconds
-        minute: 60 sec
-        quater hour: 900 sec
-        hour:   3600 sec
-    PARAMETER:
-        dt: (datetime object)
-        seconds: (integer)
-    USAGE:
-        >>>print ceil_dt(datetime(2014,01,01,14,12,04),60)
-        >>>2014-01-01 14:13:00
-        >>>print ceil_dt(datetime(2014,01,01,14,12,04),3600)
-        >>>2014-01-01 15:00:00
-        >>>print ceil_dt(datetime(2014,01,01,14,7,0),60)
-        >>>2014-01-01 14:07:00
-    """
-    #how many secs have passed this hour
-    nsecs = dt.minute*60+dt.second+dt.microsecond*1e-6
-    if nsecs % seconds:
-        delta = (nsecs//seconds)*seconds+seconds-nsecs
-        return dt + timedelta(seconds=delta)
-    else:
-        return dt
 
 
 # ##################
@@ -9965,34 +9786,6 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
     return DataStream(stream_a, headera)
 
-def dms2d(dms):
-        """
-        DESCRIPTION:
-            converts a string with degree:minutes:seconds to degree.decimals
-        VARIBALES:
-            dms (string) like -0:37:23 or 23:23
-        """
-        # 1. get sign
-        sign = dms[0]
-        multi = 1
-        if sign == '-':
-            multi = -1
-            dms = dms[1:]
-
-        dmsar = dms.split(':')
-        if len(dmsar) > 3:
-            print("Could not interpret dms")
-            return 0.0
-        val=[]
-        for i in range(0,3):
-            try:
-                val.append(float(dmsar[i]))
-            except:
-                val.append(0.0)
-        d = multi*(val[0]+val[1]/60.+val[2]/3600.)
-        return d
-
-
 
 def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
         deltat_step=0.1,log_chi=False,**kwargs):
@@ -10958,67 +10751,6 @@ def extractDateFromString(datestring):
         return [date]
 
 
-def testTimeString(time):
-    """
-    Check the date/time input and returns a datetime object if valid:
-
-    ! Use UTC times !
-
-    - accepted are the following inputs:
-    1) absolute time: as provided by date2num
-    2) strings: 2011-11-22 or 2011-11-22T11:11:00
-    3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-    """
-
-    timeformats = ["%Y-%m-%d",
-                   "%Y-%m-%dT%H:%M:%S",
-                   "%Y-%m-%d %H:%M:%S.%f",
-                   "%Y-%m-%dT%H:%M:%S.%f",
-                   "%Y-%m-%d %H:%M:%S",
-                   "%Y-%m-%dT%H:%M:%SZ"
-                   ]
-
-    if isinstance(time, float) or isinstance(time, int):
-        try:
-            timeobj = num2date(time).replace(tzinfo=None)
-        except:
-            raise TypeError
-    elif isinstance(time, basestring): # test for str only in Python 3 should be basestring for 2.x
-        for i, tf in enumerate(timeformats):
-            try:
-                timeobj = datetime.strptime(time,tf)
-                break
-            except:
-                pass
-    elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
-        for i, tf in enumerate(timeformats):
-            try:
-                timeobj = datetime.strptime(time,tf)
-                break
-            except:
-                j = i+1
-                pass
-        if j == len(timeformats):     # Loop found no matching format
-            try:
-                # Necessary to deal with old 1000000 micro second bug
-                timearray = time.split('.')
-                print(timearray)
-                if len(timearray) > 1:
-                    if timearray[1] == '1000000':
-                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-                    else:
-                        # This would be wrong but leads always to a TypeError
-                        timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
-            except:
-                raise TypeError
-    elif not isinstance(time, datetime):
-        raise TypeError
-    else:
-        timeobj = time
-
-    return timeobj
-
-
 def denormalize(column, startvalue, endvalue):
     """
     converts [0:1] back with given start and endvalue
@@ -11036,121 +10768,6 @@ def denormalize(column, startvalue, endvalue):
     return normcol
 
 
-def find_nearest(array, value):
-    idx = (np.abs(array-value)).argmin()
-    return array[idx], idx
-
-
-def nearestPow2(x):
-    """
-    Function taken from ObsPy
-    Find power of two nearest to x
-    >>> nearestPow2(3)
-    2.0
-    >>> nearestPow2(15)
-    16.0
-    :type x: Float
-    :param x: Number
-    :rtype: Int
-    :return: Nearest power of 2 to x
-    """
-
-    a = pow(2, ceil(np.log2(x)))
-    b = pow(2, floor(np.log2(x)))
-    if abs(a - x) < abs(b - x):
-        return a
-    else:
-        return b
-
-
-def test_time(time):
-    """
-        Check the date/time input and returns a datetime object if valid:
-
-        ! Use UTC times !
-
-        - accepted are the following inputs:
-        1) absolute time: as provided by date2num
-        2) strings: 2011-11-22 or 2011-11-22T11:11:00
-        3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-
-    """
-    if isinstance(time, float) or isinstance(time, int):
-        try:
-            timeobj = num2date(time).replace(tzinfo=None)
-        except:
-            raise TypeError
-    elif isinstance(time, str):
-        try:
-            timeobj = datetime.strptime(time,"%Y-%m-%d")
-        except:
-            try:
-                timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
-            except:
-                try:
-                    timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
-                except:
-                    try:
-                        timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
-                    except:
-                        raise TypeError
-    elif not isinstance(time, datetime):
-        raise TypeError
-    else:
-        timeobj = time
-
-    return timeobj
-
-
-def LeapTime(t):
-    """
-    converts strings to datetime, considering leap seconds
-    """
-    nofrag, frag = t.split('.')
-    if len(frag) < 6:  # IAGA string has only millisecond resolution:
-        frag = frag.ljust(6, '0')
-    nofrag_dt = time.strptime(nofrag, "%Y-%m-%dT%H:%M:%S")
-    ts = datetime(*nofrag_dt[:5]+(min([nofrag_dt[5], 59]),))
-    #ts = datetime.fromtimestamp(time.mktime(nofrag_dt))
-    dt = ts.replace(microsecond=int(frag))
-    return dt
-
-
-def convertGeoCoordinate(lon,lat,pro1,pro2):
-    """
-    DESCRIPTION:
-       converts longitude latitude using the provided epsg codes
-    PARAMETER:
-       lon	(float) longitude
-       lat	(float) latitude
-       pro1	(string) epsg code for source ('epsg:32909')
-       pro2	(string) epsg code for output ('epsg:4326')
-    RETURNS:
-       lon, lat	(floats) longitude,latitude
-    APLLICATION:
-
-    USED BY:
-       writeIMAGCDF,
-    """
-    try:
-        from pyproj import Proj, transform
-        try:
-            p1 = Proj(pro1)
-        except:
-            p1 = Proj(init=pro1)
-        x1 = float(lon)
-        y1 = float(lat)
-        # projection 2: WGS 84
-        try:
-            p2 = Proj(pro2)
-        except:
-            p2 = Proj(init=pro2)
-        # transform this point to projection 2 coordinates.
-        x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
-        return x2, y2
-    except:
-        print ("convertGeoCoordinate: problem (import pyproj or conversion error)")
-        return lon, lat
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Now import the child classes with formats etc

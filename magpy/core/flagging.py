@@ -22,6 +22,7 @@ fl10.save("/Users/leon/Cloud/Software/MagPyAnalysis/FlagSignatures/Training/myne
 
 """
 from magpy.stream import * # os, num2date
+from magpy.core.methods import testtime
 import copy as cp
 
 class flags(object):
@@ -1019,61 +1020,6 @@ class flags(object):
                 return True
             except:
                 return False
-
-def testtime(time):
-    """
-    Check the date/time input and returns a datetime object if valid:
-
-    ! Use UTC times !
-
-    - accepted are the following inputs:
-    1) absolute time: as provided by date2num
-    2) strings: 2011-11-22 or 2011-11-22T11:11:00
-    3) datetime objects by datetime.datetime e.g. (datetime(2011,11,22,11,11,00)
-
-    """
-
-    if isinstance(time, float) or isinstance(time, int):
-        try:
-            timeobj = num2date(time).replace(tzinfo=None)
-        except:
-            raise TypeError
-    elif isinstance(time, str): # test for str only in Python 3 should be basestring for 2.x
-        try:
-            timeobj = datetime.strptime(time,"%Y-%m-%d")
-        except:
-            try:
-                timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S")
-            except:
-                try:
-                    timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S.%f")
-                except:
-                    try:
-                        timeobj = datetime.strptime(time,"%Y-%m-%dT%H:%M:%S.%f")
-                    except:
-                        try:
-                            timeobj = datetime.strptime(time,"%Y-%m-%d %H:%M:%S")
-                        except:
-                            try:
-                                # Not happy with that but necessary to deal
-                                # with old 1000000 micro second bug
-                                timearray = time.split('.')
-                                if timearray[1] == '1000000':
-                                    timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")+timedelta(seconds=1)
-                                else:
-                                    # This would be wrong but leads always to a TypeError
-                                    timeobj = datetime.strptime(timearray[0],"%Y-%m-%d %H:%M:%S")
-                            except:
-                                try:
-                                    timeobj = num2date(float(time)).replace(tzinfo=None)
-                                except:
-                                    raise TypeError
-    elif not isinstance(time, datetime):
-        raise TypeError
-    else:
-        timeobj = time
-
-    return timeobj
 
 
 def load(path, sensorid=None, begin=None, end=None, source='file', format='', debug=False):

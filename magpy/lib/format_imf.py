@@ -23,6 +23,69 @@ import logging
 import dateutil.parser as dparser
 logger = logging.getLogger(__name__)
 
+def coordinatetransform(u,v,w,kind):
+    """
+    DESCRIPTION:
+        Transforms given values and returns [d,i,h,x,y,z,f] if successful, False if not.
+        Parameter "kind" defines the type of provided values
+    APPLICATION:
+        list = coordinatetransform(meanx,meany,meanz,'xyz')
+    """
+
+    if not kind in ['xyz','hdz','dhz','idf']:
+        return [0]*7
+    if kind == 'xyz':
+        h = np.sqrt(u**2 + v**2)
+        i = (180.)/np.pi * np.arctan2(w, h)
+        d = (180.)/np.pi * np.arctan2(v, u)
+        f = np.sqrt(u**2+v**2+w**2)
+        return [d,i,h,u,v,w,f]
+    elif kind == 'hdz':
+        dc = v*np.pi/(180.)
+        xtmp = u /np.sqrt((np.tan(dc))**2 + 1)
+        y = np.sqrt(u**2 - xtmp**2)
+        x = xtmp
+        f = np.sqrt(x**2+y**2+w**2)
+        i = (180.)/np.pi * np.arctan2(w, u)
+        return [v,i,u,x,y,w,f]
+    elif kind == 'dhz':
+        dc = u*np.pi/(180.)
+        xtmp = v /np.sqrt((np.tan(dc))**2 + 1)
+        y = np.sqrt(v**2 - xtmp**2)
+        x = xtmp
+        f = np.sqrt(h**2+w**2)
+        i = (180.)/np.pi * np.arctan2(w, v)
+        return [u,i,v,x,y,w,f]
+    return [0]*7
+
+def dms2d(dms):
+        """
+        DESCRIPTION:
+            converts a string with degree:minutes:seconds to degree.decimals
+        VARIBALES:
+            dms (string) like -0:37:23 or 23:23
+        """
+        # 1. get sign
+        sign = dms[0]
+        multi = 1
+        if sign == '-':
+            multi = -1
+            dms = dms[1:]
+
+        dmsar = dms.split(':')
+        if len(dmsar) > 3:
+            print("Could not interpret dms")
+            return 0.0
+        val = []
+        for i in range(0, 3):
+            try:
+                val.append(float(dmsar[i]))
+            except:
+                val.append(0.0)
+        d = multi * (val[0] + val[1] / 60. + val[2] / 3600.)
+        return d
+
+
 def isIMF(filename):
     """
     Checks whether a file is ASCII IMF 1.22,1.23 minute format.

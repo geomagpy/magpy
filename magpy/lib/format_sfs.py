@@ -6,6 +6,7 @@ Written by Roman Leonhardt June 2012
 """
 
 from magpy.stream import *
+from magpy.core.methods import *
 
 
 def isSFDMI(filename):
@@ -23,7 +24,7 @@ def isSFDMI(filename):
     sp = temp.split()
     if not len(sp) == 6:
         return False
-    if not isNumber(sp[0]):
+    if not is_number(sp[0]):
         return False
     #logging.info(" Found SFS file")
     return True
@@ -43,7 +44,7 @@ def isSFGSM(filename):
     sp = temp.split()
     if len(sp) != 2:
         return False
-    if not isNumber(sp[0]):
+    if not is_number(sp[0]):
         return False
     try:
         if not 20000 < float(sp[1]) < 80000:
