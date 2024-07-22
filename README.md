@@ -958,16 +958,16 @@ A month of one minute data is provided in `example2`, which corresponds to an [I
 
 The output of the K_fmi method is a DataStream object which contains timesteps and K values associated with the 'var1' key. 
 
-The determination of K values will take some time as the filtering window is dynamically adjusted. In order to plot the original data (H component) and K values together, we now use the multiple stream plotting method `plotStreams`. Here you need to provide a list of streams and an array containing variables for each stream. The additional options determine the appearance of the plot (limits, bar chart):
+For plotting we provide x and y components of magnetic data as well as the Kvalue results. The additional options determine the appearance of the plot (limits, bar chart):
 
-        p = tsplot([data2,kvals],keys=[['x','y'],['var1']], labelx=-0.08, symbols=[["-"],["k"]], title="K value plot", symbolcolor=[[0.5, 0.5, 0.5]], patch=patch, showpatch=[True,False], grid=True,height=2)
+        p = tsplot([data2,kvals],keys=[['x','y'],['var1']], labelx=-0.08, symbols=[["-","-"],["k"]], title="K value plot", symbolcolor=[[0.5, 0.5, 0.5]], patch=patch, showpatch=[True,False], grid=True,height=2)
 
-`'k'` in `symbollist` refers to the second subplot (K), which will then be plotted as bars rather than the standard line (`'-'`).
+`'k'` in `symbols` refers to the second subplot (K), which will then be plotted as bars rather than the standard line (`'-'`).
 
 
 ### 8.2 Automated geomagnetic storm detection
 
-Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike Information Criterion (AIC) as outlined in detail in Bailey and Leonhardt (2016). A basic example of usage to find an SSC using a Discrete Wavelet Transform (DWT) is shown below:
+Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike Information Criterion (AIC) as outlined in detail in [Bailey and Leonhardt (2016)](https://earth-planets-space.springeropen.com/articles/10.1186/s40623-016-0477-2). A basic example of usage to find an SSC using a Discrete Wavelet Transform (DWT) is shown below:
 
         from magpy.stream import read
         from magpy.core import activity as act
@@ -986,9 +986,8 @@ The method `seek_storm` will return two variables: `detection` is True if any de
         print("Possible CMEs detected:", ssc_dict.select_flags(parameter='sensorid', values=['ACE'])
         print("Possible SSCs detected:", ssc_dict.select_flags(parameter='sensorid', values=['LEMI'])
 
-Details on this method are published in [Bailey and Leonhardt (2016)](https://earth-planets-space.springeropen.com/articles/10.1186/s40623-016-0477-2).
 
-#### 8.3 Sq analysis
+### 8.3 Sq analysis
 
 Identifying solar quiet (Sq) variations is a challenging subject of geomagnetic data analysis. The basic objective 
 is finding/identifying a variation curve of geomagnetic data which is unaffected by active solar regions. Thus such
@@ -996,7 +995,7 @@ solar quiet curve can be subtracted from actually measured data to unambiguously
 on the geomagnetic field. Such solar quiet curve is often also referred to a 'baseline'. Please be careful not to 
 mix it with the observatory baseline as outlined in chapter 7. In the following we will use the term "sq-variation". 
 Before discussing the actual methods currently provided by MagPy it is worthwhile to look briefly at some
-influences on the geomagnetic records and there effective time ranges  in order to understand the complexitiy of separating such sq-variation curve.
+influences on the geomagnetic records and there effective time ranges  in order to understand the complexity of separating such sq-variation curve.
 
 The following sources and variations should affect the baseline/variation:
 - long term secular variation and jerks (earth internal field)
@@ -1017,20 +1016,32 @@ into "frequency" bands using an empirical mode decomposition technique (EMD). Fo
 non-sinusoidal contributions. In comparison to other Fourier-transform based decomposition techniques, which basically determine a set of sinusoidal basis functions, EMD is perfectly suited for such data sets and isolates a small number of temporally adaptive basis functions and derive dynamics in frequency and amplitude directly from them.
 These adaptive basis functions are called Intrinsic Mode Functions (IMF's).
 
-In sections 8.3.1 we show how our Sq technique is working in detail. If you are interested its simple, single-command application then move to section 8.3.2. Please note that you need to feed at least 6 days of one-minute data to this method. Ideally you would choose much longer time ranges. In th efollowing examples we are analyzing
+In section 8.3.2 we show how our Sq technique is working in detail. If you are interested its simple, single-command application then move to the next section 8.3.1. Please note that you need to feed at least 6 days of one-minute data to this method. Ideally you would choose much longer time ranges. In the following examples we are analyzing
 three months of one-minute data.
 
 >![IMPORTANT]
-> 
 > Method requires one-minute data, at least 6 days, preferably 3 months to cover a number of solar rotation cycles
 
-#### 8.3.1 Combining empirical mode decomposition, cyclicity and disturbance analysis for Sq determination
+#### 8.3.1 Getting an Sq variation curve
+
+The act.sqbase command will return an estimate of the Sq variation curve. Three methods are currently supported.
+baseline_type='emd' will return a purly frequency filtered curve based on emperical-mode decomposition and recombining 
+low-frequency contents. baseline_type='median' will analyze the median cyclicity within a solar rotation cycle and use this
+estimate for Sq determination. baseline_type='joint' will use both apporaches, 'emd' for non-stormy times and 'median' for 
+storm-times. Details in 8.3.2
+
+        from magpy.core import activity as act
+        data = read("path-to-one-minute-data")
+        sqcurve = act.sqbase(data, components=['x','y'], baseline_type='joint')
+
+
+#### 8.3.2 Combining empirical mode decomposition, cyclicity and disturbance analysis for Sq determination
 
 ##### Empirical mode decomposition
 
 The emd python package is used to determine IMF's from any given input signal. For the following example we are analyzing 3 months of definitive h data containing
 various different disturbances from weak geomagnetic storms. Each decomposition step, "sift" is removing complexity from the original data curve. 
-The original data is show in the upper diagram of Figure ![EMD](./doc/sqbase-emd.png). Altogether 16 sifts were found containing decreasing complex signal contributions. 
+The original data is show in the upper diagram of Figure ![EMD](./magpy/doc/sqbase-emd.png). Altogether 16 sifts were found containing decreasing complex signal contributions. 
 Summing up all these IMF curves will exactly reconstruct the original data, another important feature of EMD.  
 In order to get comparable amount of sifts with similar frequency contents for different data selections you will need to supply 131500 minutes, corresponding to 3 months of geomagnetic data.
 This time range is good enough to cover essential periods affecting Sq-variation evolution below seasonal effects. Additionally it is quickly applicable. If you supply less data, the maximum amounts of sifts will be lower.
@@ -1040,7 +1051,7 @@ Nevertheless, individual low-order sifts will contain similar frequency contribu
 
 In a next step we are 
 specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to analyse distributions of 
-instantenous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in Figure ![IMF-6 characteristics](./doc/sqbase-imf6-characteristics.png). IMF-6 is hereby marking a period of about 3h,
+instantenous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in Figure ![IMF-6 characteristics](./magpy/doc/sqbase-imf6-characteristics.png). IMF-6 is hereby marking a period of about 3h,
 a range which is often used for the general baseline approximation (i.e. for K values).Its amplitude variation indicates a few time ranges containing "disturbed" data characterized by larger amplitude. The dashed line 
 is related to the upper inner-quartile limit with a standard factor of 1.5 (i.e. Q3+f*IQR).
 
@@ -1060,11 +1071,11 @@ In order to analyze these oscillations we follow the approach which is described
 For each IMF we are examining cyclicity and distinguish between good and bad cycles. A good cycle is charcterized by 
 
 a) A strictly positively increasing phase, 
-b) A phase starting within phase_step of zero i.e. the lowest value of the instantenous phase (IP) must be less than phase_step
+b) A phase starting within phase_step of zero i.e. the lowest value of the instantaneous phase (IP) must be less than phase_step
 c) A phase ending within phase_step of 2Pi the highest value of IP must be between 2Pi and 2pi-phase_step
 d) A set of 4 unique control points (ascending zero, peak, descending zero & trough)
 
-An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![IMF-9 cyclicity](./doc/sqbase-imf9-cycles.png) 
+An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![IMF-9 cyclicity](./magpy/doc/sqbase-imf9-cycles.png) 
 Cycles not satisfying above criteria are termed "bad" cycles and are masked from the Sq approximation.
 
 Starting with IMF-6 (period 3h) we are then determining a median of the average linear waveforms of identified "good" cycles, by 
@@ -1080,7 +1091,6 @@ this method will likely better estimate Sq variations during disturbed periods a
 is likely superior as such methods will remove any non-solar driven multi-day variation (i.e neutral atmosphere, see day2day variability in Haberle et al).
 
 >![IMPORTANT]
-> 
 > Correct application of the cyclicity analysis requires at least 1 month of one-minute data
 
 Full application of the median Sq technique in MagPy is as follows:
@@ -1119,7 +1129,7 @@ In combination, these two methods will lead to an identification of time ranges 
 Sq determination technique does presumably not hold. A joint Sq baseline will assume that the median baseline will represent Sq variations better during such disturbed periods. 
 
 Thus, the joint procedure will determine gaps as described above. in a next step a weighting function will be determined with linear transitions between EMD Sq and median Sq curves. 
-The weighting function for the median Sq curve is shown in Figure ![Joint Sq curve](./doc/sqbase-joint.png). The weighting function of the EMD Sq baseline corresponds to the inverse. 
+The weighting function for the median Sq curve is shown in Figure ![Joint Sq curve](./magpy/doc/sqbase-joint.png). The weighting function of the EMD Sq baseline corresponds to the inverse. 
 The window length for the gradual shift from EMD to Median curve is arbitrarily chosen to 12 hours and can be changed by options. 
 All three Sq curve approximations are shown in th lower plot.
 
@@ -1131,7 +1141,9 @@ Full application of the joint Sq technique in MagPy works as follows:
         sqcurce = act.sqbase(data, components=['x','y'], baseline_type='joint')
 
 
-#### 9.4 Validity check of data
+## 9. Additional methods and functions
+
+### 9.1 Testing data validity before submissions to IM and IAGA
 
 A common and important application used in the geomagnetism community is a general validity check of geomagnetic data to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. Please note: this is currently under development and will be extended in the near future. A 'one-click' test method will be included in xmagpy in the future, checking:
 
