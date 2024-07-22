@@ -14,7 +14,7 @@ the following methods are contained:
 #from magpy.stream import * # os, num2date
 import numpy as np
 from datetime import datetime, timedelta
-from matplotlib.dates import num2date, date2num
+from matplotlib.dates import num2date
 
 def is_number(s):
     """
@@ -43,12 +43,12 @@ def ceil_dt(dt,seconds):
         dt: (datetime object)
         seconds: (integer)
     USAGE:
-        >>>print ceil_dt(datetime(2014,01,01,14,12,04),60)
-        >>>2014-01-01 14:13:00
-        >>>print ceil_dt(datetime(2014,01,01,14,12,04),3600)
-        >>>2014-01-01 15:00:00
-        >>>print ceil_dt(datetime(2014,01,01,14,7,0),60)
-        >>>2014-01-01 14:07:00
+        $ print ceil_dt(datetime(2014,01,01,14,12,04),60)
+        $ 2014-01-01 14:13:00
+        $ print ceil_dt(datetime(2014,01,01,14,12,04),3600)
+        $ 2014-01-01 15:00:00
+        $ print ceil_dt(datetime(2014,01,01,14,7,0),60)
+        $ 2014-01-01 14:07:00
     """
     #how many secs have passed this hour
     nsecs = dt.minute*60+dt.second+dt.microsecond*1e-6
@@ -75,6 +75,8 @@ def maskNAN(column):
 
     numeric = False
     datetype = False
+    num_found = False
+
     if len(column) > 0:
         if is_number(column[0]):
             numeric = True
@@ -194,8 +196,8 @@ def nearestPow2(x):
     :return: Nearest power of 2 to x
     """
 
-    a = pow(2, ceil(np.log2(x)))
-    b = pow(2, floor(np.log2(x)))
+    a = pow(2, np.ceil(np.log2(x)))
+    b = pow(2, np.floor(np.log2(x)))
     if abs(a - x) < abs(b - x):
         return a
     else:
@@ -286,6 +288,8 @@ def test_timestring(time):
                    ]
 
     basestring = (str, bytes)
+    j = 0
+    timeobj = time
 
     if isinstance(time, float) or isinstance(time, int):
         try:

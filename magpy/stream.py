@@ -366,6 +366,7 @@ class DataStream(object):
     - stream.delta_f(self, **kwargs):
     - stream.dict2stream(self,dictkey='DataBaseValues')
     differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
+    dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5)  -- helper method for storm detection
     - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
     - stream.extract(self, key, value, compare=None, debugmode=None):
     extract_headerlist(self, element, parameter=1, year=None)   -- extracts value from headerlist
@@ -384,6 +385,7 @@ class DataStream(object):
     - stream.integrate(self, **kwargs):
     - stream.interpol(self, keys, **kwargs):
     mean(self, key, **kwargs):
+    modwt_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,window=5):  -- helper method for storm detection
     - stream.multiply(self, factors):
     offset(self, offsets):
     - stream.randomdrop(self, percentage=None, fixed_indicies=None):
@@ -3125,7 +3127,7 @@ CALLED BY:
         return stream
 
 
-    def DWT_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None,
+    def dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None,
                 window=5):
         """
     DEFINITION:
@@ -3281,7 +3283,7 @@ CALLED BY:
                                 plottitle="DWT Decomposition of %s (%s)" % (key,date))
 
         #return DWT_stream
-        return DataStream([LineStruct()], headers, np.asarray([np.asarray(a) for a in array]))
+        return DataStream(header=headers, ndarray=np.asarray([np.asarray(a) for a in array],dtype=object))
 
 
     def eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):

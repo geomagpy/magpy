@@ -9,42 +9,9 @@ import scipy.stats
 
 class k_fmi(object):
     """
-    DESCRIPTION:
-        determination of K values based on the FMI method. This class is derived from the original C code
-        K_index.h by Lasse  Hakkinen, Finnish Meteorological Institute. Please note: the original method
-        fills data gaps based on mean values if gaps are smaller than a given maximum gap length. To replicate
-        that behavior,
-        Details on the procedure can be found
-        here: citation
-    PARAMETERS:
-        datastream  : a magpy data stream containing geomagnetic x and y
-                    components. Field values need to be provided in nT.
-                    The FMI method requires three full days to analyse the
-                    middle day. The given datastream will be tested and
-                    eventually cut into fitting pieces for the analysis.
-                    Furthermore, the method will be applied on one-minute
-                    data. Thus, the datastream will eventually be filtered
-                    using standard IAGA recommendations if high resolution
-                    data is provided.
-        K9_limit    : K=9 limit for the particular observatory in nT.
-                      If contained within the datastream structure
-                    this data will be used automatically. Providing a manual
-                    value will override the value contained in the datastream.
-        longitude   : longitude of the observatory whose K indices are to be
-                    computed. If contained within the datastream structure
-                    this data will be used automatically. Providing a manual
-                    value will override the value contained in the datastream.
-                    The longitude is used to determine the time of local
-                    midnight.
-        missing_data : Marker for missing data point (e.g. 999999).
-    RETURNS:
-        K_table     : a list containing the 8 K-indicies for the given day
-                    (better return a data stream with k-inidcies
-    REQUIREMENTS:
-       feed data for three days into the scheme, the middle day will be analyzed
-    APPLICATION:
-        kvals = K_index(datastream, K9_limit=500, longitude=20.0, missing_data=999999)
-
+        Checkout K_fmi for details on this class
+        import magpy.core.activity
+        help(K_fmi)
     """
 
     def __init__(self, step_size=60, K9_limit=750, longitude=222.0, missing_data=999999):
@@ -300,15 +267,15 @@ class k_fmi(object):
         return tr
 
 
-def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=999999, return_sq=False, test=False, debug=False):
+def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=999999, return_sq=False, test=False, debug=False):
     """
     DESCRIPTION:
         determination of K values based on the FMI method. This class is derived from the original C code
-        K_index.h by Lasse  Hakkinen, Finnish Meteorological Institute. Please note: the original method
-        fills data gaps based on mean values if gaps are smaller than a given maximum gap length. To replicate
-        that behavior,
-        Details on the procedure can be found
-        here: citation
+        K_index.h by Lasse  Hakkinen, Finnish Meteorological Institute.
+        (https://space.fmi.fi/MAGN/K-index/FMI_method/K_index.h) Please note: the original method
+        fills data gaps based on mean values if gaps are smaller than a given maximum gap length.
+        Details on the procedure can be found here:
+        Sukksdorf, Pirola, Häkkinen, 1991. Computer production of K indices based on linear elimination
     PARAMETERS:
         datastream  : a magpy data stream containing geomagnetic x and y
                     components. Field values need to be provided in nT.
@@ -355,6 +322,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=222.0, missing_data=
         times = threedayarray[0]
         X_data = np.asarray(threedayarray[1], dtype=int)
         Y_data = np.asarray(threedayarray[2], dtype=int)
+        kfmi = k_fmi()
         if len(X_data) == 4320 and len(X_data) == len(Y_data):
             if debug:
                 print("Got valid data - runnig analysis")
@@ -470,6 +438,7 @@ try:
             self.nensembles = nensembles
             self.nprocesses = nprocesses
             self.ensemble_noise = ensemble_noise
+            self.imf_opts = imf_opts
 
         def normalize_component(self, comp):
             comp = comp - np.nanmean(comp)
@@ -480,9 +449,9 @@ try:
                 imf = emd.sift.mask_sift(comp, max_imfs=self.max_imfs)
             elif sift_type == 'ensemble':
                 imf = emd.sift.ensemble_sift(comp, max_imfs=self.max_imfs, nensembles=24, nprocesses=6, ensemble_noise=1,
-                                             imf_opts=imf_opts)
+                                             imf_opts=self.imf_opts)
             else:
-                imf = emd.sift.sift(comp, max_imfs=16, imf_opts=imf_opts)
+                imf = emd.sift.sift(comp, max_imfs=16, imf_opts=self.imf_opts)
             if debug:
                 emd.plotting.plot_imfs(imf)
             IP, IF, IA = emd.spectra.frequency_transform(imf, self.sample_frequ, 'nht')
@@ -527,8 +496,8 @@ try:
 
         def disturbed_regions(self, comp, IA, IF, f=1.5, n_imf=5, debug=False):
             # Getting doistrubed data based on amplitude exceeding threshold on IMF 1 (~8h Period)
+            win = 0
             dimf = IA[:, n_imf]
-
             Q1 = np.nanquantile(dimf, 0.25)
             Q3 = np.nanquantile(dimf, 0.75)
             IQR = Q3 - Q1
@@ -627,6 +596,7 @@ try:
             cycle_range = 13  # i.e. 27 days 13 + 1 + 13
             waveformdict = {}
             orgwaveformdict = {}
+            newmaskprev = []
             for n_imf in range(6, max_range_cycle):
                 if debug:
                     print("Analyzing average cycle for IMF-{}".format(n_imf + 1))
@@ -755,10 +725,10 @@ try:
                imf_opts={'sd_thresh': 0.1}, nensembles=24, nprocesses=6, ensemble_noise=1, debug=False):
         """
         DESCRIPTION
-            Feed at least 1 month of one-miute data into this function.
+            Feed at least 1 month of one-minute data into this function.
             Three different types of quiet day baselines can be obtained
-            emd : baseline based on emperical mode decomposition corresponding to a low pass approximately above 3h
-            median : baseline based on average cycle and and its frequency dependend median waveform
+            emd : baseline based on empirical mode decomposition corresponding to a low pass approximately above 3h
+            median : baseline based on average cycle and and its frequency dependent median waveform
             joint : baseline combination of emd and median. emd is used in for time ranges assumed to be undisturbed.
                     Disturbed regions (geomag storms etc) are masked and filled median baseline is used there.
                     A weighting function is used for smooth emd - median -emd conversions
@@ -919,7 +889,7 @@ class stormdet(object):
                             (Only consider those with probf > 75!)
 
         EXAMPLE:
-            >>> ACE_det, ACE_ssc_list = checkACE(ACE_1m, ACE_5m=ACE_5m, verbose=True)
+            ACE_det, ACE_ssc_list = checkACE(ACE_1m, ACE_5m=ACE_5m, verbose=True)
         '''
 
         # CHECK DATA:
@@ -936,6 +906,8 @@ class stormdet(object):
         key_s = acevars['1m']
         key_e = acevars['5m']
         ace_ssc = []
+        flux_var = 0.
+        pflux_prob = 0.
 
         t_ind = KEYLIST.index('time')
         nantest = ACE_1m._get_column(key_s)
@@ -1194,14 +1166,14 @@ class stormdet(object):
                             (Only consider those with probf > 80!)
 
         EXAMPLE:
-            >>> magdata = read(FGE_file)
-            >>> satdata_1m = read(ACE_1m_file)
-            >>> satdata_5m = read(ACE_5m_file)
-            >>> ACE_detection, ACE_results = checkACE(satdata_1m, satdata_5m)
-            >>> DWT = magdata.DWT_calc()
-            >>> var_key = 'var2'            # use second detail D2
-            >>> a, p = 0.0004, 45           # amplitude 0.0004 in D2 var must be exceeded over period 45 seconds
-            >>> detection, ssc_list = findSSC(DWT, var_key, a, p, useACE=useACE,
+            magdata = read(FGE_file)
+            satdata_1m = read(ACE_1m_file)
+            satdata_5m = read(ACE_5m_file)
+            ACE_detection, ACE_results = checkACE(satdata_1m, satdata_5m)
+            DWT = magdata.dwt_calc()
+            var_key = 'var2'            # use second detail D2
+            a, p = 0.0004, 45           # amplitude 0.0004 in D2 var must be exceeded over period 45 seconds
+            detection, ssc_list = findSSC(DWT, var_key, a, p, useACE=useACE,
                     ACE_results=ACE_results, verbose=verbose)
         '''
 
@@ -1222,6 +1194,12 @@ class stormdet(object):
         x_ar = var_stream.ndarray[x_ind]
 
         i = 0
+        x1,x2 = 0,0
+        ssc_init = None
+        timepin = None
+        dh_prob = 0
+        final_probf = 0
+        det = False
 
         # SEARCH FOR PEAK:
         # ----------------
@@ -1263,7 +1241,7 @@ class stormdet(object):
                     d_amp = x2 - x1
                     if verbose:
                         print("x2:", x2, t_ar[i])
-                        print("Possible detection with duration %s at %s with %s nT." % (duration, ssc_init, d_amp))
+                        print("Possible detection with duration {}} at {}} with {}} nT.".format(duration, ssc_init, d_amp))
 
                     # CRITERION #3: Variation in H must exceed a certain value
                     # ********************************************************
@@ -1385,16 +1363,16 @@ class stormdet(object):
                             (Only consider those with probf > 70!)
 
         EXAMPLE:
-            >>> magdata = read(FGE_file)
-            >>> satdata_1m = read(ACE_1m_file)
-            >>> satdata_5m = read(ACE_5m_file)
-            >>> ACE_detection, ACE_results = checkACE(satdata_1m, satdata_5m)
-            >>> AIC_key = 'var2'
-            >>> AIC_dkey = 'var3'
-            >>> a_aic, b_aic, minlin = 5., 4., 20
-            >>> magdata = magdata.aic_calc('x',timerange=timedelta(hours=0.5),aic2key=AIC_key)
-            >>> magdata = magdata.differentiate(keys=[AIC_key],put2keys=[AIC_dkey])
-            >>> detection, ssc_list = findSSC_AIC(magdata, AIC_key, AIC_dkey, a_aic, b_aic, minlen,
+            magdata = read(FGE_file)
+            satdata_1m = read(ACE_1m_file)
+            satdata_5m = read(ACE_5m_file)
+            ACE_detection, ACE_results = checkACE(satdata_1m, satdata_5m)
+            AIC_key = 'var2'
+            AIC_dkey = 'var3'
+            a_aic, b_aic, minlin = 5., 4., 20
+            magdata = magdata.aic_calc('x',timerange=timedelta(hours=0.5),aic2key=AIC_key)
+            magdata = magdata.differentiate(keys=[AIC_key],put2keys=[AIC_dkey])
+            detection, ssc_list = findSSC_AIC(magdata, AIC_key, AIC_dkey, a_aic, b_aic, minlen,
                     useACE=ACE_detection, ACE_results=ACE_results)
         '''
 
@@ -1405,6 +1383,9 @@ class stormdet(object):
         maxfound = True
         detection = False
         count = 0
+        det = False
+        final_probf = 0.
+        dh_prob = 0.
 
         aicme, aicstd = stream.mean(aic_key, percentage=10, std=True)
         me, std = stream.mean(aic_dkey, percentage=10, std=True)
@@ -1812,8 +1793,11 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
                         (Only consider those with probf > 80!)
 
     EXAMPLE:
-        >>> detection, ssc_list = seekStorm(magstream)
+       detection, ssc_list = seekStorm(magstream)
     '''
+
+    # For testing purpose:
+    from magpy.core import plot as mp
 
     stdt = stormdet()
     if not variables:
@@ -1821,6 +1805,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
 
     detection = False
     ssc_list = []
+    var_key = 'var1'
 
     if (satdata_1m and satdata_5m) != None:
         if verbose == True:
@@ -1860,7 +1845,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
 
     # day = datetime.strftime(num2date(magdata[10].time),'%Y-%m-%d')
     t_ind = KEYLIST.index('time')
-    day = datetime.strftime(magdata.ndarray[t_ind][10], '%Y-%m-%d')
+    day = datetime.strftime(magdata.ndarray[t_ind][10], "%Y-%m-%d")
 
     a, p = variables[0], variables[1]
 
@@ -1884,14 +1869,14 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
     # DWT - DISCRETE WAVELET TRANSFORM
     # --------------------------------
     elif method == 'DWT2' or method == 'DWT1':  # using D2 or D3 detail
-        DWT = magdata.DWT_calc()
+        DWT = magdata.dwt_calc()
         if method == 'DWT2':
             var_key = 'var2'
         elif method == 'DWT1':
             var_key = 'var1'
         detection, ssc_list = stdt.findSSC(DWT, var_key, a, p, useACE=useACE, ACE_results=ACE_results, verbose=verbose)
         if plot_vars == True:
-            mp.tsplot([magdata, DWT], [['x'], ['dx', 'var1', 'var2', 'var3']], plottitle=day)
+            mp.tsplot([magdata, DWT], [['x'], ['dx', 'var1', 'var2', 'var3']], title=day)
 
     # MODWT - MAXIMAL OVERLAP DISCRETE WAVELET TRANSFORM
     # --------------------------------------------------
@@ -1901,7 +1886,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
         detection, ssc_list = stdt.findSSC(MODWT, var_key, a, p, useACE=useACE, ACE_results=ACE_results,
                                            verbose=verbose)
         if plot_vars == True:
-            mp.tsplot([magdata, DWT], [['x'], ['dx', 'var1']], plottitle=day)
+            mp.tsplot([magdata, MODWT], [['x'], ['dx', 'var1']], title=day)
 
     # FDM - FIRST DERIVATION METHOD
     # -----------------------------
@@ -1988,7 +1973,9 @@ if __name__ == '__main__':
         try:
             ts = datetime.utcnow()
             teststream = teststream.filter(missingdata='interpolate', noresample=True)
-            k = seek_storm(teststream.trim(starttime='2022-11-22',endtime='2022-11-23'), satdata_1m=None, satdata_5m=None, verbose=False, method='AIC')
+            for method in ['AIC','DWT2','MODWT','FDM']:
+                k = seek_storm(teststream.trim(starttime='2022-11-22',endtime='2022-11-23'), satdata_1m=None, satdata_5m=None, verbose=False, method=method)
+                print ("Successfully tested {} for storm detection".format(method))
             te = datetime.utcnow()
             successes['seek_storm'] = (
                 "Version: {}, seek_storm: {}".format(magpyversion, (te - ts).total_seconds()))
