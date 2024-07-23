@@ -1000,7 +1000,7 @@ if __name__ == '__main__':
             print ("Done" , dat.ndarray)
             te = datetime.utcnow()
             # validity tests
-            diff = subtractStreams(teststream,dat)
+            diff = subtract_streams(teststream, dat, debug=True)
             print ("HERE")
             xm = diff.mean('x')
             ym = diff.mean('y')
