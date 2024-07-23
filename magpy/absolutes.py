@@ -414,7 +414,7 @@ class AbsoluteData(object):
 
         return True
 
-    def _insert_function_values(self, function,**kwargs):
+    def _insert_function_values(self, function, funckeys=['x','y','z','f'], KEYLIST=None, offset=0.0, debug=False):
         """
         DEFINITION:
             Add a function-output to the selected values of the data stream -> e.g. get baseline
@@ -430,16 +430,8 @@ class AbsoluteData(object):
             stream with function values added
 
         EXAMPLE:
-            >>> abstream._calcdec()
+            abstream._calcdec()
         """
-
-        funckeys = kwargs.get('funckeys')
-        offset = kwargs.get('offset')
-        debug = kwargs.get('debug')
-        if not funckeys:
-            funckeys = ['x','y','z','f']
-        if not offset:
-            offset = 0.0
 
         for elem in self:
             # check whether time step is in function range
@@ -1812,6 +1804,8 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     failinglist = []
     successlist = []
     difiles = []
+    KEYLIST = DataStream().KEYLIST
+    NUMKEYLIST = DataStream().NUMKEYLIST
     if db:
         import magpy.database as dbase
 
@@ -2323,7 +2317,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if variofound:
                 valuetest = stream._check_coverage(variostr)
                 if valuetest:
-                    stream = stream._insert_function_values(vafunc,funckeys=['x','y','z'],debug=debug)
+                    stream = stream._insert_function_values(vafunc,funckeys=['x','y','z'],KEYLIST=KEYLIST,debug=debug)
                 else:
                     print("Warning! Variation data missing at DI time range")
                 #print ("stream looks like:", stream)
@@ -2331,7 +2325,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
             if scalarfound:
                 valuetest = stream._check_coverage(scalarstr,keys=['f'])
                 if valuetest:
-                    stream = stream._insert_function_values(scfunc,funckeys=['f'],offset=deltaF,debug=debug)
+                    stream = stream._insert_function_values(scfunc,funckeys=['f'],KEYLIST=KEYLIST,offset=deltaF,debug=debug)
                 else:
                     print ("Warning! Scalar data missing at DI time range")
             try:

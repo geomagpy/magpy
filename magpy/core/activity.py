@@ -316,7 +316,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
     sq_k_t = []
     sq_k_x = []
     sq_k_y = []
-    array = [np.array([]) for el in KEYLIST]
+    array = [np.array([]) for el in datastream.KEYLIST]
     for threedayarray in fulldataarray:
         times = threedayarray[0]
         X_data = np.asarray(threedayarray[1], dtype=int)
@@ -390,7 +390,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
 
     if not return_sq:
         array[0] = np.asarray(tresult)
-        ind = KEYLIST.index('var1')
+        ind = datastream.KEYLIST.index('var1')
         array[ind] = np.asarray(kresult)
         header = copy.deepcopy(datastream.header)
         header['DataSamplingRate'] = 10800
@@ -399,9 +399,9 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
         header['col-var1'] = 'K'
     else:
         array[0] = np.asarray(sq_k_t)
-        ind = KEYLIST.index('x')
+        ind = datastream.KEYLIST.index('x')
         array[ind] = np.asarray(sq_k_x)
-        ind = KEYLIST.index('y')
+        ind = datastream.KEYLIST.index('y')
         array[ind] = np.asarray(sq_k_y)
         header = {}
         header['DataSamplingRate'] = 3600
@@ -764,12 +764,12 @@ try:
             datastream = datastream.filter()
         header = copy.deepcopy(datastream.header)
         t = datastream.ndarray[0]
-        array = [np.asarray([]) for el in KEYLIST]
+        array = [np.asarray([]) for el in datastream.KEYLIST]
         # step2 - test datastream vailidity
         qd = quietday()
         # step3 - extract components
         for c in components:
-            compindex = KEYLIST.index(c)
+            compindex = datastream.KEYLIST.index(c)
             comp = datastream._get_column(c)
             cmean = np.nanmean(comp)
             if debug:
@@ -921,7 +921,7 @@ class stormdet(object):
         flux_var = 0.
         pflux_prob = 0.
 
-        t_ind = KEYLIST.index('time')
+        t_ind = DataStream().KEYLIST.index('time')
         nantest = ACE_1m._get_column(key_s)
         # nantest = ACE_1m.ndarray[s_ind]
         ar = [elem for elem in nantest if not isnan(elem)]
@@ -1200,11 +1200,11 @@ class stormdet(object):
         detection = False
         SSC_list = []
 
-        var_ind = KEYLIST.index(var_key)
+        var_ind = DataStream().KEYLIST.index(var_key)
         var_ar = var_stream.ndarray[var_ind]
-        t_ind = KEYLIST.index('time')
+        t_ind = DataStream().KEYLIST.index('time')
         t_ar = var_stream.ndarray[t_ind]
-        x_ind = KEYLIST.index('x')
+        x_ind = DataStream().KEYLIST.index('x')
         x_ar = var_stream.ndarray[x_ind]
 
         i = 0
@@ -1413,8 +1413,8 @@ class stormdet(object):
         onsetval = std * monsetval
         minlen = minlen
 
-        t_ind = KEYLIST.index('time')
-        x_ind = KEYLIST.index('x')
+        t_ind = DataStream().KEYLIST.index('time')
+        x_ind = DataStream().KEYLIST.index('x')
 
         SSC_list = []
 
@@ -1438,7 +1438,7 @@ class stormdet(object):
                 for i in range(len(remaininglst.ndarray[t_ind]) - 1, -1, -1):
                     if (remaininglst.ndarray[t_ind][i] > mtime - trange
                             and remaininglst.ndarray[t_ind][i] < mtime + trange):
-                        for j in range(0, len(KEYLIST)):
+                        for j in range(0, len(DataStream().KEYLIST)):
                             if len(remaininglst.ndarray[j]) > 0:
                                 remaininglst.ndarray[j] = np.delete(remaininglst.ndarray[j], i, 0)
                 # plot_new(remaininglst, ['x','var2','var3'])
@@ -1596,7 +1596,7 @@ class stormdet(object):
         mean_lo, mean_hi = np.zeros(len(y)), np.zeros(len(y))
         std_lo, std_hi = np.zeros(len(y)), np.zeros(len(y))
 
-        array = [[] for key in KEYLIST]
+        array = [[] for key in DataStream().KEYLIST]
         headers = {}
 
         for i in range(1, len(y) - 1):
@@ -1625,19 +1625,19 @@ class stormdet(object):
 
             # ASSIGN VALUES WITH DIFFERENCES:
             # -------------------------------
-            array[KEYLIST.index('time')].append(t[i])
-            array[KEYLIST.index('x')].append(float(y[i]))
-            array[KEYLIST.index('dx')].append(float(hi_mean - lo_mean))
-            array[KEYLIST.index('var1')].append(float(lo_mean))
-            array[KEYLIST.index('var2')].append(float(hi_mean))
-            array[KEYLIST.index('var3')].append(float(lo_std))
-            array[KEYLIST.index('var4')].append(float(hi_std))
+            array[DataStream().KEYLIST.index('time')].append(t[i])
+            array[DataStream().KEYLIST.index('x')].append(float(y[i]))
+            array[DataStream().KEYLIST.index('dx')].append(float(hi_mean - lo_mean))
+            array[DataStream().KEYLIST.index('var1')].append(float(lo_mean))
+            array[DataStream().KEYLIST.index('var2')].append(float(hi_mean))
+            array[DataStream().KEYLIST.index('var3')].append(float(lo_std))
+            array[DataStream().KEYLIST.index('var4')].append(float(hi_std))
 
         headers['col-x'] = 'X'
         headers['col-dx'] = 'dX'
 
         for key in ['time', 'x', 'dx', 'var1', 'var2', 'var3', 'var4']:
-            array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
+            array[DataStream().KEYLIST.index(key)] = np.asarray(array[DataStream().KEYLIST.index(key)])
 
         return DataStream(header=headers, ndarray=np.asarray(array, dtype=object))
 
@@ -1860,7 +1860,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
             print("No ACE storm.")
 
     # day = datetime.strftime(num2date(magdata[10].time),'%Y-%m-%d')
-    t_ind = KEYLIST.index('time')
+    t_ind = magdata.KEYLIST.index('time')
     day = datetime.strftime(magdata.ndarray[t_ind][10], "%Y-%m-%d")
 
     a, p = variables[0], variables[1]
@@ -1941,7 +1941,7 @@ if __name__ == '__main__':
     import scipy
     # Creating a test data set of second resolution and 6 day length
     c = 2000  # 4000 nan values are filled at random places to get some significant data gaps
-    array = [[] for el in KEYLIST]
+    array = [[] for el in DataStream().KEYLIST]
     win = scipy.signal.windows.hann(60)
     a = np.random.uniform(20950, 21000, size=122800)
     b = np.random.uniform(20950, 21050, size=138400)

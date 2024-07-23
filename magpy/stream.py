@@ -136,7 +136,7 @@ from pylab import *
 from datetime import datetime, timedelta
 
 
-# NetCDF
+# NetCDF  # move to respective library
 # ------
 try:
     from netCDF4 import Dataset
@@ -145,19 +145,10 @@ except ImportError as e:
 
 ### Some Python3/2 compatibility code
 ### taken from http://www.rfk.id.au/blog/entry/preparing-pyenchant-for-python-3/
-try:
-    unicode = unicode
-    # 'unicode' exists, must be Python 2
-    str = str
-    unicode = unicode
-    bytes = str
-    basestring = basestring
-except NameError:
-    # 'unicode' is undefined, must be Python 3
-    str = str
-    unicode = str
-    bytes = bytes
-    basestring = (str,bytes)
+str = str
+unicode = str
+bytes = bytes
+basestring = (str,bytes)
 
 # Storing function - http://bytes.com/topic/python/answers/552476-why-cant-you-pickle-instancemethods#edit2155350
 # by Steven Bethard
@@ -186,34 +177,33 @@ copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 # Part 2: Define Dictionaries
 # ----------------------------------------------------------------------------
 
-# Keys available in DataStream Object:
-KEYLIST = [     'time',         # Timestamp (date2num object)
-                'x',            # X or I component of magnetic field (float)
-                'y',            # Y or D component of magnetic field (float)
-                'z',            # Z component of magnetic field (float)
-                'f',            # Magnetic field strength (float)
-                't1',           # Temperature variable (e.g. ambient temp) (float)
-                't2',           # Secondary temperature variable (e.g. sensor temp) (float)
-                'var1',         # Extra variable #1 (float)
-                'var2',         # Extra variable #2 (float)
-                'var3',         # Extra variable #3 (float)
-                'var4',         # Extra variable #4 (float)
-                'var5',         # Extra variable #5 (float)
-                'dx',           # Errors in X (float)
-                'dy',           # Errors in Y (float)
-                'dz',           # Errors in Z (float)
-                'df',           # Errors in F (float)
-                'str1',         # Extra string variable #1 (str)
-                'str2',         # Extra string variable #2 (str)
-                'str3',         # Extra string variable #3 (str)
-                'str4',         # Extra string variable #4 (str)
-                'flag',         # Variable for flags. (str='0000000000000000-')
-                'comment',      # Space for comments on flags (str)
-                'typ',          # Type of data (str='xyzf')
-                'sectime'       # Secondary time variable (date2num)
-            ]
-
+KEYLIST = ['time',  # Timestamp (date2num object)
+                'x',  # X or I component of magnetic field (float)
+                'y',  # Y or D component of magnetic field (float)
+                'z',  # Z component of magnetic field (float)
+                'f',  # Magnetic field strength (float)
+                't1',  # Temperature variable (e.g. ambient temp) (float)
+                't2',  # Secondary temperature variable (e.g. sensor temp) (float)
+                'var1',  # Extra variable #1 (float)
+                'var2',  # Extra variable #2 (float)
+                'var3',  # Extra variable #3 (float)
+                'var4',  # Extra variable #4 (float)
+                'var5',  # Extra variable #5 (float)
+                'dx',  # Errors in X (float)
+                'dy',  # Errors in Y (float)
+                'dz',  # Errors in Z (float)
+                'df',  # Errors in F (float)
+                'str1',  # Extra string variable #1 (str)
+                'str2',  # Extra string variable #2 (str)
+                'str3',  # Extra string variable #3 (str)
+                'str4',  # Extra string variable #4 (str)
+                'flag',  # Variable for flags. (str='0000000000000000-')
+                'comment',  # Space for comments on flags (str)
+                'typ',  # Type of data (str='xyzf')
+                'sectime'  # Secondary time variable (date2num)
+                ]
 NUMKEYLIST = KEYLIST[1:16]
+
 # Empty key values at initiation of stream:
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),
                 't1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),
@@ -221,7 +211,6 @@ KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':f
                 'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-',
                 'str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf',
                 'sectime':float('nan')}
-FLAGKEYLIST = KEYLIST[:16]
 
 # Formats supported by MagPy read function:
 PYMAG_SUPPORTED_FORMATS = {
@@ -330,16 +319,16 @@ class DataStream(object):
     - stream._find_t_limits(self):
     - stream._print_key_headers(self):
     _get_key_headers(self,**kwargs):
-    - stream.sorting(self):
+    sorting(self):
     - stream._get_line(self, key, value):
     - stream._remove_lines(self, key, value):
     - stream._remove_columns(self, keys):
-    - stream._get_column(self, key):
+    _get_column(self, key):
     - stream._put_column(self, column, key, **kwargs):
     - stream._move_column(self, key, put2key):
     - stream._clear_column(self, key):
     - stream._reduce_stream(self, pointlimit=100000):
-    - stream._aic(self, signal, k, debugmode=None):
+    _aic(self, signal, k, debugmode=None):
     - stream._get_k(self, **kwargs):
     - stream._get_k_float(self, value, **kwargs):
     _get_max(self, key, returntime=False):
@@ -414,6 +403,14 @@ class DataStream(object):
     merge()*:    -- merge contents from different streams, eventually fill gaps with data of subsequent streams
     join():   -- join all contents from provided streams including length extension
 
+
+    Methods to be moved and modified:
+    ----------------------------
+    Obtain flagging dictionaries from stream
+    ------>>> move to core.flagging (outside of the flagging class
+    - flag_outlier(stream, options)
+    - bindetectir(stream, options)
+    - quakeflags(stream, options)
 
 
 
@@ -523,7 +520,7 @@ class DataStream(object):
         - variable:     (type) Description.
 
     EXAMPLE:
-        >>> alldata = mergeStreams(pos_stream, lemi_stream, keys=['x','y','z'])
+        alldata = mergeStreams(pos_stream, lemi_stream, keys=['x','y','z'])
 
     APPLICATION:
         Code for simple application.
@@ -553,62 +550,54 @@ CALLED BY:
 *********************************************************************
     """
 
-    KEYLIST = [ 'time',         # Timestamp (date2num object)
-                'x',            # X or I component of magnetic field (float)
-                'y',            # Y or D component of magnetic field (float)
-                'z',            # Z component of magnetic field (float)
-                'f',            # Magnetic field strength (float)
-                't1',           # Temperature variable (e.g. ambient temp) (float)
-                't2',           # Secondary temperature variable (e.g. sensor temp) (float)
-                'var1',         # Extra variable #1 (float)
-                'var2',         # Extra variable #2 (float)
-                'var3',         # Extra variable #3 (float)
-                'var4',         # Extra variable #4 (float)
-                'var5',         # Extra variable #5 (float)
-                'dx',           # Errors in X (float)
-                'dy',           # Errors in Y (float)
-                'dz',           # Errors in Z (float)
-                'df',           # Errors in F (float)
-                'str1',         # Extra string variable #1 (str)
-                'str2',         # Extra string variable #2 (str)
-                'str3',         # Extra string variable #3 (str)
-                'str4',         # Extra string variable #4 (str)
-                'flag',         # Variable for flags. (str='0000000000000000-')
-                'comment',      # Space for comments on flags (str)
-                'typ',          # Type of data (str='xyzf')
-                'sectime'       # Secondary time variable (date2num)
-                ]
-    NUMKEYLIST = KEYLIST[1:16]
+    def __init__(self, container=None, header=None,ndarray=None):
 
-    def __init__(self, container=None, header={},ndarray=None):
-        if container is None:
-            container = []
-        self.container = container
-        if ndarray is None:
-            ndarray = np.array([np.asarray([]) for elem in KEYLIST])
-        self.ndarray = ndarray ## Test this! -> for better memory efficiency
-        #if header is None:
-        #    header = {'Test':'Well, it works'}
-            #header = {}
-        self.header = header
-        #for key in KEYLIST:
-        #    setattr(self,key,np.asarray([]))
-        #self.header = {'Test':'Well, it works'}
+        self.KEYLIST = [ 'time',         # Timestamp (date2num object)
+                         'x',            # X or I component of magnetic field (float)
+                         'y',            # Y or D component of magnetic field (float)
+                         'z',            # Z component of magnetic field (float)
+                         'f',            # Magnetic field strength (float)
+                         't1',           # Temperature variable (e.g. ambient temp) (float)
+                         't2',           # Secondary temperature variable (e.g. sensor temp) (float)
+                         'var1',         # Extra variable #1 (float)
+                         'var2',         # Extra variable #2 (float)
+                         'var3',         # Extra variable #3 (float)
+                         'var4',         # Extra variable #4 (float)
+                         'var5',         # Extra variable #5 (float)
+                         'dx',           # Errors in X (float)
+                         'dy',           # Errors in Y (float)
+                         'dz',           # Errors in Z (float)
+                         'df',           # Errors in F (float)
+                         'str1',         # Extra string variable #1 (str)
+                         'str2',         # Extra string variable #2 (str)
+                         'str3',         # Extra string variable #3 (str)
+                         'str4',         # Extra string variable #4 (str)
+                         'flag',         # Variable for flags. (str='0000000000000000-')
+                         'comment',      # Space for comments on flags (str)
+                         'typ',          # Type of data (str='xyzf')
+                         'sectime'       # Secondary time variable (date2num)
+                       ]
+        self.NUMKEYLIST = self.KEYLIST[1:16]
+        self.FLAGKEYLIST = self.KEYLIST[:16]
+
+        self.header = header if header else {}
+        self.container = container if container else []
+        emptyarray = np.array([np.asarray([]) for elem in self.KEYLIST])
+        self.ndarray = ndarray if ndarray else emptyarray
         self.progress = 0
 
     # ------------------------------------------------------------------------
     # A. Standard functions and overrides for list like objects
     # ------------------------------------------------------------------------
 
-    def ext(self, columnstructure): # new version of extend function for column operations
-        """
-        the extend and add functions must be replaced in case of
-        speed optimization
-        """
-        for key in KEYLIST:
-            self.container.key = np.append(self.container.key, columnstructure.key, 1)
 
     def add(self, datlst):
+        """
+        DESCRIPTION
+             Method is used by absoluteAnalysis, which is using the original container (list) structure
+        :param datlst:
+        :return:
+        """
         # used by absolutAnalysis
         #try:
         assert isinstance(self.container, (list, tuple))
@@ -631,25 +620,6 @@ CALLED BY:
             except:
                 return [0]
 
-    def replace(self, datlst):
-        # Replace in stream
-        # - replace value with existing data
-        # Method was used by K calc - replaced by internal method there
-        newself = DataStream()
-        assert isinstance(self.container, (list, tuple))
-        ti = list(self._get_column('time'))
-        try:
-           ind = ti.index(datlst.time)
-        except ValueError:
-           self = self.add(datlst)
-           return self
-        except:
-           return self
-        li = [elem for elem in self]
-        del li[ind]
-        del ti[ind]
-        li.append(datlst)
-        return DataStream(li,self.header)
 
     def copy(self):
         """
@@ -679,26 +649,32 @@ CALLED BY:
     def __str__(self):
         return str(self.container)
 
+
     def __repr__(self):
         return str(self.container)
 
+
     def __getitem__(self, var):
-        if var in NUMKEYLIST:
+        if var in self.NUMKEYLIST:
             return self.ndarray[self.KEYLIST.index(var)].astype(np.float64)
         elif var in KEYLIST:
             return self.ndarray[self.KEYLIST.index(var)]
 
+
     def __setitem__(self, var, value):
         self.ndarray[self.KEYLIST.index(var)] = value
 
+
     def __len__(self):
         return len(self.ndarray[0])
+
 
     def clear_header(self):
         """
         Remove header information
         """
         self.header = {}
+
 
     def extend(self,datlst,header,ndarray):
         array = [[] for key in KEYLIST]
@@ -715,7 +691,7 @@ CALLED BY:
                     elif len(self.ndarray[0]) > 0: # only time axis present so far but no data within this elem
                         fill = ['-']
                         key = KEYLIST[idx]
-                        if key in NUMKEYLIST:
+                        if key in self.NUMKEYLIST:
                             fill = [float('nan')]
                         nullvals = np.asarray(fill * len(self.ndarray[0]))
                         array[idx] = np.append(nullvals, ndarray[idx]).astype(object)
@@ -858,7 +834,7 @@ CALLED BY:
 
     def _print_key_headers(self):
         print("%10s : %22s : %28s" % ("MAGPY KEY", "VARIABLE", "UNIT"))
-        for key in FLAGKEYLIST[1:]:
+        for key in self.FLAGKEYLIST[1:]:
             try:
                 header = self.header['col-'+key]
             except:
@@ -890,7 +866,7 @@ CALLED BY:
         numerical = kwargs.get('numerical')
 
         if numerical:
-            TESTLIST = FLAGKEYLIST
+            TESTLIST = self.FLAGKEYLIST
         else:
             TESTLIST = KEYLIST
 
@@ -1172,7 +1148,7 @@ CALLED BY:
         try:
             for i, elem in enumerate(self):
                 exec('elem.'+put2key+' = '+'elem.'+key)
-                if key in NUMKEYLIST:
+                if key in self.NUMKEYLIST:
                     setattr(elem, key, float("NaN"))
                     #exec('elem.'+key+' = float("NaN")')
                 else:
@@ -1229,10 +1205,10 @@ CALLED BY:
         #    for i in range init:
         #    self.add(float('NaN'))
 
-        if not key in KEYLIST:
+        if not key in self.KEYLIST:
             raise ValueError("Column key not valid")
         for idx, elem in enumerate(self):
-            if key in NUMKEYLIST:
+            if key in self.NUMKEYLIST:
                 setattr(elem, key, float("NaN"))
                 #exec('elem.'+key+' = float("NaN")')
             else:
@@ -1296,10 +1272,10 @@ CALLED BY:
         - DataStream:   (DataStream) New stream reduced to below pointlimit.
 
         """
-        array = [[] for key in KEYLIST]
+        array = [[] for key in self.KEYLIST]
         if len(self.ndarray[0]) > 0:
             for idx, elem in enumerate(self.ndarray):
-                if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in NUMKEYLIST:
+                if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in self.NUMKEYLIST:
                     lst = list(self.ndarray[idx])
                     if np.isnan(float(lst[0])) and np.isnan(float(lst[-1])):
                         nanlen = sum(math.isnan(x) for x in lst)
@@ -1637,7 +1613,7 @@ CALLED BY:
         - DataStream:   (DataStream object) a new data stream object with out identified lines.
 
     EXAMPLE:
-        >>> newstream = stream._drop_nans('x')
+        newstream = stream._drop_nans('x')
 
     APPLICATION:
         used for plotting and fitting of data
@@ -1645,7 +1621,7 @@ CALLED BY:
         """
         # Method only works with numerical columns and the time column
         searchlist = ['time']
-        searchlist.extend(NUMKEYLIST)
+        searchlist.extend(self.NUMKEYLIST)
         if debug:
             tstart = datetime.utcnow()
 
@@ -2606,7 +2582,7 @@ CALLED BY:
             - flaglist
 
         EXAMPLE:
-            >>>  flaglist = stream.bindetector('z',0,'x',SensorID,'Maintanence switch for rain bucket',markallon=True)
+            flaglist = stream.bindetector('z',0,'x',SensorID,'Maintanence switch for rain bucket',markallon=True)
         """
         markallon = kwargs.get('markallon')
         markalloff = kwargs.get('markalloff')
@@ -4057,7 +4033,7 @@ CALLED BY:
                 #print (elem)
                 for idx,el in enumerate(elem):
                     if not el == '-' and el in ['0','1','2','3','4','5','6']:
-                        keylist.append(NUMKEYLIST[idx-1])
+                        keylist.append(self.NUMKEYLIST[idx-1])
         # 2. Cycle through keys and extract comments
         if not len(keylist) > 0:
             return flaglist
@@ -4111,21 +4087,21 @@ CALLED BY:
 
         print("Adding flags .... ")
         # Define Defaultflag
-        flagls = [str('-') for elem in FLAGKEYLIST]
+        flagls = [str('-') for elem in self.FLAGKEYLIST]
         defaultflag = ''
 
         # Get new flag
         newflagls = []
         if not keys:
-            for idx,key in enumerate(FLAGKEYLIST): # Flag all existing data
+            for idx,key in enumerate(self.FLAGKEYLIST): # Flag all existing data
                 if len(self.ndarray[idx]) > 0:
                     newflagls.append(str(flag))
                 else:
                     newflagls.append('-')
             newflag = ''.join(newflagls)
         else:
-            for idx,key in enumerate(FLAGKEYLIST): # Only key column
-                if len(self.ndarray[idx]) > 0 and FLAGKEYLIST[idx] in keys:
+            for idx,key in enumerate(self.FLAGKEYLIST): # Only key column
+                if len(self.ndarray[idx]) > 0 and self.FLAGKEYLIST[idx] in keys:
                     newflagls.append(str(flag))
                 else:
                     newflagls.append('-')
@@ -4407,10 +4383,10 @@ CALLED BY:
             self.ndarray[commentidx] = self.ndarray[commentidx].astype(object)
 
         # get a poslist of all keys - used for markall
-        flagposls = [FLAGKEYLIST.index(key) for key in keys]
+        flagposls = [self.FLAGKEYLIST.index(key) for key in keys]
         # Start here with for key in keys:
         for key in keys:
-            flagpos = FLAGKEYLIST.index(key)
+            flagpos = self.FLAGKEYLIST.index(key)
             if not len(self.ndarray[flagpos]) > 0:
                 print("Flag_outlier: No data for key %s - skipping" % key)
                 break
@@ -4481,7 +4457,7 @@ CALLED BY:
                                     x=1/0 # Force except
                             except:
                                 newflagls = []
-                                for idx,el in enumerate(FLAGKEYLIST): # Only key column
+                                for idx,el in enumerate(self.FLAGKEYLIST): # Only key column
                                     if idx == flagpos:
                                         newflagls.append('1')
                                     else:
@@ -4821,7 +4797,7 @@ CALLED BY:
                 end = date2num(enddate)
                 return start,end
 
-        pos = FLAGKEYLIST.index(key)
+        pos = self.FLAGKEYLIST.index(key)
 
         #debug=True
         if debug:
@@ -4881,7 +4857,7 @@ CALLED BY:
             if ed == len(self.ndarray[0]):
                 ed = ed-1
             # Create a defaultflag
-            defaultflag = ['-' for el in FLAGKEYLIST]
+            defaultflag = ['-' for el in self.FLAGKEYLIST]
             if debug:
                 ti3 = datetime.utcnow()
                 print ("Full Findtime duration", ti3-ti1)
@@ -5159,9 +5135,9 @@ CALLED BY:
                 if len(totalarray[idx]) > 0 and not idx == 0:
                     totalcol = totalarray[idx]
                     for j,el in enumerate(col):
-                        if idx < len(NUMKEYLIST)+1 and not np.isnan(el) and np.isnan(totalcol[j]):
+                        if idx < len(self.NUMKEYLIST)+1 and not np.isnan(el) and np.isnan(totalcol[j]):
                             totalarray[idx][j] = array[idx][j]
-                        if idx > len(NUMKEYLIST) and not el == 'c' and totalcol[j] == 'c':
+                        if idx > len(self.NUMKEYLIST) and not el == 'c' and totalcol[j] == 'c':
                             totalarray[idx][j] = 'd'
                 else:
                     totalarray[idx] = array[idx]
@@ -5676,12 +5652,12 @@ CALLED BY:
                     elif len(elem) > 0:
                         # append nans list to array element
                         elem = list(elem)
-                        if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'sectime':
+                        if self.KEYLIST[idx] in self.NUMKEYLIST or self.KEYLIST[idx] == 'sectime':
                             elem.extend(nans)
                         else:
                             elem.extend(empts)
                         stream.ndarray[idx] = np.asarray(elem).astype(object)
-                    elif KEYLIST[idx] == gapvariable:
+                    elif self.KEYLIST[idx] == gapvariable:
                         # append nans list to array element
                         elem = [1.0]*lenelem
                         elem.extend(gaps)
@@ -5998,10 +5974,10 @@ CALLED BY:
         logger.info("interpol: Interpolating stream with %s interpolation." % kind)
 
         for key in keys:
-            if not key in NUMKEYLIST:
+            if not key in self.NUMKEYLIST:
                 logger.error("interpol: Column key not valid!")
             if ndtype:
-                ind = KEYLIST.index(key)
+                ind = self.KEYLIST.index(key)
                 val = self.ndarray[ind].astype(float)
             else:
                 val = self._get_column(key)
@@ -6044,7 +6020,7 @@ CALLED BY:
         """
 
         for key in keys:
-            if key not in NUMKEYLIST:
+            if key not in self.NUMKEYLIST:
                 logger.error("interpolate_nans: {} is an invalid key! Cannot interpolate.".format(key))
             y = self._get_column(key)
             nans, x = nan_helper(y)
@@ -6191,7 +6167,7 @@ CALLED BY:
         ind = KEYLIST.index(key)
         length = len(self.ndarray[0])
         self.ndarray[ind] = np.asarray(self.ndarray[ind])
-        if key in NUMKEYLIST:
+        if key in self.NUMKEYLIST:
             ar = self.ndarray[ind].astype(float)
             ar = ar[~np.isnan(ar)]
         elif key.find('time') > -1:
@@ -6502,7 +6478,7 @@ CALLED BY:
             if not len(commcol) == len(tcol):
                 commcol = [''] * len(tcol)
             if not len(self.ndarray[flagpos]) == len(tcol):
-                fllist = ['0' for el in FLAGKEYLIST]
+                fllist = ['0' for el in self.FLAGKEYLIST]
                 fllist.append('-')
                 fl = ''.join(fllist)
                 self.ndarray[flagpos] = [fl] * len(tcol)
@@ -6710,7 +6686,7 @@ CALLED BY:
         if not flaglist:
             flaglist = [1,3]
         if not keys:
-            keys = FLAGKEYLIST
+            keys = self.FLAGKEYLIST
 
         # Converting elements of flaglist to strings
         flaglist = [str(fl) for fl in flaglist]
@@ -6862,7 +6838,7 @@ CALLED BY:
 
         # Start here with for key in keys:
         for key in keys:
-            flagpos = FLAGKEYLIST.index(key)
+            flagpos = self.FLAGKEYLIST.index(key)
 
             st,et = self._find_t_limits()
             st = date2num(st)
@@ -6910,7 +6886,7 @@ CALLED BY:
                     # XXX DOES NOT WORK, TODO
                     for i in range(idxst,idxat):
                         if row.flag == '' or row.flag == '0000000000000000-' or row.flag == '-' or row.flag == '-0000000000000000':
-                            row.flag = '-' * len(FLAGKEYLIST)
+                            row.flag = '-' * len(self.FLAGKEYLIST)
                         if row.comment == '-':
                             row.comment = ''
                 else:
@@ -6934,7 +6910,7 @@ CALLED BY:
                                     if markall:
                                         #print "mark"
                                         fl = []
-                                        for j,f in enumerate(FLAGKEYLIST):
+                                        for j,f in enumerate(self.FLAGKEYLIST):
                                             if f in keys:
                                                 fl.append('1')
                                             else:
@@ -7392,7 +7368,7 @@ CALLED BY:
         logger.info('smooth: Start smoothing (%s window, width %d) at %s' % (window, window_len, str(datetime.now())))
 
         for key in keys:
-            if key in NUMKEYLIST:
+            if key in self.NUMKEYLIST:
                 ind = KEYLIST.index(key)
                 x = self.ndarray[ind]
                 x = maskNAN(x)
@@ -9206,14 +9182,14 @@ def joinStreams(stream_a,stream_b, **kwargs):
         if len(sa.ndarray[idx]) > 0 and len(sb.ndarray[idx]) > 0:
             array[idx] = np.concatenate((sa.ndarray[idx],sb.ndarray[idx]))
         elif not len(sa.ndarray[idx]) > 0 and  len(sb.ndarray[idx]) > 0:
-            if idx < len(NUMKEYLIST):
+            if idx < len(stream_a.NUMKEYLIST):
                 fill = float('nan')
             else:
                 fill = '-'
             arraya = np.asarray([fill]*len(sa.ndarray[0]))
             array[idx] = np.concatenate((arraya,sb.ndarray[idx]))
         elif len(sa.ndarray[idx]) > 0 and not len(sb.ndarray[idx]) > 0:
-            if idx < len(NUMKEYLIST):
+            if idx < len(stream_a.NUMKEYLIST):
                 fill = float('nan')
             else:
                 fill = '-'
@@ -9450,7 +9426,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                    ### Changes from 2019-01-15: modified axis - originally working fine, however except for saggitarius
                    #sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
                    sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0])
-                elif key == 'sectime' or key in NUMKEYLIST:
+                elif key == 'sectime' or key in stream_a.NUMKEYLIST:
                     if not len(sb.ndarray[indx]) == 0:
                         #sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
                         sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx])
@@ -9464,7 +9440,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 if key == 'time':
                    #sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
                    sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]))
-                elif key == 'sectime' or key in NUMKEYLIST:
+                elif key == 'sectime' or key in stream_a.NUMKEYLIST:
                     if not len(sb.ndarray[indx]) == 0:
                         #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
                         sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]))
@@ -9518,7 +9494,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
                             pass
                         else:
-                            if key in NUMKEYLIST:
+                            if key in stream_a.NUMKEYLIST:
                                 array[keyind] = np.asarray([np.nan] *len(timea))
                             else:
                                 array[keyind] = np.asarray([''] *len(timea))
@@ -9530,7 +9506,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
 
                         if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
                             for i,ind in enumerate(indtia):
-                                if key in NUMKEYLIST:
+                                if key in stream_a.NUMKEYLIST:
                                     tester = np.isnan(array[keyind][ind])
                                 else:
                                     tester = False
@@ -9566,7 +9542,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                 print("- otherwise you might wait an endless amount of time.")
                 # interpolate b
                 # TODO here it is necessary to limit the stream to numerical keys
-                #sb.ndarray = np.asarray([col for idx,col in enumerate(sb.ndarray) if KEYLIST[idx] in NUMKEYLIST])
+                #sb.ndarray = np.asarray([col for idx,col in enumerate(sb.ndarray) if KEYLIST[idx] in stream_a.NUMKEYLIST])
                 print("  a) starting interpolation of stream_b")
                 mst = datetime.utcnow()
                 function = sb.interpol(keys)
@@ -9619,7 +9595,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         if len(array[keyind]) > 0 and not mode=='drop': # values are present
                             pass
                         else:
-                            if key in NUMKEYLIST:
+                            if key in stream_a.NUMKEYLIST:
                                 array[keyind] = np.asarray([np.nan] *len(timea))
                             else:
                                 array[keyind] = np.asarray([''] *len(timea))
@@ -9630,7 +9606,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                                 print ("mergeStreams: warning when assigning header values to column %s- missing head" % key)
 
                         for i,ind in enumerate(indtia):
-                            if key in NUMKEYLIST:
+                            if key in stream_a.NUMKEYLIST:
                                 tester = isnan(array[keyind][ind])
                             else:
                                 tester = False
@@ -9760,7 +9736,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
                         exec('stream_a['+str(pos)+'].comment = comment')
                         ## Put flag 4 into the merged data if keyposition <= 8
-                        flagposlst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
                         try:
                             flagpos = flagposlst[0]
                             fllist = list(stream_a[pos].flag)
@@ -9773,7 +9749,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                         exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
                         exec('stream_a['+str(pos)+'].comment = comment')
                         ## Put flag 4 into the merged data if keyposition <= 8
-                        flagposlst = [i for i,el in enumerate(FLAGKEYLIST) if el == key]
+                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
                         try:
                             flagpos = flagposlst[0]
                             fllist = list(stream_a[pos].flag)
@@ -10189,7 +10165,7 @@ def subtractStreams(stream_a, stream_b, **kwargs):
                         keyind = KEYLIST.index(key)
                         #print key, keyind
                         #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
-                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0 and key in NUMKEYLIST: # and key in function:
+                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0 and key in stream_a.NUMKEYLIST: # and key in function:
                             #check lengths of sa.ndarray and last value of indtia
                             indtia = list(np.asarray(indtia)[np.asarray(indtia)<len(sa.ndarray[0])])
                             # Convert array to float just in case
@@ -10291,7 +10267,7 @@ def stackStreams(streamlist, **kwargs): # TODO
 
     if not keys:
         keys = result._get_key_headers(numerical=True)
-    keys = [key for key in keys if key in NUMKEYLIST]
+    keys = [key for key in keys if key in result.NUMKEYLIST]
 
     sumarray = [[] for key in KEYLIST]
     for idx,stream in enumerate(streamlist):
@@ -10492,7 +10468,7 @@ def compareStreams(stream_a, stream_b):
     # If the lengths are the same, compare single values for differences:
     if not flag_len:
         for i in range(len(t_a)):
-            for key in FLAGKEYLIST:
+            for key in stream_a.FLAGKEYLIST:
                 exec('val_a = stream_a[i].'+key)
                 exec('val_b = stream_b[i].'+key)
                 if not isnan(val_a):
@@ -10505,7 +10481,7 @@ def compareStreams(stream_a, stream_b):
     else:
         for i in range(len(t_b)):
             if stream_a[i].time == stream_b[i].time:
-                for key in FLAGKEYLIST:
+                for key in stream_a.FLAGKEYLIST:
                     exec('val_a = stream_a[i].'+key)
                     exec('val_b = stream_b[i].'+key)
                     if not isnan(val_a):
