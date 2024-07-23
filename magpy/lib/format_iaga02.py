@@ -6,50 +6,21 @@ Written by Roman Leonhardt June 2012
 """
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
-from magpy.stream import *
-from magpy.core.methods import testtime
-
+#from magpy.stream import *
+from magpy.stream import DataStream, read, magpyversion, merge_streams, subtract_streams
+from magpy.core.methods import testtime, convert_geo_coordinate, extract_date_from_string
+import os
+from datetime import datetime, timedelta
+import time
+import numpy as np
+import logging
 
 #global variables
+logger = logging.getLogger(__name__)
 KEYLIST = DataStream().KEYLIST
 MISSING_DATA = 99999
 NOT_REPORTED = 88888
 
-def convertGeoCoordinate(lon,lat,pro1,pro2):
-    """
-    DESCRIPTION:
-       converts longitude latitude using the provided epsg codes
-    PARAMETER:
-       lon	(float) longitude
-       lat	(float) latitude
-       pro1	(string) epsg code for source ('epsg:32909')
-       pro2	(string) epsg code for output ('epsg:4326')
-    RETURNS:
-       lon, lat	(floats) longitude,latitude
-    APLLICATION:
-
-    USED BY:
-       writeIMAGCDF,
-    """
-    try:
-        from pyproj import Proj, transform
-        try:
-            p1 = Proj(pro1)
-        except:
-            p1 = Proj(init=pro1)
-        x1 = float(lon)
-        y1 = float(lat)
-        # projection 2: WGS 84
-        try:
-            p2 = Proj(pro2)
-        except:
-            p2 = Proj(init=pro2)
-        # transform this point to projection 2 coordinates.
-        x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
-        return x2, y2
-    except:
-        print ("convertGeoCoordinate: problem (import pyproj or conversion error)")
-        return lon, lat
 
 def LeapTime(t):
     """
@@ -138,7 +109,7 @@ def readIAGA(filename, headonly=False, **kwargs):
 
     try:
         # get day from filename (platform independent)
-        theday = extractDateFromString(filename)[0]
+        theday = extract_date_from_string(filename)[0]
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
@@ -152,7 +123,7 @@ def readIAGA(filename, headonly=False, **kwargs):
         getfile = True
 
     if getfile:
-        loggerlib.info('Read: %s Format: %s ' % (filename, "IAGA2002"))
+        logger.info('Read: %s Format: %s ' % (filename, "IAGA2002"))
         dfpos = KEYLIST.index('df')
         comment = ''
 
@@ -421,11 +392,11 @@ def writeIAGA(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = merge_streams(exst,datastream,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = merge_streams(datastream,exst,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'append':
             myFile= OpenFile(filename,mode='a')
@@ -510,7 +481,7 @@ def writeIAGA(datastream, filename, **kwargs):
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
-                    longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
+                    longi,lati = convert_geo_coordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
 
     if not header.get('StationIAGAcode','') == '':
         iagacode = header.get('StationIAGAcode','')
@@ -695,19 +666,19 @@ def writeIAGA(datastream, filename, **kwargs):
             except:
                 row = ''
                 pass
-            if isnan(xval):
+            if np.isnan(xval):
                 row += '%13.2f' % MISSING_DATA
             else:
                 row += '%13.2f' % xval
-            if isnan(yval):
+            if np.isnan(yval):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % yval
-            if isnan(zval):
+            if np.isnan(zval):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % zval
-            if isnan(fval):
+            if np.isnan(fval):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % fval
@@ -800,13 +771,13 @@ if __name__ == '__main__':
             dat = readIAGA(filename)
             te = datetime.utcnow()
             # validity tests
-            diff = subtractStreams(teststream,dat)
+            diff = subtract_streams(teststream,dat)
             xm = diff.mean('x')
             ym = diff.mean('y')
             zm = diff.mean('z')
             fm = diff.mean('f')
             if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
-                 raise Exception("ERROR within IAF data validity test")
+                 raise Exception("ERROR within data validity test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:

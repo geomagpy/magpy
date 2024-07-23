@@ -96,9 +96,10 @@ from magpy.core.methods import *
 import numpy as np
 import copy # used only in core.activity for deepcopy of header
 import copyreg as copyreg
+import dateutil.parser as dparser
 
 # not yet verified
-import csv
+#import csv
 import pickle
 import types
 import struct
@@ -106,7 +107,6 @@ import re
 import time, string, os, shutil
 import fnmatch
 import json
-import dateutil.parser as dparser
 from tempfile import NamedTemporaryFile
 import warnings
 from glob import glob, iglob, has_magic
@@ -9133,6 +9133,73 @@ def loadflags(path=None,sensorid=None,begin=None, end=None):
             return []
 
 
+def join_streams(stream_a,stream_b, **kwargs):
+    """
+    DEFINITION:
+        Copy two streams together eventually replacing already existing time steps.
+        Data of stream_a will replace data of stream_b
+    APPLICATION
+        combinedstream = join_streams(stream_a,stream_b)
+    """
+    logger.info('join_streams: Start joining at %s.' % str(datetime.now()))
+
+    # Check stream type and eventually convert them to ndarrays
+    # --------------------------------------
+    if len(stream_a.ndarray[0]) > 0:
+        # Using ndarray and eventually convert stream_b to ndarray as well
+        if not len(stream_b.ndarray[0]) > 0:
+            return stream_a
+    elif len(stream_b.ndarray[0]) > 0:
+        if not len(stream_a.ndarray[0]) > 0:
+            return stream_b
+    else:
+        if not len(stream_a.ndarray[0]) > 0 and not len(stream_b.ndarray[0]) > 0:
+            logger.error('join_streams: stream(s) empty - aborting joining.')
+            return stream_a
+
+    # non-destructive
+    # --------------------------------------
+    sa = stream_a.copy()
+    sb = stream_b.copy()
+
+    # Get indicies of timesteps of stream_b of which identical times are existing in stream_a-> delelte those lines
+    # --------------------------------------
+    # IMPORTANT: If two streams with different keys should be combined then "merge" is the method of choice
+    # NEW: shape problems when removing data -> now use removeduplicates at the end
+    # SHOULD WORK (already tested) as remove duplicate will keep the last value and drop earlier occurences
+    #indofb = np.nonzero(np.in1d(sb.ndarray[0], sa.ndarray[0]))[0]
+    #for idx,elem in enumerate(sb.ndarray):
+    #    if len(sb.ndarray[idx]) > 0:
+    #        sb.ndarray[idx] = np.delete(sb.ndarray[idx],indofb)
+
+    # Now add stream_a to stream_b - regard for eventually missing column data
+    # --------------------------------------
+    array = [[] for key in KEYLIST]
+    for idx,elem in enumerate(sb.ndarray):
+        if len(sa.ndarray[idx]) > 0 and len(sb.ndarray[idx]) > 0:
+            array[idx] = np.concatenate((sa.ndarray[idx],sb.ndarray[idx]))
+        elif not len(sa.ndarray[idx]) > 0 and  len(sb.ndarray[idx]) > 0:
+            if idx < len(stream_a.NUMKEYLIST):
+                fill = float('nan')
+            else:
+                fill = '-'
+            arraya = np.asarray([fill]*len(sa.ndarray[0]))
+            array[idx] = np.concatenate((arraya,sb.ndarray[idx]))
+        elif len(sa.ndarray[idx]) > 0 and not len(sb.ndarray[idx]) > 0:
+            if idx < len(stream_a.NUMKEYLIST):
+                fill = float('nan')
+            else:
+                fill = '-'
+            arrayb = np.asarray([fill]*len(sb.ndarray[0]))
+            array[idx] = np.concatenate((sa.ndarray[idx],arrayb))
+        else:
+            array[idx] = np.asarray([])
+
+    stream = DataStream(header=sa.header, ndarray=np.asarray(array,dtype=object))
+    stream = stream.removeduplicates()
+
+    return stream.sorting()
+
 
 def joinStreams(stream_a,stream_b, **kwargs):
     """
@@ -9231,6 +9298,542 @@ def appendStreams(streamlist):
         return stream
     else:
         return DataStream([LineStruct()],streamlist[0].header,np.asarray([np.asarray([]) for key in KEYLIST]))
+
+def merge_streams(stream_a, stream_b, **kwargs):
+    """
+    DEFINITION:
+        Combine the contents of two data streams realtive to stream_a.
+        Basically three modes are possible:
+        1. Insert data from stream_b into stream_a based on timesteps of stream_a
+           - if keys are provided only these specific columns are inserted into a
+           - default: if data is existing in stream_a only nans are replaced
+                 here flags (4) can be set and a comment "inserted from SensorID" is added
+           - eventually use get_gaps to identfy missing timesteps in stream_a before
+        2. Replace
+           - same as insert but here all existing time series data is replaced by
+             corresponding data from stream_b
+        3. Drop
+           - drops the whole column from stream_a and fills it with stream_b data
+
+        The streams need to overlapp, base stream is stream_a of which the time range
+        is not modfified. If you want to extend this stream by new data use the extend
+        method.
+
+        1. replace data from specific columns of stream_a with data from stream_b.
+        - requires keys
+        2. fill gaps in stream_a data with stream_b data without replacing any data.
+        - extend = True
+
+    PARAMETERS:
+    Variables:
+        - stream_a      (DataStream object) main stream
+        - stream_b      (DataStream object) this stream is merged into stream_a
+    Kwargs:
+        - addall:       (bool) Add all elements from stream_b
+        - extend:       (bool) Time range of stream b is eventually added to stream a.
+                        Default False.
+                        If extend = true => any existing date which is not present in stream_a
+                        will be filled by stream_b
+        - mode:         (string) 'insert' or 'replace' or 'drop'. drop removes stream_a column, replace will change values no matter what, insert will only replace nan's (default)
+        - keys:         (list) List of keys to add from stream_b into stream_a.
+        - flag:         (bool) if true, a flag will be added to each merged line (default: flagid = 4, comment = "keys ... added from sensorid b").
+        - comment:      (str) Define comment to stream_b data in stream_a.
+
+        - replace:      (bool) Allows existing stream_a values to be replaced by stream_b ones.
+
+    RETURNS:
+        - Datastream(stream_a): (DataStream) DataStream object.
+
+    EXAMPLE:
+        >>> # Joining two datasets together:
+        >>> alldata = mergeStreams(lemidata, gsmdata, keys=['f'])
+               # f of gsm will be added to lemi
+        # inserting missing values from another stream
+        >>> new_gsm = mergeStreams(gsm1, gsm2, keys=['f'], mode='insert')
+               # all missing values (nans) of gsm1 will be filled by gsm2 values (if existing)
+
+
+    APPLICATION:
+    """
+    # old (LineStruct) too be removed
+    addall = kwargs.get('addall')
+    replace = kwargs.get('replace')
+    extend = kwargs.get('extend')
+
+
+    # new
+    mode = kwargs.get('mode')
+    flag = kwargs.get('flag')
+    keys = kwargs.get('keys')
+    comment = kwargs.get('comment')
+    flagid = kwargs.get('flagid')
+
+    if not mode:
+        mode = 'insert'  # other possibilities: replace, ...
+    if not keys:
+        keys = stream_b._get_key_headers()
+
+    # Defining default comment
+    # --------------------------------------
+    headera = stream_a.header
+    headerb = stream_b.header
+    try:
+        sensidb = headerb['SensorID']
+    except:
+        sensidb = 'stream_b'
+
+    # Better: create a flaglist and apply stream.flag(flaglist) with flag 4
+    if not comment:
+        comment = 'keys %s added from %s' % (','.join(keys), sensidb)
+    if not flagid:
+        flagid = 4
+
+    fllst = [] # flaglist
+
+    logger.info('mergeStreams: Start mergings at %s.' % str(datetime.now()))
+
+
+    # Check stream type and eventually convert them to ndarrays
+    # --------------------------------------
+    ndtype = False
+    if len(stream_a.ndarray[0]) > 0:
+        # Using ndarray and eventually convert stream_b to ndarray as well
+        ndtype = True
+        if not len(stream_b.ndarray[0]) > 0:
+            stream_b = stream_b.linestruct2ndarray()
+    elif len(stream_b.ndarray[0]) > 0:
+        ndtype = True
+        stream_a = stream_a.linestruct2ndarray()
+    else:
+        ndtype = True
+        stream_a = stream_a.linestruct2ndarray()
+        stream_b = stream_b.linestruct2ndarray()
+        if not len(stream_a.ndarray[0]) > 0 and len(stream_b.ndarray[0]) > 0:
+            logger.error('subtractStreams: stream(s) empty - aborting subtraction.')
+            return stream_a
+
+    # non-destructive
+    # --------------------------------------
+    sa = stream_a.copy()
+    sb = stream_b.copy()
+    sa = sa.removeduplicates()
+    sb = sb.removeduplicates()
+
+    # Sampling rates
+    # --------------------------------------
+    sampratea = sa.samplingrate()
+    samprateb = sb.samplingrate()
+    minsamprate = min(sampratea,samprateb)
+
+    if ndtype:
+        timea = sa.ndarray[0]
+    else:
+        timea = sa._get_column('time')
+
+    # truncate b to time range of a
+    # --------------------------------------
+    try:
+        sb = sb.trim(starttime=num2date(timea[0]).replace(tzinfo=None), endtime=num2date(timea[-1]).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
+    except:
+        print("mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
+        return stream_a
+
+    if ndtype:
+        timeb = sb.ndarray[0]
+    else:
+        timeb = sb._get_column('time')
+
+    # keeping a - changed by leon 10/2015
+    """
+    # truncate a to range of b
+    # --------------------------------------
+    try:
+        sa = sa.trim(starttime=num2date(timeb[0]).replace(tzinfo=None), endtime=num2date(timeb[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
+    except:
+        print "mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
+        return stream_a
+
+    # redo timea calc after trimming
+    # --------------------------------------
+    if ndtype:
+        timea = sa.ndarray[0]
+    else:
+        timea = sa._get_column('time')
+    """
+
+    # testing overlapp
+    # --------------------------------------
+    if not len(sb) > 0:
+        print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
+        return stream_a
+
+    timea = maskNAN(timea)
+    timeb = maskNAN(timeb)
+
+    orgkeys = stream_a._get_key_headers()
+
+    # master header
+    # --------------------------------------
+    header = sa.header
+    # just add the merged sensorid
+    header['SecondarySensorID'] = sensidb
+
+    ## Speed up of unequal timesteps - limit search range
+    #   - search range small (fracratio high) if t_limits are similar and data is periodic
+    #   - search range large  (fracratio small) if t_limits are similar and data is periodic
+    #   - fracratio = 1 means that the full stream_b data set is searched
+    #   - fracratio = 20 means that +-5percent of stream_b are searched arround expected index
+    #print("mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits())
+
+    fracratio = 2  # modify if start and endtime are different
+    speedup = True
+    if speedup and ndtype:
+        ast, aet = sa._find_t_limits()
+        bst, bet = sb._find_t_limits()
+        uncert = (date2num(aet)-date2num(ast))*0.01
+        #print ("Merge speedup", uncert, ast, aet, bst, bet)
+        if not bst < ast+timedelta(minutes=uncert*24*60):
+            print ("Merge: Starttime of stream_b too large")
+            for indx,key in enumerate(KEYLIST):
+                if key == 'time':
+                   ### Changes from 2019-01-15: modified axis - originally working fine, however except for saggitarius
+                   #sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
+                   sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0])
+                elif key == 'sectime' or key in stream_a.NUMKEYLIST:
+                    if not len(sb.ndarray[indx]) == 0:
+                        #sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
+                        sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx])
+                else:
+                    if not len(sb.ndarray[indx]) == 0:
+                        #sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx],1)
+                        sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx])
+        if not bet > aet-timedelta(minutes=uncert*24*60):
+            print ("Merge: Endtime of stream_b too small") ### Move that to merge??
+            for indx,key in enumerate(KEYLIST):
+                if key == 'time':
+                   #sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
+                   sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]))
+                elif key == 'sectime' or key in stream_a.NUMKEYLIST:
+                    if not len(sb.ndarray[indx]) == 0:
+                        #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]))
+                else:
+                    if not len(sb.ndarray[indx]) == 0:
+                        #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']),1)
+                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']))
+        #st,et = sb._find_t_limits()
+        #print ("Merge", st, et, sb.length())
+        sb = sb.get_gaps()
+        fracratio = 40  # modify if start and endtime are different
+
+        timeb = sb.ndarray[0]
+        timeb = maskNAN(timeb)
+
+    abratio = len(timea)/float(len(timeb))
+    dcnt = int(len(timeb)/fracratio)
+    #print ("Merge:", abratio, dcnt, len(timeb))
+
+    timea = np.round(timea, decimals=9)
+    timeb = np.round(timeb, decimals=9)
+    if ndtype:
+            array = [[] for key in KEYLIST]
+            # Init array with keys from stream_a
+            for key in orgkeys:
+                keyind = KEYLIST.index(key)
+                array[keyind] = sa.ndarray[keyind]
+            indtib = np.nonzero(np.in1d(timeb,timea))[0]
+            # If equal elements occur in time columns
+            if len(indtib) > int(0.5*len(timeb)):
+                print("mergeStreams: Found identical timesteps - using simple merge")
+                # get tb times for all matching indicies
+                #print("merge", indtib, len(indtib), len(timea), len(timeb), np.argsort(timea), np.argsort(timeb))
+                tb = np.asarray([timeb[ind] for ind in indtib])
+                # Get indicies of stream_a of which times are present in matching tbs
+                indtia = np.nonzero(np.in1d(timea,tb))[0]
+                #print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
+
+                if len(indtia) == len(indtib):
+                    nanind = []
+                    for key in keys:
+                        keyind = KEYLIST.index(key)
+                        #array[keyind] = sa.ndarray[keyind]
+                        vala, valb = [], []
+                        if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
+                            #print("Found sb values", key)
+                            valb = [sb.ndarray[keyind][ind] for ind in indtib]
+                        if len(sa.ndarray[keyind]) > 0: # stream_b values are existing
+                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
+                        ### Change by leon in 10/2015
+                        if len(array[keyind]) > 0 and not mode=='drop': # values are present
+                            pass
+                        else:
+                            if key in stream_a.NUMKEYLIST:
+                                array[keyind] = np.asarray([np.nan] *len(timea))
+                            else:
+                                array[keyind] = np.asarray([''] *len(timea))
+                            try:
+                                header['col-'+key] = sb.header['col-'+key]
+                                header['unit-col-'+key] = sb.header['unit-col-'+key]
+                            except:
+                                print ("mergeStreams: warning when assigning header values to column %s - missing head" % key)
+
+                        if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
+                            for i,ind in enumerate(indtia):
+                                if key in stream_a.NUMKEYLIST:
+                                    tester = np.isnan(array[keyind][ind])
+                                else:
+                                    tester = False
+                                    if array[keyind][ind] == '':
+                                        tester = True
+                                #print ("Merge3", tester)
+                                if mode == 'insert':
+                                    if tester:
+                                        array[keyind][ind] = valb[i]
+                                    else:
+                                        if len(vala) > 0:
+                                            array[keyind][ind] = vala[i]
+                                elif mode == 'replace':
+                                    if not np.isnan(valb[i]):
+                                        array[keyind][ind] = valb[i]
+                                    else:
+                                        if len(vala) > 0:
+                                            array[keyind][ind] = vala[i]
+                                else:
+                                    array[keyind][ind] = valb[i]
+                                if flag:
+                                    ttt = num2date(array[0][ind])
+                                    fllst.append([ttt,ttt,key,flagid,comment])
+
+                    array[0] = np.asarray(sa.ndarray[0])
+                    array = np.asarray(array, dtype=object)
+
+            else:
+                print("mergeStreams: Did not find identical timesteps - linearily interpolating stream b...")
+                print("- Please note: this method needs considerably longer.")
+                print("- Only data within 1/2 the sampling rate distance of stream_a timesteps is used.")
+                print("- Put in the larger (higher resolution) stream as stream_a,")
+                print("- otherwise you might wait an endless amount of time.")
+                # interpolate b
+                # TODO here it is necessary to limit the stream to numerical keys
+                #sb.ndarray = np.asarray([col for idx,col in enumerate(sb.ndarray) if KEYLIST[idx] in stream_a.NUMKEYLIST])
+                print("  a) starting interpolation of stream_b")
+                mst = datetime.utcnow()
+                function = sb.interpol(keys)
+                met = datetime.utcnow()
+                print("     -> needed {}".format(met-mst))
+                # Get a list of indicies for which timeb values are
+                #   in the vicintiy of a (within half of samplingrate)
+                dti = (minsamprate/24./3600.)
+                print("  b) getting indicies of stream_a with stream_b values in the vicinity")
+                mst = datetime.utcnow()
+                #indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/dti <= 1.]  # This selcetion requires most of the time
+                indtia = []  ### New and faster way by limiting the search range in stream_b by a factor of 10
+                check = [int(len(timea)*(100-el)/100.) for el in range(99,1,-10)]
+                lentimeb = len(timeb)
+                for idx, el in enumerate(timea):
+                    cst = int(idx/abratio-dcnt)
+                    if cst<=0:
+                        cst = 0
+                    cet = int(idx/abratio+dcnt)
+                    if cet>=lentimeb:
+                        cet=lentimeb
+                    if np.min(np.abs(timeb[cst:cet]-el)/(dti)) <= 0.5:
+                        indtia.append(idx)
+                    if idx in check:
+                        print ("     -> finished {} percent".format(idx/float(len(timea))*100.))
+                indtia = np.asarray(indtia)
+                met = datetime.utcnow()
+                print("     -> needed {}".format(met-mst))
+                # limit time range to valued covered by the interpolation function
+                #print len(indtia), len(timeb), np.asarray(indtia)
+                indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]
+                #t2temp = datetime.utcnow()
+                #print "Timediff %s" % str(t2temp-t1temp)
+                #print len(indtia), len(timeb), np.asarray(indtia)
+                #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
+                print("  c) extracting interpolated values of stream_b")
+                mst = datetime.utcnow()
+                if len(function) > 0:
+                    for key in keys:
+                        keyind = KEYLIST.index(key)
+                        #print key, keyind
+                        #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
+                        vala, valb = [], []
+                        if len(sb.ndarray[keyind]) > 0: # and key in function:
+
+                            valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
+                        if len(sa.ndarray[keyind]) > 0: # and key in function:
+                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
+
+                        if len(array[keyind]) > 0 and not mode=='drop': # values are present
+                            pass
+                        else:
+                            if key in stream_a.NUMKEYLIST:
+                                array[keyind] = np.asarray([np.nan] *len(timea))
+                            else:
+                                array[keyind] = np.asarray([''] *len(timea))
+                            try:
+                                header['col-'+key] = sb.header['col-'+key]
+                                header['unit-col-'+key] = sb.header['unit-col-'+key]
+                            except:
+                                print ("mergeStreams: warning when assigning header values to column %s- missing head" % key)
+
+                        for i,ind in enumerate(indtia):
+                            if key in stream_a.NUMKEYLIST:
+                                tester = isnan(array[keyind][ind])
+                            else:
+                                tester = False
+                                if array[keyind][ind] == '':
+                                    tester = True
+                            if mode == 'insert':
+                                if tester:
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    if len(vala) > 0:
+                                        array[keyind][ind] = vala[i]
+                            elif mode == 'replace':
+                                if not np.isnan(valb[i]):
+                                    array[keyind][ind] = valb[i]
+                                else:
+                                    if len(vala) > 0:
+                                        array[keyind][ind] = vala[i]
+                            else:
+                                array[keyind][ind] = valb[i]
+                            """
+                            if mode == 'insert' and tester:
+                                array[keyind][ind] = valb[i]
+                            elif mode == 'replace':
+                                array[keyind][ind] = valb[i]
+                            """
+                            if flag:
+                                ttt = num2date(array[0][ind])
+                                fllst.append([ttt,ttt,key,flagid,comment])
+
+                        met = datetime.utcnow()
+                        print("     -> needed {} for {}".format(met-mst,key))
+
+                    array[0] = np.asarray(sa.ndarray[0])
+                    array = np.asarray(array,dtype=object)
+
+            #try:
+            #    header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
+            #except:
+            #    pass
+
+            return DataStream([LineStruct()],header,array)
+
+
+    sta = list(stream_a)
+    stb = list(stream_b)
+    if addall:
+        logger.info('mergeStreams: Adding streams together not regarding for timeconstraints of data.')
+        if ndtype:
+            for idx,elem in enumerate(stream_a.ndarray):
+                ndarray = stream_a.ndarray
+                if len(elem) == 0 and len(stream_b.ndarray[idx]) > 0:
+                    # print add nan's of len_a to stream a
+                    # then append stream b
+                    pass
+                elif len(elem) > 0 and len(stream_b.ndarray[idx]) == 0:
+                    # print add nan's of len_b to stream a
+                    pass
+                elif len(elem) == 0 and len(stream_b.ndarray[idx]) == 0:
+                    # do nothing
+                    pass
+                else: #len(elem) > 0 and len(stream_b.ndarray[idx]) > 0:
+                    # append b to a
+                    pass
+            newsta = DataStream(sta, headera, ndarray)
+        else:
+            for elem in stream_b:
+                sta.append(elem)
+            newsta = DataStream(sta, headera, stream_a.ndarray)
+        for elem in headerb:
+            try:
+                headera[elem]
+                ha = True
+            except:
+                ha = False
+            if headerb[elem] and not ha:
+                newsta.header[elem] = headerb[elem]
+            elif headerb[elem] and ha:
+                logger.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
+        newsta.sorting()
+        return newsta
+    elif extend:
+        logger.info('mergeStreams: Extending stream a with data from b.')
+        for elem in stream_b:
+            if not elem.time in timea:
+                sta.append(elem)
+        newsta = DataStream(sta, headera)
+        for elem in headerb:
+            try:
+                headera[elem]
+                ha = True
+            except:
+                ha = False
+            if headerb[elem] and not ha:
+                newsta.header[elem] = headerb[elem]
+            elif headerb[elem] and ha:
+                logger.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
+        newsta.sorting()
+        return newsta
+    else:
+        # interpolate stream_b
+        # changed the following trim section to prevent removal of first input in trim method
+        if stream_b[0].time == np.min(timea):
+            sb = stream_b.trim(endtime=np.max(timea))
+        else:
+            sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
+        timeb = sb._get_column('time')
+        timeb = maskNAN(timeb)
+
+        function = sb.interpol(keys)
+
+        taprev = 0
+        for elem in sb:
+            foundina = find_nearest(timea,elem.time)
+            pos = foundina[1]
+            ta = foundina[0]
+            if (ta > taprev) and (np.min(timeb) <= ta <= np.max(timeb)):
+                taprev = ta
+                functime = (ta-function[1])/(function[2]-function[1])
+                for key in keys:
+                    if not key in KEYLIST[1:16]:
+                        logger.error('mergeStreams: Column key (%s) not valid.' % key)
+                    #keyval = getattr(stream_a[pos], key)# should be much better
+                    exec('keyval = stream_a[pos].'+key)
+                    fkey = 'f'+key
+                    if fkey in function[0] and (isnan(keyval) or not stream_a._is_number(keyval)):
+                        newval = function[0][fkey](functime)
+                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
+                        exec('stream_a['+str(pos)+'].comment = comment')
+                        ## Put flag 4 into the merged data if keyposition <= 8
+                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
+                        try:
+                            flagpos = flagposlst[0]
+                            fllist = list(stream_a[pos].flag)
+                            fllist[flagpos] = '4'
+                            stream_a[pos].flag=''.join(fllist)
+                        except:
+                            pass
+                    elif fkey in function[0] and not isnan(keyval) and replace == True:
+                        newval = function[0][fkey](functime)
+                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
+                        exec('stream_a['+str(pos)+'].comment = comment')
+                        ## Put flag 4 into the merged data if keyposition <= 8
+                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
+                        try:
+                            flagpos = flagposlst[0]
+                            fllist = list(stream_a[pos].flag)
+                            fllist[flagpos] = '4'
+                            stream_a[pos].flag=''.join(fllist)
+                        except:
+                            pass
+
+    logger.info('mergeStreams: Mergings finished at %s ' % str(datetime.now()))
+
+    return DataStream(stream_a, headera)
 
 
 def mergeStreams(stream_a, stream_b, **kwargs):

@@ -12,14 +12,20 @@ Written by Roman Leonhardt December 2012
 """
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
-from magpy.stream import *
+#from magpy.stream import *
+from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
+from magpy.stream import LineStruct
 from magpy.core.activity import K_fmi
-from magpy.core.methods import testtime
-
+from magpy.core.methods import testtime, convert_geo_coordinate, is_number, extract_date_from_string
+import os
+from datetime import datetime, timedelta
+import re
+import numpy as np
 import sys
 import logging
 import struct
 import dateutil.parser as dparser
+from matplotlib.dates import date2num, num2date
 logger = logging.getLogger(__name__)
 
 KEYLIST = DataStream().KEYLIST
@@ -266,7 +272,7 @@ def readIAF(filename, headonly=False, **kwargs):
     # Check whether header infromation is already present
 
     headers = {}
-
+    basestring = (str, bytes)
     data = []
     key = None
     keystr = ''
@@ -416,37 +422,37 @@ def readIAF(filename, headonly=False, **kwargs):
         print ("readIAF: extracted data from binary file")
     #x = np.asarray([val for val in x if not val > 888880])/10.   # use a pythonic way here
     x = np.asarray(x)/10.
-    x[x > 88880] = float(nan)
+    x[x > 88880] = float(np.nan)
     y = np.asarray(y)/10.
-    y[y > 88880] = float(nan)
+    y[y > 88880] = float(np.nan)
     z = np.asarray(z)/10.
-    z[z > 88880] = float(nan)
+    z[z > 88880] = float(np.nan)
     f = np.asarray(f)/10.
-    f[f > 88880] = float(nan)
+    f[f > 88880] = float(np.nan)
     with np.errstate(invalid='ignore'):
-        f[f < -44440] = float(nan)
+        f[f < -44440] = float(np.nan)
     xho = np.asarray(xho)/10.
-    xho[xho > 88880] = float(nan)
+    xho[xho > 88880] = float(np.nan)
     yho = np.asarray(yho)/10.
-    yho[yho > 88880] = float(nan)
+    yho[yho > 88880] = float(np.nan)
     zho = np.asarray(zho)/10.
-    zho[zho > 88880] = float(nan)
+    zho[zho > 88880] = float(np.nan)
     fho = np.asarray(fho)/10.
-    fho[fho > 88880] = float(nan)
+    fho[fho > 88880] = float(np.nan)
     with np.errstate(invalid='ignore'):
-        fho[fho < -44440] = float(nan)
+        fho[fho < -44440] = float(np.nan)
     xd = np.asarray(xd)/10.
-    xd[xd > 88880] = float(nan)
+    xd[xd > 88880] = float(np.nan)
     yd = np.asarray(yd)/10.
-    yd[yd > 88880] = float(nan)
+    yd[yd > 88880] = float(np.nan)
     zd = np.asarray(zd)/10.
-    zd[zd > 88880] = float(nan)
+    zd[zd > 88880] = float(np.nan)
     fd = np.asarray(fd)/10.
-    fd[fd > 88880] = float(nan)
+    fd[fd > 88880] = float(np.nan)
     with np.errstate(invalid='ignore'):
-        fd[fd < -44440] = float(nan)
+        fd[fd < -44440] = float(np.nan)
     k = np.asarray(k).astype(float)/10.
-    k[k > 88] = float(nan)
+    k[k > 88] = float(np.nan)
     ir = np.asarray(ir)
 
     if debug:
@@ -581,7 +587,7 @@ def writeIAF(datastr, filename, **kwargs):
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
-                    longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
+                    longi,lati = convert_geo_coordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
         if not float(datastream.header.get('DataAcquisitionLatitude', 0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude', '')) > -90:
             logger.info("Latitude and Longitude apparently not correctly provided - setting to zero")
             print("Latitude and Longitude need to be provided in degrees")
@@ -739,6 +745,7 @@ def writeIAF(datastr, filename, **kwargs):
 
         # Constructing header Info
         packcode = '<4s4l4s4sl4s4sll4s4sll' # fh.read(64)
+        unicode = str
         head = [el.encode('ascii','ignore') if isinstance(el, unicode) else el for el in head]
         if debug:
             print ("Header looks like:", head)
@@ -1108,7 +1115,7 @@ def readIMF(filename, headonly=False, **kwargs):
     var1ind = KEYLIST.index('var1')
     t2ind = KEYLIST.index('t2')
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
             if not theday[-1] >= datetime.date(testtime(starttime)):
@@ -1207,11 +1214,11 @@ def writeIMF(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream)
+            datastream = join_streams(exst,datastream)
             myFile= open( filename, "wb" )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(datastream,exst)
+            datastream = join_streams(datastream,exst)
             myFile= open( filename, "wb" )
         elif mode == 'append':
             myFile= open( filename, "ab" )
@@ -1408,7 +1415,7 @@ def readBLV(filename, headonly=False, **kwargs):
     year = 1900
 
     # get day from filename (platform independent)
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         year = str(theday[0].year)
     except:
@@ -1529,7 +1536,7 @@ def readBLV(filename, headonly=False, **kwargs):
                 else:
                     try:
                         if strval in ['d','D']:
-                            tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray],dtype=object))
+                            tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
                             func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                             func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                             funclist.append(func1)
@@ -1548,7 +1555,7 @@ def readBLV(filename, headonly=False, **kwargs):
                 # data info
                 starfound.append('*')
                 if len(starfound) > 1: # Comment section starts here
-                    tempstream = DataStream([LineStruct()], {}, np.asarray([np.asarray(el) for el in farray],dtype=object))
+                    tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
                     func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                     func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                     funclist.append(func1)
@@ -1573,7 +1580,7 @@ def readBLV(filename, headonly=False, **kwargs):
     headers['DataType'] = 'MagPyDI0.1'
     headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def writeBLV(datastream, filename, **kwargs):
@@ -1719,11 +1726,11 @@ def writeBLV(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream)
+            datastream = join_streams(exst,datastream)
             myFile= open( filename, "wt", newline='' )
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(datastream,exst)
+            datastream = join_streams(datastream,exst)
             myFile= open( filename, "wt", newline='' )
         elif mode == 'append':
             myFile= open( filename, "at", newline='' )
@@ -1859,7 +1866,7 @@ def writeBLV(datastream, filename, **kwargs):
         else:
             yar[idx] = np.asarray(yar[idx])
 
-    yearstream = DataStream([LineStruct()],datastream.header,np.asarray(yar, dtype=object))
+    yearstream = DataStream(header=datastream.header,ndarray=np.asarray(yar, dtype=object))
     yearstream = yearstream.func2stream(basefunctionlist,mode='addbaseline',keys=keys)
 
     if fbasefunc:
@@ -2118,6 +2125,10 @@ def readIYFV(filename, headonly=False, **kwargs):
     lc = KEYLIST.index('var5')  ## store the line number of each loaded line here
                                 ## this is used by writeIYFV to add at the correct position
     newarray = []
+    units = []
+    para = []
+    goodval = False
+    ele = 'XYZ'
 
     headfound = False
     latitudefound = False
@@ -2235,25 +2246,6 @@ def readIYFV(filename, headonly=False, **kwargs):
                         if t == tsel:
                             array[0].append(ti)
                             array[lc].append(cnt)
-                            """
-                            for comp in ele.lower():
-                                if comp in ['x','h','i']:
-                                    headers['col-x'] = comp
-                                    headers['unit-col-x'] = units[para.index(comp)]
-                                    array[1].append(row[para.index(comp)]-jumpx)
-                                elif comp in ['y','d']:
-                                    headers['col-y'] = comp
-                                    headers['unit-col-y'] = units[para.index(comp)]
-                                    array[2].append(row[para.index(comp)]-jumpy)
-                                elif comp in ['i','z']:
-                                    headers['col-z'] = comp
-                                    headers['unit-col-z'] = units[para.index(comp)]
-                                    array[3].append(row[para.index(comp)]-jumpz)
-                                elif comp in ['f']:
-                                    headers['col-f'] = comp
-                                    headers['unit-col-f'] = units[para.index(comp)]
-                                    array[4].append(row[para.index(comp)]-jumpf)
-                            """
                             headers['col-x'] = 'x'
                             headers['unit-col-x'] = units[para.index('x')]
                             headers['col-y'] = 'y'
@@ -2301,7 +2293,7 @@ def readIYFV(filename, headonly=False, **kwargs):
 
     #fh.close()
     array = [np.asarray(ar,dtype=object) for ar in array]
-    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    stream = DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
     if not ele.lower().startswith('xyz') and ele.lower()[:3] in ['xyz','hdz','dhz','hez','idf']:
         if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
@@ -2332,6 +2324,7 @@ def writeIYFV(datastream,filename, **kwargs):
 
     kind = kwargs.get('kind')
     comment = kwargs.get('comment')
+    note = 0
 
     if not kind in ['A','Q','D','q','d']:
         kind = 'A'
@@ -2355,7 +2348,7 @@ def writeIYFV(datastream,filename, **kwargs):
     tmin, tmax = datastream._find_t_limits()
     tmin = date2num(tmin)
     tmax = date2num(tmax)
-    meant = mean([tmin,tmax])
+    meant = np.mean([tmin,tmax])
     if tmax-tmin < 365*0.9: # 90% of one year
         logger.error(" writeIYFV: Datastream does not cover at least 90% of one year")
         if not kind in ['Q', 'D', 'q', 'd']:
@@ -2483,6 +2476,8 @@ def writeIYFV(datastream,filename, **kwargs):
 
         yearlst = []
         foundcomm = False
+        idx = 0
+        commidx = 0
 
         for idx,elem in enumerate(content):
             ellst = elem.split()
@@ -2514,6 +2509,7 @@ def writeIYFV(datastream,filename, **kwargs):
                 idx= indicies[years.index(min(years))]
                 content.insert(idx, newline)
             elif int(year) > np.min(years) and int(year) < np.max(years):
+                i = 0
                 for i,y in enumerate(years):
                     if int(y) > int(year):
                         break
@@ -2777,7 +2773,7 @@ if __name__ == '__main__':
             te = datetime.utcnow()
             # validity tests
             dat = dat.calc_f()
-            diff = subtractStreams(teststream,dat)
+            diff = subtract_streams(teststream,dat)
             xm = diff.mean('x')
             ym = diff.mean('y')
             zm = diff.mean('z')
@@ -2800,13 +2796,13 @@ if __name__ == '__main__':
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             ts = datetime.utcnow()
             # write
-            succ = writeIMF(teststream,filename)
+            succ1 = writeIMF(teststream,filename)
             # test
-            succ = isIMF(filename)
+            succ2 = isIMF(filename)
             dat = readIMF(filename)
             te = datetime.utcnow()
             # validity tests
-            diff = subtractStreams(teststream,dat)
+            diff = subtract_streams(teststream,dat)
             xm = diff.mean('x')
             ym = diff.mean('y')
             zm = diff.mean('z')
@@ -2825,15 +2821,15 @@ if __name__ == '__main__':
             ts = datetime.utcnow()
             # write
             print ("Writing")
-            succ = writeDKA(kstream,filename)
+            succ1 = writeDKA(kstream,filename)
             # test
             print ("Testing")
-            succ = isDKA(filename)
+            succ2 = isDKA(filename)
             print ("Reading")
             dat = readDKA(filename)
             te = datetime.utcnow()
             # validity tests
-            diff = subtractStreams(kstream,dat)
+            diff = subtract_streams(kstream,dat)
             km = diff.mean('var1')
             print (km)
             successes[testset] = (

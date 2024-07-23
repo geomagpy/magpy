@@ -14,6 +14,11 @@ the following methods are contained:
 import numpy as np
 from datetime import datetime, timedelta
 from matplotlib.dates import num2date
+import os
+import re
+import dateutil.parser as dparser
+
+# import pyproj  # convertGeoCoor
 
 
 def is_number(s):
@@ -56,6 +61,157 @@ def ceil_dt(dt, seconds):
         return dt + timedelta(seconds=delta)
     else:
         return dt
+
+
+def convert_geo_coordinate(lon,lat,pro1,pro2):
+    """
+    DESCRIPTION:
+       converts longitude latitude using the provided epsg codes
+    PARAMETER:
+       lon	(float) longitude
+       lat	(float) latitude
+       pro1	(string) epsg code for source ('epsg:32909')
+       pro2	(string) epsg code for output ('epsg:4326')
+    RETURNS:
+       lon, lat	(floats) longitude,latitude
+    APLLICATION:
+       lon, lat = convert_geo_coordinate(float(longi),float(lati),'epsg:31256','epsg:4326')
+    USED BY:
+       writeIMAGCDF,writeIAGA,writeIAF
+    """
+    x1 = float(lon)
+    y1 = float(lat)
+    try:
+        from pyproj import Proj
+        p1 = Proj(pro1)
+        p2 = Proj(pro2)
+    except:
+        print ("convert_geo_coordinate: problem (import pyproj or epsg code error)")
+        return lon, lat
+
+    try:
+        # pyproj2
+        from pyproj import Transformer
+        transformer = Transformer.from_crs(pro1.upper(), pro2.upper())
+        y2, x2 = transformer.transform(y1, x1)
+        return x2, y2
+    except:
+        # pyproj1
+        from pyproj import Proj, transform
+        try:
+            p1 = Proj(pro1)
+        except:
+            p1 = Proj(init=pro1)
+        # projection 2: WGS 84
+        try:
+            p2 = Proj(pro2)
+        except:
+            p2 = Proj(init=pro2)
+        # transform this point to projection 2 coordinates.
+        x2, y2 = transform(p1,p2,x1,y1,always_xy=True)
+        return x2, y2
+
+
+def extract_date_from_string(datestring):
+    """
+    DESCRIPTION:
+       Method to identify a date within a string (usually the filename).
+       It is used by most file reading procedures
+    RETURNS:
+       A list of datetimeobjects with first and last date (month, year)
+       or the day (dailyfiles)
+    APPLICATION:
+       datelist = extract_date_from_string(filename)
+    """
+
+    date = False
+    # get day from filename (platform independent)
+    localechanged = False
+
+    try:
+        splitpath = os.path.split(datestring)
+        daystring = splitpath[1].split('.')[0]
+    except:
+        daystring = datestring
+
+    try:
+        tmpdaystring = daystring[-7:]
+        date = dparser.parse(tmpdaystring[:5]+' '+tmpdaystring[5:], dayfirst=True)
+        dateform = '%b%d%y'
+    except:
+        # test for day month year
+        try:
+            tmpdaystring = re.findall(r'\d+',daystring)[0]
+        except:
+            # no number whatsoever
+            return False
+        testunder = daystring.replace('-','').split('_')
+        for i in range(len(testunder)):
+            try:
+                numberstr = re.findall(r'\d+',testunder[i])[0]
+            except:
+                numberstr = '0'
+            if len(numberstr) > 4 and int(numberstr) > 100000: # There needs to be year and month
+                tmpdaystring = numberstr
+            elif len(numberstr) == 4 and int(numberstr) > 1900: # use year at the end of string
+                tmpdaystring = numberstr
+
+        if len(tmpdaystring) > 8:
+            try: # first try whether an easy pattern can be found e.g. test12014-11-22
+                match = re.search(r'\d{4}-\d{2}-\d{2}', daystring)
+                date = datetime.strptime(match.group(), '%Y-%m-%d').date()
+            except:  # if not use the first 8 digits
+                tmpdaystring = tmpdaystring[:8]
+                pass
+        if len(tmpdaystring) == 8:
+            try:
+                dateform = '%Y%m%d'
+                date = datetime.strptime(tmpdaystring,dateform)
+            except:
+                # log ('dateformat in filename could not be identified')
+                pass
+        elif len(tmpdaystring) == 6:
+            try:
+                dateform = '%Y%m'
+                date = datetime.strptime(tmpdaystring,dateform)
+                from calendar import monthrange
+                datelist = [datetime.date(date), datetime.date(date + timedelta(days=monthrange(date.year,date.month)[1]-1))]
+                return datelist
+            except:
+                # log ('dateformat in filename could not be identified')
+                pass
+        elif len(tmpdaystring) == 4:
+            try:
+                dateform = '%Y'
+                date = datetime.strptime(tmpdaystring,dateform)
+                date2 = datetime.strptime(str(int(tmpdaystring)+1),dateform)
+                datelist = [datetime.date(date), datetime.date(date2-timedelta(days=1))]
+                return datelist
+            except:
+                # log ('dateformat in filename could not be identified')
+                pass
+
+        if not date and len(daystring.split('_')[0]) > 8:
+            try: # first try whether an easy pattern can be found e.g. test12014-11-22_00-00-00
+                daystrpart = daystring.split('_')[0] # e.g. RCS
+                match = re.search(r'\d{4}-\d{2}-\d{2}', daystrpart)
+                date = datetime.strptime(match.group(), '%Y-%m-%d').date()
+                return [date]
+            except:
+                pass
+
+        if not date:
+            # No Date found so far - now try last 6 elements of string () e.g. SG gravity files
+            try:
+                tmpdaystring = re.findall(r'\d+',daystring)[0]
+                dateform = '%y%m%d'
+                date = datetime.strptime(tmpdaystring[-6:],dateform)
+            except:
+                pass
+    try:
+        return [datetime.date(date)]
+    except:
+        return [date]
 
 
 def find_nearest(array, value):
@@ -174,9 +330,9 @@ def nan_helper(y):
         - index, a function, with signature indices= index(logical_indices),
          to convert logical indices of NaNs to 'equivalent' indices
     Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+        # linear interpolation of NaNs
+        nans, x= nan_helper(y)
+        y[nans]= np.interp(x(nans), x(~nans), y[~nans])
     """
     y = np.asarray(y).astype(float)
     return np.isnan(y), lambda z: z.nonzero()[0]
@@ -367,6 +523,19 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['testdate'] = str(excep)
         print(datetime.utcnow(), "--- ERROR testdate.")
+
+    try:
+        lon, lat = convert_geo_coordinate(-34833.41399,310086.6051,'epsg:31256','epsg:4326')
+        print ("Longitude: {}, Latitude: {}".format(lon,lat))
+    except Exception as excep:
+        errors['convert_geo_coordinate'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR convert_geo_coordinate.")
+
+    try:
+        datelist = extract_date_from_string("ccc_2022-11-22.txt")
+    except Exception as excep:
+        errors['extract_date_from_string'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR extract_date_from_string.")
 
     try:
         for fill in ['mean', 'interpolate', 'value']:

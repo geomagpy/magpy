@@ -10,11 +10,12 @@ Written by Roman Leonhardt October 2019
 """
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
-from magpy.stream import *
-from magpy.core.methods import testtime
-
+from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
+from magpy.core.methods import testtime, convert_geo_coordinate
+from datetime import datetime, timedelta
+import os
+import numpy as np
 import cdflib
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -338,11 +339,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 ar = np.delete(ar,index)
             if elem[0] in NUMKEYLIST:
                 fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
-                if isnan(fillval):
+                if np.isnan(fillval):
                     # if it is nan than the following replace wont work anyway
                     fillval = 99999.0
                 with np.errstate(invalid='ignore'):
-                    ar[ar > fillval-1] = float(nan)
+                    ar[ar > fillval-1] = float(np.nan)
                 ind = KEYLIST.index(elem[0])
                 headers['col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                 headers['unit-col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
@@ -430,7 +431,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(filename)
-            datastream = joinStreams(exst,datastream)
+            datastream = join_streams(exst,datastream)
             os.remove(filename)
             try:
                 mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
@@ -438,7 +439,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
         elif mode == 'replace' or mode == 'append': # replace existing inputs
             exst = read(filename)
-            datastream = joinStreams(datastream, exst)
+            datastream = join_streams(datastream, exst)
             os.remove(filename)
             try:
                 mycdf = cdflib.cdfwrite.CDF(filename, cdf_spec=main_cdf_spec)
@@ -601,7 +602,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
                     print ("writeIMAGCDF: converting coordinates to epsg 4326")
-                    longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
+                    longi,lati = convert_geo_coordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
                     longi = "{:.3f}".format(float(longi))
                     lati = "{:.3f}".format(float(lati))
             globalAttrs['Latitude'] = { 0 : float(lati) }
@@ -717,7 +718,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     col = col.astype(float)
 
                 # eventually use a different fill value (default is nan)
-                if not isnan(fillval):
+                if not np.isnan(fillval):
                     col = np.nan_to_num(col, nan=fillval)
 
                 if not False in checkEqual3(col):
@@ -931,7 +932,7 @@ if __name__ == '__main__':
     import subprocess
     print()
     print("----------------------------------------------------------")
-    print("TESTING: IMF FORMAT LIBRARY")
+    print("TESTING: IMAGCDF FORMAT LIBRARY")
     print("THIS IS A TEST RUN OF THE IMF LIBRARY.")
     print("All main methods will be tested. This may take a while.")
     print("A summary will be presented at the end. Any protocols")
@@ -1001,7 +1002,7 @@ if __name__ == '__main__':
             zm = diff.mean('z')
             fm = diff.mean('f')
             if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
-                 raise Exception("ERROR within IAF data validity test")
+                 raise Exception("ERROR within data validity test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
