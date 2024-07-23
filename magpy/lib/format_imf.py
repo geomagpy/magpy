@@ -13,6 +13,7 @@ Written by Roman Leonhardt December 2012
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
+from magpy.core.activity import K_fmi
 from magpy.core.methods import testtime
 
 import sys
@@ -612,10 +613,10 @@ def writeIAF(datastr, filename, **kwargs):
             " IMPORTANT: first and last day will be missing every month - provide kvals separately in order to overcome this limitation")
         if not datastream.header.get('StationK9', None):
             print(" -> no K9 value provided for Station: using 500nT as default")
-        import magpy.core.activity as act
-        kvals = act.K_fmi(datastream, K9_limit=datastream.header.get('StationK9', 500),
-                          longitude=datastream.header.get('DataAcquisitionLongitude', 15), debug=True)
-        print("KVAL", kvals)
+        if not datastream.header.get('DataAcquisitionLongitude', None):
+            print(" -> no Longitude provided for Station: using 15E as default")
+        kvals = K_fmi(datastream, K9_limit=datastream.header.get('StationK9', 500),
+                          longitude=datastream.header.get('DataAcquisitionLongitude', 15))
 
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
@@ -828,7 +829,6 @@ def writeIAF(datastr, filename, **kwargs):
             dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
             kdat = dayk[KEYLIST.index('var1')]
             kdat = [int(el*10.) if not np.isnan(el) else 999 for el in kdat]
-            #print("kvals", len(kdat), t0+i,t0+i+1,kdat,dayk[0],dayk[-1])
             packcode += '8l'
             if not len(kdat) == 8:
                 ks = [999]*8
@@ -852,8 +852,6 @@ def writeIAF(datastr, filename, **kwargs):
         reserved = [0,0,0,0]
         head.extend(reserved)
 
-        #print("HERE", len(ks), head)
-        #print [num2date(elem) for elem in temp.ndarray[0]]
         line = struct.pack(packcode,*head)
         output = output + line
 
@@ -973,7 +971,7 @@ def writeIAFREADME(datastream,path,debug=False):
         dsf = datastream.header.get('DataSamplingFilter','')
         lat=np.round(float(datastream.header.get('DataAcquisitionLatitude')),3)
         lon=np.round(float(datastream.header.get('DataAcquisitionLongitude')),3)
-        ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
+        ye=str(int(datetime.strftime(datastream.ndarray[0][1],'%Y')))
         rfile = os.path.join(path,"README."+station.upper())
         if os.path.isfile(rfile):
             print (" README file already existing - skipping writeREADME")
@@ -2609,7 +2607,7 @@ def readDKA(filename, headonly=False, **kwargs):
                         ti = dparser.parse(block[0]) + timedelta(minutes=90) + timedelta(minutes=180*i)
                         #ti = datetime.strptime(block[0],"%d-%b-%y") + timedelta(minutes=90) + timedelta(minutes=180*i)
                         val = float(block[2+i])
-                        array[0].append(date2num(ti))
+                        array[0].append(ti)
                         if val < 990:
                             array[kcol].append(val)
                         else:
@@ -2622,40 +2620,22 @@ def readDKA(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'MagPyK'
 
     array = [np.asarray(ar) for ar in array]
-    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    stream = DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
     # Eventually add trim
     return stream
 
 
 def writeDKA(datastream, filename, mode='overwrite'):
-    if os.path.isfile(filename):
-        if mode == 'append':
-            myFile = open(filename, "ab")
-        else: # overwrite mode
-            os.remove(filename)
-            myfile = open(filename, "wb")
-    elif filename.find('StringIO') > -1 and not os.path.exists(filename):
-        if sys.version_info >= (3,0,0):
-            import io
-            myfile = io.StringIO()
-            returnstring = True
-        else:
-            import StringIO
-            myfile = StringIO.StringIO()
-            returnstring = True
-    else:
-        myfile = open(filename, "wb")
 
     # extract k string from datastream
     # check kvals
     kstr = []
     # Get days out of ndarray:
-    times = list(set([num2date(elem).date() for elem in datastream.ndarray[0]]))
+    times = sorted(list(set([elem.date() for elem in datastream.ndarray[0]])))
     # Get all k values for each timestep
     for d in times:
-        klist = [kval for idx,kval in enumerate(datastream.ndarray[KEYLIST.index('var1')]) if num2date(datastream.ndarray[0][idx]).date() == d]
-        klist = [1,2,3,4,5,6,1,1]
+        klist = [kval for idx,kval in enumerate(datastream.ndarray[KEYLIST.index('var1')]) if datastream.ndarray[0][idx].date() == d]
         if len(klist) == 8:
             sumk = "{:.1f}".format(np.sum(klist))
         else:
@@ -2666,10 +2646,9 @@ def writeDKA(datastream, filename, mode='overwrite'):
 
         kstr.append(kstring)
 
-
     if len(kstr) > 0:
-        station=datastream.header['StationIAGAcode']
-        k9=datastream.header['StationK9']
+        station=datastream.header.get('StationIAGAcode')
+        k9=datastream.header.get('StationK9')
         latnum = datastream.header.get('DataAcquisitionLatitude',0)
         if not latnum:
             latnum = datastream.header.get('StationLatitude',0)
@@ -2678,8 +2657,8 @@ def writeDKA(datastream, filename, mode='overwrite'):
         if not lonnum:
             lonnum = datastream.header.get('StationLongitude',0)
         lon=np.round(float(lonnum),3)
-        year=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%y')))
-        ye=str(int(datetime.strftime(num2date(datastream.ndarray[0][1]),'%Y')))
+        year=str(int(datetime.strftime(datastream.ndarray[0][1],'%y')))
+        ye=str(int(datetime.strftime(datastream.ndarray[0][1],'%Y')))
 
         head = []
         if not os.path.isfile(filename):
@@ -2696,24 +2675,20 @@ def writeDKA(datastream, filename, mode='overwrite'):
             head.append("{0:<50}".format(emptyline))
             head.append("{0:<50}".format(head5))
             head.append("{0:<50}".format(emptyline))
-            #with open(kfile, "wb") as myfile:
-            for elem in head:
-                myfile.write(elem+'\r\n')
-            #print elem
-        # write data
-        #with open(kfile, "a") as myfile:
-        for elem in kstr:
-            myfile.write(elem+'\r\n')
-            #print elem
 
-        if returnstring:
-            return myfile
-        myfile.close()
+            with open(filename, "w", newline='') as myfile:
+                for elem in head:
+                    myfile.write(elem + '\r\n')
+        with open(filename, "a", newline='') as myfile:
+            for elem in kstr:
+                myfile.write(elem + '\r\n')
 
         return True
 
 if __name__ == '__main__':
 
+    import scipy
+    import subprocess
     print()
     print("----------------------------------------------------------")
     print("TESTING: IMF FORMAT LIBRARY")
@@ -2729,7 +2704,6 @@ if __name__ == '__main__':
     #    reloaded and compared to the original data set
     c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
     l = 32*1440
-    import scipy
     array = [[] for el in DataStream().KEYLIST]
     win = scipy.signal.windows.hann(60)
     a = np.random.uniform(20950, 21000, size=int(l/2))
@@ -2784,10 +2758,7 @@ if __name__ == '__main__':
     testrun = 'STREAMTESTFILE'
     t_start_test = datetime.utcnow()
     # Testing the following methods
-    #writeIAF()
-    #writeIMF()
     #writeBLV()
-    #writeDKA()
     #writeIYFV()
 
     while True:
@@ -2802,6 +2773,7 @@ if __name__ == '__main__':
             succ2 = isIAF(filename)
             # IAF read
             dat = readIAF(filename)
+            t_a = len(dat)
             te = datetime.utcnow()
             # validity tests
             dat = dat.calc_f()
@@ -2811,7 +2783,13 @@ if __name__ == '__main__':
             zm = diff.mean('z')
             fm = diff.mean('f')
             if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
-                 raise Exception("ERROR witin IAF validity test")
+                 raise Exception("ERROR within IAF data validity test")
+            dat = readIAF(filename, resolution='hour')
+            t_b = len(dat)
+            dat = readIAF(filename, resolution='k')
+            t_c = len(dat)
+            if not t_a == 43200 or not t_b == 720 or not t_c == 240:
+                 raise Exception("ERROR within IAF resolution test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
@@ -2840,6 +2818,29 @@ if __name__ == '__main__':
         except Exception as excep:
             errors[testset] = str(excep)
             print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+        try:
+            testset = 'DKA'
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            kstream = K_fmi(teststream)
+            ts = datetime.utcnow()
+            # write
+            print ("Writing")
+            succ = writeDKA(kstream,filename)
+            # test
+            print ("Testing")
+            succ = isDKA(filename)
+            print ("Reading")
+            dat = readDKA(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtractStreams(kstream,dat)
+            km = diff.mean('var1')
+            print (km)
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
 
         break
 
@@ -2850,8 +2851,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
-    print (del_test_files)
-    #subprocess.call(del_test_files,shell=True)
+    subprocess.call(del_test_files,shell=True)
     for item in successes:
         print ("{} :     {}".format(item, successes.get(item)))
     if errors == {}:

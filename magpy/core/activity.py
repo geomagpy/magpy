@@ -311,6 +311,12 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
     if datastream:
         fulldataarray, sr, k9 = datastream.get_fmi_array(missing_data=missing_data, debug=debug)  # return [],[]
 
+    # If defaults then check and eventually override by header content
+    if K9_limit == 750:
+        K9_limit = int(datastream.header.get('StationK9', 750))
+    if longitude == 15.0:
+        longitude = float(datastream.header.get('DataAcquisitionLongitude', 15.0))
+
     tresult = []
     kresult = []
     sq_k_t = []
