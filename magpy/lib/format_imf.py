@@ -10,19 +10,18 @@ Written by Roman Leonhardt December 2012
         DKA     (k values)d
         BLV     (baseline data)
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
 from magpy.core.methods import testtime
 
 import sys
 import logging
+import struct
 import dateutil.parser as dparser
 logger = logging.getLogger(__name__)
+
+KEYLIST = DataStream().KEYLIST
 
 def coordinatetransform(u,v,w,kind):
     """
@@ -54,7 +53,7 @@ def coordinatetransform(u,v,w,kind):
         xtmp = v /np.sqrt((np.tan(dc))**2 + 1)
         y = np.sqrt(v**2 - xtmp**2)
         x = xtmp
-        f = np.sqrt(h**2+w**2)
+        f = np.sqrt(v**2+w**2)
         i = (180.)/np.pi * np.arctan2(w, v)
         return [u,i,v,x,y,w,f]
     return [0]*7
@@ -269,12 +268,6 @@ def readIAF(filename, headonly=False, **kwargs):
 
     data = []
     key = None
-
-    #if starttime:
-    #    begin = starttime
-    #if endtime:
-    #    end = endtime
-
 
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
@@ -519,7 +512,7 @@ def writeIAF(datastr, filename, **kwargs):
         logger.error("writeIAF: Minute data needs to be provided")
         return False
     # check whether data covers one month
-    tdiff = np.round((datastream.ndarray[0][-1]-datastream.ndarray[0][0]).days)
+    tdiff = int(np.round((datastream.ndarray[0][-1]-datastream.ndarray[0][0]).total_seconds()/86400.))
     if not tdiff >= 28:
         logger.error("writeIAF: Data needs to cover one month")
         return False
@@ -610,6 +603,19 @@ def writeIAF(datastr, filename, **kwargs):
     hourvals = hourvals.get_gaps()
     printhead = True
 
+    calck = True
+    if not kvals and calck:
+        # calculate kvalues
+        print(" K values not provided - calculating them")
+        print(
+            " IMPORTANT: first and last day will be missing every month - provide kvals separately in order to overcome this limitation")
+        if not datastream.header.get('StationK9', None):
+            print(" -> no K9 value provided for Station: using 500nT as default")
+        import magpy.core.activity as act
+        kvals = act.K_fmi(datastream, K9_limit=datastream.header.get('StationK9', 500),
+                          longitude=datastream.header.get('DataAcquisitionLongitude', 15), debug=True)
+        print("KVAL", kvals)
+
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
         if len(dayar[0]) > 1440:
@@ -623,7 +629,7 @@ def writeIAF(datastr, filename, **kwargs):
         #temp = minutest.copy() ### Necessary so that dayar is not modified by the filtering process
         #temp = temp.filter(filter_width=timedelta(minutes=60), resampleoffset=timedelta(minutes=30), filter_type='flat')
         tempvals = hourvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
-        temp = DataStream([LineStruct],datastream.header,tempvals)
+        temp = DataStream(header=datastream.header,ndarray=tempvals)
 
         head = []
         reqinfotmp = requiredinfo
@@ -635,7 +641,7 @@ def writeIAF(datastr, filename, **kwargs):
                     if value == '':
                         misslist.append(elem)
                 elif elem == 'StartDate':
-                    value = int(datetime.strftime(num2date(dayar[0][0]),'%Y%j'))
+                    value = int(datetime.strftime(dayar[0][0],'%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
                         logger.info("Latitude and Longitude apparently not correctly provided - setting to zero")
@@ -722,24 +728,6 @@ def writeIAF(datastr, filename, **kwargs):
                 print(" StationK9, DataDigitalSampling, DataSensorOrientation")
                 print(" e.g. data.header['StationK9'] = 750")
                 return False
-
-        """
-            if len(misslist) == 0:
-                    if not datastream._is_number(value):
-                        if len(value) < 4:
-                            value = value.ljust(4)
-                        elif len(value) > 4:
-                            value = value[:4]
-                    head.append(value)
-                    reqinfotmp = [el for el in reqinfotmp if not el==elem]
-            else:
-                    print("Check header: below mentioned content appears to be missing in header")
-                    print("  --  critical information missing in data header  --")
-                    print("  ---------------------------------------------------")
-                    print(" Please provide: {} ".format(misslist))
-                    print(" e.g. data.header['StationK9'] = 750")
-                    return False
-        """
 
         if len(misslist) > 0 and printhead:
             print ("The following meta information is missing. Please provide!")
@@ -833,15 +821,6 @@ def writeIAF(datastr, filename, **kwargs):
                 head.append(999999)
         else:
             head.append(888888)
-
-        #print("3:", len(head))
-        calck = True
-        if not kvals and calck:
-            #calculate kvalues
-            print (" K values not provided - calculating them")
-            if not datastream.header.get('StationK9',None):
-                print (" -> no K9 value provided for Station: using 500nT as default")
-            kvals = datastream.k_fmi()
 
         # add k values
         if kvals:
@@ -1199,7 +1178,7 @@ def readIMF(filename, headonly=False, **kwargs):
                         #row = LineStruct()
                         time = datehh+':'+str(minute+i)
                         #row.time=date2num(datetime.strptime(time,"%b%d%y_%H:%M"))
-                        array[0].append(date2num(datetime.strptime(time,"%b%d%y_%H:%M")))
+                        array[0].append(datetime.strptime(time,"%b%d%y_%H:%M"))
 
                         index = int(4*i)
                         if not int(data[0+index]) > 999990:
@@ -1219,15 +1198,14 @@ def readIMF(filename, headonly=False, **kwargs):
                         #stream.add(row)
                     except:
                         logging.error('format_imf: problem with dataformat - check block header')
-                        return DataStream([LineStruct()], headers, np.asarray([np.asarray(el) for el in array],dtype=object))
+                        return DataStream(header=headers, ndarray=np.asarray([np.asarray(el) for el in array],dtype=object))
                 minute = minute + 2
 
     fh.close()
 
     headers['DataFormat'] = 'IMF'
     array = np.asarray([np.asarray(el) for el in array],dtype=object)
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    return DataStream(header=headers, ndarray=array)
 
 
 def writeIMF(datastream, filename, **kwargs):
@@ -1242,7 +1220,7 @@ def writeIMF(datastream, filename, **kwargs):
 
     success = False
     # 1. check whether datastream corresponds to minute file
-    if not 60*0.9 < datastream.get_sampling_period() < 60*1.1:
+    if not 60*0.9 < datastream.samplingrate() < 60*1.1:
         logger.error("writeIMF: Data needs to be minute data for Intermagnet - filter it accordingly")
         return False
 
@@ -1339,21 +1317,13 @@ def writeIMF(datastream, filename, **kwargs):
     zind = KEYLIST.index('z')
     find = KEYLIST.index('f')
     for i in range(fulllength):
-        if not ndtype:
-            elem = datastream[i]
-            elemx = elem.x
-            elemy = elem.y
-            elemz = elem.z
-            elemf = elem.f
-            timeval = elem.time
-        else:
-            elemx = datastream.ndarray[xind][i]
-            elemy = datastream.ndarray[yind][i]
-            elemz = datastream.ndarray[zind][i]
-            elemf = datastream.ndarray[find][i]
-            timeval = datastream.ndarray[0][i]
+        elemx = datastream.ndarray[xind][i]
+        elemy = datastream.ndarray[yind][i]
+        elemz = datastream.ndarray[zind][i]
+        elemf = datastream.ndarray[find][i]
+        timeval = datastream.ndarray[0][i]
 
-        date = num2date(timeval).replace(tzinfo=None)
+        date = timeval
         doy = datetime.strftime(date, "%j")
         day = datetime.strftime(date, "%b%d%y")
         hh = datetime.strftime(date, "%H")
@@ -1381,19 +1351,19 @@ def writeIMF(datastream, filename, **kwargs):
                         dataline = '9999999 9999999 9999999 999999'
                     j = j+1
         if not np.isnan(elemx):
-            x = comp_encode(header['unit-col-x'],elemx)
+            x = comp_encode(header.get('unit-col-x','nT'),elemx)
         else:
             x = 999999
         if not np.isnan(elemy):
-            y =comp_encode(header['unit-col-y'],elemy)
+            y =comp_encode(header.get('unit-col-y','nT'),elemy)
         else:
             y = 999999
         if not np.isnan(elemz):
-            z = comp_encode(header['unit-col-z'],elemz)
+            z = comp_encode(header.get('unit-col-z','nT'),elemz)
         else:
             z = 999999
         if not np.isnan(elemf):
-            f = comp_encode(header['unit-col-f'],elemf)
+            f = comp_encode(header.get('unit-col-f','nT'),elemf)
         else:
             f = 999999
         if minute > minuteprev + 1:
@@ -1700,7 +1670,7 @@ def writeBLV(datastream, filename, **kwargs):
                     pierlocref = parameter[11]
                     pierel = float(parameter[12])
                     pierelref =  parameter[13]
-                    line.extend([pierlon,pierlat,pierlocref,pierel,pieelref])
+                    line.extend([pierlon,pierlat,pierlocref,pierel,pierelref])
             funclist.append(line)
         return funclist
 
@@ -2675,11 +2645,10 @@ def readDKA(filename, headonly=False, **kwargs):
     return stream
 
 
-def writeDKA(datastream, filename, **kwargs):
+def writeDKA(datastream, filename, mode='overwrite'):
     if os.path.isfile(filename):
         if mode == 'append':
-            with open(filename, "a") as myfile:
-                myfile.write(output)
+            myFile = open(filename, "ab")
         else: # overwrite mode
             os.remove(filename)
             myfile = open(filename, "wb")
@@ -2759,3 +2728,162 @@ def writeDKA(datastream, filename, **kwargs):
         myfile.close()
 
         return True
+
+if __name__ == '__main__':
+
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: IMF FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE IMF LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 32*1440
+    import scipy
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1440:-1440]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1440:-1440]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1440:-1440]
+    a = np.random.uniform(48900, 49100, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1440:-1440]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(minutes=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 60
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationK9'] = 450
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataQuality'] = ''
+    header['SensorType'] = 'SherlocksSystem'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+    header['StationStreet'] = '221B Baker Street'
+    header['StationCity'] = 'London'
+    header['StationPostalCode'] = 'W1U 6SG'
+    header['StationCountry'] = 'England'
+    header['StationWebInfo'] = 'Not yet existing'
+    header['StationEmail'] = 'arthur@conan.doyle'
+
+    #header['DataPublicationDate'] = ''
+    #requiredinfo = ['FormatVersion','Reserved']
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+    hourstream = teststream.filter()
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.utcnow()
+    # Testing the following methods
+    #writeIAF()
+    #writeBLV()
+    #writeIMF()
+    #writeDKA()
+    #writeIYFV()
+
+    while True:
+        try:
+            # Testing IAF
+            testset = 'IAF'
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            # IAF write
+            print ("Original", teststream.ndarray)
+            succ1 = writeIAF(teststream, filename)
+            # IAF test
+            succ2 = isIAF(filename)
+            # IAF read
+            dat = readIAF(filename)
+            te = datetime.utcnow()
+            # validity tests
+            print ("Before", dat.ndarray)
+            dat = dat.calc_f()
+            print ("After", dat.ndarray)
+            diff = subtractStreams(teststream,dat)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            print (fm)
+            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001:
+                 print ("ERROR witin IAF validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+        try:
+            testset = 'IMF'
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            # write
+            succ = writeIMF(teststream,filename)
+            # test
+            succ = isIMF(filename)
+            dat = readIMF(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtractStreams(teststream,dat)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
+                 print ("ERROR within {} validity test".format(testset))
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.utcnow()
+    time_taken = t_end_test - t_start_test
+    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    print (del_test_files)
+    #subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")

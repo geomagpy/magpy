@@ -582,8 +582,9 @@ CALLED BY:
 
         self.header = header if header else {}
         self.container = container if container else []
-        emptyarray = np.array([np.asarray([]) for elem in self.KEYLIST])
-        self.ndarray = ndarray if ndarray else emptyarray
+        if ndarray is None:
+            ndarray = np.array([np.asarray([]) for elem in KEYLIST])
+        self.ndarray = ndarray
         self.progress = 0
 
     # ------------------------------------------------------------------------
@@ -2648,7 +2649,8 @@ CALLED BY:
         """
         DEFINITION:
             Calculates the f form  x^2+y^2+z^2. If delta F is present, then by default
-            this value is added as well
+            this value is considered as well.
+            According to IM Technical Manual 5.0.0: F(scalar) = F(vector) - dF
         PARAMETERS:
          Kwargs:
             - skipdelta   (bool)  if selecetd then an existing delta f is not accounted for
@@ -2661,7 +2663,7 @@ CALLED BY:
 
         # Take care: if there is only 0.1 nT accuracy then there will be a similar noise in the deltaF signal
 
-        if len(self.ndarray[0]) > 0:
+        if not len(self.ndarray[0]) > 0:
             return self
 
         fstream = self.copy()
@@ -2679,7 +2681,7 @@ CALLED BY:
             x2 = ((fstream.ndarray[indx])**2).astype(float)
             y2 = ((fstream.ndarray[indy])**2).astype(float)
             z2 = ((fstream.ndarray[indz])**2).astype(float)
-            fstream.ndarray[indf] = np.sqrt(x2+y2+z2) + df
+            fstream.ndarray[indf] = np.sqrt(x2+y2+z2) - df
 
         fstream.header['col-f'] = 'f'
         fstream.header['unit-col-f'] = 'nT'
@@ -2932,7 +2934,9 @@ CALLED BY:
     def delta_f(self, **kwargs):
         """
         DESCRIPTION:
-            Calculates the difference of x+y+z to f and puts the result to the df column
+            Calculates the difference of vector F and scalar f and puts the result to the df column
+            Calculated is dF = F(vector) - F(scalar) as defined in section 5.5 within the
+            INTERMAGNET Technical Manual 5.0.0
 
         PARAMETER:
             keywords:
