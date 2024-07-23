@@ -990,16 +990,13 @@ if __name__ == '__main__':
         try:
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             ts = datetime.utcnow()
-            print ("Writing")
             succ1 = writeIMAGCDF(teststream, filename)
-            print ("Testing")
             succ2 = isIMAGCDF(filename)
-            print ("Reading")
-            dat = readIMAGCDF(filename, debug=True)
-            print ("Done" , teststream.ndarray)
+            dat = readIMAGCDF(filename)
             print ("Done" , dat.ndarray)
             te = datetime.utcnow()
             # validity tests
+            print ("HERE")
             diff = subtract_streams(teststream, dat, debug=True)
             print ("HERE")
             xm = diff.mean('x')
