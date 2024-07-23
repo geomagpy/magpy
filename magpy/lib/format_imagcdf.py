@@ -8,17 +8,18 @@ Written by Roman Leonhardt October 2019
 - supports python >= 3.5
 - currently requires cdflib<=0.3.18
 """
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
 from magpy.core.methods import testtime
 
 import cdflib
 
-#import ciso8601 ## fast datetime parser  ciso8601.parse_datetime should be 10 times faster than datetime.strftime
-
 import logging
 logger = logging.getLogger(__name__)
 
+KEYLIST = DataStream().KEYLIST
+NUMKEYLIST = DataStream().NUMKEYLIST
 HEADTRANSLATE = {'FormatDescription':'DataFormat', 'IagaCode':'StationID', 'ElementsRecorded':'DataComponents', 'ObservatoryName':'StationName', 'Latitude':'DataAcquisitionLatitude', 'Longitude':'DataAcquisitionLongitude', 'Institution':'StationInstitution', 'VectorSensOrient':'DataSensorOrientation', 'TermsOfUse':'DataTerms','UniqueIdentifier':'DataID','ParentIdentifiers':'SensorID','ReferenceLinks':'StationWebInfo', 'FlagRulesetType':'FlagRulesetType','FlagRulesetVersion':'FlagRulesetVersion'}
 
 
@@ -52,7 +53,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     select = kwargs.get('select')
 
     headers={}
-    arraylist = []
     array = [[] for elem in KEYLIST]
     multipletimedict = {}
     newdatalist = []
@@ -329,9 +329,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     ar = cdflib.cdfepoch.to_datetime(col)
                 delrow = True
             arlen= len(ar)
-            arraylist.append(ar)
             ind = KEYLIST.index('time')
-            array[ind] = ar
+            #array[ind] = ar.astype(datetime)  # datetime.datetime
+            array[ind] = ar  # np.datetime64 might be quicker
         else:
             ar = cdfdat.varget(elem[1])
             if delrow:
@@ -355,26 +355,20 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     newar = np.asarray([np.nan]*arlen)
                     newar[indexarray] = ar
                     array[ind] = newar
-                    arraylist.append(newar)
                 elif not multipletimedict == {} and referencetimecol:
                     if timedepend == referencetimecol:
                         array[ind] = ar
-                        arraylist.append(ar)
                 else:
                     array[ind] = ar
-                    arraylist.append(ar)
                 if elem[0] in ['f','F'] and headers.get('DataComponents','') in ['DIF','dif','idf','IDF'] and not len(array[zpos]) > 0:
                     array[zpos] = ar
-                    arraylist.append(ar)
                     headers['col-z'] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                     headers['unit-col-z'] = cdfdat.varattsget(elem[1]).get('UNITS')
 
-    ndarray = np.array(array, dtype=object)
+    ndarray = np.asarray(array, dtype=object)
 
-    stream = DataStream()
-    stream = [LineStruct()]
 
-    result = DataStream(stream,headers,ndarray)
+    result = DataStream(header=headers,ndarray=ndarray)
 
     if not headers.get('FlagRulesetType','') == '' and len(flaglist) > 0:
         result = result.flag(flaglist)
@@ -632,7 +626,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         return lst[1:] == lst[:-1]
 
     ndarray = False
-    if len(datastream.ndarray[0]>0):
+    if len(datastream.ndarray[0])>0:
         ndarray = True
 
     # Check F/S/G select either S or G, send out warning if presumably F (mean zero, stddeviation < resolution)
@@ -717,11 +711,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
           try:
             if not key in ['scalartime','temptime']:
                 ind = KEYLIST.index(key)
-                if ndarray and len(datastream.ndarray[ind])>0:
+                if len(datastream.ndarray[ind])>0:
                     col = datastream.ndarray[ind]
-                else:
-                    col = datastream._get_column(key)
-                col = col.astype(float)
+                if not 'time' in key:
+                    col = col.astype(float)
 
                 # eventually use a different fill value (default is nan)
                 if not isnan(fillval):
@@ -995,18 +988,20 @@ if __name__ == '__main__':
     while True:
         testset = 'IMAGCDF'
         try:
-            # Testing IAF
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             ts = datetime.utcnow()
-            # IAF write
+            print ("Writing")
             succ1 = writeIMAGCDF(teststream, filename)
-            # IAF test
+            print ("Testing")
             succ2 = isIMAGCDF(filename)
-            # IAF read
-            dat = readIMAGCDF(filename)
+            print ("Reading")
+            dat = readIMAGCDF(filename, debug=True)
+            print ("Done" , teststream.ndarray)
+            print ("Done" , dat.ndarray)
             te = datetime.utcnow()
             # validity tests
             diff = subtractStreams(teststream,dat)
+            print ("HERE")
             xm = diff.mean('x')
             ym = diff.mean('y')
             zm = diff.mean('z')
@@ -1028,7 +1023,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
-    subprocess.call(del_test_files,shell=True)
+    #subprocess.call(del_test_files,shell=True)
     for item in successes:
         print ("{} :     {}".format(item, successes.get(item)))
     if errors == {}:

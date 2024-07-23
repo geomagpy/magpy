@@ -478,7 +478,7 @@ The stream can be trimmed to a specific time interval after reading by applying 
  format_gsm19.py     |                  |                  |
  format_hapijson.py  |                  |                  |
  format_iaga02.py    |   IAGA           |    2.0.0         |   pyproj
- format_imagcdf.py   |   IMCDF          |                  |
+ format_imagcdf.py   |   IMAGCDF        |    2.0.0              |   cdflib
  format_imf.py       | IAF, IMF, DKA, *BLV*, *IYFV*  |  2.0.0   |  yes
  format_iono.py |                  |                  |
  format_json.py |                  |                  |

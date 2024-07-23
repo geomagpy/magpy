@@ -9,7 +9,9 @@ sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
 from magpy.core.methods import testtime
 
+
 #global variables
+KEYLIST = DataStream().KEYLIST
 MISSING_DATA = 99999
 NOT_REPORTED = 88888
 
