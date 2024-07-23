@@ -457,6 +457,54 @@ The stream can be trimmed to a specific time interval after reading by applying 
         data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
 
+
+### 3.6 An overview of all format libraries
+
+    library         |          formats   |     since version   |   internal tests
+-----------------  |  ----------------  |  -----------------  |  -----------------
+ format_abs_magpy.py |                    |                     |
+ format_acecdf.py    |                    |                     |
+ format_autodif.py   |                    |                     |
+ format_autodif_fread.py |                  |                  |
+ format_basiccsv.py  |                    |                  |
+ format_bdv.py       |                    |                  |
+ format_covjson.py   |                  |                  |
+ format_cr800.py     |                  |                  |
+ format_didd.py      |                  |                  |
+ format_dtu.py       |                  |                  |
+ format_gdas.py      |                  |                  |
+ format_gfz.py       |                  |                  |
+ format_gfztmp.py    |                  |                  |
+ format_gsm19.py     |                  |                  |
+ format_hapijson.py  |                  |                  |
+ format_iaga02.py    |   IAGA           |    2.0.0         |   pyproj
+ format_imagcdf.py   |   IMCDF          |                  |
+ format_imf.py       | IAF, IMF, DKA, *BLV*, *IYFV*  |  2.0.0   |  yes
+ format_iono.py |                  |                  |
+ format_json.py |                  |                  |
+ format_latex.py |                  |                  |
+ format_lemi.py |                  |                  |
+ format_magpy.py |                  |                  |
+ format_magpycdf.py |                  |                  |
+ format_nc.py |                  |                  |
+ format_neic.py |                  |                  |
+ format_noaa.py |                  |                  |
+ format_pha.py |                  |                  |
+ format_pos1.py |                  |                  |
+ format_predstorm.py |                  |                  |
+ format_qspin.py |                  |                  |
+ format_rcs.py |                  |                  |
+ format_sfs.py |                  |                  |
+ format_simpletable.py |                  |                  |
+ format_tsf.py |                  |                  |
+ format_wdc.py |                  |                  |
+ format_wic.py |                  |                  |
+ format_wik.py |                  |                  |
+ magpy_absformats.py |                  |                  |
+ magpy_formats.py |                  |                  |
+
+
+
 ## 4. Figures
 
 You will find some example plots at the [Conrad Observatory](http://www.conrad-observatory.at).

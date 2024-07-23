@@ -9,11 +9,6 @@ Written by Roman Leonhardt October 2019
 - currently requires cdflib<=0.3.18
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-
 from magpy.stream import *
 from magpy.core.methods import testtime
 
@@ -739,19 +734,19 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             #{'FIELDNAM': 'Geomagnetic Field Element X', 'VALIDMIN': array([-79999.]), 'VALIDMAX': array([ 79999.]), 'UNITS': 'nT', 'FILLVAL': array([ 99999.]), 'DEPEND_0': 'GeomagneticVectorTimes', 'DISPLAY_TYPE': 'time_series', 'LABLAXIS': 'X'}
             if key == 'time':
                 cdfkey = 'GeomagneticVectorTimes'
-                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in col] )
+                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in col] )
                 var_spec['Data_Type'] = 33
             elif key == 'scalartime' and useScalarTimes:
                 cdfkey = 'GeomagneticScalarTimes'
                 ftimecol = ftest.ndarray[0]
                 # use ftest Datastream
-                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in ftimecol] )
+                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in ftimecol] )
                 var_spec['Data_Type'] = 33
             elif key == 'temptime' and useTemperatureTimes:
                 cdfkey = 'TemperatureTimes'
                 ttimecol = ttest.ndarray[0]
                 # use ttest Datastream
-                cdfdata = cdflib.cdfepoch.compute_tt2000([tt(num2date(elem).replace(tzinfo=None)) for elem in ttimecol])
+                cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in ttimecol])
                 var_spec['Data_Type'] = 33
             elif len(col) > 0:
                 var_spec['Data_Type'] = 45
@@ -936,3 +931,115 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     mycdf.close()
     return success
+
+if __name__ == '__main__':
+
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: IMF FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE IMF LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 88400
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    a = np.random.uniform(49000, 49200, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.utcnow()
+
+    while True:
+        testset = 'IMAGCDF'
+        try:
+            # Testing IAF
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            # IAF write
+            succ1 = writeIMAGCDF(teststream, filename)
+            # IAF test
+            succ2 = isIMAGCDF(filename)
+            # IAF read
+            dat = readIMAGCDF(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtractStreams(teststream,dat)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
+                 raise Exception("ERROR within IAF data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.utcnow()
+    time_taken = t_end_test - t_start_test
+    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")

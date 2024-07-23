@@ -413,7 +413,6 @@ class DataStream(object):
     - quakeflags(stream, options)
 
 
-
     Application methods:
     ----------------------------
 

@@ -2762,9 +2762,9 @@ if __name__ == '__main__':
     #writeIYFV()
 
     while True:
+        testset = 'IAF'
         try:
             # Testing IAF
-            testset = 'IAF'
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             ts = datetime.utcnow()
             # IAF write
@@ -2795,8 +2795,8 @@ if __name__ == '__main__':
         except Exception as excep:
             errors[testset] = str(excep)
             print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+        testset = 'IMF'
         try:
-            testset = 'IMF'
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             ts = datetime.utcnow()
             # write
@@ -2818,8 +2818,8 @@ if __name__ == '__main__':
         except Exception as excep:
             errors[testset] = str(excep)
             print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+        testset = 'DKA'
         try:
-            testset = 'DKA'
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             kstream = K_fmi(teststream)
             ts = datetime.utcnow()

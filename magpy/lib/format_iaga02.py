@@ -4,12 +4,8 @@ IAGA02 input filter
 Written by Roman Leonhardt June 2012
 - contains test, read and write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
 from magpy.core.methods import testtime
 
@@ -134,6 +130,9 @@ def readIAGA(filename, headonly=False, **kwargs):
     stream.header = {}
     data = []
     key = None
+    varstr = ''
+    elem = 0
+    comment = ''
 
     try:
         # get day from filename (platform independent)
@@ -397,7 +396,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
+    stream = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
 
     return stream
 
@@ -437,8 +436,8 @@ def writeIAGA(datastream, filename, **kwargs):
             myFile = io.StringIO()
             returnstring = True
         else:
-            import StringIO
-            myFile = StringIO.StringIO()
+            from io import StringIO
+            myFile = StringIO()
             returnstring = True
     else:
         myFile= OpenFile(filename)
@@ -486,21 +485,6 @@ def writeIAGA(datastream, filename, **kwargs):
         datacomp = datacomp+'G'
     else:
         datacomp = datacomp+'F'
-
-    """
-    if len(datastream.ndarray[findg]) > 0:
-        useg = True
-
-    if len(datastream.ndarray[find]) > 0:
-        if not useg:
-            datacomp = datacomp+'F'
-        else:
-            datacomp = datacomp+'G'
-    elif len(datastream.ndarray[findg]) > 0:
-        datacomp = datacomp+'G'
-    else:
-        datacomp = datacomp+'F'
-    """
 
     publevel = str(header.get('DataPublicationLevel',""))
     if publevel in ['2','P','Provisional','provisional']:
@@ -739,3 +723,115 @@ def writeIAGA(datastream, filename, **kwargs):
 
 
     return filename
+
+if __name__ == '__main__':
+
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: IMF FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE IMF LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 88400
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    a = np.random.uniform(49000, 49200, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.utcnow()
+
+    while True:
+        testset = 'IAGA'
+        try:
+            # Testing IAF
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            # IAF write
+            succ1 = writeIAGA(teststream, filename)
+            # IAF test
+            succ2 = isIAGA(filename)
+            # IAF read
+            dat = readIAGA(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtractStreams(teststream,dat)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
+                 raise Exception("ERROR within IAF data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.utcnow()
+    time_taken = t_end_test - t_start_test
+    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
