@@ -62,6 +62,7 @@ sklearn : AI flagging support and geomagnetic activity forcasts
 
 ### 1.2 Linux installation (Ubuntu,Debian like systems)
 
+#### 1.2.1 Recommended: Using environments
 In the following we assume a basic knowledge of linux systems and installations. 
 You need a working version of anaconda or miniconda.
 
@@ -111,6 +112,19 @@ To use MagPy import and select an appropriate backend:
         > matplotlib.use("tkagg")
         > %matplotlib inline
 
+#### 1.2.2 Not-Recommended: Using system python
+
+Make sure to install most required packages using *apt install* before installing geomagpy
+
+        $ sudo apt install python3-scipy python3-numpy python3-matplotlib python3-pip
+
+Optional but recommended packages are 
+
+        $ sudo apt install python3-pymysql python3-pandas python3-wxgtk4.0 libproj-dev proj-data proj-bin
+
+Now install geomagpy and its remaining dependencies
+
+        $ sudo pip3 install geomagpy
 
 ### 1.3 MacOs installation
 
