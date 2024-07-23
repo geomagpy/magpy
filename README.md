@@ -460,8 +460,8 @@ The stream can be trimmed to a specific time interval after reading by applying 
 
 ### 3.6 An overview of all format libraries
 
-    library         |          formats   |     since version   |   internal tests
------------------  |  ----------------  |  -----------------  |  -----------------
+ library            |          formats   |     since version   |   internal tests
+ -----------------  |  ----------------  |  -----------------  |  -----------------
  format_abs_magpy.py |                    |                     |
  format_acecdf.py    |                    |                     |
  format_autodif.py   |                    |                     |
@@ -477,8 +477,8 @@ The stream can be trimmed to a specific time interval after reading by applying 
  format_gfztmp.py    |                  |                  |
  format_gsm19.py     |                  |                  |
  format_hapijson.py  |                  |                  |
- format_iaga02.py    |   IAGA           |    2.0.0         |   pyproj
- format_imagcdf.py   |   IMAGCDF        |    2.0.0              |   cdflib
+ format_iaga02.py    |   IAGA           |    2.0.0         |   yes, pyproj
+ format_imagcdf.py   |   IMAGCDF        |    2.0.0              |   yes, cdflib
  format_imf.py       | IAF, IMF, DKA, *BLV*, *IYFV*  |  2.0.0   |  yes
  format_iono.py |                  |                  |
  format_json.py |                  |                  |

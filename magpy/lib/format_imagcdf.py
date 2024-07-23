@@ -993,17 +993,14 @@ if __name__ == '__main__':
             succ1 = writeIMAGCDF(teststream, filename)
             succ2 = isIMAGCDF(filename)
             dat = readIMAGCDF(filename)
-            print ("Done" , dat.ndarray)
             te = datetime.utcnow()
             # validity tests
-            print ("HERE")
             diff = subtract_streams(teststream, dat, debug=True)
-            print ("HERE")
             xm = diff.mean('x')
             ym = diff.mean('y')
             zm = diff.mean('z')
             fm = diff.mean('f')
-            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
                  raise Exception("ERROR within IAF data validity test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
@@ -1020,7 +1017,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
-    #subprocess.call(del_test_files,shell=True)
+    subprocess.call(del_test_files,shell=True)
     for item in successes:
         print ("{} :     {}".format(item, successes.get(item)))
     if errors == {}:

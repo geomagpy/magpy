@@ -5808,14 +5808,13 @@ CALLED BY:
         else:
             return 0.0
 
-    def samplingrate(self, digits=None, notrounded=False, recalculate=False):
+    def samplingrate(self, digits=None, notrounded=False, recalculate=False, debug=False):
         """
         DEFINITION:
             returns a rounded value of the sampling rate
             in seconds
             and updates the header information
         """
-        # XXX include that in the stream reading process....
 
         if not digits:
             digits = 1
@@ -5827,12 +5826,17 @@ CALLED BY:
         if self.header.get("DataSamplingRate",""):
             src = self.header.get("DataSamplingRate")
             if is_number(src):
-                sr = src
+                sr = float(src)
             else:
                 sr = float(self.header.get("DataSamplingRate").strip(" sec"))
         if not sr or recalculate:
+            if debug:
+                print("Recalculating samplingrate")
             sr = self.get_sampling_period()
             logger.info("sampling rate: Calculated sampling rate {}".format(sr))
+            if debug:
+                print("sampling rate: Calculated sampling rate {}".format(sr))
+
         unit = ' sec'
 
         val = sr
@@ -10004,16 +10008,11 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
     '''
 
     #t1 = datetime.utcnow()
-    keys = kwargs.get('keys')
-    getmeans = kwargs.get('getmeans')
-    debug = kwargs.get('debug')
-
     if not keys:
         keys = stream_a._get_key_headers(numerical=True)
     keysb = stream_b._get_key_headers(numerical=True)
     keys = list(set(keys)&set(keysb))
 
-    print ("HERE")
     if not len(keys) > 0:
         logger.error("subtractStreams: No common keys found - aborting")
         return DataStream()
@@ -10028,13 +10027,12 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
 
     logger.info('subtractStreams: Start subtracting streams.')
 
-    headera = stream_a.header
-    headerb = stream_b.header
-
     # non-destructive
     sa = stream_a.copy()
     sb = stream_b.copy()
     #t2 = datetime.utcnow()
+    headera = sa.header
+    headerb = sb.header
 
     # Drop empty columns or columns with empty placeholders
     sa = sa._remove_nancolumns()
@@ -10207,239 +10205,21 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
             except:
                 pass
 
-            return DataStream([LineStruct()],sa.header,np.asarray(array,dtype=object))
+            return DataStream(header=sa.header,ndarray=np.asarray(array,dtype=object))
 
 
 def subtractStreams(stream_a, stream_b, **kwargs):
     '''
     DEFINITION:
-        Default function will subtract stream_b from stream_a. If timesteps are different
-        stream_b will be interpolated
-
-    PARAMETERS:
-    Variables:
-        - stream_a:     (DataStream) First stream
-        - stream_b:     (DataStream) Second stream, which is subtracted from a
-
-    Optional:
-        - keys:         (list) key list for subtraction - default: all keys present in both streams
-
-    RETURNS:
-        - difference:   (DataStream) Description.
-
-    EXAMPLE:
-        diff = subtractStreams(gsm_stream, pos_stream)
-
-    APPLICATION:
-
-
+        Replaced by subtract_streams from 2.0.0 onwards
     '''
 
-    #t1 = datetime.utcnow()
     keys = kwargs.get('keys')
     newway = kwargs.get('newway')
     getmeans = kwargs.get('getmeans')
     debug = kwargs.get('debug')
 
-    if not keys:
-        keys = stream_a._get_key_headers(numerical=True)
-    keysb = stream_b._get_key_headers(numerical=True)
-    keys = list(set(keys)&set(keysb))
-
-    if not len(keys) > 0:
-        logger.error("subtractStreams: No common keys found - aborting")
-        return DataStream()
-
-    if len(stream_a.ndarray[0]) > 0:
-        pass
-    elif len(stream_b.ndarray[0]) > 0:
-        pass
-    else:
-        logger.error('subtractStreams: stream_a empty - aborting subtraction.')
-        return stream_a
-
-    logger.info('subtractStreams: Start subtracting streams.')
-
-    headera = stream_a.header
-    headerb = stream_b.header
-
-    # non-destructive
-    sa = stream_a.copy()
-    sb = stream_b.copy()
-    #t2 = datetime.utcnow()
-
-    # Drop empty columns or columns with empty placeholders
-    sa = sa._remove_nancolumns()
-    sb = sb._remove_nancolumns()
-
-    # Sampling rates
-    sampratea = float(sa.samplingrate())
-    samprateb = float(sb.samplingrate())
-    minsamprate = min([sampratea,samprateb])
-
-    startat,endat = sa._find_t_limits()
-    # truncate b to time range of a
-    try:
-        sb = sb.trim(starttime=np.datetime64(startat), endtime=np.datetime64(endat)+np.timedelta64(int(samprateb*1000), 'ms'))
-    except:
-        logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
-        if debug:
-            print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
-        return stream_a
-    startbt,endbt = sb._find_t_limits()
-    # truncate a to range of b
-    try:
-        sa = sa.trim(starttime=np.datetime64(startbt), endtime=np.datetime64(endbt)+np.timedelta64(int(sampratea*1000), 'ms'),newway=True)
-    except:
-        logger.error("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
-        if debug:
-            print("subtractStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
-        return stream_a
-    #t3 = datetime.utcnow()
-    timea = sa.ndarray[0].astype(datetime64)
-    timeb = sb.ndarray[0].astype(datetime64)
-
-    # testing overlapp
-    if not sb.length()[0] > 0:
-        logger.error("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
-        if debug:
-            print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
-        return stream_a
-
-    # mask empty slots (for time columns only empty inputs are masked) - very fast
-    numtimea = timea.astype(float64)
-    numtimeb = timeb.astype(float64)
-    numtimea = maskNAN(numtimea)
-    numtimeb = maskNAN(numtimeb)
-
-    #t4 = datetime.utcnow()
-
-    # Check for the following cases:
-    # 1- No overlap of a and b (Done)
-    # 2- a high resolution and b low resolution (tested)
-    # 3- a low resolution and b high resolution (tested)
-    # 4- a shorter and fully covered by b (tested)
-    # 5- b shorter and fully covered by a
-    ok = True
-    if ok:
-            # Assuming similar time steps
-            # Get indicies of stream_b of which times are present in stream_a
-            array = [[] for key in KEYLIST]
-            # other way (combine both columsn) and get unique
-            arr = np.unique(np.concatenate((numtimeb, numtimea)))
-            #if len(arr) == len(timea) and len(arr) == len(timeb):
-            #    # identical stream
-            # If elements in combined a,b array are only slightly different from b columns - 40 percent
-            if len(arr) < int(len(timeb)*1.4):
-                logger.info('subtractStreams: Found identical timesteps - using simple subtraction')
-                # get common timesteps
-                numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
-                indtia = numtimea.searchsorted(numcommon)
-                indtib = numtimeb.searchsorted(numcommon)
-                #t5 = datetime.utcnow()
-
-                if len(indtia) == len(indtib):
-                    nanind = []
-                    for key in keys:
-                        foundnan = False
-                        keyind = KEYLIST.index(key)
-                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0:
-                            diff = np.asarray(sa.ndarray[keyind])[indtia].astype(float) - np.asarray(sb.ndarray[keyind])[indtib].astype(float)
-                            #vala = [sa.ndarray[keyind][ind] for ind in indtia]
-                            #valb = [sb.ndarray[keyind][ind] for ind in indtib]
-                            #diff = np.asarray(vala).astype(float) - np.asarray(valb).astype(float)
-                            if isnan(diff).any():
-                                foundnan = True
-                            if foundnan:
-                                nankeys = [ind for ind,el in enumerate(diff) if np.isnan(el)]
-                                nanind.extend(nankeys)
-                            array[keyind] = diff
-                    #t6 = datetime.utcnow()
-                    nanind = np.unique(np.asarray(nanind))
-                    array[0] = np.asarray(np.asarray(sa.ndarray[0])[indtia],dtype=object)
-                    if foundnan:
-                        for ind,elem in enumerate(array):
-                            if len(elem) > 0:
-                                array[ind] = np.delete(np.asarray(elem), nanind)
-                    array = np.asarray(array,dtype=object)
-                    #t7 = datetime.utcnow()
-                    #if debug:
-                    #    print("prep", (t2 - t1).total_seconds())
-                    #    print("trim", (t3 - t2).total_seconds())
-                    #    print("numtimes", (t4 - t3).total_seconds())
-                    #    print("indicies", (t5 - t4).total_seconds())
-                    #    print("times", (t6 - t5).total_seconds())
-                    #    print("select vals", (t7 - t6).total_seconds())
-            else:
-                if debug:
-                    print("Did not find identical timesteps - linearily interpolating stream b")
-                    print("- please note... this needs considerably longer")
-                    print("- put in the larger (higher resolution) stream as stream_a")
-                    print("- otherwise you might wait endless")
-                # interpolate b
-                function = sb.interpol(keys)
-                # determine numerical times rounded to sampling rates
-                numtimeafull = sa.ndarray[0].astype('datetime64[s]').astype(float64)/minsamprate
-                numtimea = np.round(numtimeafull,0)
-                numtimeb = np.round(sb.ndarray[0].astype('datetime64[s]').astype(float64)/minsamprate,0)
-                # now get the common indicies
-                numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
-                indtia = numtimea.searchsorted(numcommon)
-                #indtib = numtimeb.searchsorted(numcommon)
-                funcstart = (np.datetime64(num2date(function[1]), 's').astype(float64)/minsamprate)
-                funcend =  (np.datetime64(num2date(function[2]), 's').astype(float64)/minsamprate)
-
-                # Get a list of indicies for which timeb values are
-                #   in the vicintiy of a (within half of samplingrate)
-                # limit time range to valued covered by the interpolation function
-                indtia = [elem for elem in indtia if funcstart < numtimeafull[elem] < funcend]
-
-                if len(function) > 0:
-                    nanind = []
-                    for key in keys:
-                        foundnan = False
-                        keyind = KEYLIST.index(key)
-                        #print key, keyind
-                        #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
-                        if len(sa.ndarray[keyind]) > 0 and len(sb.ndarray[keyind]) > 0 and key in stream_a.NUMKEYLIST: # and key in function:
-                            #check lengths of sa.ndarray and last value of indtia
-                            indtia = list(np.asarray(indtia)[np.asarray(indtia)<len(sa.ndarray[0])])
-                            # Convert array to float just in case
-                            sa.ndarray[keyind] = sa.ndarray[keyind].astype(float)
-                            # interpol still working with date2num
-                            dnsa = date2num(sa.ndarray[0])
-                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
-                            valb = [float(function[0]['f'+key]((dnsa[ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
-                            diff = np.asarray(vala) - np.asarray(valb)
-                            if np.isnan(diff).any():
-                                foundnan = True
-                            if foundnan:
-                                nankeys = [ind for ind,el in enumerate(diff) if np.isnan(el)]
-                                nanind.extend(nankeys)
-                            array[keyind] = diff
-                    nanind = np.unique(np.asarray(nanind))
-                    array[0] = np.asarray([sa.ndarray[0][ind] for ind in indtia])
-                    if foundnan:
-                        for ind,elem in enumerate(array):
-                            if len(elem) > 0:
-                                array[ind] = np.delete(np.asarray(elem), nanind)
-                    array = np.asarray(array,dtype=object)
-
-            for key in keys:
-                try:
-                    sa.header['col-'+key] = 'delta '+key
-                except:
-                    pass
-                try:
-                    sa.header['unit-col-'+key] = sa.header['unit-col-'+key]
-                except:
-                    pass
-            try:
-                sa.header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
-            except:
-                pass
-
-            return DataStream([LineStruct()],sa.header,np.asarray(array,dtype=object))
+    return subtract_streams(stream_a, stream_b, keys=keys, getmeans=getmeans, debug=debug)
 
 
 def stackStreams(streamlist, **kwargs): # TODO
